@@ -1,0 +1,294 @@
+id: GE-127g-3
+title: "The set-aside population is exactly the declared locations, so a document a person writes is still judged however it is named or wherever it sits"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the directory the agent-card generator writes into is a declared
+    set-aside location and no other location under docs/ is,
+  And a hand-authored document outside that directory standing at 340 lines
+    against the 300-line limit, whose filename carries the same suffix the
+    generated documents carry,
+  When the author performs an ordinary commit,
+  Then the commit does not complete and the document it names is that
+    hand-authored one — a resemblance in the name is not membership of the
+    declared class.
+
+  And given a hand-authored document outside every declared location standing at
+    340 lines whose filename is one the declaration lists as set aside at another
+    location,
+  When the author performs an ordinary commit,
+  Then the commit does not complete and the document it names is that one — a
+    declared entry takes effect at the location it declares and not at every
+    location sharing a filename with it.
+
+  And given a commit staging one hand-authored document inside every other
+    directory under docs/ that holds hand-authored documents, each standing at
+    340 lines,
+  When the author performs an ordinary commit,
+  Then the commit does not complete and the documents it names are all of them —
+    the declared set did not widen past the locations it names.
+
+  And given the set of documents reported as set aside for any commit,
+  Then every member of that set lies inside a declared location, and the number
+    of documents the standard judges across the whole of docs/ falls by exactly
+    the number of documents inside the declared locations and by no more.
+depends_on:
+  - GE-127g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      DEFINES THE CLASS THIS RECORD BOUNDS. GE-127g-1 establishes that membership is by
+      declared location and that a new generated document joins without an edit; this
+      record establishes that nothing else joins. The two are the inward and outward
+      halves of one boundary and each is satisfiable while the other fails: a declaration
+      wide enough to catch every future card also catches hand-authored documents, and a
+      declaration narrow enough to catch nothing extra can be a filename list. Neither
+      record may be closed as a duplicate of the other.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PROMISE THIS RECORD PROTECTS. GE-127c's whole subject is that the standard
+      follows the project rather than a list someone wrote once. An exclusion that widens
+      silently repeals it, and does so without appearing in GE-127c's own coverage at all,
+      because that record is about which kinds are in scope rather than which documents
+      escape. This record is the only place that erosion is caught.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the membership test lives. Note the hazard the first two arms exist for: the
+      present test matches a document's bare filename, so a single declared filename
+      already exempts every document of that name at any depth. Measured 2026-10-09:
+      twelve hand-authored documents named README.md sit under docs/, all exempt from one
+      declared entry.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Behavioural verification is binding and this record is where it bites hardest. A
+      test that asserts a pattern does not match a path is a test of a pattern, not of a
+      gate: it passes on a gate that never consults the pattern and on a gate that never
+      runs. Every arm here is an ordinary commit that must be REFUSED, with the refused
+      documents named, which is the only shape that cannot be satisfied by a disabled
+      gate.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-1
+    contract: >-
+      The declared set of locations and the single membership test over it. This record
+      constrains that one test's extent; it introduces no second test and no deny-list
+      alongside it.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Membership must be decided by the document's repo-relative path against the declared
+    paths, and by nothing else — not by its basename, not by its filename suffix, not by
+    its frontmatter, not by any resemblance to a generated document. A declared path
+    ending in / matches documents beneath it at any depth; a declared path not ending in /
+    matches that one document exactly."
+  - "The basename comparison at _doc_length_ratchet.is_excluded() (line 207,
+    Path(filepath).name in excluded_files) must be REMOVED, and the excluded_files key
+    removed from the doc_length section in the same change. It is not a hypothetical
+    hazard: measured 2026-10-09, twelve hand-authored README.md documents under docs/ are
+    exempt today on the strength of one entry intended for one file."
+  - "THE PRICE, AND IT MUST NOT BE SOFTENED. Removing basename matching brings those 12
+    hand-authored README.md documents into scope. Two are already over the limit —
+    docs/agents/README.md at 569 lines and docs/testing/README.md at 342 (measured
+    2026-10-09, raw counts) — so both are grandfathered by the growth ratchet and neither
+    may grow again. That is this record's intended effect. Do not add a path entry, a
+    basename entry, or a raised limit for either of them."
+  - "No second list. The declared set-aside locations are the only mechanism; a deny-list
+    of hand-authored paths alongside them would satisfy the named-document arms while
+    leaving the boundary undefined, so the next hand-authored document in a resembling
+    location is exempt again."
+  - "The judged population across docs/ must fall by exactly the number of documents
+    inside the declared locations. This is a property of one membership test over one
+    declared set, and it must hold without enumeration — if the implementation needs a
+    list of affected documents to make it true, the test is in the wrong place."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_hand_authored_document_with_the_generated_suffix_is_still_judged
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1, and the entry that settles the parent's first design question mechanically.
+      A hand-authored document OUTSIDE the declared directory, above the limit, whose
+      filename carries the same suffix the generated documents carry (.card.md). Stage it
+      and invoke the gate; assert it refuses and that the document it names is that one.
+      This is the only entry a suffix-based membership rule fails, so it is what makes
+      the directory-over-suffix decision falsifiable rather than argued. No build.py
+      spawn and no layout fixture, so no marker.
+    must_catch:
+      - "declare membership by the filename suffix the generated documents carry instead of by their location"
+      - "treat a filename resemblance as membership of the declared class"
+  - name: test_declared_filename_does_not_exempt_the_same_name_elsewhere
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 2, the present mechanism's own failure mode rather than a hypothetical one. A
+      hand-authored document above the limit, outside every declared location, whose
+      filename is one the declaration lists as set aside AT ANOTHER location. Assert the
+      gate refuses and names it. Use the real shape: a README.md outside a declared
+      location while a declared entry names a README.md inside one. No marker.
+    must_catch:
+      - "keep the present mechanism and match a declared entry against any document sharing its filename at any depth"
+      - "leave excluded_files in place alongside the new declaration"
+  - name: test_one_over_limit_document_per_hand_authored_directory_is_refused_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Arm 3. Stage one over-limit hand-authored document inside each directory under docs/
+      that holds hand-authored documents, derived from the repository's own tree at run
+      time rather than from a hardcoded directory list, and assert the gate refuses and
+      names ALL of them. Not a census — one document per directory, per the record's own
+      scope note. No marker.
+    must_catch:
+      - "declare the whole of docs/ set aside"
+      - "widen a declared directory entry to a parent of itself"
+  - name: test_judged_population_falls_by_exactly_the_declared_locations_size
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 4, the closing clause and the only one that stays true as the repository grows.
+      Over one staged set spanning the whole of docs/, run the gate twice — once with the
+      declaration empty and once with it populated — and assert the judged figure falls by
+      exactly the number of staged documents inside the declared locations, computed from
+      the tree rather than pinned, and that every document reported as set aside lies
+      inside a declared location. Reads the two figures GE-127g-2 requires. No marker.
+    must_catch:
+      - "keep the present mechanism and match a declared entry against any document sharing its filename at any depth"
+      - "satisfy the named-document arms by adding a deny-list of hand-authored paths alongside the declared set-aside locations"
+      - "declare the whole of docs/ set aside"
+test_rationale: >-
+  Every arm here is an ordinary commit that must be REFUSED with the refused documents
+  NAMED, which is the only shape a disabled gate cannot satisfy — and this is the record
+  where the behavioural rule bites hardest, because the tempting test is one that asserts
+  a pattern does not match a path. That is a test of a pattern, not of a gate: it passes
+  on a gate that never consults the pattern and on one that never runs.
+  The first entry is the load-bearing one and is why it is specified first. The record's
+  own notes identify mutation (1), declaring membership by suffix, as the mutation that
+  settles the directory-versus-suffix decision mechanically rather than by argument — so
+  this entry is not a defensive extra, it is the falsifiability of a design decision the
+  parent L1 made. Under the suffix rule it goes red and every other arm in this record and
+  in GE-127g-1/-1-i stays green; that asymmetry is the evidence.
+  The fourth entry is specified as a DIFFERENCE between two runs rather than as an
+  absolute figure, for the reason the notes give: the first three arms name specific
+  documents and a lucky implementation satisfies all three while exempting some fourth
+  thing nobody tested, and a pinned absolute count goes stale as the repository grows.
+  Computing both the expected fall and the directory list from the tree at run time is
+  what keeps arms 3 and 4 alive after the next document is added.
+  Markers: no entry requests shared_reference_layout and none spawns build.py, so all four
+  sit outside the marker-routing mechanism; the deployed-layout proof is paid once by
+  GE-127g-1's deployed entry. One note for the test author on fixture realism: arm 2 should
+  use README.md specifically, because that is the live instance — twelve hand-authored
+  README.md documents under docs/ are exempt today — and a synthetic filename would
+  reproduce the shape while losing the evidence.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHY THIS RECORD EXISTS AT ALL, GIVEN THAT NOTHING IN THE REPORT ASKED FOR IT. The
+  request was to stop generated documents being refused. Every record that delivers only
+  that is satisfied by an exclusion wide enough to swallow the whole of docs/, and an
+  over-wide exclusion is strictly worse than the problem it solves: the refusals stop, the
+  commits flow, and 901 documents grow unchecked while a gate reports success. This is the
+  record that makes the fix narrower than the problem rather than wider, and it is the one
+  most likely to be dropped as unasked-for.
+
+  THE FIRST TWO ARMS ARE NOT HYPOTHETICAL — THEY ARE THE PRESENT MECHANISM'S OWN FAILURE
+  MODE, MEASURED 2026-10-09. The exclusion test compares bare filenames, and the declared
+  list holds README.md. There are twelve files named README.md under docs/, every one
+  hand-authored, and every one of them is exempt from the length standard today on the
+  strength of one entry intended for one file. So the shape the first two arms forbid is
+  not a risk introduced by this change; it is what is already happening, and fixing the
+  narrowness without fixing the breadth would carry it forward into the new mechanism.
+
+  WHY THE FOURTH ARM IS STATED AS A POPULATION DIFFERENCE. The first three arms name
+  specific documents, and a sufficiently lucky implementation satisfies all three while
+  still exempting some fourth thing nobody tested. The fourth arm is the only clause that
+  closes the set: the judged population across the whole of docs/ falls by exactly the size
+  of the declared locations and by no more. It is also the clause that stays true as the
+  repository grows, which the named-document arms do not. Construction reused from
+  BP-1600a-2's varying-population form rather than reinvented.
+
+  SCOPE NOTE, SO THE THIRD ARM IS NOT READ AS A CENSUS. The third arm stages one document
+  per hand-authored directory; it does not require every document under docs/ to be
+  enumerated in a test, and it is not a reachability census — that is BP-1600a-2's and is
+  inherited as a precondition by the whole tree.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE SUFFIX RULE. MUTATION: declare membership by the filename suffix the generated
+      documents carry instead of by their location.
+      MUST GO RED: the first arm only.
+      MUST STAY GREEN: the second, third and fourth arms, and every arm of GE-127g-1 and
+      GE-127g-1-i. This is the mutation that settles the parent's first design question
+      mechanically rather than by argument: the suffix rule is not wrong in the abstract,
+      it is wrong because this arm goes red under it.
+
+  (2) THE BARE-FILENAME MATCH. MUTATION: keep the present mechanism and match a declared
+      entry against any document sharing its filename at any depth.
+      MUST GO RED: the second and fourth arms.
+      MUST STAY GREEN: the first and third arms, and GE-127g-1's first arm. Note this is
+      not a hypothetical mutation — it is the code as it stands.
+
+  (3) THE WIDE EXEMPTION. MUTATION: declare the whole of docs/ set aside.
+      MUST GO RED: all four arms here, and GE-127g-1's third arm, and GE-127g-1-i's third
+      arm.
+      MUST STAY GREEN: GE-127g-1's first and second arms and GE-127g-1-i's first and second
+      arms — every clause that only asks for generated documents to stop being refused.
+      That green half is the measure of how much of this subtree a wide exemption would
+      satisfy, and the reason this record is not optional.
+
+  (4) THE SECOND LIST. MUTATION: satisfy the arms above by adding a deny-list of
+      hand-authored paths alongside the declared set-aside locations.
+      MUST GO RED: the fourth arm, whose population difference must follow from the
+      declared locations alone.
+      MUST STAY GREEN: the first three arms, each of which a deny-list entry can be written
+      for. Recorded because it is the shape of a fix that makes the tests pass and leaves
+      the boundary undefined, so the next hand-authored document in a resembling location is
+      exempt again.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

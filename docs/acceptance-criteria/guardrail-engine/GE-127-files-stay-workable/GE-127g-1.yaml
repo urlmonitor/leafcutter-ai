@@ -1,0 +1,297 @@
+id: GE-127g-1
+title: "Which documents are set aside is a declared class of locations, so a newly generated document of that kind joins it without anyone editing a list"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the set of documents the size standard does not judge is declared as a
+    set of locations rather than as a set of individual filenames, and every
+    entry in it carries a stated reason it is not judged,
+  And the directory the agent-card generator writes its output into is one such
+    declared location, on the stated ground that its contents are regenerated
+    whole and have no human author,
+  And that directory holds 65 generated documents, of which 3 stand above the
+    300-line limit — the longest at 2,809 lines — and the next 3 stand at 276,
+    235 and 207,
+  When the author stages the whole of that directory exactly as a regeneration
+    leaves it, and performs an ordinary commit,
+  Then the commit completes.
+
+  And given that a new agent is added to the project and the generator is run,
+    so that directory now holds a 66th generated document standing at 420
+    lines, which has never appeared in any declared entry by name,
+  When the author stages that document together with the rest of the directory
+    and performs an ordinary commit,
+  Then the commit completes, and it completes without any change having been
+    made to the declaration — so adding a generated document of an
+    already-declared kind is not an occasion to edit anything.
+
+  And given instead that the declaration is emptied of its entry for that
+    directory,
+  When the author stages the same regenerated directory and performs an ordinary
+    commit,
+  Then the commit does not complete, and the documents it names as over the
+    limit are the three that stand above it — so the commit completing in the
+    arms above is the declaration taking effect, and not the gate failing to
+    look.
+depends_on:
+  - GE-127g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE MECHANISM GAP AND THE DEFECT SITE. Its exclusion test compares a document's
+      bare filename against the declared list, which is why a class cannot be expressed
+      and why each new agent's card is unexempt until someone edits the list. This is the
+      SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are build
+      outputs regenerated from it, and an edit to a deployed copy alone is reverted by the
+      next build.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the declaration. The sibling file-size section is the precedent for the shape
+      required here: whole kinds declared out of scope "each for a stated reason, not by
+      omission". The concrete set of locations is pinned at enrichment, not here.
+  - path: templates/scripts/commit_guardian/check_doc_length.py
+    relationship: modifies
+    status: exists
+  - path: scripts/generate_agent_cards.py
+    relationship: related
+    status: exists
+    relevance: >-
+      Produces the population the second arm depends on. Cited so "a newly generated
+      document of that kind" has a concrete referent; this record changes nothing in it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING SCOPE DECISION FOR CODE, AND THE BOUNDARY. That record pins which
+      extensions the code-side gate measures. This one declares which document locations
+      the doc-side gate does not. Neither may be satisfied by the other and neither
+      restates the other's list.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is binding and this record
+      is the one most exposed to it, because a declaration is exactly the kind of subject
+      that attracts a test asserting a pattern is present in a configuration file. Such a
+      test passes on a gate that never reads the declaration and on a gate that never
+      runs. Every arm above is an ordinary commit of real regenerated documents, with the
+      verdict read out of the commit's own outcome. The third arm exists so that a
+      completing commit is never accepted as evidence on its own.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The declaration's home, shape, matching rule and the three concrete entries with
+    their stated grounds are pinned in the parent L1's it_requirements. Implement that
+    set; do not re-derive it and do not add a fourth entry without the same kind of
+    measured evidence the three carry."
+  - "is_excluded() in templates/scripts/commit_guardian/_doc_length_ratchet.py (line 207)
+    is the defect site and must stop comparing Path(filepath).name. The replacement must
+    receive the document's repo-relative path."
+  - "There is exactly ONE membership test and it must be consulted at exactly one point.
+    is_checked() is used in TWO places that must stay in agreement — the staged-path
+    filter in check_doc_length.main() (line 407) and the HEAD-covered-set predicate
+    passed into resolve_doc_ratchet() (line 272). If the two disagree about a document,
+    the previous-value resolution and the current measurement are computed over
+    different populations."
+  - "The old basename-matched excluded_files key must be REMOVED from the doc_length
+    section in the same change, not left in place alongside the new key. Leaving it
+    keeps the basename leak alive and GE-127g-3's second arm red; a mechanism with two
+    enforcement surfaces is the shape where the inert one gets fixed and the live one
+    does not."
+  - "Adding a new generated document to an already-declared location must require no
+    edit to anything — no declaration entry, no code change, no regeneration of a
+    cached list. If the implementation materialises the declared locations into a
+    concrete file list at any point, that list must be recomputed per run and never
+    persisted."
+  - "A new helper module, if one is extracted, must live in
+    templates/scripts/commit_guardian/ — build_commit_guardian() in
+    scripts/build_phases_lifecycle.py rglobs that directory, so it deploys with no
+    deploy-map line. A module placed anywhere else needs an explicit deploy-map entry in
+    the SAME change or the deployed hook raises ModuleNotFoundError at hook runtime
+    while source-tree unit tests stay green."
+  - "templates/scripts/commit_guardian/ is the SOURCE. scripts/commit_guardian/ and
+    .leafcutter/scripts/commit_guardian/ are untracked build outputs in this checkout;
+    an edit to either alone is reverted by the next build."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_regenerated_cards_directory_commits_cleanly
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1. A real throwaway git repo with a populated docs/agents/cards/ whose shape
+      matches the measured population — several documents under the limit and at least
+      one far above it — committed at HEAD, then restaged as a regeneration leaves it.
+      Perform a real git add and invoke the gate against that index; assert it completes
+      with a clean verdict. No build.py spawn and no layout fixture, so no marker.
+    must_catch:
+      - "leave the basename-matched excluded_files key in place as the only mechanism"
+  - name: test_newly_generated_document_needs_no_declaration_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 2, and the whole record. Add a 66th generated document at 420 lines, named in
+      no declared entry, to the same directory and stage it with the rest. Assert the
+      gate completes AND assert the declaration file is byte-identical before and after
+      the run — the no-edit property must be checked, not assumed, because a fix that
+      appends the new filename on the fly satisfies the verdict half and not this one.
+      No marker.
+    must_catch:
+      - "express the exclusion as the 65 current filenames instead of their location"
+      - "append a newly seen generated document to the declaration at run time"
+  - name: test_emptied_declaration_names_the_three_over_limit_documents
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3, the negative control. Remove the cards-directory entry from the declaration,
+      stage the same regenerated directory, and assert the gate refuses AND that the
+      documents it names are exactly the ones above the limit — by comparing against the
+      set the fixture constructed, never against a pinned count. This is the only arm
+      that a disabled gate, or a gate that hardcodes the directory and ignores the
+      declaration, fails. No marker.
+    must_catch:
+      - "exclude every document under docs/ from the length standard"
+      - "hardcode the directory in the gate's own code and ignore the declaration"
+  - name: test_deployed_doc_length_gate_honours_the_declared_locations
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_doc_length.py
+    description: >-
+      The deploy-manifest arm. Runs the gate from the real DEPLOYED layout against a
+      staged generated document that is over the limit, and asserts it reaches a clean
+      verdict rather than a ModuleNotFoundError or a refusal — proving both that any new
+      helper module deployed and that the deployed copy of the declaration is the one in
+      effect. Requests the session-scoped shared_reference_layout fixture and declares
+      @pytest.mark.shared_layout_reader; it only reads the layout, so it must not spawn
+      its own build.py (one build costs 59.8s).
+    must_catch:
+      - "add a membership-test helper module that the build does not deploy, so the deployed hook crashes while source-tree tests stay green"
+      - "edit the deployed scripts/commit_guardian/ copy instead of the templates/ source"
+test_rationale: >-
+  Every entry stages real documents in a real git repository and reads the verdict out of
+  the gate's own exit status and output. This record is the one most exposed to the
+  grep-shaped test — a declaration is precisely the kind of subject that attracts an
+  assertion that a path pattern is present in commit_guardian.json — and such a test
+  passes on a gate that never reads the declaration and on a gate that never runs.
+  CLAUDE.md's behavioural rule outranks any test_spec that blessed that form. Three
+  shaping decisions. First, arm 2's test asserts TWO things, the clean verdict and the
+  declaration file's byte-identity across the run, because an implementation that quietly
+  appends the newly seen filename satisfies the verdict and defeats the record's actual
+  subject. Second, arm 3 compares the named documents against the set its own fixture
+  constructed rather than against the measured figures 65 / 2,809 / 639 / 355: the record's
+  notes are explicit that pinning any of those as a constant goes red the next time an
+  agent or an assignment is added, which is the opposite of what the record says. Third,
+  the fourth entry exists because the other three import from the source tree and would
+  stay green on a helper module the build does not deploy — the exact failure this
+  repository shipped once with done_proof.py. Markers: only that fourth entry requests
+  shared_reference_layout and therefore carries @pytest.mark.shared_layout_reader; the
+  other three neither request the fixture nor build anything, so they sit outside the
+  marker-routing mechanism and pay no build cost.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - GE-127g-1-i
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE SECOND ARM IS THE WHOLE RECORD. The first arm is satisfiable by naming all 65
+  documents individually, which is the mechanism that exists today and the mechanism that
+  recurred four times in one session. Only the second arm — a 66th document that appears
+  in no entry by name, committed with no edit to the declaration — distinguishes a
+  declared class from a longer list. If an implementation satisfies the first arm and not
+  the second, nothing has been fixed and the next agent added will reproduce the original
+  report exactly.
+
+  THE THIRD ARM IS THE NEGATIVE CONTROL AND IS NOT OPTIONAL. Without it, every clause
+  above is satisfied by disabling the doc-length gate outright, or by a gate that silently
+  fails to run on the cards directory for an unrelated reason. The arm names which three
+  documents must be reported, so the control proves the gate both ran and measured the
+  right population. This is the same construction GE-118c used for the same reason: a fix
+  must be distinguishable from switching the check off.
+
+  WHY THE LOCATION AND NOT THE FILENAME SUFFIX — THE REASONING, STATED HERE SO THE
+  IMPLEMENTER DOES NOT RE-DECIDE IT. Both would satisfy the first two arms today. The
+  location is chosen because every document in that directory is generated, so the
+  exemption lands on exactly the generated population; a suffix rule additionally exempts
+  any hand-authored document anywhere under docs/ carrying that suffix, which widens the
+  exemption past the population it was written for, and GE-127g-3 is the record that would
+  go red if it did. A suffix is also a naming convention a generator change can break
+  silently, while the directory it writes into is the thing the generator is configured
+  with. The full argument, including why a general declared-pattern mechanism is right
+  rather than a one-off for this directory, is in the parent's notes under design question
+  one; do not re-derive it.
+
+  MEASURED IN THIS WORKTREE ON 2026-10-09, RAW LINE COUNTS WITH NO EXCLUSIONS, AND THE
+  FIGURES IN THE CRITERIA ARE ILLUSTRATIVE OF A SHAPE RATHER THAN FIXED FACTS: 65
+  documents under docs/agents/cards/, 11,526 lines in total, 3 above 300 (2,809, 639,
+  355), next three at 276, 235, 207. The committed lengths of those same three at HEAD are
+  2,525, 635 and 340 — the difference is a regeneration this worktree arrived already
+  carrying, which the parent's notes record in full and which reconciles this measurement
+  with the figures in the report that prompted the record. A test that pins 65 or 2,809 as
+  a constant will go red the next time an agent or an assignment is added, which is the
+  opposite of this record's point — the population is expected to move, and the second arm
+  is the clause that says so.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE LIST. MUTATION: express the exclusion as the 65 current filenames instead of
+      their location.
+      MUST GO RED: the second arm only.
+      MUST STAY GREEN: the first and third arms, and every arm of GE-127g-3. That
+      asymmetry is the evidence that the second arm is this record's actual subject.
+
+  (2) THE SWITCH-OFF. MUTATION: exclude every document under docs/ from the length
+      standard.
+      MUST GO RED: the third arm, and every arm of GE-127g-3.
+      MUST STAY GREEN: the first and second arms, which a disabled gate satisfies exactly.
+
+  (3) THE UNREAD DECLARATION. MUTATION: hardcode the directory in the gate's own code and
+      ignore the declaration.
+      MUST GO RED: the third arm, which empties the declaration and requires the three
+      over-limit documents to be named.
+      MUST STAY GREEN: the first and second arms. This is the BP-900g-7 shape — a registry
+      naming something nothing consumes — and the third arm is the only clause that
+      catches it.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's, as is the concrete set
+  of declared locations and the wording of each stated reason.
