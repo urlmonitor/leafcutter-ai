@@ -16,16 +16,29 @@ import logging
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import ValidationError, model_validator
 
 from integrations.knowledge_config import KnowledgeBindingConfig
-from kernel.config_memory import MemoryConfig
 from kernel.config_context import ContextEnrichmentConfig
 from kernel.config_entity import EntityContextConfig
+from kernel.config_memory import MemoryConfig
+from kernel.config_retrieval import RetrievalConfig
+from kernel.config_sections import (
+    DataPolicyConfig,
+    DecisionConfig,
+    HostConfig,
+    IntentConfig,
+    JevConfig,
+    LangfuseConfig,
+    LimitsConfig,
+    PathsConfig,
+    ResearchConfig,
+    RoutingConfig,
+    SourceConfig,
+    _Section,
+)
 from kernel.contracts.base import fail
-from kernel.contracts.enums import EvidenceCategory
 
 logger = logging.getLogger(__name__)
 
@@ -50,242 +63,41 @@ class ConfigError(Exception):
         self.detail = detail
 
 
-class _Section(BaseModel):
-    """Frozen, extra-forbidding base for config sections (no defaults by design)."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-
-Probability = Annotated[float, Field(ge=0.0, le=1.0)]
-
-
-class PathsConfig(_Section):
-    """File-system locations (relative to the repository root unless absolute)."""
-
-    run_root: str
-    registry: str
-
-
-class LimitsConfig(_Section):
-    """Run limits (Rev 3 section 13.2)."""
-
-    max_work_items: int = Field(ge=1)
-    max_depth: int = Field(ge=1)
-    max_concurrent_native: int = Field(ge=1)
-    max_concurrent_host: int = Field(ge=1)
-    max_retries: int = Field(ge=0)
-    no_progress_limit: int = Field(ge=1)
-    max_jev_calls: int = Field(ge=0)
-    max_host_operations: int = Field(ge=0)
-    max_active_seconds: float = Field(gt=0)
-    max_cost_usd: float | None = Field(ge=0)
-    capability_timeout_seconds: float = Field(gt=0)
-    langgraph_recursion_limit: int = Field(ge=1)
-    max_scheduler_iterations: int | None = Field(ge=1)
-
-
-class RoutingConfig(_Section):
-    """Routing thresholds."""
-
-    min_selected_probability: Probability
-    min_confidence: Probability
-    on_insufficient_context: Literal["human", "block"]
-
-
-class IntentConfig(_Section):
-    """Thresholds for the intake answer-kind classification and the clarification cap."""
-
-    min_selected_probability: Probability
-    min_confidence: Probability
-    max_clarifications: int = Field(ge=0)
-
-
-class DecisionConfig(_Section):
-    """Decision-graph thresholds."""
-
-    sufficiency_threshold: Probability
-    satisfies_threshold: Probability
-    preference_threshold: Probability
-    conflict_threshold: Probability
-    missing_min_probability: Probability
-    #: Options generated for an unknown option set must cite the evidence they rest on; an
-    #: ungrounded option is refused (True) or only flagged as a limitation (False).
-    require_option_grounding: bool
-    #: Most evidence items attached to one options request (bounds the host input).
-    max_grounding_evidence: int = Field(ge=1)
-    #: A criterion counts as a design judgement (a property of the proposed options that research
-    #: cannot settle) when Jev's probability for that reading reaches this value.
-    design_judgement_threshold: Probability
-    #: No material progress: every score moved by at most this between assessments after new evidence.
-    progress_epsilon: float = Field(ge=0.0, le=1.0)
-    #: Most research rounds one decision may request before it hands the ranked options to a human.
-    max_research_rounds: int = Field(ge=1)
-    #: Final decision assessments whose Jev calls stay reserved (research must leave them).
-    reserve_assessments: int = Field(ge=0)
-    #: Options added to the size of the reserved assessment (a human may add one when ranked).
-    reserve_extra_options: int = Field(ge=0)
-    #: Calls kept beyond the reserved assessments for routing a child request and other overhead.
-    reserve_margin_calls: int = Field(ge=0)
-
-
-class ResearchConfig(_Section):
-    """Research-graph thresholds and category descriptions offered to Jev."""
-
-    need_required_threshold: Probability
-    need_supporting_threshold: Probability
-    evaluable_threshold: Probability
-    allow_synthesis: bool
-    category_descriptions: dict[EvidenceCategory, str]
-    #: A need counts as satisfied only when Jev judges the kept evidence answers its question.
-    answer_aware_coverage: bool
-    #: Probability the answer judgement must reach for a relevance-satisfied need to stay so.
-    answer_threshold: Probability
-    #: Most gap needs / most human-added option claim needs per research run (rest are named).
-    max_targeted_needs: int = Field(ge=0)
-    max_claim_needs: int = Field(ge=0)
-
-    @model_validator(mode="after")
-    def _all_categories(self) -> ResearchConfig:
-        """Every evidence category needs a description and thresholds must be ordered."""
-        missing = set(EvidenceCategory) - set(self.category_descriptions)
-        if missing:
-            fail(f"category_descriptions missing {sorted(m.value for m in missing)}")
-        if self.need_supporting_threshold > self.need_required_threshold:
-            fail("need_supporting_threshold must not exceed need_required_threshold")
-        return self
-
-
-class RetrievalConfig(_Section):
-    """Repository retrieval bounds."""
-
-    relevance_threshold: Probability
-    top_k: int = Field(ge=1)
-    max_candidates: int = Field(ge=1)
-    excerpt_context_lines: int = Field(ge=0)
-    max_excerpt_chars: int = Field(ge=1)
-    max_file_bytes: int = Field(ge=1)
-    deny_globs: list[str]
-    #: Relevance a kept item needs to count towards a need's coverage (lower ones stay context).
-    coverage_relevance_threshold: Probability
-    #: Sections (headings, top-level keys, top-level defs) returned per file, best first.
-    sections_per_file: int = Field(ge=1)
-    #: Longest section (lines) scored whole; a longer one is cut into windows of this many lines.
-    max_section_lines: int = Field(ge=10)
-    #: Fewest candidates a source may offer when it is small (capped by `max_candidates`).
-    source_candidate_floor: int = Field(ge=1)
-    #: Candidates a source may offer per scanned file (bounded by `max_candidates`).
-    source_candidate_ratio: float = Field(gt=0)
-    #: Most explicit locators fetched per request (`retrieval_request.explicit_locators`).
-    max_explicit_locators: int = Field(ge=0)
-    #: Most search terms one retrieval query carries (goal first, then hints, then need filler).
-    max_query_terms: int = Field(ge=1)
-    #: Candidates one rerank batch sends to Jev (`max_candidates` is the pool); with
-    #: `jev.max_questions_per_call` at least this large a batch is one call.
-    rerank_max_per_need: int = Field(ge=1)
-    #: Batches one need may judge; further ones only until it has enough evidence (rerank_min_items).
-    rerank_max_batches: int = Field(ge=1)
-    #: A need is `satisfied` only with at least this many kept items at or above
-    #: `coverage_relevance_threshold` ...
-    satisfied_min_items: int = Field(ge=1)
-    #: ... or with a single kept item whose relevance reaches this stronger bar.
-    satisfied_strong_threshold: Probability
-    #: A candidate repeating this share of the goal near-verbatim reviews the run asking, not
-    #: evidence for it, and is demoted (0 disables this and the review test).
-    self_reference_ratio: Probability
-    #: Factor on the relevance of a self-referencing candidate (cited ones are exempt).
-    self_reference_penalty: Probability
-    #: Score per rarity unit of each distinctive path word (a file NAMED after the topic).
-    path_match_weight: int = Field(ge=0)
-    #: BM25 term-count saturation and length-normalisation strength (0 = none); orders only.
-    bm25_k1: float = Field(gt=0)
-    bm25_b: Probability
-    #: Sections of one file the FIRST rerank batch may hold (later pool places: sections_per_file).
-    pool_sections_per_file: int = Field(ge=1)
-    #: Candidates per source guaranteed in the first batch if they score this share of the best.
-    pool_fair_share: int = Field(ge=0)
-    pool_fair_min_ratio: Probability
-    #: A need judges more batches until this many items passed `relevance_threshold` ...
-    rerank_min_items: int = Field(ge=0)
-    #: ... and skips one when the best unjudged candidate scores below this share of the judged.
-    rerank_stop_ratio: Probability
-    #: Goal share a document quotes (beside a run or trace id), or file-name marker, to review its run.
-    review_quote_ratio: Probability
-    review_path_markers: list[str]
-    #: A JSON registry is pinned when this many query words are names in its vocabulary.
-    registry_pin_min_terms: int = Field(ge=1)
-
-
-class SourceConfig(_Section):
-    """One entry of the source catalog (where evidence may come from)."""
-
-    id: str
-    kind: Literal["repo_text", "knowledge_map", "graph_query", "host_research"]
-    categories: list[EvidenceCategory] = Field(min_length=1)
-    automatic_research: bool = True  # false: select only through explicit sources or locators
-    roots: list[str] = Field(default_factory=list)
-    surfaces: list[str] = Field(default_factory=list)
-    deny_globs: list[str] = Field(default_factory=list)  # added to `retrieval.deny_globs`
-    max_file_bytes: int | None = Field(default=None, ge=1)  # null: `retrieval.max_file_bytes`
-
-
-class JevConfig(_Section):
-    """Jev provider settings."""
-
-    model: str
-    transport: Literal["classifier", "http"]
-    timeout_seconds: float = Field(gt=0)
-    max_questions_per_call: int = Field(ge=1)
-    max_state_chars: int = Field(ge=1)
-    retry_backoff_seconds: float = Field(ge=0)
-    price_per_input_token_usd: float | None = Field(ge=0)
-
-
-class HostConfig(_Section):
-    """Host-handoff settings."""
-
-    enabled: bool
-    fallback_on_no_match: bool
-    max_repair_attempts: int = Field(ge=0)
-    formulate_questions: bool
-    max_input_chars: int = Field(ge=1)
-
-
-class DataPolicyConfig(_Section):
-    """What may leave the process (Jev, Langfuse)."""
-
-    send_repo_excerpts_to_jev: bool
-    telemetry_excerpts: Literal["truncated", "hash", "none"]
-    telemetry_max_field_chars: int = Field(ge=1)
-
-
-class LangfuseConfig(_Section):
-    """Langfuse export settings (credentials come from secrets, never from here)."""
-
-    enabled: bool
-    environment: str
-    trace_name: str
-    flush_on_exit: bool
-
-
 class KernelConfig(_Section):
     """Complete kernel configuration."""
 
     knowledge: KnowledgeBindingConfig
+    """How optional knowledge retrieval is bound to the kernel."""
     paths: PathsConfig
+    """Where run state and the capability registry live."""
     limits: LimitsConfig
+    """Bounds on how much a run may do."""
     routing: RoutingConfig
+    """Thresholds for choosing a capability."""
     intent: IntentConfig
+    """Thresholds for classifying what the caller asked for."""
     context_enrichment: ContextEnrichmentConfig
+    """Bounds of the initial context pass."""
     entity_context: EntityContextConfig
+    """Bounds of entity recognition on the caller's text."""
     decision: DecisionConfig
+    """Thresholds that turn Jev's probabilities into decision outcomes."""
     research: ResearchConfig
+    """Thresholds and category meanings for planning research."""
     retrieval: RetrievalConfig
+    """Bounds and ranking settings for repository retrieval."""
     sources: list[SourceConfig]
+    """The catalog of places evidence may come from."""
     jev: JevConfig
+    """Settings of the Jev provider."""
     host: HostConfig
+    """Settings for handing work to the host client."""
     data_policy: DataPolicyConfig
+    """What may leave the process in Jev calls and telemetry."""
     langfuse: LangfuseConfig
+    """Settings for exporting traces."""
     memory: MemoryConfig
+    """Decision store and precedent lookup settings."""
 
     @model_validator(mode="after")
     def _unique_sources(self) -> KernelConfig:
@@ -402,6 +214,10 @@ def write_config_schema(path: Path) -> None:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: The section models moved to config_sections.py and
+#   config_retrieval.py (re-exported here) to fit the file-size limit after field purposes were
+#   added; the committed config schema carries them.
+#   (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-10-02 [python-coder]: research.max_claim_needs (25); max_targeted_needs caps gaps only.
 #   (#KernelResearchEveryAddedOption)
 # - 2026-10-01 [python-coder]: The `memory` section (backend, precedent thresholds) lives in

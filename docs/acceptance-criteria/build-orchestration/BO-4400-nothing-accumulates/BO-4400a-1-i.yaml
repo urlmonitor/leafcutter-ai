@@ -1,0 +1,116 @@
+id: BO-4400a-1-i
+title: "A run that ends with nothing to deliver still clears the workspace it was given"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given three runs, each in a workspace obtained from the one workspace maker, that end
+    without opening a pull request because there is nothing to deliver:
+    - the fast lane pointed at a requirement whose whole build set is already built, so
+      its build set resolves to zero items,
+    - the build of an epic whose every ticket is already marked done,
+    - requirements authoring where the person stops at the first gate before anything
+      is drafted,
+  When each run returns its final result,
+  Then for each run no folder remains at the location its workspace occupied,
+  And the clearing was performed by the one shared clearing door, whose answer appears
+    in the run's final result,
+  And each run's final result states that there was nothing to deliver, so a
+    no-op is distinguishable from a delivery,
+  And no branch was pushed and no pull request was opened by any of the three runs.
+depends_on: [BO-4400a-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: The fast lane's empty-set path, which today returns early.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-1
+  contract: "The route-end clearing call, reused on the early-return path."
+package_surface: false
+it_requirements:
+  - >-
+    The three early-return exits -- fast-lane-ship.js when the build set resolves to zero items,
+    build-epic.js / build-feature.js when every ticket is already done, plan-feature.js when the
+    person stops at the first gate before anything is drafted (ACD-2100c-5 discard semantics) --
+    reach the SAME route-end clearing step BO-4400a-1 delivers. The step is shared, not copied per
+    exit, so a new exit path cannot skip it.
+  - >-
+    The final result carries delivered: false and an explicit nothing-to-deliver reason alongside
+    the door's answer, so a no-op is machine-distinguishable from a delivery without parsing prose.
+  - >-
+    No push dispatch and no pull-request dispatch is issued on these paths; the clearing request is
+    still issued through the one maker's remove verb (E2 shell-agent dispatch per ADR-030, no
+    discard authorisation).
+  - >-
+    PROOF as BO-4400a-1: deployed workflows under unit_tests/_workflow_engine_harness.py, maker
+    executed for real against temporary repositories and a bare hub, assertions on the recorded
+    dispatch list, the final result and the disk -- never on workflow source text. Same isolation
+    and no-build.py rules.
+test_required: true
+test_spec:
+  - name: test_fast_lane_with_empty_build_set_clears_its_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Fast lane pointed at a fully built requirement returns with no folder left at its workspace location and the door's answer in its result."
+    must_catch:
+      - "clearing wired only on the pull-request path (early return skips it)"
+  - name: test_epic_with_every_ticket_done_clears_its_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Epic build whose tickets are all done returns with its workspace removed through the door."
+  - name: test_authoring_stopped_at_first_gate_clears_its_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "plan-feature with the first gate answered stop returns with its workspace removed through the door."
+  - name: test_no_op_result_states_nothing_to_deliver
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Each of the three results carries delivered false and the nothing-to-deliver reason."
+  - name: test_no_op_runs_push_nothing_and_open_no_pull_request
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The recorded dispatch list of each run contains no push and no pull-request step; the hub has no new branch."
+test_rationale: >-
+  An early return is where a cleanup call is classically skipped while the success path stays green.
+  Driving each deployed no-op path and inspecting the disk is the only way to see the shared step is
+  reached from every exit.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Gap G1, empty-set no-op path named explicitly by the user for the fast lane. An early
+  return is the classic place a cleanup call is skipped: the success path is wired, the
+  no-op path returns before reaching it. Named wrong version: clearing only on the
+  pull-request path -- this record goes red while BO-4400a-1 stays green.
+  Requirements authoring stopped by the person: ACD-2100c-5 already says a person choosing
+  to stop discards drafted work, so the workspace holds nothing and is cleared.

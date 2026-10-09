@@ -14,10 +14,12 @@
         },
         "type": "object"
       },
+      "description": "For each dimension, the meanings offered (label to description); the host may choose only these labels.",
       "title": "Catalog",
       "type": "object"
     },
     "context": {
+      "description": "Earlier text that may disambiguate the question; unverified, never a permission.",
       "items": {
         "type": "string"
       },
@@ -26,6 +28,7 @@
       "type": "array"
     },
     "known_ids": {
+      "description": "Identifiers the caller has already seen; offered to the host as target candidates, not as requested targets.",
       "items": {
         "type": "string"
       },
@@ -34,6 +37,7 @@
       "type": "array"
     },
     "original_question": {
+      "description": "The caller's question, verbatim; the host interprets only this text.",
       "maxLength": 8000,
       "minLength": 1,
       "title": "Original Question",
@@ -42,6 +46,7 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
@@ -49,6 +54,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/JsonValue"
       },
+      "description": "Which sources the interpretation concerns; echoed back unchanged in the output.",
       "title": "Source Scope",
       "type": "object"
     }

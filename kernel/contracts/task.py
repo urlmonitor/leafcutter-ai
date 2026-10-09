@@ -118,8 +118,8 @@ class TaskInput(KernelModel):
     goal: VerbatimString = Field(min_length=1, max_length=16000)
     caller: Actor
     scope: Scope
-    #: None means "not chosen by the caller": intake classifies the goal (Rev 3 section 7.11).
     requested_output_schema: str | None = None
+    """None means "not chosen by the caller": intake classifies the goal (Rev 3 section 7.11)."""
     input_payload_schema: str | None = None
     input_payload: dict[str, VerbatimJson] | None = None
     initial_evidence: list[EvidenceInput] = Field(default_factory=list)

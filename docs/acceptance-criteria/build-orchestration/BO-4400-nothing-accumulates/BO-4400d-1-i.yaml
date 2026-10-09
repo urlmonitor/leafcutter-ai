@@ -1,0 +1,78 @@
+id: BO-4400d-1-i
+title: "A workspace that gains work between the sweep's listing and its removal is not removed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the sweep has listed workspace "idle-1" as holding nothing unsent,
+  And before the sweep reaches "idle-1", one new uncommitted file is written into it
+    and a run starts in it,
+  When the sweep reaches "idle-1",
+  Then "idle-1" is not removed and the new file is byte-identical to what was written,
+  And the sweep's result reports "idle-1" as kept, with the reason that it was found
+    holding work or in use when its turn came,
+  And the sweep continues with the remaining items.
+depends_on: [BO-4400d-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-1800-isolated-parallel-delivery/BO-1800d.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-1
+  contract: "Sweep selection."
+package_surface: false
+it_requirements:
+  - >-
+    The listing is a candidate set only: for each candidate the in-use check and the door's
+    verdict are re-taken at the moment of removal, and a changed answer moves the item to kept
+    with reason in_use or holds_unsent_work.
+  - >-
+    The sweep continues to the remaining items after keeping one.
+  - >-
+    PROOF: deterministic, not timing-based -- the test pauses the deployed sweep between listing and
+    removal through a documented test hook (e.g. an environment-provided barrier file the sweep
+    waits on only when set), writes the file and starts a real process holding the in-use signal,
+    then releases it.
+test_required: true
+test_spec:
+  - name: test_workspace_gaining_work_after_listing_is_kept_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "idle-1 is not removed and the new file is byte-identical to what was written."
+    must_catch:
+      - "decide once from the listing, then remove from that list"
+  - name: test_late_kept_workspace_reported_with_reason_and_sweep_continues
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The result reports idle-1 as kept with the holds-work or in-use reason, and later items are still processed."
+test_rationale: >-
+  A list-then-delete race is invisible to any test that does not change the world between the two
+  steps; a barrier makes that window deterministic instead of flaky.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong version: decide once from a listing, then remove from that list -- the
+  window between list and remove destroys fresh work. The verdict and the in-use check must be
+  taken at the moment of removal (the door's own check already does the verdict half if the
+  sweep asks the door rather than deleting directly).

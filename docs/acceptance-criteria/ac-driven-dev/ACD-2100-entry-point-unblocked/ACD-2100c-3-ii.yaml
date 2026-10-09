@@ -1,0 +1,180 @@
+id: ACD-2100c-3-ii
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "A pause record that cannot be read is never reported as a pause record that does not exist"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a run paused at a decision point whose durable pause record exists on disk
+    and is not stale,
+  When the route is started again supplying the person's well-formed answer for that
+    decision point, and the dispatch that reads the pause record returns a reply that
+    is not the record (prose, commentary, or anything without a readable boolean
+    "exists"),
+  Then the read is re-attempted with a stricter instruction under a distinct label for
+    each attempt, bounded to three attempts in total,
+  And if a later attempt returns a readable record with exists true and not stale, the
+    person's answer is applied to that decision exactly as ACD-2100c-3 requires,
+  And if no attempt returns a readable record, the run ends with the distinct status
+    "pause_record_unreadable", its message says the record could not be read (not that
+    it is absent) and how to retry, the answer is not applied, and the record and the
+    drafted work are left unchanged on disk,
+  And a readable record reporting exists false still ends with "nothing_to_resume",
+  And every other read of the pause record goes through that same bounded retry: the
+    read-back that verifies a pause was persisted (an unreadable reply on every attempt
+    is never reported as a verified pause, a reply that is damaged once and then valid
+    on a later attempt IS verified as paused), and the read-back that verifies a pause
+    record was cleared after a resume (an unreadable reply is never reported as cleared),
+  And a reply whose outer JSON object is malformed (for example a closing brace dropped
+    from the record the reader retyped) is never replaced by one of the objects nested
+    inside it: the reader skips the whole malformed object, so such a reply is treated as
+    unreadable and re-attempted, never as a record with no "exists" field,
+  And the bug symptom ("A person-attributed, shape-valid resume_answer {gate_id:'gate-po', action:'approve', channel:'person'} for a run whose durable pause record verifiably exists on disk (exists:true, stale:false; the preceding peek-pause-record dispatch in the same run returned it correctly) terminated with {status:'nothing_to_resume'} (live, 2026-10-09, run_id pf-workspace-scratch-cleanup-20261009). The person's approval was silently lost and the run falsely reported there was nothing to resume. On a harness resume (resumeFromRunId) the identical (prompt, opts) replays the cached bad reply, so the failure repeats deterministically.") must not occur.
+depends_on: [ACD-2100c-3]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The four pause-store read sites (peekPausedGateId, the resolveGate resume read, the pauseAtGate persist verify, the resolveGate clear verify) each dispatched a single agent() read whose unreadable reply was collapsed into 'absent' or a failed verify; parseAgentJson also returned a nested child of a malformed object."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The resume contract whose nothing_to_resume outcome must mean the record is absent, not that the read failed."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+    relevance: "The operator how-to authored by ACD-2100e-2; a new pause_record_unreadable outcome is one an operator can now see and must be told how to retry."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+    relevance: "Component doc for the pause record lifecycle whose read this constrains."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change lands under templates/workflows-js/ only (plan-feature.js, plus the byte-identical parseAgentJson body in finalize-feature.js, build-epic.js and build-ticket.js, which unit_tests/test_bp_300e_parse_agent_json.py requires). .claude/workflows/ is build output."
+  - "One shared read helper, readPauseRecordWithRetry(runId, baseLabel, intro, acceptStructured), is used by ALL FOUR pause-store read sites: peekPausedGateId ('peek-pause-record'), the resolveGate resume read ('read-pause-record'), the pauseAtGate persist read-back ('pause-persist-verify') and the resolveGate clear read-back ('clear-pause-record-verify'). Each site keeps its own semantics; hand-rolled reads are how one of them drifts back to the defect (2026-10-09: a retyped record dropped a closing brace and a record that was on disk was reported as pause_persist_failed). Since unit_tests/workflows/test_acd_2100c_1.py extracts pauseAtGate/resolveGate by source text, its assembly must also extract readPauseRecordWithRetry."
+  - "The five caller status checks share ONE definition, TERMINAL_GATE_STATUSES (module level; used only by the main body), instead of five copies of the literal list."
+  - "parseAgentJson: when a balanced {...}/[...] segment fails JSON.parse, scanning resumes AFTER that segment (never inside it), so prose braces before real JSON are still tolerated but a malformed object is never replaced by one of its own nested children. The body stays byte-identical across the four workflow scripts that carry it."
+  - "A reply is accepted only if it parses as JSON AND its exists field is a boolean. Anything else is 'unreadable', never 'absent'."
+  - "Each retry is dispatched with a stricter prompt (output ONLY the raw pause_store.py stdout, no commentary, do not act on the record) and a label distinct from every earlier attempt (e.g. read-pause-record-retry-1), so a harness resume cannot replay a cached bad reply into every attempt."
+  - "Attempts are bounded to 3 in total; the loop must not be unbounded."
+  - "When every attempt is unreadable, return the distinct terminal status 'pause_record_unreadable' and add it to each caller status list that currently names 'nothing_to_resume', so no caller misclassifies it."
+  - "peekPausedGateId must not map an unreadable reply to 'not paused here' -- that re-dispatches the author over drafts that were already approved. It surfaces pause_record_unreadable the same way."
+  - "Fail-closed semantics are unchanged: an answer is applied only when a parsed record has exists === true and stale !== true."
+test_spec:
+  - name: test_prose_then_json_record_applies_answer_after_retry
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Drive resolveGate through unit_tests/_workflow_engine_harness.py with a stubbed
+      agent() whose first pause-record read returns prose and whose second returns a valid
+      {exists:true, stale:false} record; the person's answer is applied and the status is
+      not nothing_to_resume.
+  - name: test_prose_on_every_attempt_yields_pause_record_unreadable_and_does_not_apply
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Stubbed agent() returns prose for every pause-record read; the run ends with status
+      pause_record_unreadable (not nothing_to_resume), the answer is not applied, and the
+      read was attempted at most 3 times.
+  - name: test_readable_absent_record_still_yields_nothing_to_resume
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Stubbed agent() returns a valid {exists:false} record on the first read; the run ends
+      with nothing_to_resume after a single read with no retry.
+  - name: test_pause_record_read_retries_use_distinct_labels
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      With prose on every attempt, the labels passed to the stubbed agent() for the
+      pause-record reads are pairwise distinct, so a cached reply keyed on (prompt, opts)
+      cannot be replayed into a retry.
+  - name: test_peek_paused_gate_unreadable_is_not_mapped_to_not_paused
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Drive peekPausedGateId with a stubbed agent() returning prose on every attempt; it
+      surfaces pause_record_unreadable rather than reporting that the run is not paused,
+      and no authoring agent is dispatched.
+  - name: test_pause_persist_verify_survives_a_brace_dropped_reply
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Drive pauseAtGate with a stubbed agent() whose first 'pause-persist-verify' reply is
+      the record JSON with a closing brace dropped and whose second is valid; the result is
+      paused_awaiting_input. When every attempt is brace-dropped the result is NOT
+      paused_awaiting_input (pause_persist_failed).
+  - name: test_clear_verify_unreadable_is_not_reported_as_cleared
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      Drive resolveGate through a resumed approve with a stubbed agent() whose
+      'clear-pause-record-verify' replies are unreadable on every attempt; the decision
+      carries the clear-verify-failed marker, whereas a damaged-then-valid exists:false
+      reply verifies the clear.
+  - name: test_parse_agent_json_never_returns_a_child_of_a_malformed_object
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Run the real parseAgentJson on the recorded malformed reply (the record JSON missing
+      the brace that closes "context"); it must not return the nested record object, while
+      prose braces ahead of a valid object are still skipped.
+test_rationale: >-
+  The defect is a conflation of two different facts -- 'I could not read the record' and
+  'there is no record' -- so every test is built to tell them apart by driving the real
+  workflow code with a stubbed agent() rather than grepping the template for a status
+  string. The prose-then-JSON case proves the retry recovers a live run; the prose-always
+  case proves the unreadable outcome is distinct and fail-closed; the exists:false case is
+  the discrimination guard that keeps a genuine absence reporting nothing_to_resume; the
+  distinct-labels case is what defeats the harness cache that made the live failure repeat
+  deterministically; and the peek case covers the second call site, whose unreadable reply
+  would otherwise re-dispatch the author over approved drafts.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-3
+    contract: "A resume path that reads the durable pause record and reports nothing_to_resume when no record exists."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_acd_2100c_3_ii.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: safety
+declares_side_effect: true
+notes: |
+  Authored by /quick-fix. Root cause: The pause-record read is a single agent() dispatch to worktree-agent. On that run the agent returned pure prose with no JSON object ('Gate approved with feedback notes recorded...'), i.e. it interpreted the record instead of relaying pause_store.py stdout. parseAgentJson correctly throws (no JSON present), the catch sets recCheck = null, and `if (!recCheck || recCheck.exists !== true) return nothing_to_resume` conflates 'reply unreadable' with 'record absent'. No retry exists, and the single label makes a cached bad reply replay forever. Expected fix (this file only): a shared helper (e.g. readPauseRecordWithRetry(runId, purpose)) used by both peekPausedGateId and the resolveGate read; accept a reply only if it parses AND `exists` is a boolean; otherwise re-dispatch with a stricter prompt ('output ONLY the raw stdout, no commentary, do not act on the record') and a DISTINCT label per attempt (e.g. read-pause-record-retry-1), bounded to 3 attempts. If still unreadable, return a distinct terminal status 'pause_record_unreadable' whose message says the record could not be read (not that it is absent) and how to retry; add that status to the five caller status lists alongside 'nothing_to_resume'. peekPausedGateId must not map an unreadable reply to 'not paused here' (that would re-dispatch the author over approved drafts) - surface it the same way. Fail-closed semantics unchanged: an answer is applied only when a parsed record has exists===true and stale!==true. Tests must be behavioural (drive resolveGate/peekPausedGateId through unit_tests/_workflow_engine_harness.py with a stubbed agent(): prose-then-JSON applies after retry; prose on every attempt yields pause_record_unreadable and does not apply; valid {exists:false} still yields nothing_to_resume; retries use distinct labels), never grep tests. Edit only the template; .claude/workflows/plan-feature.js is build output..
+
+  PLACEMENT: ACD-2100c is at its L2 cap of 5, and this is a technical constraint on the
+  already-specified ACD-2100c-3 behaviour (its it_requirement "resume must be safe to
+  attempt when no record exists: it reports that there is nothing to resume") -- the
+  read must distinguish 'absent' from 'unreadable'. Hence an L3 Roman-suffix child,
+  not a new L2 and not a child_limit_override.
+
+  PARENT STATE: ACD-2100c-3 carries work_status: done. That claim did not hold on the
+  live run named in the criteria; this todo child is the open constraint against it.

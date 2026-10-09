@@ -28,10 +28,21 @@ class RetrievalNeedsRequest(KernelModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=False)
     original_question: str = Field(min_length=1, max_length=8000)
+    """The caller's question, verbatim; the host interprets only this text."""
     context: list[str] = Field(default_factory=list, max_length=32)
+    """Earlier text that may disambiguate the question; unverified, never a permission."""
     known_ids: list[str] = Field(default_factory=list, max_length=64)
+    (
+        "Identifiers the caller has already seen; offered to the host as target candidates, not "
+        "as requested targets."
+    )
     source_scope: dict[str, JsonValue] = Field(default_factory=dict)
+    """Which sources the interpretation concerns; echoed back unchanged in the output."""
     catalog: dict[str, dict[str, str]]
+    (
+        "For each dimension, the meanings offered (label to description); the host may choose "
+        "only these labels."
+    )
 
     @field_validator("catalog")
     @classmethod
@@ -66,18 +77,37 @@ class RetrievalNeedsOutput(KernelModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=False)
     original_question: str = Field(min_length=1, max_length=8000)
+    """The question echoed back unchanged, so the output can be matched to its request."""
     source_scope: dict[str, JsonValue]
+    """The request's source scope echoed back unchanged; the host may not widen it."""
     selections: dict[str, list[str]]
+    """For each dimension, the offered labels the host judges the question needs."""
     uncertain: dict[str, list[str]]
+    """For each dimension, the offered labels the host could not decide on."""
     detail_mode: Literal["fields", "full_document", "bounded_context", "unknown"]
+    (
+        "How much of each selected item the question needs: requested fields, the whole "
+        "document, or bounded surroundings."
+    )
     completeness: Literal["single_entity", "selected_entities", "exhaustive_set", "exhaustive_count", "examples", "unknown"]
+    (
+        "Whether the question wants one entity, chosen entities, a full set, a count, or just "
+        "examples."
+    )
     hierarchy_scope: Literal["not_applicable", "exclude_root", "exclude_parents", "include_root", "unknown"]
+    """Whether a population answer includes or excludes the chosen root and its parents."""
     scope_resolution: Literal["sufficient", "discovery_needed", "user_choice_missing", "unknown"]
+    """Whether retrieval may start, needs discovery first, or lacks a user choice."""
     unresolved: list[str] = Field(default_factory=list, max_length=32)
+    """Meanings the catalog could not express, unknowns and contradictions, left for resolution."""
     rationale: str = Field(default="", max_length=4000)
+    """Brief reason for the interpretation, for human review."""
     engine: Literal["host_llm"] = "host_llm"
+    """Which interpreter produced the output; always the host language model."""
     status: Literal["decided", "needs_resolution"] = "decided"
+    """Whether the interpretation is usable (decided) or needs resolution before retrieval."""
     model_id: str | None = Field(default=None, max_length=200)
+    """Model that produced the interpretation, when known; reported usage is authoritative."""
 
     @field_validator("selections", "uncertain")
     @classmethod
@@ -111,4 +141,6 @@ def prepare_request(request: RetrievalNeedsRequest) -> RetrievalNeedsRequest:
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-09 [python-coder]: Field purposes added so the host interpreting a question knows what
+#   each dimension and mode means. (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-10-03 00:00 [python-coder]: Preserve the frozen needs experiment semantics through typed host work. (#TICKETLESS reason=user-requested-isolated-host-experiment)

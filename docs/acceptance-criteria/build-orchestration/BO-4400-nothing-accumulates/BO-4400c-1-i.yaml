@@ -1,0 +1,84 @@
+id: BO-4400c-1-i
+title: "A declared tool that is missing on the machine is a clear no, never a fallback to another tool or a shared place"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given a test project whose root contains a uv lock file, on a machine where uv is not
+    available and Poetry and plain Python are,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is a refusal that names uv as the missing tool and the uv lock file
+    as the declaration that requires it,
+  And the refusal carries no workspace location,
+  And no Python environment was created inside or outside a workspace by the request,
+  And no folder, branch or registration for the requested workspace remains afterwards.
+depends_on: [BO-4400c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c.yaml
+    relationship: constrains
+    status: exists
+    relevance: A fully ready workspace or a clear no, never a quiet substitute.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Declaration-driven set-up selection."
+package_surface: false
+it_requirements:
+  - >-
+    Tool presence is decided BEFORE anything is created; a missing declared tool yields the
+    refusal delivered by BO-4400c-1 naming {tool, declaration}, with no workspace location, and no
+    fallback to a lower row of the precedence table.
+  - >-
+    If tool absence is only discovered after the clone exists, the maker rolls back folder, branch
+    and registration before answering (BO-4100a-3-i).
+  - >-
+    PROOF: deployed maker as a separate process with PATH restricted to a temporary bin folder
+    holding recording shims for poetry and python (any invocation of the poetry shim fails the
+    test) and no uv; temporary HOME.
+test_required: true
+test_spec:
+  - name: test_missing_uv_is_refused_naming_tool_and_declaration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The answer is a refusal naming uv and the uv lock file, carrying no workspace location."
+  - name: test_missing_uv_never_falls_back_to_poetry_or_pip
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The poetry shim records no invocation and no environment exists inside or outside any workspace."
+    must_catch:
+      - "try uv, else poetry, else pip"
+  - name: test_refused_request_leaves_no_folder_branch_or_registration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "After the refusal no folder, branch or registration for the requested workspace exists."
+test_rationale: >-
+  The wrong version (quiet fallback) succeeds, so only an observed refusal plus a recording poetry
+  shim distinguishes the clear no from a substitute.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong version: "try uv, else poetry, else pip" -- the quiet substitute BO-4300c
+  forbids; it also reintroduces a Poetry environment in the shared folder. The last clause
+  reuses BO-4100a-3-i's "a refused creation leaves nothing behind".
