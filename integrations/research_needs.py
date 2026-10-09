@@ -1,0 +1,146 @@
+"""MODULE: integrations.research_needs
+GOAL: Bind repository question meanings to the generic research interpretation port.
+BUSINESS CONTEXT: Facts, targets and population intent survive operation selection unchanged.
+ARCHITECTURE: Pure finite domain offers and typed contract projection; no provider or storage calls.
+"""
+from __future__ import annotations
+
+from dataclasses import replace
+
+from integrations.graph_offers import canonical_target_ids, selection_context, _identity
+from integrations.query_answer_planning import FIELDS
+from kernel.capabilities.base import ExecutionContext
+from kernel.capabilities.research.state import Plan
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput, RetrievalNeedsRequest, prepare_request
+from knowledge.answer_models import AnswerRequirements, AnswerScope
+
+ENTITY_TYPES = {"ac": "Acceptance criterion or requirement", "adr": "Architecture decision record",
+    "ticket": "Work ticket", "component": "Registered component", "flow": "Product Truth flow",
+    "decision": "Recorded decision", "test": "Test source", "document": "Repository document"}
+DOCUMENT_TYPES = {"ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+    "adr": "Architecture decision document", "ticket": "Ticket document", "flow": "Product Truth JSON",
+    "decision": "Recorded decision YAML", "code": "Implementation or test source",
+    "documentation": "Repository documentation", "component": "Component definition"}
+RELATIONSHIPS = {"parent_direct": "Immediate parent only", "children_direct": "Immediate children only",
+    "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+    "declared_dependents": "Records directly declaring a dependency on the target",
+    "covered_by": "Tests declared to cover an acceptance criterion",
+    "implemented_by": "Declared implementation references", "related_docs": "Declared document references"}
+
+
+def _graph_sources(ctx: ExecutionContext, plan: Plan) -> list:
+    """Intersect configured graph categories with caller and trusted source restrictions."""
+    return [s for s in ctx.config.sources if s.kind == "graph_query"
+        and (s.automatic_research or s.id in plan.source_restrictions)
+        and (not ctx.scope.source_ids or s.id in ctx.scope.source_ids)
+        and (not plan.source_restrictions or s.id in plan.source_restrictions)
+        and (not plan.needs_only or any(n.category in s.categories for n in plan.mandated))]
+
+
+SUPPORTED_PAIRS = {"ac": ("AcceptanceCriterion", "ac_yaml"), "adr": ("ADR", "adr"),
+    "ticket": ("Ticket", "ticket"), "component": ("Component", "component"),
+    "flow": ("Flow", "flow"), "decision": ("Decision", "decision")}
+
+
+def validate_dimensions(output: RetrievalNeedsOutput) -> str:
+    """Refuse meaning dimensions that this bounded integration cannot substantiate.
+
+    Args:
+        output: Accepted host interpretation, still not evidence of retrieval support.
+
+    Returns:
+        The single supported canonical result kind.
+
+    Raises:
+        ValueError: Required detail or entity/document constraints cannot be enforced.
+    """
+    if output.detail_mode != "fields":
+        raise ValueError("unsupported_detail: this integrated path establishes requested fields, not whole documents or surrounding context")
+    kinds = output.selections["entity_types"]
+    pair = SUPPORTED_PAIRS.get(kinds[0]) if len(kinds) == 1 else None
+    if pair is None or output.selections["document_types"] != [pair[1]]:
+        raise ValueError("unsupported_content_types: this integrated path requires one supported entity/document pairing")
+    return pair[0]
+
+
+class RepositoryNeedsInterpreter:
+    """Compose the existing host interpreter without changing its generative ownership."""
+
+    def prepare(self, ctx: ExecutionContext, plan: Plan) -> RetrievalNeedsRequest | None:
+        """Offer bounded meanings only for graph-backed natural research without explicit obligations.
+
+        Args:
+            ctx: Current trusted scope and configured sources.
+            plan: Original research request, including caller restrictions.
+
+        Returns:
+            One question-wide host request, or None for compatibility paths.
+        """
+        sources = _graph_sources(ctx, plan)
+        if plan.answer_requirements is not None or not sources:
+            return None
+        scoped = selection_context(ctx)
+        cards = scoped.entity_context.entities if scoped.entity_context is not None else []
+        ids = list(dict.fromkeys([*(i for card in cards if (i := _identity(card))),
+                                  *ctx.scope.component_ids]))
+        context = [*ctx.clarifications]
+        if scoped.entity_context is not None:
+            context += [*scoped.entity_context.caller_context.conversation,
+                        *scoped.entity_context.caller_context.observations]
+        revision = ctx.scope.revision.commit if ctx.scope.revision else None
+        return prepare_request(RetrievalNeedsRequest(original_question=plan.question, known_ids=ids,
+            context=context, source_scope={"repository_id": ctx.config.knowledge.repository_id,
+                "revision": revision or "latest", "source_ids": [s.id for s in sources],
+                "read_roots": list(ctx.scope.read_roots)}, catalog={
+                "entity_types": ENTITY_TYPES, "target_ids": {}, "required_fields": {
+                    **FIELDS, "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"},
+                "document_types": DOCUMENT_TYPES, "relationships": RELATIONSHIPS}))
+
+    def apply(self, plan: Plan, output: RetrievalNeedsOutput) -> Plan:
+        """Project accepted fields and explicit population choices without choosing a query.
+
+        Args:
+            plan: Original caller-owned research request.
+            output: Request-bound accepted interpretation.
+
+        Returns:
+            Additive plan retaining the full typed interpretation and exact answer obligations.
+
+        Raises:
+            ValueError: The requested population has no supported canonical representation.
+        """
+        if output.original_question != plan.question:
+            raise ValueError("Retrieval needs changed the original research question")
+        validate_dimensions(output)
+        relationships = output.selections["relationships"]
+        if set(relationships) - {"all_descendants", "declared_dependents"}:
+            raise ValueError("unsupported_relationship: no integrated operation establishes the requested relationship")
+        if len(relationships) > 1:
+            raise ValueError("unsupported_relationship: this bounded path cannot combine multiple relationship obligations")
+        population = "ac_descendants" if "all_descendants" in relationships else (
+            "declared_dependents" if "declared_dependents" in relationships else "returned_entities")
+        targets = output.selections["target_ids"]
+        exhaustive = output.completeness in {"exhaustive_count", "exhaustive_set"}
+        if exhaustive and population == "returned_entities":
+            raise ValueError("unsupported_population: no offered operation establishes the requested exhaustive population")
+        scope = AnswerScope(entity_ids=list(canonical_target_ids(output))
+            if not relationships and output.completeness in {"single_entity", "selected_entities"} else [])
+        if population != "returned_entities":
+            inclusion = {"exclude_root": "root_excluded", "exclude_parents": "terminal_leaves",
+                         "include_root": "include_root"}.get(output.hierarchy_scope)
+            if len(targets) != 1 or inclusion is None:
+                raise ValueError("Population retrieval requires one explicit root and inclusion rule")
+            scope = AnswerScope.model_validate({"population": population, "root_id": targets[0],
+                "levels": output.hierarchy_levels, "inclusion": inclusion})
+        requirements = AnswerRequirements(original_question=plan.question,
+            required_fields=output.selections["required_fields"], scope=scope,
+            require_complete=output.completeness != "examples")
+        return replace(plan, retrieval_needs=output,
+                       answer_requirements=requirements.model_dump(mode="json"))
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-09 15:40 [python-coder]: Supply finite repository meanings to one existing host operation. (#KM-500/KM-500e-1-i)
+
+# - 2026-10-09 18:49 [python-coder]: Bind the full accepted target set before any operation or target selection. (#KM-500/KM-500e-1-i)

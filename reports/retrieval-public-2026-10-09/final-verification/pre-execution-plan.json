@@ -1,0 +1,27 @@
+{
+  "purpose": "Test the narrow source-field disclosure repair without favorable host regeneration.",
+  "baseline": "public-evaluation",
+  "prior_repair": "repair-evaluation",
+  "final_verification_reason": "Repeat only to verify final defensive empty-text guard at its actual working-code hash; no favorable-model retries.",
+  "cases": [
+    "P01",
+    "P02"
+  ],
+  "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+  "host_response_policy": "Reuse each exact original blind interpretation byte-for-byte in a new real public wait only when the complete bound request is identical.",
+  "generation": "No new host generation; fresh real TypeSafe Jev decisions.",
+  "changes_allowed": "Production source-field disclosure only; no question, source data, gold, threshold or prompt changes.",
+  "success": "Canonical criteria and authored test_spec delivered with exact field citations; no missing requested facts; final public status completed.",
+  "bounds": {
+    "new_public_runs": 2,
+    "new_jev_calls_max": 24,
+    "prior_actual_jev_calls": 11,
+    "approved_total_jev_max": 72,
+    "new_accepted_host_results_max": 6,
+    "prior_accepted_host_results": 10,
+    "approved_total_accepted_host_max": 16,
+    "graph_writes": 0,
+    "catalog_writes": 0,
+    "telemetry_exports": 0
+  }
+}
