@@ -59,8 +59,8 @@ class Verdict:
     tied: list[str] = field(default_factory=list)
     candidate_option_id: str | None = None
     assessments: list[CriterionAssessment] = field(default_factory=list)
-    #: Set when the decision stops researching and hands the ranked options to a human.
     ranking: list[OptionRanking] = field(default_factory=list)
+    """Set when the decision stops researching and hands the ranked options to a human."""
 
 
 def _outcome(p: float, cfg: DecisionConfig) -> Literal["pass", "fail", "uncertain"]:

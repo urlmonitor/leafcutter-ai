@@ -78,13 +78,13 @@ class Assessment:
     sufficient_confidence: dict[str, float | None]
     satisfies_confidence: dict[tuple[str, str], float | None]
     missing: ChoiceAnswer
-    #: Probability that a criterion is a design judgement, for criteria not classified yet.
     design: dict[str, float]
+    """Probability that a criterion is a design judgement, for criteria not classified yet."""
     preference: float
     conflict: float
     result: JevResult
-    #: Jev's probability that each precedent (by record id) applies; empty when none was judged.
     precedents: dict[str, float] = field(default_factory=dict)
+    """Jev's probability that each precedent (by record id) applies; empty when none was judged."""
 
 
 def _state(ctx: ExecutionContext, work: Working) -> dict[str, JsonValue]:
