@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -174,6 +174,12 @@ superseded_by: null
 covered_by: [BO-4300c-1-i, BO-4300c-1-ii, BO-4300c-1-iii]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05_TICKET-20260928-BO-4300-readiness.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_readiness.py
+- templates/scripts/commit_guardian/commit_guardian.json
+- templates/scripts/commit_guardian/precommit_canary.py
+- scripts/build_helpers.py
 notes: |
   The MAKER half of BO-4300c ("ready means all of it"). Each ingredient already has an owner
   and is cited, not re-derived: the rooted commit read back after creation is BO-4100a-2; proof

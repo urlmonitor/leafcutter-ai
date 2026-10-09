@@ -48,6 +48,7 @@ import worktree_answer as wa
 import worktree_git as wg
 import worktree_layout as wl
 import worktree_paths as wp
+import worktree_readiness as wr
 
 _log = logging.getLogger(__name__)
 
@@ -77,10 +78,10 @@ def _repo_context(repo_root: Path) -> dict[str, Any]:
     return {**wp.repo_fields(repo_root), "layout": wl.layout_for(repo_root)}
 
 
-def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str) -> dict[str, Any]:
+def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str,
+                         repo_root: Path) -> dict[str, Any]:
     """Build an ``ensure`` answer for an already-ready workspace (idempotent short-circuit)."""
-    checks = wg.compute_checks(workspace_path, hub)
-    checks["hooks_canary_rejected"] = marker.get("checks", {}).get("hooks_canary_rejected", False)
+    computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "", project_root=repo_root)
     return {
         "status": "ok",
         "mechanism": "clone",
@@ -91,7 +92,8 @@ def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str
         **wp.path_fields(workspace_path),
         "base_commit": marker.get("base_commit"),
         "bootstrap": {"restored_tracked": []},
-        "checks": checks,
+        "hooks_stages_declared": marker.get("hooks_stages_declared", []),
+        "checks": wr.stored_checks(computed, marker),
     }
 
 
@@ -157,20 +159,14 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
                 "(.claude/, .gemini/, .cursor/, .github/, .cline/); never the build's "
                 "default config, never this maker's own location.",
             )
-    built, build_error = wg.run_install_build(workspace_path, config_path)
-    if not built:
-        return _err(build_error or "BOOTSTRAP_FAILED", f"Install build failed inside {workspace_path}.")
-
-    restored = wg.restore_dirtied_tracked(workspace_path)
-    canary_rejected = wg.run_canary(workspace_path)
-
-    checks = wg.compute_checks(workspace_path, hub)
-    checks["hooks_canary_rejected"] = canary_rejected
-
-    wg.write_marker(
-        workspace_path, _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks,
-                      workspace=workspace_path)
-    )
+    proof = wr.prove_ready(workspace_path, hub, kind=kind, branch=branch, project_root=repo_root,
+                           config_path=config_path, line_of_work=getattr(args, "line_of_work", "new"))
+    if proof.get("status") in ("refused", "error"):
+        return proof  # a refusal never carries a workspace location
+    checks = proof["checks"]
+    marker = _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks, workspace=workspace_path)
+    marker["hooks_stages_declared"] = proof["hooks_stages_declared"]
+    wg.write_marker(workspace_path, marker)
 
     answer = {
         "status": "ok",
@@ -181,7 +177,8 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
         "hub": hub,
         **wp.path_fields(workspace_path),
         "base_commit": base_commit,
-        "bootstrap": {"restored_tracked": restored},
+        "bootstrap": proof["bootstrap"],
+        "hooks_stages_declared": proof["hooks_stages_declared"],
         "checks": checks,
     }
     wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
@@ -215,7 +212,7 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     if occupant is not None:
         return {**_err("OCCUPIED", f"{workspace_path} holds another project's workspace.", occupant=occupant), **ctx}
     if existing_marker is not None and existing_marker.get("state") == "ready":
-        answer = {**ctx, **_answer_from_existing(workspace_path, existing_marker, hub)}
+        answer = {**ctx, **_answer_from_existing(workspace_path, existing_marker, hub, repo_root)}
         wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
         return answer
     if workspace_path.exists() and existing_marker is None:
@@ -237,11 +234,12 @@ def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     if marker is None:
         return _err("NOT_FOUND", f"No leafcutter workspace marker found at {workspace_path}.")
     hub = wp.from_portable(marker.get("hub", ""), workspace_path)
-    checks = wg.compute_checks(workspace_path, hub)
-    checks["hooks_canary_rejected"] = marker.get("checks", {}).get("hooks_canary_rejected", False)
+    project_root = marker.get("project_root")
+    computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "",
+                                 project_root=Path(wp.from_portable(project_root or "", workspace_path)))
+    checks = wr.stored_checks(computed, marker)
     answer = {"status": "ok", "path": str(workspace_path), **wp.path_fields(workspace_path),
               "marker": marker, "checks": checks, "hub": hub}
-    project_root = marker.get("project_root")
     if project_root:
         answer.update(_repo_context(Path(wp.from_portable(project_root, workspace_path))))
     return answer
@@ -389,4 +387,10 @@ if __name__ == "__main__":
 #   before anything is written; NO_REPO / AMBIGUOUS_REPO refusals write
 #   nothing; a location holding another project's workspace is OCCUPIED
 #   (occupant other-project). (ADR-018)
+# - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   BO-4300c-1/-i/-ii/-iii, b-4: ok now means worktree_readiness.prove_ready
+#   proved every ingredient (build, restored tracked files, per-stage
+#   canaries, branch/base/independence); a refusal carries checks and no
+#   workspace location. (ADR-018)
 # ===========================================================================

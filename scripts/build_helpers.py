@@ -60,7 +60,7 @@ from build_colors import info as _info
 from build_colors import success as _success
 from build_colors import warn as _warn
 from build_ownership import resolve_shim_ownership_veto, _create_shim, _create_file_shim
-from build_shim_probe import resolve_effective_shim_strategy
+from build_shim_env import effective_shim_strategy
 from build_precommit_install import install_hooks  # noqa: F401 — re-exported for build.py's existing import
 
 # ---------------------------------------------------------------------------
@@ -1451,7 +1451,7 @@ def install_shims(
     """
     if config is None:
         config = {}
-    strategy = resolve_effective_shim_strategy(config.get("shim_strategy", "auto"), target_root)
+    strategy = effective_shim_strategy(config, target_root)
     if output_root is None:
         output_root = target_root / config.get("output_root", ".leafcutter")
 

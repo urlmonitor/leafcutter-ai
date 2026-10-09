@@ -310,3 +310,4 @@ ENTROPY_HIGH:scripts/ac_store/_gtfa_files_touched.py:*
 # credential. Glob, not per-line: matches the treatment of every other changelog entry
 # in this file.
 ENTROPY_HIGH:changelogs/2026-09-23-1030-an-ambiguous-reference-pattern-is-now-refused-instead-of-silently-resolving-to-an-arbitrary-file.md:*
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300c_1_path_keyed_canaries.py:*

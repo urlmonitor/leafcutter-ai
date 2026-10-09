@@ -58,6 +58,8 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_answer.py",
     "worktree_paths.py",
     "worktree_layout.py",
+    "worktree_readiness.py",
+    "worktree_canaries.py",
 )
 
 
@@ -91,6 +93,10 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     - ``templates/scripts/worktree_layout.py`` → ``scripts/worktree_layout.py``
       (NAMED entry): the landing place, ``--landing-root`` validation and
       install-config derivation (BO-4300b-2, ADR-018 A1.12).
+    - ``templates/scripts/worktree_readiness.py`` → ``scripts/worktree_readiness.py``
+      (NAMED entry): the readiness proofs (BO-4300c-1, BO-4300b-4).
+    - ``templates/scripts/worktree_canaries.py`` → ``scripts/worktree_canaries.py``
+      (NAMED entry): the per-stage canary proofs worktree_readiness imports.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -128,6 +134,10 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     # - 2026-09-30 23:10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04)
     #   Added worktree_layout.py as a NAMED entry (landing place, override
     #   validation, config derivation; BO-4300b-2). (ADR-018)
+    # - 2026-10-01 00:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+    #   Added worktree_readiness.py as a NAMED entry (BO-4300c-1). (ADR-018)
+    # - 2026-10-09 12:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+    #   Added worktree_canaries.py as a NAMED entry (worktree_readiness imports it). (ADR-018)
     """
     import build_phases as _bp
 
@@ -232,4 +242,7 @@ def _check_named_standalone_scripts(templates_scripts_src: Path) -> None:
 #   append-only) so the same-line requirement is met without deleting or
 #   rewording any prior entry. No functional change to this module.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-018)
+# - 2026-10-09 12:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
+#   Added worktree_canaries.py as a NAMED entry (worktree_readiness imports
+#   it; the deployed maker would otherwise crash with ModuleNotFoundError). (ADR-018)
 # ===========================================================================
