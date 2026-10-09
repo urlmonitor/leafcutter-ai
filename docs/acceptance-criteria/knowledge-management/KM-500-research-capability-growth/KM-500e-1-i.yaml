@@ -1,0 +1,313 @@
+id: KM-500e-1-i
+title: Carry interpreted information needs through the public retrieval route
+component: knowledge-management
+components:
+- knowledge_management
+- decision_kernel
+level: L3
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: high
+parent: KM-500e-1
+criteria: |
+  Given an authorized repository research request supplies its original question and optional context but no query operation or answer requirements
+  And the selected repository source supports the configured knowledge retrieval route
+  When the public research entry interprets the information needed before retrieving evidence
+  Then one host LLM request proposes all information-needs dimensions together and the validated proposal is retained for later finite Jev selection and actual retrieval
+  And the caller's original question, literal target identities and trusted source scope remain unchanged through the host wait, query selection and evidence assessment
+  And every original selected identity remains an answer obligation even when query selection, custom query arguments or source disclosure return only a subset
+  And the same interpreted obligations reach the retrieval executor whether a reusable query catalog and admission path are configured or absent
+  And a question about an acceptance criterion's required behavior keeps its canonical criteria as required evidence rather than silently substituting its test specification
+  And an explicit descendant-count question keeps its hierarchy levels, root-only versus all-parent exclusion and requested work_status separate from lifecycle status
+  And missing user meaning produces a focused existing human continuation and a later interpretation uses that answer without replacing the original question
+  And unsupported needs, invalid host output, unavailable or stale evidence and incomplete required fields never become a complete answer because a query ran or a judgment was confident
+  And one anchored request for test coverage or component-linked examples keeps the anchor distinct from the returned records and does not claim an exhaustive relationship population
+  And a requested source excerpt distinguishes present, unavailable, empty, withheld and truncated content without claiming a whole document
+  And an answer identifies the evidence and source actually retrieved while retaining any unmet obligations
+  And the read-only journey grants no graph-write or query-publication authority.
+depends_on:
+- KM-500e-1
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+- code
+- schema
+risk_surface: contract_boundary
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-1.yaml
+amended_by:
+- "2026-10-09: business-analyst (retrieval_release agent) aligned bounded relationship examples and source-excerpt limits with the reviewed compatibility repair; no completion or approval promotion."
+- '2026-10-09: User authorized expert agents to build the audited needs and selector integration and prove the public route. BA and IT PO templates define this bounded child; approval authorizes work, not a passing model-quality claim.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_public_retrieval_needs.py
+- tests/knowledge/test_public_retrieval_target_obligations.py
+- tests/knowledge/test_content_disclosure.py
+- tests/kernel/entity_context/test_retrieval_relation_needs.py
+- tests/kernel/retrieval/test_retrieval_needs_literal_ids.py
+- tests/knowledge/test_query_answer_contract_acceptance_kernel.py
+implemented_by:
+- kernel/capabilities/research/needs.py
+- integrations/research_needs.py
+- kernel/capabilities/research/executor.py
+doc_links:
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: One declared owner per check; LLM interpretation, bounded Jev selection and exact structural validation remain distinct.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Reuse neutral read-only retrieval and immutable source provenance.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Public research, query catalog and evidence ownership boundaries.
+- path: docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json
+  relationship: implements
+  status: exists
+  relevance: Implements only the needs invocation and its downstream handoff, not the future multi-method strategy loop.
+- path: docs/product-truth/flows/leafcutter/retrieval-needs-interpretation.flow.json
+  relationship: context
+  status: exists
+  relevance: Reuses the typed host interpretation contract without changing frozen experimental results into production proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-4.yaml
+  relationship: context
+  status: exists
+  relevance: Real-provider planning quality remains a separate pending obligation; scripted transport proof cannot satisfy it.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Public reachability, actual producer-consumer seams, changed-input controls and failure discrimination.
+expects_from:
+  agent: research-agent
+  contract: Original question, optional context and separately authorized immutable kernel scope; no caller-supplied operation is needed for the question path.
+delivers_to:
+- ac_id: KM-500e-2
+  agent: python-coder
+  contract: Validated information needs and compatible answer requirements retain literal targets, required fields, hierarchy levels, source identity and unresolved meaning through actual retrieval.
+- ac_id: KM-500a-4
+  agent: test-writer
+  contract: Public reachable integration with attributable host and query attempts; deterministic proof is labeled separately from new real-provider semantic evaluation.
+it_requirements:
+- Use the existing KernelService and LangGraph lifecycle, registered host operation, durable interaction ledger, revision checks and cumulative budgets. No second host protocol, direct model client or independent orchestration loop is introduced.
+- A single host packet carries all dimensions of one interpretation attempt. A changed clarification answer may require a later attempt; unchanged inputs must not trigger unbounded repetition. The host supplies interpretation, Jev chooses only offered finite options, and System enforces exact contracts.
+- Explicit caller answer requirements retain their existing compatible path. The new interpretation route is conditional on the selected authorized knowledge source; unrelated source paths do not silently acquire graph access or a generative dependency.
+- Preserve original_question and trusted kernel scope independently of model echoes. Candidate context and IDs cannot grant authority, replace literal user targets or mutate the pinned source. Host acceptance checks happen before accepted ledger effects.
+- The catalog-configured and catalog-absent routes consume the same validated needs. Missing supported operations may use the existing separately authorized build path; unsupported data, missing fields or unavailable sources cannot authorize it.
+- Preserve exact field meanings and hierarchy levels in the consumer contract. Canonical criteria remain authoritative for obligation questions; test_spec may supplement them. Structured unsupported reasons must remain recognizable independently of explanatory wording.
+- Bind the complete original single-entity or selected-entities target set before finite query selection as answer_requirements.scope.entity_ids, with the same canonical identities used by the query. Keep it independent from operation parameter names and returned rows; descendant and relationship populations retain their separate population obligations. Missing original targets prevent fulfillment and an exact total, including saved-query and disclosure paths.
+- Preserve full literal ADR stems without inventing a shorter prefix. For covered_by, governing_adrs and component_context, keep one original anchor separate from the one supported result entity/document pair; require examples completeness and only the matching existing registered recipe. Component-scoped recipes cannot exceed an explicit trusted component scope.
+- A required content field is a bounded level-3 canonical-source excerpt with its exact locator, never a backend property or full-document promise. Unavailable, empty, withheld and truncated excerpts remain distinct. Mixed component-context kinds retain a partial result under the existing kind guard.
+- Successful transport, model confidence and nonempty evidence are not fulfillment proof. Required-field and source-completeness failures remain visible alongside useful partial evidence.
+- Record test provenance and denominator honestly. Offline controlled host/provider responses establish wiring and boundary behavior, not live LLM/Jev quality, Aura freshness, production query admission or remote trace ingestion.
+test_required: true
+test_rationale: The change crosses the public kernel, host wait/resume, semantic selection and neutral retrieval boundaries. Exercise the real producers and consumers with controlled external judgments and actual source artifacts, retaining changed-input and failure controls. Separate live model-quality evaluation remains KM-500a-4.
+test_spec:
+- name: test_public_question_reaches_host_before_source_read
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: KernelService.start_run and KernelService.resume_run for a research question
+  description: Start a question without an operation through the public entry with and without a catalog; inspect the real host packet and prove no source read occurs before accepted interpretation.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - The configured catalog bypasses needs interpretation or causes an extra interpretation per evidence category.
+- name: test_host_needs_drives_exact_criteria_through_public_entry
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Resume the real host wait with a needs proposal for a literal AC, pass it through finite selection and actual retrieval, and assert canonical criteria and source citations; repeat with a different AC identity and distinguish required criteria from test_spec.
+  covers: [KM-500e-1-i, KM-500e-2]
+  requires_db: false
+  must_catch:
+  - Ignoring the accepted needs and deriving entity IDs from component scope.
+  - Returning test_spec alone as fulfilled canonical acceptance obligations.
+- name: test_public_population_preserves_levels_root_and_work_status
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Carry an explicit all-L2/L3-descendants question through the public producer and consumer and preserve hierarchy levels, root-only exclusion and work_status; distinguish lifecycle status and terminal leaves.
+  covers: [KM-500e-1-i, KM-500e-1]
+  requires_db: false
+  must_catch:
+  - Dropping L2/L3 or using lifecycle status or terminal-leaf population instead of the user's obligations.
+- name: test_public_ambiguous_needs_clarifies_and_resumes_original_question
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Use the real persisted host/human continuation artifacts to resolve missing meaning and resume the original question with the unchanged source and retained prior context; do not restart a different research question.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Treating unresolved needs as a complete plan or replacing the original question with the clarification answer.
+- name: test_invalid_host_scope_and_changed_question_rejected
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Attempt host outputs with changed question or source and compare with the valid control; reject before accepted ledger effects or source access and retain the original wait.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Trusting model-echoed scope or context as authority for different repository access.
+- name: test_unavailable_or_stale_source_never_becomes_complete_answer
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Through the public question path preserve unsupported meaning, unavailable or stale source states and useful partial findings without declaring completion, writing a graph or activating a query.
+  covers: [KM-500e-1-i, KM-500e-4]
+  requires_db: false
+  must_catch:
+  - Converting source failure or unsupported meaning into a query-build authorization or a successful answer.
+- name: test_partial_source_cannot_be_upgraded_by_sufficient_jev
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Return source evidence missing a required canonical field beside a high-confidence sufficiency judgment; retain the missing obligation and partial status, with a fully evidenced control.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Letting a confident Jev answer override deterministic field or completeness failures.
+- name: test_selected_entities_cannot_complete_after_selector_narrows_original_targets
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Exercise both public catalog configurations with two original AC targets and a selector favoring one. Preserve both obligations through retrieval and assessment; a subset cannot be complete.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Narrowing query targets silently rewrites the original requested set.
+- name: test_selected_entities_complete_control_returns_both_canonical_criteria
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Return both requested ACs through the public entry and independently compare both cited criteria with their pinned Git source; complete evidence may fulfill both original obligations.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - The guard blocks every selected-entities answer or accepts only one source.
+- name: test_missing_selected_entity_stays_unmet_after_disclosure_of_present_entity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Compare one present and one absent requested AC with both catalog settings. Retain the present evidence and both original IDs, with a partial assessment and unknown exact total.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Hydration replaces a missing requested identity with the evidence that happened to be returned.
+- name: test_saved_query_assesses_original_ids_independently_of_custom_argument_name
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Run an admitted query whose seed parameter has a custom name, paired with complete and missing-target source results. The neutral assessment uses the original target set and preserves the saved catalog.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Only builtin entity_ids parameters trigger complete-set coverage checks.
+- name: test_incompatible_single_seed_offer_retains_paid_selector_usage
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Reject an operation that cannot bind the two original targets while retaining the actual paid selector usage and returning no invented evidence.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Refusing an incompatible operation drops the already incurred model usage.
+- name: test_prefixed_canonical_targets_match_original_scope_and_query_seeds
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Compare native and already-prefixed Ticket, Flow and Decision IDs. Answer obligations and query seeds use the same canonical identities without changing the literal user question.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Canonical prefix handling diverges between original obligations and executed query seeds.
+- name: test_full_adr_stem_is_offered_without_an_ungrounded_short_prefix
+  target_dir: tests/kernel/retrieval/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: Preserve a literal ADR filename stem with and without a known-ID candidate, without adding an ungrounded short prefix.
+  must_catch:
+  - A numeric ADR prefix is added beside the full literal and causes an invented target obligation.
+- name: test_relation_requests_cannot_narrow_or_claim_complete_populations
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Reject multiple anchors, incompatible result kinds and exhaustive relationship set or count requests; related examples retain a separate original anchor.
+  must_catch:
+  - A bounded relationship sample is upgraded to an exhaustive population or silently drops an anchor.
+- name: test_content_requires_actual_bounded_source
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Compare actual pinned source content with unavailable, empty, whitespace, withheld and truncated controls; a graph content property never satisfies the requested excerpt.
+  must_catch:
+  - A summary, graph property or incomplete excerpt is reported as fulfilled canonical content.
+notes: This child specifies the approved needs-to-selector integration seam. It does not complete the wider KM-500e-1 parent, the multi-method strategy design, query-agent delivery, automatic learning or real-provider quality. Controlled relation ports establish host and query transport only; real mixed-kind component context, exhaustive relation populations, full documents and Aura publication remain unproved. Historical Oct3 8/12 host semantics and 7/12 Jev semantics remain frozen; new proof must identify the actually tested source and mechanism.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: accept-needs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-09'
+  - flow: leafcutter/retrieval-current-baseline
+    node: prepare-needs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-09'
+  - flow: leafcutter/retrieval-current-baseline
+    node: understand
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-09'
+  - flow: leafcutter/retrieve-project-knowledge
+    node: interpret-needs
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-09'
+  - flow: leafcutter/retrieve-project-knowledge
+    node: question
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-09'

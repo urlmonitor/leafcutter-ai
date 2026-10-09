@@ -1,0 +1,86 @@
+{
+  "unchanged_baseline": {
+    "cases": 12,
+    "semantic_passes": 0,
+    "accepted_host_operations": 12,
+    "failures": [
+      {
+        "case": "N01",
+        "checks": []
+      },
+      {
+        "case": "N02",
+        "checks": []
+      },
+      {
+        "case": "N03",
+        "checks": []
+      },
+      {
+        "case": "N04",
+        "checks": []
+      },
+      {
+        "case": "N05",
+        "checks": []
+      },
+      {
+        "case": "N06",
+        "checks": []
+      },
+      {
+        "case": "N07",
+        "checks": []
+      },
+      {
+        "case": "N08",
+        "checks": []
+      },
+      {
+        "case": "N09",
+        "checks": []
+      },
+      {
+        "case": "N10",
+        "checks": []
+      },
+      {
+        "case": "N11",
+        "checks": []
+      },
+      {
+        "case": "N12",
+        "checks": []
+      }
+    ]
+  },
+  "independent_holdouts": {
+    "cases": 4,
+    "semantic_passes": 0,
+    "accepted_host_operations": 4,
+    "failures": [
+      {
+        "case": "H01",
+        "checks": []
+      },
+      {
+        "case": "H02",
+        "checks": []
+      },
+      {
+        "case": "H03",
+        "checks": []
+      },
+      {
+        "case": "H04",
+        "checks": []
+      }
+    ]
+  },
+  "mode": "fresh blind host agent through actual packet/ledger; no graph retrieval",
+  "model_id": null,
+  "actual_model_request_count": null,
+  "jev_calls": 0,
+  "tokens": null,
+  "expected_labels_sent_to_host": false
+}

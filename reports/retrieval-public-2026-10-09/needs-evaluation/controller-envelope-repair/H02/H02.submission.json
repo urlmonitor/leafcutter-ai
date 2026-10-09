@@ -1,0 +1,60 @@
+{
+  "run_id": "run-69950e147f6449c9",
+  "interaction_id": "int-080c07f6806449dc",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "TQ-500f"
+      ],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "children_direct"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "exclude_root",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "List the immediate child requirements of the named root with their defining clauses. The one-hop relationship excludes grandchildren, while no explicit level filter is imposed.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

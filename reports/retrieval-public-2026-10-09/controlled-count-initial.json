@@ -1,0 +1,452 @@
+{
+  "evidence_mode": "controlled public wiring, no model calls",
+  "status": "waiting_host",
+  "answer_assessments": [
+    {
+      "status": "partial",
+      "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "required_fields": [
+        "work_status",
+        "level"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "missing_fields": [],
+      "completeness": {
+        "complete": false,
+        "known_count": 2,
+        "exact_total": null,
+        "limitations": [
+          "execution is partial",
+          "enumeration or disclosure is incomplete",
+          "complete population enumeration is not established",
+          "requested identities are missing from returned evidence"
+        ]
+      },
+      "work_status_counts": null,
+      "known_work_status_counts": {
+        "done": 2
+      },
+      "limitations": [
+        "execution is partial",
+        "enumeration or disclosure is incomplete",
+        "complete population enumeration is not established",
+        "requested identities are missing from returned evidence"
+      ]
+    }
+  ],
+  "capability_results": [
+    {
+      "schema_version": "1.0",
+      "invocation_id": "inv-f81ba371bdec4b10",
+      "work_item_id": "work-1055415cda6246a0",
+      "status": "partial",
+      "output_schema_id": "leafcutter.evidence_bundle.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "request_id": "inv-f81ba371bdec4b10",
+        "evidence_ids": [
+          "ev-c668f8e89c066c76",
+          "ev-4f080220c5ee3f91"
+        ],
+        "finding_ids": [],
+        "coverage": {
+          "need.question": "partial"
+        },
+        "assessments": {
+          "need.question": {
+            "kind": "retrieval_answer",
+            "status": "partial",
+            "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+            "required_fields": [
+              "work_status",
+              "level"
+            ],
+            "scope": {
+              "population": "ac_descendants",
+              "root_id": "TQ-500f",
+              "levels": [
+                "L2",
+                "L3"
+              ],
+              "inclusion": "root_excluded"
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": false,
+              "known_count": 2,
+              "exact_total": null,
+              "limitations": [
+                "execution is partial",
+                "enumeration or disclosure is incomplete",
+                "complete population enumeration is not established",
+                "requested identities are missing from returned evidence"
+              ]
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {
+              "done": 2
+            },
+            "limitations": [
+              "execution is partial",
+              "enumeration or disclosure is incomplete",
+              "complete population enumeration is not established",
+              "requested identities are missing from returned evidence"
+            ]
+          }
+        },
+        "attempted_sources": [
+          "knowledge.graph"
+        ],
+        "unavailable_sources": [],
+        "contradictions": [],
+        "limitations": [
+          "population enumeration or subsequent disclosure remains incomplete",
+          "knowledge status: partial",
+          "retrieval choice: Jev selected a supported registered operation and authorized target",
+          "execution is partial",
+          "enumeration or disclosure is incomplete",
+          "complete population enumeration is not established",
+          "requested identities are missing from returned evidence",
+          "Original answer requirements remain partial",
+          "Retrieved evidence requires the existing research sufficiency assessment.",
+          "More evidence exists; a focused continuation requires remaining task budget."
+        ],
+        "truncated": true,
+        "evidence": [
+          {
+            "schema_version": "1.0",
+            "id": "ev-c668f8e89c066c76",
+            "created_at": "2026-10-09T15:35:50.543905Z",
+            "updated_at": "2026-10-09T15:35:50.543905Z",
+            "created_seq": 0,
+            "category": "task_context",
+            "semantic_type": "documentation_fact",
+            "excerpt": "Given a requirement whose test plan has one entry\n    name: test_retry_gate_runs_when_both_conditions_due\n    angle: discrimination\n  and a second requirement whose test plan has one entry with\n    angle: discriminating   (a misspelling),\nWhen the requirement store's validator checks both requirements,\n  And work is generated from the first requirement,\nThen the first requirement is accepted and the second is rejected with a\n  message naming the entry, the field \"angle\", and the permitted values,\n  which include \"discrimination\",\n  And the generated work's test requirements carry that entry with\n    angle: discrimination, and those test requirements conform to the\n    schema that governs generated test requirements,\n  And the test writer's taught set of test kinds lists \"discrimination\"\n    beside the seven existing kinds, with its distinguishing rule: the test\n    goes red under at least ",
+            "artifact_ref": null,
+            "source": {
+              "schema_version": "1.0",
+              "id": "knowledge.retrieval",
+              "kind": "knowledge_node",
+              "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/TQ-500f-1?path=docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1.yaml&locator=%2Fcriteria",
+              "title": "\"Discrimination\" is a kind of test a requirement can ask for, and the work generated from it accepts it",
+              "source_version": {
+                "schema_version": "1.0",
+                "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "dirty": false
+              },
+              "retrieved_at": "2026-10-09T15:35:50.543905Z",
+              "observed_modified_at": null,
+              "section_locator": "/criteria"
+            },
+            "content_hash": "7997dd9e79fea19c8248042946539126f811766565cadda5605204be5bb63977",
+            "provenance": {
+              "schema_version": "1.0",
+              "producer": "knowledge.retrieval",
+              "invocation_id": "inv-f81ba371bdec4b10",
+              "strategy": "knowledge:4d22a504-eec1-44f5-9ddb-1675d664dac4",
+              "query": null,
+              "terms": [],
+              "rank": null,
+              "relevance": null,
+              "actor": null,
+              "relayed_by": null
+            },
+            "access": "internal",
+            "verification": "unverified",
+            "limitations": [
+              "source excerpt truncated to allocated content budget"
+            ],
+            "truncated": false
+          },
+          {
+            "schema_version": "1.0",
+            "id": "ev-4f080220c5ee3f91",
+            "created_at": "2026-10-09T15:35:50.544162Z",
+            "updated_at": "2026-10-09T15:35:50.544162Z",
+            "created_seq": 0,
+            "category": "task_context",
+            "semantic_type": "documentation_fact",
+            "excerpt": "Given three places that list the permitted test kinds —\n    R, the requirement-side list,\n    G, the generated-work-side list,\n    T, the test writer's taught set —\n  and four prepared variants of them:\n    V1: \"discrimination\" present in R, G and T,\n    V2: present in R and T, absent from G,\n    V3: present in R and G, absent from T,\n    V4: present in G and T, absent from R,\nWhen the lockstep check runs against each variant,\nThen V1 passes,\n  And V2, V3 and V4 each fail, and each failure names the list that lacks\n    \"discrimination\" and the lists that carry it,\n  And V2 in particular fails — today's check compares only R with T, so a\n    kind dropped from G alone goes unnoticed; after this work it does not,\n  And the check compares the full sets of kinds, so a kind present in G but\n    in neither R nor T (for example a stray \"discriminating\") also fails,\n    naming G.\n",
+            "artifact_ref": null,
+            "source": {
+              "schema_version": "1.0",
+              "id": "knowledge.retrieval",
+              "kind": "knowledge_node",
+              "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/TQ-500f-1-i?path=docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1-i.yaml&locator=%2Fcriteria",
+              "title": "All three lists of test kinds move together, or the lockstep check names the one that did not",
+              "source_version": {
+                "schema_version": "1.0",
+                "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "dirty": false
+              },
+              "retrieved_at": "2026-10-09T15:35:50.544162Z",
+              "observed_modified_at": null,
+              "section_locator": "/criteria"
+            },
+            "content_hash": "41dde6e2b9e790f7de16297d33fc7941c33b0448477e7844c292d414fdccab6b",
+            "provenance": {
+              "schema_version": "1.0",
+              "producer": "knowledge.retrieval",
+              "invocation_id": "inv-f81ba371bdec4b10",
+              "strategy": "knowledge:4d22a504-eec1-44f5-9ddb-1675d664dac4",
+              "query": null,
+              "terms": [],
+              "rank": null,
+              "relevance": null,
+              "actor": null,
+              "relayed_by": null
+            },
+            "access": "internal",
+            "verification": "unverified",
+            "limitations": [],
+            "truncated": false
+          }
+        ],
+        "findings": [],
+        "unknowns": [],
+        "need_evidence": {},
+        "need_limitations": {}
+      },
+      "evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-c668f8e89c066c76",
+          "created_at": "2026-10-09T15:35:50.543905Z",
+          "updated_at": "2026-10-09T15:35:50.543905Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given a requirement whose test plan has one entry\n    name: test_retry_gate_runs_when_both_conditions_due\n    angle: discrimination\n  and a second requirement whose test plan has one entry with\n    angle: discriminating   (a misspelling),\nWhen the requirement store's validator checks both requirements,\n  And work is generated from the first requirement,\nThen the first requirement is accepted and the second is rejected with a\n  message naming the entry, the field \"angle\", and the permitted values,\n  which include \"discrimination\",\n  And the generated work's test requirements carry that entry with\n    angle: discrimination, and those test requirements conform to the\n    schema that governs generated test requirements,\n  And the test writer's taught set of test kinds lists \"discrimination\"\n    beside the seven existing kinds, with its distinguishing rule: the test\n    goes red under at least ",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/TQ-500f-1?path=docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1.yaml&locator=%2Fcriteria",
+            "title": "\"Discrimination\" is a kind of test a requirement can ask for, and the work generated from it accepts it",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T15:35:50.543905Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "7997dd9e79fea19c8248042946539126f811766565cadda5605204be5bb63977",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-f81ba371bdec4b10",
+            "strategy": "knowledge:4d22a504-eec1-44f5-9ddb-1675d664dac4",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [
+            "source excerpt truncated to allocated content budget"
+          ],
+          "truncated": false
+        },
+        {
+          "schema_version": "1.0",
+          "id": "ev-4f080220c5ee3f91",
+          "created_at": "2026-10-09T15:35:50.544162Z",
+          "updated_at": "2026-10-09T15:35:50.544162Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given three places that list the permitted test kinds —\n    R, the requirement-side list,\n    G, the generated-work-side list,\n    T, the test writer's taught set —\n  and four prepared variants of them:\n    V1: \"discrimination\" present in R, G and T,\n    V2: present in R and T, absent from G,\n    V3: present in R and G, absent from T,\n    V4: present in G and T, absent from R,\nWhen the lockstep check runs against each variant,\nThen V1 passes,\n  And V2, V3 and V4 each fail, and each failure names the list that lacks\n    \"discrimination\" and the lists that carry it,\n  And V2 in particular fails — today's check compares only R with T, so a\n    kind dropped from G alone goes unnoticed; after this work it does not,\n  And the check compares the full sets of kinds, so a kind present in G but\n    in neither R nor T (for example a stray \"discriminating\") also fails,\n    naming G.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/TQ-500f-1-i?path=docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1-i.yaml&locator=%2Fcriteria",
+            "title": "All three lists of test kinds move together, or the lockstep check names the one that did not",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T15:35:50.544162Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "41dde6e2b9e790f7de16297d33fc7941c33b0448477e7844c292d414fdccab6b",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-f81ba371bdec4b10",
+            "strategy": "knowledge:4d22a504-eec1-44f5-9ddb-1675d664dac4",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        }
+      ],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-scripted",
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": null,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [
+        "population enumeration or subsequent disclosure remains incomplete",
+        "knowledge status: partial",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "execution is partial",
+        "enumeration or disclosure is incomplete",
+        "complete population enumeration is not established",
+        "requested identities are missing from returned evidence",
+        "Original answer requirements remain partial",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "More evidence exists; a focused continuation requires remaining task budget."
+      ],
+      "diagnostics": {
+        "knowledge_status": "partial",
+        "knowledge_retrieval_id": "4d22a504-eec1-44f5-9ddb-1675d664dac4",
+        "knowledge_requested_mode": "graph",
+        "knowledge_executed_mode": "exact",
+        "knowledge_operation": "get_entities",
+        "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+        "knowledge_allowed_fallback": "none",
+        "knowledge_disclosure_level": 3,
+        "knowledge_budget": "{\"max_results\":6,\"max_candidates\":34,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":23781,\"max_estimated_tokens\":1753,\"deadline_ms\":9988}",
+        "knowledge_generation": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+        "knowledge_source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+        "knowledge_answer": "{\"status\":\"partial\",\"original_question\":\"Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.\",\"required_fields\":[\"work_status\",\"level\"],\"scope\":{\"population\":\"ac_descendants\",\"root_id\":\"TQ-500f\",\"levels\":[\"L2\",\"L3\"],\"inclusion\":\"root_excluded\"},\"missing_fields\":[],\"completeness\":{\"complete\":false,\"known_count\":2,\"exact_total\":null,\"limitations\":[\"execution is partial\",\"enumeration or disclosure is incomplete\",\"complete population enumeration is not established\",\"requested identities are missing from returned evidence\"]},\"work_status_counts\":null,\"known_work_status_counts\":{\"done\":2},\"limitations\":[\"execution is partial\",\"enumeration or disclosure is incomplete\",\"complete population enumeration is not established\",\"requested identities are missing from returned evidence\"]}",
+        "knowledge_continuation": "[REDACTED_LOCAL_SIGNED_CONTINUATION]",
+        "knowledge_diagnosis": "{\"request_id\": \"inv-f81ba371bdec4b10\", \"retrieval_id\": \"4d22a504-eec1-44f5-9ddb-1675d664dac4\", \"execution_status\": \"partial\", \"answer_status\": \"partial\", \"expected\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-f81ba371bdec4b10\"}, \"observed\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-f81ba371bdec4b10\", \"generation_id\": \"bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+        "knowledge_rounds": 2,
+        "knowledge_retrieval_refs": "f001863b-13f4-4fa9-9078-e6fffc0164b6,4d22a504-eec1-44f5-9ddb-1675d664dac4",
+        "knowledge_selection": "selected",
+        "knowledge_selected_operation": "get_ac_descendants",
+        "knowledge_selected_arguments": "{\"root_id\":\"TQ-500f\"}",
+        "kernel.elapsed_s": 1.0861493999836966,
+        "kernel.jev_reserved": 1
+      }
+    }
+  ],
+  "storage_calls": [
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "get_entities",
+      {
+        "entity_ids": [
+          "TQ-500f"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "_get_ac_children",
+      {
+        "entity_ids": [
+          "TQ-500f"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "_get_ac_children",
+      {
+        "entity_ids": [
+          "TQ-500f-1"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "_get_ac_children",
+      {
+        "entity_ids": [
+          "TQ-500f-2"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "_get_ac_children",
+      {
+        "entity_ids": [
+          "TQ-500f-3"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "_get_ac_children",
+      {
+        "entity_ids": [
+          "TQ-500f-4"
+        ]
+      }
+    ],
+    [
+      "public-needs-acceptance",
+      "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+      "get_entities",
+      {
+        "entity_ids": [
+          "TQ-500f-1",
+          "TQ-500f-1-i",
+          "TQ-500f-2",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3"
+        ]
+      }
+    ]
+  ],
+  "redaction_metadata": {
+    "original_artifact_sha256": "58510b74fdee2b14f7223b54f71145fae161e916466f6ed0bee4f856f35ae30d",
+    "original_bytes_preserved": false,
+    "reason": "The local signed bounded-source continuation token is removed from the committed report; the placeholder is not a reusable continuation.",
+    "redactions": [
+      {
+        "json_pointer": "/capability_results/0/diagnostics/knowledge_continuation",
+        "replacement": "[REDACTED_LOCAL_SIGNED_CONTINUATION]"
+      }
+    ],
+    "preserved": "All recorded outcomes, assessments, source identities, storage calls and other evidence are unchanged; the original artifact hash identifies the pre-redaction bytes, not this edited file."
+  }
+}

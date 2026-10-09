@@ -1,0 +1,201 @@
+{
+  "$schema": "./kernel_config.schema.json",
+  "knowledge": {
+    "backend": "neo4j",
+    "repository_id": "public-needs-acceptance",
+    "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01",
+    "query_catalog_root": null,
+    "neo4j_uri_env": "LEAFCUTTER_NEO4J_URI",
+    "neo4j_username_env": "LEAFCUTTER_NEO4J_USERNAME",
+    "neo4j_password_env": "LEAFCUTTER_NEO4J_PASSWORD",
+    "database": null,
+    "embeddings_enabled": false,
+    "embedding_endpoint_env": "LEAFCUTTER_EMBEDDING_ENDPOINT",
+    "embedding_token_env": "LEAFCUTTER_EMBEDDING_TOKEN",
+    "embedding_model": null,
+    "embedding_dimensions": null,
+    "query_timeout": 3.0
+  },
+  "paths": {
+    "run_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-repair-ri6clop8\\kernel\\P01",
+    "registry": "config/capability_registry.json"
+  },
+  "limits": {
+    "max_work_items": 32,
+    "max_depth": 4,
+    "max_concurrent_native": 4,
+    "max_concurrent_host": 1,
+    "max_retries": 0,
+    "no_progress_limit": 2,
+    "max_jev_calls": 12,
+    "max_host_operations": 3,
+    "max_active_seconds": 150,
+    "max_cost_usd": null,
+    "capability_timeout_seconds": 120,
+    "langgraph_recursion_limit": 500,
+    "max_scheduler_iterations": null
+  },
+  "routing": {
+    "min_selected_probability": 0.8,
+    "min_confidence": 0.5,
+    "on_insufficient_context": "human"
+  },
+  "intent": {
+    "min_selected_probability": 0.7,
+    "min_confidence": 0.5,
+    "max_clarifications": 2
+  },
+  "context_enrichment": {
+    "enabled": false,
+    "source_ids": [
+      "repo.docs",
+      "repo.components",
+      "repo.config",
+      "repo.decisions",
+      "repo.principles",
+      "repo.patterns"
+    ],
+    "max_files": 180,
+    "max_sources": 6,
+    "max_evidence": 6,
+    "max_chars": 8000,
+    "max_context_chars": 4000,
+    "max_excerpt_chars": 1600,
+    "max_seconds": 3.0
+  },
+  "entity_context": {
+    "enabled": false,
+    "index_path": ".leafcutter/kernel/entity-index.json",
+    "source_ids": [],
+    "max_caller_chars": 12000,
+    "max_lookups": 64,
+    "max_entities": 16,
+    "max_ambiguity_candidates": 3,
+    "max_meaning_chars": 300,
+    "max_serialized_chars": 8000,
+    "max_unknowns": 8,
+    "max_unknown_chars": 128,
+    "max_seconds": 2.0
+  },
+  "decision": {
+    "sufficiency_threshold": 0.8,
+    "satisfies_threshold": 0.8,
+    "preference_threshold": 0.7,
+    "conflict_threshold": 0.7,
+    "missing_min_probability": 0.4,
+    "require_option_grounding": true,
+    "max_grounding_evidence": 12,
+    "design_judgement_threshold": 0.7,
+    "progress_epsilon": 0.05,
+    "max_research_rounds": 2,
+    "reserve_assessments": 1,
+    "reserve_extra_options": 1,
+    "reserve_margin_calls": 2
+  },
+  "research": {
+    "need_required_threshold": 0.8,
+    "need_supporting_threshold": 0.5,
+    "evaluable_threshold": 0.7,
+    "allow_synthesis": true,
+    "answer_aware_coverage": true,
+    "answer_threshold": 0.7,
+    "max_targeted_needs": 2,
+    "max_claim_needs": 25,
+    "category_descriptions": {
+      "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
+      "internal_principles": "The project's own stated rules, conventions and principles.",
+      "prior_decisions": "Earlier recorded decisions and their rationale, such as architecture decision records.",
+      "existing_patterns": "How the existing code or documents already solve a similar problem.",
+      "task_context": "Facts about the task itself that the requester supplied or that the workspace shows.",
+      "external_practices": "Widely used practices and experience reports from outside the project."
+    }
+  },
+  "retrieval": {
+    "relevance_threshold": 0.5,
+    "top_k": 6,
+    "max_candidates": 60,
+    "excerpt_context_lines": 12,
+    "max_excerpt_chars": 2000,
+    "max_file_bytes": 400000,
+    "deny_globs": [
+      ".env*",
+      "**/*.pem",
+      "**/*.key",
+      ".security-allowlist",
+      "**/.git/**"
+    ],
+    "coverage_relevance_threshold": 0.7,
+    "sections_per_file": 3,
+    "max_section_lines": 120,
+    "source_candidate_floor": 20,
+    "source_candidate_ratio": 1.5,
+    "max_explicit_locators": 12,
+    "max_query_terms": 48,
+    "rerank_max_per_need": 20,
+    "rerank_max_batches": 3,
+    "satisfied_min_items": 2,
+    "satisfied_strong_threshold": 0.85,
+    "self_reference_ratio": 0.6,
+    "self_reference_penalty": 0.5,
+    "path_match_weight": 3,
+    "bm25_k1": 2.0,
+    "bm25_b": 0.5,
+    "pool_sections_per_file": 2,
+    "pool_fair_share": 2,
+    "pool_fair_min_ratio": 0.3,
+    "rerank_min_items": 3,
+    "rerank_stop_ratio": 0.5,
+    "review_quote_ratio": 0.5,
+    "review_path_markers": [
+      "trace-review"
+    ],
+    "registry_pin_min_terms": 2
+  },
+  "sources": [
+    {
+      "id": "knowledge.graph",
+      "kind": "graph_query",
+      "categories": [
+        "task_context"
+      ]
+    }
+  ],
+  "jev": {
+    "model": "jev-latest",
+    "transport": "classifier",
+    "timeout_seconds": 30,
+    "max_questions_per_call": 20,
+    "max_state_chars": 60000,
+    "retry_backoff_seconds": 1.0,
+    "price_per_input_token_usd": 4.2e-08
+  },
+  "host": {
+    "enabled": true,
+    "fallback_on_no_match": true,
+    "max_repair_attempts": 1,
+    "formulate_questions": false,
+    "max_input_chars": 60000
+  },
+  "data_policy": {
+    "send_repo_excerpts_to_jev": true,
+    "telemetry_excerpts": "truncated",
+    "telemetry_max_field_chars": 4000
+  },
+  "langfuse": {
+    "enabled": false,
+    "environment": "development",
+    "trace_name": "leafcutter-run",
+    "flush_on_exit": true
+  },
+  "memory": {
+    "backend": "null",
+    "repository_id": "leafcutter-ai",
+    "decisions_dir": "docs/decisions",
+    "max_precedents": 3,
+    "min_candidate_score": 0.3,
+    "applies_threshold": 0.5,
+    "reuse_threshold": 0.8,
+    "criterion_evidence_max": 5,
+    "criterion_evidence_min_overlap": 2
+  }
+}

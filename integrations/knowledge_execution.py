@@ -11,25 +11,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
     from kernel.capabilities.base import CapabilityExecutor, ExecutionContext
-    from kernel.contracts import CapabilityInvocation, CapabilityResult, Usage
+    from kernel.contracts import CapabilityInvocation, Usage
     from kernel.contracts.payloads import RetrievalRequestPayload
     from knowledge.ports import KnowledgeRetriever
     from knowledge.query_catalog import QueryCatalog
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing import Any
-    from knowledge.contracts import (
-        KnowledgeRetrievalRequest,
-        KnowledgeRetrievalResult,
-    )
-    from knowledge.ports import KnowledgeRetriever
-    from kernel.capabilities.base import ExecutionContext
-    from kernel.contracts.capability import CapabilityResult, Usage
-    from kernel.contracts.payloads import RetrievalRequestPayload
-    from kernel.contracts.work import CapabilityInvocation
-
+    from knowledge.query_admission import QueryAdmission
 
 import asyncio
 from functools import partial
@@ -247,6 +233,53 @@ def _answer_diagnostics(result: KnowledgeRetrievalResult) -> dict[str, str]:
     return values
 
 
+def _coverage(payload: RetrievalRequestPayload, result: KnowledgeRetrievalResult,
+              evidence: list, unavailable: bool, assessment_unmet: bool) -> NeedStatus:
+    """Only fulfilled typed obligations become eligible for the research answerability check.
+
+    Args:
+        payload: Typed retrieval request and preserved question obligations.
+        result: Actual bounded neutral retrieval result.
+        evidence: Authorized evidence retained after kernel content bounds.
+        unavailable: Whether the backend failed to return a usable result.
+        assessment_unmet: Whether conditional evidence obligations remain unresolved.
+
+    Returns:
+        Preliminary coverage eligible for the later answerability judgment.
+    """
+    obligations_met = (payload.retrieval_needs is not None and result.answer is not None
+        and result.answer.status == "fulfilled" and not assessment_unmet
+        and result.status == "ok" and not result.truncated)
+    return (NeedStatus.UNAVAILABLE if unavailable else
+        NeedStatus.SATISFIED if obligations_met and evidence else
+        NeedStatus.PARTIAL if evidence else NeedStatus.OPEN)
+
+
+def _content_types_unmet(payload: RetrievalRequestPayload, result: KnowledgeRetrievalResult) -> bool:
+    """Keep actual wrong-kind results from satisfying accepted entity/document constraints.
+
+    Args:
+        payload: Accepted typed needs and original question.
+        result: Final authorized response and deterministic answer assessment.
+
+    Returns:
+        Whether the response violates a required content-type constraint.
+    """
+    if payload.retrieval_needs is None:
+        return False
+    from integrations.research_needs import validate_dimensions
+    expected = validate_dimensions(payload.retrieval_needs)
+    if all(item.entity.kind == expected for item in result.evidence):
+        return False
+    reason = "Retrieved entity/document kind does not fulfill the interpreted content types"
+    result.status = "partial"
+    result.warnings.append(reason)
+    if result.answer is not None:
+        result.answer.status = "partial"
+        result.answer.limitations.append(reason)
+    return True
+
+
 def _kernel_result(
     invocation: CapabilityInvocation,
     ctx: ExecutionContext,
@@ -283,13 +316,10 @@ def _kernel_result(
         ), request, result, "knowledge evidence outside authorized scope")
     evidence = map_bounded_evidence(ctx, payload, request, result, invocation)
     unmet = _assess_final_answer(request, result)
+    unmet = _content_types_unmet(payload, result) or unmet
     assessment_unmet = finalize_assessment(request, result)
     unavailable = result.status not in {"ok", "partial"}
-    coverage = (
-        NeedStatus.UNAVAILABLE
-        if unavailable
-        else (NeedStatus.PARTIAL if evidence else NeedStatus.OPEN)
-    )
+    coverage = _coverage(payload, result, evidence, unavailable, assessment_unmet)
     limitations = [
         *result.warnings,
         f"knowledge status: {result.status}",
@@ -312,7 +342,8 @@ def _kernel_result(
         evidence=evidence,
         evidence_ids=[e.id for e in evidence],
         coverage={payload.need.id: coverage},
-        assessments=assessment_bundle(result, payload.need.id),
+        assessments=assessment_bundle(result, payload.need.id,
+                                      include_answer=payload.retrieval_needs is not None),
         attempted_sources=sorted(source_ids) or ["knowledge.retrieval"],
         unavailable_sources=[
             UnavailableSource(source_id="knowledge.retrieval", reason=result.status)
@@ -352,6 +383,24 @@ def _kernel_result(
     return attach_diagnosis(output, request, result)
 
 
+def _disclosure_target(payload: RetrievalRequestPayload, request: KnowledgeRetrievalRequest) -> int:
+    """Use field projection for typed metadata requests; acceptance clauses need immutable source text.
+
+    Args:
+        payload: Original typed request and disclosure constraints.
+        request: Selected registered query with trusted repository binding.
+
+    Returns:
+        Required disclosure level, preserving explicit caller operation behavior.
+    """
+    if payload.knowledge is not None:
+        return request.disclosure_level
+    needs = payload.retrieval_needs
+    if needs is not None and needs.detail_mode == "fields":
+        return 3 if {"criteria", "test_spec", "content"}.intersection(needs.selections["required_fields"]) else 0
+    return {"locator": 0, "summary": 2, "excerpt": 3}[payload.detail]
+
+
 async def invoke_knowledge(
     port: KnowledgeRetriever,
     invocation: CapabilityInvocation,
@@ -359,6 +408,7 @@ async def invoke_knowledge(
     payload: RetrievalRequestPayload,
     source_ids: set[str],
     *, query_catalog: QueryCatalog | None=None, fallback: CapabilityExecutor | None = None,
+    query_admission: QueryAdmission | None = None,
 ) -> CapabilityResult:
     """Validate, execute and map one bounded call through the existing capability boundary.
 
@@ -380,12 +430,20 @@ async def invoke_knowledge(
         selection_reason = None
         _scoped_request(ctx, payload, capabilities)
         if payload.knowledge is None:
-            choice, usage = await assess_graph_operation(ctx, invocation, payload, capabilities)
+            choice, usage = await assess_graph_operation(ctx, invocation, payload, capabilities,
+                catalog=query_catalog, allow_catalog=query_admission is not None)
+            if choice.operation == "query_catalog" and query_catalog is not None:
+                from integrations.query_growth import invoke_query_growth
+                output = await invoke_query_growth(port, query_catalog, query_admission,
+                    invocation, ctx, payload, source_ids)
+                return output.model_copy(update={"usage": [*usage, *output.usage]})
             if not choice.retrieve:
                 return await selection_result(ctx, invocation, payload, choice, usage, fallback)
             selected_payload = payload.model_copy(update={"knowledge": {
                 "mode": choice.mode, "operation": choice.operation,
-                "arguments": choice.arguments, "disclosure_level": 0},
+                "arguments": choice.arguments, "disclosure_level": 0,
+                **({"operation_version": choice.operation_version, "operation_digest": choice.operation_digest}
+                   if choice.operation_digest else {})},
                 "answer_requirements": selected_requirements(payload, choice)})
             selection_reason = choice.reason
             selection_diagnostics = {"knowledge_selection": "selected",
@@ -395,11 +453,7 @@ async def invoke_knowledge(
         usage.extend(request_usage)
         reason = selection_reason or reason
         original_mode = request.mode
-        target = (
-            request.disclosure_level
-            if payload.knowledge is not None
-            else {"locator": 0, "summary": 2, "excerpt": 3}[payload.detail]
-        )
+        target = _disclosure_target(payload, request)
         request, result, retrieval_ids = await disclose_selected(
             port, request, ctx, target, _observed_call, partial(_authorized, source_ids=source_ids)
         )
@@ -445,3 +499,5 @@ async def invoke_knowledge(
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
 # - 2026-10-03 20:00 [python-coder]: Select natural-question operations and retain paid usage through binding and execution failures. (#TICKETLESS reason=user-approved-DK300-graph-routing)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

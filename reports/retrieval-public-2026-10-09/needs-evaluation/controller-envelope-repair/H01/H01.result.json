@@ -1,0 +1,292 @@
+{
+  "case_id": "H01",
+  "original_rejected_receipt": "../H01.result.json",
+  "response_sha256": "90729743acfa53e97469a245a9aff772da8b97025e18f8111d8d01f403358618",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-20ce5281a0624e0e",
+    "root_task_id": "task-4b4efd0d07a348c6",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The request is confined to the named criterion's acceptance obligations and explicitly excludes its linked checks.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-20ce5281a0624e0e\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-ce4ea201acf2526b",
+        "created_at": "2026-10-09T15:35:05.811280Z",
+        "updated_at": "2026-10-09T15:35:05.811280Z",
+        "created_seq": 0,
+        "gap_key": "a79bebef3a975d590bcdb4f0747aea8f4f22ca997e637da52b039cfa43a284cd",
+        "gap_type": "host_only",
+        "goal": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+        "normalized_need": "1 500c acceptance checks it itself km linked me not obligations tell",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-20ce5281a0624e0e"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/a79bebef3a975d590bcdb4f0747aea8f4f22ca997e637da52b039cfa43a284cd.md"
+        },
+        "first_seen": "2026-10-09T15:35:05.811280Z",
+        "last_seen": "2026-10-09T15:35:05.811280Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 449709,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "4dc1a4cfe5638f8dd4c888cf9ef2851d",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-1"
+      ],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The request is confined to the named criterion's acceptance obligations and explicitly excludes its linked checks.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+        "expected": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "KM-500c-1"
+        ],
+        "expected": [
+          "KM-500c-1"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "exclude.target_ids",
+        "passed": true,
+        "actual": [
+          "KM-500c-1"
+        ],
+        "expected": {
+          "forbidden": [
+            "KM-500c-2"
+          ]
+        }
+      },
+      {
+        "name": "exclude.relationships",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "linked_tests",
+            "all_descendants"
+          ]
+        }
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "single_entity",
+        "expected": [
+          "single_entity"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      },
+      {
+        "name": "required_fields_when_projecting",
+        "passed": true,
+        "actual": [
+          "criteria"
+        ],
+        "expected": [
+          "criteria"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

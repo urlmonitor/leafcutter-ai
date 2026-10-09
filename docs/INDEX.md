@@ -220,6 +220,7 @@ task, then pull only those files.
 | kernel request splitting 2 conversion gate runs config | [docs/reference/kernel-request-splitting-2-conversion-gate-runs-config.md](reference/kernel-request-splitting-2-conversion-gate-runs-config.md) | The full rules behind ADR-067 sections 5 to 11, read when building or reviewing a split: proposal conversion, the split gate, endings by trigger, bounds, order and budgets, the split output, gap accounting, and configuration with the staged rollout. |
 | kernel request splitting | [docs/reference/kernel-request-splitting.md](reference/kernel-request-splitting.md) | The full rules behind ADR-067 sections 1 to 4, read when building or reviewing a split: the mechanism of each step, bundle detection and its triggers, the host.decompose_goal operation and registry entry, and the fields of the four split schemas. |
 | knowledge retrieval answers | [docs/reference/knowledge-retrieval-answers.md](reference/knowledge-retrieval-answers.md) | Request fields, status meanings, population rules, evidence assessment, evaluation contracts and explicit limits for repository research answers. |
+| knowledge retrieval evidence | [docs/reference/knowledge-retrieval-evidence.md](reference/knowledge-retrieval-evidence.md) | Canonical evidence fields, field-specific citations, requested source disclosure and availability limits for repository research answers. |
 | knowledge routing step | [docs/reference/knowledge-routing-step.md](reference/knowledge-routing-step.md) | Lookup for where the knowledge-routing step runs, which completion paths carry it, what its reported outcome and figures mean to the caller, and what the routing-run recency answer reports versus the waiting count and capture-health figures. |
 | neo4j native queries | [docs/reference/neo4j-native-queries.md](reference/neo4j-native-queries.md) | Native Neo4j labels, component filters, authored metadata and verified saved-query replacement. |
 | plan feature layout and startup checks | [docs/reference/plan-feature-layout-and-startup-checks.md](reference/plan-feature-layout-and-startup-checks.md) | Which copy of each /plan-feature support file runs depending on where the route is started, which directory a repair to that file has to land in for an install to carry it, and the complete set of startup checks that can halt the route before its first question to the user. |
@@ -245,8 +246,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 | adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
+| PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 
 ## Retrospectives
 
@@ -254,9 +255,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
