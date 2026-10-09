@@ -52,7 +52,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-035-fast-lane-closed-producer-roster.md
     relationship: describes
     status: exists
-    relevance: "Measured that two registry entries have no template at all -- architect-review-deep AND conflict-resolver-deep. The second is the open item in this record's it_requirements."
+    relevance: "Measured that two registry entries have no template at all -- architect-review-deep AND conflict-resolver-deep. The second was an open item until BrainCandy decision 13 (2026-10-09) removed it the same way as the first; see this record's it_requirements."
   - path: docs/agents/coding/architect-review.md
     relationship: modifies
     status: exists
@@ -118,10 +118,14 @@ test_rationale: >-
   The discriminating risk is a resolver that counts the wrong thing as existence -- a
   registry row or a compiled leftover -- which would pass architect-review-deep, the
   live case, and keep the defect silent; hence the must_catch descriptor. The
-  real-tree descriptor pins the decision-10 remediation so it cannot regress. It
-  deliberately does NOT assert 'zero refusing findings on the real tree', because
-  conflict-resolver-deep is a measured second unresolvable target awaiting a user
-  decision; that assertion belongs to AR-300b-1-i once it is decided.
+  real-tree descriptor pins the decision-10 remediation so it cannot regress. When
+  this record was first written it deliberately did NOT assert 'zero refusing
+  findings on the real tree', because conflict-resolver-deep was a measured second
+  unresolvable target awaiting a user decision, and that assertion was deferred to
+  AR-300b-1-i. BrainCandy decided it on 2026-10-09 (decision 13): conflict-resolver-deep
+  is removed exactly like architect-review-deep. The zero-refusing-findings
+  requirement is now stated in this record's POST-REMEDIATION ACCEPTANCE
+  it_requirement, and the real-tree assertion still belongs to AR-300b-1-i.
 delivers_to:
   agent: python-coder
   contract: >-
@@ -150,6 +154,10 @@ amended_by:
   agent: it-po
   date: '2026-10-09'
   changed: "it_requirements: the first line no longer defines the project-local lookup as 'resolved through the declared output root (skills_config output_root)'; a new PACKAGED-ONLY FOR NOW line records that a declared sub-agent resolves only against templates/agents/<id>.md, that the project-local lookup stays a distinct named lookup in the finding but currently finds nothing, and that designing a project-local agent location is deferred to a known issue. The stale-compiled-prompt line now applies to both lookups and names <output_root>/agents/ explicitly. test_spec: test_report_distinguishes_not_packaged_from_not_project_local no longer requires 'a project-local definition under the declared output root resolves'; it asserts both lookups are named and that a packaged template resolves, and states positive project-local resolution is deferred. Every must_catch (registry row; compiled or stale compiled prompt under <output_root>/agents/) is unchanged. WHY: decided by BrainCandy on 2026-10-09 -- no project-local agent location exists yet, so a test demanding positive project-local resolution would force one to be invented inside this slice. criteria, title, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because the decision comes from the approving user and only narrows a resolution path the criteria do not define."
+- reason: apply-user-decision
+  agent: it-po
+  date: '2026-10-09'
+  changed: "test_rationale, notes and the ADR-035 doc_link relevance: these still described conflict-resolver-deep as awaiting a user decision ('awaiting a user decision', 'Not decided here', 'the open item in this record's it_requirements'). Each now says the question was open and was decided by BrainCandy on 2026-10-09 (decision 13): conflict-resolver-deep is removed exactly like architect-review-deep -- registry entry retired, spawn permission and body instructions removed, conflict-resolver resolves structural conflicts itself -- and KI-AR-004 is widened to both missing Opus escalations. A new notes paragraph 'SECOND INSTANCE DECIDED' records this; the earlier paragraph is kept, reworded to past tense, so the history stays readable. WHY: decision 13 was already applied to it_requirements in the first amendment above, but these passages were not updated with it and contradicted it. criteria, title, it_requirements, test_spec, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because this only brings descriptive text in line with a decision the approving user already made."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -195,8 +203,15 @@ notes: |
   conflict-resolver-deep, which has the same shape: a registry entry with
   template_path null, no template, and a body instruction to spawn it via the
   Agent tool. ADR-035 already counted both. After decision 10 the build still
-  refuses on this one, so it needs the same user decision before the real build
-  can go green. Not decided here.
+  refused on this one, so it was left open for the same user decision before the
+  real build could go green.
+
+  SECOND INSTANCE DECIDED (BrainCandy, 2026-10-09, decision 13): removed exactly
+  like architect-review-deep. Its registry entry is retired, the spawn permission
+  and conflict-resolver's body instructions to spawn it are removed, and
+  conflict-resolver resolves structural conflicts itself. KI-AR-004 is widened to
+  cover both missing Opus escalations. The removal is the decision-13 remediation
+  step in this record's it_requirements.
 
   PROJECT-LOCAL LOOKUP -- DEFERRED (BrainCandy, 2026-10-09). Declared sub-agents
   resolve against PACKAGED templates (templates/agents/<id>.md) only, for now.

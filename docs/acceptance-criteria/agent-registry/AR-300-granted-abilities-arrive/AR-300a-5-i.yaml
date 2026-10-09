@@ -76,7 +76,7 @@ it_requirements:
   - "ORDER: the deletion runs only AFTER the AR-300c-5-i consolidation has written the union into each template's `spawn_allowlist` declaration (and, for architect-review, after AR-300c-5-iii's decision-10 remediation). Deleting first loses python-coder's table-only test-runner permission, which BrainCandy decided (decision 11) it keeps. For ticket-supervisor, its permission must already be carried by its declaration (the `__ticket_phase_agents__` shorthand, AR-300c-5) before the fenced list goes, so no agent it may spawn today is lost."
   - "ONE DETECTOR: detecting a hand-written sub-agent account must generalise the existing in-place-account detector (scripts/agent_inplace_abilities.py, which detects a hand-written abilities account) over the kind of account, not add a parallel spawn detector. It anchors on the generated section's emitted structure (AR-300a-5 defines it once) and on a table OR a list (bulleted, numbered or fenced) that states the agent's OWN permitted sub-agents -- never on counting a heading string, which llm-expert's checklist prose contains (the control case; AR-200b-1 records what a heading-string detector costs this component). A detector that recognises only tables misses ticket-supervisor's shape and fails this AC."
   - "Equality is a two-way set comparison between the sub-agents named in the surviving (delivered) account and the declaration after macro resolution."
-  - "The single-account property is asserted over EVERY compiled prompt in every platform root under the declared output root, with the count reported and failure on zero -- not just the five known instances."
+  - "The single-account property is asserted over EVERY compiled prompt in every platform root under the declared output root, with the count reported and failure on zero -- not just the six known instances (the five tables plus ticket-supervisor's fenced list)."
   - "File-size ratchet: generalising the detector must not push its module over the 400-content-line limit (count_content_lines); split into a new module if needed. scripts/template_compiler.py and scripts/injection_builders.py may not grow."
 test_spec:
   - name: test_six_formerly_hand_written_agents_carry_exactly_one_sub_agent_account
@@ -98,7 +98,7 @@ test_spec:
     angle: discrimination
     description: "Planting a hand-written sub-agent table in a different template makes the whole-population assertion fail, naming that agent."
     must_catch:
-      - "the assertion iterates only the five known templates"
+      - "the assertion iterates only the six known templates (the five with tables plus ticket-supervisor)"
   - name: test_a_hand_written_sub_agent_list_planted_in_another_template_is_caught
     target_dir: unit_tests/prompt_assembly/
     framework: unittest
@@ -139,6 +139,10 @@ amended_by:
   agent: it-po
   date: '2026-10-09'
   changed: "title and criteria: the single-account rule now names SIX formerly hand-written sub-agent accounts -- the five tables plus ticket-supervisor's fenced list under '### Spawn Allowlist (is_ticket_phase agents)' -- and covers any hand-written sub-agent account, table OR list, both for the whole-population clause and the prose-mention control clause (was: tables only, five agents). doc_links: templates/agents/ticket-supervisor.md added (modifies). it_requirements: the deletion line names the six accounts, the ORDER line requires ticket-supervisor's permission to be carried by its declaration before its list goes, and the ONE DETECTOR line requires the detector to recognise lists as well as tables. test_spec: the deployed descriptor is renamed test_six_formerly_hand_written_agents_carry_exactly_one_sub_agent_account and includes ticket-supervisor; a planted-LIST discrimination descriptor is added. WHY: decided by BrainCandy on 2026-10-09 -- ticket-supervisor's fenced list is a second hand-written account of who it may call on, exactly the drift this rule exists to stop, and a table-only rule would leave it and any future list in place. req_status, depends_on, delivers_to, expects_from unchanged. readiness stays approved: the widening is the approving user's own decision, recorded here so the approval provably covers the amended wording (AR-200b's re-approval convention)."
+- reason: apply-user-decision
+  agent: it-po
+  date: '2026-10-09'
+  changed: "it_requirements and test_spec: two places still read 'five' as the governing count after the six-account widening above. The whole-population it_requirement now says 'not just the six known instances (the five tables plus ticket-supervisor's fenced list)' (was 'the five known instances'), and the planted-table descriptor's must_catch now reads 'the assertion iterates only the six known templates (the five with tables plus ticket-supervisor)' (was 'the five known templates'). WHY: BrainCandy's 2026-10-09 decision made the governing count six; these two sentences were missed by the earlier amendment. Explicitly historical 'five' wording (the notes, which already say to read 'five' as the measured table population, and test_rationale's 'two of the five tables') is left as-is. criteria, title, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because this only aligns two sentences with a decision the approving user already made."
 superseded_by: null
 covered_by: []
 implemented_by: []

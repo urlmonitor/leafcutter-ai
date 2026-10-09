@@ -500,7 +500,7 @@
       {
         "id": "transform-agent-registry",
         "tier": "transform",
-        "name": "Transform agent registry (regenerate skills_used/skills_invoked from template declarations)",
+        "name": "Transform agent registry (regenerate skills_used/skills_invoked/spawn_allowlist from template declarations)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py",
         "language": "system",
         "files": "^(templates/agents/.*\\.md|config/agent_registry\\.json)$",
@@ -510,7 +510,7 @@
         "pass_filenames": false,
         "change_set_source": "handed_by_commit_path",
         "always_run": false,
-        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability fields are a derived copy of each template's frontmatter `skills:` declaration. This transform regenerates ONLY skills_used/skills_invoked and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
+        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability fields are a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_used/skills_invoked/spawn_allowlist (never spawned_by) and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
       },
       {
         "id": "check-doc-frontmatter",

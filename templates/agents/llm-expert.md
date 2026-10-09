@@ -153,11 +153,20 @@ before signing off.
    - Correct form: remove the stray tool reference from the body, or add the tool
      to the `tools:` allowlist so the two are consistent.
 
-4. **`spawn_allowlist` declared when spawning sub-agents** — any prompt that
-   invokes the `Agent` tool must include a `## Your Available Sub-Agents` or
-   `## Spawn Allowlist` section listing the agents it is permitted to spawn.
-   - Violation: prompt calls `Agent` tool but has no spawn allowlist section.
-   - Correct form: a table with each sub-agent's `id`, `role`, and `tier`.
+4. **`spawn_allowlist` declared in frontmatter, and agreeing with `Agent`** — the
+   one place a sub-agent is permitted is the frontmatter `spawn_allowlist:` key,
+   beside `tools:`. An agent that declares any sub-agent must list `Agent` in
+   `tools:`, and a prompt that invokes the `Agent` tool must declare
+   `spawn_allowlist:`. The build appends the generated "Your Available
+   Sub-Agents" section itself.
+   - Violation: prompt calls `Agent` tool but has no `spawn_allowlist:`
+     declaration, or declares sub-agents without `Agent` in `tools:`.
+   - Violation: the body hand-writes a sub-agent table or list, or places a
+     marker for one. Remove it; nothing beyond the declaration is needed.
+   - Correct form: `tools:` lists `Agent` and the frontmatter carries
+     `spawn_allowlist: [<agent-ids>]`; the body contains no sub-agent table.
+   - Do not edit the registry's `spawn_allowlist` / `skills_invoked`: they are
+     derived copies regenerated from the declarations.
 
 5. **Signoff protocol section present for `signoff: true` agents** — every agent
    template with `signoff: true` in frontmatter must include a `## Sign-off`
