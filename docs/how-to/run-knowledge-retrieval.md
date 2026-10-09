@@ -6,9 +6,10 @@ created: '2026-10-01'
 components:
 - knowledge_management
 - decision_kernel
-last_updated: '2026-10-02'
+last_updated: '2026-10-09'
 description: Run scoped repository queries and inspect answer completeness, evidence and observation delivery.
 related_docs:
+- docs/reference/neo4j-native-queries.md
 - docs/reference/knowledge-retrieval-answers.md
 - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
 - docs/architecture/components/knowledge-retrieval.md
@@ -29,113 +30,15 @@ Run commands from the trusted Leafcutter checkout. Indexed Git objects are data,
 
 ### Explore the graph in Aura
 
-The domain graph exposes native labels including `AC`, `ADR`, `Component`,
-`Agent`, `Skill`, `Ticket`, `Document`, `RoadmapPhase`, `GlossaryTerm`, `Flow`,
-`Mockup`, `MockData`, `ChangelogEntry`, `Capability`, `Decision`, `SourceFile`,
-and `Test`. A label has nodes only when the pinned source contains that type.
-Use `name` for captions (canonical identifiers), and inspect `title`, `source_path`
-and `source_revision` for context. Relationships use their actual types, such as
-`COMPONENT_MEMBERSHIP`, `DEPENDS_ON`, `COVERED_BY`, and `IMPLEMENTED_BY`.
-These remain source declarations, not proof that implementation or testing passed.
-
-In Aura **Bloom**, use the saved search phrase **Component finalize**, select the
-matching suggestion, then run it. Replace `finalize` with another component name
-to view its direct assignments. The saved phrase selects only current nodes and
-relationships. Results depend on the active mapper and source revision; the native
-field expansion also admits direct component assignments from newly supported types.
-Choose **In Scene** in the legend to show the categories present in this view.
-Aura resets this choice to **All** after a reload, so select **In Scene** again.
-The free instance uses its Default Perspective; an additional perspective requires
-an Aura upgrade. The saved captions use `name` for AC, ADR, Component, SourceFile
-and Test, and `title` for Ticket, Document and ChangelogEntry; titles appear on hover.
-The verified mapper-7 scene at source `59269e02` contains 74 nodes and 74
-relationships: 63 ACs, one ADR, one Component, three Tickets, two Documents and
-four ChangelogEntries. See `reports/native-fields/aura-ui.json` for visual evidence.
-
-Show items explicitly assigned to a component in the active snapshot:
-
-```cypher
-MATCH (n)
-WHERE n.current = true AND 'finalize' IN n.components
-RETURN n;
-```
-
-Show those items connected to the component:
-
-```cypher
-MATCH p = (n)-[:COMPONENT_MEMBERSHIP]->(c:Component {name: 'finalize'})
-WHERE n.current = true AND c.current = true
-RETURN p;
-```
-
-`components` is a list because an item may declare more than one membership.
-It includes direct assignments only; a test referenced by an AC does not acquire
-the AC's component automatically. Keep `current = true` in ordinary exploration
-to exclude retained historical copies. The component search omits `Repository`
-and `Snapshot`; they remain available for diagnostics. Ordinary label searches
-can still include historical copies unless a current filter is applied.
-
-Existing generic graphs can be inspected without writes:
-
-```sh
-python -m knowledge.domain_migrate --root REPOSITORY --repository-id leafcutter --expected-host AURA_HOST
-```
-
-After updating readers, add `--apply --backup ABSOLUTE_BACKUP_PATH` with explicitly
-configured writer credentials to perform the migration. Backups contain source
-evidence and should remain private and outside Git. Migration validates every
-retained snapshot, preserves entity keys, payloads, source revisions and counts,
-and replaces each legacy relationship atomically with its native typed equivalent.
-Interrupted runs can be inspected and resumed with a new backup path. Publication
-changes, corrupt records and cross-generation edges are rejected. Old writer
-versions must not be used after migration.
+See the [native graph reference](../reference/neo4j-native-queries.md#explore-the-graph-in-aura)
+for domain labels, saved Bloom views, current component filters and verified
+native-query catalog replacement.
 
 ### Inspect complete native fields
 
-Simple authored fields appear directly, for example `criteria`, `priority`,
-`test_required` and `depends_on`. Nested leaves use JSON Pointer names, retaining
-list positions and parent objects. For example, the first test specification's
-name is `/test_spec/0/name`. Quote these names with backticks in Cypher:
-
-```cypher
-MATCH (n:AC {current: true})
-WHERE 'finalize' IN n.components
-RETURN n.id, n.criteria, n.test_required, n.`/test_spec/0/name`;
-```
-
-Authored names that collide with graph bookkeeping use pointers too: `/id`,
-`/title`, `/components`, `/current`, and `/payload` preserve exact source values.
-The ordinary `components` property deduplicates explicit source declarations and
-direct membership edges. Unresolved declarations remain filterable and are reported
-in snapshot diagnostics; indirect connections do not imply membership.
-Registry data stays separate from template frontmatter, bodies and context, which
-appear under `_native_derived/derived/...`. Those fields are inspection aids,
-not additional authored attributes of the registry entry.
-
-Neo4j cannot store maps, nested lists or null as ordinary property values. The
-mapping exposes their non-null leaves and records null paths in
-`_native_null_paths`, empty containers in `_native_empty_paths`, and exact structure
-and types in `_native_shape`. A missing field is different from any of these.
-The lossless canonical payload remains available; low-disclosure retrieval retains
-its existing field allowlist and does not reveal the full source automatically.
-
-The maintained type registry is `knowledge/native_types/registry.py`; the reviewed
-inventory and individual field contracts are in `reports/native-fields/`. Each
-reader preserves extension fields as well as the currently declared schema fields.
-To inspect a native-field refresh at the existing active source commit:
-
-```sh
-python -m knowledge.native_refresh --root ENVIRONMENT_ROOT --source-root TRUSTED_CHECKOUT --repository-id leafcutter --expected-host AURA_HOST
-```
-
-Add `--apply --backup ABSOLUTE_PRIVATE_BACKUP_PATH` only for an authorized refresh
-with writer credentials. It builds a new mapper generation, verifies written fields
-before activation, and preserves the previous generations and their canonical data.
-It does not publish uncommitted files or claim missing source records exist.
-The 2026-10-02 publication contains 9,047 current nodes and 23,612 relationships,
-with all four earlier generations preserved. The current source contains no
-Decision records. Counts and field readback are recorded separately in
-`reports/native-fields/aura-publication.json` and `aura-readback.json`.
+See [native fields and refresh](../reference/neo4j-native-queries.md#inspect-complete-native-fields)
+for authored properties, nested leaves, null/empty distinctions, publication
+receipts and the explicit native-metadata refresh procedure.
 
 ### Step 1 - Check optional service availability
 
@@ -241,7 +144,7 @@ Keep the actual `.env` outside Git and set `LEAFCUTTER_ENV_FILE` to its existing
 
 ### Step 7 - Use the governed reusable query catalog
 
-Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Existing operations keep their original contracts. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
+Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Only current native compiler entries are accepted; see the [saved-query replacement contract](../reference/neo4j-native-queries.md#saved-native-queries) when replacing an obsolete catalog. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
 
 ```text
 python -m knowledge catalog-list --catalog-root <directory>
@@ -256,7 +159,7 @@ The coding agent authors typed parameters, purpose, supported questions and a re
 
 The candidate includes positive and empty expected-result cases. The verifier executes those judgments against the exact pinned source and independently tests invalid input, bound injection and foreign scope. Passing these checks establishes declared-case conformance, not general semantic usefulness. The example [component test query](../../knowledge/examples/component_tests_candidate.json) joins component membership to acceptance-criterion test references in one new two-hop operation. Its expected IDs were independently reviewed against the commit named in [source judgments](../../reports/knowledge-query-growth-source-judgments.json).
 
-The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; already pinned requests retain their selected descriptor. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
+The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; pinned requests select retained native entries; an explicit format replacement requires the new recorded digest and rejects the old pin. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
 
 For a catalog intended to survive replacing or later merging an implementation worktree, configure a durable user/application data directory outside that worktree. The catalog contains query metadata and measured provenance rather than Neo4j credentials. Keep write access restricted to the activation owner; copying an untrusted catalog is not an authorization mechanism.
 
@@ -344,6 +247,7 @@ Verification labels: public kernel/observer acceptance tests exercise the real k
 
 ## See Also
 
+- [Native graph and saved queries](../reference/neo4j-native-queries.md)
 - [Repository answer contracts and proof meanings](../reference/knowledge-retrieval-answers.md)
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md)
 - [Kernel research and reusable queries](kernel-query-growth.md)
