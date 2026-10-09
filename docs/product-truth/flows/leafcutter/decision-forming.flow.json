@@ -4532,8 +4532,8 @@
         "decision_request/criteria_missing: boolean (optional; default false)"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-05",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "implements": [
         "DK-400a-3-ii"
       ],
@@ -7080,9 +7080,9 @@
     }
   ],
   "impl_summary": {
-    "done": 5,
+    "done": 6,
     "in_progress": 6,
-    "not_started": 30,
+    "not_started": 29,
     "total": 41,
     "asof": "2026-10-09"
   },
