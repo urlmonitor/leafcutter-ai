@@ -365,6 +365,25 @@ leftovers that withheld it persist. Fix the cause and re-run to build it.
 
 ---
 
+## KI-10: Done tickets are modified but unstaged after a run — leave them alone
+
+**What you will see.** After a run, ticket files show as modified but **unstaged** with
+`status: done`. The completion write runs `set_ticket_status.py --status done --no-stage`.
+
+**Why this is expected.** Staging them made KI-9's staged-leftovers stop fire at the next
+halt, and swept the done ticket into the next ticket's commit, where `check-predone-scope`
+blocked it. So the write is deliberately left unstaged.
+
+**What to do.** Nothing. Do not stage or commit them by hand on an epic branch. They are
+committed by `finalize-feature` step 3.5 (the pre-merge closure on the feature branch): it
+resets the worktree to the feature branch's HEAD (aborting any test merge first), re-sets
+`status: done` on each open ticket, closes the source ACs and commits that closure on the
+branch before the merge, so the statuses reach main through the merge. The reset discards
+anything unstaged in the worktree in both cases, so nothing else should be left there before
+finalize. (Decision Kernel run `run-f6524c703be24639`.)
+
+---
+
 ## References
 
 - `.claude/commands/build-feature.md` — executable workflow; Step A step 6

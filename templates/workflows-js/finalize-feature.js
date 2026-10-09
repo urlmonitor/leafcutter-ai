@@ -1539,9 +1539,7 @@ if (closureAlreadyCommitted) {
       reason: "PR already merged — pre-merge closure step skipped (AC-5 idempotency)",
     });
   } else {
-    // -----------------------------------------------------------------------
     // Sub-step A: Reset the Step 2 test-merge.
-    // -----------------------------------------------------------------------
     const resetMergeResult = await agent(
       "Reset any staged test-merge left by step 2 before editing ticket files.\n" +
       `All git commands use the explicit worktree root: git -C "${WORKTREE_ROOT}"\n` +
@@ -1552,7 +1550,8 @@ if (closureAlreadyCommitted) {
       "\n" +
       "2. If exit code is 0 (MERGE_HEAD exists — merge in progress):\n" +
       `   Run: git -C "${WORKTREE_ROOT}" merge --abort\n` +
-      "   Log: 'Step 2 test-merge aborted — clean feature-branch state restored.'\n" +
+      `   Then run: git -C "${WORKTREE_ROOT}" reset --hard HEAD\n` +
+      "   Log: 'Step 2 test-merge aborted and reset to feature-branch HEAD.'\n" +
       "   Return: { \"status\": \"aborted\" }\n" +
       "\n" +
       "3. If exit code is non-zero (no merge in progress):\n" +
