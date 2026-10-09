@@ -37,7 +37,7 @@ def _journey(n: int) -> dict:
         "id": f"fixture-product/journey-{n}", "component": "fixture-product", "name": f"journey-{n}",
         "summary": "fixture journey", "kind": "user", "source": "mock", "status": "active",
         "readiness": "draft", "version": 1, "entities": [],
-        "steps": [{"id": "act", "label": "act", "human": "the actor acts", "io_contracts": {"not_applicable": "Record-count fixture models an actor action with no serialized handoff."}, "order": 1, "implements": ["AC-REAL-1"]}],
+        "steps": [{"id": "act", "label": "act", "description": "the actor acts", "actor_kind": "human", "io_contracts": {"not_applicable": "Record-count fixture models an actor action with no serialized handoff."}, "order": 1, "implements": ["AC-REAL-1"]}],
         "branches": [],
     }
 

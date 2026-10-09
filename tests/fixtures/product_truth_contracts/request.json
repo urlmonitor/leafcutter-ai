@@ -67,7 +67,7 @@
         "label": "Interpret request",
         "agent": "System",
         "order": 1,
-        "human": "Pass the documented request.",
+        "description": "Pass the documented request.", "actor_kind": "human",
         "implements": [],
         "io_contracts": {
           "consumes": [

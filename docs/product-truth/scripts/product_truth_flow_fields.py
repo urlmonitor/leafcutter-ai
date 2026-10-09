@@ -1,4 +1,6 @@
-"""Refresh a flow's derived presentation and implementation rollup in one place.
+"""Refresh a flow's derived compatibility labels and implementation rollup in one place.
+
+Step and branch descriptions are authored text and are never touched here.
 
 GOAL: Keep the canonical flow writer small while preserving status/date idempotency.
 BUSINESS CONTEXT: Regeneration must not change approval or freshness dates unnecessarily.

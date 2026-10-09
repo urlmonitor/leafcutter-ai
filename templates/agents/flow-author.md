@@ -58,8 +58,9 @@ step, plus screen/entity wiring where applicable, with one `acceptance_scenario`
 is the reviewable source of truth the persona approves and the business-analyst
 decomposes into ACs — so its wiring must be exact and its scenarios testable.
 
-For real code/data flows, read the actual runtime contracts and saved receipts.
-Do not invent screens, mock entities or serialized envelopes. Every new step and
+For real code/data flows, read the actual runtime contracts and saved receipts
+to fill `io_contracts` — contract detail belongs there, never in a step's
+`description`. Do not invent screens, mock entities or serialized envelopes. Every new step and
 branch must carry `io_contracts`: exact JSON field paths, transport types,
 requiredness, deterministic defaults and concrete full/projected examples, or an
 explicit reason that no JSON handoff exists. Use `contract_definitions` with
@@ -68,8 +69,9 @@ transport field distinct from its applied payload schema. Observed examples must
 point to their receipt; reconstructed examples must say so.
 
 Follow the [JSON contract standard](../../docs/product-truth/JSON-CONTRACTS.md).
-Keep narrative before the generated contract marker; the canonical generator owns
-`consumes`, `produces` and the generated field/example section. Run generation and
+Each step's `description` is ONE plain sentence of what happens (S3); the canonical
+generator owns the compatibility `consumes`/`produces` labels and writes nothing
+into a description. Run generation and
 the existing validator before reporting completion. The gate checks declared
 JSON facts and examples, not semantic correctness or AC approval. Every existing
 and new flow node is now required to carry metadata; there are no legacy opt-outs.
@@ -89,12 +91,13 @@ absent/unreadable/oversized file and continue).
    the Search section, and the add-vs-create rule: *"a new screen that belongs to an
    existing journey is a step added to that flow, not a new flow."*
 2. Read `docs/product-truth/schemas/flow.schema.json` — the exact shape: `steps`
-   (`id`, `label`, `human`, `order`, `screen`, `reads`, `writes`, `implements`,
-   `impl_status`), `branches`, and `acceptance_scenarios` (`for`, `given`, `when`,
-   `then`).
+   (`id`, `label`, `description`, `agent`, `actor_kind`, `order`, `screen`, `reads`,
+   `writes`, `implements`, `impl_status`), `branches`, and `acceptance_scenarios`
+   (`for`, `given`, `when`, `then`). Read the field guide "What goes where in a step"
+   in `docs/how-to/product-truth-schema-reference.md`.
 3. Read the **gold seed**
    `docs/product-truth/flows/fern-and-fig/customer-buys-a-plant.flow.json` — match its
-   shape and quality (human lines, screen wiring, reads/writes, branch, one scenario
+   shape and quality (one-sentence descriptions, screen wiring, reads/writes, branch, one scenario
    per node).
 4. Read the **gold prompt**
    `docs/product-truth/mock-data/pipeline-prompts/draft-flow.prompt.json` — the
@@ -123,9 +126,20 @@ absent/unreadable/oversized file and continue).
 
 ## S3 Authoring rules
 
-- Order the steps and give each a short `label`, a plain-language `human` narrative,
-  and exactly one owner. Set `screen` only when the step renders a mockup; that id
-  must resolve. A real callable or internal data transition does not need a screen.
+- Order the steps and give each a short `label`, a `description` and exactly one
+  owner (`agent`). Set `screen` only when the step renders a mockup; that id must
+  resolve. A real callable or internal data transition does not need a screen.
+- The `description` is ONE plain sentence, at most 200 characters, saying WHAT
+  happens and who does it, in words a product person understands. NEVER put in it:
+  code paths or file names; symbol, function or field names; build or
+  implementation status ("implemented", "not built", "stub", "TODO"); design notes
+  or rationale; ticket, AC, ADR or record ids; contract dumps, JSON, commands or
+  flags. Those belong in code, ACs, `realization` and `io_contracts`. The
+  validator's description gates reject the length and every code-shaped token.
+- Set `actor_kind` beside `agent` on every step (and on branches): `deterministic`
+  for scripts, hooks, workflows and other code; `jev` for Jev; `llm` for an agent
+  template, Claude Code or a host model; `human` for a person. Record the mechanism
+  that does the work described, not who approves it afterwards.
 - For entity/mock journeys, declare `reads`/`writes` using the entity registry and
   link the canonical dataset via `mock_data_ref`. Code/data flows instead document
   their real contracts; do not invent business entities or mock datasets.
@@ -158,13 +172,13 @@ absent/unreadable/oversized file and continue).
    (id, type `flow`, title, summary, kind, source, component, path, status,
    readiness, version, entities, tags). Update `version` in place on extend.
 3. **Do NOT hand-edit the DERIVED index maps** (`by_component`, `by_entity`,
-   `by_flow`, `by_ac`), generated contract badges/details, or any
+   `by_flow`, `by_ac`), the generated compatibility labels, or any
    `impl_status` / `impl_summary` — the generator owns all of it.
 4. Rebuild derived data (the canonical generator does not emit flow Markdown):
    `python docs/product-truth/scripts/generate_product_truth.py`
 5. Validate:
    `python docs/product-truth/scripts/validate_product_truth.py`
-   Fix every schema, pointer, field/example or generated-presentation failure,
+   Fix every schema, pointer, field/example, description-gate or label failure,
    then rerun. Unresolved implements AC pointers are hard failures. Leave new
    links empty until those ACs exist; preserve valid existing links.
 

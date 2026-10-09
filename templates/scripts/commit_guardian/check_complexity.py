@@ -25,6 +25,8 @@ from _resolve_root import find_project_root
 project_root = find_project_root()
 
 from config import MAX_COMPLEXITY_SCORE, COMPLEXITY_EXCLUDED_DIRS
+from _complexity_ratchet import CouldNotCheck, Refusal, UnjudgeableError, judge_file
+from _file_size_ratchet import PreviousLengthSourceError, resolve_parent_revisions
 
 class ComplexityVisitor(ast.NodeVisitor):
     """AST visitor that calculates cyclomatic complexity by counting branches."""
@@ -127,32 +129,29 @@ def get_staged_files() -> dict[str, str]:
             staged_files[filepath] = status
     return staged_files
 
-def process_staged_file(filepath: str, max_complexity: int) -> list[tuple[str, int]]:
-    """Check a single file for functions exceeding complexity threshold.
+def process_staged_file(
+    filepath: str, max_complexity: int, parents: list[str]
+) -> list[Refusal] | CouldNotCheck:
+    """Judge the STAGED version of a file against each function's ceiling.
 
     Args:
         filepath: Path to the Python file.
-        max_complexity: Maximum allowed cyclomatic complexity.
+        max_complexity: The complexity limit (floor of every ceiling).
+        parents: Parent revisions (HEAD, plus MERGE_HEAD lines in a merge).
 
     Returns:
-        list[tuple[str, int]]: Functions that exceed the threshold.
+        list[Refusal] | CouldNotCheck: Functions refused, or a could-not-check
+        verdict naming the file when it cannot be parsed or read. Never an
+        empty list for a file that could not be judged.
     """
     path = Path(filepath)
     # Exclude certain testing and legacy directories
     if any(ex in path.parts for ex in COMPLEXITY_EXCLUDED_DIRS):
         return []
-        
     try:
-        content = path.read_text(encoding="utf-8")
-        function_complexities = calculate_complexities(content)
-        
-        file_failures = []
-        for func_name, score in function_complexities:
-            if score > max_complexity:
-                file_failures.append((func_name, score))
-        return file_failures
-    except Exception:
-        return []
+        return judge_file(filepath, max_complexity, parents, ComplexityVisitor)
+    except UnjudgeableError as exc:
+        return CouldNotCheck(filepath, exc.why)
 
 def get_agent_for_extension(
     ext: str,
@@ -210,32 +209,50 @@ def main() -> int:
     if not staged_files:
         return 0
 
+    try:
+        parents = resolve_parent_revisions()
+    except PreviousLengthSourceError as exc:
+        print(f"❌ could not check staged Python files: {exc.reason}")
+        return 1
+
     failed_files = []
+    unchecked = []
     passed_files_count = 0
-    
+
     for filepath, status in staged_files.items():
-        if not filepath.endswith(".py"):
+        if not filepath.endswith(".py") or status.startswith("D"):
             continue
-            
-        file_failures = process_staged_file(filepath, MAX_COMPLEXITY_SCORE)
-        
-        if file_failures:
-            failed_files.append((filepath, file_failures))
+
+        verdict = process_staged_file(filepath, MAX_COMPLEXITY_SCORE, parents)
+
+        if isinstance(verdict, CouldNotCheck):
+            unchecked.append(verdict)
+        elif verdict:
+            failed_files.append((filepath, verdict))
         else:
             passed_files_count += 1
 
-    if failed_files:
+    if failed_files or unchecked:
         print("\n🧠 Code Complexity Check Failed\n")
-        print(f"Functions exceed the maximum allowed Cyclomatic Complexity of {MAX_COMPLEXITY_SCORE}\n")
-        
+        print(
+            "Each function is held to the greater of the limit "
+            f"({MAX_COMPLEXITY_SCORE}) and its own highest previous score (its ceiling)\n"
+        )
+
         for filepath, failures in failed_files:
             print(f"❌ {filepath}:")
-            for func_name, score in failures:
-                print(f"   - Function '{func_name}' has complexity {score}")
+            for item in failures:
+                print(f"   - Function '{item.name}' scores {item.score}, ceiling {item.ceiling} ({item.reason})")
             print()
-            
+
+        for item in unchecked:
+            print(f"❌ could not check {item.path}: {item.why}")
+        if unchecked:
+            print()
+
         print("💡 Tip: Try breaking these large functions into smaller, private helper functions.")
         print("   Use the `complexity-reduction` skill to safely refactor and extract components.")
+        print("   A pure move or rename of an unchanged function: commit with SKIP=check-complexity.")
 
         # Machine-readable autofix hint — parsed by the precommit-autofix skill
         # to route directly to the correct coder. Looked up from agent_registry.json

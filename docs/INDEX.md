@@ -224,7 +224,7 @@ task, then pull only those files.
 | neo4j native queries | [docs/reference/neo4j-native-queries.md](reference/neo4j-native-queries.md) | Native Neo4j labels, component filters, authored metadata and verified saved-query replacement. |
 | plan feature layout and startup checks | [docs/reference/plan-feature-layout-and-startup-checks.md](reference/plan-feature-layout-and-startup-checks.md) | Which copy of each /plan-feature support file runs depending on where the route is started, which directory a repair to that file has to land in for an install to carry it, and the complete set of startup checks that can halt the route before its first question to the user. |
 | product truth checker outcomes | [docs/reference/product-truth-checker-outcomes.md](reference/product-truth-checker-outcomes.md) | The four-value outcome vocabulary validate_product_truth.py reports on its last stdout line -- checked-and-sound, nothing-examined, degraded, failed -- what a reader may and may not conclude from each, the soundness rule that produces nothing-examined, how that rule differs from the project's fail-open convention, and which checks are deliberately exempt from it. |
-| product truth size bounds | [docs/reference/product-truth-size-bounds.md](reference/product-truth-size-bounds.md) | Every declared size bound on the product-truth record, with its value, field and shape version; the order a new bound or reshaped field is rolled out in; which fields are authored and which are derived; and the measurement behind the bounds. |
+| product truth size bounds | [docs/reference/product-truth-size-bounds.md](reference/product-truth-size-bounds.md) | Every declared size bound on the product-truth record, with its value, field and shape version; the step description gates (length and code-token lint); the order a new bound or reshaped field is rolled out in; which fields are authored and which are derived; and the measurement behind the bounds. |
 | proof claims and completeness | [docs/reference/proof-claims-and-completeness.md](reference/proof-claims-and-completeness.md) | For each of the seven kinds of proof a test can claim, states what the claim asserts, what it does NOT entitle a reader to conclude, and where the excluded question is actually settled. |
 | skill frontmatter | [docs/reference/skill-frontmatter.md](reference/skill-frontmatter.md) | Overview of Reference: SKILL.md Frontmatter Fields. |
 | skills config fields | [docs/reference/skills-config-fields.md](reference/skills-config-fields.md) | Overview of Reference: skills_config.json Fields. |
@@ -245,8 +245,8 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -254,9 +254,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

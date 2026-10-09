@@ -38,7 +38,7 @@ Background: TQ-600a-13 already landed a REAL deselection (pytest.ini addopts
    `collected` and `failing`). The lane step may be a wrapper such as
    ``python scripts/ci/post_merge_suite.py run -- python -m pytest -m "manual and not timing_ratio" tests/ unit_tests/``
    so the literal pytest ``-m`` stays visible here. The timing lane (post-merge-timing.yml, shipped by
-   TQ-600a-13-xix) has no retry: its single pytest step still decides its run.
+   TQ-600a-13-xix as one pytest step) has the same run / retry / verdict shape since TQ-600a-13-xii.
 4. ``.github/workflows/ci.yml`` (a ``pull_request`` workflow) has a step whose ``run:``
    invokes ``check_exclusion_compensation`` with no ``${{ }}`` expression, relative to the
    repository root, with ``--root`` defaulting to cwd -- this is what makes the refusal
@@ -206,39 +206,45 @@ class TestTq600a13iFailingExcludedTestFailsTheJob(unittest.TestCase):
     def tearDownClass(cls):
         cls.api.close()
 
-    def _lane_step(self, workflow_name):
+    def _drive_lane(self, workflow_name, test_source):
+        """Execute run -> retry -> verdict of a lane workflow for a passing and a failing test; return both outcomes.
+
+        Each outcome is ``(run job, verdict job, uploaded verdict file or None)``. The three jobs are real
+        (the shared workflow-step executor), each in its own fresh directory.
+        """
         path = WORKFLOWS / workflow_name
         self.assertTrue(path.is_file(), f"lane workflow not implemented: .github/workflows/{workflow_name}")
         doc = _load_workflow(path)
         self.assertTrue(_is_automatic(doc), f"{workflow_name} is never triggered by push-to-main or schedule")
         steps = list(_opt_in_steps(doc))
         self.assertTrue(steps, f"{workflow_name} has no run step with a pytest -m command")
-        _job_name, job, step = steps[0]
-        self.assertFalse(_swallows(job.get("continue-on-error")), "job-level continue-on-error swallows the failure")
-        self.assertFalse(_swallows(step.get("continue-on-error")), "step-level continue-on-error swallows the failure")
-        return step["run"]
-
-    def _run_lane(self, run_text, test_source):
-        """Execute the step verbatim in a synthetic project; return (rc, output) for a passing and a failing test."""
-        results = []
+        for job_name, job in (doc.get("jobs") or {}).items():
+            self.assertFalse(_swallows(job.get("continue-on-error")), f"job {job_name}: continue-on-error swallows the failure")
+            for step in job.get("steps") or []:
+                self.assertFalse(_swallows(step.get("continue-on-error")), f"job {job_name}: step-level continue-on-error")
+        for job in ("run", "retry", "verdict"):
+            self.assertIsNotNone(find_job(doc, job), f"{workflow_name} has no `{job}` job")
+        outcomes = []
         for passing in (True, False):
             with tempfile.TemporaryDirectory() as raw:
-                tmp = Path(raw)
-                _write(tmp / "pytest.ini", (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8"))
-                _write(tmp / "unit_tests" / "test_lane.py", test_source(passing))
-                _write(tmp / "tests" / "test_control.py", "def test_control():\n    assert True\n")
-                proc = _run_step(run_text, tmp, {"AC_ENFORCE_STRICT": "1"})
-                results.append((proc.returncode, proc.stdout + proc.stderr))
-        return results
-
-    def _assert_lane_goes_red(self, passing_result, failing_result):
-        rc_ok, out_ok = passing_result
-        rc_bad, out_bad = failing_result
-        self.assertEqual(0, rc_ok, f"control: the lane step must pass when the excluded test passes:\n{out_ok[-800:]}")
-        self.assertRegex(out_ok, r"\b[1-9]\d* passed", f"control: lane must RUN the excluded test:\n{out_ok[-800:]}")
-        self.assertNotEqual(0, rc_bad, f"a failing excluded test must turn the job red, got exit 0:\n{out_bad[-800:]}")
-        self.assertNotEqual(5, rc_bad, "exit 5 means the lane collected NOTHING, not that a test failed")
-        self.assertRegex(out_bad, r"\b1 failed", f"the failing excluded test must actually have run:\n{out_bad[-800:]}")
+                base = Path(raw)
+                project = base / "project"
+                _write(project / "pytest.ini", (REPO_ROOT / "pytest.ini").read_text(encoding="utf-8"))
+                _write(project / "unit_tests" / "test_lane.py", test_source(passing))
+                _write(project / "tests" / "test_control.py", "def test_control():\n    assert True\n")
+                _write(project / "requirements-dev.txt", "")
+                try:
+                    (project / "scripts").symlink_to(REPO_ROOT / "scripts", target_is_directory=True)
+                except OSError as exc:
+                    _fail(f"cannot link scripts/ into the synthetic project: {exc}", exc)
+                wf = WorkflowRun(path, project, base / "scratch", None, self.api.url)
+                run = wf.execute_job("run")
+                retry = wf.execute_job("retry", {"run": run})
+                verdict = wf.execute_job("verdict", {"run": run, "retry": retry})
+                names = wf.artifacts.names()
+                file = wf.artifacts.read_json("post-merge-verdict", "post-merge-verdict.json") if "post-merge-verdict" in names else None
+                outcomes.append((run, verdict, file))
+        return outcomes
 
     def test_tq600a_13_i_a_failing_excluded_test_turns_the_invoking_job_red(self):
         # covers: TQ-600a-13-i
@@ -300,17 +306,29 @@ class TestTq600a13iFailingExcludedTestFailsTheJob(unittest.TestCase):
     def test_tq600a_13_i_a_failing_excluded_test_turns_the_timing_lane_job_red(self):
         # covers: TQ-600a-13-i
         # angle: discrimination
-        """AC-13-i must_catch (timing lane): a failing `timing_ratio` test turns the timing workflow's own job red.
+        """AC-13-i must_catch (timing lane): a failing `timing_ratio` test turns the timing workflow's own run red.
 
-        Must be implemented (with PR #1060's marker): `.github/workflows/post-merge-timing.yml`,
-        automatic trigger, whose first pytest `-m` step exits non-zero on a failing `timing_ratio` test,
-        exits 0 on a passing one, and does not swallow the status.
+        RECONCILED WITH TQ-600a-13-xii, exactly as the correctness twin above was with -ii: the timing
+        workflow has the same run / retry / verdict shape, its `run` job exits zero on a produced report and
+        the `verdict` job's exit status is the run's conclusion. So the job observed is `verdict`, executed
+        after `run` and `retry`. A failing `timing_ratio` test must make `verdict` exit non-zero (and be named
+        in `failing`); a passing one must make it exit zero having actually collected the test (control row).
+        The workflow is automatic and carries no continue-on-error anywhere. Before xii the single pytest
+        step was executed and its exit status observed.
         """
         name = f"test_ratio_{uuid.uuid4().hex[:8]}"
-        run_text = self._lane_step(TIMING_WORKFLOW)
+        node_id = f"unit_tests/test_lane.py::{name}"
         source = lambda ok: f"import pytest\n\n\n@pytest.mark.timing_ratio\ndef {name}():\n    assert {ok}\n"  # noqa: E731
-        passing, failing = self._run_lane(run_text, source)
-        self._assert_lane_goes_red(passing, failing)
+        (run_ok, verdict_ok, file_ok), (run_bad, verdict_bad, file_bad) = self._drive_lane(TIMING_WORKFLOW, source)
+        self.assertEqual("success", run_ok.conclusion, f"control: run job:\n{run_ok.log_text()[-800:]}")
+        self.assertEqual("success", verdict_ok.conclusion, f"control: verdict must be green when the timing test passes:\n{verdict_ok.log_text()[-800:]}")
+        self.assertIsNotNone(file_ok, "control: no verdict artifact")
+        self.assertGreaterEqual(file_ok["collected"], 1, "control: the lane must RUN the timing test")
+        self.assertEqual("timing", file_ok["lane"])
+        self.assertEqual("success", run_bad.conclusion, "the run job reports a failing test as data and exits zero")
+        self.assertEqual("failure", verdict_bad.conclusion, f"a failing timing test must turn the deciding (verdict) job red:\n{verdict_bad.log_text()[-800:]}")
+        self.assertIsNotNone(file_bad, "no verdict artifact on the red run")
+        self.assertIn(node_id, file_bad["failing"], "the failing timing test must be named by its full node id")
 
 
 class TestTq600a13iRefusal(_GateCase):
