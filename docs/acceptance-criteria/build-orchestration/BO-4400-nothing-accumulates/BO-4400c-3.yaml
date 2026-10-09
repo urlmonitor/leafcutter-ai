@@ -1,0 +1,98 @@
+id: BO-4400c-3
+title: "A project declaring neither uv nor Poetry gets a plain in-workspace environment, or none at all"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given test project "req-only", whose root has no uv lock file and no Poetry lock file
+    but has a "requirements-dev.txt" listing one package,
+  And test project "no-python", whose root declares no Python dependencies at all,
+  When a workspace is requested from the one workspace maker for each project,
+  Then for "req-only" the answer is ready, the workspace contains a plain Python
+    environment in ".venv" at its root with the listed package installed, the answer
+    names "requirements-dev.txt" as the choosing declaration, and Poetry was not run,
+  And for "no-python" the answer is ready, no Python environment is created anywhere,
+    and the answer states that no Python environment was declared,
+  And for both, the user's shared Poetry environments folder contains the same entries
+    as before.
+depends_on: [BO-4400c, BO-4400c-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400c-1
+  contract: "Declaration-driven set-up selection."
+package_surface: false
+it_requirements:
+  - >-
+    Plain-file fallback order (IT PO decision, flagged for the user): requirements-dev.txt before
+    requirements.txt; only the first present file is installed. A pyproject.toml without a lock is
+    not a declaration. Set-up is `python -m venv <workspace>/.venv` then that environment's pip
+    installing the file; Poetry is never invoked without poetry.lock.
+  - >-
+    No declaration -> ready answer with environment.declaration null, tool null, location null and
+    an explicit note that no Python environment was declared; nothing is created.
+  - >-
+    This repository's own case (requirements-dev.txt, no lock files) is the reference: ensure on the
+    package repository must succeed without Poetry.
+  - >-
+    PROOF: deployed maker as a separate process; local wheel served from a find-links folder via
+    PIP_FIND_LINKS / --no-index; a recording poetry shim on PATH that fails the test if invoked;
+    temporary HOME.
+test_required: true
+test_spec:
+  - name: test_requirements_dev_only_project_gets_plain_in_workspace_venv
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "req-only is ready with .venv at the workspace root, the listed package importable, and requirements-dev.txt named as the declaration."
+  - name: test_requirements_dev_only_project_never_runs_poetry
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The poetry shim records no invocation for req-only."
+    must_catch:
+      - "Poetry bootstrap attempted on a project with no poetry.lock"
+  - name: test_no_python_project_gets_no_environment_and_says_so
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "no-python is ready, no environment exists anywhere, and the answer states no Python environment was declared."
+  - name: test_neither_project_touches_poetry_shared_folder
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The Poetry virtualenvs folder has the same entries before and after both requests."
+test_rationale: >-
+  This repository is itself the req-only case and Poetry bootstrap fails here, so the proof must run
+  a real venv set-up and show Poetry was never reached.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400c-3-i]
+implemented_by: []
+notes: |
+  BO-4400c's notes require the package-repo case: this repository itself has neither lock file
+  and uses requirements-dev.txt, and a Poetry bootstrap fails here. "req-only" is that case.
+  Order of the plain-file fallback (requirements-dev.txt before requirements.txt, both, or a
+  pyproject without a lock) is left to the IT PO; the customer promise is only "in the
+  workspace, never shared, never Poetry without a Poetry lock file".

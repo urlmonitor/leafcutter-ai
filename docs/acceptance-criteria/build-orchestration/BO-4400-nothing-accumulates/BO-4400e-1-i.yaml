@@ -1,0 +1,77 @@
+id: BO-4400e-1-i
+title: "When free space cannot be measured, the workspace is made and the person is told which drive could not be read"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB, and the free space of one drive the check
+    must measure cannot be read because that drive is not reachable,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is ready and carries a warning naming the drive that could not be
+    measured and stating that the free-space check was not completed for it,
+  And the warning is distinguishable in the answer from a low-space warning.
+depends_on: [BO-4400e-1]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400e.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-1
+  contract: "Free-space check."
+package_surface: false
+it_requirements:
+  - >-
+    A measurement failure (OSError from the disk-usage probe, an unreachable drive, a host-drive
+    locator that times out) is caught with a specific exception type and logged at WARNING; the
+    ensure proceeds and the ready answer carries a warning of kind space_unmeasured naming the drive
+    -- distinct from the low-space warning kind (space_low). Never treated as enough space without
+    saying so.
+  - >-
+    Any external probe used to measure a drive is bounded by a timeout (default 5 s) so an
+    unreachable mount cannot stall ensure.
+  - >-
+    PROOF: deployed maker as a separate process with the measurement seam set to fail for one
+    drive; assertions on the ready answer's warnings list.
+test_required: true
+test_spec:
+  - name: test_unmeasurable_drive_yields_ready_answer_with_named_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "The answer is ready and carries a warning naming the drive and stating the check was not completed for it."
+    must_catch:
+      - "measurement failure treated as enough space with no warning"
+  - name: test_unmeasured_warning_kind_differs_from_low_space_warning
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The warning's kind is space_unmeasured, not space_low."
+test_rationale: >-
+  The silent wrong version (treat unmeasurable as fine) produces the same ready answer, so the proof
+  must assert the warning and its kind.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION TAKEN AS DEFAULT, flagged to the user: a measurement failure warns and proceeds
+  rather than refusing, so a broken drive mount cannot stop all work. The opposite choice
+  (refuse when unmeasurable) is defensible under BO-4300c's "clear no" framing; if the user
+  prefers it, only this record changes. Never silently treated as "enough space".

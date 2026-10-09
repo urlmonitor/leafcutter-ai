@@ -1,0 +1,61 @@
+id: BO-4400a-5
+title: "Sequence diagram: a route's end state through to its workspace being cleared or kept"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given end-of-route clearing (BO-4400a-1, BO-4400a-1-i, BO-4400a-2) is in place,
+  When the sequence diagram for end-of-route clearing is read,
+  Then it shows, in order, the route pushing its commits, the pull request being
+    opened, the route asking the one clearing door to clear its workspace, the door
+    obtaining the holds-work / holds-nothing verdict, and the route returning its result,
+  And it shows the two outcomes as separate branches: removed, and refused with the
+    unsent work named and the workspace kept,
+  And it shows the nothing-to-deliver path reaching the same clearing request without
+    a push or a pull request,
+  And it shows that an epic's workspace is cleared once, after its last ticket.
+depends_on: [BO-4400a, BO-4400a-1, BO-4400a-1-i, BO-4400a-1-ii, BO-4400a-2]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-1
+  contract: "Final route-end behaviour to diagram."
+package_surface: false
+it_requirements:
+  - >-
+    Mermaid sequence diagram under docs/architecture/diagrams/ following the c3-NNN naming of its
+    neighbours; the id is allocated with scripts/next_diagram_seq.py immediately before publishing,
+    never taken from this record or a ticket (CLAUDE.md 'Sequential Resource Paths Go Stale').
+  - >-
+    Participants named as the built components: route workflow, shell-permitted agent, the one
+    maker (remove verb), verdict (BO-4100c-1), hub. Linked from
+    docs/architecture/components/worktree-manager.md and docs/architecture/agent_delivery_workflows.md.
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400a documentation_triggers: sequence-diagram. Re-measure the next free
+  diagram id with the allocator immediately before publishing (repo CLAUDE.md: sequential
+  resource ids go stale on long-lived branches).

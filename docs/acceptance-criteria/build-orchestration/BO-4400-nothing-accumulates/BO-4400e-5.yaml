@@ -1,0 +1,56 @@
+id: BO-4400e-5
+title: "How-to: reading the workspace space report and adjusting the disk-space limits"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given the disk-space guard and space report (BO-4400e-1, BO-4400e-2, BO-4400e-3,
+    BO-4400e-4) are in place,
+  When a person reads the how-to guide for workspace disk space,
+  Then the guide shows the command for the space report with an example output and
+    explains each column, including the space a sweep would free,
+  And the guide names the warning-level and refusal-limit settings, their defaults,
+    and where they are set,
+  And the guide explains that under WSL the Windows drive holding the Linux disk is
+    also checked, and why the Linux free-space figure alone can mislead,
+  And the guide gives the steps to take when a workspace is refused for space: read
+    the report, preview and run the sweep, then retry.
+depends_on: [BO-4400e, BO-4400e-1, BO-4400e-2, BO-4400e-3, BO-4400e-4]
+doc_links:
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-4
+  contract: "Final space report shape and settings."
+package_surface: false
+it_requirements:
+  - >-
+    New how-to under docs/how-to/ (name chosen by documentation-expert) with the repo's doc
+    frontmatter, registered through the doc-index flow. Command, columns, the workspace_disk keys
+    and their defaults are copied from the built behaviour; the keys are also listed in
+    docs/reference/skills-config-fields.md.
+  - >-
+    The WSL section links the sweep how-to (BO-4400d-4) for the refusal remedy.
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400e documentation_triggers: how-to.
