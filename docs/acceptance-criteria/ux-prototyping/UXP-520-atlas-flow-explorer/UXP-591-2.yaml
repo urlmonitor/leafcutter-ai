@@ -66,3 +66,15 @@ notes: |
   'stepNoticeCleared' and 'legacyRedirect' are the L3 children. A branch is deliberately
   addressed with the same ?step= key as a step, because the explorer opens the same drawer for
   both.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: openStepLink
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

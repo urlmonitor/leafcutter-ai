@@ -49,3 +49,15 @@ notes: |
   'filter' step, which UXP-521 implements; FlowNavigation nav-filter-replace-4). Owner
   ruling 3 (2026-10-09). The entry's stored filters change with the replace (dataset
   assumption), which UXP-591-5-ii relies on when the entry is later returned to.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: filterKeepsFlow
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

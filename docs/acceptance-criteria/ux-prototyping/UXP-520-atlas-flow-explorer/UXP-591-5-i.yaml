@@ -49,3 +49,14 @@ implemented_by: []
 notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'pushFromOpenDrawer' (from
   'navPush'; FlowNavigation sessions select-from-open-drawer and drawer-in-history).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: pushFromOpenDrawer
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

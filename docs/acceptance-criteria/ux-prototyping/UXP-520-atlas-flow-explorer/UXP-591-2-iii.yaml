@@ -47,3 +47,14 @@ notes: |
   'openStepLink'; FlowRoute route-legacy-step-link). The owner ruled the two remaining legacy
   cases at the AC gate (2026-10-09): a link without &step= is UXP-591-2-iv and a link whose
   flow id is unknown is UXP-591-2-v. Neither is modelled by flow v5 or dataset v3 yet.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: legacyRedirect
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

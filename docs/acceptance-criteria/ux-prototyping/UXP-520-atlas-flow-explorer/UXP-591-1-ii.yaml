@@ -56,3 +56,15 @@ notes: |
   id '<id>'. A flow link names a product and a flow, for example
   /flows/leafcutter/deliver-a-feature.". Not modelled by the dataset: a filter change while
   this notice shows.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: flowNotFound
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

@@ -45,3 +45,15 @@ notes: |
   'openByLink'; FlowRoute route-bare-flows). Keeps today's entry behaviour deliberately now
   that flows have their own addresses. What happens to /flows once a drawer opens there is
   owner ruling 1, covered by UXP-591-4 and UXP-591-4-ii.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: bareFlows
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

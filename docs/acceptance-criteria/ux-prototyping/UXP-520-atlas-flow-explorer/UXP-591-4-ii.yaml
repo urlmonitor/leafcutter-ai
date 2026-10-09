@@ -48,3 +48,14 @@ notes: |
   nav-drawer-replace-4 to -6, nav-drawer-in-history-4, nav-drawer-on-bare-flows-3). Owner
   ruling 1 (2026-10-09) governs the bare-/flows clause. Authored as an L3 under the
   drawer-opening L2 because UXP-591 is at its five-L2 cap; it is a flow step, not a branch.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerClose
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

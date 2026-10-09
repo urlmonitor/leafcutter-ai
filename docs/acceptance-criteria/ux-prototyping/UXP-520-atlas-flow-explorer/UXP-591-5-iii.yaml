@@ -53,3 +53,15 @@ notes: |
   history entry. The re-picked flow is the first flow the selector lists under the new
   filters, as today. Not modelled by the dataset: a filter change while the 'Flow not found'
   notice shows.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: filterRepicksFlow
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

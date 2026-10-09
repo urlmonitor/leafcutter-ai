@@ -49,3 +49,14 @@ notes: |
   'openStepLink'; FlowNavigation nav-clear-step-notice-1 to -4). Owner ruling 2 (2026-10-09):
   the notice never outlives the unknown ?step= value and the unknown value never outlives the
   notice.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: stepNoticeCleared
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

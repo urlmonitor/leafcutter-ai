@@ -46,3 +46,14 @@ notes: |
   one-click switch needs the click to reach the other node; how the build lets it through is
   not decided. This criterion fixes the outcome (one click ends with only 'Build' open), not
   the mechanism.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerSwitch
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

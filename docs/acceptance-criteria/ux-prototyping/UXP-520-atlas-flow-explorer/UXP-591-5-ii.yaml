@@ -62,3 +62,14 @@ notes: |
   to an entry whose flow the current filters exclude would leave that flow unlisted in the
   selector. The flow (v5) and the dataset (v3) still record the rule as unruled until they are
   next revised.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: backForward
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

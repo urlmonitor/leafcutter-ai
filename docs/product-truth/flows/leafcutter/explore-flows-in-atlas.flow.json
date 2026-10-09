@@ -597,7 +597,9 @@
         "FlowAppearance",
         "Flow"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-3"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -681,7 +683,9 @@
         "Flow",
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-1"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -754,7 +758,9 @@
         "Flow",
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-2"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -847,7 +853,9 @@
         "Flow",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-4"
+      ],
       "io_contracts": {
         "not_applicable": "A click on a step or branch node changes the explorer's open-drawer state and rewrites the current history entry's URL to <canonical URL>?step=<id> in place (history replace). No request is made and no JSON payload is passed; the drawer's contents are documented on the inspect step."
       },
@@ -866,7 +874,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-4-ii"
+      ],
       "io_contracts": {
         "not_applicable": "The X button or a canvas click clears the open-drawer state and rewrites the current history entry's URL to the flow's canonical URL without a query (history replace). No request is made and no JSON payload is passed."
       },
@@ -886,7 +896,9 @@
         "Flow",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-5"
+      ],
       "io_contracts": {
         "missing_bindings": [
           {
@@ -912,7 +924,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-5-ii"
+      ],
       "io_contracts": {
         "missing_bindings": [
           {
@@ -942,7 +956,9 @@
         "Flow",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-5-iii"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "consumes": [
@@ -1026,7 +1042,9 @@
         "Flow",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-5-iv"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "consumes": [
@@ -1110,7 +1128,9 @@
         "Flow",
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-1-i"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "consumes": [
@@ -1159,7 +1179,9 @@
         "Flow",
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-1-ii"
+      ],
       "outcome_kind": "failure",
       "io_contracts": {
         "consumes": [
@@ -1216,7 +1238,9 @@
         "Flow",
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-2-i"
+      ],
       "outcome_kind": "failure",
       "io_contracts": {
         "consumes": [
@@ -1309,7 +1333,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-2-ii"
+      ],
       "outcome_kind": "failure",
       "io_contracts": {
         "not_applicable": "A click on a real step or branch node clears the 'Step not found' state, opens that node's drawer and rewrites the current history entry's unknown ?step= value to the node's id in place (history replace). No request is made and no JSON payload is passed."
@@ -1330,7 +1356,9 @@
       "reads": [
         "FlowRoute"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-2-iii"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "not_applicable": "An HTTP 308 Permanent Redirect: the request carries only the legacy query string (?flow=<percent-encoded id>&step=<step>) and the response carries the step link /flows/<id>?step=<step> in its Location header, with no JSON body and no view props. The page it lands on is the step link documented on openStepLink."
@@ -1351,7 +1379,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-4-i"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "not_applicable": "A click on another node swaps the open-drawer state and rewrites the current history entry's ?step= value in place (history replace). No request is made and no JSON payload is passed."
@@ -1372,7 +1402,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-591-5-i"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "missing_bindings": [

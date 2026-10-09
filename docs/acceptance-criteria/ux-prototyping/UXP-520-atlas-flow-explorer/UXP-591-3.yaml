@@ -66,3 +66,15 @@ notes: |
   today the AC detail emits /flows?flow=<percent-encoded id>&step=<node id>, which the Flows
   view does not read, so the link opens the default flow instead of the linked flow and step
   (see the flow's 'cross' step). Old links in that form are covered by UXP-591-2-iii.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: acStepLink
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowAppearance
+    source: real
+    asof: '2026-10-09'

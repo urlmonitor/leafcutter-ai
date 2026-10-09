@@ -68,3 +68,15 @@ notes: |
   placed under this L2 because UXP-591 is at its five-L2 cap), and the filter step's two
   branches 'filterRepicksFlow' (-iii) and 'filterKeepsFlow' (-iv), owner ruling 3: a filter
   change never adds an entry.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: navPush
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

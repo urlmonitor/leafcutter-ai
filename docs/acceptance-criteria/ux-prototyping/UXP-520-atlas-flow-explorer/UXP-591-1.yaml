@@ -65,3 +65,15 @@ notes: |
   route-bookmarked-agent-subflow, route-shared-architecture-map in the leafcutter/atlas-flows
   dataset). Branches 'bareFlows' and 'flowNotFound' are the L3 children. Specified, not built:
   today the Flows view reads no address and always opens leafcutter/deliver-a-feature.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: openByLink
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

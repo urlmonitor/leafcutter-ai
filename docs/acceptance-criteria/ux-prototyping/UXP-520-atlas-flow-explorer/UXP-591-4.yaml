@@ -63,3 +63,15 @@ notes: |
   the current history entry; they never add a Back entry. Branch 'drawerSwitch' and the
   closing step 'drawerClose' are the L3 children (closing sits here as the inverse of opening
   because UXP-591 is at its five-L2 cap).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerUrl
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

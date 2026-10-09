@@ -46,3 +46,15 @@ notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'stepNotFound' (from
   'openStepLink'; FlowRoute route-unknown-step, FlowNavigation nav-clear-step-notice-1).
   How the notice is cleared is UXP-591-2-ii (owner ruling 2).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: stepNotFound
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

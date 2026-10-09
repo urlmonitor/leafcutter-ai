@@ -6977,6 +6977,256 @@
         "asof": "2026-07-20"
       }
     ],
+    "UXP-591-1": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "openByLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-1-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "bareFlows",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-1-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "flowNotFound",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "openStepLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "stepNotFound",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "stepNoticeCleared",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-iii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "legacyRedirect",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-3": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "acStepLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowAppearance"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerUrl",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerSwitch",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerClose",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "navPush",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "pushFromOpenDrawer",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "backForward",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-iii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "filterRepicksFlow",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-iv": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "filterKeepsFlow",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
     "UXP-700e-2-ii": [
       {
         "flow": "leafcutter/generate-product-truth",
