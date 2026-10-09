@@ -2,7 +2,7 @@
 MODULE: _lane_report_plugin
 GOAL: A tiny pytest plugin that writes the machine-readable per-test report of
     one execution: ``{"runner": <name>, "exitstatus": <int>, "expected": <int>,
-    "results": {<full node id>: <status>}}`` with status ``passed`` | ``failed``
+    "collection_errors": [<node id>], "results":{<full node id>: <status>}}`` with status ``passed`` | ``failed``
     | ``skipped``. ``exitstatus`` and ``expected`` (tests selected for the
     session) let the verdict tell a lane that finished from one that was cut short.
 BUSINESS CONTEXT: TQ-600a-13-ii. The post-merge verdict must come from per-test
@@ -16,9 +16,10 @@ BUSINESS CONTEXT: TQ-600a-13-ii. The post-merge verdict must come from per-test
 ARCHITECTURE: Loaded by ``scripts/ci/post_merge_suite.py`` with
     ``-p scripts.ci._lane_report_plugin --lane-report <path>`` appended to the
     lane's pytest command, so the literal ``-m`` selection stays in the workflow
-    file. Stdlib-only. A collection error is recorded as a failed entry under
-    the collected file's node id, so a file that failed to import cannot vanish
-    from the verdict.
+    file. Stdlib-only. A collection error is recorded in the separate sorted
+    ``collection_errors`` list under the collected file's node id (TQ-600a-13-v),
+    never in ``results``, so a file that failed to import cannot vanish from
+    the verdict and is never mistaken for a failing test.
 """
 
 from __future__ import annotations
@@ -59,6 +60,7 @@ class _Recorder:
         self.path = path
         self.results: dict[str, str] = {}
         self.ran: set[str] = set()
+        self.collection_errors: set[str] = set()
 
     def _record(self, node_id: str, status: str) -> None:
         current = self.results.get(node_id)
@@ -71,9 +73,12 @@ class _Recorder:
         self._record(report.nodeid, _status(report))
 
     def pytest_collectreport(self, report) -> None:
-        """Record a collection error as a failed entry; a clean collection records nothing."""
+        """Record a collection error separately from the results; a clean collection records nothing.
+
+        A module that failed to import is not a failing test: it is its own stage of the verdict.
+        """
         if report.failed:
-            self._record(report.nodeid or "<collection>", "failed")
+            self.collection_errors.add(report.nodeid or "<collection>")
 
     def pytest_sessionfinish(self, session, exitstatus) -> None:
         """Write the report; an unwritable report is an error, never a silent pass.
@@ -86,6 +91,7 @@ class _Recorder:
             "exitstatus": int(exitstatus),
             "expected": int(getattr(session, "testscollected", 0)),
             "ran": len(self.ran),
+            "collection_errors": sorted(self.collection_errors),
             "results": dict(sorted(self.results.items())),
         }
         try:

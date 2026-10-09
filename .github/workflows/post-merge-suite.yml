@@ -13,9 +13,11 @@
 #   retry   starts on a FRESH runner, receives ONLY the failure list, checks out
 #           and builds for itself, and re-executes exactly those ids once under
 #           the SAME `-m` selection. Skipped when there were no failures.
-#   verdict reads both reports, writes post-merge-verdict.json (artifact
-#           `post-merge-verdict`), and fails at exactly one of the steps named
-#           `Verdict: red` / `Verdict: did not complete` on a non-green run.
+#   verdict reads both reports and the run/retry results, writes
+#           post-merge-verdict.json (artifact `post-merge-verdict`), and fails at
+#           exactly one of the steps named `Verdict: red` / `Verdict: did not
+#           complete` on a non-green run. It runs on EVERY ending, cancellation
+#           included (the job and each of its steps are `if: always()`).
 #           The run's conclusion IS this job's exit status.
 # All decision logic lives in scripts/ci/post_merge_suite.py; these steps only
 # prepare the environment and invoke it. Nothing here writes to the repository,
@@ -148,23 +150,36 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+    # EVERY step below is status-agnostic (`if: always()`): a step with no `if:` implies
+    # `success()` and is skipped once the run is cancelled, which would leave a cancelled
+    # run with no verdict artifact. The step conditions below that read `steps.classify`
+    # still only fire when the classify step produced a verdict.
     steps:
       - uses: actions/checkout@v4
+        if: always()
         with:
           persist-credentials: false
 
       - name: Set up Python
+        if: always()
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
       - name: Download the reports
+        if: always()
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      # The dependency results are what tell a failed setup, a failed retry and a cancellation
+      # apart from a run that simply had no failures (TQ-600a-13-v). They arrive through env:.
       - name: Classify the run
         id: classify
+        if: always()
+        env:
+          RUN_RESULT: ${{ needs.run.result }}
+          RETRY_RESULT: ${{ needs.retry.result }}
         run: python scripts/ci/post_merge_suite.py verdict --artifacts artifacts --output post-merge-verdict.json
 
       - name: Upload the verdict

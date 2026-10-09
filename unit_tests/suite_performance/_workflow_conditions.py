@@ -41,6 +41,7 @@ class _Context:
     steps: dict = field(default_factory=dict)
     needs: dict = field(default_factory=dict)
     status: str = "success"
+    cancelled: bool = False  # the whole run was cancelled: only status-agnostic steps (always(), cancelled()) still run
 
 
 def _lookup(path, ctx):
@@ -99,7 +100,7 @@ def _atom(text, ctx):
     if text == "failure()":
         return ctx.status == "failure"
     if text == "cancelled()":
-        return False
+        return ctx.cancelled
     match = _COMPARISON.match(text)
     if match:
         equal = str(_lookup(match.group(1), ctx)) == _literal(match.group(3))
