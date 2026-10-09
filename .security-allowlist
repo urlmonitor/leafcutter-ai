@@ -704,6 +704,8 @@ ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
 GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*
 # TQ-600a-13-xii previous-run tests: the same kind of fixed placeholder token default.
 GENERIC_SECRET:unit_tests/suite_performance/test_tq_600a_13_xii_previous_run.py:*
+# TQ-600a-13-xiii flaky harness: the same kind of fixed placeholder token default.
+GENERIC_SECRET:unit_tests/suite_performance/_flaky_harness.py:*
 
 # Refreshed feedback corpus snapshot, 2026-10-09 (713 records, KI-FC-001). Same false
 # positive as the 2026-09-30 entry above: fb_YYYY-MM-DD_xxxxxxxx ids in dense one-line

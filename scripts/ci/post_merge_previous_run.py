@@ -14,7 +14,9 @@ ARCHITECTURE: One read of the timing workflow's run history (``post_merge_notice
     runs numbered below the triggering one: the ONE settled-run rule, so a cancelled
     run superseded by a newer one, an unfinished run and a run that did not test
     main are all passed over. CLI: ``--api-url --repo --run-id`` with the token in
-    GITHUB_TOKEN; the id (or an empty line) goes to stdout, and exit is 0 whenever
+    GITHUB_TOKEN, plus ``--lane`` (default ``timing``, so the timing workflow is
+    unchanged; ``correctness`` serves the flaky notice's not-reproduced reds,
+    TQ-600a-13-xiii); the id (or an empty line) goes to stdout, and exit is 0 whenever
     the history was read (the step must not fail the job over a missing predecessor),
     2 on unusable input or an unreadable history.
 """
@@ -31,7 +33,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_previous_r
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
-from scripts.ci._notice_render import TIMING  # noqa: E402
+from scripts.ci._notice_render import LANES, TIMING  # noqa: E402
 from scripts.ci._run_history import select_verdict_run  # noqa: E402
 from scripts.ci.post_merge_notice import REPO_RE, read_runs  # noqa: E402
 
@@ -59,15 +61,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--api-url", required=True)
     parser.add_argument("--repo", required=True)
     parser.add_argument("--run-id", required=True, type=int)
+    parser.add_argument("--lane", choices=sorted(LANES), default=TIMING.name, help="whose run history to read (default: timing, TQ-600a-13-xii)")
     opts = parser.parse_args(sys.argv[1:] if argv is None else argv)
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token or not REPO_RE.fullmatch(opts.repo):
         logger.warning("GITHUB_TOKEN is not set or the repository name %r is refused", opts.repo)
         return EXIT_BAD_INPUT
     try:
-        runs = read_runs(GitHubClient(opts.api_url, token), opts.repo, TIMING)
+        runs = read_runs(GitHubClient(opts.api_url, token), opts.repo, LANES[opts.lane])
     except GitHubError as exc:
-        logger.warning("cannot read the timing run history: %s", exc)
+        logger.warning("cannot read the %s run history: %s", opts.lane, exc)
         return EXIT_BAD_INPUT
     previous = previous_settled_run(runs, opts.run_id)
     sys.stdout.write(f"{previous['id']}\n" if previous else "\n")

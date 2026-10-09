@@ -67,6 +67,32 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
+      # Which settled correctness run came just before this one (TQ-600a-13-xiii): a red followed by a
+      # green at the same commit is named on the `post-merge-flaky` notice as a timing-lane candidate.
+      # No previous run or an unreadable history leaves the output empty: no candidate is named.
+      - name: Find the previous settled correctness run
+        id: previous
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+          API_URL: ${{ github.api_url }}
+        run: |
+          previous="$(python scripts/ci/post_merge_previous_run.py --lane correctness --api-url "$API_URL" --repo "$REPO" --run-id "$RUN_ID")"
+          echo "run_id=$previous" >> "$GITHUB_OUTPUT"
+
+      # A missing or expired previous artifact is not a failure: it means no candidate is named.
+      - name: Download the previous verdict
+        if: steps.previous.outputs.run_id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: post-merge-verdict
+          path: previous-verdict
+          run-id: ${{ steps.previous.outputs.run_id }}
+          github-token: ${{ github.token }}
+
       - name: Apply the verdict to the notice
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -74,7 +100,7 @@ jobs:
           REPO: ${{ github.repository }}
           API_URL: ${{ github.api_url }}
           DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
-        run: python scripts/ci/post_merge_notice.py apply --api-url "$API_URL" --repo "$REPO" --repo-dir . --run-id "$RUN_ID" --verdict-file verdict/post-merge-verdict.json --download-outcome "$DOWNLOAD_OUTCOME"
+        run: python scripts/ci/post_merge_notice.py apply --api-url "$API_URL" --repo "$REPO" --repo-dir . --run-id "$RUN_ID" --verdict-file verdict/post-merge-verdict.json --previous-verdict-file previous-verdict/post-merge-verdict.json --download-outcome "$DOWNLOAD_OUTCOME"
 
   # The timing lane's notice (TQ-600a-13-xii): the same machinery under `--lane timing`, which reads
   # ONLY post-merge-timing.yml's runs and lists and writes ONLY issues labelled `post-merge-timing`.
