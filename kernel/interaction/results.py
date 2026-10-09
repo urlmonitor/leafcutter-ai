@@ -127,13 +127,18 @@ def result_from_submission(packet: HostWorkRequest | HumanQuestion,
 
 def repair_exhausted_result(packet: HostWorkRequest, invocation: CapabilityInvocation | None,
                             last_code: str) -> CapabilityResult:
-    """Return the failed result for a host interaction whose repair attempts ran out."""
+    """Return the failed result for a host interaction whose repair attempts ran out.
+
+    The last rejection's message is kept in the error, so a caller that abandons the work can
+    name why the host's proposal was refused.
+    """
+    reason = f": {packet.rejections[-1].message}" if packet.rejections else ""
     return CapabilityResult(
         invocation_id=invocation.id if invocation else packet.id,
         work_item_id=packet.work_item_id, status=ResultStatus.FAILED,
         error=ErrorInfo(code=REPAIR_EXHAUSTED_CODE, retryable=False,
                         message=f"host output stayed invalid after {len(packet.rejections)} "
-                                f"submissions (last: {last_code})"))
+                                f"submissions (last: {last_code}{reason})"))
 
 
 # ====================================================================

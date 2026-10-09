@@ -35,6 +35,7 @@ from kernel.contracts.split import (
     GoalDecompositionRequestPayload,
     KeptRouting,
 )
+from kernel.interaction.results import REPAIR_EXHAUSTED_CODE
 from kernel.providers.base import QuestionSpec
 from kernel.registry.eligibility import filter_candidates
 from kernel.scheduler.context import run_corr
@@ -222,6 +223,8 @@ class SplitStep:
         """
         record = self.state.get("splits", {}).get(split_id(item.id))
         proposal = self._proposal_of(item) if record is not None and record.state is None else None
+        if record is not None and record.state is None and proposal is None:
+            return self._abandon_if_refused(item, record)
         if record is None or proposal is None:
             return False
         done = convert_proposal(proposal, record.subject_text, record.subject_kind,
@@ -247,7 +250,30 @@ class SplitStep:
                         split_id=record.id)
         return True
 
-    def close_split(self, item: WorkItem, record: Decomposition) -> bool:
+    def _abandon_if_refused(self, item: WorkItem, record: Decomposition) -> bool:
+        """Abandon the split when the host's repair attempts for its proposal ran out.
+
+        The split is never failed: no gate opens and no part runs; the item goes on as for fewer
+        than two parts, by its trigger. The refusal (the chain or unknown part) is kept as a
+        limitation and no host_only gap is recorded for the decomposition. False leaves the
+        item alone (the proposal is not decided yet).
+        """
+        for child_id in item.child_ids:
+            child = self.draft.items[child_id]
+            if (self.draft.request_of(child).operation != DECOMPOSE_OPERATION
+                    or child.status is not WorkItemStatus.FAILED):
+                continue
+            why = next((t for t in child.limitations if t.startswith(REPAIR_EXHAUSTED_CODE)),
+                       REPAIR_EXHAUSTED_CODE)
+            item = self.draft.put_item(item, limitations=[
+                *item.limitations, f"split_abandoned: proposal refused, {why}"[:600]])
+            self.draft.emit("split.abandoned", "proposal refused", work_item_id=item.id,
+                            split_id=record.id)
+            return self.close_split(item, record, reason="repairs exhausted")
+        return False
+
+    def close_split(self, item: WorkItem, record: Decomposition,
+                    reason: str = "fewer than two parts") -> bool:
         """Close a split that holds fewer than two parts; the item goes on as one question.
 
         The record is kept only as a closed marker (never shown), a run event names why, and the
@@ -257,7 +283,7 @@ class SplitStep:
         """
         self.splits[record.id] = record.model_copy(update={"state": CLOSED_STATE})
         item = self.draft.put_item(item, continuation=None, status=WorkItemStatus.READY)
-        self.draft.emit("split.closed", "fewer than two parts", work_item_id=item.id,
+        self.draft.emit("split.closed", reason, work_item_id=item.id,
                         split_id=record.id)
         if record.kept_routing is not None:
             return self._resume_whole(item, record.kept_routing)
@@ -293,6 +319,7 @@ class SplitStep:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: A decompose_goal child whose repair attempts ran out (a refused proposal: cycle, unknown part) abandons the split through close_split instead of failing the run; the refusal is kept as a limitation. (#TICKET-20261006-DK-400c-1-ii)
 # - 2026-10-06 [python-coder]: A split parks the root on a REQUIRED `host.decompose_goal` child
 #   (the formulate_question pattern) instead of a new pause mechanism, so the host handoff,
 #   budget and tracing machinery is reused. Telemetry carries the subject length, never its text
