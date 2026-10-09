@@ -279,8 +279,14 @@ amended_by:
   agent: approve_acs
   date: '2026-10-08'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_i.py
+- unit_tests/suite_performance/test_tq_600a_13.py
+- unit_tests/suite_performance/test_tq_600a_13_review_fixes.py
+implemented_by:
+- scripts/suite_performance/check_exclusion_compensation.py
+- .github/workflows/ci.yml
+- .github/workflows/post-merge-suite.yml
 change_target:
   - pipeline
   - config

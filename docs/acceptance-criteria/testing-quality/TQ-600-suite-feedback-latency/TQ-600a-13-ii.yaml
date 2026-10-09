@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -497,8 +497,15 @@ amended_by:
   agent: approve_acs
   date: '2026-10-08'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_ii.py
+- unit_tests/suite_performance/test_tq_600a_13_review_fixes.py
+implemented_by:
+- .github/workflows/post-merge-suite.yml
+- scripts/ci/post_merge_suite.py
+- scripts/ci/_lane_report_plugin.py
+- scripts/ci/_run_history.py
+- scripts/ci/post_merge_tunables.json
 change_target: pipeline
 risk_surface: internal
 notes: |
