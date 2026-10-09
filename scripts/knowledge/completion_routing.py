@@ -44,6 +44,9 @@ Public functions:
     confirm_routed / claim_and_confirm_routed
         Persist ids as routed (the latter flock-arbitrated, with the
         ``arbitration_enabled`` off switch INF-700a-5-iii requires).
+    accumulate_branch_run(previous, current) / branch_run(record)
+        Pure. Keep every stage's writes in the run record so a teardown
+        observation (``observe --all-stages``) covers the whole branch.
     unconfirmed_writes_report(...)
         Read-only. Name staged writes whose text is absent from a merged tree.
     emission_backlog(*, sink_path, read_hashes)
@@ -255,6 +258,56 @@ def observe_publication(
             "note": WAITING_NOTE,
         },
         "detail": run.get("detail"),
+    }
+
+
+def _write_key(record: dict[str, Any]) -> tuple[Any, Any]:
+    return record.get("destination"), record.get("text")
+
+
+def accumulate_branch_run(
+    previous: dict[str, Any] | None, current: dict[str, Any]
+) -> dict[str, Any]:
+    """Fold one stage's run record into the history of every stage on the branch.
+
+    Pure function. A branch can be staged several times before it merges (an
+    epic drive stages once per ticket commit, INF-700a-1-iv), and each stage
+    replaces the run record. The latest stage's own keys are kept unchanged --
+    a per-commit ``observe`` still judges only that stage -- and two keys are
+    added: ``branch_entries`` (every staged write, latest copy per
+    destination and text) and ``branch_unwritten_records`` (every write a
+    stage left out, minus those a later stage did write). *previous* may be
+    ``None`` or a record written before these keys existed.
+    """
+    prev = previous or {}
+    entries = {_write_key(e): e for e in prev.get("branch_entries", prev.get("entries", []))}
+    entries.update({_write_key(e): e for e in current.get("entries", [])})
+    left_out = {
+        _write_key(r): r
+        for r in prev.get("branch_unwritten_records", prev.get("unwritten_records", []))
+    }
+    left_out.update({_write_key(r): r for r in current.get("unwritten_records", [])})
+    return {
+        **current,
+        "branch_entries": list(entries.values()),
+        "branch_unwritten_records": [r for k, r in left_out.items() if k not in entries],
+    }
+
+
+def branch_run(record: dict[str, Any]) -> dict[str, Any]:
+    """The run a teardown observation judges: every stage on the branch.
+
+    Pure function. Replaces the latest stage's entries and left-out writes
+    with the accumulated ones from ``accumulate_branch_run``; a record
+    without them (a single stage, or one written before they existed) is
+    judged on its own entries.
+    """
+    left_out = record.get("branch_unwritten_records", record.get("unwritten_records", []))
+    return {
+        **record,
+        "entries": record.get("branch_entries", record.get("entries", [])),
+        "unwritten_records": left_out,
+        "unwritten": len(left_out),
     }
 
 

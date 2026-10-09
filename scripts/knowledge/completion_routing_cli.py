@@ -106,6 +106,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             cmd.add_argument(
                 "--commit-status", choices=("ok", "failed", "not_run"), required=True
             )
+            cmd.add_argument("--all-stages", action="store_true")  # teardown: every stage on the branch
     waiting = sub.add_parser("waiting")
     waiting.add_argument("--sink", type=Path, default=None)
     waiting.add_argument("--state", type=Path, default=None)
@@ -132,6 +133,18 @@ def _run_record_path(working_dir: Path) -> Path | None:
     return git_dir / RUN_RECORD_NAME if git_dir else None
 
 
+def _read_run_record(record_path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    """Read the run record; ``(None, why)`` when absent or unreadable."""
+    if not record_path.is_file():
+        return None, "absent"
+    try:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Routing run record %s unreadable: %s", record_path, exc)
+        return None, str(exc)
+    return (record, None) if isinstance(record, dict) else (None, "not a JSON object")
+
+
 def _stage(args: argparse.Namespace, sink: Path, state: Path) -> dict[str, Any]:
     working_dir = args.working_dir.resolve()
     outcome = _routing.stage_completion(
@@ -147,6 +160,8 @@ def _stage(args: argparse.Namespace, sink: Path, state: Path) -> dict[str, Any]:
         logger.warning("No git dir for %s; observe will report did_not_run.", working_dir)
         reply["detail"] = "run not recorded for observation: not a git working directory"
         return reply
+    previous, _error = _read_run_record(record_path)
+    record = _routing.accumulate_branch_run(previous, record)
     try:
         record_path.write_text(json.dumps(record), encoding="utf-8")
     except OSError as exc:
@@ -160,14 +175,12 @@ def _observe(args: argparse.Namespace, sink: Path, state: Path) -> dict[str, Any
     record_path = _run_record_path(working_dir)
     if record_path is None or not record_path.is_file():
         return _did_not_run("no staged routing run is recorded for this working directory")
-    try:
-        run = json.loads(record_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Routing run record %s unreadable: %s", record_path, exc)
-        return _did_not_run(f"routing run record unreadable: {exc}")
+    run, error = _read_run_record(record_path)
+    if run is None:
+        return _did_not_run(f"routing run record unreadable: {error}")
     return _routing.observe_publication(
         working_dir=working_dir,
-        run=run,
+        run=_routing.branch_run(run) if args.all_stages else run,
         commit_status=args.commit_status,
         sink_path=sink,
         state_path=state,

@@ -197,27 +197,31 @@ function isRefusalStatus(status) {
   return REFUSAL_STATUSES.has(s) || s.startsWith("out_of_scope");
 }
 
-// INF-700a-5-i, called by Step 7 just before the removal — the last moment a learning written in
-// the worktree can still be carried. The read-only `observe` names each routed write HEAD (the head
-// Step 4 merged) does not carry. Fail-open: an unusable answer is a shorter announcement, never a halt.
+// INF-700a-5-i, Step 7 before the removal. Step 4's merge is not trusted, so the PR state is probed. Merged: the
+// read-only `observe --all-stages` names every stage's routed write HEAD lacks; not merged: every staged write.
 let unpublishedLearnings = [];
 async function announceUnpublishedLearnings() {
+  let merged = false;
   try {
+    const probe = await agent(`Run: gh pr view ${prNumber} --json state --jq '.state'\nReturn ONLY a JSON object: { "state": "OPEN"|"MERGED"|"CLOSED" }`, { agentType: "status-checker", label: "step-7-pr-merged-probe", phase: "Step 7" });
+    merged = String(readAgentJson(probe, "step-7-pr-merged-probe", "status-checker", {}, "treating the branch as not merged").state || "").toUpperCase() === "MERGED";
     const reply = readAgentJson(await agent(
       "Report, read-only, which routed learnings written in this worktree did NOT reach the merged tree. " +
       "Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n" +
-      `   python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ok\n` +
+      `   python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ${merged ? "ok" : "not_run"} --all-stages\n` +
       'If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail.',
       { agentType: "status-checker", label: "step-7-unpublished-learnings", phase: "Step 7" }
     ), "step-7-unpublished-learnings", "status-checker", {}, "announcing nothing; removal proceeds");
     unpublishedLearnings = (Array.isArray(reply.unwritten_records) ? reply.unwritten_records : [])
-      .filter((r) => r && typeof r === "object" && r.destination);
+      .filter((r) => r && typeof r === "object" && r.destination)
+      .map((r) => (merged || r.reason !== "stopped_before_publication" ? r : { ...r, reason: "branch_not_merged" }));
     if (!reply.case || reply.case === "did_not_run") log(`[finalize-feature] step 7 unpublished-learning check did not run: ${reply.detail || "no usable reply"}`);
   } catch (err) {
     log(`[finalize-feature] step 7 unpublished-learning check unavailable (${err}) — removal proceeds`);
   }
   if (unpublishedLearnings.length === 0) return "";
-  const note = `${unpublishedLearnings.length} learning(s) written in this worktree are NOT in the merged tree:\n` +
+  const note = (merged ? `${unpublishedLearnings.length} learning(s) written in this worktree are NOT in the merged tree:\n`
+    : `branch not merged — every routed learning here is unpublished (${unpublishedLearnings.length}):\n`) +
     unpublishedLearnings.map((r) => `  - ${r.destination} [${r.reason}; ${r.eligible === false
       ? "NOT eligible: will not be written again" : "still eligible: a later completed unit of work writes it"}]: ${r.text}`).join("\n");
   log(`[finalize-feature] step 7: ${note}`);
@@ -694,6 +698,11 @@ async function cleanupBaselineWorktree() {
   baselineWorktreePath = null;
 }
 
+/** Branch, PR and step-progress fields every halt return carries (each still states its own step_outcomes / step_summary). */
+function haltRefs() {
+  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps };
+}
+
 // -------------------------------------------------------------------------
 // Pre-flight 2 — gh account verification (EMU-aware, config-driven)
 //
@@ -1021,11 +1030,7 @@ if (mergeStatus === "conflict") {
     reason: "merge_conflict",
     message:
       "Feature branch has conflicts with main. Resolve conflicts and re-run.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
@@ -1050,11 +1055,7 @@ if (isRefusalStatus(mergeStatus) || !["merged", "already_up_to_date"].includes(m
         : "this status is not part of the step's contract, so whether a merge happened is unknown. ") +
       "Refusing to treat this as a successful merge. Re-dispatch step 2 to an agent whose " +
       "contract covers git merge operations, or perform the merge by hand and re-run.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
@@ -1110,26 +1111,12 @@ testResult = await agent(
   { agentType: "test-runner", label: "step-3-test-run", phase: "Step 3" }
 )
 
-let testPassed;
-let postMergeFailures;
-{
-  try {
-    const parsed = parseAgentJson(testResult, { stage: "step-3-test-run", agent: "test-runner" }) || {};
-    testPassed = parsed.passed === true;
-    testResult = parsed;
-    postMergeFailures = Array.isArray(parsed.failing_tests) ? parsed.failing_tests : [];
-  } catch (_parseErr) {
-    // AC-4: A malformed test reply is ambiguous — we cannot determine pass/fail.
-    // Default to testPassed=false (conservative) but log clearly that this is a
-    // parse failure, not an agent-reported failure. The triage step will then
-    // attempt to classify failures, and if the triage reply is also malformed,
-    // that triage step's own safe default applies.
-    log("[finalize-feature] step 3 test-runner parse malformed — treating as failed (conservative; triage will classify)");
-    testPassed = false;
-    postMergeFailures = [];
-    testResult = { passed: false, output: "(parse malformed)", failing_tests: [] };
-  }
-}
+// AC-4: a malformed test reply is ambiguous — treated as failed (conservative), logged as a parse
+// failure rather than an agent-reported one; triage then classifies (with its own safe default).
+testResult = readAgentJson(testResult, "step-3-test-run", "test-runner",
+  { passed: false, output: "(parse malformed)", failing_tests: [] }, "treating as failed (conservative; triage will classify)");
+let testPassed = testResult.passed === true;
+let postMergeFailures = Array.isArray(testResult.failing_tests) ? testResult.failing_tests : [];
 
 // -------------------------------------------------------------------------
 // Step 3 (deploy-parity self-check — FIN-100g-4 / FIN-100g-4-i)
@@ -1174,21 +1161,11 @@ if (!testPassed && postMergeFailures.length > 0) {
     { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
   )
 
-  let buildStateOnly = [];
-  let stillFailing = null;
-  {
-    try {
-      const parsedDp = parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }) || {};
-      buildStateOnly = Array.isArray(parsedDp.build_state_only_failures)
-        ? parsedDp.build_state_only_failures
-        : [];
-      // still_failing is the agent's post-redeploy remaining-failure set; null
-      // when the agent did not report it (older/ambiguous replies).
-      stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
-    } catch (_parseErr) {
-      log("[finalize-feature] step 3 deploy-parity parse malformed — proceeding with the original post-merge failures (conservative).");
-    }
-  }
+  const parsedDp = readAgentJson(deployParityResult, "step-3-deploy-parity", "test-runner", {},
+    "proceeding with the original post-merge failures (conservative).");
+  const buildStateOnly = Array.isArray(parsedDp.build_state_only_failures) ? parsedDp.build_state_only_failures : [];
+  // still_failing: the agent's post-redeploy remaining set; null when not reported (older/ambiguous replies).
+  const stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
 
   // Contradiction guard (M-2): never exclude a test the agent itself still reports
   // failing after the re-deploy. Only tests classified build-state AND absent from
@@ -1240,16 +1217,8 @@ if (testPassed) {
     { agentType: "status-checker", label: "step-3-changed-files", phase: "Step 3" }
   )
 
-  let changedFiles = [];
-  {
-    try {
-      const parsedCf = parseAgentJson(changedFilesResult, { stage: "step-3-changed-files", agent: "status-checker" }) || {};
-      changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
-    } catch (_parseErr) {
-      log("[finalize-feature] step 3 changed_files parse malformed — triage will use empty changed_files list");
-      changedFiles = [];
-    }
-  }
+  const parsedCf = readAgentJson(changedFilesResult, "step-3-changed-files", "status-checker", {}, "triage will use empty changed_files list");
+  const changedFiles = Array.isArray(parsedCf.changed_files) ? parsedCf.changed_files : [];
 
   // -----------------------------------------------------------------------
   // Step 3 (null-baseline targeted-rerun recovery — FIN-100c-4/5/6/9)
@@ -1377,29 +1346,12 @@ if (testPassed) {
     { agentType: "test-failure-triage", label: "step-3-triage", phase: "Step 3" }
   )
 
-  {
-    try {
-      triageReport = parseAgentJson(triageRaw, { stage: "step-3-triage", agent: "test-failure-triage" }) || {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage report empty — treating all failures as regressions.",
-      };
-    } catch (_parseErr) {
-      // AC-4: A malformed triage reply is genuinely ambiguous — we cannot determine
-      // whether failures are regressions or pre-existing. Use conservative
-      // blocks_finalization=true, but log clearly that this is a parse failure
-      // (not an agent-reported regression), so the operator can distinguish
-      // "tests have regressions" from "triage reply was garbled".
-      log("[finalize-feature] step 3 triage parse malformed — treating as blocks_finalization=true (conservative; see note in summary)");
-      triageReport = {
-        blocks_finalization: true,
-        regressions: postMergeFailures,
-        pre_existing: [],
-        summary: "Triage reply was malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
-      };
-    }
-  }
+  // AC-4: an empty or malformed triage reply is ambiguous — conservative blocks_finalization=true, logged
+  // as a parse failure so "tests have regressions" stays distinguishable from "triage reply was garbled".
+  triageReport = readAgentJson(triageRaw, "step-3-triage", "test-failure-triage", {
+    blocks_finalization: true, regressions: postMergeFailures, pre_existing: [],
+    summary: "Triage reply was empty or malformed (could not parse JSON) — treating all failures as regressions conservatively. If you believe this is a parse error rather than a real regression, re-run /finalize-feature.",
+  }, "treating as blocks_finalization=true (conservative; see note in summary)");
 
   // Log the triage report to the user for visibility.
   log("[finalize-feature] step 3 triage report: " + JSON.stringify(triageReport, null, 2));
@@ -1424,11 +1376,7 @@ if (testPassed) {
       test_output:
         (testResult && testResult.output) ||
         JSON.stringify(testResult),
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
@@ -1738,11 +1686,7 @@ let syncCheckInfo;
         "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
         `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
@@ -1766,11 +1710,7 @@ if (!KNOWN_SYNC_STATUSES.has(syncStatus)) {
       "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
       `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "verify_and_push",
@@ -1789,11 +1729,7 @@ if (syncStatus === "fetch_failed") {
       "Sync state is unknown — refusing to merge a head that may be stale. " +
       "Verify network / remote access and re-run /finalize-feature. " +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "retry_after_fetch",
@@ -1810,11 +1746,7 @@ if (syncStatus === "push_failed") {
       "Local branch HEAD is ahead of origin but push failed. " +
       `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "push_local_commits",
@@ -1837,11 +1769,7 @@ if (syncStatus === "diverged") {
       "Resolve any conflicts, verify tests pass, then re-run /finalize-feature. " +
       "Do NOT use plain 'git push' — that would be rejected or would silently drop origin commits. " +
       "The PR has NOT been merged — no work is lost.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     action_required: "resolve_divergence",
@@ -1864,11 +1792,7 @@ if (syncStatus === "pushed") {
         `Verify with: git -C "${WORKTREE_ROOT}" rev-parse HEAD "origin/${BRANCH}", ` +
         `then push manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
@@ -1890,11 +1814,7 @@ if (syncStatus === "pushed") {
         "Could not confirm the local branch HEAD is on origin, so refusing to merge a possibly-stale head. " +
         `Push the branch manually (git push origin ${BRANCH}) and re-run /finalize-feature. ` +
         "The PR has NOT been merged — no work is lost.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       action_required: "verify_and_push",
@@ -1939,11 +1859,7 @@ if (triageReport !== null && triageReport.blocks_finalization) {
     message:
       "Defensive guard triggered: blocks_finalization is true at step 4. " +
       "The PR has NOT been merged. Fix regressions and re-run /finalize-feature.",
-    branch: BRANCH,
-    pr_number: prNumber,
-    pr_url: prUrl,
-    completed_steps: completedSteps,
-    skipped_steps: skippedSteps,
+    ...haltRefs(),
     step_outcomes: stepOutcomes,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
@@ -2019,11 +1935,7 @@ if ((prState.state || "").toUpperCase() === "MERGED") {
       halted_at_step: 4,
       reason: "user_declined_merge",
       message: "Finalization halted at merge step. No changes made to main.",
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
     };
@@ -2208,11 +2120,7 @@ if (!worktreeProbe.exists) {
         "Worktree removal blocked by conflicting processes. " +
         "Resolve the conflict PIDs below, then re-run /finalize-feature.",
       conflict_pids: wResult.conflict_pids,
-      branch: BRANCH,
-      pr_number: prNumber,
-      pr_url: prUrl,
-      completed_steps: completedSteps,
-      skipped_steps: skippedSteps,
+      ...haltRefs(),
       step_outcomes: stepOutcomes,
       step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
       tickets_closed: ticketsClosed,

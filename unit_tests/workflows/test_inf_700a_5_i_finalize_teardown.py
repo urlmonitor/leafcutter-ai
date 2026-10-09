@@ -41,17 +41,20 @@ _UNPUBLISHED = "memory/inf700a5i_teardown_unpublished.md"
 _WT = "/tmp/inf700a5i-finalize-wt"
 _OBSERVE_LABEL = "step-7-unpublished-learnings"
 _REMOVE_LABEL = "step-7-remove-worktree"
+_THIRD = "memory/inf700a5i_teardown_third.md"
+_MERGED_PROBE_LABEL = "step-7-pr-merged-probe"
+_NOT_MERGED_HEADING = "branch not merged — every routed learning here is unpublished"
 
 
-class TestTheObservationFinalizeIssuesAgainstAMergedBranch(unittest.TestCase):
-    """Real origin, real main clone, real linked worktree, real merge."""
+class _ScratchOriginCase(unittest.TestCase):
+    """Real origin, real main clone, real linked worktree on branch ``feature``."""
+
+    SEEDS = {_PUBLISHED: "seed a\n", _UNPUBLISHED: "seed b\n", _THIRD: "seed c\n"}
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         root = Path(self._tmp.name)
-        seed = fx.init_install_repo(
-            root / "seed", {_PUBLISHED: "seed a\n", _UNPUBLISHED: "seed b\n"}
-        )
+        seed = fx.init_install_repo(root / "seed", self.SEEDS)
         self.origin = root / "origin.git"
         fx._run_git(["clone", "--bare", str(seed), str(self.origin)], root)
         self.main = root / "main"
@@ -78,6 +81,22 @@ class TestTheObservationFinalizeIssuesAgainstAMergedBranch(unittest.TestCase):
         fx.emit(self.sink, agent="python-coder", component="infrastructure",
                 destination=destination, entry_kind="memory-project", text=text)
 
+    def commit(self, label: str, *paths: str) -> None:
+        (self.wt / "own_output.txt").write_text(f"{label}\n", encoding="utf-8")
+        fx.commit_paths(self.wt, ["own_output.txt", *paths], label)
+
+    def merge_branch(self) -> None:
+        """The PR merge (finalize Step 4): branch into origin's main."""
+        fx._run_git(["push", "origin", "feature"], self.wt)
+        fx._run_git(["pull", "--no-rebase", "--no-edit", "origin", "feature"], self.main)
+        fx._run_git(["push", "origin", "HEAD:main"], self.main)
+
+    @staticmethod
+    def named(observed: dict) -> dict:
+        return {r["destination"]: r for r in observed["unwritten_records"]}
+
+
+class TestTheObservationFinalizeIssuesAgainstAMergedBranch(_ScratchOriginCase):
     def test_only_the_learning_absent_from_the_merged_tree_is_named_and_removal_proceeds(
         self,
     ) -> None:
@@ -90,17 +109,16 @@ class TestTheObservationFinalizeIssuesAgainstAMergedBranch(unittest.TestCase):
 
         # The unit of work's own commit carries only one of the two writes,
         # then its branch is merged into origin's main (the PR merge, Step 4).
-        (self.wt / "own_output.txt").write_text("feature\n", encoding="utf-8")
-        fx.commit_paths(self.wt, ["own_output.txt", _PUBLISHED], "feature work")
-        fx._run_git(["push", "origin", "feature"], self.wt)
-        fx._run_git(["pull", "--no-rebase", "--no-edit", "origin", "feature"], self.main)
-        fx._run_git(["push", "origin", "HEAD:main"], self.main)
+        self.commit("feature work", _PUBLISHED)
+        self.merge_branch()
         merged = fx._run_git(["show", f"origin/main:{_UNPUBLISHED}"], self.wt).stdout
         self.assertNotIn("never left the worktree", merged)
 
         # Step 7's announcement: the exact subcommand finalize dispatches.
-        observed = self.cli("observe", "--working-dir", str(self.wt), "--commit-status", "ok")
-        named = {r["destination"]: r for r in observed["unwritten_records"]}
+        observed = self.cli(
+            "observe", "--working-dir", str(self.wt), "--commit-status", "ok", "--all-stages"
+        )
+        named = self.named(observed)
         self.assertEqual(set(named), {_UNPUBLISHED}, observed)
         record = named[_UNPUBLISHED]
         self.assertIn("never left the worktree", record["text"])
@@ -110,6 +128,82 @@ class TestTheObservationFinalizeIssuesAgainstAMergedBranch(unittest.TestCase):
 
         fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
         self.assertFalse(self.wt.exists(), "the announcement must not stop the removal")
+
+
+class TestTheTeardownObservationCoversEveryStageOnTheBranch(_ScratchOriginCase):
+    """An epic drive stages once per ticket commit on ONE branch (INF-700a-1-iv), so the
+    run record a teardown reads must hold every stage, not only the last one."""
+
+    L1, L2, L3 = "ticket one learning", "ticket two learning never committed", "ticket three learning"
+
+    def three_stages(self, *, break_third_stage: bool = False) -> None:
+        self.emit(self.L1, _PUBLISHED)
+        first = self.cli("stage", "--working-dir", str(self.wt))
+        self.assertEqual(first["manifest"], [_PUBLISHED], first)
+        self.commit("ticket 1", *first["manifest"])
+
+        self.emit(self.L2, _UNPUBLISHED)
+        second = self.cli("stage", "--working-dir", str(self.wt))
+        self.assertEqual(second["manifest"], [_UNPUBLISHED], second)
+        self.commit("ticket 2")  # the commit leaves the routed write behind
+        # Per-commit semantics are unchanged: ticket 2's observe reports ticket 2's commit only.
+        own = self.cli("observe", "--working-dir", str(self.wt), "--commit-status", "ok")
+        self.assertEqual(set(self.named(own)), {_UNPUBLISHED}, own)
+        self.assertEqual(own["written"], 0, own)
+
+        self.emit(self.L3, _THIRD)
+        saved_state = self.state.read_bytes() if self.state.exists() else None
+        if break_third_stage:
+            self.state.write_text("{ not json", encoding="utf-8")
+        third = self.cli("stage", "--working-dir", str(self.wt))
+        if break_third_stage:
+            self.assertEqual(third["case"], "could_not_complete", third)
+            self.assertEqual(third["manifest"], [], third)
+            if saved_state is None:
+                self.state.unlink()
+            else:
+                self.state.write_bytes(saved_state)
+            self.commit("ticket 3")
+        else:
+            self.assertIn(_THIRD, third["manifest"], third)
+            self.commit("ticket 3", _THIRD)
+
+    def teardown_observe(self, status: str) -> dict:
+        return self.cli(
+            "observe", "--working-dir", str(self.wt), "--commit-status", status, "--all-stages"
+        )
+
+    def test_three_stages_merged_the_teardown_names_the_learning_never_committed(self) -> None:
+        # covers: INF-700a-5-i
+        # angle: seam
+        self.three_stages()
+        self.merge_branch()
+        named = self.named(self.teardown_observe("ok"))
+        self.assertEqual(set(named), {_UNPUBLISHED}, named)
+        self.assertIn(self.L2, named[_UNPUBLISHED]["text"])
+        self.assertEqual(named[_UNPUBLISHED]["reason"], "left_out_of_commit")
+        self.assertIs(named[_UNPUBLISHED]["eligible"], True)
+        fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
+        self.assertFalse(self.wt.exists())
+
+    def test_a_later_stage_that_could_not_complete_does_not_erase_earlier_stages(self) -> None:
+        # covers: INF-700a-5-i
+        # angle: failure
+        self.three_stages(break_third_stage=True)
+        self.merge_branch()
+        named = self.named(self.teardown_observe("ok"))
+        self.assertEqual(set(named), {_UNPUBLISHED}, named)
+        self.assertIn(self.L2, named[_UNPUBLISHED]["text"])
+
+    def test_an_unmerged_branch_names_every_stages_write_including_committed_ones(self) -> None:
+        # covers: INF-700a-5-i
+        # angle: boundary
+        self.three_stages()
+        named = self.named(self.teardown_observe("not_run"))
+        self.assertEqual(set(named), {_PUBLISHED, _UNPUBLISHED, _THIRD}, named)
+        for destination, text in ((_PUBLISHED, self.L1), (_UNPUBLISHED, self.L2), (_THIRD, self.L3)):
+            self.assertIn(text, named[destination]["text"])
+            self.assertEqual(named[destination]["reason"], "stopped_before_publication")
 
 
 def _finalize_responses(observe: Any) -> dict[str, Any]:
@@ -130,6 +224,7 @@ def _finalize_responses(observe: Any) -> dict[str, Any]:
         "step-6-scope-detect": {"scope": "single-ticket", "tickets_in_scope": [],
                                 "tickets_done": [], "tickets_not_done": [], "skipped": False},
         "step-7-worktree-probe": {"exists": True},
+        _MERGED_PROBE_LABEL: {"state": "MERGED"},
         _REMOVE_LABEL: {"removed": True, "conflict_pids": []},
     }
     if observe is not None:
@@ -170,10 +265,11 @@ class TestFinalizeAnnouncesBeforeTheRemovalAndStillRemoves(unittest.TestCase):
         self.assertEqual((len(observes), len(removals)), (1, 1), [c.label for c in result.agent_calls])
         self.assertLess(observes[0].call_index, removals[0].call_index)
         self.assertIn(
-            f"completion_routing_cli.py observe --working-dir {_WT} --commit-status ok",
+            f"completion_routing_cli.py observe --working-dir {_WT} --commit-status ok --all-stages",
             str(observes[0].prompt),
         )
         removal_prompt = str(removals[0].prompt)
+        self.assertNotIn(_NOT_MERGED_HEADING, removal_prompt)
         for record in (_ELIGIBLE, _SPENT):
             self.assertIn(record["destination"], removal_prompt)
             self.assertIn(record["text"], removal_prompt)
@@ -211,6 +307,40 @@ class TestFinalizeAnnouncesBeforeTheRemovalAndStillRemoves(unittest.TestCase):
                 self.assertEqual(result.result["status"], "ok", result.result)
                 self.assertIs(result.result["worktree_removed"], True)
                 self.assertEqual(result.result["unpublished_learnings"], [])
+
+    def test_an_unmerged_pr_announces_every_staged_write_as_unpublished_and_still_removes(
+        self,
+    ) -> None:
+        # covers: INF-700a-5-i
+        # angle: failure
+        # Step 4's `gh pr merge --auto` can leave the PR open; the branch head is then NOT merged.
+        stopped = {**_ELIGIBLE, "reason": "stopped_before_publication"}
+        carried_on_head = {"destination": _PUBLISHED, "text": "on the branch, not on main",
+                           "reason": "stopped_before_publication", "eligible": True}
+        for probe in ({"state": "OPEN"}, "no json here at all"):
+            with self.subTest(probe=probe):
+                responses = _finalize_responses(_observed(stopped, carried_on_head, _SPENT))
+                responses[_MERGED_PROBE_LABEL] = probe
+                result = run_workflow_under_e2(_JS, timeout=30, label_responses=responses)
+                probes = self.calls(result, _MERGED_PROBE_LABEL)
+                observes = self.calls(result, _OBSERVE_LABEL)
+                removals = self.calls(result, _REMOVE_LABEL)
+                self.assertEqual((len(probes), len(observes), len(removals)), (1, 1, 1))
+                self.assertLess(probes[0].call_index, observes[0].call_index)
+                self.assertLess(observes[0].call_index, removals[0].call_index)
+                self.assertIn("--commit-status not_run --all-stages", str(observes[0].prompt))
+                removal_prompt = str(removals[0].prompt)
+                self.assertIn(_NOT_MERGED_HEADING, removal_prompt)
+                for record in (stopped, carried_on_head, _SPENT):
+                    self.assertIn(record["destination"], removal_prompt)
+                    self.assertIn(record["text"], removal_prompt)
+                payload = result.result
+                self.assertEqual(payload["status"], "ok", payload)
+                self.assertIs(payload["worktree_removed"], True)
+                self.assertEqual(
+                    [r["reason"] for r in payload["unpublished_learnings"]],
+                    ["branch_not_merged", "branch_not_merged", "conflicts_with_merged_tree"],
+                )
 
     def test_no_observation_is_dispatched_when_the_worktree_is_already_gone(self) -> None:
         # covers: INF-700a-5-i
