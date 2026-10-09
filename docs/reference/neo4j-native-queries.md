@@ -1,5 +1,5 @@
 ---
-title: Neo4j native graph and query compatibility
+title: Neo4j native graph and saved queries
 type: reference
 status: active
 created: '2026-10-09'
@@ -7,17 +7,17 @@ last_updated: '2026-10-09'
 components:
 - knowledge_management
 - decision_kernel
-description: Native Neo4j labels, component filters, authored metadata, migration commands and retained query identity rules.
+description: Native Neo4j labels, component filters, authored metadata and verified saved-query replacement.
 related_docs:
 - docs/how-to/run-knowledge-retrieval.md
 - docs/reference/knowledge-retrieval-answers.md
 - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
 ---
 
-# Neo4j native graph and query compatibility
+# Neo4j native graph and saved queries
 
-This reference describes the native graph representation and its migration and
-query-identity boundaries. For credentials, ordinary publication and retrieval,
+This reference describes the native graph representation and its saved-query
+identity boundaries. For credentials, ordinary publication and retrieval,
 use the [standalone retrieval guide](../how-to/run-knowledge-retrieval.md).
 
 ## Explore the graph in Aura
@@ -75,31 +75,40 @@ labels and relationships; older generic query names are not aliases in Aura.
 For example, use `AC` for acceptance criteria, `Repository` and `Snapshot` for
 bookkeeping, and the declared relationship type for each connection.
 
-Registered queries admitted by compiler version 1 keep their original immutable
-catalog entries and verification digests, including the `digest` of a descriptor
-returned by `QueryCatalog.get()`. A separate compatibility verifier
-reconstructs their historical compiled text solely to check those receipts;
-executing the retained descriptor generates native Cypher. New admissions use
-compiler version 2 and the ordinary fresh-verification process. To replace an
-existing operation with a new admission, increment its descriptor version and
-supply the prior active digest. Do not edit stored digests or verification
-receipts by hand. Legacy names remain in explicit old-graph migration code and
-fixtures so migration can still recognize the format it converts.
+## Saved native queries
 
-Existing generic graphs can be inspected without writes:
+The serving catalog accepts only the current native compiler format. Retired
+compiler versions, old digest pins and generic graph representations are rejected;
+there is no legacy compiler, query translator or old-graph migration command in
+the current package. Ordinary native publication, rollback and metadata refresh
+retain their existing scope, validation and atomicity checks.
 
-```sh
-python -m knowledge.domain_migrate --root REPOSITORY --repository-id leafcutter --expected-host AURA_HOST
-```
+A saved-query format replacement requires a separate authorized data operation:
+back up the original catalog outside Git, recover the reviewed candidate with its
+actual arguments, and freshly verify it against the exact retained source. Admit
+those native queries into a separate catalog, then replace the original only while
+holding its activation lock and confirming its bytes have not changed. Record an
+old-to-new digest mapping and update active saved request pins. Historical
+checkpoints and receipts remain history; they do not authorize an old pin to run.
+Do not relabel old verification proof as evidence for the new compiled statement.
 
-After updating readers, add `--apply --backup ABSOLUTE_BACKUP_PATH` with explicitly
-configured writer credentials to perform the migration. Backups contain source
-evidence and should remain private and outside Git. Migration validates every
-retained snapshot, preserves entity keys, payloads, source revisions and counts,
-and replaces each legacy relationship atomically with its native typed equivalent.
-Interrupted runs can be inspected and resumed with a new backup path. Publication
-changes, corrupt records and cross-generation edges are rejected. Old writer
-versions must not be used after migration.
+Use `query-verify` and `query-register` as described in the
+[governed catalog procedure](../how-to/run-knowledge-retrieval.md#step-7---use-the-governed-reusable-query-catalog)
+for fresh admission. Registration within an existing native catalog still requires
+a new descriptor version and the expected active digest when replacing an
+operation. A format-only replacement into a separately verified catalog can retain
+the unchanged descriptor and operation version, while receiving a new compiled
+query digest. Compiler vocabularies are fixed per version so later registry growth
+cannot silently change previously admitted native digests.
+
+On 2026-10-09, both discovered application catalogs for `get_component_tests`
+were replaced with freshly verified compiler-2 entries at source `9f70de80`.
+Each retained its one descriptor and operation version. The
+[sanitized cutover receipt](../../reports/neo4j-native-query-cutover-2026-10-09.json)
+records the two relative catalog locations, old/new file hashes and query digest
+mapping. Positive and empty cases plus invalid-input, injection and foreign-scope
+checks passed against Aura; the graph itself was not changed. Original catalog
+bytes remain in private backups. This receipt covers those two catalogs only.
 
 ## Inspect complete native fields
 

@@ -1,6 +1,7 @@
 """Strict authored query recipes; these data models cannot carry executable code.
 
 DECISION HISTORY
+- 2026-10-09 09:46 [python-coder]: Remove obsolete compiler compatibility after explicit native saved-catalog re-admission. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-09 09:11 [python-coder]: Preserve admitted descriptor identity without exposing compiler provenance in authored data. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: Restrict live admission to bounded declared graph paths. (#KM-500/TICKET-20261001-KM-500b-2)
 
@@ -13,7 +14,7 @@ ARCHITECTURE: Dependencies point inward to neutral contracts; see docs/architect
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import Field, PrivateAttr, model_validator
+from pydantic import Field, model_validator
 from .contracts import Model, OPERATIONS
 from .errors import invalid
 
@@ -74,7 +75,6 @@ class QueryDescriptor(Model):
     result_meaning: str = "Canonical entities reached by the declared scoped relationship path"
     parameters: dict[str, QueryParameter] = Field(min_length=1, max_length=8)
     recipe: QueryRecipe
-    _admitted_compiler_version: str | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def declared_inputs(self):
@@ -92,19 +92,9 @@ class QueryDescriptor(Model):
 
     @property
     def digest(self) -> str:
-        """Recompute identity using the admitted compiler, or the current authoring compiler.
+        """Return the current native descriptor-and-compiled-query identity."""
+        from .query_compile import compile_query
 
-        Only trusted catalog reads bind an admitted version. Private provenance is
-        excluded from authored JSON; copying or editing still recomputes the digest.
-        """
-        from .query_compile import COMPILER_VERSION, compile_query
-
-        if self._admitted_compiler_version == "1":
-            from .query_legacy import compile_legacy_query
-
-            return compile_legacy_query(self)["digest"]
-        if self._admitted_compiler_version not in {None, COMPILER_VERSION}:
-            invalid("query identity requires an unsupported compiler version")
         return compile_query(self)["digest"]
 
 

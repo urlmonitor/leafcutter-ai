@@ -31,8 +31,8 @@ Run commands from the trusted Leafcutter checkout. Indexed Git objects are data,
 ### Explore the graph in Aura
 
 See the [native graph reference](../reference/neo4j-native-queries.md#explore-the-graph-in-aura)
-for domain labels, saved Bloom views, current component filters, query compatibility
-and legacy graph migration commands.
+for domain labels, saved Bloom views, current component filters and verified
+native-query catalog replacement.
 
 ### Inspect complete native fields
 
@@ -144,7 +144,7 @@ Keep the actual `.env` outside Git and set `LEAFCUTTER_ENV_FILE` to its existing
 
 ### Step 7 - Use the governed reusable query catalog
 
-Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Existing operations keep their original contracts. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
+Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Only current native compiler entries are accepted; see the [saved-query replacement contract](../reference/neo4j-native-queries.md#saved-native-queries) when replacing an obsolete catalog. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
 
 ```text
 python -m knowledge catalog-list --catalog-root <directory>
@@ -159,7 +159,7 @@ The coding agent authors typed parameters, purpose, supported questions and a re
 
 The candidate includes positive and empty expected-result cases. The verifier executes those judgments against the exact pinned source and independently tests invalid input, bound injection and foreign scope. Passing these checks establishes declared-case conformance, not general semantic usefulness. The example [component test query](../../knowledge/examples/component_tests_candidate.json) joins component membership to acceptance-criterion test references in one new two-hop operation. Its expected IDs were independently reviewed against the commit named in [source judgments](../../reports/knowledge-query-growth-source-judgments.json).
 
-The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; already pinned requests retain their selected descriptor. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
+The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; pinned requests select retained native entries; an explicit format replacement requires the new recorded digest and rejects the old pin. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
 
 For a catalog intended to survive replacing or later merging an implementation worktree, configure a durable user/application data directory outside that worktree. The catalog contains query metadata and measured provenance rather than Neo4j credentials. Keep write access restricted to the activation owner; copying an untrusted catalog is not an authorization mechanism.
 
@@ -247,7 +247,7 @@ Verification labels: public kernel/observer acceptance tests exercise the real k
 
 ## See Also
 
-- [Native graph and query compatibility](../reference/neo4j-native-queries.md)
+- [Native graph and saved queries](../reference/neo4j-native-queries.md)
 - [Repository answer contracts and proof meanings](../reference/knowledge-retrieval-answers.md)
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md)
 - [Kernel research and reusable queries](kernel-query-growth.md)

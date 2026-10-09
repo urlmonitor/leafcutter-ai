@@ -1,19 +1,15 @@
-"""MODULE: neo4j_domain_migration
-GOAL: Inspect and migrate one owned repository to native domain graph storage.
+"""MODULE: neo4j_inspection
+GOAL: Validate native snapshot identity, ownership and immutable evidence.
 BUSINESS CONTEXT: KM-400a-3-i preserves source evidence while improving Aura exploration.
-ARCHITECTURE: Validate every generation before writes; bounded atomic batches can resume.
+ARCHITECTURE: Read-only native storage inspection shared by metadata refresh and recovery.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
-
-if TYPE_CHECKING:
-    from .neo4j_backend import Neo4jBackend
+from typing import Protocol
 
 import hashlib
 import json
-import logging
 import re
 
 from knowledge.adapters.domain_schema import LABELS, RELATIONSHIPS
@@ -21,17 +17,13 @@ from knowledge.adapters.neo4j_backend import scope_key
 from knowledge.contracts import Entity, Relation, ProjectionSnapshot
 from knowledge.projection.validation import validate_snapshot
 
-LOGGER = logging.getLogger(__name__)
-
-# Only the explicit migration/refresh inspection boundary reads both storage versions.
 INSPECTION_MANIFEST_QUERY = (
-    "MATCH (g:Snapshot|KRGeneration {repository_id:$repo}) "
-    "RETURN properties(g) AS props ORDER BY g.key"
+    "MATCH (g:Snapshot {repository_id:$repo}) RETURN properties(g) AS props ORDER BY g.key"
 )
 
 
 class InspectionReader(Protocol):
-    """Read interface shared by migration and published-generation inspection."""
+    """Read interface shared by published snapshot inspection and recovery."""
 
     async def _run(
         self, statement: str, parameters: dict | None = None, write: bool = False
@@ -46,13 +38,13 @@ async def inspect(db: InspectionReader, repository_id: str) -> dict:
         repository_id: Repository whose existing graph will be inspected.
 
     Returns:
-        Serializable migration plan, including original properties for an operator backup.
+        Serializable native snapshot inventory, including original properties for a private backup.
 
     Raises:
         ValueError: Unknown, corrupt, duplicate or cross-generation graph data is found.
     """
     repos = await db._run(
-        "MATCH (r:Repository|KRRepository {repository_id:$repo}) RETURN properties(r) AS props",
+        "MATCH (r:Repository {repository_id:$repo}) RETURN properties(r) AS props",
         {"repo": repository_id},
     )
     if len(repos) != 1:
@@ -83,7 +75,7 @@ async def inspect(db: InspectionReader, repository_id: str) -> dict:
             "b.generation_key AS target_scope ORDER BY r.key",
             {"key": key},
         )
-        snapshot = _validate(meta, nodes, edges)
+        snapshot = validate_records(meta, nodes, edges)
         for item in nodes:
             fingerprint.update(
                 json.dumps([key, item["props"]["key"], item["props"]["payload"]]).encode()
@@ -113,24 +105,24 @@ async def inspect(db: InspectionReader, repository_id: str) -> dict:
     }
 
 
-def _validate(meta: dict, nodes: list[dict], edges: list[dict]) -> ProjectionSnapshot:
+def validate_records(meta: dict, nodes: list[dict], edges: list[dict]) -> ProjectionSnapshot:
     """Check persisted identity, endpoints, counts and canonical evidence before writes."""
     key = meta["key"]
     entities = []
     for row in nodes:
         props = row["props"]
         entity = Entity.model_validate_json(props["payload"])
-        allowed_labels = {"KREntity", LABELS.get(entity.kind)} | {
+        allowed_labels = {LABELS.get(entity.kind)} | {
             name
             for name in meta.get("vector_indexes", [])
-            if re.fullmatch(r"krv_[a-f0-9]{64}", name)
+            if re.fullmatch(r"native_vector_[a-f0-9]{64}", name)
         }
         if (
             props.get("key") != scope_key(key, entity.canonical_id)
             or props.get("canonical_id") != entity.canonical_id
             or props.get("kind") != entity.kind
             or props.get("content_hash") != entity.source.content_hash
-            or not ({"KREntity", LABELS.get(entity.kind)} & set(row["labels"]))
+            or LABELS.get(entity.kind) not in row["labels"]
             or not set(row["labels"]) <= allowed_labels
         ):
             raise ValueError("node identity or kind mismatch")
@@ -149,7 +141,7 @@ def _validate(meta: dict, nodes: list[dict], edges: list[dict]) -> ProjectionSna
             or props["key"] != hashlib.sha256(props["payload"].encode()).hexdigest()
             or props["key"] in seen
             or props["edge_type"] != relation.edge_type
-            or row["type"] not in {"KR_LINK", RELATIONSHIPS.get(relation.edge_type)}
+            or row["type"] != RELATIONSHIPS.get(relation.edge_type)
         ):
             raise ValueError("relationship identity or scope mismatch")
         seen.add(props["key"])
@@ -165,58 +157,3 @@ def _validate(meta: dict, nodes: list[dict], edges: list[dict]) -> ProjectionSna
     if len(nodes) != meta["node_count"] or len(edges) != meta["edge_count"]:
         raise ValueError("persisted generation counts mismatch")
     return snapshot
-
-
-async def migrate(db: Neo4jBackend, plan: dict) -> dict:
-    """Apply a freshly revalidated plan and verify immutable content after migration.
-
-    Args:
-        db: Explicitly authorized writer adapter.
-        plan: Inspected plan that the operator has backed up before applying.
-
-    Returns:
-        Verified content fingerprint and migrated generation/count summary.
-    """
-    from knowledge.adapters.neo4j_domain_batches import migrate_generation, finish_repository
-
-    fresh = await inspect(db, plan["repository_id"])
-    if (
-        fresh["fingerprint"] != plan["fingerprint"]
-        or fresh["repository"]["active"] != plan["repository"]["active"]
-    ):
-        raise ValueError("graph changed after migration inspection")
-    LOGGER.info("Migrating graph presentation for repository %s", plan["repository_id"])
-    await db.setup()
-    for group in fresh["generations"]:
-        await migrate_generation(db, fresh, group)
-        LOGGER.info(
-            "Migrated snapshot %s (%s nodes, %s relationships)",
-            group["metadata"]["source_sha"][:8],
-            len(group["nodes"]),
-            len(group["edges"]),
-        )
-    await finish_repository(db, fresh)
-    after = await inspect(db, plan["repository_id"])
-    if after["fingerprint"] != plan["fingerprint"]:
-        raise ValueError("migration changed canonical evidence")
-    for group in after["generations"]:
-        current = group["metadata"]["key"] == after["repository"]["active"]
-        if (
-            group["metadata"].get("storage_version") != 2
-            or any(
-                "KREntity" in n["labels"] or n["props"].get("current") != current
-                for n in group["nodes"]
-            )
-            or any(
-                r["type"] == "KR_LINK" or r["props"].get("current") != current
-                for r in group["edges"]
-            )
-        ):
-            raise ValueError("migration presentation verification failed")
-    return {
-        "repository_id": plan["repository_id"],
-        "fingerprint": after["fingerprint"],
-        "generations": len(after["generations"]),
-        "nodes": sum(len(g["nodes"]) for g in after["generations"]),
-        "relationships": sum(len(g["edges"]) for g in after["generations"]),
-    }

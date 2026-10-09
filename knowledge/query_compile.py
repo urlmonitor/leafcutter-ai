@@ -1,6 +1,7 @@
 """Compile a restricted authored recipe into actual scoped parameterized Cypher.
 
 DECISION HISTORY
+- 2026-10-09 09:46 [python-coder]: Remove obsolete compiler compatibility after explicit native saved-catalog re-admission. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-09 09:11 [python-coder]: Emit native queries while preserving versioned catalog admission identities. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: New multi-relation queries compile through a trusted grammar. (#KM-500/TICKET-20261001-KM-500b-2)
 
@@ -19,7 +20,7 @@ from .errors import invalid
 
 COMPILER_VERSION = "2"
 # Digest-bearing vocabulary is frozen per compiler version. Registry growth must
-# introduce a new compiler version and retain this version's integrity verifier.
+# introduce a new compiler version and re-admit saved catalogs with fresh evidence.
 COMPILER_LABELS = {
     "AcceptanceCriterion": "AC",
     "ADR": "ADR",

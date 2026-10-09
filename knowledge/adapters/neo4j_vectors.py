@@ -28,7 +28,7 @@ from knowledge.adapters.neo4j_vector_build import reserve, build_indexes, index_
 
 def trusted_name(value: str) -> str:
     """Allow only projector-owned hashed schema identifiers."""
-    if not re.fullmatch(r"krv_[a-f0-9]{64}", value):
+    if not re.fullmatch(r"native_vector_[a-f0-9]{64}", value):
         raise ValueError("invalid owned vector index identifier")
     return value
 

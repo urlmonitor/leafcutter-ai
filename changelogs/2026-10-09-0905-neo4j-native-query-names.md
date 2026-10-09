@@ -1,34 +1,35 @@
 ---
-title: "Use native graph names directly in Neo4j queries"
+title: "Remove legacy Neo4j compatibility and update saved native queries"
 date: "2026-10-09"
 time: "09:05"
 type: fix
 components:
   - knowledge_management
-summary: "Remove legacy-name rewriting from current Neo4j operations while preserving previously admitted query receipts."
-description: "Use native labels and relationship types in retrieval, publication, vectors and newly compiled catalog queries. Keep legacy names confined to explicit migration and immutable compiler-v1 receipt verification."
+summary: "Use native Neo4j graph and catalog formats exclusively, and replace both actual saved-query catalogs with freshly verified native entries."
+description: "Remove legacy query rewriting, compiler-v1 reconstruction and old-graph conversion paths. Preserve native inspection and scoped publication safeguards, reject obsolete catalog versions and pins, and record the verified saved-query cutover."
 tickets:
   - tickets/00_inbox/TICKET-20261009-KM-400a-3-i-native-query-maintenance.md
 ---
 
-The adapter sends its trusted Cypher unchanged to Neo4j. Current queries use the
-physical domain labels and relationship types directly, including `AC`, `ADR`,
-`Repository`, `Snapshot`, `COMPONENT_MEMBERSHIP` and `COVERED_BY`. Query arguments
-remain separately bound and every operation retains its existing repository and
-snapshot scope.
+Queries use the physical domain labels and relationship types directly, including
+`AC`, `ADR`, `Repository`, `Snapshot`, `COMPONENT_MEMBERSHIP` and `COVERED_BY`.
+The package no longer carries a legacy compiler or a generic-graph conversion
+path. Native graph inspection, refresh and publication retain their safety checks.
 
-Newly admitted queries use compiler version 2. Previously admitted catalog entries
-keep their exact compiled records, verification digests and public descriptor
-identities; the version-1 compiler
-is retained only to verify those historical records. Executing their descriptors
-uses native Cypher. Old-format graph migration still recognizes its legacy labels
-and relationships, and historical test receipts remain unchanged.
+Both discovered application catalogs for `get_component_tests` were replaced
+with freshly verified native entries. Each retained its one descriptor and
+operation version; its compiled digest changed and the old pin is rejected.
+Verification used the original retained Aura source and passed positive, empty,
+invalid-input, injection and foreign-scope cases. Private backups preserve the
+original bytes. The sanitized report records relative catalog identifiers,
+old/new file hashes and the digest mapping without credentials or private paths.
 
-The retrieval guide explains the compatibility boundary and treats prior Aura
-counts as source-pinned observations. This code cleanup does not claim a new Aura
-publication or browser configuration change.
+Historical receipts remain evidence for their original runs. They are not loaded
+as serving catalogs or presented as proof of the new compiled queries. Aura graph
+data was unchanged by the saved-query replacement. Documentation describes the
+native-only contract and the completed two-catalog cutover.
 
-Focused validation passed 74 compiler/catalog cases, four adapter regression checks,
-15 native-refresh recovery cases, and 16 cases against disposable local Neo4j.
-The frozen historical compiler also matched the original implementation across
-1,152 descriptor combinations. These are scoped checks; Aura was not changed.
+Verification passed 78 focused compiler/catalog tests, nine adapter unit tests,
+15 refresh recovery cases and 19 checks on disposable Neo4j. Both actual catalogs
+also passed positive and empty public retrieval after reopening in a fresh process.
+Changed-file lint and annotation checks passed; no full pytest suite ran.

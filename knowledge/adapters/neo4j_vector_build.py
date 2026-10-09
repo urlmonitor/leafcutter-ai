@@ -25,7 +25,7 @@ from knowledge.adapters.neo4j_backend import scope_key
 
 def index_name(key: str, kind: str = "") -> str:
     """Hash trusted scope and kind into a projector-owned schema identifier."""
-    return "krv_" + (scope_key(key, kind) if kind else key)
+    return "native_vector_" + (scope_key(key, kind) if kind else key)
 
 
 async def reserve(
