@@ -1,0 +1,48 @@
+id: UXP-591-2-i
+title: "A step address naming no step or branch opens the flow with a 'Step not found' notice and no drawer"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given leafcutter/python-coder-internal has no step or branch with the id 'lint',
+  When a person opens /flows/leafcutter/python-coder-internal?step=lint,
+  Then the Atlas answers 200 and draws leafcutter/python-coder-internal with Source Real,
+    Kind Data and Realization All and a breadcrumb showing only that flow,
+  And no drawer is open,
+  And a 'Step not found' notice reads "This flow has no step or branch with the id 'lint', so it
+    opens without a step drawer.",
+  And no 'Flow not found' notice shows,
+  And the address bar keeps /flows/leafcutter/python-coder-internal?step=lint.
+depends_on:
+  - UXP-591-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'stepNotFound' (from
+  'openStepLink'; FlowRoute route-unknown-step, FlowNavigation nav-clear-step-notice-1).
+  How the notice is cleared is UXP-591-2-ii (owner ruling 2).

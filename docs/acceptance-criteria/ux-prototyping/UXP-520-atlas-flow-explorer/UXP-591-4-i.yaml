@@ -1,0 +1,48 @@
+id: UXP-591-4-i
+title: "Switching from one drawer to another swaps the single ?step= value without adding a Back entry"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the 'Plan' drawer is open at /flows/leafcutter/deliver-a-feature?step=plan,
+  When the person clicks the 'Build' step,
+  Then only the 'Build' drawer is open,
+  And the address bar becomes /flows/leafcutter/deliver-a-feature?step=build, carrying a single
+    ?step= value,
+  And the number of entries in the tab's history is unchanged.
+depends_on:
+  - UXP-591-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'drawerSwitch' (from
+  'drawerUrl'; FlowNavigation nav-drawer-replace-3). Open build detail recorded by the flow
+  and mockup: today's drawer lays a full-canvas scrim that closes the drawer on click, so a
+  one-click switch needs the click to reach the other node; how the build lets it through is
+  not decided. This criterion fixes the outcome (one click ends with only 'Build' open), not
+  the mechanism.

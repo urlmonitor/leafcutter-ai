@@ -1,0 +1,55 @@
+id: UXP-591-2-iv
+title: "An old /flows?flow=... link without &step= redirects permanently to the flow's canonical address"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an old link in the /flows?flow= form that names a flow but no step,
+    /flows?flow=leafcutter%2Fflow-render-pipeline,
+  When a person follows it,
+  Then the Atlas answers with a permanent redirect (308) whose location is
+    /flows/leafcutter/flow-render-pipeline, with the '/' in the flow id literal and no ?step=,
+  And the page then opens leafcutter/flow-render-pipeline with no drawer open and no
+    'Step not found' notice, with Source Real, Kind Data and Realization All and a breadcrumb
+    showing only "How a flow renders in the Atlas", exactly as the canonical address does when
+    opened directly,
+  And the tab's history holds /flows/leafcutter/flow-render-pipeline and not the old
+    /flows?flow= address, so Back does not return to it.
+depends_on:
+  - UXP-591-2
+  - UXP-591-2-iii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owner ruling at the AC gate (2026-10-09), decision (2)(a): an old /flows?flow=<id> link
+  without &step= answers 308 to /flows/<id> and opens that flow with no drawer. The flow
+  leafcutter/explore-flows-in-atlas v5 does not yet model this behaviour (its 'legacyRedirect'
+  branch records it as not modelled by the dataset), so no flow node maps to this AC and it
+  carries no flow back-link. Placed under UXP-591-2, next to the legacy step-link redirect
+  UXP-591-2-iii, at the owner's direction, although the address it lands on carries no ?step=.
+  The landing state is the dataset's FlowRoute route-shared-data-pipeline.

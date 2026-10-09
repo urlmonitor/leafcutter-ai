@@ -1,0 +1,61 @@
+id: UXP-591-2-v
+title: "An old /flows?flow=... link naming an unknown flow redirects to its canonical form, which shows 'Flow not found' (404)"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given no flow has the id leafcutter/flow-render-pipline (a typo of
+    leafcutter/flow-render-pipeline),
+  When a person follows the old link /flows?flow=leafcutter%2Fflow-render-pipline&step=resolve,
+    or the old link /flows?flow=leafcutter%2Fflow-render-pipline without &step=,
+  Then the Atlas answers with the same permanent redirect (308) a known flow id gets, whose
+    location is the canonical form with the '/' in the flow id literal:
+    /flows/leafcutter/flow-render-pipline?step=resolve for the first link and
+    /flows/leafcutter/flow-render-pipline for the second,
+  And that canonical address then answers 404 and shows the 'Flow not found' notice quoting
+    'leafcutter/flow-render-pipline' verbatim, with no flow drawn, an empty breadcrumb and the
+    flow selector at Source Real, Kind User and Realization All,
+  And for the first link no drawer opens and no 'Step not found' notice shows,
+  And neither link lands on /flows or draws leafcutter/deliver-a-feature or any other flow,
+  And the address bar and the tab's history hold the canonical form, not the old /flows?flow=
+    address.
+depends_on:
+  - UXP-591-2
+  - UXP-591-2-iii
+  - UXP-591-1-ii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owner ruling at the AC gate (2026-10-09), decision (2)(b): an old /flows?flow=<id>[&step=<step>]
+  link whose flow id is unknown answers 308 to the canonical form and then shows the 404
+  'Flow not found' state for that id. The flow leafcutter/explore-flows-in-atlas v5 does not yet
+  model this behaviour, so no flow node maps to this AC and it carries no flow back-link. The
+  redirect does not first check whether the flow exists; the 404 comes from the canonical address
+  it lands on. The landing states are the dataset's FlowRoute route-unknown-flow-with-step and
+  route-unknown-typo, whose notice reads "No flow has the id 'leafcutter/flow-render-pipline'.
+  The link may be mistyped, or the flow was renamed or removed.".

@@ -1,0 +1,67 @@
+id: UXP-591-1
+title: "A flow's canonical address opens the Atlas on that flow, selected and drawn"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the flows leafcutter/flow-render-pipeline (source real, kind data),
+    fern-and-fig/customer-buys-a-plant (source mock, kind user) and
+    leafcutter/product-truth-architecture (source real, kind architecture) exist,
+  When a person opens /flows/leafcutter/flow-render-pipeline in a new tab from a link pasted
+    into chat, a ticket or a PR,
+  Then the Atlas answers 200 and draws leafcutter/flow-render-pipeline as the selected flow
+    with no step drawer open,
+  And the filters show Source Real, Kind Data and Realization All, so the flow selector lists
+    the linked flow instead of the first flow of the default filters,
+  And the breadcrumb shows only "How a flow renders in the Atlas", with no parent trail,
+  And the address bar keeps /flows/leafcutter/flow-render-pipeline, with the '/' inside the
+    flow id a literal path separator rather than %2F,
+  And opening /flows/fern-and-fig/customer-buys-a-plant the same way shows Source Mock, Kind User
+    and Realization All, and opening /flows/leafcutter/product-truth-architecture shows
+    Source Real, Kind Architecture and Realization All.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  agent: frontend-coder
+  contract: "Every flow has one canonical address, '/flows/' + its flow id with the '/' literal; opening it answers 200 with that flow selected, drawn, filtered to its own Source and Kind with Realization All, and a one-flow breadcrumb. UXP-591-2, UXP-591-4 and UXP-591-5 build on this address."
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-591-1-i
+  - UXP-591-1-ii
+  - UXP-591-1-iii
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'openByLink'
+  (records FlowRoute route-shared-data-pipeline, route-shared-mock-journey,
+  route-bookmarked-agent-subflow, route-shared-architecture-map in the leafcutter/atlas-flows
+  dataset). Branches 'bareFlows' and 'flowNotFound' are the L3 children. Specified, not built:
+  today the Flows view reads no address and always opens leafcutter/deliver-a-feature.

@@ -1,0 +1,50 @@
+id: UXP-591-4-ii
+title: "Closing the drawer returns the address to the flow's canonical address without adding a Back entry"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the 'Build' drawer is open at /flows/leafcutter/deliver-a-feature?step=build,
+  When the person closes it with its X button, or by clicking the canvas beside it,
+  Then the drawer closes and the address bar becomes /flows/leafcutter/deliver-a-feature with
+    no query,
+  And the number of entries in the tab's history is unchanged,
+  And when the person afterwards drills into the 'Build' sub-flow and presses Back,
+    leafcutter/deliver-a-feature returns at /flows/leafcutter/deliver-a-feature with no drawer
+    open,
+  And a drawer opened from the bare /flows entry closes to /flows/leafcutter/deliver-a-feature,
+    never back to /flows.
+depends_on:
+  - UXP-591-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'drawerClose' (FlowNavigation
+  nav-drawer-replace-4 to -6, nav-drawer-in-history-4, nav-drawer-on-bare-flows-3). Owner
+  ruling 1 (2026-10-09) governs the bare-/flows clause. Authored as an L3 under the
+  drawer-opening L2 because UXP-591 is at its five-L2 cap; it is a flow step, not a branch.

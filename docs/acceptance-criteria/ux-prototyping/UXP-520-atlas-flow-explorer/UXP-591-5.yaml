@@ -1,0 +1,70 @@
+id: UXP-591-5
+title: "Selecting, drilling into or breadcrumb-clicking a flow adds one Back entry at that flow's canonical address"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given /flows/leafcutter/deliver-a-feature is open with no drawer and the tab has one
+    history entry,
+  When the person drills into the sub-flow of the 'Build' step, on the node or with
+    'Open sub-flow' in its drawer,
+  Then a new history entry is added, so the tab has two entries,
+  And the address bar shows /flows/leafcutter/how-acs-are-built with no ?step=,
+  And the breadcrumb reads "Deliver a feature end-to-end > How a ticket is built (the phase chain)",
+  And picking a flow in the flow selector adds an entry at that flow's canonical address with a
+    breadcrumb of only that flow,
+  And clicking the "Deliver a feature end-to-end" breadcrumb adds an entry at
+    /flows/leafcutter/deliver-a-feature, with the trail cut after that flow,
+  And an entry added after the person pressed Back discards the entries Forward could have
+    returned to.
+depends_on:
+  - UXP-591
+  - UXP-591-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-591-1
+  contract: "The target flow's canonical address /flows/<flow id>, used as the address of each added history entry."
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-591-5-i
+  - UXP-591-5-ii
+  - UXP-591-5-iii
+  - UXP-591-5-iv
+  - UXP-591-5-v
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'navPush' (FlowNavigation
+  sessions drill-and-return, shared-mock-journey, recover-from-unknown). The breadcrumb trail
+  is not part of the address, so each history entry has to keep its own trail for Back and
+  Forward (UXP-591-5-ii). Children: 'pushFromOpenDrawer' (-i), the 'backForward' step (-ii,
+  placed under this L2 because UXP-591 is at its five-L2 cap), and the filter step's two
+  branches 'filterRepicksFlow' (-iii) and 'filterKeepsFlow' (-iv), owner ruling 3: a filter
+  change never adds an entry.

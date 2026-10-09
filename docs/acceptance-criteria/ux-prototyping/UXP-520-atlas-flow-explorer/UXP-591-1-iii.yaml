@@ -1,0 +1,61 @@
+id: UXP-591-1-iii
+title: "A flow address with a percent-encoded '/' or a trailing slash shows 'Flow not found' (404) instead of the flow"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given leafcutter/flow-render-pipeline exists and its canonical address is
+    /flows/leafcutter/flow-render-pipeline,
+  When a person opens /flows/leafcutter%2Fflow-render-pipeline (the '/' inside the flow id
+    percent-encoded as %2F), or /flows/leafcutter/flow-render-pipeline/ (a trailing slash),
+  Then the Atlas answers 404 and shows the 'Flow not found' state for each address; it does not
+    redirect to /flows/leafcutter/flow-render-pipeline and does not draw that flow,
+  And the notice quotes the id as requested, verbatim: 'leafcutter%2Fflow-render-pipeline' for the
+    first address and 'leafcutter/flow-render-pipeline/' for the second,
+  And each notice explains that a flow link names a product and a flow, for example
+    /flows/leafcutter/deliver-a-feature, and offers an 'Open the Flows view' link to /flows,
+  And no flow is drawn, the breadcrumb is empty and the flow selector is shown with Source Real,
+    Kind User and Realization All,
+  And the address bar keeps the address as opened, %2F or trailing slash included, so the link
+    can be corrected.
+depends_on:
+  - UXP-591-1
+  - UXP-591-1-ii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owner ruling at the AC gate (2026-10-09), decision (2)(d): a canonical path with a
+  percent-encoded slash or a trailing slash answers with the 404 'Flow not found' state quoting
+  the requested id. The flow leafcutter/explore-flows-in-atlas v5 does not yet model this
+  behaviour (its 'flowNotFound' branch covers a typo, a product alone, a step written as a path
+  segment and an unknown flow with ?step=), so no flow node maps to this AC and it carries no
+  flow back-link. The quoted id is the path after /flows/ verbatim, as the leafcutter/atlas-flows
+  dataset defines the requested flow id, so the encoded form keeps '%2F' rather than being
+  decoded to the id of an existing flow. The notice wording is the dataset's variant for an id
+  that is not <product>/<flow>: neither requested id matches the two-segment flow-id form. That
+  wording choice is derived from the dataset, not part of the ruling.

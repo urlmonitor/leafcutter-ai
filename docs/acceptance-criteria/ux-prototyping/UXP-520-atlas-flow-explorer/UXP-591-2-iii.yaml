@@ -1,0 +1,49 @@
+id: UXP-591-2-iii
+title: "An old /flows?flow=...&step=... link redirects permanently to the step address"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given an old link in the form the AC detail used to produce,
+    /flows?flow=leafcutter%2Fflow-render-pipeline&step=resolve,
+  When a person follows it,
+  Then the Atlas answers with a permanent redirect (308) whose location is
+    /flows/leafcutter/flow-render-pipeline?step=resolve, with the '/' in the flow id literal,
+  And the page then opens leafcutter/flow-render-pipeline with the 'resolve' drawer open,
+    exactly as the step address does when opened directly,
+  And the tab's history holds /flows/leafcutter/flow-render-pipeline?step=resolve and not the
+    old /flows?flow= address, so Back does not return to it.
+depends_on:
+  - UXP-591-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: {}
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'legacyRedirect' (from
+  'openStepLink'; FlowRoute route-legacy-step-link). The owner ruled the two remaining legacy
+  cases at the AC gate (2026-10-09): a link without &step= is UXP-591-2-iv and a link whose
+  flow id is unknown is UXP-591-2-v. Neither is modelled by flow v5 or dataset v3 yet.

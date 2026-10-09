@@ -1,0 +1,65 @@
+id: UXP-591-4
+title: "Opening a step's or branch's drawer puts its step address in the address bar without adding a Back entry"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the tab has one history entry showing leafcutter/deliver-a-feature with no drawer open,
+    either at /flows/leafcutter/deliver-a-feature or at the bare /flows,
+  When the person clicks the 'Plan' step,
+  Then the 'Plan' drawer opens,
+  And the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan in both cases, the
+    bare /flows being replaced by the default flow's canonical address,
+  And the tab still has one history entry, because the current entry was replaced rather than a
+    new one added,
+  And opening the address now in the address bar in a new tab shows the same flow with the same
+    'Plan' drawer open.
+depends_on:
+  - UXP-591
+  - UXP-591-1
+  - UXP-591-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-591-1
+  contract: "The flow's canonical address /flows/<flow id>, onto which the open drawer's ?step=<id> is appended."
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-591-4-i
+  - UXP-591-4-ii
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'drawerUrl' (FlowNavigation
+  nav-drawer-replace-2 and nav-drawer-on-bare-flows-1 to -3). Owner ruling 1 (2026-10-09):
+  a drawer opened on the bare /flows entry replaces /flows with the default flow's canonical
+  address plus ?step=. Owner decision at the mockup gate (2026-10-09): drawer actions replace
+  the current history entry; they never add a Back entry. Branch 'drawerSwitch' and the
+  closing step 'drawerClose' are the L3 children (closing sits here as the inverse of opening
+  because UXP-591 is at its five-L2 cap).
