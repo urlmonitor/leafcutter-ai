@@ -608,93 +608,13 @@ class TestMissingDocLinkRendering(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test 9 — H-1 regression: _scan_ac_assignments uses Path.stem for id fallback
-# Defect: filename.rstrip(".yaml") strips a CHARACTER SET, not a suffix.
-# e.g. "ml-100a.yaml" -> "ml-100" (the trailing 'a' is in {., y, a, m, l})
-#      "data.yaml"    -> "dat"   (the trailing 'a' is stripped)
-# Fix: use Path(filename).stem which derives the true stem.
+# (The former Test 9, the H-1 AC-id stem-fallback regression, now lives in
+# unit_tests/test_agent_cards_static.py::TestAcStoreIsNotReadByCardGeneration:
+# cards are static, so no AC id reaches a card.)
 # ---------------------------------------------------------------------------
 
-class TestScanAcAssignmentsStemFallback(unittest.TestCase):
-    """H-1 regression: AC id fallback uses Path.stem, not str.rstrip."""
-
-    def setUp(self):
-        # covers: H-1 regression
-        from generate_agent_cards import _scan_ac_assignments
-        self._scan_ac_assignments = _scan_ac_assignments
-
-    def test_ac_id_fallback_preserves_full_stem_for_yaml_suffix(self):
-        # covers: H-1 regression
-        """H-1: When AC YAML omits 'id', derived id equals full filename stem (no truncation)."""
-        import yaml
-
-        with tempfile.TemporaryDirectory() as tmp:
-            docs_root = Path(tmp)
-            ac_dir = docs_root / "docs" / "acceptance-criteria"
-            ac_dir.mkdir(parents=True)
-
-            # Filenames whose stems end in chars that appear in ".yaml" —
-            # rstrip(".yaml") would corrupt these; Path.stem must not.
-            test_cases = [
-                # (filename, expected_stem)
-                ("ml-100a.yaml", "ml-100a"),   # trailing 'a' is in {a,y,m,l,.}
-                ("data.yaml", "data"),           # trailing 'a' is in {a,y,m,l,.}
-                ("my-yaml.yaml", "my-yaml"),     # entire suffix overlap
-                ("ACD-200m.yaml", "ACD-200m"),  # trailing 'm' is in {a,y,m,l,.}
-            ]
-
-            for filename, expected_stem in test_cases:
-                ac_content = yaml.dump({
-                    "assigned_agent": "test-agent",
-                    "status": "active",
-                    "title": "Test AC",
-                    # intentionally omitting 'id' to trigger the fallback
-                })
-                (ac_dir / filename).write_text(ac_content, encoding="utf-8")
-
-            results = self._scan_ac_assignments("test-agent", docs_root)
-            found_ids = {r["id"] for r in results}
-
-            for filename, expected_stem in test_cases:
-                self.assertIn(
-                    expected_stem,
-                    found_ids,
-                    msg=(
-                        f"Filename '{filename}': expected fallback id '{expected_stem}' "
-                        f"but got ids: {found_ids}. "
-                        "Path.stem must be used — not str.rstrip('.yaml')."
-                    ),
-                )
-
-    def test_ac_id_from_yaml_field_is_unaffected(self):
-        # covers: H-1 regression
-        """H-1: When AC YAML supplies 'id', it is used as-is (stem fallback not triggered)."""
-        import yaml
-
-        with tempfile.TemporaryDirectory() as tmp:
-            docs_root = Path(tmp)
-            ac_dir = docs_root / "docs" / "acceptance-criteria"
-            ac_dir.mkdir(parents=True)
-
-            ac_content = yaml.dump({
-                "id": "ACD-999z",
-                "assigned_agent": "test-agent",
-                "status": "active",
-                "title": "Explicit ID Test",
-            })
-            (ac_dir / "ACD-999z.yaml").write_text(ac_content, encoding="utf-8")
-
-            results = self._scan_ac_assignments("test-agent", docs_root)
-            self.assertEqual(len(results), 1)
-            self.assertEqual(
-                results[0]["id"],
-                "ACD-999z",
-                msg="Explicit id field in YAML must be returned unchanged.",
-            )
-
-
 # ---------------------------------------------------------------------------
-# Test 10 — H-2 regression: _resolve_source_to_path Strategy 3 ambiguity
+# Test 10— H-2 regression: _resolve_source_to_path Strategy 3 ambiguity
 # Defect: first os.walk match returned non-deterministically when multiple
 # files share the same basename (e.g. every skill dir has SKILL.md).
 # Fix: collect ALL matches; return path only when exactly 1 unique match
