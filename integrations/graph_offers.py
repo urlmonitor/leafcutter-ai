@@ -17,6 +17,7 @@ from kernel.contracts.entity_context import EntityBudgets, EntityCard, EntityCov
 from kernel.contracts.payloads import RetrievalRequestPayload
 from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from knowledge.contracts import OPERATIONS
+from knowledge.errors import invalid
 
 
 @dataclass(frozen=True)
@@ -232,7 +233,11 @@ def _population_offers(payload: RetrievalRequestPayload, ac_ids: tuple[str, ...]
     """
     requirements = payload.answer_requirements or {}
     scope = requirements.get("scope", {})
+    if not isinstance(scope, dict):
+        invalid("answer scope must be an object")
     root = scope.get("root_id")
+    if root is not None and not isinstance(root, str):
+        invalid("answer scope root_id must be a string")
     descendant_ids = (root,) if root in ac_ids else ac_ids if not root else ()
     dependent_ids = (root,) if root in all_ids else all_ids if not root else ()
     if payload.answer_requirements is None and len(payload.need.question) <= 4000:

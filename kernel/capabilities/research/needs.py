@@ -5,6 +5,7 @@ ARCHITECTURE: Generic LangGraph node support; a composition-injected port owns d
 """
 from __future__ import annotations
 
+import logging
 from typing import Protocol
 from pydantic import Field
 
@@ -13,7 +14,7 @@ from kernel.capabilities.decision.jev_support import load_output_payload
 from kernel.capabilities.host.retrieval_needs import RetrievalNeeds
 from kernel.capabilities.research.state import Collected, Plan, ResearchContinuation
 from kernel.contracts import NeedStatus, RequestKind, RequestProposal, ResultStatus, schema_ids
-from kernel.contracts.base import KernelModel
+from kernel.contracts.base import KernelModel, fail
 from kernel.contracts.capability import CapabilityResult
 from kernel.contracts.evidence import EvidenceBundlePayload
 from kernel.contracts.payloads import HumanQuestionRequestPayload
@@ -68,7 +69,7 @@ def unresolved(invocation: CapabilityInvocation, question: str, reasons: list[st
     """
     bundle = EvidenceBundlePayload(request_id=invocation.id, limitations=reasons,
         assessments={"retrieval_needs": {"kind": "retrieval_needs", "status": "unresolved",
-            "original_question": question, "limitations": reasons}}, unknowns=reasons)
+            "original_question": question, "limitations": [*reasons]}}, unknowns=reasons)
     return CapabilityResult(invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.PARTIAL, output_schema_id=schema_ids.EVIDENCE_BUNDLE,
         output_payload=bundle.model_dump(mode="json"), limitations=reasons,
@@ -113,10 +114,10 @@ def _child(invocation: CapabilityInvocation, ctx: ExecutionContext, schema: str)
     """
     children = [c for c in invocation.child_outcomes if c.current_wait and c.output_schema_id == schema]
     if len(children) != 1 or children[0].status is not ResultStatus.COMPLETED:
-        raise ValueError("Required retrieval-needs child did not complete")
+        fail("Required retrieval-needs child did not complete")
     output = load_output_payload(ctx, children[0])
     if output is None:
-        raise ValueError("Required retrieval-needs child output is unavailable")
+        fail("Required retrieval-needs child output is unavailable")
     return output
 
 
@@ -160,7 +161,7 @@ def _clarification_reply(invocation: CapabilityInvocation, ctx: ExecutionContext
     """
     answer = _child(invocation, ctx, schema_ids.HUMAN_ANSWER).get("free_text")
     if not isinstance(answer, str) or not answer.strip() or answer in cont.clarifications:
-        raise ValueError("Retrieval-needs clarification must supply new nonempty information")
+        fail("Retrieval-needs clarification must supply new nonempty information")
     supplied_ids = LITERAL_ID.findall(answer)
     updated = cont.request.model_copy(update={
         "context": [*cont.request.context, answer],
@@ -195,19 +196,21 @@ def interpret(invocation: CapabilityInvocation, ctx: ExecutionContext, plan: Pla
             return _host(invocation, NeedsContinuation(request=request))
         cont = NeedsContinuation.model_validate(invocation.continuation.state)
         if cont.request.original_question != request.original_question or cont.request.source_scope != request.source_scope:
-            raise ValueError("Retrieval-needs continuation differs from the original question or trusted scope")
+            return {"result": unresolved(invocation, plan.question,
+                ["Retrieval-needs continuation differs from the original question or trusted scope"])}
         if cont.phase == "clarifying_needs":
             return _clarification_reply(invocation, ctx, cont)
         output = RetrievalNeedsOutput.model_validate(_child(invocation, ctx, schema_ids.RETRIEVAL_NEEDS_OUTPUT))
         violations = RetrievalNeeds().submission_violations(cont.request.model_dump(mode="json"), output)
         if violations:
-            raise ValueError("; ".join(violations))
+            return {"result": unresolved(invocation, plan.question, ["; ".join(violations)])}
         if output.status != "decided":
             if output.scope_resolution == "user_choice_missing" and "needs_outside_catalog" not in output.unresolved:
                 return _clarify(invocation, ctx, cont, output)
             return {"result": unresolved(invocation, plan.question, output.unresolved or ["retrieval needs remain unresolved"])}
         return {"plan": interpreter.apply(plan, output)}
     except ValueError as exc:
+        logging.getLogger(__name__).warning("Retrieval-needs boundary rejected input (%s)", type(exc).__name__)
         return {"result": unresolved(invocation, plan.question, [str(exc)])}
 
 

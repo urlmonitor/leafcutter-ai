@@ -228,7 +228,7 @@ def map_bounded_evidence(
     Returns:
         list[Evidence]: Canonical evidence within the caller's excerpt budget.
     """
-    evidence = []
+    evidence: list[Evidence] = []
     bounded_items = []
     remaining = payload.limits.max_chars
     for item in result.evidence[: request.budget.max_results]:
@@ -328,7 +328,8 @@ class KnowledgeRetrievalExecutor:
             return await (self.fallback or RepositoryRetrievalExecutor()).ainvoke(invocation, ctx)
         from integrations.knowledge_budget import preserve_jev_reserve
         with preserve_jev_reserve(ctx, request.jev_reserve) as bounded_ctx:
-            if self._uses_query_growth(invocation, request):
+            if (self._uses_query_growth(invocation, request)
+                    and self.query_catalog is not None and self.query_admission is not None):
                 from integrations.query_growth import invoke_query_growth
                 return await invoke_query_growth(self.retriever,self.query_catalog,self.query_admission,
                                                  invocation,bounded_ctx,request,eligible)
