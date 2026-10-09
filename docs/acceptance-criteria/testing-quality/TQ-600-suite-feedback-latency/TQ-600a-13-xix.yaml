@@ -256,3 +256,14 @@ notes: |
 
   LIVE OBSERVATION TO RECORD HERE: the first `Post-merge timing suite` run on main, its
   conclusion, and the two tests' measured ratios on the hosted runner.
+
+  FIRST LIVE RUNS (2026-10-08, runs 37831700317 and 37831863518 on main): conclusion
+  FAILURE, but not from the lane's own tests — both timing_ratio tests PASSED ("2 passed,
+  9769 deselected"). The run went red on 4 collection errors (ModuleNotFoundError in
+  tests/test_check_feedback_id.py, tests/test_check_mermaid_complexity.py,
+  tests/test_transform_decision_history.py, unit_tests/test_link_feedback_resolve.py):
+  pytest imports every test module to evaluate `-m`, and those modules import build outputs.
+  The "no build step is needed" claim in it_requirements was therefore wrong for a
+  whole-suite selection; the workflow now runs `python scripts/build.py --target-dir .`
+  before the lane, as ci.yml's shards do. The ratios themselves are not printed by the
+  tests on success; the next green run is the first clean observation.
