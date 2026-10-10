@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -113,7 +113,8 @@ amended_by:
     wherever the old way put it, and no second workspace is made beside it. it_requirement and one test
     added. readiness stays approved (user decisions, 2026-09-28).
 superseded_by: null
-covered_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4300d_3_i.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md
 notes: |

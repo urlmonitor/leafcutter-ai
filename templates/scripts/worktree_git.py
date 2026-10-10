@@ -28,7 +28,6 @@ import contextlib
 import json
 import logging
 import os
-import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -40,20 +39,13 @@ _log = logging.getLogger(__name__)
 
 MAKER_VERSION = "1"
 
-KIND_BRANCH_PREFIX: dict[str, str] = {
-    "ticket": "ticket",
-    "feature": "feature",
-    "ac": "ac-authoring",
-    "fastlane": "fast-lane",
-    "epic": "epic",
-    "scratch": "scratch",
-}
-VALID_KINDS: tuple[str, ...] = tuple(KIND_BRANCH_PREFIX)
+# One scheme for every kind: the line of work is ``<kind>/<slug>``; legacy
+# spellings are declared in worktree_identity.LEGACY_ALIASES (BO-4300a-2).
+VALID_KINDS: tuple[str, ...] = ("ticket", "feature", "ac", "fastlane", "epic", "scratch")
 
 _CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
 _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
-_SLUG_DISALLOWED = re.compile(r"[^a-z0-9._-]+")
 
 def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
     """Run ``git <args>`` with the working directory set to *cwd*.
@@ -187,10 +179,10 @@ def same_location(a: str, b: str) -> bool:
         return a == b
 
 
-def normalize_slug(raw: str) -> str:
-    """Normalise a caller-supplied work-identity slug to a safe directory/branch fragment."""
-    slug = _SLUG_DISALLOWED.sub("-", raw.strip().lower())
-    return slug.strip("-") or "workspace"
+def normalize_slug(raw: str, kind: str | None = None) -> str:
+    """Normalise a work-identity slug; the naming table lives in ``worktree_identity``."""
+    import worktree_identity  # noqa: PLC0415 - function-level: identity imports this module
+    return worktree_identity.normalize_slug(raw, kind)
 
 
 # ===========================================================================
@@ -243,4 +235,9 @@ def normalize_slug(raw: str) -> str:
 #   Moved compute_checks, run_canary, run_install_build,
 #   restore_dirtied_tracked, hooks_dir and is_clean to worktree_readiness.py
 #   (BO-4300c-1); _same_location became the public same_location. (ADR-018)
+# - 2026-10-10 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+#   The naming table moved to worktree_identity.py (BO-4300a-2); normalize_slug
+#   here only delegates so worktree_admin's locate uses the same rule, and
+#   KIND_BRANCH_PREFIX was retired (every kind's line is <kind>/<slug>). (ADR-018)
 # ===========================================================================

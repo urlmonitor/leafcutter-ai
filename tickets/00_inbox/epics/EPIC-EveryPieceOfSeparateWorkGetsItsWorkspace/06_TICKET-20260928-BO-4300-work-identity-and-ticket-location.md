@@ -26,7 +26,7 @@ ac_traceability:
   l3:
   - BO-4300a-1-ii
   - BO-4300d-3-i
-ac_coverage: 0/5
+ac_coverage: 5/5
 tags:
 - BO-4300
 - re-cut-2026-09-28
@@ -43,19 +43,19 @@ files_touched:
 - unit_tests/build_orchestration/test_bo_4300d_3_i.py
 - unit_tests/build_orchestration/test_bo_4300d_4.py
 agents:
-  ac-fulfillment-gate: needed
-  ac-validator: needed
-  architect-review: needed
-  commit: needed
+  ac-fulfillment-gate: signed_off
+  ac-validator: signed_off
+  architect-review: signed_off
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   pull-request: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  test-writer: needed
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 ---
 
@@ -165,11 +165,11 @@ And the line of work "alpha" on the shared project is identical before and
   after.
 ```
 
-- [ ] AC-1: BO-4300a-2 -- The same piece of work is always recognised as the same workspace
-- [ ] AC-2: BO-4300a-1-ii -- A ready workspace made for a ticket states where that ticket is inside the workspace
-- [ ] AC-3: BO-4300d-3-i -- A workspace for the same work made the old way is not quietly taken over
-- [ ] AC-4: BO-4300d-3 -- A location already holding different work is left untouched and reported
-- [ ] AC-5: BO-4300d-4 -- Asking for work whose line already exists on the shared project resumes that line
+- [x] AC-1: BO-4300a-2 -- The same piece of work is always recognised as the same workspace
+- [x] AC-2: BO-4300a-1-ii -- A ready workspace made for a ticket states where that ticket is inside the workspace
+- [x] AC-3: BO-4300d-3-i -- A workspace for the same work made the old way is not quietly taken over
+- [x] AC-4: BO-4300d-3 -- A location already holding different work is left untouched and reported
+- [x] AC-5: BO-4300d-4 -- Asking for work whose line already exists on the shared project resumes that line
 
 ## Test Requirements
 
@@ -644,21 +644,22 @@ tests:
 
 ### python-coder
 
-- [ ] AC-1: BO-4300a-2 -- The same piece of work is always recognised as the same workspace
-- [ ] AC-2: BO-4300a-1-ii -- A ready workspace made for a ticket states where that ticket is inside the workspace
-- [ ] AC-3: BO-4300d-3-i -- A workspace for the same work made the old way is not quietly taken over
-- [ ] AC-4: BO-4300d-3 -- A location already holding different work is left untouched and reported
-- [ ] AC-5: BO-4300d-4 -- Asking for work whose line already exists on the shared project resumes that line
+- [x] AC-1: BO-4300a-2 -- The same piece of work is always recognised as the same workspace <!-- signed: python-coder -->
+- [x] AC-2: BO-4300a-1-ii -- A ready workspace made for a ticket states where that ticket is inside the workspace <!-- signed: python-coder -->
+- [x] AC-3: BO-4300d-3-i -- A workspace for the same work made the old way is not quietly taken over <!-- signed: python-coder -->
+- [x] AC-4: BO-4300d-3 -- A location already holding different work is left untouched and reported <!-- signed: python-coder -->
+- [x] AC-5: BO-4300d-4 -- Asking for work whose line already exists on the shared project resumes that line <!-- signed: python-coder -->
 
 **Depends on:** test-writer's red baseline for the tests above and the producers under Expects From.
 
 ### test-writer
 
-- [ ] AC-1: red tests for BO-4300a-2 per `## Test Requirements`
-- [ ] AC-2: red tests for BO-4300a-1-ii per `## Test Requirements`
-- [ ] AC-3: red tests for BO-4300d-3-i per `## Test Requirements`
-- [ ] AC-4: red tests for BO-4300d-3 per `## Test Requirements`
-- [ ] AC-5: red tests for BO-4300d-4 per `## Test Requirements`
+- [x] AC-1: red tests for BO-4300a-2 per `## Test Requirements`
+- [x] AC-2: red tests for BO-4300a-1-ii per `## Test Requirements`
+- [x] AC-3: red tests for BO-4300d-3-i per `## Test Requirements`
+- [x] AC-4: red tests for BO-4300d-3 per `## Test Requirements`
+- [x] AC-5: red tests for BO-4300d-4 per `## Test Requirements`
+- [x] FIX (python-coder handoff): `test_one_workspace_and_one_line_of_work_exist_after_rerequests` in test_bo_4300a_2.py can never pass: `landing_entries` (in `_bo_4300a_1_ii_fixtures.py`) rglob-lists every file of the ready workspace, so the expected `["epic", "epic/files-stay-workable"]` is impossible. Limit the listing to the kind and slug folders (depth <= 2) or compare only directories at depth 2; keep `landing_entries(...) == []` semantics for the refusal tests (nothing at all, no INCOMPLETE remnant). Fixture dicts/tables rule: >5 keys or >3 parametrize rows go to `tests/fixtures/` JSON.
 
 **Delivers to:** python-coder (red baseline).
 
@@ -678,11 +679,11 @@ tests:
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | |
-| AC-2 | | | |
-| AC-3 | | | |
-| AC-4 | | | |
-| AC-5 | | | |
+| AC-1 | test_bo_4300a_2.py:test_same_epic_requested_via_other_spelling_returns_existing_location | worktree_identity.py, worktree.py, worktree_git.py | ok — 2026-10-10 |
+| AC-2 | test_bo_4300a_1_ii.py:test_ticket_absent_from_the_base_never_yields_an_ok_answer | worktree_identity.py, worktree.py, worktree_git.py | ok — 2026-10-10 |
+| AC-3 | test_bo_4300d_3_i.py:test_legacy_worktree_for_same_work_is_refused_as_legacy_occupant | worktree_identity.py, worktree.py, worktree_git.py | ok — 2026-10-10 |
+| AC-4 | test_bo_4300d_3.py:test_occupant_on_another_line_is_refused_and_described | worktree_identity.py, worktree.py, worktree_git.py | ok — 2026-10-10 |
+| AC-5 | test_bo_4300d_4.py:test_existing_hub_line_is_resumed_with_its_commits | worktree_identity.py, worktree.py, worktree_git.py | ok — 2026-10-10 |
 
 ## Risk & Safety
 
@@ -692,15 +693,181 @@ tests:
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] ac-validator
-- [ ] ac-fulfillment-gate
-- [ ] commit
+- [x] architect-review — 2026-10-09 12:00
+- [x] test-writer — 2026-10-09 13:10
+- [x] python-coder — 2026-10-10 13:00
+- [x] test-runner — 2026-10-10 14:00
+- [x] pr-reviewer — 2026-10-10 15:00
+- [x] ac-validator — 2026-10-10 16:00
+- [x] ac-fulfillment-gate — 2026-10-10 13:30
+- [x] commit — 2026-10-10 17:21
 
 ## Comments
 
 _(Append-only log -- leave blank when authoring.)_
+
+### 2026-10-09 12:00 — architect-review (status: handoff)
+feedback-id: (submit-failed)
+completion_manifest:
+  rubric_evaluated: true
+  research_agent_blast_radius:
+    result: false
+    reason: "Agent tool not available in this dispatch; blast radius derived from the ticket's own files_touched and AC technical requirements, not from jcodemunch."
+    remediation: "python-coder runs get_blast_radius on worktree.py/worktree_git.py before moving code into worktree_identity.py."
+Classification: no always-large trigger (no Alembic, hypertable, FastAPI or ADR file change; the AMBIGUOUS_LINE code is a BO-4300c-2 AC-contract addition owned by ticket 03, not an ADR). One component (worktree_manager) but 11 files touched (5 implementation, 6 test), above the 5-file threshold, so large by rubric; opus deep review could not be spawned (anomaly). requires_adr stays false. Design concerns: all new logic goes in worktree_identity.py because worktree.py (~393/400) and worktree_git.py are at the size ratchet; the new module needs a NAMED deploy entry in both deploy files; legacy-worktree detection must be read-only on .git/worktrees; no new status codes locally (AMBIGUOUS_LINE must be confirmed in BO-4300c-2 first). No acceptance adjustments. Handing to test-writer for the red baseline.
+
+### 2026-10-09 13:10 — test-writer (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  rubric_evaluated: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "deployed worktree.py ensure (identity step in worktree_identity.py), run as a subprocess against a real bare hub"
+    consuming_side: "the real git state it leaves behind (hub refs, workspace branch/HEAD, .git/worktrees) and the answer JSON consumers read (workspace_path, line_of_work, ticket_path_in_worktree)"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python <install-root>/.leafcutter/scripts/worktree.py ensure --kind ticket --slug <s> --ticket <path> --repo-root <project> (CLI via subprocess; named by the request surface_invoked, copied unchanged)"
+Wrote 5 test modules (35 tests, all through the shared locator run_maker against the DEPLOYED maker, real temp repos and bare hub, no mocks) plus _bo_4300a_1_ii_fixtures.py (hub-line / ticket / snapshot helpers). Added 2 extra tests from the AC technical requirements: ticket outside the project, and scratch plus ticket, are USAGE (exit 64).
+Verification (AC_ENFORCE_STRICT=1, pytest, only the new files): 24 failed + 1 teardown error, 11 passed. Every failure is an assertion red (the code ran and gave the wrong result). No ImportError reds.
+red_baseline:
+  - test_name: test_every_declared_legacy_alias_resolves_to_its_canonical_identity
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "SUBFAILED x4 (epic, ac, fastlane, ticket): alias request does not land on canonical kind/slug/branch and location"
+  - test_name: test_legacy_epic_spelling_lands_on_the_canonical_epic_workspace
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: slug is not 'files-stay-portable' for EPIC-FilesStayPortable"
+  - test_name: test_same_epic_requested_via_other_spelling_returns_existing_location
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: False is not true (EPIC-FilesStayWorkable answered at a twin location)"
+  - test_name: test_existing_commits_survive_rerequests
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: re-request answered from a different workspace_path (strengthened after it passed on the first run)"
+  - test_name: test_one_workspace_and_one_line_of_work_exist_after_rerequests
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: landing place holds twin folders"
+  - test_name: test_legacy_line_on_the_hub_is_resumed_never_twinned
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: line_of_work None != 'resumed'"
+  - test_name: test_two_spellings_with_lines_on_the_hub_are_refused_ambiguous_line
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: status ok, not refused AMBIGUOUS_LINE"
+  - test_name: test_ticket_06_reachable_from_entry_point
+    file: unit_tests/build_orchestration/test_bo_4300a_2.py
+    kind: assertion
+    error: "AssertionError: slug 'feature-demo-reach' != 'demo-reach'"
+  - test_name: test_ticket_absent_from_the_base_never_yields_an_ok_answer
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ii.py
+    kind: assertion
+    error: "AssertionError: ok answer instead of refused TICKET_NOT_ON_BASE/absent"
+  - test_name: test_ticket_that_differs_from_the_base_is_refused_not_on_base
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ii.py
+    kind: assertion
+    error: "AssertionError: ok answer instead of refused TICKET_NOT_ON_BASE/differs"
+  - test_name: test_ticket_outside_the_project_is_a_usage_error
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ii.py
+    kind: assertion
+    error: "AssertionError: code is not USAGE (ticket silently dropped, answered ok)"
+  - test_name: test_ticket_with_scratch_kind_is_a_usage_error
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ii.py
+    kind: assertion
+    error: "AssertionError: code is not USAGE"
+  - test_name: test_legacy_worktree_for_same_work_is_refused_as_legacy_occupant
+    file: unit_tests/build_orchestration/test_bo_4300d_3_i.py
+    kind: assertion
+    error: "AssertionError: ('refused','OCCUPIED',2) != ('refused','OCCUPIED_LEGACY_WORKTREE',2)"
+  - test_name: test_legacy_worktree_commit_and_registration_unchanged
+    file: unit_tests/build_orchestration/test_bo_4300d_3_i.py
+    kind: assertion
+    error: "SUBFAILED x2: 'OK' != 'OCCUPIED_LEGACY_WORKTREE' (old-folder), OCCUPIED (location)"
+  - test_name: test_legacy_worktree_in_its_old_folder_under_legacy_name_is_refused_not_twinned
+    file: unit_tests/build_orchestration/test_bo_4300d_3_i.py
+    kind: assertion
+    error: "AssertionError: ('ok','OK') != ('refused','OCCUPIED_LEGACY_WORKTREE')"
+  - test_name: test_occupant_on_another_line_is_refused_and_described
+    file: unit_tests/build_orchestration/test_bo_4300d_3.py
+    kind: assertion
+    error: "AssertionError: occupant.kind missing (refusal names no occupant)"
+  - test_name: test_occupant_from_another_project_is_refused_and_described
+    file: unit_tests/build_orchestration/test_bo_4300d_3.py
+    kind: assertion
+    error: "AssertionError: occupant.kind missing"
+  - test_name: test_plain_folder_occupant_is_refused_and_described
+    file: unit_tests/build_orchestration/test_bo_4300d_3.py
+    kind: assertion
+    error: "AssertionError: occupant.kind missing"
+  - test_name: test_existing_hub_line_is_resumed_with_its_commits
+    file: unit_tests/build_orchestration/test_bo_4300d_4.py
+    kind: assertion
+    error: "AssertionError: 'origin/main' != 'origin/feature/alpha' (upstream)"
+  - test_name: test_answer_reports_line_resumed
+    file: unit_tests/build_orchestration/test_bo_4300d_4.py
+    kind: assertion
+    error: "AssertionError: None != 'resumed'"
+  - test_name: test_no_fresh_line_replaces_existing_hub_commits
+    file: unit_tests/build_orchestration/test_bo_4300d_4.py
+    kind: assertion
+    error: "AssertionError: HEAD == origin/main (hub commits dropped by checkout -B)"
+Passing on the first run, so not in red_baseline (guards, may be under-specified on their own): test_distinct_epic_gets_its_own_location (boundary control), test_occupant_files_and_line_of_work_unchanged and test_no_workspace_is_made_elsewhere_instead (marker-less occupants are already refused untouched today; they stay as guards against a fix that adopts or relocates), test_hub_line_unchanged_by_the_request, and three a_1_ii tests (ticket location, content, no old field names) that the hub-main checkout already satisfies and that guard the new ticket check against regressing them. One transient teardown error in test_bo_4300d_4 (Windows temp cleanup) did not reproduce on re-run.
+Three Questions (reasoned): Q1 a coder who keeps the -B reset fails test_no_fresh_line (HEAD must equal the hub tip and track origin/feature/alpha). Q1 for aliases: stripping only the EPIC- prefix fails the ac, fastlane and ticket subtests; matching by prefix or substring fails the distinct-epic control. Q2 the AMBIGUOUS_LINE fixture gives both refs real commits. Q3 the single-legacy-line case resumes while the two-line case refuses, for different reasons.
+Notes for python-coder: AMBIGUOUS_LINE and OCCUPIED_LEGACY_WORKTREE are already in the worktree_answer.py enum; still confirm the AMBIGUOUS_LINE lines field in the BO-4300c-2 contract (ticket 03). Canonical branches are <kind>/<slug> for every kind (ac gives ac/<slug>, fastlane gives fastlane/<slug>); KIND_BRANCH_PREFIX currently maps ac to ac-authoring and fastlane to fast-lane. A fresh request is expected to answer line_of_work "new" (assumed by test_answer_reports_line_resumed).
+
+### 2026-10-10 10:00 — python-coder (status: handoff)
+feedback-id: (submit-failed)
+Implemented templates/scripts/worktree_identity.py (naming table with per-kind legacy aliases, hub-line resolution incl. AMBIGUOUS_LINE, occupied/legacy-worktree refusals read-only on .git/worktrees, ticket USAGE/TICKET_NOT_ON_BASE/in-workspace fields, discard of a refused new clone); wired into worktree.py (_start_line resumes a single hub line with checkout -b --track, never -B; line_of_work now in the answer and marker); worktree_git.py keeps normalize_slug as a delegate (worktree_admin locate shares the rule) and KIND_BRANCH_PREFIX is retired; NAMED deploy entries added in both deploy files. Counted sizes: worktree.py 363, worktree_git.py 172, worktree_identity.py 274.
+Result (AC_ENFORCE_STRICT=1, the 5 ticket modules): 28 passed, 1 failed, 1 teardown error. Sibling BO-4300 modules (a_1, a_1_deployed, b_*, c_2, f_4*): 68 passed, 1 skipped.
+red_baseline_results: all red_baseline tests green EXCEPT test_one_workspace_and_one_line_of_work_exist_after_rerequests (test_bo_4300a_2.py), which is impossible as written: the fixture landing_entries lists every file inside the ready workspace, so it can never equal ["epic", "epic/files-stay-workable"]. (classification: test_drift) Production is correct (one folder, one branch, hub heads unchanged were verified by the other assertions); handoff to test-writer for the assertion-only fix, added under its section above. The teardown error in test_bo_4300d_4 is the developer-repo guard seeing another session move refs/heads/ki/bo4300-drive-findings-v2 in this shared repo, not this change.
+Known limit: worktree_admin (not in files_touched) calls wg.normalize_slug without a kind, so `locate --slug EPIC-Foo` does not strip the legacy prefix; locate by canonical slug works. Not signed off: python-coder AC boxes and sign-off stay open until the test is fixed.
+
+### 2026-10-10 12:00 — test-writer (status: ok)
+(classification: test_drift) Fixed test_one_workspace_and_one_line_of_work_exist_after_rerequests in test_bo_4300a_2.py by assertion only: the landing listing is limited to folders at depth <= 2, and the branch check ignores the clone base branch main. The shared landing_entries fixture is unchanged, so refusal tests keep their nothing-at-all semantics. Result under AC_ENFORCE_STRICT=1: test_bo_4300a_2.py 9 passed. No production change.
+feedback-id: (submit-failed)
+
+### 2026-10-10 13:00 — python-coder (status: ok)
+feedback-id: (submit-failed)
+All red_baseline tests green after test-writer drift fix (AC_ENFORCE_STRICT=1, 5 modules: 29 passed, 14 subtests passed). red_baseline_results: all green, incl. test_one_workspace_and_one_line_of_work_exist_after_rerequests. doc-enforcer/complexity-reduction skills not invocable in this dispatch (no Skill tool).
+
+### 2026-10-10 14:00 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Suite: build_orchestration BO-4300 modules (test_bo_4300a_2, test_bo_4300a_1_ii, test_bo_4300d_3, test_bo_4300d_3_i, test_bo_4300d_4) with AC_ENFORCE_STRICT=1 via pytest. Tests run: 29   Failures: 0   Errors: 0   Subtests passed: 14   Elapsed: 117.9s.
+
+### 2026-10-10 15:00 — pr-reviewer (status: ok)
+feedback-id: (submit-failed)
+Base HEAD; 12 files. Contract pass: no field/status mismatches; ticket fields only on ok answers. No dispatch calls in diff (Step 2b n/a). Step 2c: tests are real-effect (real temp repos + bare hub, deployed maker). Tests: 29 passed, 1 error on first run (DeveloperRepoChangedError from another session's ticket branch appearing in the developer repo, environmental); rerun of test_bo_4300d_4.py 4 passed.
+High findings: none. Medium: [M-1] worktree_identity.py LEGACY_ALIASES gives kind 'ticket' the 'feature/' alias, so a legacy feature/<slug> worktree refuses a ticket request with the same slug (intended per Q4, worth noting). [M-2] cmd_ensure scans legacy registrations before the ready short-circuit (safe, refuses early). Suppressed: 0. Escalation: none (medium count 2 <= 3).
+
+### 2026-10-10 16:00 — ac-validator (status: ok)
+feedback-id: (submit-failed)
+All 5 ACs covered. Store alignment script exit 0. No delivers_to consumer files exist in this repo beyond the documented answer fields, which worktree_identity.attach_ticket populates (ticket_path_in_worktree, ticket_path_in_worktree_posix).
+AC-1 covered: impl templates/scripts/worktree_identity.py resolve/LEGACY_ALIASES/normalize_slug; test test_same_epic_requested_via_other_spelling_returns_existing_location (unit_tests/build_orchestration/test_bo_4300a_2.py)
+AC-2 covered: impl worktree_identity.attach_ticket/base_ticket_refusal; test test_ready_answer_states_ticket_location_inside_the_workspace (test_bo_4300a_1_ii.py)
+AC-3 covered: impl worktree_identity.legacy_registrations/_legacy_refusal (OCCUPIED_LEGACY_WORKTREE); test test_legacy_worktree_for_same_work_is_refused_as_legacy_occupant (test_bo_4300d_3_i.py)
+AC-4 covered: impl worktree_identity.occupied_refusal/_classify_unmarked; test test_occupant_on_another_line_is_refused_and_described (test_bo_4300d_3.py)
+AC-5 covered: impl worktree.py _start_line (lines[0], 'resumed'); test test_existing_hub_line_is_resumed_with_its_commits (test_bo_4300d_4.py)
+Test run (AC_ENFORCE_STRICT=1): 29 passed, 14 subtests passed, 1 teardown ERROR in test_bo_4300d_4 from DeveloperRepoChangedError (developer repo ticket refs changed by a concurrent session, not a code defect).
+
+### 2026-10-10 13:30 — ac-fulfillment-gate (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_store_fields_verified: true
+  covered_by_autofix_applied: true
+  work_status_marked_done: true
+All 5 ACs verified. 4 auto-fixes applied: covered_by appended for BO-4300a-2, BO-4300d-4, BO-4300a-1-ii, BO-4300d-3-i (schema check passed). mark_ac_done set work_status=done on all 5 (BO-4300d-3 composite done). Resolver re-run: failures [].
+
+### 2026-10-10 17:21 — commit (status: ok)
+feedback-id: fb_2026-10-10_7150ba58
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Commit phase for ticket 06: 17 expected files staged, pre-commit probe passed, committed with PYTHONUTF8=1.

@@ -60,6 +60,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_layout.py",
     "worktree_readiness.py",
     "worktree_canaries.py",
+    "worktree_identity.py",
 )
 
 
@@ -97,6 +98,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry): the readiness proofs (BO-4300c-1, BO-4300b-4).
     - ``templates/scripts/worktree_canaries.py`` → ``scripts/worktree_canaries.py``
       (NAMED entry): the per-stage canary proofs worktree_readiness imports.
+    - ``templates/scripts/worktree_identity.py`` → ``scripts/worktree_identity.py``
+      (NAMED entry): the one naming table, legacy-line and occupant checks (BO-4300a-2, d-3, d-4).
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files. After the shallow glob,
@@ -138,6 +141,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   Added worktree_readiness.py as a NAMED entry (BO-4300c-1). (ADR-018)
     # - 2026-10-09 12:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
     #   Added worktree_canaries.py as a NAMED entry (worktree_readiness imports it). (ADR-018)
+    # - 2026-10-10 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/06)
+    #   Added worktree_identity.py as a NAMED entry (BO-4300a-2, d-3, d-4). (ADR-018)
     """
     import build_phases as _bp
 

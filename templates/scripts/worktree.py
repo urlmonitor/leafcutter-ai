@@ -46,6 +46,7 @@ from typing import Any
 import worktree_admin
 import worktree_answer as wa
 import worktree_git as wg
+import worktree_identity as wi
 import worktree_layout as wl
 import worktree_paths as wp
 import worktree_readiness as wr
@@ -88,6 +89,7 @@ def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str
         "kind": marker.get("kind"),
         "slug": marker.get("slug"),
         "branch": marker.get("branch"),
+        "line_of_work": marker.get("line_of_work", "new"),
         "hub": hub,
         **wp.path_fields(workspace_path),
         "base_commit": marker.get("base_commit"),
@@ -121,15 +123,37 @@ def _build_marker(kind: str, slug: str, branch: str, hub: str, repo_root: Path, 
     return marker
 
 
-def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: str,
-                       workspace_path: Path, args: argparse.Namespace) -> dict[str, Any]:
+def _start_line(workspace_path: Path, ident: wi.Identity, place: Path,
+                ticket: wi.TicketRequest | None) -> tuple[str, str, dict[str, Any] | None]:
+    """Check out the line of work: resume the one hub line, else start fresh at origin/main.
+
+    Returns ``(branch, line_of_work, refusal)``; a refusal discards the new clone.
+    """
+    lines = wi.hub_lines(workspace_path, ident)
+    refusal = wi.line_refusal(lines, ident)
+    branch, line = (lines[0], "resumed") if lines else (ident.branch, "new")
+    if refusal is None and ticket is not None:
+        refusal = wi.base_ticket_refusal(workspace_path, f"origin/{branch}" if lines else "origin/main", ticket)
+    if refusal is None:
+        cmd = ["checkout", "-b", branch, "--track", f"origin/{branch}"] if lines else ["checkout", "-B", branch, "origin/main"]
+        proc = wg.run_git(cmd, workspace_path)
+        if proc.returncode != 0:
+            refusal = _err("GIT_FAILED", f"git {' '.join(cmd)} failed: {proc.stderr.strip()}")
+    if refusal is not None:
+        wi.discard_new_clone(workspace_path, place)
+    return branch, line, refusal
+
+
+def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
+                       args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
     """Clone, fetch, checkout, install, and mark a brand-new workspace ready."""
+    kind, slug = ident.kind, ident.slug
     workspace_path.parent.mkdir(parents=True, exist_ok=True)
     clone_proc = wg.run_git(["clone", "--no-checkout", "--local", hub, str(workspace_path)], repo_root)
     if clone_proc.returncode != 0:
         return _err("FETCH_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
 
-    wg.write_marker(workspace_path, _build_marker(kind, slug, branch, hub, repo_root, None, "creating", workspace=workspace_path))
+    wg.write_marker(workspace_path, _build_marker(kind, slug, ident.branch, hub, repo_root, None, "creating", workspace=workspace_path))
 
     wg.run_git(["remote", "set-url", "origin", hub], workspace_path)
     fetch_proc = wg.run_git(["fetch", "origin", "main"], workspace_path)
@@ -140,9 +164,9 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
     if not base_commit:
         return _err("FETCH_FAILED", "origin/main did not resolve to a commit after fetch.")
 
-    checkout_proc = wg.run_git(["checkout", "-B", branch, "origin/main"], workspace_path)
-    if checkout_proc.returncode != 0:
-        return _err("GIT_FAILED", f"git checkout -B {branch} origin/main failed: {checkout_proc.stderr.strip()}")
+    branch, line_of_work, refusal = _start_line(workspace_path, ident, place, ticket)
+    if refusal is not None:
+        return refusal
 
     wg.run_git(["config", "gc.auto", "0"], workspace_path)
     wg.run_git(["config", "maintenance.auto", "false"], workspace_path)
@@ -160,12 +184,13 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
                 "default config, never this maker's own location.",
             )
     proof = wr.prove_ready(workspace_path, hub, kind=kind, branch=branch, project_root=repo_root,
-                           config_path=config_path, line_of_work=getattr(args, "line_of_work", "new"))
+                           config_path=config_path, line_of_work=line_of_work)
     if proof.get("status") in ("refused", "error"):
         return proof  # a refusal never carries a workspace location
     checks = proof["checks"]
     marker = _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks, workspace=workspace_path)
     marker["hooks_stages_declared"] = proof["hooks_stages_declared"]
+    marker["line_of_work"] = line_of_work
     wg.write_marker(workspace_path, marker)
 
     answer = {
@@ -174,6 +199,7 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
         "kind": kind,
         "slug": slug,
         "branch": branch,
+        "line_of_work": line_of_work,
         "hub": hub,
         **wp.path_fields(workspace_path),
         "base_commit": base_commit,
@@ -181,14 +207,15 @@ def _create_workspace(repo_root: Path, hub: str, kind: str, slug: str, branch: s
         "hooks_stages_declared": proof["hooks_stages_declared"],
         "checks": checks,
     }
-    wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
-    return answer
+    return wi.attach_ticket(answer, ticket, workspace_path) or answer
 
 
 def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     """Create (or idempotently confirm) the workspace for ``--kind``/``--slug``."""
     if args.kind not in wg.VALID_KINDS:
         return _err("USAGE", f"Unknown --kind {args.kind!r}; expected one of {wg.VALID_KINDS}.")
+    if args.ticket and args.kind == "scratch":
+        return _err("USAGE", "--ticket cannot be combined with --kind scratch.")
 
     repo_root, refusal = wl.resolve_repo_root(args.repo_root)
     if refusal is not None:
@@ -197,31 +224,26 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     if usage is not None:
         return usage
     ctx = _repo_context(repo_root)
+    ticket, ticket_usage = wi.resolve_ticket(args.ticket, repo_root)
+    if ticket_usage is not None:
+        return {**ticket_usage, **ctx}
 
     hub = wg.origin_url(repo_root)
     if hub is None:
         return {**_err("NO_HUB", f"{repo_root} has no 'origin' remote; cannot determine the hub."), **ctx}
     ctx["hub"] = hub
 
-    slug = wg.normalize_slug(args.slug)
-    branch = f"{wg.KIND_BRANCH_PREFIX[args.kind]}/{slug}"
-    workspace_path = wl.workspace_path_for(place, args.kind, slug)
+    ident = wi.resolve(args.kind, args.slug)
+    workspace_path = wl.workspace_path_for(place, args.kind, ident.slug)
 
-    existing_marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
-    occupant = wl.other_project_occupant(workspace_path, existing_marker, repo_root) if existing_marker else None
-    if occupant is not None:
-        return {**_err("OCCUPIED", f"{workspace_path} holds another project's workspace.", occupant=occupant), **ctx}
-    if existing_marker is not None and existing_marker.get("state") == "ready":
-        answer = {**ctx, **_answer_from_existing(workspace_path, existing_marker, hub, repo_root)}
-        wp.add_ticket_fields(answer, getattr(args, "ticket", None), repo_root, workspace_path)
-        return answer
-    if workspace_path.exists() and existing_marker is None:
-        return {
-            **_err("OCCUPIED", f"{workspace_path} already exists and carries no leafcutter workspace marker."),
-            **ctx,
-        }
-
-    return {**ctx, **_create_workspace(repo_root, hub, args.kind, slug, branch, workspace_path, args)}
+    refusal = wi.occupied_refusal(repo_root, ident, workspace_path, hub)
+    if refusal is not None:
+        return {**refusal, **ctx}
+    marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
+    if marker is not None and marker.get("state") == "ready":
+        answer = {**ctx, **_answer_from_existing(workspace_path, marker, hub, repo_root)}
+        return {**(wi.attach_ticket(answer, ticket, workspace_path) or answer), **ctx}
+    return {**ctx, **_create_workspace(repo_root, hub, ident, place, workspace_path, args, ticket)}
 
 
 def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
