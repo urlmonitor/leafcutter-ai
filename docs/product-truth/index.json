@@ -876,9 +876,9 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 14,
-        "in_progress": 1,
-        "not_started": 26,
+        "done": 15,
+        "in_progress": 2,
+        "not_started": 24,
         "total": 41,
         "asof": "2026-10-10"
       },
@@ -1796,9 +1796,9 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 14,
-        "in_progress": 1,
-        "not_started": 26,
+        "done": 15,
+        "in_progress": 2,
+        "not_started": 24,
         "total": 41,
         "asof": "2026-10-10"
       },

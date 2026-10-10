@@ -1448,7 +1448,7 @@
         "findings/unknowns: array (optional; default [])"
       ],
       "impl_asof": "2026-10-10",
-      "impl_status": "not_started",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -2093,7 +2093,7 @@
         "options/unresolved_feasibility: array (optional; default [])"
       ],
       "impl_asof": "2026-10-10",
-      "impl_status": "not_started",
+      "impl_status": "in_progress",
       "io_contracts": {
         "consumes": [
           {
@@ -7103,9 +7103,9 @@
     }
   ],
   "impl_summary": {
-    "done": 14,
-    "in_progress": 1,
-    "not_started": 26,
+    "done": 15,
+    "in_progress": 2,
+    "not_started": 24,
     "total": 41,
     "asof": "2026-10-10"
   },
