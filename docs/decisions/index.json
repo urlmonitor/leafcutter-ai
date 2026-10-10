@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "generated_by": "python -m kernel decisions index",
   "_comment": "Generated; never edit by hand. Regenerate with the command in generated_by.",
-  "count": 11,
+  "count": 12,
   "records": [
     {
       "id": "dec-46476988badbd5e6",
@@ -224,6 +224,28 @@
       "related": [
         "dec-ef8ddcb79d668a67"
       ],
+      "corrections": 0
+    },
+    {
+      "id": "dec-e4c6a3e133b9694b",
+      "file": "dec-e4c6a3e133b9694b.yaml",
+      "sha256": "be84ea87662466e72b840edf34832989258965b74d660a2e44e0764b75405f75",
+      "title": "One audience classifier (leafcutter_only / customer / both), chosen by Jev from described ...",
+      "question": "And one other thing regarding decisions: do they already have some kind of categories? \nI mean currently we build leafcutter and all decisions pretty much apply. But there could be some decisions that are also important for the customers. So actually we would have to have jev decide whether a decision / rule applies only to leafcutter itself or the harness itself. So e.g. how to fill product truth is a decision it has to form based on exising components - for customers but also for leafcutter itself.\nlet leafcutter research and decide which other categories / classifiers we need.",
+      "decision_type": "design",
+      "selected_option_id": "opt-audience-classifier",
+      "selected_option_title": "One audience classifier (leafcutter_only / customer / both), chosen by Jev from described candidates, with a user-set, risk-specific human-in-the-loop threshold",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-02T13:49:25Z",
+      "components": [],
+      "change_target": [],
+      "risk_surface": [],
+      "roadmap_phase": [],
+      "file_globs": [],
+      "repository_wide": true,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [],
       "corrections": 0
     },
     {
