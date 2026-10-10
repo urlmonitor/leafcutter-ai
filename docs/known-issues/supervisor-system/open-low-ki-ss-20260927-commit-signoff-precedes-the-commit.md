@@ -5,12 +5,13 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-09-27'
+last_updated: '2026-10-09'
 components:
   - supervisor_system
 related_docs:
   - docs/known-issues/supervisor-system.md
   - docs/known-issues/README.md
+  - docs/known-issues/supervisor-system/open-low-ki-ss-20261009-comment-templates-omit-the-feedback-id-line.md
 ---
 
 # KI-SS-20260927-commit-signoff-precedes-the-commit — the commit phase is recorded as ok before the commit exists
@@ -22,8 +23,9 @@ related_docs:
   whole window between the sign-off and the commit, and the protocol cannot be followed at all
   under a permission classifier that refuses unverified success claims.
 - **Status:** open — no AC.
-- **Occurrences:** 1 build, 5 commit attempts (GE-120f-1 family, PR #916, 2026-09-25 to 2026-09-27)
-- **First seen:** 2026-09-25 · **Last seen:** 2026-09-27
+- **Occurrences:** 2 builds. GE-120f-1 family, 5 commit attempts (PR #916, 2026-09-25 to
+  2026-09-27). BO-4300 ticket 05, 1 false ok entry (2026-10-09). See "Observed again" below.
+- **First seen:** 2026-09-25 · **Last seen:** 2026-10-09
 - **Where:** `templates/skills/signoff/SKILL.md` (the atomic sign-off recipe, run before the phase's
   action completes); `templates/agents/commit.md` (signs off, stages the ticket, then commits, and
   on hook failure rewrites its own entry to `failed`).
@@ -66,3 +68,30 @@ PR-phase commit). Update `check-ticket-signoff-parity` and the done-status check
 commit phase is signed off in the next commit is accepted.
 
 **Pattern:** a record written before the event it records, because the record has to travel inside the event.
+
+## Observed again, 2026-10-09
+
+**Where:** ticket `05_TICKET-20260928-BO-4300-readiness.md` of
+EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, driven by `/build-feature`.
+
+**What happened.** The ticket gained `agents.commit: signed_off` and a
+`### 2026-10-09 19:10 — commit (status: ok)` entry, but no commit had landed: HEAD was unchanged
+at `731e7a93`. The coordinator caught it by reading the ticket against `git log`, reset
+`agents.commit` to `needed`, and annotated the entry ("no commit landed for this entry"). The work
+then landed as `03a1e4cd4`, with the commit phase recorded afterwards in a ticket-only commit
+(`70761edb4`), which is the workaround above.
+
+**A second source of the same false record.** The entry's body is word for word the supervised
+audit entry that `templates/agents/commit.md:296-299` (Step 3) prescribes: "Auto-authorized commit
+gate: subject ...; staged files: ...". That template is itself a `(status: ok)` heading, and Step 3
+writes it before Step 4 runs `git commit`. So the commit agent records an ok commit entry before
+committing even apart from the signoff recipe. The same template produced ticket 02's 2026-09-30
+10:00 entry. The template has no `feedback-id:` line, and ticket 02's 10:05 entry records that
+`check-feedback-id` refused the first commit attempt on that audit entry
+(`KI-SS-20261009-comment-templates-omit-the-feedback-id-line`). Inferred: ticket 05's commit attempt
+was refused by a hook after the entry was written, and the entry was not rewritten.
+
+**Why the driver did not notice.** `build-feature.js` verifies a phase only from the ticket's
+record. It never reads HEAD (no `rev-parse` anywhere in the file), so a pre-written ok entry
+satisfies the commit phase's verification. The fix direction above also needs a driver-side check:
+after the commit phase, confirm HEAD moved and that the new commit contains the ticket's files.
