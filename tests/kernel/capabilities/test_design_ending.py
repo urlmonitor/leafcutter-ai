@@ -14,6 +14,7 @@ ARCHITECTURE: ScriptedJev answers the batch (the `kind.*` question included) fro
 
 from __future__ import annotations
 
+from kernel.capabilities.decision.assess import HUMAN_STATED
 from kernel.config import load_kernel_config
 from kernel.contracts import schema_ids
 from kernel.contracts.decision import Criterion, CriterionKind, Option
@@ -172,7 +173,7 @@ class TestHumanChoiceResolves(DesignCase):
         again = self.answer({"free_text": words})
         self.assertEqual(again.status, ResultStatus.WAITING)
         self.assertEqual(self.jev.call_count, 2)  # assessed again before the human is asked
-        self.assertIn(words, as_json(self.jev.batches[1].state)["constraints"])
+        self.assertIn(HUMAN_STATED + words, as_json(self.jev.batches[1].state)["constraints"])
         question = self.question(again)  # a new ranked question
         self.assertEqual({c.id for c in question.choices}, {"A", "B", "C"})
         self.assertEqual(again.continuation_state["phase"], "awaiting_design_choice")
