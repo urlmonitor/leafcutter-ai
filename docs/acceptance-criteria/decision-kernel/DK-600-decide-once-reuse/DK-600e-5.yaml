@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -63,7 +63,9 @@ it_requirements:
     it-po pointers); a branch the code does not have is drawn only if marked as not built.
   - Name the thresholds by configuration key (memory.max_precedents, memory.applies_threshold, memory.reuse_threshold),
     not by number.
+  - 'Target file (fixed 2026-10-10 by business-analyst for tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md): docs/architecture/diagrams/c3-029-decision-kernel-flows-precedent-reuse.md, an L3-Component sequence diagram under parent docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md (its children list gains the file in the same change). c3-023 is taken on the open epic/abundled-request-that-routing-turns-away-is branch; re-run scripts/next_diagram_seq.py 3 and scan open branches before writing, and renumber the ticket''s Agent Contracts line if the number moved.'
 test_required: false
+test_rationale: "Documentation only, no executable behaviour; checked by documentation-verifier against the ticket's Agent Contracts list."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -84,9 +86,16 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: one sequence diagram; starting material exists on origin/main
+  - reason: documentation-build-path-and-leaf-author
+    by: business-analyst
+    directed_by: user
+    date: '2026-10-10'
+    ticket: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md
+    note: 'Build path per kernel decision dec-ea83c3989d1b7199 (user''s choice 2026-10-10): this documentation AC is built in the one hand-authored docs ticket by its leaf author and checked by documentation-verifier. test_required set false with a test_rationale (user-approved 2026-10-10) so the done-proof waiver (is_covers_tag_waived) applies. Target file fixed in it_requirements: docs/architecture/diagrams/c3-029-decision-kernel-flows-precedent-reuse.md. criteria, title, depends_on and req_status unchanged.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/architecture/diagrams/c3-029-decision-kernel-flows-precedent-reuse.md
 change_target: docs
 risk_surface: internal
 notes: |
