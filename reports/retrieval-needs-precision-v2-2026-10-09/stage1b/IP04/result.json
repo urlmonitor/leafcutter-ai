@@ -1,0 +1,135 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-ff4bf0ae32e745a7",
+  "root_task_id": "task-d947e71bcd4848ce",
+  "state_revision": 3,
+  "status": "completed",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.retrieval_needs_output.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "original_question": "What behavior does KM-500c-2 require?",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The question asks for required behavior, which is expressed by the named criterion's acceptance clauses.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-v2-2026-10-09\\stage1b\\IP04\\runtime\\runs\\run-ff4bf0ae32e745a7\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [
+    "host-reported; not verified by the kernel",
+    "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+  ],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-72f5c907e4e433d3",
+      "created_at": "2026-10-09T21:45:39.019855Z",
+      "updated_at": "2026-10-09T21:45:39.019855Z",
+      "created_seq": 0,
+      "gap_key": "02189a38128e0a4b48196362ed0286fe0e9bd625f3fdb16dc886c161d87f4b37",
+      "gap_type": "host_only",
+      "goal": "What behavior does KM-500c-2 require?",
+      "normalized_need": "2 500c behavior km require what",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+      "candidates_considered": [
+        "host.retrieval_needs"
+      ],
+      "candidate_exclusions": {},
+      "need_title": "What behavior does KM-500c-2 require?",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-ff4bf0ae32e745a7"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: What behavior does KM-500c-2 require?",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/02189a38128e0a4b48196362ed0286fe0e9bd625f3fdb16dc886c161d87f4b37.md"
+      },
+      "first_seen": "2026-10-09T21:45:39.019855Z",
+      "last_seen": "2026-10-09T21:45:39.019855Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 0,
+    "host_operations": 1,
+    "input_tokens": null,
+    "output_tokens": null,
+    "cost_usd_known": null,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 183774,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "e8ad0f4c555786e5e704fb910b394401",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

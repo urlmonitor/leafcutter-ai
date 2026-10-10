@@ -1,0 +1,18 @@
+{
+  "run_id": "run-bb966f394da74080",
+  "case_id": "A01",
+  "agent_id": "/root/retrieval_aura_blind_host",
+  "dispatched_at": null,
+  "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+  "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+  "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+  "registered_at": "2026-10-09T21:03:41.452158+00:00",
+  "model_id": null,
+  "root_spawn_fork_turns": "none",
+  "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+  "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\dispatch.original-host.json",
+  "original_host_record_sha256": "e697967e2e2ebe5371704e5aa8d3954baded6fb9f1360239b7eaafaafe6bafb4",
+  "validated_packet_sha256": "70aef7c1ec490b5bf347407034b5f78bc08c71eedb45bf1f29a22f7b17b22c58",
+  "validated_response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+  "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+}

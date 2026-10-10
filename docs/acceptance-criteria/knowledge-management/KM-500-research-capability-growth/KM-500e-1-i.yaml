@@ -20,6 +20,8 @@ criteria: |
   And every original selected identity remains an answer obligation even when query selection, custom query arguments or source disclosure return only a subset
   And the same interpreted obligations reach the retrieval executor whether a reusable query catalog and admission path are configured or absent
   And a question about an acceptance criterion's required behavior keeps its canonical criteria as required evidence rather than silently substituting its test specification
+  And a question asking what verification must demonstrate requests both acceptance clauses and authored test specifications as distinct evidence, while an explicit acceptance-only, specification-only, reference-only or status-only question retains its narrower meaning
+  And prior context does not add unrelated required fields to that narrower question, declared tests are not reported as executed proof, and a whole-document request is not reduced to a bounded excerpt
   And an explicit descendant-count question keeps its hierarchy levels, root-only versus all-parent exclusion and requested work_status separate from lifecycle status
   And missing user meaning produces a focused existing human continuation and a later interpretation uses that answer without replacing the original question
   And unsupported needs, invalid host output, unavailable or stale evidence and incomplete required fields never become a complete answer because a query ran or a judgment was confident
@@ -40,10 +42,15 @@ origin_agent: business-analyst
 created: '2026-10-09'
 created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-1.yaml
 amended_by:
+- "2026-10-10: BA / IT PO (retrieval_acceptance_next) independently checked all 163 closed live artifact hashes and the two successful source-field receipts; accepted the narrow interpretation repair while retaining the 2/3 live answer denominator, A02 selector failure and approved/in_progress status. Historical evaluations are unchanged."
+- "2026-10-09: IT PO / business-analyst (retrieval_acceptance_next) recorded the closed 16/16 interpretation-only revision2 evidence and preserved prior 10/12 and live 0/3 outcomes; no criteria, approval or implementation-status change, pending the separate live retest."
+- "2026-10-09: IT PO / business-analyst (retrieval_acceptance_next) clarified answer facts versus discovery leads and declaration values versus related populations after the frozen 10/12 interpretation result; existing criteria and approved/in_progress status remain unchanged, with stricter new holdouts frozen before revision2."
+- "2026-10-09: business-analyst / IT PO (retrieval_acceptance_next) amended verification-field precision and discriminating test contracts under user-authorized sequential repair; preserved approved/in_progress and historical evaluation gold. Fresh Aura interpretation omitted authored test_spec in all three positives; this amendment is not repair-completion evidence."
 - "2026-10-09: business-analyst (retrieval_release agent) aligned bounded relationship examples and source-excerpt limits with the reviewed compatibility repair; no completion or approval promotion."
 - '2026-10-09: User authorized expert agents to build the audited needs and selector integration and prove the public route. BA and IT PO templates define this bounded child; approval authorizes work, not a passing model-quality claim.'
 superseded_by: null
 covered_by:
+- tests/knowledge/test_retrieval_verification_fields.py
 - tests/knowledge/test_public_retrieval_needs.py
 - tests/knowledge/test_public_retrieval_target_obligations.py
 - tests/knowledge/test_content_disclosure.py
@@ -99,11 +106,14 @@ it_requirements:
 - Explicit caller answer requirements retain their existing compatible path. The new interpretation route is conditional on the selected authorized knowledge source; unrelated source paths do not silently acquire graph access or a generative dependency.
 - Preserve original_question and trusted kernel scope independently of model echoes. Candidate context and IDs cannot grant authority, replace literal user targets or mutate the pinned source. Host acceptance checks happen before accepted ledger effects.
 - The catalog-configured and catalog-absent routes consume the same validated needs. Missing supported operations may use the existing separately authorized build path; unsupported data, missing fields or unavailable sources cannot authorize it.
-- Preserve exact field meanings and hierarchy levels in the consumer contract. Canonical criteria remain authoritative for obligation questions; test_spec may supplement them. Structured unsupported reasons must remain recognizable independently of explanatory wording.
+- Preserve exact field meanings and hierarchy levels in the consumer contract. Canonical criteria remain authoritative for acceptance obligations; verification-obligation questions require criteria and authored test_spec as complementary evidence, while explicitly narrower requests remain narrow. Structured unsupported reasons must remain recognizable independently of explanatory wording.
 - Bind the complete original single-entity or selected-entities target set before finite query selection as answer_requirements.scope.entity_ids, with the same canonical identities used by the query. Keep it independent from operation parameter names and returned rows; descendant and relationship populations retain their separate population obligations. Missing original targets prevent fulfillment and an exact total, including saved-query and disclosure paths.
 - Preserve full literal ADR stems without inventing a shorter prefix. For covered_by, governing_adrs and component_context, keep one original anchor separate from the one supported result entity/document pair; require examples completeness and only the matching existing registered recipe. Component-scoped recipes cannot exceed an explicit trusted component scope.
 - A required content field is a bounded level-3 canonical-source excerpt with its exact locator, never a backend property or full-document promise. Unavailable, empty, withheld and truncated excerpts remain distinct. Mixed component-context kinds retain a partial result under the existing kind guard.
 - Successful transport, model confidence and nonempty evidence are not fulfillment proof. Required-field and source-completeness failures remain visible alongside useful partial evidence.
+- Host instructions and repository catalog distinguish acceptance clauses, authored verification specifications, declared references, test requirements and status meanings. Verification-obligation questions select offered criteria and test_spec together; explicit narrower requests retain their selected fields. No target-specific rule, all-fields default or deterministic post-processing adds semantic obligations to accepted host output.
+- Measure interpretation sufficiency and unnecessary field selection independently from retrieval fulfillment of the selected fields. A faithful criteria-only answer can fail a verification-obligation question even when its selected-field assessment is fulfilled. Frozen Oct3 optional-spec gold and the closed Aura baseline retain their original outcomes.
+- Required fields are indispensable facts for the requested answer, not optional discovery leads; possible leads remain in rationale and unavailable answer meanings remain unresolved. Reading declared reference values on the original AC does not itself request a relationship traversal. Facts about linked Test records or a related population retain the coverage relationship, the result entity/document kinds, original anchor and requested completeness; no global deletion of references or relationships is permitted.
 - Record test provenance and denominator honestly. Offline controlled host/provider responses establish wiring and boundary behavior, not live LLM/Jev quality, Aura freshness, production query admission or remote trace ingestion.
 test_required: true
 test_rationale: The change crosses the public kernel, host wait/resume, semantic selection and neutral retrieval boundaries. Exercise the real producers and consumers with controlled external judgments and actual source artifacts, retaining changed-input and failure controls. Separate live model-quality evaluation remains KM-500a-4.
@@ -264,7 +274,27 @@ test_spec:
   description: Compare actual pinned source content with unavailable, empty, whitespace, withheld and truncated controls; a graph content property never satisfies the requested excerpt.
   must_catch:
   - A summary, graph property or incomplete excerpt is reported as fulfilled canonical content.
-notes: This child specifies the approved needs-to-selector integration seam. It does not complete the wider KM-500e-1 parent, the multi-method strategy design, query-agent delivery, automatic learning or real-provider quality. Controlled relation ports establish host and query transport only; real mixed-kind component context, exhaustive relation populations, full documents and Aura publication remain unproved. Historical Oct3 8/12 host semantics and 7/12 Jev semantics remain frozen; new proof must identify the actually tested source and mechanism.
+- name: test_public_verification_fields_reach_pinned_source
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Through actual public run/resume and both catalog modes, carry accepted criteria and test_spec for two different literal ACs into retrieval; compare both disclosed fields and separate locators with their immutable Git sources. Controlled host output proves wiring, not semantic quality.
+  covers: [KM-500e-1-i, KM-500e-2]
+  requires_db: false
+  must_catch:
+  - Dropping the authored test specification after acceptance or reusing another target's source values.
+- name: test_public_minimal_field_selection_is_not_expanded
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Resume independent criteria-only, specification-only and work-status-only needs through both catalog modes; retain exactly the selected fact obligations and their attributable source values without an unconditional verification-field expansion.
+  covers: [KM-500e-1-i]
+  requires_db: false
+  must_catch:
+  - Adding criteria or test_spec to every accepted AC interpretation regardless of the original narrower question.
+notes: This child specifies the approved needs-to-selector integration seam. It does not complete the wider KM-500e-1 parent, the multi-method strategy design, query-agent delivery, automatic learning or real-provider quality. Controlled relation ports establish host and query transport only; real mixed-kind component context, exhaustive relation populations and full documents remain unproved; canonical Aura publication is recorded separately from answer quality. Historical Oct3 8/12 host semantics and 7/12 Jev semantics remain frozen; new proof must identify the actually tested source and mechanism. The closed Aura batch at canonical source 2a8ebc87ce937a0a2fec65ab26220f79a72e4859 matched chosen criteria in 3/3 positives but omitted authored test_spec in all three interpretations, yielding 0/3 whole-question answers and a passing stale control. The first closed twelve-case precision batch passed 10/12; complementary-field positives passed, while redundant declaration/relationship selection and an unnecessary investigative field remained. The closed revision2 batch passed 16/16 fresh host interpretations (the unchanged twelve cases plus four independently frozen holdouts), including both independently reviewed execution-gap explanations; it used zero Jev calls, zero graph calls and no retries. Evidence is reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.html with review.json, summary.json and closure-integrity.json alongside it. Model identity and token counts are unknown. The new execution-gap holdout is stricter than historical IP11, whose original allowance remains unchanged. The authorized once-only live batch at runtime 44406d923e2a0e2f40079a317135d0736534c654 and source 2a8ebc87ce937a0a2fec65ab26220f79a72e4859 is closed at reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/review.html. All 4/4 interpretations retained both fields; 2/3 positive answers completed with exact source fields and citations, and 1/1 actual stale control passed, using 6 Jev calls and 4 accepted host results without retries. A02 preserved the correct interpretation and answer requirements but selected get_entities with probability 0.71 below unchanged 0.80 (confidence 0.64 above 0.50), so it returned partial without retrieval or evidence while retaining paid usage. This accepts only the narrow interpretation repair; query-selection reliability moves to queued issue02 and the original whole-question exit remains unmet. One paired observation does not establish catalog causation. Historical 10/12 and live 0/3 results remain unchanged; full-document, exhaustive-population, CI-execution and general retrieval quality remain unproved, and this child stays approved/in_progress.
 product_truth:
   - flow: leafcutter/retrieval-current-baseline
     node: accept-needs

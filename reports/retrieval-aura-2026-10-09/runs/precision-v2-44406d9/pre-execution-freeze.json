@@ -1,0 +1,35 @@
+{
+  "frozen_at": "2026-10-10T06:17:11.383216+00:00",
+  "run": "precision-v2-44406d9",
+  "reason": "Fresh explicitly authorized four-case evaluation of committed runtime, preserving earlier zero-attempt approval-block run and all baseline results.",
+  "authorization": {
+    "human_response": "Approved",
+    "provenance": "Root directly reports user explicit approval to the exact four-case TypeSafe/Aura permission request.",
+    "exact_reply_timestamp": null,
+    "external_model_destination": "api.typesafe.ai",
+    "database": "84379aa6",
+    "max_actual_jev_calls": 48,
+    "max_accepted_host_results": 12,
+    "graph_writes": 0,
+    "telemetry_exports": 0
+  },
+  "unchanged_cases_and_expectations": true,
+  "unchanged_budgets": true,
+  "byte_identical_original_source_oracles": true,
+  "source_oracle_sha256": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "writer_code_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "code_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "runtime_fingerprint": "bb93a68bda69411d810a645e28211416434e95bc959f7e6a0f0a77195ebe7b82",
+  "tested_source_manifest_sha256": "d18f1cf3ddd5305f23bda3f82fa47b1678371fc95d4d33ba44232da77cdd32fa",
+  "prior_semantic_gate": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.json",
+  "no_retry_or_gold_relaxation": true,
+  "host_policy": "Fresh blind agent receives only actual packets and referenced inputs; no expected outputs, prior results or outcomes. Unknown model identity remains null.",
+  "separate_scores": [
+    "interpretation_sufficiency",
+    "selected_field_fulfillment",
+    "complete_correct_public_answer",
+    "stale_revision_control"
+  ]
+}

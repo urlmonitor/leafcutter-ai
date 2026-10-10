@@ -1,0 +1,261 @@
+{
+  "reviewed_at": "2026-10-10T09:51:04.127091+00:00",
+  "rule": "ENTROPY_HIGH",
+  "exact_entries": 42,
+  "normal_hook_prose_filter_retained": true,
+  "credential_rules_unchanged": true,
+  "locations": [
+    {
+      "path": ".gitignore",
+      "line": 115,
+      "line_sha256": "cf6c22853a4ba5d7a5a5476384c9d3569afa125a4c6c3faa43cca6d5d4725e9f",
+      "classification": "exact_local_artifact_exclusion"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9.json",
+      "line": 40,
+      "line_sha256": "a7ef6a8b74ce620451128f1cd3a65f159ae1dda2134a60c7afd506130d7d6f07",
+      "classification": "verified_local_artifact_or_source_snapshot_path"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9.json",
+      "line": 76,
+      "line_sha256": "65e708dfd6f1d68b9cda6064adc9a783e9fa9a5b364398303e01ac825eb0e16c",
+      "classification": "verified_local_artifact_or_source_snapshot_path"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/resume-0002/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/resume-0002/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/started/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/started/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/resume-0002/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/resume-0002/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/started/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/started/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/resume-0002/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/resume-0002/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/started/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/started/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/resume-0002/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/resume-0002/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/started/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/started/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 18,
+      "line_sha256": "50021826ee8446942635361b84858fdb592a757e7e3968d13666b801a15e34ca",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 21,
+      "line_sha256": "c806d77d41f290344797342dab0a3b2412421d5d2751253e67d598ecb26251b2",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 22,
+      "line_sha256": "3bcb6e56af57cb0a71da0ea91e92ce544e2d0a5533068a2b35112bd49b3e3e5b",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 23,
+      "line_sha256": "8f074a332f5b85aa935bbc6381a3a0bfdbc701d0b5161c2c4e9a4b007c5a6662",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 24,
+      "line_sha256": "d02301d9765173aab947dd177c4c579dcbed92dcd67705b15755d111169de06b",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 25,
+      "line_sha256": "de630f8549b016699fd178b38620b7048f70965cc3346d44f5ed9daa858b0215",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 27,
+      "line_sha256": "c1dc075b6821d3a6c951f45347015cd6b5a8afa576176ed1d08b1cc08ce37bf0",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 30,
+      "line_sha256": "e1d730b1c1f0d8172830063326f62b419aba57d33c46272af3a059d0813acfbc",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 54,
+      "line_sha256": "81e3098a904f5260cad11c1a2ecb96a7694ab328fc41c4a3c3ff2b56e9156da4",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 57,
+      "line_sha256": "851f0c748e14b2442df0a5b54685ebf6bc25d657771225087957709409503e5c",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 59,
+      "line_sha256": "5cb43a7252c265951208032be65aaae323d32dfa80f5047ba4bb716a6d803431",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 66,
+      "line_sha256": "ff6ebf9aece5b915ccbec4e3d5fdc8611649ad84b0e204eb1ff7583118a25224",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 88,
+      "line_sha256": "9eff3b5b213bdf6db2a3949f6deeac916b905410289be6b7328ebc88e56ad3f6",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 93,
+      "line_sha256": "3031effd715aafdc9e2404e2810c26ed55a2138be59d7764528a301a6f918097",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 94,
+      "line_sha256": "f5b0bf95c70d9f47f3551c033c89826a452b9aee0d788a4208e13ed887c25c7e",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 95,
+      "line_sha256": "9fef56b0e0cbfd746f58f63189fbe5911cc6aa605480958bcea01fb70778392e",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 96,
+      "line_sha256": "35e5084236d0b8b9e23162669c1ae6e4a20158123b8efba44c2ff94a3e87c497",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 97,
+      "line_sha256": "f60904c1864005f261f36e36192a00067a005de5325826451698f6ead5cb4202",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 129,
+      "line_sha256": "55b926cf0b90f2cb7d11b2a8a4e1cb093829e39d3cdf8fd40b3e7844e87e8749",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 131,
+      "line_sha256": "4245ba60117393c6fb1548a3649c43561cbd9b04934b795eb3d94394ab225580",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json",
+      "line": 133,
+      "line_sha256": "f19db52779139a7996158438bc11bc87b78aaacc012bb074636b251232b0d608",
+      "classification": "verified_closed_artifact_path_and_hash"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json",
+      "line": 120,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json",
+      "line": 471,
+      "line_sha256": "afa950c9cae46aee1bb07fa4b4038f42c489832943bc46788a0c8a4cbc071a92",
+      "classification": "optional_unresolved_repository_document_reference"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ description: 'Configure the kernel query catalog and resume human and coding-age
 type: how-to
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-09'
+last_updated: '2026-10-10'
 components:
 - knowledge_management
 - decision_kernel
@@ -67,10 +67,14 @@ unavailable, the run retains an explicit unresolved result.
 | `hierarchy_scope`, `hierarchy_levels` | Preserve root/parent inclusion and explicit L0–L3 filters; an empty levels list means all levels. |
 | `scope_resolution`, `status` | Distinguish usable interpretation, required discovery and a missing user choice. `decided` does not prove correctness. |
 
-For an obligations question, the host must request canonical `criteria`;
-`test_spec` can supplement those clauses. For a count, the accepted level and
-inclusion choices reach the actual query. System validates identities and offered
-labels, preserves the result on child requests as `retrieval_needs`, and projects
+For an acceptance-behavior question, the host requests canonical `criteria`.
+For what tests or verification must demonstrate, the host instructions request
+both `criteria` and authored `test_spec`: required behavior and prescribed checks
+are complementary evidence. An explicit criteria-only, specification-only,
+reference-only or status-only question keeps that narrower meaning; prior context
+does not add unrelated fields. Declared tests are not proof that tests ran.
+For a count, the accepted level and inclusion choices reach the actual query.
+System validates identities and offered labels, preserves the result on child requests as `retrieval_needs`, and projects
 compatible `answer_requirements`. Jev then makes bounded selections from the
 executable operations. Catalog configuration does not bypass this path.
 
@@ -101,10 +105,25 @@ also leaves the result partial.
 shows System, host LLM and Jev as separate owners with checked inputs and outputs.
 The standalone Oct3 experiment shares the host contract but retains its historical
 8/12 semantic result. Controlled integration tests establish transport and
-query handoffs; the dated public verification below separately establishes two
-exact-AC cases with actual Jev decisions. Neither establishes current Aura
-publication or broader query accuracy. Multi-method search, traversal and automatic strategy learning remain
-outside this integration.
+query handoffs; the dated local-storage verification below separately establishes
+two exact-AC cases with actual Jev decisions. The later
+[canonical publication receipt](../../reports/retrieval-aura-2026-10-09/publication-receipt.json)
+establishes graph publication at `2a8ebc87ce937a0a2fec65ab26220f79a72e4859`,
+with semantic readiness false. The
+[closed Aura evaluation](../../reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/review.html)
+matched selected criteria in 3/3 positives but answered the whole question in 0/3:
+the fresh interpretations omitted authored test specifications. Terminal statuses
+were partial, partial and completed; the stale control passed. That baseline stays
+unchanged. The [later interpretation gate](../../reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.html)
+passed 16/16 frozen cases. The authorized [live retest](../../reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/review.html)
+then retained both fields in 4/4 interpretations and delivered 2/3 correct complete
+positive answers, with a passing stale control. One correct interpretation stopped
+at query selection: 0.71 probability was below the unchanged 0.80 gate, so no
+retrieval ran. The narrow interpretation fix is accepted; query-selection reliability
+and the full live positive gate remain open. The retest used runtime `44406d923`,
+source `2a8ebc87`, six Jev calls and four accepted host results without retries.
+Multi-method search, traversal and automatic strategy learning remain outside
+this integration.
 
 The executable needs handoff currently accepts `detail_mode: fields` and one
 supported entity/document pair: ac/ac_yaml, adr/adr, ticket/ticket,

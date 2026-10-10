@@ -1,0 +1,62 @@
+{
+  "KM-500c-1": {
+    "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml",
+    "file_sha256": "dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03",
+    "criteria": "Given research is waiting on an attributable query-build child\nWhen a matching verified activation receipt is delivered through the existing continuation path\nThen the original run, question and evidence need resume with the newly available catalog version selected at that continuation boundary\nAnd the original repository, pinned source revision, input answers and remaining budget are preserved\nAnd the resumed research invokes the new registered query at most once for that completed build delivery\nAnd a foreign, stale, duplicate or self-certified child result cannot resume unrelated research or execute an unverified candidate\nAnd building or registering a query does not itself count as retrieved evidence or an answered question.\n",
+    "test_spec": [
+      {
+        "name": "test_km500_c_1_behavior",
+        "target_dir": "tests/knowledge/",
+        "framework": "pytest",
+        "type": "integration",
+        "angle": "criterion",
+        "description": "Complete real KernelService missing-query host handoff, verified activation and retrieval in the same research, reopen checkpoint, then prove fresh-run reuse without a build handoff.",
+        "covers": [
+          "KM-500c-1"
+        ],
+        "requires_db": false
+      }
+    ]
+  },
+  "KM-500c-2": {
+    "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+    "file_sha256": "785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75",
+    "criteria": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+    "test_spec": [
+      {
+        "name": "test_km500_c_2_behavior",
+        "target_dir": "tests/knowledge/",
+        "framework": "pytest",
+        "type": "integration",
+        "angle": "criterion",
+        "description": "Use actual research answer assessment to show relevant but insufficient evidence remains partial, contradictions persist, and newly retrieved evidence answers the original question without false certainty.",
+        "covers": [
+          "KM-500c-2"
+        ],
+        "requires_db": false
+      }
+    ]
+  },
+  "KM-500a-2": {
+    "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml",
+    "file_sha256": "7db0d06695d364564985474b99a55ecbc939d36b15aeb77e7c33bfa6a8a86859",
+    "criteria": "Given a ready research need and the eligible registered query catalog\nWhen the research planner chooses how to obtain evidence\nThen each candidate exposes its stable identity, purpose, supported questions, required typed inputs and result meaning\nAnd an unambiguous explicit registered selection uses deterministic validation without a new semantic judgment\nAnd semantic selection uses bounded judgments over eligible catalog entries and records its reason\nAnd missing required query inputs return to clarification before execution\nAnd the chosen query executes with validated bound arguments under the original repository, revision and retrieval budget\nAnd question text cannot introduce an unregistered executable query.\n",
+    "test_spec": [
+      {
+        "name": "test_km500_a_2_behavior",
+        "target_dir": "tests/knowledge/",
+        "framework": "pytest",
+        "type": "integration",
+        "angle": "criterion",
+        "description": "Exercise catalog-driven graph query choice through registered retrieve.repository with typed parameters, recorded descriptor digest and no source-identity inference from arbitrary task text.",
+        "covers": [
+          "KM-500a-2"
+        ],
+        "requires_db": false
+      }
+    ]
+  }
+}

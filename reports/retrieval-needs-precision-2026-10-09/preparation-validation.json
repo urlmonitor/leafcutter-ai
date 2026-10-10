@@ -1,0 +1,94 @@
+{
+  "validated_at": "2026-10-09T21:24:27.546067+00:00",
+  "checks": [
+    {
+      "path": "tests\\knowledge\\test_retrieval_verification_fields.py",
+      "docstrings_exit": 0,
+      "size": [
+        true,
+        129,
+        400
+      ],
+      "max_complexity": 12
+    },
+    {
+      "path": "reports\\retrieval-needs-precision-2026-10-09\\controller.py",
+      "docstrings_exit": 0,
+      "size": [
+        true,
+        141,
+        400
+      ],
+      "max_complexity": 6
+    },
+    {
+      "path": "reports\\retrieval-needs-precision-2026-10-09\\eval_support.py",
+      "docstrings_exit": 0,
+      "size": [
+        true,
+        89,
+        400
+      ],
+      "max_complexity": 2
+    },
+    {
+      "path": "reports\\retrieval-needs-precision-2026-10-09\\score.py",
+      "docstrings_exit": 0,
+      "size": [
+        true,
+        109,
+        400
+      ],
+      "max_complexity": 12
+    },
+    {
+      "command": [
+        "-m",
+        "ruff",
+        "check",
+        "tests\\knowledge\\test_retrieval_verification_fields.py",
+        "reports\\retrieval-needs-precision-2026-10-09\\controller.py",
+        "reports\\retrieval-needs-precision-2026-10-09\\eval_support.py",
+        "reports\\retrieval-needs-precision-2026-10-09\\score.py"
+      ],
+      "exit_code": 0,
+      "output": "All checks passed!"
+    },
+    {
+      "command": [
+        "-m",
+        "mypy",
+        "--follow-imports=skip",
+        "--ignore-missing-imports",
+        "reports\\retrieval-needs-precision-2026-10-09\\controller.py",
+        "reports\\retrieval-needs-precision-2026-10-09\\eval_support.py",
+        "reports\\retrieval-needs-precision-2026-10-09\\score.py"
+      ],
+      "exit_code": 0,
+      "output": "Success: no issues found in 3 source files"
+    },
+    {
+      "command": [
+        "reports\\retrieval-needs-precision-2026-10-09\\controller.py",
+        "validate"
+      ],
+      "exit_code": 0,
+      "output": "{\"validated_cases\": 12, \"jev_calls\": 0, \"graph_calls\": 0, \"host_generations\": 0}"
+    }
+  ],
+  "controlled_tests": {
+    "new_public_tests": {
+      "passed": 10,
+      "seconds": 18.87,
+      "strict": true
+    },
+    "existing_disclosure_controls": {
+      "passed": 19,
+      "seconds": 12.8,
+      "strict": true
+    }
+  },
+  "closed_baseline_files_verified": 202,
+  "model_calls": 0,
+  "graph_calls": 0
+}

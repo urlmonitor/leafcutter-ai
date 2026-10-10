@@ -4,7 +4,7 @@ description: "Canonical evidence fields, field-specific citations, requested sou
 type: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-10'
 components:
   - knowledge_management
   - decision_kernel
@@ -68,6 +68,32 @@ Arbitrary roadmap facts, full code graphs, execution receipts and deployment
 state are not automatically projected by these mappings. Test/SourceFile nodes
 represent declared references, not a complete repository file inventory. Unknown
 mapping metadata in an older manifest remains unknown.
+
+## Acceptance clauses and verification specifications
+
+The host catalog separates `criteria` (required acceptance behavior) from
+`test_spec` (authored scenarios, assertions, test angles and wrong implementations
+to catch). A verification-obligation question needs both; the specification does
+not replace the clauses. This is an interpretation instruction, not a deterministic
+addition to every accepted request or a claim that the semantic repair has passed.
+
+| Requested meaning | Evidence to request |
+|---|---|
+| What tests must demonstrate | `criteria` and authored `test_spec`, each with its own source locator |
+| Only acceptance obligations | `criteria` |
+| Only the authored test specification | `test_spec` |
+| Declared test references | The AC's `covered_by` or an equivalent attributable reference set; no execution claim |
+| Implementation and lifecycle status | `work_status` and `status`; `req_status` is governance, not lifecycle |
+| Whole canonical document | Preserve `full_document`; a bounded `content` excerpt is insufficient |
+| Whether tests passed | Actual execution evidence identifying the run and tested revision; declarations and status do not establish it |
+
+Field availability is checked after retrieval. Missing or withheld specifications
+remain explicit; the interpreter cannot infer their absence from a catalog label.
+Interpretation quality and faithful retrieval of the chosen fields are separate
+measurements. The frozen Oct3 experiment allowed an optional specification; its
+historic gold and receipts remain unchanged by the current precision contract.
+
+The [closed precision evaluation](../../reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.html) passed 16/16 interpretations. The subsequent [live source review](../../reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/review.html) retained both fields in 4/4 interpretations; A01 and A03 returned exact canonical values and separate field citations, yielding 2/3 complete positive answers and a passing stale control. A02 stopped below the unchanged selection threshold with no retrieved evidence. This accepts the narrow interpretation repair while leaving selection reliability open; it does not establish full-document or actual test-execution support. Historical 10/12 interpretation and 0/3 whole-answer receipts remain unchanged.
 
 ## Bounded content
 

@@ -1,0 +1,97 @@
+{
+  "closed_at": "2026-10-09T21:29:49.380970+00:00",
+  "mode": "Fresh blind host; production finite catalogue and compiled packet; existing isolated durable host ledger; no retrieval executed.",
+  "accepted_host_results": 12,
+  "finite_contract_passes": 10,
+  "total_cases": 12,
+  "jev_calls": 0,
+  "graph_calls": 0,
+  "host_model_id": null,
+  "host_tokens": null,
+  "underlying_host_model_call_count": null,
+  "manual_IP11_explanation_review": {
+    "passed": true,
+    "reason": "The actual unresolved explanation names latest CI execution results, run identity and tested commit as outside the catalogue and explicitly refuses source revision, work/lifecycle status, authored plans or declarations as substitutes.",
+    "remaining_failure": "Frozen minimality still fails: covered_by is added as a required investigative field and relationship. This is not an asserted passing test result."
+  },
+  "failures": [
+    {
+      "id": "IP07",
+      "reason": "Mixed reference representation: the AC covered_by field is selected while the same covered_by traversal is added, but output remains AC/ac_yaml. Neither frozen direct-field nor linked-Test alternative is met."
+    },
+    {
+      "id": "IP11",
+      "reason": "Execution gap is honest, but extra covered_by obligation is outside the frozen investigative fields."
+    }
+  ],
+  "positive_repair_evidence": "IP01/IP02/IP03 select both criteria and test_spec; IP04/IP05/IP06/IP09/IP12 retain the narrower original field meaning.",
+  "execution_limits": "IP07 alternative exhaustive relationship and IP10 full_document were interpretation checks only; no retrieval support is implied. No public Aura retest has run for this repair yet.",
+  "runtime_fingerprint": "3e88bc975c00e1d9e0591cece8f85834b43f4bc4ab8edcf95120e703cae4eb4e",
+  "runtime_base_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "frozen_plan_sha256": "8e34e293b82077737f53da0dfafe9cef73ead2c10195a77a4b0adc7d61f95dc7",
+  "manifest_sha256": "7a1cf81be86fe7accf638497a23fe61925467304d69f436ca64090c6f2d61ecc",
+  "no_model_regeneration": true,
+  "no_threshold_or_gold_changes": true,
+  "responses": [
+    {
+      "id": "IP01",
+      "sha256": "8ae8863b80b16da39c44d9260af0a786a2b3e38662a22fb4e01ae5c869e1b217",
+      "result_sha256": "780652f4dc82987d121ebcb16c69a7bf06b7a53af28a3a795a7f509d32774072"
+    },
+    {
+      "id": "IP02",
+      "sha256": "b51703734521560e6d64009cd9f46a9ab481b5bfdd9020d7ad72a49a7f2c5d6e",
+      "result_sha256": "527bbd0ccbba7d00188003466aba48bafd4d3e8cd866da99fd01c7748a0d6ab3"
+    },
+    {
+      "id": "IP03",
+      "sha256": "a1d0cdafe94013036d8d2f5a496b70dc8eabdd9f7763dc02b75feaa64ac0c2db",
+      "result_sha256": "0d0bd2744e8f0a6e2340c57cd387130f0d80ef40fa39be2f63af163c6a5defbd"
+    },
+    {
+      "id": "IP04",
+      "sha256": "c5e5f771d3f21bef7240af0a28795c4950bfc6c018d12ffb8bf3c274a77c7dd0",
+      "result_sha256": "e9b0a74ff4c3e280c511b82cf1ca72ffd94a4b67f5de26e5bdb9ef7e0f0ba9e9"
+    },
+    {
+      "id": "IP05",
+      "sha256": "a6f528a96dbb84403e21b68a814652cdf05949edc00efc310f8c99c78023d416",
+      "result_sha256": "71a806323d666a3d823a42f111b552a148752c776c52e9f5cac328507b3d7710"
+    },
+    {
+      "id": "IP06",
+      "sha256": "7afee37e9bc9631513347379972863986bd84b561451f79de2c28a365e12cd7f",
+      "result_sha256": "04d188a32948697b095b6b06da60b9712e4b1eb576ba0c2c8a4c3faf7c4847b7"
+    },
+    {
+      "id": "IP07",
+      "sha256": "2915648a703bc0fa6dcdf4a7dbbbac2a919229940361c28e6adc64a52896a7df",
+      "result_sha256": "b806222a48283b5adda6a9dee34780428f835765c7fd309dd5f0a155470680aa"
+    },
+    {
+      "id": "IP08",
+      "sha256": "3b2e84a2518e1258129b2cbaabace60fd5c6522c6ff5adc926576f9c67b23428",
+      "result_sha256": "e99979db114b290a6a7c40e5b12d00f222d120e9ef6002458c1164b7848b7f48"
+    },
+    {
+      "id": "IP09",
+      "sha256": "27f4a9dc6f1875a36ae0e76b1740fa2b28bd6ad323fec746ed06895e139e992c",
+      "result_sha256": "55153ada02cf281c08d8e1110af04c1cc85b89f0de3c3be488ff6beaa2957851"
+    },
+    {
+      "id": "IP10",
+      "sha256": "0d2addce47f57f129c70e7260776d28d0884bf79e6207ad51a981fa788c4f7f6",
+      "result_sha256": "c56b74dab0fb7fee902873642d1b013e0d1969bc12a04cf3e24115c3240af810"
+    },
+    {
+      "id": "IP11",
+      "sha256": "94be3a59c515e4370eea686f9fda84f340920b8f7fcf62885b2dbc7821c869b2",
+      "result_sha256": "492e30473cba7596e26f1e43f33c7219dadda016f69a8d4884a64b204b592074"
+    },
+    {
+      "id": "IP12",
+      "sha256": "c0989790b634868e5e55390237bdfb6d1c7de960da3450c936e02996856a43b2",
+      "result_sha256": "c5de39e10c29d96a9146ff7aa771134c5210a569dc44921662b4607e774730d5"
+    }
+  ]
+}
