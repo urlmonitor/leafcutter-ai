@@ -1363,8 +1363,8 @@
         "Decision"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-06",
-      "impl_status": "in_progress",
+      "impl_asof": "2026-10-10",
+      "impl_status": "not_started",
       "io_contracts": {
         "consumes": [
           {
@@ -1607,10 +1607,10 @@
   ],
   "impl_summary": {
     "done": 6,
-    "in_progress": 2,
-    "not_started": 0,
+    "in_progress": 1,
+    "not_started": 1,
     "total": 8,
-    "asof": "2026-10-06"
+    "asof": "2026-10-10"
   },
   "contract_definitions": {
     "decision": {

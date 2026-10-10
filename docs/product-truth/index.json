@@ -877,10 +877,10 @@
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 13,
-        "in_progress": 4,
-        "not_started": 24,
+        "in_progress": 2,
+        "not_started": 26,
         "total": 41,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "tags": [
         "decision-kernel",
@@ -971,10 +971,10 @@
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
         "done": 6,
-        "in_progress": 2,
-        "not_started": 0,
+        "in_progress": 1,
+        "not_started": 1,
         "total": 8,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "tags": [
         "decision-kernel",
@@ -1797,10 +1797,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 13,
-        "in_progress": 4,
-        "not_started": 24,
+        "in_progress": 2,
+        "not_started": 26,
         "total": 41,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "expands": [
         "leafcutter/decision-retrieval"
@@ -1871,10 +1871,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 6,
-        "in_progress": 2,
-        "not_started": 0,
+        "in_progress": 1,
+        "not_started": 1,
         "total": 8,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "expands": [
         "leafcutter/decision-staging"
