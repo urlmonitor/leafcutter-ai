@@ -48,8 +48,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -182,7 +182,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-1"
+      ]
     },
     {
       "id": "judge",
@@ -201,8 +204,8 @@
         "jev_result/model_id: null|string (optional; default null)",
         "jev_result/usage: object (required)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -308,7 +311,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-2"
+      ]
     },
     {
       "id": "cite",
@@ -338,8 +344,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -546,7 +552,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-2"
+      ]
     },
     {
       "id": "offer-reuse",
@@ -575,8 +584,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "in_progress",
       "io_contracts": {
         "consumes": [
           {
@@ -729,7 +738,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-3"
+      ]
     },
     {
       "id": "reuse",
@@ -768,8 +780,8 @@
       "expands_to": [
         "leafcutter/decision-staging"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -982,7 +994,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-4"
+      ]
     }
   ],
   "branches": [
@@ -1005,8 +1020,8 @@
         "jev_result/usage: object (required)"
       ],
       "outcome_kind": "exit",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1098,7 +1113,10 @@
           }
         ]
       },
-      "produces": []
+      "produces": [],
+      "implements": [
+        "DK-600e-2-i"
+      ]
     },
     {
       "id": "evidence-only",
@@ -1127,8 +1145,8 @@
         "evidence/verification: string (optional; default \"unverified\")"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1309,7 +1327,12 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-3-ii",
+        "DK-600e-3-iii",
+        "DK-600e-3-iv"
+      ]
     },
     {
       "id": "decide-anew",
@@ -1340,7 +1363,7 @@
         "Decision"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-10",
       "impl_status": "not_started",
       "io_contracts": {
         "consumes": [
@@ -1512,7 +1535,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-3-i"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -1580,11 +1606,11 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 0,
-    "not_started": 8,
+    "done": 6,
+    "in_progress": 1,
+    "not_started": 1,
     "total": 8,
-    "asof": "2026-10-02"
+    "asof": "2026-10-10"
   },
   "contract_definitions": {
     "decision": {

@@ -1,0 +1,175 @@
+id: DK-600b-2-iii
+title: "No answer or a cancel leaves the decision unresolved and keeps no record"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the ranked-choice question is open,
+  When you never answer, or you cancel the run with
+    python -m kernel cancel --run-id <run id> --actor human:<your id>,
+  Then the decision does not resolve,
+  And the run's staged decisions folder holds no decision record,
+  And docs/decisions/ holds no record from the run.
+depends_on:
+  - DK-600b-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch no-answer (from choose). Add this AC id
+      to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService, CLI exit codes, the /leafcutter skill.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - 'Only a human answer may approve, choose or reuse (ADR-053, ADR-060): no path may let Jev, a host
+    or the kernel resolve or approve on a person''s behalf.'
+  - 'During a run the kernel only reads the repository (ADR-060): no file under the repository root
+    may change; the configured run root is the only place a run writes.'
+  - Cancel needs a human actor (--actor human:<id>), is first-actor-wins, and leaves the run cancelled
+    with no pending interaction; a later answer is rejected (cancelled_or_superseded).
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_an_unanswered_decision_leaves_no_record
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record): a decision waiting on its question stages nothing'
+    covers:
+    - DK-600b-2-iii
+  - name: test_cancel_while_waiting_human_cancels_the_question
+    target_dir: tests/kernel/integration/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question): cancel at a human question ends the run cancelled'
+    covers:
+    - DK-600b-2-iii
+  - name: test_cancel_then_resume_is_refused
+    target_dir: tests/kernel/adapters/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused): python -m kernel cancel --run-id R --actor human:demo, then resume exits 3'
+    covers:
+    - DK-600b-2-iii
+  - name: test_cancelling_at_the_ranked_question_stages_no_record
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record): real service, scripted Jev, fake host: cancel while the ranked-choice question is open; the run is cancelled, its staged/decisions folder is empty and docs/decisions/ does not exist'
+    covers:
+    - DK-600b-2-iii
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/executor.py#_stage
+      - kernel/service.py#KernelService.cancel_run
+      - kernel/service_cancel.py#commit_cancel
+      - kernel/service_cancel.py#close_paused_graph
+      - kernel/adapters/cli.py#build_parser
+    test_pointers:
+      - tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record
+      - tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question
+      - tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused
+    gaps:
+      - 'The two halves are tested apart: no test cancels at the ranked question and then checks the
+        staged folder and docs/decisions/.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record
+    - tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question
+    - tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_decision_precedent.py::TestOnlyHumanApprovalStagesARecord::test_an_unanswered_decision_leaves_no_record
+  - tests/kernel/integration/test_cancel.py::TestCancelWhileWaiting::test_cancel_while_waiting_human_cancels_the_question
+  - tests/kernel/adapters/test_cli.py::TestCancel::test_cancel_then_resume_is_refused
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_cancelling_at_the_ranked_question_stages_no_record
+implemented_by:
+  - kernel/capabilities/decision/executor.py#_stage
+  - kernel/service.py#KernelService.cancel_run
+  - kernel/service_cancel.py#commit_cancel
+  - kernel/service_cancel.py#close_paused_graph
+  - kernel/adapters/cli.py#build_parser
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  no-answer
+
+  DERIVATION. Branch no-answer (exit). The cancel command is from
+  docs/how-to/run-the-decision-kernel.md. "Never answer" is observable as a run
+  left in waiting_human with nothing staged.
+
+  BOUNDARY with DK-600c-1-i (not-stageable): this AC is the person walking away
+  before a choice; DK-600c-1-i is a decision that did resolve but without a human
+  approval.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built, partly tested. Staging happens
+  only for a resolved, human-approved decision, so neither silence nor a cancel can
+  stage; the combined cancel-at-ranked-question test is missing.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - The two halves are tested apart: no test cancels at the ranked question and then
+      checks the staged folder and docs/decisions/.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: no-answer
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

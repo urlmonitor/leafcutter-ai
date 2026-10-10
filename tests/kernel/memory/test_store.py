@@ -37,22 +37,26 @@ class TestFind(StoreCase):
         self.memory = FileColonyMemory(self.root, self.run_root)
 
     def test_the_same_question_is_found_first(self) -> None:
+        # covers: DK-600e-1
         hits = self.memory.find_decisions(DecisionQuery(text=QUESTION))
         self.assertEqual(hits[0].record.id, FIRST_ID)
         self.assertEqual(hits[0].score, 1.0)
         self.assertEqual(hits[0].path, f"docs/decisions/{FIRST_ID}.yaml")
 
     def test_an_unrelated_question_finds_nothing(self) -> None:
+        # covers: DK-600e-1
         query = DecisionQuery(text="Should the pricing page use a carousel?", min_score=0.3)
         self.assertEqual(self.memory.find_decisions(query), [])
 
     def test_a_minimum_score_and_a_limit_bound_the_result(self) -> None:
+        # covers: DK-600e-1
         query = DecisionQuery(text="Where should the kernel file approved decisions?", limit=1)
         self.assertEqual(len(self.memory.find_decisions(query)), 1)
         strict = DecisionQuery(text="logging library scheduler", min_score=0.9)
         self.assertEqual([h.record.id for h in self.memory.find_decisions(strict)], [OTHER_ID])
 
     def test_a_facet_the_query_names_filters_out_a_record_without_overlap(self) -> None:
+        # covers: DK-600e-1
         query = DecisionQuery(text="logging library scheduler",
                               roadmap_phase=["phase_kernel_1_founding"])
         self.assertEqual(self.memory.find_decisions(query), [])
@@ -60,6 +64,7 @@ class TestFind(StoreCase):
         self.assertEqual([h.record.id for h in self.memory.find_decisions(both)], [OTHER_ID])
 
     def test_a_repository_wide_record_passes_every_facet(self) -> None:
+        # covers: DK-600e-1
         wide = make_record(id="dec-2222222222222222", repository_wide=True, components=[],
                            change_target=[], risk_surface=[], roadmap_phase=[],
                            question="Where do approved decisions live?")
@@ -71,16 +76,20 @@ class TestFind(StoreCase):
         self.assertIn("dec-2222222222222222", found)
 
     def test_a_record_edited_after_the_index_is_skipped(self) -> None:
+        # covers: DK-600e-1
         path = self.folder / f"{FIRST_ID}.yaml"
         path.write_text(path.read_text(encoding="utf-8") + "# edited\n", encoding="utf-8")
         found = [h.record.id for h in self.memory.find_decisions(DecisionQuery(text=QUESTION))]
         self.assertNotIn(FIRST_ID, found)
 
     def test_a_missing_index_gives_no_precedent(self) -> None:
+        # covers: DK-600e-1
+        # covers: DK-600d-1-i
         (self.folder / INDEX_NAME).unlink()
         self.assertEqual(self.memory.find_decisions(DecisionQuery(text=QUESTION)), [])
 
     def test_a_superseded_record_is_marked(self) -> None:
+        # covers: DK-600e-3-iii
         newer = make_record(id="dec-3333333333333333", supersedes=[FIRST_ID],
                             question="Where should the kernel file approved decisions now?")
         self.write_record(newer)
@@ -104,6 +113,7 @@ class TestGetAndStage(StoreCase):
         self.assertIsNone(memory.get_decision("../../etc/passwd"))
 
     def test_stage_writes_only_under_the_run_root(self) -> None:
+        # covers: DK-600c-3
         memory = FileColonyMemory(self.root, self.run_root)
         staged = memory.stage_decision(make_record())
         assert staged is not None
@@ -113,6 +123,7 @@ class TestGetAndStage(StoreCase):
         self.assertFalse(self.folder.exists())  # the repository store was not touched
 
     def test_staging_an_unsafe_run_id_keeps_nothing(self) -> None:
+        # covers: DK-600c-3
         provenance = {**make_record().provenance.model_dump(), "run_id": "../escape"}
         bad = make_record(provenance=provenance)
         self.assertIsNone(FileColonyMemory(self.root, self.run_root).stage_decision(bad))
@@ -134,6 +145,7 @@ class TestNullAndHelpers(StoreCase):
         self.assertEqual(text_score("", "x"), 0.0)
 
     def test_filters_match_ignores_a_facet_the_record_does_not_set(self) -> None:
+        # covers: DK-600e-1
         record = make_record(components=[])
         entry = build_entries([(record, dump_record(record))])[0]
         self.assertTrue(filters_match(entry, DecisionQuery(text="x", components=["anything"])))

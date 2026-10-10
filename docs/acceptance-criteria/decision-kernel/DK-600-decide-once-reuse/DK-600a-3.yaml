@@ -1,0 +1,228 @@
+id: DK-600a-3
+title: "Findings cite only the retrieved evidence, and options you named stay yours"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given 3 grounding evidence items retrieved for the question,
+  And a goal that names options of its own, for example "... have agents consult the kernel for
+    precedent, file human decisions made in Claude Code sessions, or run trace analyzers over the
+    recent kernel traces",
+  When Claude Code, as host, synthesizes findings and then proposes options and criteria,
+  Then every finding the run accepts cites at least one of the 3 retrieved items and nothing else,
+    and a finding that cites any other evidence id is not accepted,
+  And each option named in the goal is checked against the goal text and kept as the caller's
+    option (proposed_by caller_goal), listed alongside the host's own proposals
+    (proposed_by host.generate_options),
+  And an option presented as named in the goal whose words do not appear in the goal text is not
+    kept as the caller's option.
+depends_on:
+  - DK-600a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming step synthesize; step propose. Add this AC id
+      to each named node's implements list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - 'A host''s findings and options are converted by the kernel before use: the host can cite only
+    evidence ids the kernel handed it, and cannot mark an option as named in the goal or approved
+    by itself.'
+  - Named-option verification is deterministic code against the goal text (ADR-053); extracting the
+    options from free text stays host work.
+  - Every dropped citation, finding or option is reported as a limitation; nothing is dropped silently.
+  - 'No kernel code change is in scope of TICKET-20261002-DecisionLifecycleACs: a behaviour gap that
+    needs kernel code is closed through its own ticket. Adding covers tags or a missing test does
+    not change kernel code.'
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_a_citation_of_unknown_evidence_is_dropped_with_a_limitation
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/capabilities/test_host_conversion.py::TestSynthesisConversion::test_a_citation_of_unknown_evidence_is_dropped_with_a_limitation):
+      an unknown citation is removed with a limitation (the finding itself is KEPT, see gaps)'
+    covers:
+      - DK-600a-3
+  - name: test_a_finding_citing_other_evidence_is_not_accepted
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'TO WRITE (in tests/kernel/capabilities/test_host_conversion.py): a finding citing
+      any id outside the evidence handed to the synthesis is not accepted, and every accepted finding
+      cites at least one handed item (fails today)'
+    covers:
+      - DK-600a-3
+  - name: test_options_and_criteria_are_proposed_and_attributed_to_the_host_capability
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_host_conversion.py::TestOptionsConversion::test_options_and_criteria_are_proposed_and_attributed_to_the_host_capability):
+      host options are proposals with proposed_by host.generate_options'
+    covers:
+      - DK-600a-3
+  - name: test_a_named_option_found_in_the_goal_is_supplied_and_needs_no_grounding
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_round5.py::TestNamedOptions::test_a_named_option_found_in_the_goal_is_supplied_and_needs_no_grounding):
+      an option whose title is in the goal becomes supplied, proposed_by caller_goal'
+    covers:
+      - DK-600a-3
+  - name: test_a_named_claim_not_in_the_goal_stays_an_ungrounded_proposal
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/grounding/test_round5.py::TestNamedOptions::test_a_named_claim_not_in_the_goal_stays_an_ungrounded_proposal):
+      a claimed named option whose words are not in the goal stays a host proposal'
+    covers:
+      - DK-600a-3
+  - name: test_named_options_reach_the_criteria_approval_question
+    target_dir: tests/kernel/grounding/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/grounding/test_named_options_end_to_end.py::TestAGoalThatNamesItsOptions::test_named_options_reach_the_criteria_approval_question):
+      named options and host proposals reach the approval question together'
+    covers:
+      - DK-600a-3
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: partly_built
+    implementation_pointers:
+      - kernel/capabilities/host/synthesize.py#Synthesize.convert_payload
+      - kernel/capabilities/host/sanitize.py#convert_findings
+      - kernel/capabilities/host/generate_options.py#_split_named
+      - kernel/capabilities/host/generate_options.py#_in_goal
+      - kernel/capabilities/host/generate_options.py#_as_proposal
+      - kernel/capabilities/decision/loading.py#_absorb_options
+      - kernel/contracts/schema_catalog.py#_options_violations
+    test_pointers:
+      - tests/kernel/capabilities/test_host_conversion.py::TestSynthesisConversion::test_a_citation_of_unknown_evidence_is_dropped_with_a_limitation
+      - tests/kernel/capabilities/test_host_conversion.py::TestOptionsConversion::test_options_and_criteria_are_proposed_and_attributed_to_the_host_capability
+      - tests/kernel/grounding/test_round5.py::TestNamedOptions::test_a_named_option_found_in_the_goal_is_supplied_and_needs_no_grounding
+      - tests/kernel/grounding/test_round5.py::TestNamedOptions::test_a_named_claim_not_in_the_goal_stays_an_ungrounded_proposal
+      - tests/kernel/grounding/test_named_options_end_to_end.py::TestAGoalThatNamesItsOptions::test_named_options_reach_the_criteria_approval_question
+      - tests/kernel/grounding/test_round5.py::TestNamedOptions::test_a_host_cannot_supply_named_options_directly
+      - tests/kernel/grounding/test_named_options_end_to_end.py::TestTheNamedOptionsRuleIsHostOnly::test_a_host_submission_is_refused
+    gaps:
+      - 'Synthesize half BUILT DIFFERENTLY from the criteria: convert_findings removes an unknown
+        citation from a finding and KEEPS the finding (with a limitation); a finding left with no
+        citation is still accepted; ''known'' means any evidence id in the run, not only the items
+        handed to the synthesis. findings.v1 has no semantic citation check in kernel/contracts/schema_catalog.py#semantic_violations.'
+      - Propose half built and tested.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: 'remaining work: the synthesize half needs a kernel change (own ticket) or a
+      BA amendment; the propose half needs covers tags only'
+superseded_by: null
+covered_by: []
+implemented_by:
+  - kernel/capabilities/host/synthesize.py#Synthesize.convert_payload
+  - kernel/capabilities/host/sanitize.py#convert_findings
+  - kernel/capabilities/host/generate_options.py#_split_named
+  - kernel/capabilities/host/generate_options.py#_in_goal
+  - kernel/capabilities/host/generate_options.py#_as_proposal
+  - kernel/capabilities/decision/loading.py#_absorb_options
+  - kernel/contracts/schema_catalog.py#_options_violations
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    step    synthesize
+    leafcutter/decision-forming    step    propose
+
+  DERIVATION. Two forming steps folded into one L2 under the five-L2 cap. Both are
+  host operations (synthesize_evidence, generate_options) whose output the kernel
+  holds to what is actually there: findings to the retrieved evidence (scenario
+  synthesize), caller-named options to the goal text (scenario propose). Example
+  options from dec-d53e1c52cd47c832, whose three caller_goal options sit beside the
+  host's opt.kernel_entry_point.
+
+  STANDING RULE carried from DK-600a: options the person named are checked against
+  their own words and kept as theirs.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): PARTLY BUILT. The propose half (named
+  options checked against the goal text, proposed_by caller_goal beside
+  host.generate_options) is built and tested. The synthesize half is built differently
+  from the criteria: a finding that cites an unknown evidence id is kept with that
+  citation removed, a finding with no citation left is still accepted, and 'known'
+  evidence is any id in the run. Either the kernel changes (its own ticket) or the BA
+  amends the criteria; do not mark done as is.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    partly_built.
+    - Synthesize half BUILT DIFFERENTLY from the criteria: convert_findings removes an
+      unknown citation from a finding and KEEPS the finding (with a limitation); a finding
+      left with no citation is still accepted; 'known' means any evidence id in the run, not
+      only the items handed to the synthesis. findings.v1 has no semantic citation check in
+      kernel/contracts/schema_catalog.py#semantic_violations.
+    - Propose half built and tested.
+  Follow-up: TICKET-20261002-KernelSynthesisCitationCheck.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: propose
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-forming
+    node: synthesize
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

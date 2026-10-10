@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import kernel
 from kernel.contracts import schema_ids
 from kernel.contracts.enums import (
     ApprovalStatus,
@@ -26,6 +27,7 @@ from kernel.contracts.enums import (
     ResultStatus,
 )
 from kernel.contracts.payloads import DecisionReportPayload, HumanQuestionRequestPayload
+from kernel.contracts.task import RevisionInfo
 from kernel.memory.codec import dump_record, load_record_file
 from kernel.memory.file_store import FileColonyMemory, staged_files
 from kernel.memory.publish import rebuild_index
@@ -111,6 +113,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
     """Goal only: no assessment is coming, so one Jev call judges the precedent."""
 
     def test_one_call_judges_it_and_the_human_is_asked_to_reuse_or_decide_anew(self) -> None:
+        # covers: DK-600e-3
         _, _, waiting = self.goal()
         self.assertEqual(self.jev.call_count, 1)
         self.assertEqual([b.purpose for b in self.jev.batches], ["decision.precedent"])
@@ -140,12 +143,14 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertEqual(question.evidence_ids, [item.id])
 
     def test_the_precedent_alone_resolves_nothing(self) -> None:
+        # covers: DK-600e-3
         _, _, waiting = self.goal()
         self.assertNotEqual(waiting.status, ResultStatus.COMPLETED)
         self.assertIsNone(waiting.decisions[0].selected_option_id)
         self.assertEqual(self.staged(self.ctx()), [])
 
     def test_reuse_resolves_with_the_precedents_choice_approved_by_the_current_human(self) -> None:
+        # covers: DK-600e-4
         inv, ctx, waiting = self.goal()
         done = self.answer(inv, ctx, waiting, {"choice_id": "reuse"}, actor="human:ada")
         self.assertEqual(done.status, ResultStatus.COMPLETED)
@@ -164,6 +169,8 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertEqual(done.requests, [])
 
     def test_reuse_stages_a_new_record_citing_the_precedent(self) -> None:
+        # covers: DK-600e-4
+        # covers: DK-600c-4
         inv, ctx, waiting = self.goal()
         done = self.answer(inv, ctx, waiting, {"choice_id": "reuse"}, actor="human:ada")
         (record,) = self.staged(ctx)
@@ -183,6 +190,8 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertEqual(len(record.provenance.langfuse_trace_id or ""), 32)
 
     def test_staging_never_touches_the_repository_store(self) -> None:
+        # covers: DK-600e-4
+        # covers: DK-600c-3
         before = sorted(p.name for p in self.folder.iterdir())
         inv, ctx, waiting = self.goal()
         self.answer(inv, ctx, waiting, {"choice_id": "reuse"})
@@ -200,6 +209,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertEqual(self.staged(ctx), [])
 
     def test_a_precedent_judged_not_to_apply_is_ignored(self) -> None:
+        # covers: DK-600e-2-i
         self.params["applies"] = 0.1
         _, ctx, waiting = self.goal("Where should the kernel file approved decisions?")
         self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)
@@ -210,6 +220,8 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertEqual(waiting.decisions[0].precedent_ids, [])
 
     def test_an_applicable_precedent_below_the_reuse_threshold_is_evidence_only(self) -> None:
+        # covers: DK-600a-2-i
+        # covers: DK-600e-3-ii
         self.params["applies"] = 0.6
         _, _, waiting = self.goal()
         self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)  # still grounds first
@@ -217,6 +229,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertIn(waiting.evidence[0].id, waiting.continuation_state["evidence_ids"])
 
     def test_a_superseded_precedent_is_never_offered_for_reuse(self) -> None:
+        # covers: DK-600e-3-iii
         newer = make_record(id="dec-3333333333333333", supersedes=[PRECEDENT_ID],
                             question="Something about animals and trees?")
         self.write(newer)
@@ -246,6 +259,7 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
         self.assertTrue(any("precedent was not judged" in x for x in waiting.limitations))
 
     def test_a_precedent_deleted_before_the_answer_falls_back_to_deciding_anew(self) -> None:
+        # covers: DK-600e-4
         inv, ctx, waiting = self.goal()
         (self.folder / f"{PRECEDENT_ID}.yaml").unlink()
         again = self.answer(inv, ctx, waiting, {"choice_id": "reuse"})
@@ -269,6 +283,8 @@ class TestPrecedentInTheAssessBatch(PrecedentCase):
         self.assertEqual(len(result.evidence), 1)  # evidence for what follows, never a resolution
 
     def test_no_reuse_question_when_the_decision_has_options_of_its_own(self) -> None:
+        # covers: DK-600c-1-i
+        # covers: DK-600e-3-iv
         self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
         _, _, result = self.matching()
         self.assertEqual(result.status, ResultStatus.COMPLETED)
@@ -291,6 +307,9 @@ class TestOnlyHumanApprovalStagesARecord(PrecedentCase, DesignCase):
         return self.answer(self.inv, self.ctx_, self.waiting, {"choice_id": "C"}, actor=actor)
 
     def test_a_humans_design_choice_stages_a_publishable_record(self) -> None:
+        # covers: DK-600b-3
+        # covers: DK-600c-1
+        # covers: DK-600c-2
         done = self.choose("human:ada")
         self.assertEqual(done.status, ResultStatus.COMPLETED)
         self.assertTrue(any(x.startswith("decision record staged:") for x in done.limitations))
@@ -314,18 +333,34 @@ class TestOnlyHumanApprovalStagesARecord(PrecedentCase, DesignCase):
         report = validate_store(target, schema=schema(), vocab=vocabulary())
         self.assertTrue(report.ok, [p.as_dict() for p in report.problems])
 
+    def test_the_staged_record_names_model_kernel_and_repository_versions(self) -> None:
+        # covers: DK-600c-2
+        revision = RevisionInfo(commit="abc1234567", dirty=True)
+        ctx = replace(self.ctx_, scope=self.ctx_.scope.model_copy(update={"revision": revision}))
+        self.answer(self.inv, ctx, self.waiting, {"choice_id": "C"}, actor="human:ada")
+        (record,) = self.staged(ctx)
+        provenance = record.provenance
+        self.assertEqual((provenance.model_version, provenance.kernel_version),
+                         (ctx.config.jev.model, kernel.__version__))
+        self.assertTrue(provenance.model_version and provenance.kernel_version)
+        self.assertEqual((provenance.repository_revision.commit,
+                          provenance.repository_revision.dirty), ("abc1234567", True))
+
     def test_a_bare_actor_id_is_filed_as_a_human_actor(self) -> None:
+        # covers: DK-600c-1
         self.choose("tester")
         (record,) = self.staged(self.ctx_)
         self.assertEqual(record.approval.approved_by, "human:tester")
 
     def test_a_decision_a_host_approved_leaves_no_record(self) -> None:
+        # covers: DK-600c-1-i
         done = self.choose("host:fake")
         self.assertEqual(done.status, ResultStatus.COMPLETED)
         self.assertFalse(any(x.startswith("decision record staged:") for x in done.limitations))
         self.assertEqual(self.staged(self.ctx_), [])
 
     def test_an_unanswered_decision_leaves_no_record(self) -> None:
+        # covers: DK-600b-2-iii
         self.assertEqual(self.staged(self.ctx_), [])
 
 
@@ -333,6 +368,7 @@ class TestRecordsOfOtherApprovalPaths(PrecedentCase):
     """The resolved-gate path stages only when a human approved the decision."""
 
     def test_a_required_human_approval_stages_a_record_for_that_human(self) -> None:
+        # covers: DK-600c-1
         self.params["satisfies"] = {("c1", "A"): 0.95}
         self.params["applies"] = 0.05
         inv, ctx, waiting = self.matching(approval_required=True)

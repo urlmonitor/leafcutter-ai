@@ -67,6 +67,7 @@ class TestOneTargetedRoundBeforeRanking(RoundCase):
     """The cited file is looked up, then the options are ranked."""
 
     def test_a_cited_file_that_is_not_evidence_is_researched_before_ranking(self) -> None:
+        # covers: DK-600a-4
         _, _, waiting = self.start(options=CITING)
         self.assertEqual(waiting.requests[0].kind, RequestKind.EVIDENCE)
         self.assertEqual(waiting.decisions[0].status, DecisionStatus.NEEDS_EVIDENCE)
@@ -78,6 +79,7 @@ class TestOneTargetedRoundBeforeRanking(RoundCase):
         self.assertIn(CONTRACT, cited)  # research fetches it as an explicit locator
 
     def test_after_the_round_the_options_are_ranked_and_the_round_is_not_repeated(self) -> None:
+        # covers: DK-600a-4
         inv, ctx, waiting = self.start(options=CITING)
         _, ranked = self.research_round(inv, ctx, waiting)
         question = self.question(ranked)
@@ -114,6 +116,8 @@ class TestOneTargetedRoundBeforeRanking(RoundCase):
         self.assertGreater(request.jev_reserve, 0)  # the round is told what it may not spend
 
     def test_a_human_added_option_has_its_claims_checked_in_that_round(self) -> None:
+        # covers: DK-600a-4
+        # covers: DK-600b-1-i
         inv, ctx, waiting = self.start()
         answered = child(ctx, RequestKind.HUMAN, schema_ids.HUMAN_ANSWER, {
             "added_options": [{"title": "Hybrid", "description": f"Both, see {CONTRACT}"}]})

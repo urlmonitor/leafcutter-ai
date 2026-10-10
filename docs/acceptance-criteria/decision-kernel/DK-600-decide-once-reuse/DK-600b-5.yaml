@@ -1,0 +1,98 @@
+id: DK-600b-5
+title: "State diagram: a decision from proposed to resolved, with the re-rank loop and the no-answer exit"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the forming flow's human decision points, DK-600b-1 to DK-600b-3,
+  When the state diagram is drawn,
+  Then it shows the states proposed, approved, ranked and resolved, plus an unresolved end state
+    for no answer or a cancel,
+  And every transition is labelled with the action that causes it: your approval (all, or a
+    revised set), the assessment, your choice, the re-rank loop from ranked back to assessment when
+    you add an option or answer in your own words, and the exit when you never answer or cancel,
+  And no transition reaches resolved without your choice.
+depends_on:
+  - DK-600b
+  - DK-600b-1
+  - DK-600b-2
+  - DK-600b-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Steps approve-proposals, choose and resolve with branches revise-proposals, rerank and
+      no-answer.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+  - path: docs/architecture/diagrams/c3-014-decision-kernel-flows-request-handoff.md
+    relationship: related
+    status: exists
+    relevance: 'Exists on origin/main since PR #981 (docs-only; this worktree branch is behind main
+      by those commits). Starting material, not the deliverable.'
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - 'Follow the write-c4-diagram skill: frontmatter with a parent diagram, a Mermaid diagram, the
+    next free c3-NNN number in docs/architecture/diagrams/, and a link from docs/architecture/components/decision-kernel.md.'
+  - Participants and message names match the built code (graph node and symbol names in the amended_by
+    it-po pointers); a branch the code does not have is drawn only if marked as not built.
+  - States map to the decision's continuation phases (awaiting_approval, awaiting_design_choice, resolved;
+    cancelled or left waiting for the unresolved end).
+  - The words-answer re-rank transition is drawn as proven only once DK-600b-2-ii's test passes; until
+    then it is marked unverified.
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_not_written
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - No state diagram of the decision exists; c3-015 (capability lifecycle) on origin/main is a
+        different state view.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: one state diagram
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Produced because DK-600b declares documentation_triggers: [how-to, state-diagram].
+  This is the state-diagram half (decision moving from proposed to approved,
+  ranked and resolved, with the re-rank loop and the no-answer exit).
+
+  IT-PO BUILD STATUS (2026-10-02): not written. Documentation AC: test_required false.
+
+  TRUE STATUS (2026-10-02): work_status todo; the it-po verified build status is
+    docs_not_written.
+    - No state diagram of the decision exists; c3-015 (capability lifecycle) on origin/main
+      is a different state view.

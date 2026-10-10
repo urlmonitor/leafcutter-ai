@@ -1,0 +1,104 @@
+id: DK-600e-5
+title: "Sequence diagram: the precedent step from lookup to your reuse answer"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the retrieval flow, DK-600e-1 to DK-600e-4,
+  When the sequence diagram is drawn,
+  Then it shows the precedent step, the decision store and its index, Jev, you, and the decision
+    executor as participants,
+  And it orders: lookup through the index, judging up to memory.max_precedents candidates, citing
+    those at or above the applies threshold, the reuse question at or above the reuse threshold,
+    and your answer leading to reuse or to deciding anew,
+  And it shows that no path resolves the decision without your answer.
+depends_on:
+  - DK-600e
+  - DK-600e-1
+  - DK-600e-2
+  - DK-600e-3
+  - DK-600e-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Steps lookup to reuse; branches not-applicable, evidence-only, decide-anew.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-013-decision-kernel-flows-request-native.md
+    relationship: related
+    status: exists
+    relevance: 'Exists on origin/main since PR #981 (docs-only; this worktree branch is behind main
+      by those commits). Starting material, not the deliverable.'
+  - path: docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
+    relationship: related
+    status: exists
+    relevance: 'Exists on origin/main since PR #981 (docs-only; this worktree branch is behind main
+      by those commits). Starting material, not the deliverable.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - 'Follow the write-c4-diagram skill: frontmatter with a parent diagram, a Mermaid diagram, the
+    next free c3-NNN number in docs/architecture/diagrams/, and a link from docs/architecture/components/decision-kernel.md.'
+  - Extend or link the existing decision-kernel flow diagrams on origin/main (c3-013, c3-014, c3-020)
+    instead of drawing a competing copy of the same messages; rebase this branch on main first.
+  - Participants and message names match the built code (graph node and symbol names in the amended_by
+    it-po pointers); a branch the code does not have is drawn only if marked as not built.
+  - Name the thresholds by configuration key (memory.max_precedents, memory.applies_threshold, memory.reuse_threshold),
+    not by number.
+test_required: false
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_not_written
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - No precedent-step sequence diagram in this worktree; c3-013 (precedent lookup in the native
+        flow) and c3-020 (learning loop) on origin/main cover parts of it.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: one sequence diagram; starting material exists on origin/main
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Produced because DK-600e declares documentation_triggers: [sequence-diagram].
+
+  IT-PO BUILD STATUS (2026-10-02): not written. Documentation AC: test_required false.
+
+  TRUE STATUS (2026-10-02): work_status todo; the it-po verified build status is
+    docs_not_written.
+    - No precedent-step sequence diagram in this worktree; c3-013 (precedent lookup in the
+      native flow) and c3-020 (learning loop) on origin/main cover parts of it.

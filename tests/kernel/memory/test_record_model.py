@@ -46,6 +46,7 @@ class TestRecordConsistency(unittest.TestCase):
         self.assertEqual(make_record().id, "dec-0123456789abcdef")
 
     def test_a_non_human_approver_is_refused(self) -> None:
+        # covers: DK-600c-2-i
         for actor in ("host:fake", "jev", "kernel", "service:x"):
             data = record_data()
             data["approval"] = {**data["approval"], "approved_by": actor}
@@ -84,6 +85,7 @@ class TestRecordConsistency(unittest.TestCase):
             make_record(related=["ADR-056"])
 
     def test_unknown_fields_are_refused(self) -> None:
+        # covers: DK-600c-2
         with self.assertRaises(ValidationError):
             make_record(surprise="x")
 

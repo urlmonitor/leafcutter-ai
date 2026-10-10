@@ -226,6 +226,7 @@ class TestAddedOptionsEndToEnd(ScenarioCase):
     domains = ("primary",)
 
     async def test_a_human_adds_an_option_at_approval(self) -> None:
+        # covers: DK-600b-1-i
         self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
         responder = FakeHostResponder({schema_ids.OPTIONS: options_response("primary")})
         paused = await self.service().start_run(self.task("primary", request=False))

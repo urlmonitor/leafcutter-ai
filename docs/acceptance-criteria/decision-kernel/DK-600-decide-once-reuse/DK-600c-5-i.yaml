@@ -1,0 +1,115 @@
+id: DK-600c-5-i
+title: "Reference: what a decision record contains"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: in_progress
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a decision record staged by a run, for example dec-d53e1c52cd47c832,
+  When a reader looks up its contents in the reference,
+  Then the reference lists every part of the record: identity, the question, the filters, the
+    answer, the evidence, the authority and the provenance, plus the append-only corrections,
+  And it states that evidence is held as locators and content hashes, never as text,
+  And it states that only a decision a human approved, with an approval time, produces a record,
+  And every field it lists is a field of the record schema the kernel validates against, and every
+    field of that schema is listed.
+depends_on:
+  - DK-600c-5
+  - DK-600c-2
+doc_links:
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Its 'What a record holds' table is the current, partial description; the reference may
+      grow from it.
+  - path: config/decision_record.schema.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      The record schema the reference must match field for field.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+  - path: docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
+    relationship: describes
+    status: exists
+    relevance: dec-<16hex> ids and filters from existing vocabularies only.
+  - path: docs/reference/decision-record.md
+    relationship: describes
+    status: planned
+    relevance: Suggested home of the reference.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - Documentation states only behaviour that a test proves on main; where the code and an existing
+    doc disagree, the doc is corrected, never the other way round.
+  - Reference genre; the field list is checked against config/decision_record.schema.json (generated
+    from kernel.memory.models) by a test, both directions, so the two cannot drift.
+  - The 'What a record holds' table in file-and-reuse-decisions-with-the-kernel.md becomes a link
+    to the reference, not a second copy.
+test_spec:
+  - name: test_the_record_reference_lists_exactly_the_schema_fields
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: 'TO WRITE (in tests/kernel/memory/test_validate.py): every field named in the reference
+      is a property of decision_record.schema.json and every schema property (recursively) is named
+      in the reference'
+    covers:
+      - DK-600c-5-i
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: docs_partly_exist
+    implementation_pointers: []
+    test_pointers: []
+    gaps:
+      - No dedicated reference exists; file-and-reuse-decisions-with-the-kernel.md has a summary table
+        ('What a record holds') that lists groups, not every field.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: a reference doc plus one parity test
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS: none. This is a documentation AC; it implements no flow step
+  and belongs in no flow node's implements list, so a step's built status never
+  waits on documentation.
+
+  Reference-doc half of DK-600c's documentation_triggers.
+
+  IT-PO BUILD STATUS (2026-10-02): partly exists as a summary table in the
+  file-and-reuse how-to; the full reference is not written. One test_spec entry makes
+  the 'every field' clause checkable.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    docs_partly_exist.
+    - No dedicated reference exists; file-and-reuse-decisions-with-the-kernel.md has a
+      summary table ('What a record holds') that lists groups, not every field.

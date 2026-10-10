@@ -39,6 +39,7 @@ class TestSchemaFile(StoreCase):
     """The committed schema is the model's schema."""
 
     def test_the_committed_schema_is_generated_from_the_model(self) -> None:
+        # covers: DK-600c-2
         committed = (CHECKOUT / "config" / "decision_record.schema.json").read_text(
             encoding="utf-8")
         self.assertEqual(committed.replace("\r\n", "\n"), render_schema())
@@ -91,6 +92,7 @@ class TestRefusals(StoreCase):
         self.assertTrue(self.validate().ok)
 
     def test_a_schema_violation_is_reported_with_its_path(self) -> None:
+        # covers: DK-600d-2
         path = self.write_record(make_record())
         broken = yaml.safe_load(path.read_text(encoding="utf-8"))
         broken["approval"]["approved_by"] = "host:fake"
@@ -115,6 +117,7 @@ class TestRefusals(StoreCase):
         self.assertIn("duplicate record id", messages(self.validate(check_index=False)))
 
     def test_a_link_to_a_missing_record_is_reported(self) -> None:
+        # covers: DK-600d-2
         self.indexed(make_record(related=[SECOND_ID]))
         self.assertIn(f"related target {SECOND_ID} does not exist", messages(self.validate()))
 
@@ -126,6 +129,8 @@ class TestRefusals(StoreCase):
         self.assertTrue(self.validate().ok, messages(self.validate()))
 
     def test_a_filter_outside_the_vocabularies_is_reported(self) -> None:
+        # covers: DK-600d-2
+        # covers: DK-600d-2-ii
         for field, value in (("components", "not_a_component"), ("change_target", "magic"),
                              ("risk_surface", "vibes"), ("roadmap_phase", "phase_nine"),
                              ("file_globs", "**/*.cobol")):

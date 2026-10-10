@@ -45,7 +45,8 @@
       ],
       "implements": [
         "DK-300b-1",
-        "DK-300b-1-i"
+        "DK-300b-1-i",
+        "DK-600a-1"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "done",
@@ -405,7 +406,8 @@
         "DK-300d-1-i",
         "DK-300d-2",
         "DK-300d-2-i",
-        "DK-300c-3-i"
+        "DK-300c-3-i",
+        "DK-600a-1"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "done",
@@ -1140,8 +1142,8 @@
       "expands_to": [
         "leafcutter/decision-retrieval"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "in_progress",
       "io_contracts": {
         "consumes": [
           {
@@ -1274,7 +1276,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-1"
+      ]
     },
     {
       "id": "ground",
@@ -1301,7 +1306,9 @@
         "DK-300d-4-i",
         "DK-300d-4-ii",
         "DK-300d-5",
-        "DK-300d-5-i"
+        "DK-300d-5-i",
+        "DK-600a-2-i",
+        "DK-600a-2"
       ],
       "impl_asof": "2026-10-03",
       "impl_status": "done",
@@ -1440,7 +1447,7 @@
         "findings/disagreements: array (optional; default [])",
         "findings/unknowns: array (optional; default [])"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-10",
       "impl_status": "not_started",
       "io_contracts": {
         "consumes": [
@@ -1553,7 +1560,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600a-3"
+      ]
     },
     {
       "id": "reuse-criteria",
@@ -2082,7 +2092,7 @@
         "options/proposed_criteria: array (optional; default [])",
         "options/unresolved_feasibility: array (optional; default [])"
       ],
-      "impl_asof": "2026-10-02",
+      "impl_asof": "2026-10-10",
       "impl_status": "not_started",
       "io_contracts": {
         "consumes": [
@@ -2234,7 +2244,8 @@
         ]
       },
       "implements": [
-        "DK-500e-2"
+        "DK-500e-2",
+        "DK-600a-3"
       ]
     },
     {
@@ -2257,8 +2268,8 @@
         "human_answer/edited_criteria: array|null (optional; default null)",
         "human_answer/free_text: null|string (optional; default null)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "in_progress",
       "io_contracts": {
         "consumes": [
           {
@@ -2408,7 +2419,8 @@
       },
       "implements": [
         "DK-500d-2",
-        "DK-500d-2-i"
+        "DK-500d-2-i",
+        "DK-600b-1"
       ]
     },
     {
@@ -2431,8 +2443,8 @@
         "evidence_bundle/evidence_ids: array (optional; default [])",
         "evidence_bundle/limitations: array (optional; default [])"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -2555,7 +2567,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600a-4"
+      ]
     },
     {
       "id": "assess",
@@ -2582,8 +2597,8 @@
         "jev_result/model_id: null|string (optional; default null)",
         "jev_result/usage: object (required)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -2759,7 +2774,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600a-4"
+      ]
     },
     {
       "id": "choose",
@@ -2788,8 +2806,8 @@
         "human_answer/added_options: array|null (optional; default null)",
         "human_answer/free_text: null|string (optional; default null)"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -2987,7 +3005,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600b-2"
+      ]
     },
     {
       "id": "resolve",
@@ -3018,8 +3039,8 @@
       "writes": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -3250,7 +3271,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600b-3"
+      ]
     },
     {
       "id": "split-report",
@@ -3753,8 +3777,8 @@
         "human_answer/free_text: null|string (optional; default null)"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -3872,7 +3896,11 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600b-1-i",
+        "DK-600b-1-ii"
+      ]
     },
     {
       "id": "budget-reserve",
@@ -3894,8 +3922,8 @@
         "human_question/why_research_cannot_settle: string (optional; default \"\")"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -4002,7 +4030,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600a-4-i"
+      ]
     },
     {
       "id": "unidentified-gap-research",
@@ -4731,8 +4762,8 @@
         "option/approved_by: null|string (optional; default null)"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -4825,7 +4856,11 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600b-2-i",
+        "DK-600b-2-ii"
+      ]
     },
     {
       "id": "no-answer",
@@ -4841,8 +4876,8 @@
         "human_question/required_actor_kind: string (optional; default \"human\")"
       ],
       "outcome_kind": "exit",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-09",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -4931,6 +4966,9 @@
       "produces": [
         "run_envelope/status: string (required)",
         "run_envelope/pending_interaction: null|object (optional; default null)"
+      ],
+      "implements": [
+        "DK-600b-2-iii"
       ]
     },
     {
@@ -7065,11 +7103,11 @@
     }
   ],
   "impl_summary": {
-    "done": 5,
-    "in_progress": 0,
-    "not_started": 36,
+    "done": 13,
+    "in_progress": 2,
+    "not_started": 26,
     "total": 41,
-    "asof": "2026-10-06"
+    "asof": "2026-10-10"
   },
   "contract_definitions": {
     "choice_answer": {

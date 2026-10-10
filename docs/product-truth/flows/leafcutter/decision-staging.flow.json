@@ -43,8 +43,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -125,7 +125,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600c-1"
+      ]
     },
     {
       "id": "build-record",
@@ -166,8 +169,8 @@
       "writes": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -412,7 +415,11 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600c-2-i",
+        "DK-600c-2"
+      ]
     },
     {
       "id": "write-staged",
@@ -438,8 +445,8 @@
       "writes": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -553,7 +560,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600c-3"
+      ]
     },
     {
       "id": "announce",
@@ -577,8 +587,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -706,7 +716,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600c-4"
+      ]
     }
   ],
   "branches": [
@@ -727,8 +740,8 @@
         "decision/approved_at: null|string (optional; default null)"
       ],
       "outcome_kind": "exit",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -804,7 +817,10 @@
           }
         ]
       },
-      "produces": []
+      "produces": [],
+      "implements": [
+        "DK-600c-1-i"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -860,11 +876,11 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
+    "done": 5,
     "in_progress": 0,
-    "not_started": 5,
+    "not_started": 0,
     "total": 5,
-    "asof": "2026-10-02"
+    "asof": "2026-10-06"
   },
   "contract_definitions": {
     "capability_result": {

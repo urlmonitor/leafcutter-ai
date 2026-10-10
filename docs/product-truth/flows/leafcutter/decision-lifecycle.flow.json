@@ -30,7 +30,8 @@
       "implements": [
         "DK-300d-1",
         "DK-300d-3",
-        "DK-300d-3-i"
+        "DK-300d-3-i",
+        "DK-600b-3"
       ],
       "label": "Form the decision",
       "description": "You ask a question, and the kernel uses short meanings of its terms to classify the intent, gathers evidence, weighs the options and asks you to approve and choose.",
@@ -236,8 +237,8 @@
       "expands_to": [
         "leafcutter/decision-staging"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -385,7 +386,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600c-3"
+      ]
     },
     {
       "id": "publish",
@@ -418,8 +422,8 @@
       "expands_to": [
         "leafcutter/decision-publishing"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -554,7 +558,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-3"
+      ]
     },
     {
       "id": "reuse",
@@ -592,8 +599,8 @@
       "expands_to": [
         "leafcutter/decision-retrieval"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "in_progress",
       "io_contracts": {
         "consumes": [
           {
@@ -800,7 +807,11 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600e-1",
+        "DK-600e-3"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -874,11 +885,11 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 1,
-    "not_started": 3,
+    "done": 2,
+    "in_progress": 2,
+    "not_started": 0,
     "total": 4,
-    "asof": "2026-10-03"
+    "asof": "2026-10-06"
   },
   "contract_definitions": {
     "decision": {

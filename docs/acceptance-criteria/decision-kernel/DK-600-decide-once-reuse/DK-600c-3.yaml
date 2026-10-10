@@ -1,0 +1,234 @@
+id: DK-600c-3
+title: "The record is staged in the run folder, and your repository is not touched"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a built decision record dec-d53e1c52cd47c832 from run run-f0f15b38791a428f,
+  When the file backend saves it,
+  Then the record is written to
+    <run_root>/runs/run-f0f15b38791a428f/staged/decisions/dec-d53e1c52cd47c832.yaml as YAML,
+  And no file in the repository changes: the repository's git status is the same before and after
+    the run, and docs/decisions/ gains no file.
+depends_on:
+  - DK-600c
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-staging.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-staging step write-staged. Add this AC id to each named
+      node's implements list.
+  - path: docs/product-truth/flows/leafcutter/decision-lifecycle.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-lifecycle step stage. Add this AC id to each named
+      node's implements list.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Decision, research and retrieval capabilities, host operations, human interaction;
+      'As built' sections.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - 'During a run the kernel only reads the repository (ADR-060): no file under the repository root
+    may change; the configured run root is the only place a run writes.'
+  - The run id is checked as a plain path segment before any staging path is built; an unsafe id stages
+    nothing.
+  - Staged files are written atomically in the plain YAML subset the publish validator accepts.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_stage_writes_only_under_the_run_root
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestGetAndStage::test_stage_writes_only_under_the_run_root): the record lands at <run_root>/runs/<run_id>/staged/decisions/<id>.yaml'
+    covers:
+    - DK-600c-3
+  - name: test_staging_an_unsafe_run_id_keeps_nothing
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_store.py::TestGetAndStage::test_staging_an_unsafe_run_id_keeps_nothing): an unsafe run id stages nothing'
+    covers:
+    - DK-600c-3
+  - name: test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository): after the run docs/decisions/ does not exist in the scenario repository'
+    covers:
+    - DK-600c-3
+  - name: test_staging_never_touches_the_repository_store
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store): the store folder is unchanged by a run'
+    covers:
+    - DK-600c-3
+  - name: test_a_staging_run_leaves_git_status_unchanged
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_staging_run_leaves_git_status_unchanged): git status of the committed scenario repository is identical before and after the run; the record is at <run_root>/runs/<run>/staged/decisions/<id>.yaml'
+    covers:
+    - DK-600c-3
+delivers_to:
+  agent: python-coder
+  ac_id: DK-600c-4
+  contract: 'kernel.memory.port.StagedRecord {decision_id: ''dec-<16 hex>'', path: absolute Path <run_root>/runs/<run_id>/staged/decisions/<decision_id>.yaml},
+    or None when nothing was kept (not human-approved, invalid, unsafe run id, write failure, null
+    memory backend); None produces no message.'
+expects_from:
+  ac_id: DK-600c-2
+  contract: 'A model-validated kernel.memory.models.DecisionRecord matching config/decision_record.schema.json:
+    schema_version ''1.0'', kind ''decision'', id ''dec-<16 hex>'', approval {approval_status: approved,
+    approved_by: ''human'' | ''human:<id>'', approved_at: ''YYYY-MM-DDTHH:MM:SSZ''}, evidence: [{id,
+    locator, category, content_hash: 64 hex, verification, relevance, source_version}] with no text
+    field, assessment {basis, design_reason, selected_rank, ranking: [{option_id, rank, required_passed,
+    required_total, required_mean, scores}]}, precedents_considered: [{id, applicability, action,
+    note}], provenance {run_id, root_task_id, langfuse_trace_id: 32 hex, repository_revision {commit,
+    dirty}, template_version, model_version, kernel_version, decision_versions}; serialised by kernel.memory.codec.dump_record
+    (plain YAML subset).'
+declares_side_effect: true
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/memory/file_store.py#FileColonyMemory.stage_decision
+      - kernel/memory/file_store.py#staged_dir
+      - kernel/memory/codec.py#write_record_file
+      - kernel/memory/port.py#StagedRecord
+    test_pointers:
+      - tests/kernel/memory/test_store.py::TestGetAndStage::test_stage_writes_only_under_the_run_root
+      - tests/kernel/memory/test_store.py::TestGetAndStage::test_staging_an_unsafe_run_id_keeps_nothing
+      - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+      - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store
+      - tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_no_writes_to_the_repository
+    gaps:
+      - '''git status is the same before and after the run'' is not asserted by any test; tests show
+        docs/decisions/ gains no file.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_store.py::TestGetAndStage::test_stage_writes_only_under_the_run_root
+    - tests/kernel/memory/test_store.py::TestGetAndStage::test_staging_an_unsafe_run_id_keeps_nothing
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+    - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store
+    - tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_no_writes_to_the_repository
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_staging_run_leaves_git_status_unchanged
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_store.py::TestGetAndStage::test_stage_writes_only_under_the_run_root
+  - tests/kernel/memory/test_store.py::TestGetAndStage::test_staging_an_unsafe_run_id_keeps_nothing
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_human_choice_stages_a_record_and_nothing_is_written_to_the_repository
+  - tests/kernel/memory/test_decision_precedent.py::TestAMatchingPrecedentBeforeAnyBasis::test_staging_never_touches_the_repository_store
+  - tests/kernel/capabilities/test_retrieval_repository.py::TestEvidenceShape::test_no_writes_to_the_repository
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunOneStagesARecordThatPublishFiles::test_a_staging_run_leaves_git_status_unchanged
+implemented_by:
+  - kernel/memory/file_store.py#FileColonyMemory.stage_decision
+  - kernel/memory/file_store.py#staged_dir
+  - kernel/memory/codec.py#write_record_file
+  - kernel/memory/port.py#StagedRecord
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-staging    step    write-staged
+    leafcutter/decision-lifecycle  step    stage
+
+  DERIVATION. Scenario write-staged, plus the journey scenario
+  decision-lifecycle/stage, which says the same thing one level up. Values from
+  dec-d53e1c52cd47c832.
+
+  STANDING RULE carried from DK-600c (ADR-060 section 3): during a run the kernel
+  only reads the repository.
+
+  JOURNEY NODE NOTE. decision-lifecycle/stage expands into the whole staging
+  sub-flow. If the journey node should roll up the sub-flow, list DK-600c (the
+  composite) in its implements instead of, or as well as, this AC.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built; tested except the git-status
+  clause. Pointers: amended_by.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - 'git status is the same before and after the run' is not asserted by any test; tests
+      show docs/decisions/ gains no file.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+product_truth:
+  - flow: leafcutter/decision-lifecycle
+    node: stage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-staging
+    node: write-staged
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
