@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -68,9 +68,11 @@ amended_by:
     summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
       ships false in E1 and E2.'
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/kernel/split/test_dk_400c_3_i.py
 implemented_by:
 - tickets/00_inbox/TICKET-20261006-DK-400c-3-i.md
+- docs/product-truth/flows/leafcutter/decision-forming.flow.json
 notes: |
   Confirms the DK-400c note "fewer than 2 parts left AFTER dropping: the same rule as fewer
   than 2 should apply". The count is taken after the quote check.
