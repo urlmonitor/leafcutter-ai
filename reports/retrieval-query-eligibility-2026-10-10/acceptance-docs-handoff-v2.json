@@ -1,0 +1,56 @@
+{
+  "status": "authored_paths_frozen",
+  "supersedes_for_changed_queue_hash_only": {
+    "path": "reports/retrieval-query-eligibility-2026-10-10/acceptance-docs-handoff.json",
+    "sha256": "595a9c7131d21a038af26de300da32844df1213a5b9401c576c129b8dd3cc0b8"
+  },
+  "authorization": "Root explicitly authorized only the delivery queue historical-red-baseline label and final sentence correction after the first author freeze. Release was paused for this bounded change.",
+  "rationale": "Remove a contradictory present-tense sentence from the historical red baseline. Current strict51 evidence and all original receipts remain unchanged.",
+  "changed_path_sha256": {
+    "docs/analysis/2026-10-09-retrieval-delivery-queue.md": "ef77a76e23af5cf0c6cfe5ecabab39be3461b11e85035db715945ef95ae52b7f"
+  },
+  "prior_changed_path_sha256": {
+    "docs/analysis/2026-10-09-retrieval-delivery-queue.md": "dbd8f9614546a7354891e3778fbad5900cf001a51e3ed4627e16b062cae0e103"
+  },
+  "unchanged_authored_paths_sha256": {
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-1.yaml": "7adba8719e33331e4af4d50348ccd8dc753b2522481d679d12c69dd9cc6102cc",
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml": "d006f35bc09d696325aa96aefd27ce2682c1fb40106611ec84584816cd4af6bb",
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2-i.yaml": "6ef548943918c8573d8fa50781a022890e5192ccb14bcc50aaf43b9cb59667de",
+    "docs/analysis/2026-10-10-retrieval-query-eligibility-contract.md": "6ffb2f7b7aaaaad354db89e1c1e5186321cc63c5ee045f07f4cd00558ddda1dc",
+    "docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json": "ea5f78fe7bfb6ec2f0a3ce3ca188b7569d7e9ba536d3e57e642e82f5fdac4606",
+    "docs/product-truth/index.json": "072fe7eab1b1076683b7208e7993549fd0d7428eb16b5b4c0d514615ff6239ec",
+    "docs/product-truth/schemas/operation-selection-state.schema.json": "a5f62cd955e52977db41f38c86929f462d8b7bfeb3104b49043c407e38332d57",
+    "reports/retrieval-query-eligibility-2026-10-10/plan.json": "1e2d93cd5b7152d8ff0e458ef4a30e104298d92166f707d4f641ba573d9446e3",
+    "reports/retrieval-query-eligibility-2026-10-10/cases.json": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "reports/retrieval-query-eligibility-2026-10-10/source-oracles.json": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "reports/retrieval-query-eligibility-2026-10-10/overlap-review/ba-itpo-adjudication.json": "39e323bcec33d2e2611fa5417799913fcc6865779d5e9162c8eb34dbf60a9e6d"
+  },
+  "checks": {
+    "frontmatter": "PASS; same-day last_updated warning only",
+    "git_diff_check": "PASS",
+    "other_11_authored_hashes": "unchanged",
+    "original_manifest": "preserved byte-for-byte",
+    "generator": "not rerun; labels/evidence wording only, no Product Truth or AC changes",
+    "changelog_payload": "PASS emit_entry.validate_payload; registered components, manual type and generated date/time slug"
+  },
+  "acceptance_statuses": {
+    "KM-500a-1": {
+      "readiness": "approved",
+      "work_status": "done"
+    },
+    "KM-500a-2": {
+      "readiness": "approved",
+      "work_status": "in_progress"
+    },
+    "KM-500a-2-i": {
+      "readiness": "approved",
+      "work_status": "in_progress"
+    }
+  },
+  "freeze": "All author paths frozen again; no runtime/tests/Git/provider/graph operations or issue03 authoring.",
+  "added_path_sha256": {
+    "changelogs/2026-10-10-1113-retrieval-filters-proven-query-mismatches-before-jev-selection.md": "f9285dc0a1ea3b0869dfc5371c92126298843a7c67dbe667310533d71cfd2157"
+  },
+  "additional_authorization": "Root authorized one concise issue02 changelog while release was paused. Created through scripts/changelog/emit_entry.py using its actual required-field/naming validation; no merge, live-provider or complete-count claim.",
+  "prior_v2_before_authorized_changelog_sha256": "f4a445ec35cca807c42f62a8a21c2f3859cf49fe1763e59b618584d586a9e1b2"
+}

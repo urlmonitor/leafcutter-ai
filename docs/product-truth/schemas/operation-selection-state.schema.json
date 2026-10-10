@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed operation selection state",
+  "description": "Transcribes integrations/graph_selection.py _selection_state and assess_graph_operation plus graph_eligibility.py operation_fit. The seven core keys are emitted before make_batch adds optional caller context. This documentation schema is not runtime validation or automatic source parity. GraphOffer and OperationResult remain internal Python dataclasses, not serialized envelopes.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "original_question",
+    "need_question",
+    "query_hints",
+    "retrieval_needs",
+    "answer_requirements",
+    "operation_targets",
+    "operation_fit"
+  ],
+  "properties": {
+    "original_question": {
+      "type": "string"
+    },
+    "need_question": {
+      "type": "string"
+    },
+    "query_hints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "retrieval_needs": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "answer_requirements": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "operation_targets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "operation_fit": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "population",
+          "result_kind",
+          "relationship",
+          "source_hydration_fields",
+          "reason"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "unknown",
+              "incompatible"
+            ]
+          },
+          "population": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "exact_entities",
+              "ac_descendants",
+              "declared_dependents",
+              "related_entities",
+              "recipe_endpoints",
+              "mixed_entities",
+              "relevance",
+              null
+            ]
+          },
+          "result_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "relationship": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_hydration_fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "criteria",
+                "test_spec",
+                "content"
+              ]
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

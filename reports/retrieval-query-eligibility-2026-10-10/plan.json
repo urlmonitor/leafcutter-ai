@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "authored_before_issue02_implementation_and_outcomes": true,
+  "authored_on": "2026-10-10",
+  "status": "frozen_for_independent_test_writer",
+  "code_baseline": "44406d923e2a0e2f40079a317135d0736534c654",
+  "source_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "ac_id": "KM-500a-2-i",
+  "positive_execution_count": 9,
+  "population_execution_count": 8,
+  "exact_record_execution_count": 1,
+  "historical_plan": {
+    "path": "reports/retrieval-public-2026-10-09/plan.json",
+    "sha256": "41cbd3414f03f8099901d26e7bd50d64c2f4565190338e15c67b75aa4a77e8e9",
+    "preserved_verbatim": [
+      "P03",
+      "P04"
+    ],
+    "prior_exact_eight_case_manifest": "not located; do not claim an exact historical freeze"
+  },
+  "cases_file": "cases.json",
+  "source_oracles_file": "source-oracles.json",
+  "controlled_controls": [
+    {
+      "id": "C01",
+      "name": "Exact record versus related records",
+      "expected": "AC criteria+test_spec requires original AC records, excluding proved Test-result operations; a separate linked-Test request retains a matching Test-result operation. Description changes alone cannot change fit."
+    },
+    {
+      "id": "C02",
+      "name": "Population contract versus saved prose",
+      "expected": "A recipe with authoritative exact-record result population is incompatible with descendants despite descendant-sounding prose. Missing authoritative metadata remains unknown, never proved descendants/completeness or excluded solely for that absence."
+    },
+    {
+      "id": "C03",
+      "name": "Unknown, hydratable and bounded candidates",
+      "expected": "Unknown legacy metadata, source-hydratable fields absent from projection, and possible truncation each remain eligible/unknown; none converts later incomplete evidence into a complete answer."
+    },
+    {
+      "id": "C04",
+      "name": "Zero remaining operations",
+      "expected": "All candidates proved incompatible yields ordinary choice.operation unsupported, knowledge_status unsupported, partial/unavailable coverage, zero paid operation-selection calls, queries, requests or new assessments; local absence does not prove every route unsupported."
+    },
+    {
+      "id": "C05",
+      "name": "One candidate does not bypass Jev",
+      "expected": "One eligible or unknown operation still receives exactly one operation-selection judgment and unchanged gates; existing target/answerability decisions are separate."
+    },
+    {
+      "id": "C06",
+      "name": "Probability/confidence boundaries",
+      "expected": "0.7999/0.64 refuses; 0.80/0.64 permits; 0.90/0.49 refuses. Preserve choice.operation uncertain and knowledge_selection uncertain; knowledge_status selection_uncertain is diagnostic only. Refusal retains one paid selection usage, partial/unavailable coverage, zero queries/requests/assessments."
+    },
+    {
+      "id": "C07",
+      "name": "Sibling merge and resume",
+      "expected": "Real uncertainty or ordinary unsupported output merges with independently fulfilled sibling evidence through real guard/public continuation without new assessment conflicts/veto. Existing established unsupported_population remains the distinct completeness-guard control."
+    },
+    {
+      "id": "C08",
+      "name": "Explicit query compatibility",
+      "expected": "Valid explicit operation keeps deterministic validation/execution without new semantic selection; malformed explicit operation remains existing validation error."
+    },
+    {
+      "id": "C09",
+      "name": "Missing user meaning",
+      "expected": "Genuinely missing required root/levels/inclusion retains focused clarification; a sufficient request refused only by model confidence never asks the user to repair model uncertainty."
+    },
+    {
+      "id": "C10",
+      "name": "Scope and catalog identity",
+      "expected": "Saved choice retains name/version/digest/validated arguments and all original identities, fields, source/read roots/revision and cumulative budgets; five/seven positional GraphOffer callers remain compatible."
+    },
+    {
+      "id": "C11",
+      "name": "Pre-call wire budget",
+      "expected": "Fit facts cross the existing packet limit in a discriminating fixture; pre-call budget refusal occurs with zero provider charge/query, without trimming original obligations."
+    },
+    {
+      "id": "C12",
+      "name": "Distinct failures",
+      "expected": "Invalid/unoffered choice, provider failure, denied access and exhausted budget keep their distinct failures/paid usage; no blind retry, forced clarification, forced sole candidate or global assessment veto."
+    }
+  ],
+  "evidence_lanes": {
+    "controlled": "Actual KernelService start/host wait/resume, real selector/executor, source-pinned backend and explicitly labeled host/Jev doubles; inspect real packets/dispatch, not mocked both sides. Assertion-shaped red tests precede repair.",
+    "fresh_model": "Later specifically authorized fresh-provider execution is separate, reuses these questions/gold and preserves source/calls/usage/limitations. No provider or graph calls in authoring; not-run is never pass."
+  },
+  "denominators": {
+    "selection": "9 intended positives each requiring accepted operation AND actual correct dispatch; no cherry-picking/retry until pass.",
+    "whole_question": "9 separate complete-answer outcomes; partial counts never pass this denominator even when selection passes. Count completeness is issue03.",
+    "controlled_controls": "12 control families; report each parametrization/call count separately, not added to the nine-case quality rate."
+  },
+  "unchanged_thresholds": {
+    "selected_operation_probability": 0.8,
+    "decision_confidence": 0.5
+  },
+  "call_boundary": "One existing operation-selection judgment for a nonempty candidate set; zero if all are proved incompatible. Distinct target/answerability judgments are separate.",
+  "prohibited": [
+    "Literal ID/question hacks",
+    "Forced sole-candidate execution",
+    "Removing unknown candidates solely for absent metadata",
+    "Prose-derived population/completeness claims",
+    "Threshold reduction",
+    "Blind retry",
+    "Persistent uncertainty/ordinary-unsupported assessment",
+    "General planner/classifier workflow",
+    "Graph/catalog writes"
+  ],
+  "pt_handoff": "Separate System eligibility step before existing Jev selection; existing fit is source capability. Exact fields/examples must bind to reviewed runtime interface later, without a fabricated DTO.",
+  "implementation_status": "not_started",
+  "results": null,
+  "frozen_file_sha256": {
+    "source-oracles.json": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "cases.json": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643"
+  },
+  "source_scope_clarification_before_execution": "44406d9 is the controlled source fixture revision, not a published Aura source. After PR1131 merges, any later live evaluation must pin the actual canonical publication and freeze its source oracle or an explicit equivalence addendum before calls. Current questions/inclusion meanings remain unchanged; no silent feature-branch source substitution in Aura."
+}

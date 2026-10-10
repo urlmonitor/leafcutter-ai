@@ -1,0 +1,400 @@
+id: KM-500a-2-i
+title: Exclude only proven population mismatches before query selection
+component: knowledge-management
+components:
+- knowledge_management
+- decision_kernel
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: in_progress
+parent: KM-500a-2
+criteria: |
+  Given a sufficient typed research request retains its requested records or structural population and the authorized registered query candidates
+  When the system prepares candidates for the existing semantic operation decision
+  Then it excludes a candidate only when authoritative typed scope or result facts prove that candidate returns the wrong requested population
+  And it retains compatible and unknown candidates, including source-hydratable fields and operations whose enumeration may be bounded
+  And descriptions alone neither establish population compatibility nor prove complete enumeration
+  And a nonempty candidate set, including one remaining candidate, still receives the existing bounded semantic operation decision under unchanged acceptance thresholds
+  And an empty set caused by proved incompatibilities returns ordinary unsupported without a paid operation decision or graph query
+  And the original question, identities, fields, hierarchy, source restrictions, query provenance and cumulative budgets remain unchanged
+  And selection uncertainty remains distinct from missing user meaning and from an established unsupported population
+  And ordinary candidate absence or selection uncertainty adds no assessment that can veto useful sibling evidence through merge or continuation
+  And no low-confidence choice forces execution, user clarification, repeated selection or a capability build
+  And explicit registered operations retain their existing deterministic validation path
+  And successful operation selection alone never declares a complete count or complete answer.
+depends_on:
+- KM-500a-2
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-10'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml
+amended_by:
+- '2026-10-10: BA / IT PO (retrieval_acceptance_next) linked the implemented eligibility sources and version8
+  Product Truth; independently verified the strict49 phase-adjudication receipt and unchanged gold. Approved/in_progress
+  remains pending final acceptance review and scoped live selection evidence; no broad completion claim.'
+- '2026-10-10: BA / IT PO (retrieval_acceptance_next) adjudicated QE-ADJ-001 from independent real-consumer overlap
+  witnesses. Core criteria and approved/in_progress remain unchanged; only two overrestrictive exact-record negative
+  assertions are superseded. Original 43-case history and all positive question/oracle bytes remain preserved.'
+- '2026-10-10: BA / IT PO (retrieval_acceptance_next) recorded implementation GO after the independent frozen test-writer
+  handoff; work_status is in_progress, readiness stays approved. The controlled baseline has 22 assertion failures
+  and 21 preservation passes, not completion evidence.'
+- '2026-10-10: BA / IT PO (retrieval_acceptance_next) authored and enriched the missing eligibility boundary under
+  existing approved selection scope. Readiness is approved under the user standing instruction to set ACs approved
+  and put agents to work, renewed by the request to solve retrieval issues sequentially; this does not claim personal
+  human review of this new ID or implementation completion.'
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_eligibility_public.py
+- tests/knowledge/test_query_eligibility_consumers.py
+- tests/kernel/entity_context/test_query_eligibility_selection.py
+- tests/knowledge/test_query_eligibility_overlap.py
+- tests/kernel/entity_context/test_query_eligibility_pt_schema.py
+implemented_by:
+- integrations/graph_eligibility.py
+- integrations/graph_offers.py
+- integrations/graph_catalog.py
+- integrations/graph_selection.py
+- integrations/graph_selection_result.py
+doc_links:
+- path: docs/analysis/2026-10-10-retrieval-query-eligibility-contract.md
+  relationship: specifies
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+- path: docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json
+  relationship: context
+  status: exists
+  relevance: Version 8 separates System eligibility from source capability and Jev selection, with actual JSON
+    fields, illustrative examples and diagnostic-only exits; acceptance remains in progress.
+it_requirements:
+- Chosen mechanism is deterministic typed candidate eligibility before the existing finite Jev operation-selection
+  judgment; reuse current LangGraph/kernel retrieval without a new planner, classifier, decision tree or retry loop.
+- Use eligible, unknown and incompatible fit distinctions; exclude only authoritative contradictions in requested
+  versus returned population, kind or anchor role. Missing metadata stays unknown. Hydratable source fields and
+  possible truncation are not incompatibility proofs.
+- For returned_entities with original exact IDs, unequal population labels or an indirect route alone are not disjointness
+  proof. Native self endpoints and admitted saved round trips with possible identity overlap remain unknown/offered;
+  Jev chooses suitability and actual answer assessment checks all original obligations.
+- Explicit named populations still require matching population identity and completeness metadata. Possible ID overlap
+  cannot promote a saved endpoint or dependency read to an exhaustive hierarchy answer; retain disjoint result-kind
+  exclusions and unknown-kind conservatism.
+- Builtin facts must match actual operation contracts. Saved descriptor prose, supported-question text and result
+  descriptions are not authoritative population/completeness metadata; retained saved choices keep immutable version/digest.
+- Keep selected-operation probability 0.80 and decision confidence 0.50. A nonempty set receives one existing operation-selection
+  judgment; any distinct target or answerability judgment is separate. Do not force the sole candidate.
+- All candidates proved incompatible yields ordinary unsupported with no paid operation-selection call, graph query,
+  requests or new bundle assessment. Do not synthesize unsupported_population because this local candidate set is
+  empty.
+- Confidence refusal preserves RetrievalChoice.operation=uncertain, knowledge_selection=uncertain, partial/unavailable
+  coverage and paid usage; selection_uncertain is a knowledge_status diagnostic only. No unresolved assessments,
+  human requests, retries or build handoffs.
+- Feed actual ordinary-unsupported and uncertain results through sibling merge, guard and resumed research tests.
+  Established unsupported_population assessments retain their completeness guard; no global relaxation of assessment
+  merge/guard.
+- GraphOffer has positional consumers with five and seven arguments. Any metadata is additive and defaulted without
+  changing existing field order, original arguments, or public selector/result signatures.
+- Fit facts count toward the existing pre-call serialized payload budget before charging Jev. Preserve full original
+  question, identities, fields, source/revision/read roots, immutable catalog identity and cumulative usage rather
+  than trimming obligations.
+- Initial selected-query execution and later existing progressive disclosure are distinct phases. A retained relation
+  or saved query may return partial evidence at disclosure0 before get_entities hydrates the same requested facts
+  at disclosure3; verify original requirements, IDs, source locators and budgets across both phases. Do not require
+  every subsequent read to use the initial operation or claim discovery already disclosed source content.
+- Use actual KernelService public research and retrieve.repository wiring. Descriptor admission, explicit-operation
+  validation, read authority, original-target obligations and disclosure boundaries stay intact.
+- Missing-user-meaning clarification, source-capability limits, provider failures and empty successful retrieval
+  remain distinguishable. Controlled dispatch proves neither live-provider quality nor complete counts.
+expects_from:
+  ac_id: KM-500e-1-i
+  contract: Accepted retrieval_needs and AnswerRequirements retain original question, targets, fields, scope and
+    authorized sources.
+delivers_to:
+  agent: python-coder
+  contract: Filtered finite candidates with auditable typed fit facts for the existing selector, preserving public
+    outcomes and compatibility; independent guarding tests must be red before repair.
+test_required: true
+test_rationale: A public selection-boundary repair needs independent source-pinned cases, actual packet/dispatch
+  assertions and real merge/resume seams to distinguish filtering from forced routing, field loss, threshold changes
+  and persistent assessment vetoes. Planned tests are not evidence.
+notes: Standing user approval authorizes this bounded repair, not personal human review or completion of the new
+  child. Parent historical selection primitive evidence remains valid; this child is in_progress after implementation
+  GO. Frozen population totals describe source 44406d923, not what a bounded query proved. Count completeness remains
+  issue03. No PT runtime interface or result is invented. Independent handoff receipt C:/Users/Hendrik/AppData/Local/Temp/retrieval-eligibility-test-writer-handoff-20261010.json
+  (SHA256 0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089) records 43 controlled cases, 22 assertion
+  failures, 21 preservation passes and zero errors before implementation. Actual tests are linked in covered_by,
+  with tests/knowledge/query_eligibility_support.py as shared support. Frozen tests and fixtures match the receipt.
+  This is a red baseline, not a passing retrieval or live-quality claim. QE-ADJ-001 at reports/retrieval-query-eligibility-2026-10-10/overlap-review/ba-itpo-adjudication.json
+  preserves the original baseline and records a separate seven-assertion-red/two-native-witness-pass gate after
+  two specifically authorized negative-offer corrections. Possible exact-identity overlap is unknown; core criteria,
+  all nine positive cases, source oracles and thresholds are unchanged. Conservative runtime refinement and independent
+  acceptance remain in progress. The additive phase-adjudication/handoff.json receipt (SHA256
+  67c69b44abc3b4ba006d7cbf225ab0f134c0751d55d17841a2828cd4f7c1df66) records 49 strict passes, zero failures,
+  errors, skips or xfails; its JUnit, five runtime files, observed phases and unchanged positive/gold hashes were
+  independently verified. Prior masked failures and the specific phase-only assertion patch remain preserved.
+  The 126 preservation passes are separately attributed to the implementation expert. The independent writer additionally reports two strict actual-packet schema
+  passes (native and unknown legacy metadata), with corrupt-field and missing-key controls, in the linked PT
+  schema test. The combined strict-51.xml was independently verified with 51 passes, zero failures/errors/skips, SHA256
+  1ff9a45e4de7130f171bf1f2f317f8de4f63151b2aabcaa130f5449fcf81badc. The prepared nine-case live lane has not run. These local
+  checks do not prove live selection quality or complete counts.
+test_spec:
+- name: test_public_population_choice_executes_frozen_scope
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: All eight frozen population cases use actual public host-wait/resume, Jev options and descendants
+    dispatch retaining work_status, hierarchy, source and budgets.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Filtering only an unused helper
+  - Routing by literal question/root
+  - Dropping intermediate parents or changing root/levels
+- name: test_exact_ac_fields_keep_hydratable_get_entities
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Unchanged A02 catalog-on removes proved Test-result choices, retains source-hydratable get_entities
+    and both authored fields through actual retrieval.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Dropping test_spec because graph projection lacks it
+  - Keeping a proved wrong result kind because prose mentions verification
+- name: test_eligibility_keeps_unknown_and_bounded_candidates
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Keep unknown legacy descriptors and compatible bounded operations while removing a similar proved
+    mismatch; prose changes cannot promote or demote fit.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Absent metadata becomes incompatible
+  - Saved prose becomes exact population metadata
+  - Possibly truncated operations are removed
+- name: test_relationship_population_control_remains_offered
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A related-Test request retains its legitimate linked-record candidate, distinct from exact-AC authored-field
+    lookup.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Globally disabling relationships
+- name: test_empty_and_single_candidate_boundaries
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Zero survivors yields ordinary unsupported without selection cost; one eligible/unknown operation
+    still receives the normal decision and gates.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Auto-executing sole candidate
+  - Calling Jev with no candidates
+  - Creating unsupported_population assessment for local absence
+- name: test_selection_probability_and_confidence_gates_preserved
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Compare 0.7999/0.64, 0.80/0.64 and 0.90/0.49 with exact selection-call, paid-usage, graph-call and
+    request counts.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Lowering or bypassing a threshold
+  - Retrying until pass
+  - Discarding paid usage or manufacturing clarification
+- name: test_uncertain_and_unsupported_results_do_not_veto_sibling_resume
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Real selection_result outputs enter real merge/guard and resumed public flow with fulfilled sibling
+    evidence; no uncertainty/ordinary-unsupported assessments, while established unsupported_population still guards
+    completeness.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Adding unresolved diagnostic assessment
+  - Removing all assessment guards
+  - Testing a hand-built bundle instead of real producer output
+- name: test_explicit_operation_and_catalog_provenance_compatible
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Real explicit execution adds no operation-choice judgment; a saved choice retains immutable version/digest
+    and bound authorized arguments into execution.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Routing explicit calls through new Jev selection
+  - Losing descriptor digest or original identities
+- name: test_fit_metadata_preserves_positional_offer_consumers
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Existing five/seven-argument GraphOffer producers feed the real selector/executor with metadata absent/defaulted.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Inserting a required field before many/version/digest
+  - Testing only an isolated new offer
+- name: test_fit_facts_count_in_pre_call_wire_budget
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: Distinct before/after serialized sizes cross the existing maximum after fit facts; existing pre-call
+    refusal incurs zero provider charge without dropping obligations.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Budgeting only old payload
+  - Trimming required fields
+  - Charging before size validation
+- name: test_missing_meaning_and_provider_failure_remain_distinct
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Compare genuinely missing hierarchy input, sufficient-request uncertainty, invalid choice and unavailable/denied/budget
+    failure through real gates without forced clarification, retry or build.
+  covers:
+  - KM-500a-2-i
+  - KM-500a-1
+  requires_db: false
+  must_catch:
+  - Calling every refusal missing input
+  - Calling provider failure missing capability
+- name: test_selection_does_not_promote_incomplete_counts
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Correct descendants dispatch with truncated evidence stays partial and exact_total null; canonical
+    oracle totals cannot fill unreturned rows.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Marking a count complete because operation matches
+  - Injecting oracle totals into retrieved results
+- name: test_native_self_endpoint_reaches_real_answer_consumer
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Validated self-dependency and self-CORRECTED_BY snapshots traverse actual KnowledgeService/native
+    query/disclosure/answer consumers; exact requested identity and required field yield fulfilled with empty missing
+    fields/limitations.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Testing only invented label metadata
+  - Assuming a distinct result label forbids the requested identity
+- name: test_native_self_endpoint_remains_selectable
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: Same-kind native self endpoints remain offered as possible exact-ID matches and actually execute
+    with unchanged obligations; paired disjoint-kind candidates remain excluded.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Globally excluding every related or declared population for exact IDs
+  - Removing all kind checks to keep overlaps
+- name: test_admitted_round_trip_remains_selectable
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Real admitted AC-to-Test-to-AC round trips with typed or unspecified endpoint kind remain offered,
+    retain immutable provenance and can satisfy the exact-ID consumer; no named hierarchy completeness is inferred.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Excluding saved recipes solely for having expansion steps
+  - Treating an unknown endpoint kind as a proved mismatch
+- name: test_actual_operation_packet_matches_product_truth_schema
+  target_dir: tests/kernel/entity_context/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Validate actual captured Jev selector state, including caller context, against the source-reviewed
+    Product Truth schema with native and unknown legacy metadata. Corrupt hydration fields, a missing core key
+    and a missing required fact key must fail that same schema.
+  covers:
+  - KM-500a-2-i
+  requires_db: false
+  must_catch:
+  - Validating only illustrative examples rather than the real selector packet
+  - Accepting drift in required keys or source hydration field values
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: eligibility
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-10'
+  - flow: leafcutter/retrieval-current-baseline
+    node: no-eligible-query
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-10'
+  - flow: leafcutter/retrieval-current-baseline
+    node: select
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-10'
+  - flow: leafcutter/retrieval-current-baseline
+    node: selection-uncertain
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-10'

@@ -1,0 +1,45 @@
+--- tests/knowledge/test_query_eligibility_overlap.py.before-phase-correction
++++ tests/knowledge/test_query_eligibility_overlap.py
+@@ -122,9 +122,20 @@
+     wrong_kind = "get_related_tests" if case["kind"] == "AcceptanceCriterion" else "get_related_lessons"
+     assert wrong_kind not in offered
+     assert result.evidence and len(rig.port.calls) == 2
+-    assert all(call.operation == case["operation"] for call in rig.port.calls)
+-    assert rig.port.results[-1].answer.status == "fulfilled"
++    assert [(call.operation, call.disclosure_level) for call in rig.port.calls] == [
++        (case["operation"], 0), ("get_entities", 3)]
++    discovery, hydrated = rig.port.results
++    assert discovery.answer.status == "partial"
++    assert discovery.evidence[0].field_availability["content"] == "disclosure_omitted"
++    assert hydrated.answer.status == "fulfilled"
++    assert rig.port.calls[0].answer_requirements == rig.port.calls[1].answer_requirements
+     assert rig.port.calls[-1].answer_requirements.scope.entity_ids == [case["id"]]
++    assert rig.port.calls[-1].answer_requirements.required_fields == ["content"]
++    assert hydrated.evidence[0].entity.canonical_id == case["id"]
++    assert hydrated.evidence[0].entity.source.path == case["path"]
++    assert hydrated.evidence[0].entity.source.source_sha == SHA
++    assert hydrated.evidence[0].field_availability["content"] == "present"
++    assert hydrated.evidence[0].field_locators["content"] == ""
+ 
+ 
+ @pytest.mark.parametrize("endpoint_kind", ["AcceptanceCriterion", None], ids=["typed-cycle", "unknown-endpoint"])
+@@ -179,10 +190,15 @@
+         batches = operation_batches(harness)
+         assert len(batches) == 1
+         assert "read_round_trip" in choices(batches[0]), "Admitted reverse traversal can return its seed"
+-        selected = [(request, result) for request, result in zip(requests, results)
+-                    if request.operation == "read_round_trip"]
+-        assert selected and driver_calls
+-        request, result = selected[-1]
++        assert [(request.operation, request.disclosure_level) for request in requests] == [
++            ("read_round_trip", 0), ("get_entities", 3)]
++        assert driver_calls and len(results) == 2
++        assert results[0].answer.status == "partial"
++        assert results[0].evidence[0].field_availability["criteria"] == "disclosure_omitted"
++        assert requests[0].answer_requirements == requests[1].answer_requirements
++        request, result = requests[-1], results[-1]
++        assert result.evidence[0].entity.source.path == root.source.path
++        assert result.evidence[0].entity.source.source_sha == snapshot.source_sha
+         assert request.answer_requirements.scope.entity_ids == ["KM-500c-2"]
+         assert request.answer_requirements.required_fields == ["criteria"]
+         assert result.answer.status == "fulfilled"

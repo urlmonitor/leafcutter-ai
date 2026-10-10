@@ -1,0 +1,95 @@
+{
+  "status": "authored_paths_frozen",
+  "owner": "BA / IT PO / flow-author (retrieval_acceptance_next)",
+  "created_at": "2026-10-10T11:10:12.746683+00:00",
+  "checkout": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\retrieval-query-eligibility-v01",
+  "head_at_freeze": "8cdf44c6dccca1a5933323a46a7ad5ad691ef1ef",
+  "authored_paths_sha256": {
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-1.yaml": "7adba8719e33331e4af4d50348ccd8dc753b2522481d679d12c69dd9cc6102cc",
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml": "d006f35bc09d696325aa96aefd27ce2682c1fb40106611ec84584816cd4af6bb",
+    "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2-i.yaml": "6ef548943918c8573d8fa50781a022890e5192ccb14bcc50aaf43b9cb59667de",
+    "docs/analysis/2026-10-09-retrieval-delivery-queue.md": "dbd8f9614546a7354891e3778fbad5900cf001a51e3ed4627e16b062cae0e103",
+    "docs/analysis/2026-10-10-retrieval-query-eligibility-contract.md": "6ffb2f7b7aaaaad354db89e1c1e5186321cc63c5ee045f07f4cd00558ddda1dc",
+    "docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json": "ea5f78fe7bfb6ec2f0a3ce3ca188b7569d7e9ba536d3e57e642e82f5fdac4606",
+    "docs/product-truth/index.json": "072fe7eab1b1076683b7208e7993549fd0d7428eb16b5b4c0d514615ff6239ec",
+    "docs/product-truth/schemas/operation-selection-state.schema.json": "a5f62cd955e52977db41f38c86929f462d8b7bfeb3104b49043c407e38332d57",
+    "reports/retrieval-query-eligibility-2026-10-10/plan.json": "1e2d93cd5b7152d8ff0e458ef4a30e104298d92166f707d4f641ba573d9446e3",
+    "reports/retrieval-query-eligibility-2026-10-10/cases.json": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "reports/retrieval-query-eligibility-2026-10-10/source-oracles.json": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "reports/retrieval-query-eligibility-2026-10-10/overlap-review/ba-itpo-adjudication.json": "39e323bcec33d2e2611fa5417799913fcc6865779d5e9162c8eb34dbf60a9e6d"
+  },
+  "ac_statuses": {
+    "KM-500a-1": {
+      "readiness": "approved",
+      "work_status": "done"
+    },
+    "KM-500a-2": {
+      "readiness": "approved",
+      "work_status": "in_progress"
+    },
+    "KM-500a-2-i": {
+      "readiness": "approved",
+      "work_status": "in_progress"
+    }
+  },
+  "product_truth": {
+    "flow": "leafcutter/retrieval-current-baseline",
+    "version": 8,
+    "new_nodes": [
+      "eligibility",
+      "no-eligible-query",
+      "selection-uncertain"
+    ],
+    "history": "All original scenarios and provenance preserved exactly as JSON. Only selector contract/description, subsequent order values and derived parent statuses changed on existing nodes."
+  },
+  "checks": [
+    {
+      "command": "python docs/product-truth/scripts/generate_product_truth.py --now 2026-10-10",
+      "result": "PASS; one writing generation; 27 flows, 5 mocks, 4954 ACs, 270 ACs linked"
+    },
+    {
+      "command": "python docs/product-truth/scripts/generate_product_truth.py --check --now 2026-10-10",
+      "result": "PASS; up to date, no writes; followed only by AC/reference evidence prose updates"
+    },
+    {
+      "command": "python docs/product-truth/scripts/validate_product_truth.py --quiet",
+      "result": "PASS checked-and-sound; 372 pointers, 0 unresolved; existing repository warnings and 117 proposal gaps remain elsewhere"
+    },
+    {
+      "command": "python docs/product-truth/scripts/product_truth_contracts.py --check --flow-id leafcutter/retrieval-current-baseline --flow-id leafcutter/retrieval-needs-interpretation",
+      "result": "PASS; 48 nodes, 563 fields, 90 examples, 0 errors/warnings/gaps"
+    },
+    {
+      "command": "python scripts/ac_store/validate_ac_schema.py <each of three exact AC paths>",
+      "result": "PASS; final child revalidated after correcting a plain-scalar YAML prose colon; no behavior change"
+    },
+    {
+      "command": "python templates/scripts/commit_guardian/check_doc_frontmatter.py <two authored analysis docs>",
+      "result": "PASS; existing same-day last_updated warning only"
+    },
+    {
+      "command": "git diff --check -- <eight authored paths>",
+      "result": "PASS; line-ending normalization warnings only"
+    }
+  ],
+  "independently_verified_proof_sha256": {
+    "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/handoff.json": "67c69b44abc3b4ba006d7cbf225ab0f134c0751d55d17841a2828cd4f7c1df66",
+    "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-49.xml": "6e5c2c4d16aa6c67a5034f0dd9b4c91b5aa279840f20a845d07c7264c153baff",
+    "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-51.xml": "1ff9a45e4de7130f171bf1f2f317f8de4f63151b2aabcaa130f5449fcf81badc",
+    "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/observed-phases.json": "26db0c6394be5a32dd35034f1fcb5f1b6aa719def5f7944a6f7028aaa28ee680"
+  },
+  "packet_guard": {
+    "path": "tests/kernel/entity_context/test_query_eligibility_pt_schema.py",
+    "sha256": "cb57bedfb14fc32e3a0b043a6a748c6ef862b9da4fb60b3d10f7df57a91d51f7",
+    "scope": "Two actual captured selector-state variants, native and unknown legacy, plus corruption rejection; the existing strict full-suite CI collects the module."
+  },
+  "evidence_limits": {
+    "strict_controlled_total": 51,
+    "composition": "49 independent eligibility/public/consumer/overlap cases plus 2 separately added actual-packet parity cases",
+    "preservation": "126 existing passes attributed to expert, not independently rerun by this author",
+    "fresh_live_lane": "9 prepared, not run",
+    "whole_count_proof": "Not established; issue03 stays separate",
+    "status": "Approved/in_progress; final acceptance/live selection remain open"
+  },
+  "boundaries": "No production/test edits, model calls, graph access, Git mutations, hooks, old checkout changes or second canonical writing generation by this author."
+}

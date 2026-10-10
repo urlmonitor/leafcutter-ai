@@ -1,0 +1,44 @@
+{
+  "descriptor": {
+    "operation": "get_saved_exact_population",
+    "version": "1",
+    "description": "Read the exact supplied acceptance criteria",
+    "questions": [
+      "Read requested canonical records"
+    ],
+    "parameters": {
+      "ac_ids": {
+        "type": "string_list",
+        "required": true
+      }
+    },
+    "recipe": {
+      "seed_parameter": "ac_ids",
+      "seed_kind": "AcceptanceCriterion",
+      "steps": []
+    }
+  },
+  "reviewer": "Controlled admission fixture; not a model judgment",
+  "cases": [
+    {
+      "name": "present",
+      "arguments": {
+        "ac_ids": [
+          "KM-500c-2"
+        ]
+      },
+      "expected_ids": [
+        "KM-500c-2"
+      ]
+    },
+    {
+      "name": "missing",
+      "arguments": {
+        "ac_ids": [
+          "ABSENT-1"
+        ]
+      },
+      "expected_ids": []
+    }
+  ]
+}

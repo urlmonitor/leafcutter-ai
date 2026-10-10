@@ -1,0 +1,539 @@
+{
+  "purpose": "Resolve exact reviewed bytes against published Git blobs without rewriting historical receipts. This is controlled-test and documentation packaging; the live nine-case plan remains not run.",
+  "base_commit": "13db09f1a231f5c55a5a9b044a5007d8467f7afa",
+  "freeze_receipts": {
+    "reports/retrieval-query-eligibility-2026-10-10/acceptance-docs-handoff.json": "595a9c7131d21a038af26de300da32844df1213a5b9401c576c129b8dd3cc0b8",
+    "reports/retrieval-query-eligibility-2026-10-10/acceptance-docs-handoff-v2.json": "3eb63a488af70f02f19d81d403292907f1a1994e626364a3f4c2b9a1aae10ca3",
+    "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/final-51-handoff.json": "32b6aca593079490c316772096702c64e535d577f95e3f8c235d91f5488a7c80"
+  },
+  "source_resolution_key": [
+    "path",
+    "reviewed_sha256"
+  ],
+  "members": [
+    {
+      "path": "changelogs/2026-10-10-1113-retrieval-filters-proven-query-mismatches-before-jev-selection.md",
+      "reviewed_sha256": "f9285dc0a1ea3b0869dfc5371c92126298843a7c67dbe667310533d71cfd2157",
+      "reviewed_size": 1623,
+      "git_blob_sha1": "3d5839aa7a6dc04958da0fd1f93c4902a931754e",
+      "git_bytes_sha256": "f9285dc0a1ea3b0869dfc5371c92126298843a7c67dbe667310533d71cfd2157",
+      "difference": "none"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-1.yaml",
+      "reviewed_sha256": "7adba8719e33331e4af4d50348ccd8dc753b2522481d679d12c69dd9cc6102cc",
+      "reviewed_size": 5909,
+      "git_blob_sha1": "e85c8434861504820cf06a1585ac5b5349cf0c82",
+      "git_bytes_sha256": "7adba8719e33331e4af4d50348ccd8dc753b2522481d679d12c69dd9cc6102cc",
+      "difference": "none"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2-i.yaml",
+      "reviewed_sha256": "6ef548943918c8573d8fa50781a022890e5192ccb14bcc50aaf43b9cb59667de",
+      "reviewed_size": 20775,
+      "git_blob_sha1": "e5991c5b3ed6d78ecf8d41a34558480708796345",
+      "git_bytes_sha256": "6ef548943918c8573d8fa50781a022890e5192ccb14bcc50aaf43b9cb59667de",
+      "difference": "none"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-2.yaml",
+      "reviewed_sha256": "d006f35bc09d696325aa96aefd27ce2682c1fb40106611ec84584816cd4af6bb",
+      "reviewed_size": 5904,
+      "git_blob_sha1": "66325d8a99a3d4cbaa108bbf5a659f4a07cadbc0",
+      "git_bytes_sha256": "d006f35bc09d696325aa96aefd27ce2682c1fb40106611ec84584816cd4af6bb",
+      "difference": "none"
+    },
+    {
+      "path": "docs/analysis/2026-10-09-retrieval-delivery-queue.md",
+      "reviewed_sha256": "ef77a76e23af5cf0c6cfe5ecabab39be3461b11e85035db715945ef95ae52b7f",
+      "reviewed_size": 28611,
+      "git_blob_sha1": "75142e6e813aa103eefffcd499a94e1b4e36d852",
+      "git_bytes_sha256": "ef77a76e23af5cf0c6cfe5ecabab39be3461b11e85035db715945ef95ae52b7f",
+      "difference": "none"
+    },
+    {
+      "path": "docs/analysis/2026-10-10-retrieval-query-eligibility-contract.md",
+      "reviewed_sha256": "6ffb2f7b7aaaaad354db89e1c1e5186321cc63c5ee045f07f4cd00558ddda1dc",
+      "reviewed_size": 16513,
+      "git_blob_sha1": "0485579c949e0f88d52b7b2a34be582f8ea5c38c",
+      "git_bytes_sha256": "6ffb2f7b7aaaaad354db89e1c1e5186321cc63c5ee045f07f4cd00558ddda1dc",
+      "difference": "none"
+    },
+    {
+      "path": "docs/product-truth/flows/leafcutter/retrieval-current-baseline.flow.json",
+      "reviewed_sha256": "ea5f78fe7bfb6ec2f0a3ce3ca188b7569d7e9ba536d3e57e642e82f5fdac4606",
+      "reviewed_size": 260437,
+      "git_blob_sha1": "34e1a8b25e56123ab54a710a01171c269dc406a2",
+      "git_bytes_sha256": "a7aa06b74c08d2292dc96ab0692f19a9b6220a11118832853eaa6ee185e578bf",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "docs/product-truth/index.json",
+      "reviewed_sha256": "072fe7eab1b1076683b7208e7993549fd0d7428eb16b5b4c0d514615ff6239ec",
+      "reviewed_size": 200217,
+      "git_blob_sha1": "c7cffae0245ae91daa8c730855709b70dadbd5d7",
+      "git_bytes_sha256": "9828bb26373772f7c1f48c60d347e1007049ebe6d64d9b8cacd3dc3fd949529d",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "docs/product-truth/schemas/operation-selection-state.schema.json",
+      "reviewed_sha256": "a5f62cd955e52977db41f38c86929f462d8b7bfeb3104b49043c407e38332d57",
+      "reviewed_size": 2885,
+      "git_blob_sha1": "0e01fba8a389d03de1e5df17dbe8fd250609d40f",
+      "git_bytes_sha256": "a5f62cd955e52977db41f38c86929f462d8b7bfeb3104b49043c407e38332d57",
+      "difference": "none"
+    },
+    {
+      "path": "integrations/graph_catalog.py",
+      "reviewed_sha256": "8004deaa9431564ecb10421adbaa717396247cf7a9d1232ecb53011acd5ca457",
+      "reviewed_size": 4116,
+      "git_blob_sha1": "f9311128fe8d9f237427dda343d60cd8d7308277",
+      "git_bytes_sha256": "8004deaa9431564ecb10421adbaa717396247cf7a9d1232ecb53011acd5ca457",
+      "difference": "none"
+    },
+    {
+      "path": "integrations/graph_eligibility.py",
+      "reviewed_sha256": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+      "reviewed_size": 7623,
+      "git_blob_sha1": "fc0fee2df7a6fa4692616d577dd6abb2bae4f912",
+      "git_bytes_sha256": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+      "difference": "none"
+    },
+    {
+      "path": "integrations/graph_offers.py",
+      "reviewed_sha256": "8da59fa16c1a2645fe613dbf1d5c6624cf7ef732f7dcc7889150b9eb2df6c7d0",
+      "reviewed_size": 14309,
+      "git_blob_sha1": "62393cf0808ddc1fdb365c86d60d2387fa27471d",
+      "git_bytes_sha256": "8da59fa16c1a2645fe613dbf1d5c6624cf7ef732f7dcc7889150b9eb2df6c7d0",
+      "difference": "none"
+    },
+    {
+      "path": "integrations/graph_selection.py",
+      "reviewed_sha256": "9943321c3ca3bd63770eff29f34a6f646ff5e7e9c2287ec9d84fa17ec3ba4b18",
+      "reviewed_size": 15876,
+      "git_blob_sha1": "3543f71f2c9d1419e67d6ab9c3fe6083b1f76aaa",
+      "git_bytes_sha256": "9943321c3ca3bd63770eff29f34a6f646ff5e7e9c2287ec9d84fa17ec3ba4b18",
+      "difference": "none"
+    },
+    {
+      "path": "integrations/graph_selection_result.py",
+      "reviewed_sha256": "d685c39180b53d82fcb63f2d9483b84fb443c17e9f93b4c53be6b9373eab31b5",
+      "reviewed_size": 3881,
+      "git_blob_sha1": "ea08ed0dbba5792ca83457679626f80c27a5bb0b",
+      "git_bytes_sha256": "d685c39180b53d82fcb63f2d9483b84fb443c17e9f93b4c53be6b9373eab31b5",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/acceptance-docs-handoff-v2.json",
+      "reviewed_sha256": "3eb63a488af70f02f19d81d403292907f1a1994e626364a3f4c2b9a1aae10ca3",
+      "reviewed_size": 4031,
+      "git_blob_sha1": "bdb3f257c252c73c9a72975b415300145da92a7c",
+      "git_bytes_sha256": "3eb63a488af70f02f19d81d403292907f1a1994e626364a3f4c2b9a1aae10ca3",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/acceptance-docs-handoff.json",
+      "reviewed_sha256": "595a9c7131d21a038af26de300da32844df1213a5b9401c576c129b8dd3cc0b8",
+      "reviewed_size": 6002,
+      "git_blob_sha1": "b6dec80db0e0a60d7df25e5780a0fc7629da6c4e",
+      "git_bytes_sha256": "595a9c7131d21a038af26de300da32844df1213a5b9401c576c129b8dd3cc0b8",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/cases.json",
+      "reviewed_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "reviewed_size": 16074,
+      "git_blob_sha1": "e4340a540247aa6b9625f1b7274d4158057111d8",
+      "git_bytes_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/live-nine-case-plan.json",
+      "reviewed_sha256": "aecac9bbc7af6584637b14acfd71402a5e38c7711ea2986872c89dd440d4b355",
+      "reviewed_size": 25596,
+      "git_blob_sha1": "3590436f98634884e9381a1534320f05932d404a",
+      "git_bytes_sha256": "aecac9bbc7af6584637b14acfd71402a5e38c7711ea2986872c89dd440d4b355",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/approved-assertion-amendment.patch",
+      "reviewed_sha256": "9085cdf89c19b72c3c619225ac7e248e07bb5cc901d7c05c0ce3803e908981a8",
+      "reviewed_size": 1389,
+      "git_blob_sha1": "08e61a9da0c557fb7cc704fd1862b587d8c4cd76",
+      "git_bytes_sha256": "9085cdf89c19b72c3c619225ac7e248e07bb5cc901d7c05c0ce3803e908981a8",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/ba-itpo-adjudication.json",
+      "reviewed_sha256": "39e323bcec33d2e2611fa5417799913fcc6865779d5e9162c8eb34dbf60a9e6d",
+      "reviewed_size": 15722,
+      "git_blob_sha1": "8b8f244f2a878902a69e3e38d10b30a860309371",
+      "git_bytes_sha256": "39e323bcec33d2e2611fa5417799913fcc6865779d5e9162c8eb34dbf60a9e6d",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/first43-original-red.xml",
+      "reviewed_sha256": "cdcc4e0c2a442708f0472b3671a747ed5e2fec898b5d19b2a7821adee4550136",
+      "reviewed_size": 47554,
+      "git_blob_sha1": "0fce6ceec524e9c8b6e133cda4a337a78fb3638a",
+      "git_bytes_sha256": "cdcc4e0c2a442708f0472b3671a747ed5e2fec898b5d19b2a7821adee4550136",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/first43-test-writer-handoff.json",
+      "reviewed_sha256": "0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089",
+      "reviewed_size": 51494,
+      "git_blob_sha1": "9404638cc666d8e559bfdbbd4f3d9f06c4e22032",
+      "git_bytes_sha256": "0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/graph_catalog.first-pass-source",
+      "reviewed_sha256": "18f13b57cf585f4698af3e40ee80b1534958b41985b7ef78f5941ddaa5400bfe",
+      "reviewed_size": 4116,
+      "git_blob_sha1": "c2b03442b91e0b755a052b0ba15a817d0ecfa81b",
+      "git_bytes_sha256": "18f13b57cf585f4698af3e40ee80b1534958b41985b7ef78f5941ddaa5400bfe",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/graph_eligibility.first-pass-source",
+      "reviewed_sha256": "de2875da73067ddfa3b7a4c33c23ab2f880c1d23e206b1bd1efd25cd857fbd73",
+      "reviewed_size": 7072,
+      "git_blob_sha1": "fc3f714c34445ad83dd71d85e060d3af8ba97d4e",
+      "git_bytes_sha256": "de2875da73067ddfa3b7a4c33c23ab2f880c1d23e206b1bd1efd25cd857fbd73",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/graph_offers.first-pass-source",
+      "reviewed_sha256": "34679db75969f220fd69165788dcdba736a8a6e2270b7f37fd5ab6cba933b2ae",
+      "reviewed_size": 14309,
+      "git_blob_sha1": "e6e0b169b2e0a56338393adaeb9c2737acf6f3f3",
+      "git_bytes_sha256": "34679db75969f220fd69165788dcdba736a8a6e2270b7f37fd5ab6cba933b2ae",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/graph_selection.first-pass-source",
+      "reviewed_sha256": "b41bec07297bd7d5e92330d8066e7463f901e4889f6b93002d2b3d1ce1f96fb3",
+      "reviewed_size": 15876,
+      "git_blob_sha1": "f850dba3c012f3b7b332a5ce96a790fb13f57049",
+      "git_bytes_sha256": "b41bec07297bd7d5e92330d8066e7463f901e4889f6b93002d2b3d1ce1f96fb3",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/graph_selection_result.first-pass-source",
+      "reviewed_sha256": "d36aae6ae8375d6f59bda54a35f38182382c89b5f26c433fac2274cbd94b111f",
+      "reviewed_size": 3881,
+      "git_blob_sha1": "3c18e3dbf992d335aec2556d240947a29a2dd7d1",
+      "git_bytes_sha256": "d36aae6ae8375d6f59bda54a35f38182382c89b5f26c433fac2274cbd94b111f",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/handoff.json",
+      "reviewed_sha256": "ed3c760a2d85111df9820258494eee918506c92d1d31014ada0c97a3bb8397b7",
+      "reviewed_size": 12359,
+      "git_blob_sha1": "49bcc30e0afee3427734e0a8e93ac409db28448d",
+      "git_bytes_sha256": "ed3c760a2d85111df9820258494eee918506c92d1d31014ada0c97a3bb8397b7",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/red-attempt1.xml",
+      "reviewed_sha256": "d9daba8cd411f882b22c804a656f332b8c413223bac436db44aaf6e90e7534ed",
+      "reviewed_size": 10452,
+      "git_blob_sha1": "1c607fc7986dc4b8ce86bc7c9ab0e62e18959c01",
+      "git_bytes_sha256": "d9daba8cd411f882b22c804a656f332b8c413223bac436db44aaf6e90e7534ed",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/red.xml",
+      "reviewed_sha256": "10c2f9177fb6fcd886785a030b820a06b7b9b58b6dc4cc7742242c6de7e7a06f",
+      "reviewed_size": 12528,
+      "git_blob_sha1": "1b63d61718458ecc362fce2339741fcd13e6f4f9",
+      "git_bytes_sha256": "10c2f9177fb6fcd886785a030b820a06b7b9b58b6dc4cc7742242c6de7e7a06f",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/test_query_eligibility_public.py.first43",
+      "reviewed_sha256": "26d5c0f7dc0802c266b622ce752bb4c315fd246af07726b4d37ff4be733a6ae2",
+      "reviewed_size": 6055,
+      "git_blob_sha1": "887a3407a0c7fc920577ea2b858451f4700e5150",
+      "git_bytes_sha256": "26d5c0f7dc0802c266b622ce752bb4c315fd246af07726b4d37ff4be733a6ae2",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/test_query_eligibility_selection.py.first43",
+      "reviewed_sha256": "668bcf34f4630f5a040acf042a2ffe992ddb9b641ec3d52366b0a62d058da900",
+      "reviewed_size": 13470,
+      "git_blob_sha1": "67c1a3d0bc9143b0ec4f42711314debb69d3b2df",
+      "git_bytes_sha256": "668bcf34f4630f5a040acf042a2ffe992ddb9b641ec3d52366b0a62d058da900",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/final-51-handoff.json",
+      "reviewed_sha256": "32b6aca593079490c316772096702c64e535d577f95e3f8c235d91f5488a7c80",
+      "reviewed_size": 5424,
+      "git_blob_sha1": "d5dbe107cda7b81d9a9eb6a2b4f44a9e0a4b093f",
+      "git_bytes_sha256": "32b6aca593079490c316772096702c64e535d577f95e3f8c235d91f5488a7c80",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/handoff.json",
+      "reviewed_sha256": "67c69b44abc3b4ba006d7cbf225ab0f134c0751d55d17841a2828cd4f7c1df66",
+      "reviewed_size": 5021,
+      "git_blob_sha1": "5c2a2e70b776bb530b43f805907c369ed365baad",
+      "git_bytes_sha256": "67c69b44abc3b4ba006d7cbf225ab0f134c0751d55d17841a2828cd4f7c1df66",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/observed-phases.json",
+      "reviewed_sha256": "26db0c6394be5a32dd35034f1fcb5f1b6aa719def5f7944a6f7028aaa28ee680",
+      "reviewed_size": 17450,
+      "git_blob_sha1": "7e2887f19be57ee18653dbca3ae6d84dd03e1e56",
+      "git_bytes_sha256": "26db0c6394be5a32dd35034f1fcb5f1b6aa719def5f7944a6f7028aaa28ee680",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/phase-assertion-correction.patch",
+      "reviewed_sha256": "9933ec07effc0e3939be45b89cfcdf742346abed7ccf2c3cc27ee74e0707ade2",
+      "reviewed_size": 2873,
+      "git_blob_sha1": "7b03c932146706aa6c26ae6b28a68ba43c5757a0",
+      "git_bytes_sha256": "9933ec07effc0e3939be45b89cfcdf742346abed7ccf2c3cc27ee74e0707ade2",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-49.xml",
+      "reviewed_sha256": "6e5c2c4d16aa6c67a5034f0dd9b4c91b5aa279840f20a845d07c7264c153baff",
+      "reviewed_size": 8424,
+      "git_blob_sha1": "9c75fbd8398e49438087ad82915201b57f5875d7",
+      "git_bytes_sha256": "6e5c2c4d16aa6c67a5034f0dd9b4c91b5aa279840f20a845d07c7264c153baff",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-51.xml",
+      "reviewed_sha256": "1ff9a45e4de7130f171bf1f2f317f8de4f63151b2aabcaa130f5449fcf81badc",
+      "reviewed_size": 8786,
+      "git_blob_sha1": "25eb49966e16a7b90539607b10bdd2bbbc11801e",
+      "git_bytes_sha256": "1ff9a45e4de7130f171bf1f2f317f8de4f63151b2aabcaa130f5449fcf81badc",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-before-phase-correction.xml",
+      "reviewed_sha256": "5fa47d6c9d8890535991245886ec7b2612f67059d9cefa7b48fc9cf1516f6353",
+      "reviewed_size": 12800,
+      "git_blob_sha1": "02a7651a6fb34eb3ff6ab33c0b29d2ba5bdb115f",
+      "git_bytes_sha256": "5fa47d6c9d8890535991245886ec7b2612f67059d9cefa7b48fc9cf1516f6353",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-pt-parity.xml",
+      "reviewed_sha256": "5191ac2ded90367dbd8ed92ea8b60006823f339792a26a0462e5bb3ddb89f9a0",
+      "reviewed_size": 607,
+      "git_blob_sha1": "dff92943fb47108bf49f15e469f34560111b2b0b",
+      "git_bytes_sha256": "5191ac2ded90367dbd8ed92ea8b60006823f339792a26a0462e5bb3ddb89f9a0",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/test_query_eligibility_overlap.py.before-phase-correction",
+      "reviewed_sha256": "fbd18c7d831fb77e52436782961f8f883b4cfd0f10f40c469295b77c9b357f8a",
+      "reviewed_size": 10135,
+      "git_blob_sha1": "c4e5b71760239dbfe2d9d88720965d5adbd7de93",
+      "git_bytes_sha256": "fbd18c7d831fb77e52436782961f8f883b4cfd0f10f40c469295b77c9b357f8a",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/plan.json",
+      "reviewed_sha256": "1e2d93cd5b7152d8ff0e458ef4a30e104298d92166f707d4f641ba573d9446e3",
+      "reviewed_size": 7174,
+      "git_blob_sha1": "7967755b243584d4f8b184f83022f9b0a6a29f8b",
+      "git_bytes_sha256": "1e2d93cd5b7152d8ff0e458ef4a30e104298d92166f707d4f641ba573d9446e3",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/publication-13db09f-equivalence.json",
+      "reviewed_sha256": "bf556bce1c67109d31ff0ebce098b449b80ab77444434db1c8e1b00339581c5e",
+      "reviewed_size": 1650,
+      "git_blob_sha1": "ea349c8e6b9bda3abc719b91f37a0e53b8a8f120",
+      "git_bytes_sha256": "bf556bce1c67109d31ff0ebce098b449b80ab77444434db1c8e1b00339581c5e",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/publication-13db09f-source-oracles.json",
+      "reviewed_sha256": "9d82aad4090f0ef6b980b5c48e374d32559fe95aa3172b7d1a417015d3a069bb",
+      "reviewed_size": 17386,
+      "git_blob_sha1": "cee8765d8838edb5b38cb9e23868b762dd2751b9",
+      "git_bytes_sha256": "9d82aad4090f0ef6b980b5c48e374d32559fe95aa3172b7d1a417015d3a069bb",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/publication-740b419-equivalence.json",
+      "reviewed_sha256": "6fc7b5b70a355d112f8a8b597a737e86127db03b2e07d7131fe0eada3d4b507e",
+      "reviewed_size": 2090,
+      "git_blob_sha1": "7f8d15731816252990d8469bdad21bcc20796789",
+      "git_bytes_sha256": "6fc7b5b70a355d112f8a8b597a737e86127db03b2e07d7131fe0eada3d4b507e",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/publication-740b419-source-oracles.json",
+      "reviewed_sha256": "124466cc7540dfcfa03727af6c82eef246f0f9880ea705aa169b5f12549b92fa",
+      "reviewed_size": 17357,
+      "git_blob_sha1": "8e86aa1d23efb7882072f708acb034a6dc6e8d7f",
+      "git_bytes_sha256": "124466cc7540dfcfa03727af6c82eef246f0f9880ea705aa169b5f12549b92fa",
+      "difference": "none"
+    },
+    {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/source-oracles.json",
+      "reviewed_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "reviewed_size": 16917,
+      "git_blob_sha1": "630fefee6efa0a6f667a3a35fde02c6a5d0255d2",
+      "git_bytes_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "difference": "none"
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/cases.json",
+      "reviewed_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "reviewed_size": 16074,
+      "git_blob_sha1": "e4340a540247aa6b9625f1b7274d4158057111d8",
+      "git_bytes_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "difference": "none"
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/controls.json",
+      "reviewed_sha256": "98da882ee329da25c282a32fbd25d845201ebde3cfa2fc9e765f35bb65d7e972",
+      "reviewed_size": 1491,
+      "git_blob_sha1": "a5adc2466ef0074bf0d748ae3b74252d986c6b98",
+      "git_bytes_sha256": "965cbb4eacf9e80e84feae2530d7f925c48227ff4573592b73ffda3ebfaf880d",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/overlap.json",
+      "reviewed_sha256": "3b99f62e7a934b6e44f5af6cf1b6d6fe59a0c64fbe2c06d630d5ed21011e9aab",
+      "reviewed_size": 449,
+      "git_blob_sha1": "08817cb18a4e36f73872419a67ed2ad62baabbe3",
+      "git_bytes_sha256": "3b99f62e7a934b6e44f5af6cf1b6d6fe59a0c64fbe2c06d630d5ed21011e9aab",
+      "difference": "none"
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/saved_exact.json",
+      "reviewed_sha256": "6746db9783d58d377f8a8db45378ec868f1740fd699cb9bf1b6959c1acd9aa70",
+      "reviewed_size": 896,
+      "git_blob_sha1": "093372e11368256faaf132611711d7829a67e5b8",
+      "git_bytes_sha256": "793f35c7e4bbfff2cd4f3a5681ae3f4275c1dbc2435674461584631fb98b1c0c",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/source-blobs.json",
+      "reviewed_sha256": "0b596c5ef63c2d4bd1b0c34d05eac1a69cad75079f2415999ed676a74bb66063",
+      "reviewed_size": 228165,
+      "git_blob_sha1": "7182a06a9628bd57099bf54fa87b468af724dd84",
+      "git_bytes_sha256": "564a92e663f218916742183af69af4083ed127f24e9811b224a0ba01961865f5",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/fixtures/_shared/query_eligibility/source-oracles.json",
+      "reviewed_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "reviewed_size": 16917,
+      "git_blob_sha1": "630fefee6efa0a6f667a3a35fde02c6a5d0255d2",
+      "git_bytes_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "difference": "none"
+    },
+    {
+      "path": "tests/kernel/entity_context/test_query_eligibility_pt_schema.py",
+      "reviewed_sha256": "cb57bedfb14fc32e3a0b043a6a748c6ef862b9da4fb60b3d10f7df57a91d51f7",
+      "reviewed_size": 2122,
+      "git_blob_sha1": "bdb071d828bf684d480d16f4ce18b22cd2cf4f85",
+      "git_bytes_sha256": "cb57bedfb14fc32e3a0b043a6a748c6ef862b9da4fb60b3d10f7df57a91d51f7",
+      "difference": "none"
+    },
+    {
+      "path": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "reviewed_sha256": "5ad9468c715229dfedc26b85ec95b9efaea6466ac95b9633349436aaa41ee21f",
+      "reviewed_size": 13518,
+      "git_blob_sha1": "618ea198593bf757c876d4104cd31be1cc79088a",
+      "git_bytes_sha256": "dcbc147e50291b9c44043099c412b60b1a065270280a87cde3344ed450ed043a",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/knowledge/query_eligibility_support.py",
+      "reviewed_sha256": "51fce703c8ffb670805ee17a5fa387ee06f8791a96cd89903ee0aff9e5bb56d2",
+      "reviewed_size": 6597,
+      "git_blob_sha1": "b3e9c0e6e20cb06f6c44e77a38f8d9d08e6bc679",
+      "git_bytes_sha256": "9050d6014495f06035144236058f05cab2584810a2ad89c302dc943b1b6c20e7",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/knowledge/test_query_eligibility_consumers.py",
+      "reviewed_sha256": "d2e05c2d69c17d7e424291901b1617e110c7ba7e910eb0bee904ee9dc564cdde",
+      "reviewed_size": 10550,
+      "git_blob_sha1": "39f91325a39b7b7e35978205dbbbf4d14f2b849d",
+      "git_bytes_sha256": "ffabe0de0cb8f4859615b4018df3e1ec34d109f752e03774520eb64f35488555",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    },
+    {
+      "path": "tests/knowledge/test_query_eligibility_overlap.py",
+      "reviewed_sha256": "cd8bda1fa6283d06b2baafb7eb35ee6165730ed07130fb1f5e356d0add94ae37",
+      "reviewed_size": 11274,
+      "git_blob_sha1": "07b647be6fb191c1fd553bee01074720bd68f4ec",
+      "git_bytes_sha256": "cd8bda1fa6283d06b2baafb7eb35ee6165730ed07130fb1f5e356d0add94ae37",
+      "difference": "none"
+    },
+    {
+      "path": "tests/knowledge/test_query_eligibility_public.py",
+      "reviewed_sha256": "743b662f8cfd4c144d23d8475db176a3f2ac40b0fb79dee6c1f5ad08fd20693b",
+      "reviewed_size": 6133,
+      "git_blob_sha1": "01e0d3de047ddf32617e5f1d921b841407fddfcb",
+      "git_bytes_sha256": "1d7514c41507b17e53dc7ba167b3181a5249cc97956ef7a3b62f515d6417e993",
+      "difference": "CRLF-to-LF only",
+      "reconstruction": {
+        "algorithm": "Replace each LF byte (0x0A) in the Git blob with CRLF bytes (0x0D 0x0A).",
+        "preconditions": "Recorded Git blob contains no CR byte; reviewed source contains only CRLF line endings and no UTF-8 BOM.",
+        "verification": "Require git_blob_sha1 and git_bytes_sha256 before conversion; require reviewed_size and reviewed_sha256 after conversion."
+      }
+    }
+  ],
+  "snapshots": [],
+  "notes": [
+    "The original acceptance-docs-handoff.json is historical. The additive v2 handoff supersedes only its delivery-queue hash and records the authorized changelog.",
+    "Runtime source bytes and final test assertions are unchanged; verified LF-to-CRLF reconstruction restores byte-level handoff hashes where Git normalization differs.",
+    "Private local files and caches are preserved in a local release backup and are not publication candidates."
+  ],
+  "reconstructed_crlf_members": 9
+}

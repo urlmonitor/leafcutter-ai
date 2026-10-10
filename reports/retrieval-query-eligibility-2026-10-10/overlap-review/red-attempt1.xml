@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="0" tests="9" time="4.993" timestamp="2026-10-10T10:44:44.683888+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_reaches_real_answer_consumer[get_declared_dependents]" time="0.281" /><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_reaches_real_answer_consumer[get_corrected_decisions]" time="0.215" /><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_remains_selectable[get_declared_dependents]" time="0.246"><failure message="AssertionError: The native result can contain the required exact identity&#10;assert 'get_declared_dependents' in {'get_entities': &quot;Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}">tests\knowledge\test_query_eligibility_overlap.py:122: in test_native_self_endpoint_remains_selectable
+    assert case["operation"] in offered, "The native result can contain the required exact identity"
+E   AssertionError: The native result can contain the required exact identity
+E   assert 'get_declared_dependents' in {'get_entities': "Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_remains_selectable[get_corrected_decisions]" time="0.217"><failure message="AssertionError: The native result can contain the required exact identity&#10;assert 'get_corrected_decisions' in {'get_entities': &quot;Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}">tests\knowledge\test_query_eligibility_overlap.py:122: in test_native_self_endpoint_remains_selectable
+    assert case["operation"] in offered, "The native result can contain the required exact identity"
+E   AssertionError: The native result can contain the required exact identity
+E   assert 'get_corrected_decisions' in {'get_entities': "Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_admitted_round_trip_remains_selectable[typed-cycle]" time="1.603"><failure message="AssertionError: assert 'activated' == 'accepted'&#10;  &#10;  - accepted&#10;  + activated">tests\knowledge\test_query_eligibility_overlap.py:179: in test_admitted_round_trip_remains_selectable
+    final, values = asyncio.run(exercise())
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge\test_query_eligibility_overlap.py:171: in exercise
+    assert receipt["status"] == "accepted"
+E   AssertionError: assert 'activated' == 'accepted'
+E     
+E     - accepted
+E     + activated</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_admitted_round_trip_remains_selectable[unknown-endpoint]" time="0.019"><failure message="AssertionError: assert 'activated' == 'accepted'&#10;  &#10;  - accepted&#10;  + activated">tests\knowledge\test_query_eligibility_overlap.py:179: in test_admitted_round_trip_remains_selectable
+    final, values = asyncio.run(exercise())
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge\test_query_eligibility_overlap.py:171: in exercise
+    assert receipt["status"] == "accepted"
+E   AssertionError: assert 'activated' == 'accepted'
+E     
+E     - accepted
+E     + activated</failure></testcase><testcase classname="tests.kernel.entity_context.test_query_eligibility_selection" name="test_eligibility_keeps_unknown_and_bounded_candidates[Enumerate every descendant and prove the complete population.]" time="0.239"><failure message="AssertionError: Same-kind self-dependency is not proved disjoint&#10;assert 'get_declared_dependents' in {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}&#10; +  where {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))">tests\kernel\entity_context\test_query_eligibility_selection.py:126: in test_eligibility_keeps_unknown_and_bounded_candidates
+    assert "get_declared_dependents" in _choices(batch), "Same-kind self-dependency is not proved disjoint"
+E   AssertionError: Same-kind self-dependency is not proved disjoint
+E   assert 'get_declared_dependents' in {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}
+E    +  where {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))</failure></testcase><testcase classname="tests.kernel.entity_context.test_query_eligibility_selection" name="test_eligibility_keeps_unknown_and_bounded_candidates[Read automated Test records that demonstrate verification.]" time="0.227"><failure message="AssertionError: Same-kind self-dependency is not proved disjoint&#10;assert 'get_declared_dependents' in {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}&#10; +  where {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))">tests\kernel\entity_context\test_query_eligibility_selection.py:126: in test_eligibility_keeps_unknown_and_bounded_candidates
+    assert "get_declared_dependents" in _choices(batch), "Same-kind self-dependency is not proved disjoint"
+E   AssertionError: Same-kind self-dependency is not proved disjoint
+E   assert 'get_declared_dependents' in {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}
+E    +  where {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_public" name="test_exact_ac_fields_keep_hydratable_get_entities" time="1.131"><failure message="AssertionError: Same-kind self-dependency is not proved disjoint&#10;assert 'get_declared_dependents' in {'get_entities': &quot;Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}">tests\knowledge\test_query_eligibility_public.py:82: in test_exact_ac_fields_keep_hydratable_get_entities
+    assert "get_declared_dependents" in offered, "Same-kind self-dependency is not proved disjoint"
+E   AssertionError: Same-kind self-dependency is not proved disjoint
+E   assert 'get_declared_dependents' in {'get_entities': "Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}</failure></testcase></testsuite></testsuites>
