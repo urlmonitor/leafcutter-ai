@@ -7,7 +7,7 @@ flight_level: L2-Container
 diagram_type: container
 root: true
 created: 2026-09-30
-last_updated: 2026-10-05
+last_updated: 2026-10-10
 components:
   - decision_kernel
 related_docs:
@@ -27,6 +27,7 @@ related_docs:
   - docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
   - docs/architecture/adrs/ADR-061-identity-of-declared-and-learned-records.md
   - docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+  - docs/architecture/adrs/ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md
   - docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
   - docs/how-to/run-the-decision-kernel.md
   - docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md

@@ -55,6 +55,20 @@
       "agent_affinity": [],
       "exposed_interfaces": []
     },
+    "atlas_frontend": {
+      "id": "atlas_frontend",
+      "name": "Frontend (Leafcutter Atlas)",
+      "type": "utility",
+      "description": "The Leafcutter frontend, called the Atlas: a Next.js 14 web app in leafcutter-web/ that reads the repo live on every request and renders it as views (Pulse, Now & Next, AC Atlas, Flows, Roadmap, Coverage, Pipeline, Architecture). It is the read surface over the AC store and the product-truth store. Run locally on http://localhost:4319 (npm run dev -- -p 4319); the Flows view is at /flows.",
+      "detail_ref": "docs/architecture/components/atlas-frontend.md",
+      "status": "active",
+      "primary_code": [
+        "leafcutter-web/",
+        "leafcutter-web/lib/data/"
+      ],
+      "agent_affinity": [],
+      "exposed_interfaces": []
+    },
     "bootstrap_installer": {
       "id": "bootstrap_installer",
       "name": "Bootstrap Installer",
