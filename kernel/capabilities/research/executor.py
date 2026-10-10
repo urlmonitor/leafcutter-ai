@@ -39,6 +39,7 @@ from kernel.capabilities.research.planning import (
     resolve_sources,
 )
 from kernel.capabilities.research.results import bundle_result, waiting_result
+from kernel.capabilities.research.needs import NeedsInterpreter, guard_answerability, interpret
 from kernel.capabilities.research.state import Collected, Plan, ResearchContinuation
 from kernel.contracts.capability import CapabilityResult, Usage
 from kernel.contracts.payloads import GoalRequestPayload, ResearchRequestPayload
@@ -89,6 +90,12 @@ def parse_plan(invocation: CapabilityInvocation) -> Plan:
                 assessment=request.assessment, jev_reserve=request.jev_reserve)
 
 
+async def _interpret(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
+    """Interpret the original question before selecting evidence categories or operations."""
+    invocation, ctx = _run(config)
+    return interpret(invocation, ctx, parse_plan(invocation), config["configurable"].get("needs_interpreter"))
+
+
 async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
     """plan_needs and resolve_sources: wait for children, or collect at once if none can run.
 
@@ -100,13 +107,13 @@ async def _plan(state: ResearchState, config: RunnableConfig) -> dict[str, Any]:
         Updated research state or the documented capability result.
     """
     invocation, ctx = _run(config)
-    plan = parse_plan(invocation)
+    plan = state.get("plan") or parse_plan(invocation)
     needs, usage = await plan_needs(ctx, invocation, plan)
     needs, trimmed = afford_needs(ctx, plan, needs)
     trimmed = [*claim_limitations(ctx, plan), *trimmed]
     resolution = resolve_sources(ctx, needs, plan)
     cont = ResearchContinuation(
-        phase="planned", needs=resolution.needs, child_map=resolution.child_map,
+        phase="planned", retrieval_needs=plan.retrieval_needs, needs=resolution.needs, child_map=resolution.child_map,
         unavailable=resolution.unavailable, attempted=resolution.attempted,
         deferred=resolution.deferred, limitations=trimmed)
     if resolution.requests:
@@ -162,6 +169,7 @@ async def _evaluate(state: ResearchState, config: RunnableConfig) -> dict[str, A
     usage = [*prior, *judgement.usage]
     if judgement.conflict is not None:
         record_contradiction(ctx, out, judgement.conflict)
+    guard_answerability(cont, out, judgement.answers)
     apply_answers(ctx, cont, out, judgement.answers)
     threshold = ctx.config.research.evaluable_threshold
     thin = thin_coverage(cont, out)
@@ -244,7 +252,8 @@ async def _finish(state: ResearchState, config: RunnableConfig) -> dict[str, Any
 def _entry(config: RunnableConfig) -> str:
     """Route a fresh invocation to planning and a resumption to collect."""
     invocation, _ = _run(config)
-    return "collect" if invocation.continuation else "plan"
+    phase = invocation.continuation.state.get("phase") if invocation.continuation else None
+    return "interpret" if phase in {None, "interpreting_needs", "clarifying_needs"} else "collect"
 
 
 def _after_plan(state: ResearchState) -> str:
@@ -265,11 +274,13 @@ def _after_evaluate(state: ResearchState) -> str:
 def build_research_graph() -> Any:
     """Compile the research graph (no checkpointer)."""
     graph = StateGraph(ResearchState)
-    for name, node in (("plan", _plan), ("collect", _collect), ("evaluate", _evaluate),
+    for name, node in (("interpret", _interpret), ("plan", _plan), ("collect", _collect), ("evaluate", _evaluate),
                        ("finish", _finish)):
         graph.add_node(name, node)
     graph.set_conditional_entry_point(lambda state, config: _entry(config),
-                                      {"plan": "plan", "collect": "collect"})
+                                      {"interpret": "interpret", "collect": "collect"})
+    graph.add_conditional_edges("interpret", lambda state: END if state.get("result") else "plan",
+                                {END: END, "plan": "plan"})
     graph.add_conditional_edges("plan", _after_plan, {END: END, "collect": "collect"})
     graph.add_conditional_edges("collect", _after_collect,
                                 {"finish": "finish", "evaluate": "evaluate"})
@@ -281,8 +292,13 @@ def build_research_graph() -> Any:
 class ResearchExecutor:
     """CapabilityExecutor for the native research capability."""
 
-    def __init__(self) -> None:
-        """Compile the graph once."""
+    def __init__(self, needs_interpreter: NeedsInterpreter | None = None) -> None:
+        """Compile the graph once with an optional application-owned needs adapter.
+
+        Args:
+            needs_interpreter: Optional application adapter providing finite domain meanings.
+        """
+        self._needs_interpreter = needs_interpreter
         self._graph = build_research_graph()
 
     async def ainvoke(self, invocation: CapabilityInvocation, ctx: ExecutionContext
@@ -297,7 +313,7 @@ class ResearchExecutor:
             Updated research state or the documented capability result.
         """
         config: RunnableConfig = {
-            "configurable": {"invocation": invocation, "ctx": ctx},
+            "configurable": {"invocation": invocation, "ctx": ctx, "needs_interpreter": self._needs_interpreter},
             "recursion_limit": ctx.config.limits.langgraph_recursion_limit}
         try:
             final = await self._graph.ainvoke({}, config=config)
@@ -333,3 +349,5 @@ class ResearchExecutor:
 # ====================================================================
 
 # - 2026-10-02 04:36 [conflict-resolver]: Preserve answer and assessment packets with the kernel research reserve. (#TICKETLESS reason=kernel-v01-integration)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

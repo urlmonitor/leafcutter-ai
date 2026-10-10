@@ -184,6 +184,9 @@ def build_bindings(snapshot: RegistrySnapshot, *, knowledge_retriever: Knowledge
         table.register(key, NATIVE_VERSION, factory)
     if knowledge_retriever is not None:
         from integrations.knowledge_capability import KnowledgeRetrievalExecutor
+        from integrations.research_needs import RepositoryNeedsInterpreter
+        table.register("research", NATIVE_VERSION,
+                       partial(ResearchExecutor, needs_interpreter=RepositoryNeedsInterpreter()))
         table.register("retrieve.repository", NATIVE_VERSION,
                        partial(KnowledgeRetrievalExecutor, knowledge_retriever,
                                  query_catalog=query_catalog,query_admission=query_admission))
@@ -289,3 +292,5 @@ def build_environment(*, config_path: Path | None = None, env_file: Path | None 
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

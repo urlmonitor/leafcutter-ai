@@ -1,0 +1,4566 @@
+{
+  "correction": "Controller actor id contained a slash. Reused identical blind responses and original waits with a valid actor id.",
+  "underlying_model_requests": null,
+  "tokens": null,
+  "model_id": null,
+  "new_model_generations_for_correction": 0,
+  "jev_calls": 0,
+  "accepted_host_interpretations": 16,
+  "all_model_response_bytes_unchanged": true,
+  "results": [
+    {
+      "case_id": "N01",
+      "original_rejected_receipt": "../N01.result.json",
+      "response_sha256": "23efd6af9f45c3b260e19205487d3109dcd316b8fcc44d25ad84866981b06ca8",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-c32d640ab555492c",
+        "root_task_id": "task-5fa2a257c0ae4942",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "criteria",
+                "test_spec"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The named criterion's acceptance clauses and test-specific obligations establish what verification must demonstrate. Test links and implementation progress do not supply those obligations.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-c32d640ab555492c\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-deadba199c93fa4e",
+            "created_at": "2026-10-09T15:35:03.750610Z",
+            "updated_at": "2026-10-09T15:35:03.750610Z",
+            "created_seq": 0,
+            "gap_key": "9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855",
+            "gap_type": "host_only",
+            "goal": "For KM-500c-2, what must tests demonstrate?",
+            "normalized_need": "2 500c demonstrate km must tests what",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "For KM-500c-2, what must tests demonstrate?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-c32d640ab555492c"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: For KM-500c-2, what must tests demonstrate?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855.md"
+            },
+            "first_seen": "2026-10-09T15:35:03.750610Z",
+            "last_seen": "2026-10-09T15:35:03.750610Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449741,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "5e0fa0a6c9ad6ad9eef420f8b5b82fad",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The named criterion's acceptance clauses and test-specific obligations establish what verification must demonstrate. Test links and implementation progress do not supply those obligations.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "For KM-500c-2, what must tests demonstrate?",
+            "expected": "For KM-500c-2, what must tests demonstrate?"
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": {
+              "forbidden": []
+            }
+          },
+          {
+            "name": "exclude.relationships",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "parent_direct",
+                "children_direct",
+                "all_descendants"
+              ]
+            }
+          },
+          {
+            "name": "detail_mode",
+            "passed": true,
+            "actual": "fields",
+            "expected": [
+              "fields",
+              "full_document",
+              "bounded_context"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "single_entity",
+            "expected": [
+              "single_entity"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria",
+              "test_spec"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M01",
+            "passed": true,
+            "reason": "An exact criteria question does not require test-link declarations, lifecycle/progress or hierarchy/code facts; supporting discussion must not create required retrieval obligations."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N02",
+      "original_rejected_receipt": "../N02.result.json",
+      "response_sha256": "e9fac38d804848a922ecde0854f5565a26c5ac66c78209fc4f7467b1b906cf84",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-bf45b71c8d0c48bb",
+        "root_task_id": "task-3dd5da08af584a0b",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [],
+              "required_fields": [
+                "criteria",
+                "parent"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_count",
+            "hierarchy_scope": "exclude_parents",
+            "hierarchy_levels": [],
+            "scope_resolution": "discovery_needed",
+            "unresolved": [],
+            "rationale": "The count requires discovering the full test-writing topic, inspecting criterion meaning, and using hierarchy facts to remove parent requirements. The supplied TQ-500 candidate does not establish the topic boundary. No level restriction was requested.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-bf45b71c8d0c48bb\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-fc72fb15aec22632",
+            "created_at": "2026-10-09T15:35:03.868243Z",
+            "updated_at": "2026-10-09T15:35:03.868243Z",
+            "created_seq": 0,
+            "gap_key": "356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c",
+            "gap_type": "host_only",
+            "goal": "How many ACs concern test writing? Exclude parent requirements.",
+            "normalized_need": "acs concern exclude how many parent requirements test writing",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "How many ACs concern test writing? Exclude parent requirements.",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-bf45b71c8d0c48bb"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: How many ACs concern test writing? Exclude parent requirements.",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c.md"
+            },
+            "first_seen": "2026-10-09T15:35:03.868243Z",
+            "last_seen": "2026-10-09T15:35:03.868243Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449752,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "24a0f5ccfc573af015dc33a29b20b94a",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "criteria",
+            "parent"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_parents",
+        "hierarchy_levels": [],
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "The count requires discovering the full test-writing topic, inspecting criterion meaning, and using hierarchy facts to remove parent requirements. The supplied TQ-500 candidate does not establish the topic boundary. No level restriction was requested.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "How many ACs concern test writing? Exclude parent requirements.",
+            "expected": "How many ACs concern test writing? Exclude parent requirements."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "TQ-500"
+              ]
+            }
+          },
+          {
+            "name": "exclude.required_fields",
+            "passed": true,
+            "actual": [
+              "criteria",
+              "parent"
+            ],
+            "expected": {
+              "forbidden": [
+                "work_status",
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_count",
+            "expected": [
+              "exhaustive_count"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "exclude_parents",
+            "expected": [
+              "exclude_parents"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided",
+              "needs_resolution"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "N03",
+      "original_rejected_receipt": "../N03.result.json",
+      "response_sha256": "4f6b410590ee153ec3cde5d6a52553b20a6785eb746b48386c7fffa39ea1689f",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-9d3779dcf56d4be3",
+        "root_task_id": "task-c736b30c0aa9466f",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "TQ-500f"
+              ],
+              "required_fields": [
+                "level",
+                "work_status"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": [
+                "all_descendants"
+              ]
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_count",
+            "hierarchy_scope": "exclude_root",
+            "hierarchy_levels": [
+              "L2",
+              "L3"
+            ],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "Count every descendant of the named root at the explicitly requested levels, grouped by implementation progress. Excluding only the root retains intermediate parent requirements when their levels qualify.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-9d3779dcf56d4be3\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-7a99ec04235352ce",
+            "created_at": "2026-10-09T15:35:03.980430Z",
+            "updated_at": "2026-10-09T15:35:03.980430Z",
+            "created_seq": 0,
+            "gap_key": "2443ae0f073eada683e014083c79fdc120aca9c698dd587a35cfed0396527d50",
+            "gap_type": "host_only",
+            "goal": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+            "normalized_need": "500f all by count descendants excluding grouped l2 l3 only tq work_status",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped b...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-9d3779dcf56d4be3"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped b...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/2443ae0f073eada683e014083c79fdc120aca9c698dd587a35cfed0396527d50.md"
+            },
+            "first_seen": "2026-10-09T15:35:03.980430Z",
+            "last_seen": "2026-10-09T15:35:03.980430Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449766,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "2b39f19eeb951ad495ff86efadcb036d",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "all_descendants"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_root",
+        "hierarchy_levels": [
+          "L2",
+          "L3"
+        ],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Count every descendant of the named root at the explicitly requested levels, grouped by implementation progress. Excluding only the root retains intermediate parent requirements when their levels qualify.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+            "expected": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "TQ-500f"
+            ],
+            "expected": [
+              "TQ-500f"
+            ]
+          },
+          {
+            "name": "include.required_fields",
+            "passed": true,
+            "actual": [
+              "level",
+              "work_status"
+            ],
+            "expected": [
+              "work_status",
+              "level"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "include.relationships",
+            "passed": true,
+            "actual": [
+              "all_descendants"
+            ],
+            "expected": [
+              "all_descendants"
+            ]
+          },
+          {
+            "name": "exclude.required_fields",
+            "passed": true,
+            "actual": [
+              "level",
+              "work_status"
+            ],
+            "expected": {
+              "forbidden": [
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_count",
+            "expected": [
+              "exhaustive_count"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "exclude_root",
+            "expected": [
+              "exclude_root"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "N04",
+      "original_rejected_receipt": "../N04.result.json",
+      "response_sha256": "262d2b5bef7b036cb5b50de15efc80f7c835b45ce592324ae3c1580fc0c31842",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-ab3a7cb933674259",
+        "root_task_id": "task-9adee208e8c64313",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac",
+                "source_file",
+                "schema"
+              ],
+              "target_ids": [],
+              "required_fields": [
+                "mapping",
+                "content",
+                "provenance"
+              ],
+              "document_types": [
+                "ac_yaml",
+                "source_code",
+                "schema"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_set",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "discovery_needed",
+            "unresolved": [],
+            "rationale": "The question asks for the complete work_status data path from canonical AC input through its producer and consumer handoffs into returned evidence. This needs inspected transformations and their source locations, rather than the value of any individual criterion's implementation status.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-ab3a7cb933674259\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-cc5bbd73417930b6",
+            "created_at": "2026-10-09T15:35:04.094332Z",
+            "updated_at": "2026-10-09T15:35:04.094332Z",
+            "created_seq": 0,
+            "gap_key": "f508f9c6e7a85dc085ef092215dc4970b747cd340b6c2647f685a1538e0e7630",
+            "gap_type": "host_only",
+            "goal": "Where does work_status travel from AC YAML into returned evidence?",
+            "normalized_need": "ac evidence from into returned travel where work_status yaml",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Where does work_status travel from AC YAML into returned evidence?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-ab3a7cb933674259"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Where does work_status travel from AC YAML into returned evidence?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/f508f9c6e7a85dc085ef092215dc4970b747cd340b6c2647f685a1538e0e7630.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.094332Z",
+            "last_seen": "2026-10-09T15:35:04.094332Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449779,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "e611d92fbf952ac07e758327fce32d06",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac",
+            "source_file",
+            "schema"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "mapping",
+            "content",
+            "provenance"
+          ],
+          "document_types": [
+            "ac_yaml",
+            "source_code",
+            "schema"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "The question asks for the complete work_status data path from canonical AC input through its producer and consumer handoffs into returned evidence. This needs inspected transformations and their source locations, rather than the value of any individual criterion's implementation status.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Where does work_status travel from AC YAML into returned evidence?",
+            "expected": "Where does work_status travel from AC YAML into returned evidence?"
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac",
+              "source_file",
+              "schema"
+            ],
+            "expected": [
+              "source_file"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml",
+              "source_code",
+              "schema"
+            ],
+            "expected": [
+              "source_code"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": []
+            }
+          },
+          {
+            "name": "detail_mode",
+            "passed": true,
+            "actual": "fields",
+            "expected": [
+              "fields",
+              "full_document",
+              "bounded_context"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_set",
+            "expected": [
+              "examples",
+              "exhaustive_set"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "mapping",
+              "content",
+              "provenance"
+            ],
+            "expected": [
+              "content",
+              "mapping"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M03",
+            "passed": true,
+            "reason": "These unbound discovery questions must not demand a named target before source discovery."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N05",
+      "original_rejected_receipt": "../N05.result.json",
+      "response_sha256": "130c39284eee6ed2ebfbcf9179fe71b621e3d656783b68b40e5c18e1a2441ec5",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-e96b76d0238940ef",
+        "root_task_id": "task-1c2bf9809a744417",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "content",
+                "criteria",
+                "parent"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": [
+                "parent_direct"
+              ]
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "bounded_context",
+            "completeness": "selected_entities",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "Retrieve the whole named acceptance criterion, including its acceptance clauses, with its uniquely determined immediate parent as the requested surroundings. This does not request descendants or broader repository context.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-e96b76d0238940ef\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-d0cde03b72a572c2",
+            "created_at": "2026-10-09T15:35:04.205040Z",
+            "updated_at": "2026-10-09T15:35:04.205040Z",
+            "created_seq": 0,
+            "gap_key": "8f3a57a27f1b80b01642e748c55cb0066b0b47d3bbe1ff26de0e26e866f0974e",
+            "gap_type": "host_only",
+            "goal": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+            "normalized_need": "2 500c acceptance can context criterion full i immediate its km parent",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Show the full KM-500c-2 acceptance criterion together with its immediate pare...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-e96b76d0238940ef"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Show the full KM-500c-2 acceptance criterion together with its immediate pare...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/8f3a57a27f1b80b01642e748c55cb0066b0b47d3bbe1ff26de0e26e866f0974e.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.205040Z",
+            "last_seen": "2026-10-09T15:35:04.205040Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449797,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "02ad173987b4ab59e4e07d1bebd41762",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "content",
+            "criteria",
+            "parent"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "parent_direct"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "bounded_context",
+        "completeness": "selected_entities",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Retrieve the whole named acceptance criterion, including its acceptance clauses, with its uniquely determined immediate parent as the requested surroundings. This does not request descendants or broader repository context.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+            "expected": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "include.relationships",
+            "passed": true,
+            "actual": [
+              "parent_direct"
+            ],
+            "expected": [
+              "parent_direct"
+            ]
+          },
+          {
+            "name": "exclude.relationships",
+            "passed": true,
+            "actual": [
+              "parent_direct"
+            ],
+            "expected": {
+              "forbidden": [
+                "children_direct",
+                "all_descendants"
+              ]
+            }
+          },
+          {
+            "name": "detail_mode",
+            "passed": true,
+            "actual": "bounded_context",
+            "expected": [
+              "full_document",
+              "bounded_context"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "selected_entities",
+            "expected": [
+              "single_entity",
+              "selected_entities"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable",
+              "include_root"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "N06",
+      "original_rejected_receipt": "../N06.result.json",
+      "response_sha256": "7a85d963d4e5af95ed6536b48be8e523ec7edaa6387e3b9e619a69758f57c818",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-4c8cd55ca23e4214",
+        "root_task_id": "task-066086f4ba164379",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-1",
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "criteria"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "selected_entities",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The comparison needs complete acceptance clauses for the two explicitly named records, without a hierarchy expansion.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-4c8cd55ca23e4214\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-383b97b679badf1b",
+            "created_at": "2026-10-09T15:35:04.313007Z",
+            "updated_at": "2026-10-09T15:35:04.313007Z",
+            "created_seq": 0,
+            "gap_key": "7d246fc26bad2e6194d34b9e472c482e40ca9ef25a443a8a71ebc45d93e2abfb",
+            "gap_type": "host_only",
+            "goal": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+            "normalized_need": "1 2 500c acceptance compare criteria km",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-4c8cd55ca23e4214"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/7d246fc26bad2e6194d34b9e472c482e40ca9ef25a443a8a71ebc45d93e2abfb.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.313007Z",
+            "last_seen": "2026-10-09T15:35:04.313007Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449796,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "ee55d9e4dcc06c5b24270ef59c15df6a",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1",
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "selected_entities",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The comparison needs complete acceptance clauses for the two explicitly named records, without a hierarchy expansion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2.",
+            "expected": "Compare the acceptance criteria of KM-500c-1 and KM-500c-2."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-1",
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-1",
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.relationships",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "all_descendants",
+                "children_direct"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "selected_entities",
+            "expected": [
+              "selected_entities"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "N07",
+      "original_rejected_receipt": "../N07.result.json",
+      "response_sha256": "8f6ee38166ca20c28d0fc066fc99ed83b5d56c5d45c80c9cdf433fac8663d8b1",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-d6943a449dc44357",
+        "root_task_id": "task-46c56c998cca4bcd",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "status",
+                "work_status"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The question explicitly asks for lifecycle status and implementation progress as separate fields of one named criterion.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-d6943a449dc44357\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-0776b136c9149106",
+            "created_at": "2026-10-09T15:35:04.420469Z",
+            "updated_at": "2026-10-09T15:35:04.420469Z",
+            "created_seq": 0,
+            "gap_key": "fe8706e6649c5b32ca76c253dfab3fccc4cc11dc3ab46465c2d8e3f79bd038fb",
+            "gap_type": "host_only",
+            "goal": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+            "normalized_need": "2 500c both implementation its keeping km lifecycle separate show status two",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "For KM-500c-2, show both its lifecycle status and its implementation work_sta...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-d6943a449dc44357"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: For KM-500c-2, show both its lifecycle status and its implementation work_sta...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/fe8706e6649c5b32ca76c253dfab3fccc4cc11dc3ab46465c2d8e3f79bd038fb.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.420469Z",
+            "last_seen": "2026-10-09T15:35:04.420469Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449799,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "6ee0681b00cf83d39d216db1aae4bbf0",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "status",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question explicitly asks for lifecycle status and implementation progress as separate fields of one named criterion.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate.",
+            "expected": "For KM-500c-2, show both its lifecycle status and its implementation work_status, keeping the two separate."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.required_fields",
+            "passed": true,
+            "actual": [
+              "status",
+              "work_status"
+            ],
+            "expected": [
+              "status",
+              "work_status"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "single_entity",
+            "expected": [
+              "single_entity"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M02",
+            "passed": true,
+            "reason": "A question explicitly requesting two status fields requires those statuses and attribution, not full criteria or test specifications."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N08",
+      "original_rejected_receipt": "../N08.result.json",
+      "response_sha256": "d7b105802e35a3f5b25d6cfe89f650aa2b076bc051cc8354fa3f20fec7b22ea9",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-0f8bf2e1ef8c4c08",
+        "root_task_id": "task-5f364804f8d4401c",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [],
+              "required_fields": [
+                "criteria"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_set",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "discovery_needed",
+            "unresolved": [],
+            "rationale": "Discover the criteria that govern missing required research inputs and retrieve their acceptance clauses. The question supplies a topic rather than target identifiers and does not request samples or a hierarchy restriction.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-0f8bf2e1ef8c4c08\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-3918c420adea26ac",
+            "created_at": "2026-10-09T15:35:04.546185Z",
+            "updated_at": "2026-10-09T15:35:04.546185Z",
+            "created_seq": 0,
+            "gap_key": "24bd64b1aa82457c1cb0f845b2adf2fb668787e1dcb0c5ed6ad5054a6886f0ab",
+            "gap_type": "host_only",
+            "goal": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+            "normalized_need": "already criteria happens inputs lacks relevant required research show specify what when",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Do we already specify what happens when research lacks required inputs? Show...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-0f8bf2e1ef8c4c08"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Do we already specify what happens when research lacks required inputs? Show...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/24bd64b1aa82457c1cb0f845b2adf2fb668787e1dcb0c5ed6ad5054a6886f0ab.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.546185Z",
+            "last_seen": "2026-10-09T15:35:04.546185Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449808,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "84ebc5898c492f5bdc61d59400140582",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "Discover the criteria that govern missing required research inputs and retrieve their acceptance clauses. The question supplies a topic rather than target identifiers and does not request samples or a hierarchy restriction.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+            "expected": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_set",
+            "expected": [
+              "examples",
+              "exhaustive_set"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M03",
+            "passed": true,
+            "reason": "These unbound discovery questions must not demand a named target before source discovery."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N09",
+      "original_rejected_receipt": "../N09.result.json",
+      "response_sha256": "d4793e8fdc50a5a7de5d41b3b9d8d556c62ea3fe9075a14cc83179e44420291f",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-7e4a3e66b65647d5",
+        "root_task_id": "task-328222ee8fa14bb0",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "criteria",
+                "test_spec"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The literal target KM-500c-2 governs this request despite the contextual note about another record. Its acceptance clauses and test-specific obligations establish what verification must demonstrate.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-7e4a3e66b65647d5\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-78c9609277570f33",
+            "created_at": "2026-10-09T15:35:03.750610Z",
+            "updated_at": "2026-10-09T15:35:04.773608Z",
+            "created_seq": 0,
+            "gap_key": "9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855",
+            "gap_type": "host_only",
+            "goal": "For KM-500c-2, what must tests demonstrate?",
+            "normalized_need": "2 500c demonstrate km must tests what",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "For KM-500c-2, what must tests demonstrate?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 2,
+            "example_run_ids": [
+              "run-c32d640ab555492c",
+              "run-7e4a3e66b65647d5"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: For KM-500c-2, what must tests demonstrate?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855.md"
+            },
+            "first_seen": "2026-10-09T15:35:03.750610Z",
+            "last_seen": "2026-10-09T15:35:04.773608Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449928,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "07ce0a9157d34bb977d54b449af9dae6",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The literal target KM-500c-2 governs this request despite the contextual note about another record. Its acceptance clauses and test-specific obligations establish what verification must demonstrate.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "For KM-500c-2, what must tests demonstrate?",
+            "expected": "For KM-500c-2, what must tests demonstrate?"
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": {
+              "forbidden": [
+                "KM-500c-1"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "single_entity",
+            "expected": [
+              "single_entity"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided",
+              "needs_resolution"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria",
+              "test_spec"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M01",
+            "passed": true,
+            "reason": "An exact criteria question does not require test-link declarations, lifecycle/progress or hierarchy/code facts; supporting discussion must not create required retrieval obligations."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N10",
+      "original_rejected_receipt": "../N10.result.json",
+      "response_sha256": "9a62fb2d25f7e9c239a9b4e5a8d3da82b93b66ce42d8bd5b6b689e693d2c1001",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-b9c4fc7909af4bcb",
+        "root_task_id": "task-48aeaab530854f85",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "What was each employee's payroll amount last month?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_set",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "unknown",
+            "unresolved": [
+              "needs_outside_catalog",
+              "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+              "entity_types",
+              "document_types",
+              "required_fields",
+              "scope_resolution"
+            ],
+            "rationale": "The requested per-employee payroll amounts for last month cannot be represented by the offered software requirement, implementation, and report catalog. The supplied source scope is preserved.",
+            "engine": "host_llm",
+            "status": "needs_resolution",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-b9c4fc7909af4bcb\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-94228d89ce15790c",
+            "created_at": "2026-10-09T15:35:04.999257Z",
+            "updated_at": "2026-10-09T15:35:04.999257Z",
+            "created_seq": 0,
+            "gap_key": "b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195",
+            "gap_type": "host_only",
+            "goal": "What was each employee's payroll amount last month?",
+            "normalized_need": "amount each employee last month payroll s was what",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "What was each employee's payroll amount last month?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-b9c4fc7909af4bcb"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: What was each employee's payroll amount last month?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195.md"
+            },
+            "first_seen": "2026-10-09T15:35:04.999257Z",
+            "last_seen": "2026-10-09T15:35:04.999257Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 450041,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "f4eb8ca20b8d30cdfe0f4428e2b609e0",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "What was each employee's payroll amount last month?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "rationale": "The requested per-employee payroll amounts for last month cannot be represented by the offered software requirement, implementation, and report catalog. The supplied source scope is preserved.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "What was each employee's payroll amount last month?",
+            "expected": "What was each employee's payroll amount last month?"
+          },
+          {
+            "name": "exclude.entity_types",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "ac",
+                "source_file",
+                "test",
+                "adr",
+                "schema",
+                "report",
+                "component"
+              ]
+            }
+          },
+          {
+            "name": "exclude.required_fields",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "criteria",
+                "work_status",
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "needs_resolution",
+            "expected": [
+              "needs_resolution"
+            ]
+          },
+          {
+            "name": "unsupported_need_disclosed",
+            "passed": true,
+            "actual": [
+              "needs_outside_catalog",
+              "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+              "entity_types",
+              "document_types",
+              "required_fields",
+              "scope_resolution"
+            ],
+            "expected": "Explicit unmet catalog dimension, unresolved; no synthetic confidence"
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "N11",
+      "original_rejected_receipt": "../N11.result.json",
+      "response_sha256": "7f41aee7b720a4559c3b15a29893850895271a2c8f568c19bd6360a813edcbf9",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-a9555e1df31846ff",
+        "root_task_id": "task-c682688c69a74b09",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-2"
+              ],
+              "required_fields": [
+                "criteria",
+                "test_spec"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The original question requires the acceptance and test-specific obligations of KM-500c-2. The quoted contextual instructions do not alter its literal target, meaning, or source scope.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-a9555e1df31846ff\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-7614aafb24d31543",
+            "created_at": "2026-10-09T15:35:03.750610Z",
+            "updated_at": "2026-10-09T15:35:05.195393Z",
+            "created_seq": 0,
+            "gap_key": "9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855",
+            "gap_type": "host_only",
+            "goal": "For KM-500c-2, what must tests demonstrate?",
+            "normalized_need": "2 500c demonstrate km must tests what",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "For KM-500c-2, what must tests demonstrate?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 3,
+            "example_run_ids": [
+              "run-c32d640ab555492c",
+              "run-7e4a3e66b65647d5",
+              "run-a9555e1df31846ff"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: For KM-500c-2, what must tests demonstrate?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855.md"
+            },
+            "first_seen": "2026-10-09T15:35:03.750610Z",
+            "last_seen": "2026-10-09T15:35:05.195393Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449859,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "2f212767368aad71c87356d1603c416e",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The original question requires the acceptance and test-specific obligations of KM-500c-2. The quoted contextual instructions do not alter its literal target, meaning, or source scope.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "For KM-500c-2, what must tests demonstrate?",
+            "expected": "For KM-500c-2, what must tests demonstrate?"
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": [
+              "KM-500c-2"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-2"
+            ],
+            "expected": {
+              "forbidden": [
+                "SECRET-900"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "single_entity",
+            "expected": [
+              "single_entity"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria",
+              "test_spec"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M01",
+            "passed": true,
+            "reason": "An exact criteria question does not require test-link declarations, lifecycle/progress or hierarchy/code facts; supporting discussion must not create required retrieval obligations."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "N12",
+      "original_rejected_receipt": "../N12.result.json",
+      "response_sha256": "9abd6c98eb3a282d635ad68eca2c7d34551c345ca767bc43f2266393c2b4a990",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-3e79cbf4ba204d17",
+        "root_task_id": "task-27337b82c669468c",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "adr",
+                "schema"
+              ],
+              "target_ids": [],
+              "required_fields": [
+                "content",
+                "compatibility"
+              ],
+              "document_types": [
+                "adr",
+                "schema"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_set",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "discovery_needed",
+            "unresolved": [],
+            "rationale": "Discover the architecture decisions and versioned contracts governing a new retrieval operation, then inspect their applicable provisions and compatibility obligations.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-3e79cbf4ba204d17\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-59efaa5a93aa2f4a",
+            "created_at": "2026-10-09T15:35:05.420751Z",
+            "updated_at": "2026-10-09T15:35:05.420751Z",
+            "created_seq": 0,
+            "gap_key": "beec8cfadcd9eec77d2118d4cb80077f52e6692d766ed997663114d06ad2f586",
+            "gap_type": "host_only",
+            "goal": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+            "normalized_need": "adding adrs compatible contracts govern must operation remain retrieval what which",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Which ADRs and contracts govern adding a retrieval operation, and what must r...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-3e79cbf4ba204d17"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Which ADRs and contracts govern adding a retrieval operation, and what must r...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/beec8cfadcd9eec77d2118d4cb80077f52e6692d766ed997663114d06ad2f586.md"
+            },
+            "first_seen": "2026-10-09T15:35:05.420751Z",
+            "last_seen": "2026-10-09T15:35:05.420751Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449716,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "8c01bd9090cfc49936280129a8231276",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "adr",
+            "schema"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "content",
+            "compatibility"
+          ],
+          "document_types": [
+            "adr",
+            "schema"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "Discover the architecture decisions and versioned contracts governing a new retrieval operation, then inspect their applicable provisions and compatibility obligations.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?",
+            "expected": "Which ADRs and contracts govern adding a retrieval operation, and what must remain compatible?"
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "adr",
+              "schema"
+            ],
+            "expected": [
+              "adr",
+              "schema"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "adr",
+              "schema"
+            ],
+            "expected": [
+              "adr",
+              "schema"
+            ]
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_set",
+            "expected": [
+              "examples",
+              "exhaustive_set"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "content",
+              "compatibility"
+            ],
+            "expected": [
+              "content",
+              "compatibility"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": true,
+        "passed": true,
+        "checks": [
+          {
+            "id": "M04",
+            "passed": true,
+            "reason": "When the answer requires a schema/contract entity, the source plan must not silently omit its contract document type."
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "H01",
+      "original_rejected_receipt": "../H01.result.json",
+      "response_sha256": "90729743acfa53e97469a245a9aff772da8b97025e18f8111d8d01f403358618",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-20ce5281a0624e0e",
+        "root_task_id": "task-4b4efd0d07a348c6",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "KM-500c-1"
+              ],
+              "required_fields": [
+                "criteria"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "The request is confined to the named criterion's acceptance obligations and explicitly excludes its linked checks.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-20ce5281a0624e0e\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-ce4ea201acf2526b",
+            "created_at": "2026-10-09T15:35:05.811280Z",
+            "updated_at": "2026-10-09T15:35:05.811280Z",
+            "created_seq": 0,
+            "gap_key": "a79bebef3a975d590bcdb4f0747aea8f4f22ca997e637da52b039cfa43a284cd",
+            "gap_type": "host_only",
+            "goal": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+            "normalized_need": "1 500c acceptance checks it itself km linked me not obligations tell",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-20ce5281a0624e0e"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/a79bebef3a975d590bcdb4f0747aea8f4f22ca997e637da52b039cfa43a284cd.md"
+            },
+            "first_seen": "2026-10-09T15:35:05.811280Z",
+            "last_seen": "2026-10-09T15:35:05.811280Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449709,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "4dc1a4cfe5638f8dd4c888cf9ef2851d",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The request is confined to the named criterion's acceptance obligations and explicitly excludes its linked checks.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+            "expected": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-1"
+            ],
+            "expected": [
+              "KM-500c-1"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.target_ids",
+            "passed": true,
+            "actual": [
+              "KM-500c-1"
+            ],
+            "expected": {
+              "forbidden": [
+                "KM-500c-2"
+              ]
+            }
+          },
+          {
+            "name": "exclude.relationships",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "linked_tests",
+                "all_descendants"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "single_entity",
+            "expected": [
+              "single_entity"
+            ]
+          },
+          {
+            "name": "hierarchy_scope",
+            "passed": true,
+            "actual": "not_applicable",
+            "expected": [
+              "not_applicable"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          },
+          {
+            "name": "required_fields_when_projecting",
+            "passed": true,
+            "actual": [
+              "criteria"
+            ],
+            "expected": [
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "H02",
+      "original_rejected_receipt": "../H02.result.json",
+      "response_sha256": "84cbf85c1c0edf5db88946b1213a314c6b25149b96caa32e5a51dbd017e8fc76",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-69950e147f6449c9",
+        "root_task_id": "task-3da64db494aa4194",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "TQ-500f"
+              ],
+              "required_fields": [
+                "criteria"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": [
+                "children_direct"
+              ]
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_set",
+            "hierarchy_scope": "exclude_root",
+            "hierarchy_levels": [],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "List the immediate child requirements of the named root with their defining clauses. The one-hop relationship excludes grandchildren, while no explicit level filter is imposed.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-69950e147f6449c9\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-b96dbec21d47795c",
+            "created_at": "2026-10-09T15:35:06.329095Z",
+            "updated_at": "2026-10-09T15:35:06.329095Z",
+            "created_seq": 0,
+            "gap_key": "e9f618d2726ed80792ccee5254338c4dc2e79bdf31fcb8615d6ac76470f86417",
+            "gap_type": "host_only",
+            "goal": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+            "normalized_need": "500f child don grandchildren immediate include list only requirements t tq",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "List only the immediate child requirements of TQ-500f; don't include grandchi...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-69950e147f6449c9"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: List only the immediate child requirements of TQ-500f; don't include grandchi...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/e9f618d2726ed80792ccee5254338c4dc2e79bdf31fcb8615d6ac76470f86417.md"
+            },
+            "first_seen": "2026-10-09T15:35:06.329095Z",
+            "last_seen": "2026-10-09T15:35:06.329095Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449837,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "361abc3026914066e3956528733c8a66",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "children_direct"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "exclude_root",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "List the immediate child requirements of the named root with their defining clauses. The one-hop relationship excludes grandchildren, while no explicit level filter is imposed.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+            "expected": "List only the immediate child requirements of TQ-500f; don't include grandchildren."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "TQ-500f"
+            ],
+            "expected": [
+              "TQ-500f"
+            ]
+          },
+          {
+            "name": "include.relationships",
+            "passed": true,
+            "actual": [
+              "children_direct"
+            ],
+            "expected": [
+              "children_direct"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.relationships",
+            "passed": true,
+            "actual": [
+              "children_direct"
+            ],
+            "expected": {
+              "forbidden": [
+                "all_descendants",
+                "parent_direct"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_set",
+            "expected": [
+              "exhaustive_set"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "H03",
+      "original_rejected_receipt": "../H03.result.json",
+      "response_sha256": "ccd5795d2677ecd2b30784aff3a6087ffd49b2573cbff63386a80eb70c366de8",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-2bfb9c09655849e2",
+        "root_task_id": "task-a6430fb7abb74d2b",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Within TQ-500f, count only level L3 descendants by implementation progress; leave out the root and every L2 item.",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "TQ-500f"
+              ],
+              "required_fields": [
+                "level",
+                "work_status"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": [
+                "all_descendants"
+              ]
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_count",
+            "hierarchy_scope": "exclude_root",
+            "hierarchy_levels": [
+              "L3"
+            ],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "Count the full descendant population at explicitly requested level L3, grouped by implementation progress. Exclude the root and apply the level filter to omit every L2 item without replacing descendant traversal with direct children.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-2bfb9c09655849e2\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-ffa69ba8c81b8568",
+            "created_at": "2026-10-09T15:35:06.572687Z",
+            "updated_at": "2026-10-09T15:35:06.572687Z",
+            "created_seq": 0,
+            "gap_key": "3f6fb5f8e60ecc112737460236d8dc878440791c6b098add953a771c4a74a485",
+            "gap_type": "host_only",
+            "goal": "Within TQ-500f, count only level L3 descendants by implementation progress; leave out the root and every L2 item.",
+            "normalized_need": "500f by count descendants every implementation item l2 l3 leave level only",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "Within TQ-500f, count only level L3 descendants by implementation progress; l...",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-2bfb9c09655849e2"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: Within TQ-500f, count only level L3 descendants by implementation progress; l...",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/3f6fb5f8e60ecc112737460236d8dc878440791c6b098add953a771c4a74a485.md"
+            },
+            "first_seen": "2026-10-09T15:35:06.572687Z",
+            "last_seen": "2026-10-09T15:35:06.572687Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449734,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "2fdd4bb0c86c3d8577350da38726fe0e",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "Within TQ-500f, count only level L3 descendants by implementation progress; leave out the root and every L2 item.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "all_descendants"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_root",
+        "hierarchy_levels": [
+          "L3"
+        ],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Count the full descendant population at explicitly requested level L3, grouped by implementation progress. Exclude the root and apply the level filter to omit every L2 item without replacing descendant traversal with direct children.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "Within TQ-500f, count only level L3 descendants by implementation progress; leave out the root and every L2 item.",
+            "expected": "Within TQ-500f, count only level L3 descendants by implementation progress; leave out the root and every L2 item."
+          },
+          {
+            "name": "include.entity_types",
+            "passed": true,
+            "actual": [
+              "ac"
+            ],
+            "expected": [
+              "ac"
+            ]
+          },
+          {
+            "name": "include.target_ids",
+            "passed": true,
+            "actual": [
+              "TQ-500f"
+            ],
+            "expected": [
+              "TQ-500f"
+            ]
+          },
+          {
+            "name": "include.required_fields",
+            "passed": true,
+            "actual": [
+              "level",
+              "work_status"
+            ],
+            "expected": [
+              "work_status",
+              "level"
+            ]
+          },
+          {
+            "name": "include.relationships",
+            "passed": true,
+            "actual": [
+              "all_descendants"
+            ],
+            "expected": [
+              "all_descendants"
+            ]
+          },
+          {
+            "name": "include.document_types",
+            "passed": true,
+            "actual": [
+              "ac_yaml"
+            ],
+            "expected": [
+              "ac_yaml"
+            ]
+          },
+          {
+            "name": "exclude.required_fields",
+            "passed": true,
+            "actual": [
+              "level",
+              "work_status"
+            ],
+            "expected": {
+              "forbidden": [
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "completeness",
+            "passed": true,
+            "actual": "exhaustive_count",
+            "expected": [
+              "exhaustive_count"
+            ]
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "decided",
+            "expected": [
+              "decided"
+            ]
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    },
+    {
+      "case_id": "H04",
+      "original_rejected_receipt": "../H04.result.json",
+      "response_sha256": "346806b412e01d55a29d2002a04c186e9dfd77d0952dd0351174318ca8e03011",
+      "response_unchanged": true,
+      "envelope": {
+        "schema_version": "1.0",
+        "run_id": "run-dc3c5d56ebc9428d",
+        "root_task_id": "task-04643173bd1b4b61",
+        "state_revision": 3,
+        "status": "completed",
+        "output": {
+          "schema_version": "1.0",
+          "schema_id": "leafcutter.retrieval_needs_output.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "What is the current CPU temperature of the operator's laptop?",
+            "source_scope": {
+              "allow_retrieval": false,
+              "read_roots": [
+                "docs",
+                "kernel",
+                "knowledge",
+                "integrations"
+              ],
+              "repository": "leafcutter",
+              "source_revision": "planning-probe-only"
+            },
+            "selections": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "single_entity",
+            "hierarchy_scope": "not_applicable",
+            "hierarchy_levels": [],
+            "scope_resolution": "unknown",
+            "unresolved": [
+              "needs_outside_catalog",
+              "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+              "entity_types",
+              "document_types",
+              "required_fields",
+              "target_ids",
+              "scope_resolution"
+            ],
+            "rationale": "A current laptop CPU temperature is live device telemetry, which the offered repository-oriented catalog does not express. The original source scope remains unchanged.",
+            "engine": "host_llm",
+            "status": "needs_resolution",
+            "model_id": null
+          }
+        },
+        "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-dc3c5d56ebc9428d\\artifacts\\report.md",
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": null,
+        "limitations": [
+          "host-reported; not verified by the kernel",
+          "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+        ],
+        "gaps": [
+          {
+            "schema_version": "1.0",
+            "id": "gap-9f4b68224be8e386",
+            "created_at": "2026-10-09T15:35:06.796991Z",
+            "updated_at": "2026-10-09T15:35:06.796991Z",
+            "created_seq": 0,
+            "gap_key": "2354052d3d2e11a3449363b67ab1f13eaba61c5f75f8f8123c17f10a12c22a5f",
+            "gap_type": "host_only",
+            "goal": "What is the current CPU temperature of the operator's laptop?",
+            "normalized_need": "cpu current laptop operator s temperature what",
+            "request_kind": "capability",
+            "input_schema": "leafcutter.retrieval_needs_request.v1",
+            "output_schema": "leafcutter.retrieval_needs_output.v1",
+            "scope_component_ids": [],
+            "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+            "candidates_considered": [
+              "host.retrieval_needs"
+            ],
+            "candidate_exclusions": {},
+            "need_title": "What is the current CPU temperature of the operator's laptop?",
+            "why_insufficient": "host-backed only; no native implementation exists",
+            "occurrence_count": 1,
+            "example_run_ids": [
+              "run-dc3c5d56ebc9428d"
+            ],
+            "example_trace_urls": [],
+            "fallback_outcome": "host_completed",
+            "missing_native_capability": "native implementation of host.retrieval_needs",
+            "proposal": {
+              "schema_version": "1.0",
+              "author": "template",
+              "title": "Capability for: What is the current CPU temperature of the operator's laptop?",
+              "purpose": "host_only need",
+              "draft_ref": "drafts/2354052d3d2e11a3449363b67ab1f13eaba61c5f75f8f8123c17f10a12c22a5f.md"
+            },
+            "first_seen": "2026-10-09T15:35:06.796991Z",
+            "last_seen": "2026-10-09T15:35:06.796991Z"
+          }
+        ],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 0,
+          "host_operations": 1,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 1,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "host",
+              "model_id": null,
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": 449602,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 1
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "780a4376ffbd15696a4878279982ab11",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "result": {
+        "schema_version": "1.0",
+        "original_question": "What is the current CPU temperature of the operator's laptop?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "target_ids",
+          "scope_resolution"
+        ],
+        "rationale": "A current laptop CPU temperature is live device telemetry, which the offered repository-oriented catalog does not express. The original source scope remains unchanged.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      },
+      "shared_semantics": {
+        "passed": true,
+        "checks": [
+          {
+            "name": "original_question",
+            "passed": true,
+            "actual": "What is the current CPU temperature of the operator's laptop?",
+            "expected": "What is the current CPU temperature of the operator's laptop?"
+          },
+          {
+            "name": "exclude.entity_types",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "ac",
+                "source_file",
+                "test",
+                "adr",
+                "schema",
+                "report",
+                "component"
+              ]
+            }
+          },
+          {
+            "name": "exclude.required_fields",
+            "passed": true,
+            "actual": [],
+            "expected": {
+              "forbidden": [
+                "criteria",
+                "work_status",
+                "status"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "passed": true,
+            "actual": "needs_resolution",
+            "expected": [
+              "needs_resolution"
+            ]
+          },
+          {
+            "name": "unsupported_need_disclosed",
+            "passed": true,
+            "actual": [
+              "needs_outside_catalog",
+              "The catalog has no device telemetry entity, temperature field, or live sensor document type.",
+              "entity_types",
+              "document_types",
+              "required_fields",
+              "target_ids",
+              "scope_resolution"
+            ],
+            "expected": "Explicit unmet catalog dimension, unresolved; no synthetic confidence"
+          }
+        ]
+      },
+      "overlay": {
+        "applicable": false,
+        "passed": true,
+        "checks": []
+      }
+    }
+  ],
+  "unchanged_baseline": {
+    "cases": 12,
+    "semantic_passes": 12,
+    "failures": []
+  },
+  "independent_holdouts": {
+    "cases": 4,
+    "semantic_passes": 4,
+    "failures": []
+  }
+}

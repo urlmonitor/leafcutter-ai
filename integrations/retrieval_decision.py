@@ -34,6 +34,8 @@ class RetrievalChoice:
     allowed_fallback: str | None = None
     disclosure_level: int = 0
     ambiguous: bool = False
+    operation_version: str | None = None
+    operation_digest: str | None = None
 
 
 def choose_retrieval_mode(
@@ -180,3 +182,5 @@ async def assess_retrieval_mode(
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 20:00 [python-coder]: Preserve canonical evidence and optional bounded retrieval. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

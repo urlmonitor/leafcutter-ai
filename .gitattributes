@@ -20,3 +20,5 @@
 reports/retrieval-scenarios-2026-10-02/**/*.json -text
 reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/**/*.json -text
 reports/retrieval-scenarios-2026-10-02-post-sync-84006ac3/replay-recorded.py.txt -text
+
+reports/retrieval-public-2026-10-09/**/*.json -text

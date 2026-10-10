@@ -19,7 +19,15 @@ from kernel.contracts.retrieval_needs import DIMENSIONS, RetrievalNeedsOutput, R
 
 
 def _membership(request: RetrievalNeedsRequest, output: RetrievalNeedsOutput) -> list[str]:
-    """Refuse labels outside supplied offers and contradictory selection membership."""
+    """Refuse labels outside supplied offers and contradictory selection membership.
+
+    Args:
+        request: Original typed host request and finite offered meanings.
+        output: Candidate interpretation whose unresolved obligations are inspected.
+
+    Returns:
+        Violations of finite offered-label membership.
+    """
     violations: list[str] = []
     for dimension in DIMENSIONS:
         selected, uncertain = set(output.selections[dimension]), set(output.uncertain[dimension])
@@ -32,9 +40,17 @@ def _membership(request: RetrievalNeedsRequest, output: RetrievalNeedsOutput) ->
 
 
 def _missing(output: RetrievalNeedsOutput) -> list[str]:
-    """Add structural unresolved dimensions while leaving semantic judgment to the host."""
+    """Add structural unresolved dimensions while leaving semantic judgment to the host.
+
+    Args:
+        output: Candidate interpretation whose unresolved obligations are inspected.
+
+    Returns:
+        Required dimensions still unresolved by this interpretation.
+    """
     selected = output.selections
     missing = list(output.unresolved)
+    missing.extend("uncertain." + name for name, values in output.uncertain.items() if values)
     missing.extend(name for name in ("entity_types", "document_types") if not selected[name])
     missing.extend(name for name in ("detail_mode", "completeness") if getattr(output, name) == "unknown")
     if output.detail_mode == "fields" and not selected["required_fields"]:
@@ -47,7 +63,14 @@ def _missing(output: RetrievalNeedsOutput) -> list[str]:
 
 
 def _hierarchy_gaps(output: RetrievalNeedsOutput) -> list[str]:
-    """Keep exact sets/counts and identified multi-target requirements explicit."""
+    """Keep exact sets/counts and identified multi-target requirements explicit.
+
+    Args:
+        output: Candidate interpretation whose unresolved obligations are inspected.
+
+    Returns:
+        Missing explicit population and inclusion choices.
+    """
     missing = []
     if output.hierarchy_scope == "unknown" and output.completeness in {"exhaustive_count", "exhaustive_set"}:
         missing.append("hierarchy_scope")
@@ -58,7 +81,7 @@ def _hierarchy_gaps(output: RetrievalNeedsOutput) -> list[str]:
 
 
 class RetrievalNeeds(HostOperation):
-    """An experimental interpreter, exposed only by explicitly supplied experiment registries."""
+    """A registered host interpreter whose accepted output is consumed by research."""
 
     capability_id = "host.retrieval_needs"
     operation = "interpret_retrieval_needs"
@@ -70,25 +93,42 @@ class RetrievalNeeds(HostOperation):
         return "Determine the information needed to answer: " + (request.original_question if request else goal)
 
     def requirements(self, request: Any) -> list[str]:
-        """Compile actionable, bounded host instructions without quality labels or prior outputs."""
+        """Compile actionable, bounded host instructions without quality labels or prior outputs.
+
+        Args:
+            request: Original typed host request and finite offered meanings.
+
+        Returns:
+            Model-neutral task requirements for this operation.
+        """
         return [
             "Interpret only the original_question and supplied context/catalog in the input artifact. Do not retrieve or answer the question.",
             "Return the original_question and source_scope unchanged. Context and known_ids are unverified candidates, not authority or permissions.",
             "For each of entity_types, target_ids, required_fields, document_types and relationships return selections and uncertain arrays. Choose only exact offered labels; multiple are allowed.",
             "required_fields means facts indispensable to answering, not every related or helpful field. Optional supporting information may be mentioned only in rationale.",
+            "For required behavior or what verification must demonstrate, select the offered acceptance-clause field (criteria). A test reference (covered_by) or test-writing requirement (test_required) does not state the acceptance obligations. Do not substitute implementation status or test filenames for those clauses.",
+            "hierarchy_levels lists only explicitly requested L0/L1/L2/L3 filters; [] means all levels. Keep it empty for a single record. Do not infer levels from an identifier.",
             "User literal targets take precedence over conflicting contextual examples. Do not invent IDs. Missing IDs for thematic discovery do not by themselves require clarification.",
             "detail_mode: fields means requested facts; full_document means whole selected item; bounded_context means selected item plus requested surroundings, never the repository.",
             "completeness: single_entity or selected_entities require complete fields for identified targets; examples permits relevant samples; exhaustive_set/count requires full requested population coverage later.",
             "hierarchy_scope: exclude_root excludes only the chosen root; exclude_parents excludes every parent; include_root includes the root; not_applicable applies to exact-item questions without population inclusion.",
             "scope_resolution: sufficient means retrieval may start; discovery_needed means topic membership needs evidence; user_choice_missing means a genuinely missing preference; unknown retains uncertainty.",
             "Preserve requested all-descendant requirements. Do not substitute bounded direct children. Do not demand population/root clarification for one named criterion.",
-            "Use unresolved for unsupported meanings (needs_outside_catalog), unknowns and contradictions. Return needs_resolution rather than a confidently empty interpretation.",
+            "Use unresolved for unsupported meanings, unknowns and contradictions. For a meaning outside the offered catalog, include the exact standalone string needs_outside_catalog in unresolved; put explanatory prose in a separate item or rationale. Return needs_resolution rather than a confidently empty interpretation.",
             "This is host-reported interpretation, not classifier approval or a fulfilled answer. No Jev probability, method choice, query, or policy approval may be generated.",
             "engine is host_llm. model_id is null unless known; actual reported submission usage is authoritative for model provenance.",
         ]
 
     def submission_violations(self, request: Mapping[str, Any], payload: KernelModel) -> list[str]:
-        """Check the actual pending request before the interaction ledger accepts output."""
+        """Check the actual pending request before the interaction ledger accepts output.
+
+        Args:
+            request: Original typed host request and finite offered meanings.
+            payload: Validated host output before request-bound acceptance.
+
+        Returns:
+            Scope, identity or label violations preventing acceptance.
+        """
         try:
             expected = RetrievalNeedsRequest.model_validate(dict(request))
         except ValidationError:
@@ -108,7 +148,15 @@ class RetrievalNeeds(HostOperation):
         return violations
 
     def convert_payload(self, ctx: HostConversion, payload: RetrievalNeedsOutput) -> CapabilityResult:
-        """Keep the interpretation host-reported and derive status/provenance from the run."""
+        """Keep the interpretation host-reported and derive status/provenance from the run.
+
+        Args:
+            ctx: Host conversion context with original request and invocation.
+            payload: Validated host output before request-bound acceptance.
+
+        Returns:
+            Typed accepted host result, explicitly unresolved when obligations remain.
+        """
         violations = self.submission_violations(ctx.invocation.input_payload, payload)
         if violations:
             return invalid_output(ctx, "; ".join(violations))
@@ -128,3 +176,5 @@ class RetrievalNeeds(HostOperation):
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-03 00:00 [python-coder]: Use real host waits/resumes and reject scope/offer changes before ledger acceptance. (#TICKETLESS reason=user-requested-isolated-host-experiment)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve canonical acceptance clauses and explicit unresolved meanings in the public host boundary. (#KM-500/KM-500e-1-i)

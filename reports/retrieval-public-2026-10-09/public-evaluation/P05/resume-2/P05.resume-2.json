@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-0f3fa7e29c5c4402",
+  "root_task_id": "task-a327856298e74ce3",
+  "state_revision": 5,
+  "status": "partial",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.evidence_bundle.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "request_id": "inv-1cd34aa8cfa54eca",
+      "evidence_ids": [],
+      "finding_ids": [],
+      "coverage": {},
+      "assessments": {
+        "retrieval_needs": {
+          "kind": "retrieval_needs",
+          "status": "unresolved",
+          "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+          "limitations": [
+            "unsupported_population: no offered operation establishes the requested exhaustive population"
+          ]
+        }
+      },
+      "attempted_sources": [],
+      "unavailable_sources": [],
+      "contradictions": [],
+      "limitations": [
+        "unsupported_population: no offered operation establishes the requested exhaustive population"
+      ],
+      "truncated": false,
+      "evidence": [],
+      "findings": [],
+      "unknowns": [
+        "unsupported_population: no offered operation establishes the requested exhaustive population"
+      ],
+      "need_evidence": {},
+      "need_limitations": {}
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\kernel\\P05\\runs\\run-0f3fa7e29c5c4402\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [
+    "unsupported_population: no offered operation establishes the requested exhaustive population"
+  ],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-327d25ea5be498a5",
+      "created_at": "2026-10-09T15:51:08.929362Z",
+      "updated_at": "2026-10-09T15:51:08.929362Z",
+      "created_seq": 0,
+      "gap_key": "356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c",
+      "gap_type": "host_only",
+      "goal": "How many ACs concern test writing? Exclude parent requirements.",
+      "normalized_need": "acs concern exclude how many parent requirements test writing",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+      "candidates_considered": [
+        "host.retrieval_needs",
+        "decision",
+        "host.formulate_question",
+        "host.generate_options",
+        "host.query_build"
+      ],
+      "candidate_exclusions": {
+        "decision": "kind_mismatch",
+        "host.formulate_question": "kind_mismatch",
+        "host.generate_options": "kind_mismatch",
+        "host.query_build": "kind_mismatch"
+      },
+      "need_title": "How many ACs concern test writing? Exclude parent requirements.",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-0f3fa7e29c5c4402"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: How many ACs concern test writing? Exclude parent requirements.",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c.md"
+      },
+      "first_seen": "2026-10-09T15:51:08.929362Z",
+      "last_seen": "2026-10-09T15:51:08.929362Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 0,
+    "host_operations": 1,
+    "input_tokens": null,
+    "output_tokens": null,
+    "cost_usd_known": null,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 188881,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "feab419bd38f591dff78c95e3c15fbb4",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

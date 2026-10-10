@@ -4,11 +4,12 @@ description: "Request fields, status meanings, population rules, evidence assess
 type: reference
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-01'
+last_updated: '2026-10-09'
 components:
   - knowledge_management
   - decision_kernel
 related_docs:
+  - docs/reference/knowledge-retrieval-evidence.md
   - docs/how-to/run-knowledge-retrieval.md
   - docs/architecture/components/knowledge-retrieval.md
   - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
@@ -88,6 +89,7 @@ Canonical enum definitions remain in [AC schema](ac-schema.md). For example, `st
 |---|---|---|---|
 | `answer_requirements.original_question` | String | Required | The unchanged original question is retained, with a 4000-character maximum. |
 | `answer_requirements.required_fields` | String list | `[]` | Up to 32 distinct exact field names are required; `canonical_id` is the identity name, not `id`. |
+| `answer_requirements.scope.entity_ids` | String list | `[]` | Up to 64 original canonical target IDs, each 1–200 characters, remain required independently of query arguments; public single-entity and selected-entities interpretations populate them before selection. |
 | `answer_requirements.require_complete` | Boolean | `true` | The flag requires exhaustive enumeration; disabling it cannot supply absent execution, missing identities, unresolved scope or a complete truncated criterion. |
 | `answer_requirements.scope.population` | Enum | `returned_entities` | Allowed values are `returned_entities`, `ac_descendants` and `declared_dependents`. |
 | `answer_requirements.scope.root_id` | String or null | `null` | The root identifies the requested population and must match the operation arguments. |
@@ -103,27 +105,16 @@ Canonical enum definitions remain in [AC schema](ac-schema.md). For example, `st
 | `answer.known_work_status_counts` | Count map | `{}` | A requested subset breakdown includes an `unknown` bucket when needed. |
 | `answer.limitations` | String list | `[]` | The list records non-fulfilled question conditions. |
 
+`answer.scope.entity_ids` echoes these original obligations. For example, `{"population":"returned_entities","entity_ids":["KM-500c-1","KM-500c-2"]}` requires evidence for both identities even if a builtin or saved query returns only one. Missing targets keep fulfillment partial and `exact_total=null`. Descendant and relationship requests leave this list empty because their seed is not itself a required returned member; their declared population policy still applies.
+
 A representative partial answer is `{"status":"partial","completeness":{"complete":false,"known_count":4,"exact_total":null},"work_status_counts":null}`. This fragment is an answer object, not a new retrieval request or an executed result.
 
 ## Field provenance and availability
 
-| Evidence field | Type | Default | Description |
-|---|---|---|---|
-| `entity.canonical_id`, `kind`, `title` | Strings | Source values | These fields retain canonical identity and entity type. |
-| `entity.properties` | Object | Disclosed allowlist | Exact mapped values remain separate from generated summaries and interpretations. |
-| `entity.source` | Object | Actual source | The object contains `repository_id`, `source_sha`, repository-relative `path`, `locator` and optional `content_hash`. |
-| `content` | String or null | Disclosure-dependent | Level 3 returns bounded exact source content. AC `/criteria` returns the decoded canonical YAML string rather than YAML quote syntax. |
-| `evidence_id` | String | Generated from actual evidence | The identity binds source and disclosed content. |
-| `field_availability` | String map | `{}` | Required fields report `present`, `canonical_absent`, `projection_missing`, `disclosure_omitted`, `truncated` or `unknown`. |
-| `field_locators` | String map | `{}` | A header field such as `work_status` uses `/work_status` within the same file/SHA; it is not located by the default `/criteria` excerpt pointer. |
-| `field_derivations` | String map | `{}` | Derived hierarchy values state the rule instead of masquerading as literal YAML fields. |
-| `path`, `relationships` | Relation lists | `[]` | Each relation retains source/target IDs, edge type and declaration source/locator. |
-| `related`, `signals`, `seed_id` | Context fields | Empty or null | These fields carry bounded structural or relevance context. |
-| `limitations` | String list | `[]` | Actual source truncation and unavailable excerpt conditions remain visible. |
-
-Mapper `6` maps canonical AC `status`, `req_status`, `work_status`, `readiness`, `priority`, `level`, optional `parent`, `covered_by`, `implemented_by`, `depends_on`, `test_required` and source-disclosed `criteria`. Values have no invented defaults. `structural_parent` uses an explicit parent override or the existing `derive_parent_id` rule; its locator is `/parent` or `/id`. `has_children` is derived from structural-parent membership at the pinned revision. The exact rule is named in `field_derivations` when requested.
-
-`test_spec`, arbitrary roadmap facts, full code graphs, execution receipts and deployment state are not automatically projected by these mappings. Test/SourceFile nodes represent declared references, not a complete repository file inventory. Unknown mapping metadata in an older manifest remains unknown.
+See [Knowledge Retrieval Evidence](knowledge-retrieval-evidence.md) for the complete
+field contract, canonical provenance, requested source excerpts and unavailable or
+truncated outcomes. It distinguishes default criteria disclosure from separately
+cited requested fields while retaining the same source and caller budgets.
 
 ## Population operations
 

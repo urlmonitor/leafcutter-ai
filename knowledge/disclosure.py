@@ -241,9 +241,19 @@ async def evidence(
     from .answer_fields import availability
 
     fields = request.answer_requirements.required_fields if request.answer_requirements else []
+    available = availability(node, visible, fields, level, limitations, content=content)
+    from .requested_fields import read_fields
+    values, field_contents, field_availability, field_limits = await read_fields(
+        node, request, source_resolver,
+        max(0, (content_limit if content_limit is not None else request.budget.max_content_bytes)
+            - len((content or "").encode("utf-8"))))
+    visible.properties.update(values)
+    available.update(field_availability)
+    limitations.extend(field_limits)
     return KnowledgeEvidence(
         entity=visible,
-        field_availability=availability(node, visible, fields, level, limitations),
+        field_availability=available,
+        field_contents=field_contents,
         field_locators=_field_locators(node, fields),
         field_derivations=_field_derivations(fields),
         evidence_id="knowledge-" + hashlib.sha256(identity.encode()).hexdigest(),
@@ -269,6 +279,8 @@ def _field_locators(node: Entity, fields: list[str]) -> dict[str, str]:
         for name in fields
         if name not in {"canonical_id", "kind", "title", "source_sha", "source_locator"}
     }
+    if "content" in locators:
+        locators["content"] = node.source.locator
     if "structural_parent" in locators:
         locators["structural_parent"] = node.properties.get("structural_parent_locator", "/id")
     if "has_children" in locators:
@@ -288,3 +300,5 @@ def _field_derivations(fields: list[str]) -> dict[str, str]:
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
+
+# - 2026-10-09 17:00 [python-coder]: Hydrate only requested additional fields at source disclosure without changing the summary allowlist. (#KM-500/KM-500e-1-i)

@@ -16,7 +16,10 @@ from kernel.providers.fakes import choice_answer
 from knowledge.config import KnowledgeConfig
 from knowledge.contracts import KnowledgeRetrievalResult
 from tests.kernel.helpers import make_scope
-from tests.kernel.integration.scenario_support import ScenarioCase, answer_human
+from tests.kernel.integration.scenario_support import ScenarioCase
+from tests.knowledge.query_answer_contract_host_support import (
+    accepted_needs, configure_count_task, interpret_count, resume_count_in_child,
+)
 
 
 class TestPublicKernelAnswerContract(ScenarioCase):
@@ -34,7 +37,8 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         self.route_choice = "research"
         # Natural-language retrieval asks Jev to pick the graph read (DK-300d-4); answer it here,
         # not in the shared ScenarioCase, so selector regressions stay visible elsewhere.
-        self.jev.script("knowledge.operation_select", "operation", choice_answer("get_component_context"))
+        self.operation = "get_component_context"
+        self.jev.script("knowledge.operation_select", "operation", lambda q, b: choice_answer(self.operation))
         self.calls = []
         self.catalog = None
         self.admission = None
@@ -172,33 +176,9 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         assert "host.query_build" not in self.capabilities_used(values)
 
 
-    def natural_task(self, *, inclusion="clarify", fields=True):
-        """Script only external interpretation; actual producer builds all answer requirements."""
-        from kernel.providers.fakes import noul_answer
-        self.requirements["original_question"] = (
-            "How many TQ-500f test-writing ACs are there and what work statuses do they have, excluding parent requirements?"
-            if inclusion == "clarify" else
-            "Count every L2 and L3 descendant of TQ-500f, exclude only TQ-500f itself, and show work statuses.")
-        self.catalog = SimpleNamespace(descriptors=lambda: [])
-        async def pin(repository_id, source_sha="latest"):
-            return {"repository_id": repository_id, "source_sha": "a" * 40,
-                    "generation_id": "controlled-generation", "supported_kinds": ["AcceptanceCriterion"],
-                    "supported_fields": {"AcceptanceCriterion": ["canonical_id", "level"] + ([] if getattr(self, "mapping_gap", False) else ["work_status"])},
-                    "supported_relationships": ["parent", "depends_on"]}
-        self.admission = SimpleNamespace(pin=pin)
-        self.jev.script("knowledge.answer_contract", "field.*", lambda q, b:
-            noul_answer(0.99 if fields and q.id == "field.work_status" else 0.01))
-        self.jev.script("knowledge.answer_contract", "population", choice_answer("ac_descendants"))
-        self.jev.script("knowledge.answer_contract", "inclusion", choice_answer(inclusion))
-        self.jev.script("knowledge.answer_contract", "root", choice_answer("TQ-500f"))
-        self.jev.script("knowledge.answer_contract", "level.*", lambda q, b:
-            noul_answer(0.99 if q.id in {"level.L2", "level.L3"} else 0.01))
-        self.jev.script("knowledge.query_readiness", "readiness", choice_answer("ready"))
-        self.jev.script("knowledge.query_target", "kind", choice_answer("AcceptanceCriterion"))
-        self.jev.script("knowledge.query_select", "query", choice_answer("build"))
-        raw = self.research_task().model_dump(mode="json")
-        raw["input_payload"].pop("answer_requirements")
-        return TaskInput.model_validate(raw)
+    def natural_task(self, *, inclusion="clarify", fields=True, legacy=False):
+        """Keep question-only intake distinct from explicit legacy builder obligations."""
+        return configure_count_task(self, inclusion=inclusion, fields=fields, legacy=legacy)
 
     def test_natural_question_produces_work_status_need_and_focused_clarification(self):
         # covers: KM-500e-1
@@ -209,16 +189,18 @@ class TestPublicKernelAnswerContract(ScenarioCase):
     async def _scenario_natural_question_produces_work_status_need_and_focused_clarification(self):
         """No caller-built contract: actual planner must preserve field meaning and ambiguity."""
         task = self.natural_task()
-        pending = await self.service().start_run(task)
+        pending, request = await interpret_count(self, task)
         assert pending.status == RunStatus.WAITING_HUMAN, pending.model_dump_json()
         assert self.calls == []
         values = await self.checkpoint_values(pending.run_id)
-        states = [item.continuation.state for item in values["work_items"].values()
-                  if item.continuation and item.continuation.state.get("answer_requirements")]
-        assert states
-        assert states[-1]["answer_requirements"]["required_fields"] == ["work_status"]
-        assert states[-1]["answer_requirements"]["scope"]["inclusion"] is None
-        assert states[-1]["answer_requirements"]["original_question"] == task.goal
+        needs = accepted_needs(values)[-1]
+        assert needs["selections"]["required_fields"] == ["work_status"]
+        assert needs["hierarchy_scope"] == "unknown"
+        assert needs["hierarchy_levels"] == []
+        assert needs["original_question"] == task.goal
+        assert needs["source_scope"] == request["source_scope"]
+        assert pending.usage_summary.host_operations == 1
+        assert "host.query_build" not in self.capabilities_used(values)
         question = pending.pending_interaction.model_dump_json()
         assert "root_excluded" in question and "terminal_leaves" in question
 
@@ -232,15 +214,23 @@ class TestPublicKernelAnswerContract(ScenarioCase):
     async def _scenario_fully_explicit_natural_scope_reaches_selection_without_repeat_question(self):
         """The same public producer must honor an already explicit root and level policy."""
         task = self.natural_task(inclusion="root_excluded")
-        result = await self.service().start_run(task)
+        result, request = await interpret_count(self, task, inclusion="root_excluded")
         assert result.status != RunStatus.WAITING_HUMAN, result.model_dump_json()
         batches = [batch.model_dump(mode="json") for batch in self.jev.batches
-                   if batch.purpose == "knowledge.query_select"]
+                   if batch.purpose == "knowledge.operation_select"]
         assert batches, result.model_dump_json()
         contract = batches[-1]["state"]["answer_requirements"]
         assert contract["scope"]["inclusion"] == "root_excluded"
         assert contract["scope"]["levels"] == ["L2", "L3"]
         assert contract["required_fields"] == ["work_status"]
+        assert self.calls and self.calls[0].operation == "get_ac_descendants"
+        values = await self.checkpoint_values(result.run_id)
+        requests = [r for r in values["requests"].values() if r.payload_schema == schema_ids.RETRIEVAL_REQUEST]
+        assert requests and all(r.payload["answer_requirements"] == contract for r in requests)
+        assert all(r.payload["retrieval_needs"]["source_scope"] == request["source_scope"] for r in requests)
+        assert result.pending_interaction.operation == "synthesize_evidence"
+        assert len(accepted_needs(values)) == 1
+        assert result.usage_summary.host_operations == 2  # interpretation plus the pending synthesis
 
     def test_no_confident_required_facts_asks_about_facts_before_selection(self):
         # covers: KM-500e-1
@@ -250,9 +240,10 @@ class TestPublicKernelAnswerContract(ScenarioCase):
     async def _scenario_no_confident_required_facts_asks_about_facts_before_selection(self):
         """A planner that cannot identify requested facts cannot continue with empty obligations."""
         task = self.natural_task(inclusion="root_excluded", fields=False)
-        result = await self.service().start_run(task)
+        result, _ = await interpret_count(self, task, inclusion="root_excluded", fields=False)
         assert result.status == RunStatus.WAITING_HUMAN, result.model_dump_json()
-        assert not any(batch.purpose == "knowledge.query_select" for batch in self.jev.batches)
+        assert self.calls == []
+        assert not any(batch.purpose in {"knowledge.operation_select", "knowledge.query_select"} for batch in self.jev.batches)
         question = result.pending_interaction.model_dump_json().lower()
         assert "field" in question or "fact" in question, question
 
@@ -317,9 +308,9 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         self._asyncioRunner.run(self._scenario_missing_field_mapping_never_dispatches_query_builder(), context=contextvars.copy_context())
 
     async def _scenario_missing_field_mapping_never_dispatches_query_builder(self):
-        """Even a scripted build choice cannot invent an absent required field mapping."""
+        """Legacy explicit obligations: a build choice cannot invent an absent field mapping."""
         self.mapping_gap = True
-        task = self.natural_task(inclusion="root_excluded")
+        task = self.natural_task(inclusion="root_excluded", legacy=True)
         result = await self.service().start_run(task)
         values = await self.checkpoint_values(result.run_id)
         assert "host.query_build" not in self.capabilities_used(values)
@@ -339,11 +330,30 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         self._asyncioRunner.run(self._scenario_available_fields_with_missing_query_can_dispatch_builder(), context=contextvars.copy_context())
 
     async def _scenario_available_fields_with_missing_query_can_dispatch_builder(self):
-        """The same missing-query path stays eligible when requested fields are mapped."""
-        task = self.natural_task(inclusion="root_excluded")
+        """Legacy explicit obligations retain their existing mapped-field builder eligibility."""
+        task = self.natural_task(inclusion="root_excluded", legacy=True)
         result = await self.service().start_run(task)
         assert result.status == RunStatus.WAITING_HOST, result.model_dump_json()
         assert result.pending_interaction.operation == "build_query"
+
+    def test_natural_ac_query_gap_does_not_borrow_legacy_builder_authority(self):
+        # covers: KM-500e-1-i
+        # covers: KM-500e-4
+        # angle: failure
+        # angle: discrimination
+        self._asyncioRunner.run(self._scenario_natural_ac_query_gap(), context=contextvars.copy_context())
+
+    async def _scenario_natural_ac_query_gap(self):
+        """An AC interpretation cannot acquire component-only query creation authority."""
+        task = self.natural_task(inclusion="root_excluded")
+        self.operation = "unsupported"
+        result, _ = await interpret_count(self, task, inclusion="root_excluded")
+        assert result.status == RunStatus.PARTIAL, result.model_dump_json()
+        choices = [b.questions[0].criteria for b in self.jev.batches if b.purpose == "knowledge.operation_select"]
+        assert choices and all("query_catalog" not in choice for choice in choices)
+        values = await self.checkpoint_values(result.run_id)
+        assert "host.query_build" not in self.capabilities_used(values)
+        assert not self.calls and not result.evidence_ids
 
     def test_actual_child_process_reopens_and_resumes_original_count_scope(self):
         # covers: KM-500e-1
@@ -353,63 +363,43 @@ class TestPublicKernelAnswerContract(ScenarioCase):
         self._asyncioRunner.run(self._scenario_actual_child_process_reopens_and_resumes_original_count_scope(), context=contextvars.copy_context())
 
     async def _scenario_actual_child_process_reopens_and_resumes_original_count_scope(self):
-        """An OS process boundary retains the original question and human scope correction."""
+        """A real process retains the question, trust scope, clarification and cumulative usage."""
         import asyncio
         from pathlib import Path
         import subprocess
         import sys
         task = self.natural_task()
-        pending = await self.service().start_run(task)
+        pending, request = await interpret_count(self, task)
         assert pending.status == RunStatus.WAITING_HUMAN
         packet = self.run_root / "qa-independent-restart-input.json"
         packet.write_text(json.dumps({"repo": str(self.repo), "run_root": str(self.run_root),
             "config": self.config.model_dump(mode="json"), "pending": pending.model_dump(mode="json"),
-            "question": task.goal}), encoding="utf-8")
+            "question": task.goal, "source_scope": request["source_scope"]}), encoding="utf-8")
         process = await asyncio.to_thread(subprocess.run, [sys.executable, "-m", __name__, str(packet)],
             cwd=Path(__file__).resolve().parents[2], capture_output=True, text=True, encoding="utf-8", timeout=60)
         assert process.returncode == 0, process.stdout + process.stderr
         report = json.loads(process.stdout)
         assert report["run_id"] == pending.run_id
-        assert report["status"] == "waiting_host", report
         assert report["original_question"] == task.goal
         assert report["required_fields"] == ["work_status"]
         assert report["scope"]["inclusion"] == "root_excluded"
+        assert report["scope"]["levels"] == ["L2", "L3"]
+        assert report["source_scope"] == request["source_scope"]
+        assert report["host_operations"] == 3  # two interpretations plus pending synthesis
+        assert report["host_input_tokens"] == 22 and report["host_output_tokens"] == 14
+        assert report["jev_calls"] >= pending.usage_summary.jev_calls
+        assert report["interpretation_count"] == 2
+        assert report["operation"] == "get_ac_descendants"
+        assert report["status"] == "waiting_host" and report["pending_operation"] == "synthesize_evidence"
         assert report["pid"] != __import__("os").getpid()
-
-
-def _resume_in_child(path):
-    """Independent client process: reconstruct external fixtures and resume persisted service state."""
-    import asyncio
-    import os
-    from pathlib import Path
-    from kernel.config import KernelConfig
-    from kernel.contracts.run import RunEnvelope
-    raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    case = TestPublicKernelAnswerContract()
-    case.setUp()
-    try:
-        case.repo, case.run_root = Path(raw["repo"]), Path(raw["run_root"])
-        case.config = KernelConfig.model_validate(raw["config"])
-        case.natural_task()
-        pending = RunEnvelope.model_validate(raw["pending"])
-        response = answer_human(pending, {"free_text": json.dumps({"scope": {"inclusion": "root_excluded"}})})
-        result = asyncio.run(case.service().resume_run(pending.run_id, response))
-        values = asyncio.run(case.checkpoint_values(result.run_id))
-        states = [item.continuation.state for item in values["work_items"].values()
-                  if item.continuation and item.continuation.state.get("answer_requirements")]
-        requirements = states[-1]["answer_requirements"]
-        print(json.dumps({"run_id": result.run_id, "status": result.status.value,
-            "original_question": requirements["original_question"], "required_fields": requirements["required_fields"],
-            "scope": requirements["scope"], "pid": os.getpid()}))
-    finally:
-        case.doCleanups()
 
 
 if __name__ == "__main__":
     import sys
-    _resume_in_child(sys.argv[1])
+    resume_count_in_child(TestPublicKernelAnswerContract, sys.argv[1])
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-06 12:00 [test-writer]: Script the operation_select question in this fixture (not the shared ScenarioCase); #1008 routes natural-language retrieval through it. (#KnowledgeFixturesOpSelect)
+# - 2026-10-09 [test-writer]: Drive the real needs host and restart protocol; isolate legacy builder compatibility. (#KM-500e-1-i)

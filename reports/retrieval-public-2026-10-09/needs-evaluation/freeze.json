@@ -1,0 +1,23 @@
+{
+  "base_commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+  "dataset_sha256": "b067c5721cc49f3510d2c2b99feaa82272db9acf0ad686ad541b2fa182fcf5d7",
+  "comparison_sha256": "965ca7cddfda6790b8646bc560c38aac0d344e05cc577e18f97bf01568ad7072",
+  "files_sha256": {
+    "scripts/evaluate_retrieval_needs_llm.py": "4a12f650c849bdb8201a202fd5c907d95ed38ebdbaf3e51dd80659ff46f0240f",
+    "kernel/contracts/retrieval_needs.py": "32702b4de2fc7283946d8e00544f38dfb6ca256df6864b3b203dfc5bd24b174e",
+    "kernel/capabilities/host/retrieval_needs.py": "dd63524f4450d5c00d8c5181c9197e9e43d6204c258c7688789da497621935c5",
+    "integrations/retrieval_needs_llm.py": "e730a5b0e62965c45534f7a2b0c6d7cc401123c1cdc67d88d736a63e85ad1992",
+    "kernel/capabilities/host/base.py": "41c83107f5099f74285795f408066a01f8921df81669c29d6ae2fe4caa9d25c4",
+    "kernel/capabilities/host/registry.py": "d6ae25cdd6cfa14e707f205deab6ca12434e900a872afbde899282e39eb2e833",
+    "kernel/contracts/schema_ids.py": "f1264cd5bf64e774862d08a663df3021fc2279172986f94a5ffe7e1b4facc46a",
+    "kernel/contracts/schema_catalog.py": "26820eb6c730c9187a7bb7ca18f0c83d5e1e1f2c685dd54278b48ad2f645621c",
+    "kernel/contracts/__init__.py": "9620dcd8f71c4b3ce506041e56685067a48bdffff8a7ec1f34809348cde966f8",
+    "kernel/interaction/submissions.py": "5b26d96b3c555e30320c3b7c9c0d68f19ca523875f147525202a41a33602f013",
+    "kernel/schemas/leafcutter.retrieval_needs_request.v1.schema.json": "2c022045234120c0af31512d2845e685744fd6c615946c2cd3786164ae1a370b",
+    "kernel/schemas/leafcutter.retrieval_needs_output.v1.schema.json": "16ee82eca67786947ac4d371ff04dbbaa2843a534db9ffa13b16484fc74fcb98"
+  },
+  "expected_labels_in_host_input": false,
+  "automatic_context_enrichment": false,
+  "controller_calls_models": false,
+  "model_tokens_and_provider_calls": "unknown unless actually reported"
+}

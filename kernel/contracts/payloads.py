@@ -21,6 +21,7 @@ from kernel.contracts.decision import CriterionAssessment, Criterion, Option, Ra
 from kernel.contracts.enums import ApprovalStatus, DecisionStatus, ProposalStatus
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed, Finding
 from kernel.contracts.run import TraceRefs
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from kernel.contracts.payloads_human import (  # noqa: F401
     AddedOption,
     CriterionEdit,
@@ -197,6 +198,8 @@ class RetrievalLimits(KernelModel):
 class RetrievalRequestPayload(KernelModel):
     """leafcutter.retrieval_request.v1."""
 
+    retrieval_needs: RetrievalNeedsOutput | None = None
+    """Accepted interpretation of the original question, retained across retrieval and catalog selection."""
     knowledge: dict[str, VerbatimJson] | None = None
     """Neutral knowledge request fields, fully validated by the capability adapter."""
     answer_requirements: dict[str, JsonValue] | None = None
@@ -360,3 +363,5 @@ __all__ = [
 # ====================================================================
 
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

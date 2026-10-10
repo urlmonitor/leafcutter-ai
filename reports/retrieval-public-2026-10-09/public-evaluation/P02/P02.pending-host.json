@@ -1,0 +1,9 @@
+{
+  "case_id": "P02",
+  "step": "resume-2",
+  "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\packets\\P02.resume-2.json",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\kernel\\P02\\runs\\run-7532746d8507418e\\artifacts\\input-int-8d29c5dd40524645.json"
+  ],
+  "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\responses\\P02.resume-2.json"
+}
