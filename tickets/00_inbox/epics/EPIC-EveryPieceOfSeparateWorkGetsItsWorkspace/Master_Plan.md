@@ -89,8 +89,9 @@ re-verified, never applied wholesale.
 | 12 | [12_TICKET-20260928-BO-4300-legacy-cut-over.md](./12_TICKET-20260928-BO-4300-legacy-cut-over.md) | Cut-over of legacy git worktrees without losing work | f-3-i, f-3-ii, f-3 | 08 | `[ ]` |
 | 13 | [13_TICKET-20260928-BO-4300-docs-and-diagrams.md](./13_TICKET-20260928-BO-4300-docs-and-diagrams.md) | How-tos, answer reference, component/sequence/state diagrams | a-3, a-4, a-5, c-5, d-5, e-5 | 11, 12 | `[ ]` |
 | 14 | [14_TICKET-20260928-BO-4300-retire-former-ways.md](./14_TICKET-20260928-BO-4300-retire-former-ways.md) | Retire the old scripts, repo-wide census, rewrite every written recipe | f-2-ia, f-2-ib, f-2 | 01, 11, 12, 13 | `[ ]` |
+| 15 | [15_TICKET-20261010-BO-4300c-6-canary-robustness.md](./15_TICKET-20261010-BO-4300c-6-canary-robustness.md) | Stage canaries never read a git failure as a pass and never block ordinary work (added 2026-10-10, decision dec-0ed3e2e3a1cd8340) | c-6 | 05 | `[ ]` |
 
-AC ids above omit the `BO-4300` prefix. 58 ACs across tickets 02-14 plus BO-4300a-1 in ticket 01 = 59.
+AC ids above omit the `BO-4300` prefix. 58 ACs across tickets 02-14 plus BO-4300a-1 in ticket 01 = 59; BO-4300c-6 (ticket 15, added 2026-10-10) = 60.
 
 ## Dependencies
 
@@ -111,6 +112,7 @@ Ticket frontmatter `depends_on` is authoritative. Each edge comes from an Expect
 12 (cut-over, f-3)                <- 08 (unsent-work verdict; maker core files serialised); fixture from 02
 13 (docs, a-3/a-4/a-5/c-5/d-5/e-5)<- 11, 12 (a-5 expects c-2; c-5 expects c-3; d-5 expects d-2; e-5 expects e-3; written against what shipped)
 14 (retire, f-2)                  <- 11 (f-2 expects f-1), 13 (f-2-ia/ib expect a-3), 12 (census exempts the cut-over verb), 01
+15 (canary fix, c-6)            <- 05 (fixes the stage canary ticket 05 delivered; files disjoint from 06-14)
 01 (BO-4300a-1 composite)         <- 06 (a-1-ii), 09 (a-1-ib), 10 (a-1-ia)
 ```
 
