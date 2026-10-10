@@ -1,6 +1,6 @@
 ---
 title: Work identity, ticket location, occupied locations and resumed lines
-status: todo
+status: done
 components:
 - worktree_manager
 created: '2026-09-28'
@@ -42,6 +42,56 @@ files_touched:
 - unit_tests/build_orchestration/test_bo_4300d_3.py
 - unit_tests/build_orchestration/test_bo_4300d_3_i.py
 - unit_tests/build_orchestration/test_bo_4300d_4.py
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-1-ii.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300a-2.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-3-i.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-3.yaml
+- docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-4.yaml
+out_of_scope:
+- scripts/build_helpers.py
+- scripts/build_phases_script_deploy.py
+- scripts/build_shim_env.py
+- templates/scripts/commit_guardian/precommit_canary.py
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_admin.py
+- templates/scripts/worktree_answer.py
+- templates/scripts/worktree_canaries.py
+- templates/scripts/worktree_layout.py
+- templates/scripts/worktree_paths.py
+- templates/scripts/worktree_readiness.py
+- unit_tests/build_orchestration/_bo2400f13_fixtures.py
+- unit_tests/build_orchestration/_bo_4300a_1_fixtures.py
+- unit_tests/build_orchestration/_developer_repo_guard.py
+- unit_tests/build_orchestration/_workspace_maker_build_helpers.py
+- unit_tests/build_orchestration/_workspace_maker_builders.py
+- unit_tests/build_orchestration/_workspace_maker_fixtures.py
+- unit_tests/build_orchestration/conftest.py
+- unit_tests/build_orchestration/test_bo2400f_13i_own_leftover_report.py
+- unit_tests/build_orchestration/test_bo_4300a_1.py
+- unit_tests/build_orchestration/test_bo_4300a_1_deployed.py
+- unit_tests/build_orchestration/test_bo_4300b_1.py
+- unit_tests/build_orchestration/test_bo_4300b_1_i.py
+- unit_tests/build_orchestration/test_bo_4300b_2.py
+- unit_tests/build_orchestration/test_bo_4300b_2_i.py
+- unit_tests/build_orchestration/test_bo_4300b_2_ii.py
+- unit_tests/build_orchestration/test_bo_4300b_3.py
+- unit_tests/build_orchestration/test_bo_4300b_3_i.py
+- unit_tests/build_orchestration/test_bo_4300b_4.py
+- unit_tests/build_orchestration/test_bo_4300b_5.py
+- unit_tests/build_orchestration/test_bo_4300b_5_i.py
+- unit_tests/build_orchestration/test_bo_4300c_1.py
+- unit_tests/build_orchestration/test_bo_4300c_1_canary_git_failure.py
+- unit_tests/build_orchestration/test_bo_4300c_1_canary_order.py
+- unit_tests/build_orchestration/test_bo_4300c_1_i.py
+- unit_tests/build_orchestration/test_bo_4300c_1_ii.py
+- unit_tests/build_orchestration/test_bo_4300c_1_iii.py
+- unit_tests/build_orchestration/test_bo_4300c_1_marker_and_guardian.py
+- unit_tests/build_orchestration/test_bo_4300c_1_path_keyed_canaries.py
+- unit_tests/build_orchestration/test_bo_4300c_1_real_install.py
+- unit_tests/build_orchestration/test_bo_4300c_1_review_fixes.py
+- unit_tests/build_orchestration/test_bo_4300c_2.py
+- unit_tests/build_orchestration/test_bo_4300f_4.py
+- unit_tests/build_orchestration/test_bo_4300f_4_i.py
 agents:
   ac-fulfillment-gate: signed_off
   ac-validator: signed_off
