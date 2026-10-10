@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -76,7 +76,9 @@ test_spec:
     type: unit
     angle: failure
     description: 'EXISTS (tests/kernel/capabilities/test_host_conversion.py::TestSynthesisConversion::test_a_citation_of_unknown_evidence_is_dropped_with_a_limitation):
-      an unknown citation is removed with a limitation (the finding itself is KEPT, see gaps)'
+      with the synthesis handed one evidence id, a finding citing an unknown id alongside the
+      handed one is not accepted, and a limitation names the unknown id (a request handing no ids
+      keeps the old drop-the-citation check)'
     covers:
       - DK-600a-3
   - name: test_a_finding_citing_other_evidence_is_not_accepted
@@ -84,9 +86,10 @@ test_spec:
     framework: unittest
     type: unit
     angle: failure
-    description: 'TO WRITE (in tests/kernel/capabilities/test_host_conversion.py): a finding citing
-      any id outside the evidence handed to the synthesis is not accepted, and every accepted finding
-      cites at least one handed item (fails today)'
+    description: 'EXISTS (tests/kernel/capabilities/test_host_conversion.py::TestSynthesisConversion::test_a_finding_citing_other_evidence_is_not_accepted,
+      with test_only_the_evidence_handed_to_the_synthesis_counts_as_known): a finding citing any id
+      outside the evidence handed to the synthesis (mixed, unknown only) or citing nothing is not
+      accepted, and every accepted finding cites at least one handed item and nothing else'
     covers:
       - DK-600a-3
   - name: test_options_and_criteria_are_proposed_and_attributed_to_the_host_capability
@@ -167,6 +170,7 @@ superseded_by: null
 covered_by: []
 implemented_by:
   - kernel/capabilities/host/synthesize.py#Synthesize.convert_payload
+  - kernel/capabilities/host/synthesize.py#_cite_only_handed
   - kernel/capabilities/host/sanitize.py#convert_findings
   - kernel/capabilities/host/generate_options.py#_split_named
   - kernel/capabilities/host/generate_options.py#_in_goal
