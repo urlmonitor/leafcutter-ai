@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -41,7 +41,7 @@ doc_links:
     relationship: describes
     status: exists
     relevance: RunService, CLI exit codes, the /leafcutter skill.
-assigned_agent: documentation-expert
+assigned_agent: how-to-author
 estimated_complexity: S
 it_requirements:
   - Documentation states only behaviour that a test proves on main; where the code and an existing
@@ -50,7 +50,9 @@ it_requirements:
     how-to.
   - Commands and messages are copied from the code (kernel/memory/cli.py, publish.py), including the
     exact exit-3 messages.
+  - 'Target file (fixed 2026-10-10 by it-po for tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md): docs/how-to/file-and-reuse-decisions-with-the-kernel.md (exists; extend it). In the same ticket reference-author (DK-600c-5-i) edits this file afterwards, replacing its ''What a record holds'' table with a link to docs/reference/decision-record.md.'
 test_required: false
+test_rationale: "Documentation only, no executable behaviour; checked by documentation-verifier against the ticket's Agent Contracts list."
 delivers_to: null
 expects_from: null
 origin_agent: business-analyst
@@ -72,9 +74,21 @@ amended_by:
       e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
       and adds the `# covers:` tags before anything is marked done.
     complexity_basis: completing the existing how-to
+  - reason: documentation-build-path-and-leaf-author
+    by: business-analyst
+    directed_by: user
+    date: '2026-10-10'
+    ticket: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md
+    note: 'Build path per kernel decision dec-ea83c3989d1b7199 (user''s choice 2026-10-10): this documentation AC is built in the one hand-authored docs ticket by its leaf author and checked by documentation-verifier. test_required set false with a test_rationale (user-approved 2026-10-10) so the done-proof waiver (is_covers_tag_waived) applies. assigned_agent documentation-expert -> how-to-author per ADR-036 (an AC names the leaf author, never documentation-expert). criteria, title, depends_on and req_status unchanged.'
+  - reason: it-po-docs-ticket-review
+    by: it-po
+    date: '2026-10-10'
+    ticket: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md
+    note: 'IT-PO review of the 2026-10-10 build-path amendment. Agreed: test_required false with test_rationale, assigned_agent how-to-author (ADR-036). Added the target-file it_requirements line the other eight ACs carry and this one lacked (the ticket says each AC''s last it_requirements line records its target file): docs/how-to/file-and-reuse-decisions-with-the-kernel.md, with the note that reference-author edits the same file afterwards. criteria, title, depends_on, req_status, assigned_agent and estimated_complexity unchanged.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+  - docs/how-to/file-and-reuse-decisions-with-the-kernel.md
 change_target: docs
 risk_surface: internal
 notes: |

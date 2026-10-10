@@ -118,6 +118,20 @@ context) and the learning loop are in
 [Decision Kernel — Flows and Context](../diagrams/c2-007-decision-kernel-flows-overview.md). The
 colony memory layer is in [Colony Memory](colony-memory.md).
 
+## Decision lifecycle diagrams
+
+These diagrams follow one decision from your question to a published record that later runs
+reuse as precedent. Each is a child of the design map above.
+
+| Diagram | Shows |
+|---|---|
+| [Decision forming round](../diagrams/c3-024-decision-kernel-flows-forming-round.md) | One round from your question to the ranked options, with the budget-reserve exit |
+| [Decision states](../diagrams/c3-025-decision-kernel-flows-decision-states.md) | Proposed, approved, ranked and resolved, the re-rank loop and the no-answer exit |
+| [Record staging](../diagrams/c3-026-decision-kernel-flows-record-staging.md) | How a human-approved decision is staged in the run folder and announced with its publish command |
+| [Record publishing](../diagrams/c3-027-decision-kernel-flows-record-publishing.md) | `decisions publish`, its checks and exit-3 stops, then commit, review and merge |
+| [Record lifecycle](../diagrams/c3-028-decision-kernel-flows-record-lifecycle.md) | Staged, published (in review, then merged), kept staged or superseded |
+| [Precedent and reuse](../diagrams/c3-029-decision-kernel-flows-precedent-reuse.md) | How an earlier record is found, judged, cited and offered for reuse |
+
 ## Exposed interfaces
 
 Registered in `docs/components.json` under `decision_kernel.exposed_interfaces`:

@@ -4,7 +4,7 @@ description: "Set up credentials, start a run from the command line, answer the 
 type: how-to
 status: active
 created: 2026-10-01
-last_updated: 2026-10-03
+last_updated: 2026-10-10
 components:
   - decision_kernel
 related_docs:
@@ -131,8 +131,10 @@ after `decision.max_research_rounds` rounds, the decision stops researching and 
 **ranked question**: the options as `#1, #2, ...` ordered by required criteria passed, then the
 required mean, then the supporting mean, each with its criteria in words and the evidence it
 cites. Answer with `{"choice_id": "<option id>"}`, add an option of your own
-(`added_options`), or answer in words (recorded only). A choice resolves the decision with you
-as approver and the ranking in the rationale. `decision.design_judgement_threshold` sets how
+(`added_options`), or answer in words (`free_text`). An added option or a words answer is
+assessed again, with your words as constraints, and ranked again; only a choice resolves the
+decision, with you as approver and the ranking in the rationale. Every answer form is shown in
+[How to answer the decision kernel's questions](answer-the-decision-kernel-questions.md). `decision.design_judgement_threshold` sets how
 sure Jev must be that a criterion is a design judgement.
 
 Research uses what the decision already knows. An option that cites `kernel/contracts/decision.py`
@@ -303,6 +305,7 @@ Expected output: one JSON line with `"gaps"`, `"total"`, `"build_opportunities"`
 
 ## See Also
 
+- [How to answer the decision kernel's questions](answer-the-decision-kernel-questions.md)
 - [How to inspect kernel traces with the Langfuse MCP server](inspect-kernel-traces-with-langfuse-mcp.md); [how to file approved decisions and reuse them as precedent](file-and-reuse-decisions-with-the-kernel.md)
 - [Decision kernel container overview](../architecture/components/decision-kernel.md)
 - [V0 demo and run report](../analysis/2026-10-01-decision-kernel-v0-demo-report.md)
