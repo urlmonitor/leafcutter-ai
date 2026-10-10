@@ -1,0 +1,71 @@
+{
+  "gates": [
+    {
+      "id": "historical_a02",
+      "probability": 0.71,
+      "confidence": 0.64,
+      "accept": false
+    },
+    {
+      "id": "below_probability",
+      "probability": 0.7999,
+      "confidence": 0.64,
+      "accept": false
+    },
+    {
+      "id": "at_probability",
+      "probability": 0.8,
+      "confidence": 0.64,
+      "accept": true
+    },
+    {
+      "id": "below_confidence",
+      "probability": 0.9,
+      "confidence": 0.49,
+      "accept": false
+    },
+    {
+      "id": "at_confidence",
+      "probability": 0.8,
+      "confidence": 0.5,
+      "accept": true
+    }
+  ],
+  "prose": [
+    "Enumerate every descendant and prove the complete population.",
+    "Read automated Test records that demonstrate verification."
+  ],
+  "legacy_state_keys": [
+    "answer_requirements",
+    "caller_context",
+    "entity_context",
+    "need_question",
+    "operation_targets",
+    "original_question",
+    "query_hints",
+    "registered_capabilities",
+    "retrieval_needs"
+  ],
+  "failures": [
+    {
+      "id": "provider",
+      "code": "provider_unavailable",
+      "paid_calls": 1
+    },
+    {
+      "id": "unoffered",
+      "code": "invalid_provider_response",
+      "paid_calls": 1
+    },
+    {
+      "id": "denied",
+      "code": "knowledge_scope_violation",
+      "paid_calls": 1
+    },
+    {
+      "id": "exhausted",
+      "code": "budget_exhausted",
+      "paid_calls": 0
+    }
+  ]
+}

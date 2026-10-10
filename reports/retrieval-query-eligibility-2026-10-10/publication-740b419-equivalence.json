@@ -1,0 +1,53 @@
+{
+  "status": "offline_equivalence_prepared_not_live_readiness",
+  "source_revision": "740b41939e83d81897222256dd66f202db3db9bb",
+  "baseline_source_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "baseline_oracle_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+  "new_oracle_sha256": "124466cc7540dfcfa03727af6c82eef246f0f9880ea705aa169b5f12549b92fa",
+  "workflow_receipt": {
+    "authority": "Parent supplied verified GitHub publication workflow receipt; no graph readiness call by this agent.",
+    "url": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/38045531582",
+    "requested_sha": "740b41939e83d81897222256dd66f202db3db9bb",
+    "published_sha": "740b41939e83d81897222256dd66f202db3db9bb",
+    "generation_id": "619314e79310673c8c60e66c7767af8db41171ddeeb40c74b562081e0114634c",
+    "repository_id": "leafcutter",
+    "mapper_version": "7",
+    "status": "ready",
+    "lagging": false,
+    "nodes": 10182,
+    "edges": 26998,
+    "semantic_ready": false,
+    "published": true
+  },
+  "checks": {
+    "tq_all": {
+      "root_semantics_equal": true,
+      "members_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_file_bytes_equal": true
+    },
+    "tq_l3_terminal": {
+      "root_semantics_equal": true,
+      "members_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_file_bytes_equal": true
+    },
+    "km_changed_root": {
+      "root_semantics_equal": true,
+      "members_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_file_bytes_equal": true
+    },
+    "exact_record": {
+      "identity_semantics_equal": true,
+      "fields_equal": true,
+      "source_bytes_equal": true
+    }
+  },
+  "equivalent": true,
+  "source_pin_rule": "A later canonical publication needs a new independent oracle/equivalence addendum before calls. Do not silently replace this source with a feature checkout or a new main revision.",
+  "no_live_calls": true
+}

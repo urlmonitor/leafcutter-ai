@@ -1,0 +1,35 @@
+{
+  "status": "reviewed_release_packaging_correction",
+  "prior_direct_scan_claim": {
+    "reported_remaining": 0,
+    "valid": false,
+    "cause": "A pre-scan compared platform-specific scanner file paths with Git path strings, omitting findings before the normal prose filter. That result is invalid evidence."
+  },
+  "first_normal_commit": {
+    "outcome": "blocked_by_check_secrets",
+    "head_unchanged": "13db09f1a231f5c55a5a9b044a5007d8467f7afa",
+    "raw_findings": 25,
+    "after_normal_prose_filter": 24,
+    "failure_log": "Preserved in the private local release backup; no failed attempt was concealed or retried automatically."
+  },
+  "independent_classification": {
+    "canonical_ac_base64_records": 20,
+    "source_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+    "verification": "Each decoded value equals its named tracked AC Git blob and frozen source-oracle SHA256. Two release agents independently verified the attribution.",
+    "demonstrated_receipt_path_hash_or_test_command_lines": 4,
+    "real_or_unknown_secret_findings": 0
+  },
+  "correction": {
+    "allowlist_file": ".security-allowlist",
+    "exact_individual_line_entries": 24,
+    "wildcards_added": 0,
+    "scanner_rules_changed": false,
+    "hooks_bypassed": false,
+    "runtime_test_question_oracle_bytes_changed": false
+  },
+  "automatic_fixer": {
+    "state": "stopped",
+    "reason": "The configured routing file .claude/precommit-autofix.json was absent. No routing defaults or automatic fixer dispatch were fabricated.",
+    "resolution": "Separately reviewed release-packaging correction under existing user authorization; normal hooks must pass on retry."
+  }
+}

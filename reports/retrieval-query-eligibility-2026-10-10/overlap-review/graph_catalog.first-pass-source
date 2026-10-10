@@ -74,4 +74,4 @@ def catalog_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload, cata
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-09 15:40 [python-coder]: Share the entity selector across builtin and admitted query offers. (#KM-500/KM-500e-1-i)
-# - 2026-10-10 10:51 [python-coder]: Derive saved-query result facts from the pinned recipe rather than its description. (#KM-500/KM-500a-2-i)
+# - 2026-10-10 12:00 [python-coder]: Derive saved-query result facts from the pinned recipe rather than its description. (#KM-500/KM-500a-2-i)

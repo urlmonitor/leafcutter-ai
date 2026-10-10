@@ -60,4 +60,4 @@ async def selection_result(ctx: ExecutionContext, invocation: CapabilityInvocati
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-03 20:00 [python-coder]: Preserve unsupported population obligations across research merges. (#TICKETLESS reason=user-approved-DK300-graph-routing)
-# - 2026-10-10 10:51 [python-coder]: Distinguish uncertain selection diagnostically without vetoing useful sibling evidence. (#KM-500/KM-500a-2-i)
+# - 2026-10-10 12:00 [python-coder]: Distinguish uncertain selection diagnostically without vetoing useful sibling evidence. (#KM-500/KM-500a-2-i)

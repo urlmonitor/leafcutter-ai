@@ -785,7 +785,7 @@
       "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 7,
+      "version": 8,
       "entities": [],
       "tags": [
         "retrieval",
@@ -795,11 +795,11 @@
         "retrieval-reference"
       ],
       "impl_summary": {
-        "done": 13,
-        "in_progress": 16,
+        "done": 10,
+        "in_progress": 22,
         "not_started": 0,
-        "total": 29,
-        "asof": "2026-10-09"
+        "total": 32,
+        "asof": "2026-10-10"
       }
     },
     {
@@ -2112,11 +2112,11 @@
       "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 13,
-        "in_progress": 16,
+        "done": 10,
+        "in_progress": 22,
         "not_started": 0,
-        "total": 29,
-        "asof": "2026-10-09"
+        "total": 32,
+        "asof": "2026-10-10"
       },
       "expands": [],
       "parents": []
@@ -5269,6 +5269,52 @@
         "entities": [],
         "source": "real",
         "asof": "2026-10-02"
+      }
+    ],
+    "KM-500a-2-i": [
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "eligibility",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-10"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "no-eligible-query",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-10"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "select",
+        "node_kind": "step",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-10"
+      },
+      {
+        "flow": "leafcutter/retrieval-current-baseline",
+        "node": "selection-uncertain",
+        "node_kind": "branch",
+        "flow_kind": "data",
+        "screen": null,
+        "mock_data": null,
+        "entities": [],
+        "source": "real",
+        "asof": "2026-10-10"
       }
     ],
     "KM-500a-3": [

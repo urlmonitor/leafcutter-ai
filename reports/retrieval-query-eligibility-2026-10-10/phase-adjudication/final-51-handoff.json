@@ -1,0 +1,66 @@
+{
+  "status": "final_combined_strict_green_and_frozen",
+  "earlier_49_receipt_sha256": "67c69b44abc3b4ba006d7cbf225ab0f134c0751d55d17841a2828cd4f7c1df66",
+  "strict_result": {
+    "tests": 51,
+    "passed": 51,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "xfails": 0,
+    "seconds_stdout": 19.25,
+    "seconds_xml": "19.164",
+    "AC_ENFORCE_STRICT": "1",
+    "xml": "strict-51.xml",
+    "sha256": "1ff9a45e4de7130f171bf1f2f317f8de4f63151b2aabcaa130f5449fcf81badc"
+  },
+  "new_guard": {
+    "path": "tests/kernel/entity_context/test_query_eligibility_pt_schema.py",
+    "sha256": "cb57bedfb14fc32e3a0b043a6a748c6ef862b9da4fb60b3d10f7df57a91d51f7",
+    "executions": 2,
+    "attribution": "Additional user-requested product-truth/runtime parity, separate from the frozen nine questions and controlled eligibility regressions.",
+    "actual_producer": "Real SelectionRig registered binding captures actual knowledge.operation_select JevBatch.state after make_batch.",
+    "valid_controls": "Native result facts and legacy missing metadata validate against the documented state schema; actual caller_context is accepted and null population metadata remains valid.",
+    "negative_controls": "Each captured packet is copied and independently corrupted: source_hydration_fields=[work_status], missing operation_targets, and missing operation_fit/get_entities/reason. All raise JSON Schema ValidationError.",
+    "red_claim": "No invented production red: this guard passed on introduction; deliberate corrupted actual packets demonstrate discrimination.",
+    "Q1": "Does product truth accept the actual emitted state and reject invalid/missing declared fields?",
+    "Q2": "Captured real paid-selector packets, not schema examples.",
+    "Q3": "A missing declared core/fact field or invalid field enum must break parity.",
+    "vacuity": "Actual single Jev packet, meaningful source hydration facts and legacy null metadata are asserted before corruption checks."
+  },
+  "schema": {
+    "path": "docs/product-truth/schemas/operation-selection-state.schema.json",
+    "sha256": "a5f62cd955e52977db41f38c86929f462d8b7bfeb3104b49043c407e38332d57",
+    "draft": "draft-07"
+  },
+  "ruff": "All checks passed for the new parity guard and prior phase-adjusted supplemental module.",
+  "reviewed_runtime_sha256": {
+    "integrations/graph_eligibility.py": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+    "integrations/graph_offers.py": "8da59fa16c1a2645fe613dbf1d5c6624cf7ef732f7dcc7889150b9eb2df6c7d0",
+    "integrations/graph_catalog.py": "8004deaa9431564ecb10421adbaa717396247cf7a9d1232ecb53011acd5ca457",
+    "integrations/graph_selection.py": "9943321c3ca3bd63770eff29f34a6f646ff5e7e9c2287ec9d84fa17ec3ba4b18",
+    "integrations/graph_selection_result.py": "d685c39180b53d82fcb63f2d9483b84fb443c17e9f93b4c53be6b9373eab31b5"
+  },
+  "frozen_test_fixture_sha256": {
+    "tests/knowledge/query_eligibility_support.py": "51fce703c8ffb670805ee17a5fa387ee06f8791a96cd89903ee0aff9e5bb56d2",
+    "tests/knowledge/test_query_eligibility_public.py": "743b662f8cfd4c144d23d8475db176a3f2ac40b0fb79dee6c1f5ad08fd20693b",
+    "tests/knowledge/test_query_eligibility_consumers.py": "d2e05c2d69c17d7e424291901b1617e110c7ba7e910eb0bee904ee9dc564cdde",
+    "tests/kernel/entity_context/test_query_eligibility_selection.py": "5ad9468c715229dfedc26b85ec95b9efaea6466ac95b9633349436aaa41ee21f",
+    "tests/fixtures/_shared/query_eligibility/cases.json": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "tests/fixtures/_shared/query_eligibility/controls.json": "98da882ee329da25c282a32fbd25d845201ebde3cfa2fc9e765f35bb65d7e972",
+    "tests/fixtures/_shared/query_eligibility/saved_exact.json": "6746db9783d58d377f8a8db45378ec868f1740fd699cb9bf1b6959c1acd9aa70",
+    "tests/fixtures/_shared/query_eligibility/source-blobs.json": "0b596c5ef63c2d4bd1b0c34d05eac1a69cad75079f2415999ed676a74bb66063",
+    "tests/fixtures/_shared/query_eligibility/source-oracles.json": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "tests/knowledge/test_query_eligibility_overlap.py": "cd8bda1fa6283d06b2baafb7eb35ee6165730ed07130fb1f5e356d0add94ae37",
+    "tests/fixtures/_shared/query_eligibility/overlap.json": "3b99f62e7a934b6e44f5af6cf1b6d6fe59a0c64fbe2c06d630d5ed21011e9aab",
+    "tests/kernel/entity_context/test_query_eligibility_pt_schema.py": "cb57bedfb14fc32e3a0b043a6a748c6ef862b9da4fb60b3d10f7df57a91d51f7"
+  },
+  "original_gold": {
+    "questions_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "oracles_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "status": "All nine question bytes and source-oracle bytes unchanged; seven original paths verified unchanged and the two approved exact-ID assertion revisions retain their prior frozen hashes."
+  },
+  "preservation": "126 relevant existing tests passed in expert run, independently reviewed receipts/claims kept separate; this agent did not rerun them.",
+  "review": "No remaining actionable production findings after conservative identity-overlap and progressive-disclosure review. Actual fresh-model quality and complete-count retrieval remain unproven.",
+  "side_effects": "No production/AC/PT changes, Git mutations, hooks, provider/graph calls or alternate-runtime snapshot wrappers."
+}

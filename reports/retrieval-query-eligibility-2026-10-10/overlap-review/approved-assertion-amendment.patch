@@ -1,0 +1,23 @@
+--- tests/kernel/entity_context/test_query_eligibility_selection.py.first43
++++ tests/kernel/entity_context/test_query_eligibility_selection.py
+@@ -123,7 +123,7 @@
+     assert selection.port.calls[0].answer_requirements.required_fields == ["criteria", "test_spec", "content"]
+     assert {"get_entities", "legacy_unclassified"} <= _choices(batch).keys(), "Legacy missing metadata is unknown, not a refusal"
+     assert "get_related_tests" not in _choices(batch), "The paired proved mismatch must still be excluded"
+-    assert "get_declared_dependents" not in _choices(batch)
++    assert "get_declared_dependents" in _choices(batch), "Same-kind self-dependency is not proved disjoint"
+     assert result.requests == []
+ 
+ 
+--- tests/knowledge/test_query_eligibility_public.py.first43
++++ tests/knowledge/test_query_eligibility_public.py
+@@ -79,7 +79,8 @@
+         assert answer_assessments(values)[-1]["status"] == "fulfilled"
+         offered = choices(operation_batches(harness)[0])
+         assert "get_entities" in offered
+-        assert not ({"get_related_tests", "get_declared_dependents", "get_ac_descendants"} & offered.keys()), offered
++        assert "get_declared_dependents" in offered, "Same-kind self-dependency is not proved disjoint"
++        assert not ({"get_related_tests", "get_ac_descendants"} & offered.keys()), offered
+     finally:
+         harness.doCleanups()
+ 
