@@ -5,12 +5,13 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-10'
 components:
   - commit_guardian
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
+  - docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
 ---
 
 # KI-CG-20260909-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable
@@ -34,3 +35,9 @@ related_docs:
 **Definition of done.** `before_counts` reads `HEAD`; the 107 stay green; adding a file that takes a compliant directory over 15 is refused; noise is bounded.
 
 ---
+
+**Update, 2026-10-10.** The fix above appears to have landed: `d8cd00a9d` (GE-120h-3, on main
+through PR #1067, 2026-10-09) reads BEFORE with `git ls-tree -r HEAD`
+(`check_folder_density.py:124-170` on `d03830e7c`). This entry was not moved to `resolved/` here;
+check the definition of done before moving it. Reading HEAD alone exposed a different defect in
+merge commits: `KI-CG-20261010-folder-density-refuses-merges-of-main`.

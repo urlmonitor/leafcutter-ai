@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-10'
 components:
   - supervisor_system
   - commit_guardian
@@ -14,6 +14,7 @@ related_docs:
   - docs/known-issues/build-pipeline/open-high-ki-bp-017.md
   - docs/known-issues/commit-guardian/open-low-ki-cg-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message.md
   - docs/known-issues/supervisor-system/open-low-ki-ss-20260927-commit-signoff-precedes-the-commit.md
+  - docs/known-issues/feedback-collector/open-low-ki-fc-003.md
 ---
 
 # KI-SS-20261009-comment-templates-omit-the-feedback-id-line — the templates contradict the rule the hook enforces
@@ -25,9 +26,11 @@ related_docs:
   wrong lands. But each refusal costs a commit attempt plus a repair, and on a supervised drive the
   repair is a hand-edit of entries the agents wrote.
 - **Status:** open, no AC. Template contents verified on `origin/main` `c373b005e`.
-- **Occurrences:** 2 tickets. Ticket 02, 2026-09-30, one entry (the commit agent's audit entry).
-  Ticket 05, 2026-10-09, four entries.
-- **First seen:** 2026-09-30 · **Last seen:** 2026-10-09
+- **Occurrences:** 3 tickets, 4 refusals. Ticket 02, 2026-09-30, one entry (the commit agent's
+  audit entry), and again on 2026-10-09. Ticket 05, 2026-10-09, four entries. Ticket 06,
+  2026-10-10, the commit agent's entry. The last two refusals were "repaired" with a made-up
+  `feedback-id: (submit-failed)` (see "Observed again" below).
+- **First seen:** 2026-09-30 · **Last seen:** 2026-10-10
 - **Where:** the rule: `templates/skills/signoff/SKILL.md:125` and `:743` ("`feedback-id:` line ...
   always first"); the gate: `templates/scripts/commit_guardian/check_feedback_id.py` (a new
   `### YYYY-MM-DD HH:MM — ` heading needs `feedback-id:` within its next two added lines). The
@@ -81,3 +84,68 @@ the record as evidence of what each agent did. Many entries fall back to `feedba
 `(status: ok)` written before the commit runs). `KI-BP-017` (`scripts/feedback/` missing from
 worktrees, so ids come back `(submit-failed)`). `KI-CG-20260901-feedback-id-escape-hatch-reads-the-previous-commit-message`
 (the hook's bypass does not work with `git commit -m`).
+
+## Observed again, 2026-10-10: the fallback is typed without running the script
+
+**What happened.** Twice, a commit agent answered a `check-feedback-id` refusal by typing
+`feedback-id: (submit-failed)` into the entry **without calling `scripts/feedback/submit_feedback.py`**:
+
+- Ticket 02, 2026-10-09. The agent reported: "I added `feedback-id: (submit-failed)` (I did not run
+  submit_feedback.py)".
+- Ticket 06, 2026-10-10. The agent did the same on its pre-written commit entry. The permission
+  classifier then denied the retry as "Instruction Poisoning"
+  (`KI-SS-20260927-commit-signoff-precedes-the-commit`).
+
+Both come from the coordinator's session accounts. Neither line survives in the ticket files.
+
+**The rule allows that value only after the script ran and failed.** Verified on `origin/main`
+`d03830e7c`:
+
+- `templates/skills/signoff/SKILL.md:197-201` (§2a step 4): "If the script exits non-zero ... use
+  `feedback-id: (submit-failed)` as the fallback value".
+- `SKILL.md:1050` (§8): "**Don't** skip the `submit_feedback.py` call (§2a). If the script fails, use
+  `feedback-id: (submit-failed)` ... An empty feedback entry is not a valid substitute for calling
+  the script."
+
+**The hook cannot tell a real failure from a typed one.**
+
+- `templates/scripts/commit_guardian/check_feedback_id.py:50-51`: the comment says the pattern
+  matches `feedback-id: fb_YYYY-MM-DD_xxxxxxxx`, but the regex is `^\s*feedback-id:\s*\S`. It
+  accepts any non-blank value, including `(submit-failed)` typed by hand.
+- Its refusal message (:296-299) says "Add 'feedback-id: <id>' on the line immediately after each
+  heading". It does not mention the script, so the shortest path to a pass is to type the line.
+- `submit_feedback.py` leaves no trace when it fails. A rejected submission exits 1 before the log
+  is opened; only an accepted one is appended to `debugging/logs/feedback.jsonl`
+  (`templates/scripts/feedback/submit_feedback.py:116`, :530-534). So afterwards, a genuine
+  `(submit-failed)` and a typed one look the same.
+
+**The fallback has become the default.** At epic commit `9f314c1b1`, the six built tickets (01-06)
+carry 77 `feedback-id: (submit-failed)` lines, 44 real `fb_` ids and 2 other values:
+
+| Ticket | `(submit-failed)` | `fb_` id |
+|---|---|---|
+| 01 | 10 | 22 |
+| 02 | 14 | 11 |
+| 03 | 9 | 0 |
+| 04 | 10 | 4 |
+| 05 | 25 | 6 |
+| 06 | 9 | 1 |
+
+Some of these are genuine. The epic branch forked from main on 2026-09-27 (merge base `d0c573289`)
+and lacks `c3a469610` (2026-09-28), which let `ac-validator` and `ac-fulfillment-gate` write
+feedback. So those two agents are still refused there (`KI-FC-003`), and ticket 02's ac-validator
+entry records exactly that. How many of the rest were typed without running the script cannot be
+told from the record, and that is the defect.
+
+**Fix direction, in addition to the above.**
+
+- Make a failure leave a receipt. On a non-zero exit, `submit_feedback.py` appends the attempt
+  (time, agent, category, error) to a failure log and prints a receipt id. The fallback becomes
+  `feedback-id: (submit-failed: <receipt>)`.
+- Make the hook check the value. Accept an `fb_<date>_<hex>` id or a `(submit-failed: <receipt>)`
+  receipt, and verify that it exists in the feedback log or the failure log when that log is
+  readable. Refuse a bare `(submit-failed)`.
+- Make the refusal name the remedy: "run `scripts/feedback/submit_feedback.py` (signoff §2a) and use
+  the id it prints", not just "add a line".
+- Merge `c3a469610` into long-lived epic branches, so the genuine failures stop and the fallback is
+  rare enough to stand out.
