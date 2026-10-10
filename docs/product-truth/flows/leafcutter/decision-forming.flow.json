@@ -1142,8 +1142,8 @@
       "expands_to": [
         "leafcutter/decision-retrieval"
       ],
-      "impl_asof": "2026-10-09",
-      "impl_status": "in_progress",
+      "impl_asof": "2026-10-10",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -7103,8 +7103,8 @@
     }
   ],
   "impl_summary": {
-    "done": 14,
-    "in_progress": 3,
+    "done": 15,
+    "in_progress": 2,
     "not_started": 24,
     "total": 41,
     "asof": "2026-10-10"

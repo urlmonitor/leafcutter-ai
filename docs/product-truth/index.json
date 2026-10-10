@@ -844,11 +844,11 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 2,
-        "in_progress": 2,
+        "done": 3,
+        "in_progress": 1,
         "not_started": 0,
         "total": 4,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "tags": [
         "decision-kernel",
@@ -876,8 +876,8 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 14,
-        "in_progress": 3,
+        "done": 15,
+        "in_progress": 2,
         "not_started": 24,
         "total": 41,
         "asof": "2026-10-10"
@@ -970,9 +970,9 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "impl_summary": {
-        "done": 6,
-        "in_progress": 1,
-        "not_started": 1,
+        "done": 8,
+        "in_progress": 0,
+        "not_started": 0,
         "total": 8,
         "asof": "2026-10-10"
       },
@@ -1796,8 +1796,8 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 14,
-        "in_progress": 3,
+        "done": 15,
+        "in_progress": 2,
         "not_started": 24,
         "total": 41,
         "asof": "2026-10-10"
@@ -1822,11 +1822,11 @@
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 2,
-        "in_progress": 2,
+        "done": 3,
+        "in_progress": 1,
         "not_started": 0,
         "total": 4,
-        "asof": "2026-10-09"
+        "asof": "2026-10-10"
       },
       "expands": [
         "leafcutter/decision-forming",
@@ -1868,11 +1868,11 @@
       ],
       "mock_data_ref": "leafcutter/decisions",
       "path": "flows/leafcutter/decision-retrieval.flow.json",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "impl_summary": {
-        "done": 6,
-        "in_progress": 1,
-        "not_started": 1,
+        "done": 8,
+        "in_progress": 0,
+        "not_started": 0,
         "total": 8,
         "asof": "2026-10-10"
       },

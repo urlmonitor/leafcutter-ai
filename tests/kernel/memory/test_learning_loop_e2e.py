@@ -301,6 +301,8 @@ class TestRunTwoReusesThePrecedent(LoopCase):
 
     async def test_deciding_anew_keeps_the_precedent_as_evidence_and_runs_the_normal_flow(
             self) -> None:
+        # covers: DK-600e-3-i
+        # angle: criterion
         _, record_id = await self.published()
         envelope = await self.service().start_run(self.goal(GOAL))
         again = await self.service().resume_run(

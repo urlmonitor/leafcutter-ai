@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_kernel_1_founding
@@ -112,10 +112,11 @@ test_spec:
     framework: unittest
     type: integration
     angle: criterion
-    description: 'TO WRITE (in tests/kernel/memory/test_decision_precedent.py): decide anew, then
-      choose another option: the staged record lists the precedent under supersedes with action set_aside,
-      the publish instruction carries --correct <old id>, and the precedent file is unchanged (fails
-      today on --correct)'
+    description: 'EXISTS (tests/kernel/memory/test_decision_anew_correction.py::TestDecidingAnewCarriesTheCorrection,
+      with test_deciding_anew_to_the_same_option_supersedes_nothing_and_adds_no_correct): decide
+      anew, then choose another option: the staged record lists the precedent under supersedes with
+      action set_aside, the publish instruction carries --correct <old id>, and the precedent file is
+      unchanged'
     covers:
       - DK-600e-3-i
 delivers_to:
