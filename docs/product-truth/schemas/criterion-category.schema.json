@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED CriterionCategory illustrative mock-record design",
+  "description": "Transcribed from docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json entities.CriterionCategory.fields (decision dec-93c1c730463c1f3c). All listed fields are present in every complete mock record. replaces and member_view are derived display views and source is fixture provenance; none of the three is a field of the record file. No reader, writer, index or runtime validator for category records exists yet; cross-record invariants (membership, label uniqueness, lifecycle rules) are stated in the dataset and are not expressed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^cat-[0-9a-f]{16}$",
+      "description": "string — kernel-minted cat-<16 hex>; stable for the life of the category (a label edit, merge or split never changes it)"
+    },
+    "repository_id": {
+      "type": "string",
+      "description": "string — first part of the ADR-061 identity key (repository_id, kind, id); memory.repository_id from the kernel config"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["criterion_category"],
+      "description": "enum: criterion_category — the declared record kind (ADR-061 key)"
+    },
+    "pref_label": {
+      "type": "string",
+      "description": "string — the canonical question: a member's wording, or one the approving human wrote (SKOS prefLabel)"
+    },
+    "alt_labels": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "array of strings — the other wordings of the same question, from published records or mined traces (SKOS altLabel)"
+    },
+    "broader": {
+      "type": ["string", "null"],
+      "description": "string | null — id of the broader category this one narrows (SKOS broader)"
+    },
+    "replaced_by": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^cat-[0-9a-f]{16}$"},
+      "description": "array of category ids — set when this category is merged (one id) or split (several ids); empty while active"
+    },
+    "replaces": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^cat-[0-9a-f]{16}$"},
+      "description": "array of category ids — categories whose replaced_by names this one (derived reverse view for display, not a field of the record file)"
+    },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decision_id": {"type": "string"},
+          "criterion_id": {"type": "string"}
+        },
+        "required": ["decision_id", "criterion_id"]
+      },
+      "description": "array of { decision_id: dec id, criterion_id } — membership, stored only here, so published decision records stay unchanged"
+    },
+    "member_view": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "decision_id": {"type": "string"},
+          "criterion_id": {"type": "string"},
+          "priority": {"type": "string", "enum": ["required", "supporting"]},
+          "question": {"type": "string"}
+        },
+        "required": ["decision_id", "criterion_id", "priority", "question"]
+      },
+      "description": "array of { decision_id, criterion_id, priority: required | supporting, question } — each member joined with its criterion from the decision record (derived display view, not a field of the record file)"
+    },
+    "decision_types": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "array of decision_type values the category applies to (declared vocabulary filter)"
+    },
+    "components": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "array of component ids from docs/components.json ([] == not limited to a component)"
+    },
+    "lifecycle_stage": {
+      "type": "string",
+      "enum": ["candidate", "staged", "published", "retired"],
+      "description": "enum: candidate | staged | published | retired — candidate == proposed by the offline mining job, awaiting a human; staged == approved in a kernel run and written to that run's root; published == entered into Git by a human-run publish; retired == published, then merged or split (replaced_by set)"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": ["proposed", "approved"],
+      "description": "enum: proposed | approved — only a human approval turns a candidate into a record"
+    },
+    "proposed_by": {
+      "type": "string",
+      "description": "string — criteria_mining (the offline mining job) or human:<name>"
+    },
+    "proposed_at": {
+      "type": "string",
+      "description": "string — ISO-8601 UTC time the category was proposed"
+    },
+    "approved_by": {
+      "type": ["string", "null"],
+      "description": "string | null — human:<name>; never a model or the mining job; null while candidate"
+    },
+    "approved_at": {
+      "type": ["string", "null"],
+      "description": "string | null — ISO-8601 UTC time of the human approval of this version of the record; null while candidate"
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "string | null — the kernel run that last staged this record (run-<16 hex>); null while candidate"
+    },
+    "staged_path": {
+      "type": ["string", "null"],
+      "description": "string | null — where that run staged the record; <run_root> is the machine-local kernel run root"
+    },
+    "record_path": {
+      "type": ["string", "null"],
+      "description": "string | null — docs/criteria/<id>.yaml once published (folder name not fixed by dec-93c1c730463c1f3c); null while candidate or staged"
+    },
+    "retirement": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "retired_at": {"type": "string"},
+        "retired_by": {"type": "string"},
+        "reason": {"type": "string"}
+      },
+      "required": ["retired_at", "retired_by", "reason"],
+      "description": "object | null — { retired_at, retired_by: human:<name>, reason } written when a human merges or splits the category; null while active"
+    },
+    "usage_count": {
+      "type": ["integer", "null"],
+      "description": "integer | null — distinct published decisions among members; generated from published records into a generated index (like docs/decisions/index.json), never hand-written; null while candidate or staged"
+    },
+    "mined_from": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {"type": "string", "enum": ["published_record", "langfuse_trace"]},
+          "run_id": {"type": "string"},
+          "run_status": {"type": ["string", "null"]},
+          "langfuse_trace_id": {"type": "string"},
+          "decision_id": {"type": ["string", "null"]},
+          "criterion_id": {"type": "string"},
+          "origin": {"type": "string", "enum": ["approved", "generated", "human_edited"]},
+          "wording": {"type": "string"}
+        },
+        "required": ["source", "run_id", "run_status", "langfuse_trace_id", "decision_id", "criterion_id", "origin", "wording"]
+      },
+      "description": "array of sightings the offline mining job found; Langfuse is read only by that job, never by a decision run"
+    },
+    "source": {
+      "type": "string",
+      "description": "string — where this sample record comes from: real data it is grounded in, and what is illustrative (fixture provenance, not a record field)"
+    }
+  },
+  "required": [
+    "id",
+    "repository_id",
+    "kind",
+    "pref_label",
+    "alt_labels",
+    "broader",
+    "replaced_by",
+    "replaces",
+    "members",
+    "member_view",
+    "decision_types",
+    "components",
+    "lifecycle_stage",
+    "approval_status",
+    "proposed_by",
+    "proposed_at",
+    "approved_by",
+    "approved_at",
+    "run_id",
+    "staged_path",
+    "record_path",
+    "retirement",
+    "usage_count",
+    "mined_from",
+    "source"
+  ]
+}

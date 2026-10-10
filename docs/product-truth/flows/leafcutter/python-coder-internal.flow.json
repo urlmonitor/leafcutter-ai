@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "build-pipeline",
     "python-coder",
@@ -23,74 +23,367 @@
     {
       "id": "conventions",
       "label": "Load conventions",
-      "human": "python-coder loads the project conventions / PROJECT_CONTEXT so it writes code that matches the repo's error-handling, style, and structure rules.",
+      "description": "The coding agent loads the project's conventions so its code matches the repository's error-handling, style and structure rules.",
       "order": 1,
       "agent": "python-coder",
+      "actor_kind": "llm",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "Input is the Python coder prompt plus Markdown CLAUDE.md/PROJECT_CONTEXT and repository conventions; output is the agent working context. No JSON artifact is authored at this reading step."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "implement",
       "label": "Implement against red",
-      "human": "python-coder edits only the ticket's files_touched to satisfy the red baseline handed over by test-writer.",
+      "description": "The coding agent edits only the files the ticket names, to make the failing tests handed over by the test-writing agent pass.",
       "order": 2,
       "agent": "python-coder",
+      "actor_kind": "llm",
       "implements": [
         "BP-1100a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/files_touched",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/existing_test_files",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/source_ac",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          },
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/tests_written",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/red_baseline_verified",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md",
+              "files_touched": [
+                "app/service.py"
+              ],
+              "existing_test_files": [
+                "tests/test_service.py"
+              ],
+              "source_ac": [
+                "ACD-300"
+              ]
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "tests_written": [
+                "tests/test_service.py"
+              ],
+              "red_baseline_verified": true
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)",
+        "planner/files_touched: array (optional)",
+        "planner/existing_test_files: array (optional)",
+        "planner/source_ac: array (optional)",
+        "phase-result/tests_written: array (optional)",
+        "phase-result/red_baseline_verified: boolean (optional)"
+      ],
+      "produces": []
     },
     {
       "id": "docenforce",
       "label": "Doc-enforcer",
-      "human": "doc-enforcer runs over the changed .py files to enforce docstring and documentation conventions.",
+      "description": "The documentation enforcer checks the changed Python files against the project's docstring and documentation conventions.",
       "order": 3,
       "agent": "doc-enforcer",
+      "actor_kind": "llm",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "doc-enforcer consumes changed Python files and documentation conventions and returns diagnostics/code edits under its skill contract. This flow defines no JSON diagnostic envelope; the file diff and command output are the artifacts."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "complexity",
       "label": "Complexity reduction",
-      "human": "python-coder runs complexity-reduction to keep the new code within the repo's complexity budget.",
+      "description": "The coding agent simplifies the new code to keep it within the repository's complexity budget.",
       "order": 4,
       "agent": "python-coder",
+      "actor_kind": "llm",
       "implements": [
         "BO-2000b"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "not_applicable": "The complexity-reduction skill inspects and refactors source files under the existing complexity budget. Its output is a source diff plus measurements/report text, not an invented JSON score DTO."
+      },
+      "consumes": [],
+      "produces": []
     },
     {
       "id": "tests",
       "label": "Run until green",
-      "human": "test-runner runs the suite until every red_baseline test passes.",
+      "description": "The test agent runs the suite until every test in the failing baseline passes.",
       "order": 5,
       "agent": "test-runner",
+      "actor_kind": "llm",
       "implements": [
         "BO-530-2"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/tests_written",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              },
+              {
+                "path": "/red_baseline_verified",
+                "types": [
+                  "boolean"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "phase-result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/message",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "tests_written": [
+                "tests/test_service.py"
+              ],
+              "red_baseline_verified": true
+            }
+          },
+          {
+            "contract": "phase-result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative phase-result projection; not an execution receipt",
+            "value": {
+              "status": "ok",
+              "message": "The assigned phase completed; the ticket retains its evidence."
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "phase-result/tests_written: array (optional)",
+        "phase-result/red_baseline_verified: boolean (optional)"
+      ],
+      "produces": [
+        "phase-result/status: string (required)",
+        "phase-result/message: string (optional)"
+      ]
     },
     {
       "id": "signoff",
       "label": "Record sign-off",
-      "human": "python-coder records the sign-off via the signoff skill, updating the ticket frontmatter and the Sign-offs checklist together.",
+      "description": "The coding agent records its sign-off, updating the ticket's status and its sign-off checklist together.",
       "order": 6,
       "agent": "python-coder",
+      "actor_kind": "llm",
       "implements": [
         "BO-2000a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "planner",
+            "fields": [
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "readback",
+            "fields": [
+              {
+                "path": "/readable",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ticket_path",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs/*/agent",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signoffs/*/status",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/signed_off_agents",
+                "types": [
+                  "array"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "planner",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative planner projection; not an execution receipt",
+            "value": {
+              "ticket_path": "tickets/01_todo/feature.md"
+            }
+          },
+          {
+            "contract": "readback",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative readback projection; not an execution receipt",
+            "value": {
+              "readable": true,
+              "ticket_path": "tickets/01_todo/feature.md",
+              "signoffs": [
+                {
+                  "agent": "python-coder",
+                  "status": "passed"
+                }
+              ],
+              "signed_off_agents": [
+                "python-coder"
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "planner/ticket_path: string (required)"
+      ],
+      "produces": [
+        "readback/readable: boolean (required)",
+        "readback/ticket_path: string (optional)",
+        "readback/signoffs/*/agent: string (optional)",
+        "readback/signoffs/*/status: string (optional)",
+        "readback/signed_off_agents: array (optional)"
+      ]
     }
   ],
   "branches": [],
@@ -114,6 +407,12 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Gold agent-internal flow; the drill-down target of the how-acs-are-built code step."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
   ],
   "impl_summary": {
@@ -122,5 +421,22 @@
     "not_started": 6,
     "total": 6,
     "asof": "2026-07-20"
+  },
+  "contract_definitions": {
+    "planner": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-planner.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "phase-result": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-phase-result.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    },
+    "readback": {
+      "schema": "docs/product-truth/schemas/delivery-workflow-readback.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity."
+    }
   }
 }

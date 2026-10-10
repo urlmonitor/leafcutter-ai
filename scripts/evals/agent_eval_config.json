@@ -1,5 +1,5 @@
 {
-  "$comment": "Shared agent-eval registry. Each key is a pipeline agent; the value declares WHERE its gold eval set lives, HOW to score it (label | artifact), which field of a row feeds the agent, and the pass threshold used as a CI gate. LABEL mode invokes the agent headless with tools disabled and exact-matches routing booleans. ARTIFACT mode copies the product-truth store into a throwaway /tmp sandbox, invokes the WRITE-capable agent there (cwd=sandbox, LEAFCUTTER_REPO_ROOT=sandbox, so all writes stay contained), then scores the produced *.mock.json / *.flow.json with the deterministic assertions of TQ-200a-2-ii (schema-valid, entities-in-registry, extend-not-duplicate, referenced-records-exist, one acceptance_scenario per step/branch, id path-stable) plus an optional per-row LLM-judge rubric. All paths are relative to the repo root.",
+  "$comment": "Shared agent-eval registry. Each key is a pipeline agent; the value declares WHERE its gold eval set lives, HOW to score it (label | artifact), which field of a row feeds the agent, and the pass threshold used as a CI gate. LABEL mode invokes the agent headless with tools disabled and exact-matches routing booleans. ARTIFACT mode copies the product-truth store and its bounded declared contract dependencies into a throwaway /tmp sandbox, invokes the WRITE-capable agent there (cwd=sandbox, LEAFCUTTER_REPO_ROOT=sandbox, so all writes stay contained), then scores the produced *.mock.json / *.flow.json with the deterministic assertions of TQ-200a-2-ii (schema-valid, entities-in-registry, extend-not-duplicate, referenced-records-exist, one acceptance_scenario per step/branch, id path-stable) plus an optional per-row LLM-judge rubric. All paths are relative to the repo root.",
   "agents": {
     "pt-classifier": {
       "template": "templates/agents/pt-classifier.md",
@@ -9,9 +9,13 @@
       "expected_field": "expected",
       "response_label_field": "expected",
       "model": "claude-haiku-4-5-20251001",
-      "label_axes": ["needs_flow", "needs_mock_data", "needs_mockup"],
+      "label_axes": [
+        "needs_flow",
+        "needs_mock_data",
+        "needs_mockup"
+      ],
       "derive_outcome": true,
-      "threshold": 0.70,
+      "threshold": 0.7,
       "triggers": [
         "templates/agents/pt-classifier.md",
         "docs/product-truth/README.md",
@@ -19,7 +23,9 @@
         "docs/product-truth/index.json",
         "docs/product-truth/classifier/eval.jsonl",
         "scripts/evals/run_agent_eval.py",
-        "scripts/evals/agent_eval_config.json"
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
       ],
       "notes": "Booleans are the scored labels; outcome is derived from them via OUTCOME_BY_COMBO and reported as a secondary accuracy figure. Model pinned to haiku to match the pt-classifier template frontmatter. response_label_field names the sub-object of the model's returned JSON that holds the axes (pt-classifier's S4 contract nests them under 'expected'); omit or null it when an agent returns the axes at top level."
     },
@@ -39,16 +45,21 @@
         "docs/product-truth/scripts/generate_product_truth.py",
         "docs/product-truth/scripts/validate_product_truth.py",
         "scripts/evals/run_agent_eval.py",
-        "scripts/evals/agent_eval_config.json"
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/artifact_dependencies.py",
+        "scripts/evals/artifact_validation.py",
+        "scripts/evals/cli_envelope.py"
       ],
       "input_field": "input",
       "expected_field": "expected",
       "model": "opus",
       "tools": "Read,Write,Edit,Bash",
-      "sandbox_copy": ["docs/product-truth"],
+      "sandbox_copy": [
+        "docs/product-truth"
+      ],
       "timeout": 900,
       "threshold": 0.66,
-      "notes": "Runs in a per-row /tmp sandbox copy of docs/product-truth. Deterministic assertions are the gate; the key check unique to this agent is extend-not-duplicate (single_canonical_dataset) — the validator does NOT enforce it. validator_clean is a DELTA gate (the agent must introduce no NEW validator errors vs the reconciled baseline), robust to a store a concurrent session is mid-editing. Model=opus per the template frontmatter. Threshold 0.66 = >=2/3 rows as the CI gate; 3/3 is the fully-wired bar."
+      "notes": "Runs in a per-row /tmp sandbox copy of docs/product-truth plus its declared contract dependencies. Deterministic assertions are the gate; the key check unique to this agent is extend-not-duplicate (single_canonical_dataset) — the validator does NOT enforce it. validator_clean is a DELTA gate (the agent must introduce no NEW validator errors vs the reconciled baseline), robust to a store a concurrent session is mid-editing. Model=opus per the template frontmatter. Threshold 0.66 = >=2/3 rows as the CI gate; 3/3 is the fully-wired bar. Flow targets must independently pass scoped contract validation; target errors and unavailable validation are never subtracted as baseline noise."
     },
     "flow-author": {
       "template": "templates/agents/flow-author.md",
@@ -67,17 +78,23 @@
         "docs/product-truth/evals/flow-author/eval.jsonl",
         "docs/product-truth/scripts/generate_product_truth.py",
         "docs/product-truth/scripts/validate_product_truth.py",
+        "docs/product-truth/scripts/product_truth_contracts.py",
         "scripts/evals/run_agent_eval.py",
-        "scripts/evals/agent_eval_config.json"
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/artifact_dependencies.py",
+        "scripts/evals/artifact_validation.py",
+        "scripts/evals/cli_envelope.py"
       ],
       "input_field": "input",
       "expected_field": "expected",
       "model": "opus",
       "tools": "Read,Write,Edit,Bash",
-      "sandbox_copy": ["docs/product-truth"],
+      "sandbox_copy": [
+        "docs/product-truth"
+      ],
       "timeout": 900,
       "threshold": 0.66,
-      "notes": "Per-row /tmp sandbox copy of docs/product-truth. The GOLDEN row removes the gold track-an-order artifact (sandbox_prep.remove_artifacts) so the agent must reverse-engineer it. Assertions cover ordered steps, screens-resolve, one acceptance_scenario per step AND per branch, has_branch (the held-out journey requires an alternate path), and extend-not-duplicate for the negative add-vs-create row. validator_clean is a DELTA gate. Model=opus per the template frontmatter."
+      "notes": "Per-row /tmp sandbox copy of docs/product-truth plus its declared contract dependencies. The GOLDEN row removes the gold track-an-order artifact (sandbox_prep.remove_artifacts) so the agent must reverse-engineer it. Assertions cover ordered steps, screens-resolve, one acceptance_scenario per step AND per branch, has_branch (the held-out journey requires an alternate path), and extend-not-duplicate for the negative add-vs-create row. validator_clean is a DELTA gate. Model=opus per the template frontmatter. Flow targets must independently pass scoped contract validation; target errors and unavailable validation are never subtracted as baseline noise."
     }
   }
 }

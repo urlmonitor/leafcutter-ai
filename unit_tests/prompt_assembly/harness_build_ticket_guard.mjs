@@ -75,6 +75,7 @@
  *            // or an ARRAY of the above, one entry per dispatch attempt
  *          },
  *          "delete_record_after_phase": "<phase>",   // makes the record unreadable
+ *          "unreadable_readback_after_phase": "<phase>", // ONE read-back reports unreadable
  *          "delete_record_before_run": bool,
  *          "plan_reply": { "mode": "...", "value": ... }   // OPT-IN, see below
  *        }
@@ -143,6 +144,16 @@
  * `!== true`) then takes the VERIFIED branch on a reply that verified nothing.
  * Without this mode the flag is always present and always agrees with the
  * outcome, so a fail-open re-check and a fail-closed one are indistinguishable.
+ *
+ * DIRTY-STATE READ (BO-100e-4)   label: "worktree-dirty"
+ *                         reply: the repo-facts envelope { output, exit_code }.
+ *                         Answered from scenario.dirty — an ABSENT key answers
+ *                         CLEAN (so every pre-existing halt fixture keeps its
+ *                         outcome); explicit null answers UNREADABLE (non-zero
+ *                         exit); a string is served as raw (unparseable) output;
+ *                         an object is served verbatim as JSON; an array answers
+ *                         one entry per read, the last repeated. Every read is
+ *                         recorded in the `dirty_reads` output array.
  *
  * Any other label is treated as a phase-agent dispatch — that is what the
  * `dispatched` array measures.
@@ -233,7 +244,15 @@ const readbacks = [];
 const writes = [];
 const enumerations = [];
 const planReplies = [];
+const dirtyReads = [];
 const logs = [];
+// INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
+// phase dispatches and routing calls together, so a test can see whether a
+// ticket's stage -> commit -> observe ran without another ticket's in between.
+const routingCalls = [];
+const timeline = [];
+const routingCallCounts = {};
+const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
 
 // ---------------------------------------------------------------------------
@@ -308,6 +327,13 @@ function parseRecord(path) {
       }
       dependsOn.push(value);
     }
+  }
+
+  const filesTouched = [];
+  const filesTouchedBlock = frontmatter.match(/^files_touched:\n((?:^-[^\n]*\n?)*)/m);
+  for (const line of filesTouchedBlock ? filesTouchedBlock[1].split("\n") : []) {
+    const m = line.match(/^-\s*(.+?)\s*$/);
+    if (m) filesTouched.push(m[1].replace(/^(["'])(.*)\1$/, "$2"));
   }
 
   // handoff_target (BO-400e-1-i): an OPTIONAL line in a signoff's own comment
@@ -411,6 +437,7 @@ function parseRecord(path) {
     // because demandedPhasesFromRecord's union has nothing to union in.
     failed_phases: Object.keys(agents).filter((a) => agents[a] === "failed"),
     depends_on: dependsOn,
+    files_touched: filesTouched,
     implementation_task_agents: implementationTaskAgents,
     signoffs,
     signed_off_agents: signoffs.map((s) => s.agent),
@@ -418,12 +445,14 @@ function parseRecord(path) {
 }
 
 /** Append a real sign-off heading, exactly as a phase agent would. */
-function appendSignoff(path, agentName, status) {
+function appendSignoff(path, agentName, status, handoffTarget) {
   if (!existsSync(path)) return false;
   const stamp = "2026-08-18 12:00";
   const block =
     `\n### ${stamp} — ${agentName} (status: ${status})\n` +
-    `harness-simulated phase agent sign-off\n`;
+    `harness-simulated phase agent sign-off\n` +
+    // BO-3000a: opt-in `handoff_target:` line the read-back parser reads per entry.
+    (handoffTarget ? `handoff_target: ${handoffTarget}\n` : "");
   writeFileSync(path, readFileSync(path, "utf8") + block, "utf8");
   return true;
 }
@@ -759,6 +788,17 @@ async function agent(prompt, opts = {}) {
     };
   }
 
+  // BO-100e-4: the dirty-state read; absent scenario.dirty = clean, null = unreadable.
+  if (label === "worktree-dirty") {
+    const spec = scenario.dirty;
+    const one = Array.isArray(spec) ? spec[Math.min(dirtyReads.length, spec.length - 1)] : spec;
+    dirtyReads.push({ prompt: String(prompt) });
+    if (one === null) return { output: "", exit_code: 128 };
+    if (typeof one === "string") return { output: one, exit_code: 0 };
+    const clean = { readable: true, staged: [], unstaged: [], untracked: [] };
+    return { output: JSON.stringify(one === undefined ? clean : one), exit_code: 0 };
+  }
+
   // BO-4000: the "name a new location" branch's own repo-facts checks. Every
   // pre-existing scenario is indifferent to these (none asserts on them), so
   // generic, always-succeeding defaults let the run proceed to the SAME
@@ -857,7 +897,10 @@ async function agent(prompt, opts = {}) {
   // --- record read-back -----------------------------------------------------
   if (RE_READBACK.test(label)) {
     const ticketPath = ticketFromPrompt(prompt) || opts.ticket_path || null;
-    const record = ticketPath
+    const forcedUnreadable = ticketPath && unreadableOnce.delete(ticketPath);
+    const record = forcedUnreadable
+      ? { readable: false, error: "harness: one-shot unreadable read-back" }
+      : ticketPath
       ? parseRecord(ticketPath)
       : { readable: false, error: "harness: read-back named no known ticket record" };
     readbacks.push({
@@ -969,10 +1012,29 @@ async function agent(prompt, opts = {}) {
     return { classification, reason: "harness classification" };
   }
 
+  // --- knowledge-routing CLI (INF-700a-1-v) ---------------------------------
+  // Labels "knowledge-routing-step" (stage) and "knowledge-routing-observe".
+  // Answered from scenario.knowledge_routing[label] as the repo-facts
+  // envelope: an object is served as its JSON, a string as raw (unparseable)
+  // output, an array one entry per call (the last repeated). An ABSENT entry
+  // answers a failed command, so a scenario that does not mention routing
+  // sees the step not run and every pre-existing outcome is unchanged.
+  if (label === "knowledge-routing-step" || label === "knowledge-routing-observe") {
+    const index = routingCallCounts[label] || 0;
+    routingCallCounts[label] = index + 1;
+    let spec = (scenario.knowledge_routing || {})[label];
+    if (Array.isArray(spec)) spec = spec[Math.min(index, spec.length - 1)];
+    routingCalls.push({ label, prompt: String(prompt) });
+    timeline.push({ kind: "routing", label, ticket_path: null });
+    if (spec === undefined || spec === null) return { output: "", exit_code: 1 };
+    return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
   const ticketPath = recordMode ? ticketFromPrompt(prompt) : null;
+  timeline.push({ kind: "phase", label, ticket_path: ticketPath });
   const key = `${ticketPath}::${label}`;
   attemptCounts[key] = (attemptCounts[key] || 0) + 1;
   const attempt = attemptCounts[key];
@@ -1009,13 +1071,14 @@ async function agent(prompt, opts = {}) {
   // A phase that records leaves a real sign-off in the real record. A phase
   // with record:false reports success and leaves nothing — BUG-23.
   if (spec.record !== false && ticketPath) {
-    appendSignoff(ticketPath, label, status);
+    appendSignoff(ticketPath, label, status, spec.record_handoff_target);
     // BO-400e-3 fixture repair: a genuine success also flips the agent's OWN
     // frontmatter entry to signed_off, mirroring the real signoff skill's
     // atomic recipe (see flipAgentSignedOff() above). Gated on status === "ok"
     // so a blocker/failed/handoff report never marks the record's own agents
     // map as satisfied.
-    if (status === "ok") flipAgentSignedOff(ticketPath, label);
+    // BO-3000a: opt-in `flips_signed_off` lets a handoff entry flip its own agent too.
+    if (status === "ok" || spec.flips_signed_off === true) flipAgentSignedOff(ticketPath, label);
   }
 
   // BO-3700: a running phase promoting another agent to `needed` in the real
@@ -1034,6 +1097,12 @@ async function agent(prompt, opts = {}) {
 
   if (cfg.delete_record_after_phase === label && ticketPath) {
     deleteRecord(ticketPath);
+  }
+
+  // BO-3000a (review M-2): opt-in. The record stays on disk but the NEXT single
+  // read-back of it reports `readable: false`; every later read-back is normal.
+  if (cfg.unreadable_readback_after_phase === label && ticketPath) {
+    unreadableOnce.add(ticketPath);
   }
 
   const reply = { status };
@@ -1130,6 +1199,9 @@ console.log(
     writes,
     enumerations,
     plan_replies: planReplies,
+    dirty_reads: dirtyReads,
+    routing_calls: routingCalls,
+    timeline,
     logs,
     records,
     result,

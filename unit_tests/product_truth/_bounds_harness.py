@@ -30,7 +30,8 @@ def journey(flow_id: str, summary_length: int = 60, steps: int = 1, shape_versio
         "id": flow_id, "component": "ux-prototyping", "name": flow_id, "summary": "x" * summary_length,
         "kind": "user", "source": "mock", "status": "active", "readiness": "draft", "version": 1,
         "tags": [], "entities": [],
-        "steps": [{"id": f"s{n}", "label": f"s{n}", "human": "the actor acts", "order": n} for n in range(1, steps + 1)],
+        "steps": [{"id": f"s{n}", "label": f"s{n}", "description": "the actor acts", "actor_kind": "human", "order": n,
+                   "io_contracts": {"not_applicable": "This actor action tests journey size bounds and exchanges no JSON."}} for n in range(1, steps + 1)],
         "branches": [],
     }
     if shape_version is not None:

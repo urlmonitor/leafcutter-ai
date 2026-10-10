@@ -13,6 +13,7 @@ ARCHITECTURE: A frozen, extra-forbidding Pydantic section with no field defaults
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -25,26 +26,29 @@ Probability = Annotated[float, Field(ge=0.0, le=1.0)]
 class MemoryConfig(BaseModel):
     """Decision store backend and precedent lookup settings."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, use_attribute_docstrings=True)
 
-    #: `file` reads docs/decisions through the generated index; `null` remembers nothing.
     backend: Literal["file", "null"]
-    #: The repository part of a record's identity key (ADR-061); null uses the scope's workspace id.
+    """`file` reads docs/decisions through the generated index; `null` remembers nothing."""
     repository_id: str | None
-    #: The store folder, relative to the repository root.
+    (
+        "The repository part of a record's identity key (ADR-061); null uses the scope's workspace "
+        "id."
+    )
     decisions_dir: str
-    #: Most past decisions pulled into one decision (0 switches precedent lookup off).
+    """The store folder, relative to the repository root."""
     max_precedents: int = Field(ge=0)
-    #: Content-word overlap a record's question must reach to be a candidate at all.
+    """Most past decisions pulled into one decision (0 switches precedent lookup off)."""
     min_candidate_score: Probability
-    #: Jev's probability that a precedent applies at which it becomes evidence for the decision.
+    """Content-word overlap a record's question must reach to be a candidate at all."""
     applies_threshold: Probability
-    #: Jev's probability at which the human is asked to reuse the precedent or decide anew.
+    """Jev's probability that a precedent applies at which it becomes evidence for the decision."""
     reuse_threshold: Probability
-    #: Most evidence ids cited per criterion assessment and record criterion (not all of them).
+    """Jev's probability at which the human is asked to reuse the precedent or decide anew."""
     criterion_evidence_max: int = Field(ge=1)
-    #: Content words an evidence item must share with a criterion to be cited for it.
+    """Most evidence ids cited per criterion assessment and record criterion (not all of them)."""
     criterion_evidence_min_overlap: int = Field(ge=1)
+    """Content words an evidence item must share with a criterion to be cited for it."""
 
     @model_validator(mode="after")
     def _ordered(self) -> MemoryConfig:
@@ -53,10 +57,20 @@ class MemoryConfig(BaseModel):
             fail("reuse_threshold must not be below applies_threshold")
         return self
 
+    def decisions_folder(self, base: Path) -> Path:
+        """Return the store folder under `base`: the one place `decisions_dir` is resolved.
+
+        Both `decisions publish` and the notice that names where it writes use this, so the
+        two cannot drift apart.
+        """
+        return base / self.decisions_dir
+
 
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: use_attribute_docstrings on; the `#:` comments became attribute
+#   docstrings. (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-10-01 [python-coder]: Two thresholds, not one: applicable precedent is shown as evidence
 #   from applies_threshold, but only a stronger judgement (reuse_threshold) interrupts the human
 #   with a reuse question, and neither lets a precedent resolve anything. (#KernelDecisionStore)

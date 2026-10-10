@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,87 +27,737 @@
     {
       "id": "lookup",
       "label": "Look up matching records",
-      "human": "A new decision's precedent step asks the memory port for matching records through docs/decisions/index.json: filters (components, roadmap phase), a text score, and a sha256 check against the index.",
+      "description": "The kernel searches the decision index for earlier records that match the new decision's components and roadmap phase, scores them by text and checks each file is unchanged.",
       "order": 1,
       "agent": "kernel memory port",
+      "actor_kind": "deterministic",
       "consumes": [
-        "published record (docs/decisions/<id>.yaml)",
-        "docs/decisions/index.json"
+        "decision_query/text: string (required)",
+        "decision_query/components: array (optional; default [])",
+        "decision_query/roadmap_phase: array (optional; default [])",
+        "decision_query/limit: integer (optional; default 3)",
+        "decision_query/min_score: number (optional; default 0.0)"
       ],
       "produces": [
-        "precedent candidates"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_query",
+            "fields": [
+              {
+                "path": "/text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/components",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/roadmap_phase",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/limit",
+                "types": [
+                  "integer"
+                ],
+                "required": false,
+                "default": 3
+              },
+              {
+                "path": "/min_score",
+                "types": [
+                  "number"
+                ],
+                "required": false,
+                "default": 0.0
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_query",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: decision_query",
+            "value": {
+              "text": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "components": [
+                "decision_kernel"
+              ],
+              "limit": 3,
+              "min_score": 0.0
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "judge",
       "label": "Ask Jev whether each applies",
-      "human": "Up to memory.max_precedents (3) candidates go to Jev, each with one literal question: \"does this earlier decision apply here?\". That is one call before options exist; after that the questions ride the assessment batch.",
+      "description": "Jev judges, for up to three candidate records, whether each earlier decision applies here, asking once before options exist and then alongside the option assessment.",
       "order": 2,
       "agent": "jev",
+      "actor_kind": "jev",
       "consumes": [
-        "precedent candidates"
+        "jev_batch/purpose: string (required)",
+        "jev_batch/state: object (required)",
+        "jev_batch/questions: array (required)"
       ],
       "produces": [
-        "applicability score"
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "jev_batch",
+            "fields": [
+              {
+                "path": "/purpose",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/state",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/questions",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "jev_batch",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Illustrative actual precedent question template",
+            "value": {
+              "purpose": "decision.precedent",
+              "state": {
+                "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+                "precedents": {
+                  "dec-ef8ddcb79d668a67": "Question: Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded. Chosen: Kernel-contract YAML per decision. Flat docs/decisions/<dec-id>.yaml, one file per decision, kernel-minted dec-<16hex> ids. Fields mirror the kernel's Decision contract (kernel/contracts/decision.py) and the colony concept §15 decision fields: question, decision_type, task_context, options, criteria, evidence, selected option, assessment/confidence, final outcome, corrections with correction reason. Concept §12 provenance: origin, root task id, Langfuse trace id, repository revision, policy/template/mo"
+                }
+              },
+              "questions": [
+                {
+                  "schema_version": "1.0",
+                  "id": "precedent.dec-ef8ddcb79d668a67",
+                  "kind": "noul",
+                  "template_id": "decision.precedent",
+                  "template_version": "1",
+                  "instructions": "Does the previous decision in `precedents.dec-ef8ddcb79d668a67` apply to the current `question` in its context?",
+                  "criteria": {
+                    "true": "It answers the same kind of question about the same things, and nothing in the current `question` or `constraints` contradicts the reasons it was decided.",
+                    "false": "It is about a different question or a different thing, or the situation it assumed no longer holds."
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative strong applicability answer",
+            "value": {
+              "answers": {
+                "precedent.dec-ef8ddcb79d668a67": {
+                  "kind": "noul",
+                  "question_id": "precedent.dec-ef8ddcb79d668a67",
+                  "probability": 0.9
+                }
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "cite",
       "label": "Cite it as evidence",
-      "human": "A precedent scoring 0.5 or more becomes prior_decisions evidence that cites its record path and who approved it.",
+      "description": "The kernel turns a precedent scoring 0.5 or more into evidence that cites the earlier record and who approved it.",
       "order": 3,
       "agent": "kernel precedent step",
+      "actor_kind": "deterministic",
       "consumes": [
-        "precedent candidates",
-        "applicability score"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])",
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "produces": [
-        "prior_decisions evidence"
+        "evidence/id: string (required)",
+        "evidence/category: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/source/title: string (optional; default \"\")",
+        "evidence/provenance/actor: null|string (optional; default null)",
+        "evidence/verification: string (optional; default \"unverified\")"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/category",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/title",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/provenance/actor",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/verification",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unverified"
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: jev_result",
+            "value": {
+              "answers": {
+                "precedent.dec-ef8ddcb79d668a67": {
+                  "kind": "noul",
+                  "question_id": "precedent.dec-ef8ddcb79d668a67",
+                  "probability": 0.9
+                }
+              }
+            }
+          },
+          {
+            "contract": "evidence",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Reconstructed evidence from the actual pure precedent builder",
+            "value": {
+              "id": "ev-f657e2f7b406cf8f",
+              "category": "prior_decisions",
+              "source": {
+                "schema_version": "1.0",
+                "id": "memory.decisions",
+                "kind": "repository_file",
+                "locator": "docs/decisions/dec-ef8ddcb79d668a67.yaml",
+                "title": "Precedent dec-ef8ddcb79d668a67 approved by human:user on 2026-10-01",
+                "source_version": {
+                  "schema_version": "1.0",
+                  "commit": "a4b9a94f5b266503993e65a97727b5059717f6c4",
+                  "dirty": true
+                },
+                "retrieved_at": "2026-10-03T00:00:00Z",
+                "observed_modified_at": null,
+                "section_locator": null
+              },
+              "provenance": {
+                "schema_version": "1.0",
+                "producer": "memory.file",
+                "invocation_id": null,
+                "strategy": "precedent",
+                "query": "approved_by=human:user",
+                "terms": [],
+                "rank": null,
+                "relevance": 0.9,
+                "actor": null,
+                "relayed_by": null
+              },
+              "verification": "source_verified"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "offer-reuse",
       "label": "Reuse it, or decide anew?",
-      "human": "Decision point: for a score of 0.8 or more, on a decision with no options of its own and a precedent that is not superseded, you are asked: reuse it, or decide anew?",
+      "description": "When a precedent scores 0.8 or more, is not superseded and the decision has no options of its own, you are asked whether to reuse it or decide anew.",
       "order": 4,
       "screen": "decision-reuse-or-decide-anew",
       "agent": "human (asked through claude_code)",
+      "actor_kind": "human",
       "consumes": [
-        "prior_decisions evidence"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])",
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "produces": [
-        "reuse answer"
+        "human_question/question: string (required)",
+        "human_question/choices: array (optional; default [])",
+        "human_question/required_actor_kind: string (optional; default \"human\")",
+        "human_question/state_revision: integer (required)"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "human_question",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/choices",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/required_actor_kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "human"
+              },
+              {
+                "path": "/state_revision",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Decision-record scenario: jev_result",
+            "value": {
+              "answers": {
+                "precedent.dec-ef8ddcb79d668a67": {
+                  "kind": "noul",
+                  "question_id": "precedent.dec-ef8ddcb79d668a67",
+                  "probability": 0.9
+                }
+              }
+            }
+          },
+          {
+            "contract": "human_question",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Actual reuse wording applied to existing record; illustrative pending question",
+            "value": {
+              "question": "Decision dec-ef8ddcb79d668a67 (approved by human:user on 2026-10-01) chose Kernel-contract YAML per decision for a matching question. Reuse it, or decide anew?",
+              "choices": [
+                {
+                  "schema_version": "1.0",
+                  "id": "reuse",
+                  "label": "Reuse it: Kernel-contract YAML per decision",
+                  "consequences": "This decision resolves with 'Kernel-contract YAML per decision', approved by you; precedent dec-ef8ddcb79d668a67 is cited and a new record is staged for review."
+                },
+                {
+                  "schema_version": "1.0",
+                  "id": "decide_anew",
+                  "label": "Decide anew",
+                  "consequences": "The decision continues normally; the precedent stays as evidence and the old record is not edited."
+                }
+              ],
+              "free_text_allowed": false,
+              "required_actor_kind": "human",
+              "state_revision": 1
+            }
+          }
+        ]
+      }
     },
     {
       "id": "reuse",
       "label": "Reuse the earlier choice",
-      "human": "The decision resolves with the precedent's choice, approved by you, the current human, and a new record that cites the precedent under related is staged (for example dec-7cdc61ea41a206e0).",
+      "description": "The kernel resolves the decision with the earlier choice, approved by you, and stages a new record that cites the precedent.",
       "order": 5,
       "agent": "kernel decision executor",
+      "actor_kind": "deterministic",
       "consumes": [
-        "reuse answer"
+        "human_answer/choice_id: null|string (optional; default null)",
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])"
       ],
       "produces": [
-        "reused decision (approved by the current human)",
-        "resolved decision (approved_by: human)"
+        "option/id: string (required)",
+        "option/title: string (required)",
+        "option/source_refs: array (optional; default [])",
+        "option/proposal_status: string (optional; default \"supplied\")",
+        "option/approval_status: string (optional; default \"not_required\")",
+        "option/approved_by: null|string (optional; default null)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)",
+        "decision/precedent_ids: array (optional; default [])"
       ],
       "reads": [
         "Decision"
@@ -119,7 +769,220 @@
         "leafcutter/decision-staging"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "option",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_refs",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/proposal_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "supplied"
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/precedent_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Current human confirms reuse",
+            "value": {
+              "choice_id": "reuse"
+            }
+          },
+          {
+            "contract": "option",
+            "mode": "full",
+            "origin": "reconstructed",
+            "label": "Reconstructed reuse option",
+            "value": {
+              "schema_version": "1.0",
+              "id": "opt.added.1",
+              "title": "Kernel-contract YAML per decision",
+              "description": "Flat docs/decisions/<dec-id>.yaml, one file per decision, kernel-minted dec-<16hex> ids. Fields mirror the kernel's Decision contract (kernel/contracts/decision.py) and the colony concept §15 decision fields: question, decision_type, task_context, options, criteria, evidence, selected option, assessment/confidence, final outcome, corrections with correction reason. Concept §12 provenance: origin, root task id, Langfuse trace id, repository revision, policy/template/model versions. Filters drawn only from existing vocabularies: component ids from docs/components.json, change_target, risk_surface, roadmap_phase, file-type rule globs from templates/rules, plus a repository_wide flag. An approval-provenance block (approval_status, approved_by human actor, approved_at); records never self-authorize. Append-only corrections that preserve the original evidence and assumptions. JSON Schema in config/ validated at commit. A generated, never hand-edited filter index. A decisions surface in config/paths.json. Plain-YAML subset compatible with the stdlib knowledge-map parser.",
+              "assumptions": [],
+              "source_refs": [
+                "ev-f657e2f7b406cf8f"
+              ],
+              "proposal_status": "supplied",
+              "approval_status": "approved",
+              "proposed_by": "precedent:dec-ef8ddcb79d668a67",
+              "approved_by": "human:user",
+              "named_in_goal": false
+            }
+          },
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative later decision approved now, not at the earlier approval time",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-03T00:00:00Z",
+              "precedent_ids": [
+                "dec-ef8ddcb79d668a67"
+              ],
+              "criterion_ids": []
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
@@ -128,52 +991,528 @@
       "from": "judge",
       "condition": "Jev scores the precedent below 0.5",
       "label": "Does not apply",
-      "human": "The earlier decision is left out; the new decision carries on without it.",
+      "description": "The kernel leaves the earlier decision out, and the new decision carries on without it.",
       "agent": "kernel precedent step",
+      "actor_kind": "deterministic",
       "consumes": [
-        "applicability score"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])",
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative applicability below default 0.5 threshold",
+            "value": {
+              "answers": {
+                "precedent.dec-ef8ddcb79d668a67": {
+                  "kind": "noul",
+                  "question_id": "precedent.dec-ef8ddcb79d668a67",
+                  "probability": 0.2
+                }
+              }
+            }
+          }
+        ]
+      },
+      "produces": []
     },
     {
       "id": "evidence-only",
       "from": "cite",
       "condition": "the score is below 0.8, the new decision already has options, or the precedent is superseded",
       "label": "Evidence only, no reuse question",
-      "human": "The precedent stays as cited evidence and the normal forming flow continues; you are not interrupted.",
+      "description": "The kernel keeps the precedent as cited evidence and the normal forming flow continues without interrupting you.",
       "agent": "kernel precedent step",
+      "actor_kind": "deterministic",
       "consumes": [
-        "prior_decisions evidence"
+        "decision_record/id: string (required)",
+        "decision_record/question: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval: object (required)",
+        "decision_record/superseded_by: array (optional; default [])",
+        "jev_result/answers: object (required)",
+        "jev_result/model_id: null|string (optional; default null)",
+        "jev_result/usage: object (required)"
       ],
       "produces": [
-        "prior_decisions evidence"
+        "evidence/id: string (required)",
+        "evidence/category: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/source/title: string (optional; default \"\")",
+        "evidence/provenance/actor: null|string (optional; default null)",
+        "evidence/verification: string (optional; default \"unverified\")"
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/superseded_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "jev_result",
+            "fields": [
+              {
+                "path": "/answers",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/model_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/usage",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/category",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/title",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/provenance/actor",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/verification",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unverified"
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "jev_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative applicable score below default 0.8 reuse threshold",
+            "value": {
+              "answers": {
+                "precedent.dec-ef8ddcb79d668a67": {
+                  "kind": "noul",
+                  "question_id": "precedent.dec-ef8ddcb79d668a67",
+                  "probability": 0.6
+                }
+              }
+            }
+          },
+          {
+            "contract": "evidence",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Same precedent retained as evidence, without a reuse question",
+            "value": {
+              "id": "ev-f657e2f7b406cf8f",
+              "category": "prior_decisions",
+              "source": {
+                "schema_version": "1.0",
+                "id": "memory.decisions",
+                "kind": "repository_file",
+                "locator": "docs/decisions/dec-ef8ddcb79d668a67.yaml",
+                "title": "Precedent dec-ef8ddcb79d668a67 approved by human:user on 2026-10-01",
+                "source_version": {
+                  "schema_version": "1.0",
+                  "commit": "a4b9a94f5b266503993e65a97727b5059717f6c4",
+                  "dirty": true
+                },
+                "retrieved_at": "2026-10-03T00:00:00Z",
+                "observed_modified_at": null,
+                "section_locator": null
+              },
+              "provenance": {
+                "schema_version": "1.0",
+                "producer": "memory.file",
+                "invocation_id": null,
+                "strategy": "precedent",
+                "query": "approved_by=human:user",
+                "terms": [],
+                "rank": null,
+                "relevance": 0.6,
+                "actor": null,
+                "relayed_by": null
+              },
+              "verification": "source_verified"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "decide-anew",
       "from": "offer-reuse",
       "condition": "you choose to decide anew",
       "label": "Decide anew",
-      "human": "The normal forming flow continues with the precedent kept as evidence and grounding research still running. If you end up choosing differently, the staged record supersedes the old one. A precedent never resolves anything on its own.",
+      "description": "The normal forming flow continues with the precedent kept as evidence, and if you end up choosing differently the new record supersedes the old one.",
       "agent": "human (asked through claude_code)",
+      "actor_kind": "human",
       "consumes": [
-        "reuse answer"
+        "human_answer/choice_id: null|string (optional; default null)",
+        "evidence/id: string (required)",
+        "evidence/category: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/source/title: string (optional; default \"\")",
+        "evidence/provenance/actor: null|string (optional; default null)",
+        "evidence/verification: string (optional; default \"unverified\")"
       ],
       "produces": [
-        "prior_decisions evidence",
-        "supersedes link (when the final choice differs)"
+        "evidence/id: string (required)",
+        "evidence/category: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/source/title: string (optional; default \"\")",
+        "evidence/provenance/actor: null|string (optional; default null)",
+        "evidence/verification: string (optional; default \"unverified\")"
       ],
       "reads": [
         "Decision"
       ],
       "outcome_kind": "alternative",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "human_answer",
+            "fields": [
+              {
+                "path": "/choice_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/category",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/title",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/provenance/actor",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/verification",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unverified"
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/category",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/title",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": ""
+              },
+              {
+                "path": "/provenance/actor",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/verification",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "unverified"
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "human_answer",
+            "mode": "full",
+            "origin": "illustrative",
+            "label": "Human declines reuse and continues forming",
+            "value": {
+              "choice_id": "decide_anew"
+            }
+          },
+          {
+            "contract": "evidence",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Precedent stays as evidence after declining reuse",
+            "value": {
+              "id": "ev-f657e2f7b406cf8f",
+              "category": "prior_decisions",
+              "source": {
+                "schema_version": "1.0",
+                "id": "memory.decisions",
+                "kind": "repository_file",
+                "locator": "docs/decisions/dec-ef8ddcb79d668a67.yaml",
+                "title": "Precedent dec-ef8ddcb79d668a67 approved by human:user on 2026-10-01",
+                "source_version": {
+                  "schema_version": "1.0",
+                  "commit": "a4b9a94f5b266503993e65a97727b5059717f6c4",
+                  "dirty": true
+                },
+                "retrieved_at": "2026-10-03T00:00:00Z",
+                "observed_modified_at": null,
+                "section_locator": null
+              },
+              "provenance": {
+                "schema_version": "1.0",
+                "producer": "memory.file",
+                "invocation_id": null,
+                "strategy": "precedent",
+                "query": "approved_by=human:user",
+                "terms": [],
+                "rank": null,
+                "relevance": 0.9,
+                "actor": null,
+                "relayed_by": null
+              },
+              "verification": "source_verified"
+            }
+          }
+        ]
+      }
     }
   ],
   "acceptance_scenarios": [
@@ -232,6 +1571,12 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Sub-flow 4 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): precedent retrieval inside a later decision run. Thresholds (0.5 applies, 0.8 reuse, max 3) checked against config/kernel_config.default.json on main."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-03",
+      "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
     }
   ],
   "impl_summary": {
@@ -240,5 +1585,34 @@
     "not_started": 8,
     "total": 8,
     "asof": "2026-10-02"
+  },
+  "contract_definitions": {
+    "decision": {
+      "model": "decision"
+    },
+    "decision_query": {
+      "model": "decision_query"
+    },
+    "decision_record": {
+      "model": "decision_record"
+    },
+    "evidence": {
+      "model": "evidence"
+    },
+    "human_answer": {
+      "model": "human_answer"
+    },
+    "human_question": {
+      "model": "human_question"
+    },
+    "jev_batch": {
+      "model": "jev_batch"
+    },
+    "jev_result": {
+      "model": "jev_result"
+    },
+    "option": {
+      "model": "option"
+    }
   }
 }

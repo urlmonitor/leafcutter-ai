@@ -240,6 +240,8 @@ Both conditions must hold. The file-touch set is authoritative — it is populat
 - The commit-phase lock (§5) cannot be released after a child crash (lock-recovery requires user intervention).
 
 In all other blocker scenarios, the epic continues with the remaining independent tickets while the blocked ticket awaits user input. See §6.
+
+**Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
 `/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
@@ -514,6 +516,8 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     # If block is present with empty tests but a code producer exists, dispatch normally.
 
 2.  SPAWN next_agent with input { ticket_path: <absolute path> }.
+    IF next_agent == "commit": spawn it through §5.9 (lock, routing stage,
+    commit staging the manifest by name, one observe, release).
     The agent invokes the `signoff` skill as its final action;
     on return, the ticket file has a new `## Comments` heading
     and updated `agents:` + `## Sign-offs` rows.
@@ -637,6 +641,10 @@ The priority column is the authoritative ordering for dispatch ties. Lower numbe
 | 12 | `commit` | Atomic commit phase |
 | 13 | `pull-request` | Pushes branch and opens PR |
 
+Knowledge routing is not a phase and has no row: it is not an agent, so a row or a
+`phaseOrder` entry would route nothing (ADR-040 §3). The supervisor runs it around the
+`commit` phase (priority 12) as part of that spawn. See §5.9.
+
 **Flow-change pair ordering note:** For tickets generated from (change_target,
 risk_surface) pairs listed in `config/guardrail_gates.yaml` `flow_change_gates:`
 (e.g. `code/production`, `code/all`, `schema/production`, `schema/all`),
@@ -668,6 +676,18 @@ breakdown, ambiguous by construction whenever more than one agent has a section 
 ticket, and inferring a target from it would re-dispatch an agent on a handoff that named
 nobody deliberately. Every phase agent template must set `handoff_target` on the
 machine-parsed dispatch path for this reason — see `signoff` §3.
+
+A valid `handoff_target` does not end the run. The driver queues the target next, runs it
+through the normal phase loop (pointer block, test guard, red-baseline gate before a coder,
+record read-back), and re-queues the handing phase after it if that phase is still `needed`
+or `failed` in the record. Chains A→B→C re-queue B, then A. An epic ticket whose handoff
+resolves completes in the same run. The driver refuses, dispatching nobody and naming the
+case: a self-handoff, a target that is not a key in the ticket's `agents` map (a
+`not_needed` key is honoured), and a deferred target such as `pull-request`. Confirmation
+fails closed: the target must leave a new sign-off entry after the handoff, since an older
+passing entry does not count. Otherwise the ticket stops as `cross_agent` and no later phase
+runs. A repeated (from→to) pair, or a fourth handoff on one ticket, halts with
+classification `handoff_loop`, naming the chain.
 
 ### §2.3 Completion Manifest Validation (post-comment-parse step)
 
@@ -797,6 +817,7 @@ Every cap below is a hard ceiling enforced per-ticket. When exceeded, the superv
 |---|---|---|
 | **Coder respawn after own failure** (§3.1) | **1 per phase per ticket** | A second consecutive failure of the same coder agent on the same phase → fall through to §3.4. |
 | **Sibling respawn from review** (§3.2) | **1 per phase pair per ticket** | A "phase pair" is the (reviewer, coder) tuple, e.g. (pr-reviewer, python-coder). After one round-trip, a second blocker from the same reviewer against the same coder → fall through to §3.4. |
+| **Handoff continuation** (BO-3000a, workflow drivers) | **1 per (from→to) pair, 3 per ticket** | Honoured `handoff_target` re-dispatches. A repeat of a pair, or a fourth handoff, halts with classification `handoff_loop` naming the chain; no later phase runs. Counted by the drivers per drive, separate from the §3.2 sibling respawn. |
 | **test-failure rework** (BO-530-3-i) | **2 per ticket (configurable)** | When test-runner returns a blocker, the originating coder is re-dispatched for rework. After 2 rework attempts on the same ticket the loop is exhausted — fall through to §3.4. The default of 2 is configurable per-ticket via `test_failure_rework_cap:` in the ticket frontmatter; if absent, 2 applies. |
 | **brainstorm-lead invocations** (§3.3) | **1 per ticket** | A ticket gets at most one brainstorm. A second design-class blocker on the same ticket → fall through to §3.4 directly (do not spawn brainstorm-lead again). |
 | **Commit hook autofix loop** | inherited from `precommit-autofix` skill (1 retry) | Owned by the commit phase agent itself; supervisor does not retry commits. |
@@ -931,13 +952,21 @@ if (-not $parentAlive -and $cpuPct -lt 2) {
 captures the original user correction that prompted this rule
 (EPIC-ArchitectureDocsEnforcement, 2026-05-14).
 
-**Exception — commit-phase preamble kill is unconditional.** The idle-only
-rule (§5.5) applies to the pre-flight sweep. The commit agent's Step 0
-preamble kill (`pkill -f "pytest" || true` / `taskkill ...`) is deliberately
-**unconditional** — it terminates all pytest workers regardless of CPU or
-parent status. This is safe because by the time commit fires, all test phases
-for the current ticket have completed and any remaining workers are stale.
-Workers in parallel tickets are isolated by worktree (separate working dirs).
+**Exception — commit-phase preamble kill is unconditional on idleness, but
+scoped to the current worktree.** The idle-only rule (§5.5) applies to the
+pre-flight sweep. The commit agent's Step 0 preamble kill is deliberately
+**not** idle-gated — it terminates pytest workers regardless of CPU or parent
+status, because by the time commit fires all test phases for the current ticket
+have completed and any remaining workers of *this worktree* are stale.
+
+It is **not** machine-wide. Worktrees isolate files, not processes: a bare
+`pkill -f pytest` or `taskkill ... *pytest*` matches every pytest process on the
+machine, including other sessions' and other worktrees' live test runs (observed
+2026-10-02). Step 0 therefore kills only processes whose cwd (POSIX
+`/proc/<pid>/cwd`) or command line (Windows CIM `CommandLine`) lies inside the
+current worktree root. Where that scoping is impossible, Step 0 skips the kill
+and relies on the commit agent's lock-failure retry. See
+`templates/agents/commit.md` Step 0.
 
 ### §5.6 Stage-all-in-scope before `git commit`
 
@@ -1054,6 +1083,34 @@ other quality gate in one command. Commits that bypass hooks may contain:
 **The `commit` agent enforces this policy** — it refuses `--no-verify` absent explicit
 user authorization in the current conversation (relayed approval does not count).
 
+### §5.9 Knowledge routing around the commit phase (ADR-040 §3, INF-700a-1-iv)
+
+Learnings that phase agents emitted reach their surfaces only if **this ticket's own
+commit** carries them (INF-700a-5). The supervisor therefore runs the routing step around
+every `commit` spawn, inside the commit lock. Sibling tickets share the worktree, and the
+CLI keeps one run record per worktree, so the three calls must not interleave across
+tickets. Each call below is one Bash command. It prints one JSON line and always exits 0.
+
+1. Acquire the commit lock (§5.2).
+2. Run this and keep its JSON reply (if the command cannot run, use `{"case": "did_not_run", "manifest": []}`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py stage --working-dir <worktree_root>`
+3. Spawn the `commit` agent with `{ticket_path}`. In its stage list (the ticket-supervisor
+   staging SOP), add every path in the stage reply's `manifest` **by name**, as a relative
+   path under the worktree. A path that is absolute or contains `..` is dropped. Never add
+   a sweep (`git add -A` / `git add .`).
+4. When the commit agent returns, run this exactly once, on success and failure alike
+   (`ok` only when the commit landed, otherwise `failed`):
+   `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir <worktree_root> --commit-status ok|failed`
+   Its JSON reply, unchanged, is this ticket's
+   `knowledge_routing`. If it cannot run, return `{"case": "did_not_run"}` instead. Never
+   copy figures from the stage reply.
+5. Release the lock (§5.3), then add `knowledge_routing` to the ticket's result payload.
+
+Fail-open: never block, fail, or retry the ticket because of these calls, and never let them change its status.
+A ticket with no `commit` phase does not route, and its records wait for the next carrying
+commit. Records whose text an earlier ticket's commit already carries are not written
+again; the stage reports them as `already_on_branch`.
+
 ---
 
 ## §6 User Escalation Contract
@@ -1082,7 +1139,7 @@ All four fields are required. The values are:
 
 > **`/build-feature` MAY continue processing other tickets in the current batch (and subsequent batches) while a blocked ticket waits for user input**, provided the remaining tickets do not depend on the blocked one (transitively, via either `depends_on` or `files_touched`).
 
-Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state).
+Equivalent phrasing: a single ticket's user-escalation does NOT halt the epic by default. The epic only halts when the §1.3 conditions are met (structural blocker, dependency-cycle invariant violation, or unrecoverable lock state). The workflow driver adds two stops of its own after a halted ticket: staged leftovers, and a worktree state that cannot be read (§1.3). Work behind the halted ticket (dependants, or tickets sharing files it left modified) is withheld and named in `unbuilt`; everything else still builds, and the final return never reports the epic complete.
 
 When the user replies and resolves the blocker, the supervisor flow is:
 

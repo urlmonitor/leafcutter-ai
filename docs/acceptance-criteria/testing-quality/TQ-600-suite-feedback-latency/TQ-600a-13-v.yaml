@@ -1,0 +1,325 @@
+id: TQ-600a-13-v
+components:
+  - testing_quality
+title: "A post-merge run that did not run to completion is reported as not run, never as green — and a run superseded by a newer one is no verdict at all"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given that the hold passes only on a green post-merge run (TQ-600a-13-vi) and the notice
+    is closed only by one (TQ-600a-13-iii),
+  And the failure class this repository has documented repeatedly — a check that examined
+    nothing reporting the same result as a check that found nothing — which here takes the
+    form of a run that broke before it tested anything being read as a run with no
+    failures,
+  And the coalescing of TQ-600a-13-ii, under which a waiting run that a newer merge
+    displaces ends as cancelled without ever having started its tests,
+  When a correctness-lane run ends in any of these ways: a setup step before the tests
+    fails (for example installing dependencies or the build), test collection errors, the
+    population collected is empty, the run is cancelled, the run exceeds its time limit,
+    the run cannot start at all because its definition is invalid, or the run's test
+    result cannot be read,
+  Then the run is not green: its recorded conclusion is not success, the hold reads it as
+    did-not-complete, and the notice lifecycle treats it like red — it raises the notice
+    when none is open and updates the open one otherwise,
+  And the notice, and the held pull request's comment and check output, state that the run
+    did not complete, name the stage at which it stopped where that stage is known, and
+    are worded differently from a test failure, so a reader can tell "the tests failed"
+    from "the tests never ran",
+  And no open notice is closed by such a run and no hold is lifted by it,
+  And only a run that collected the whole correctness lane, executed it, and ended with
+    every test passing — after the single fresh-machine retry of TQ-600a-13-ii — is green,
+  And a run whose collected population is empty is never green, however its exit status
+    reads,
+  And a cancelled run for which a newer run of the same workflow on the main branch
+    exists, in any state, is treated as carrying no verdict: the hold and the notice skip
+    it and read the next older settled run, so a burst of merges never produces a
+    did-not-complete hold or notice by itself, while a cancelled run with no newer run is
+    did-not-complete,
+  And each ending is demonstrated by producing it — a failing setup, a collection error,
+    an empty selection, a cancellation, a superseded cancellation, a timeout, an
+    unreadable result — and observing the verdict, the hold and the notice write, never by
+    inspecting the workflow's failure handling.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+doc_links:
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Names three precedents of a defence that was a no-op and reported clean. An empty
+      run reporting green is the same shape.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The notice lifecycle that consumes the did-not-complete verdict.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The hold, which reads each run's conclusion and must skip superseded cancellations.
+  - path: .github/workflows/test-durations.yml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Precedent for refusing a success-shaped result from a run that did not cover what
+      it claims.
+declared_files:
+  - path: scripts/ci/post_merge_suite.py
+    state: to_be_created
+  - path: scripts/ci/post_merge_notice.py
+    state: to_be_created
+  - path: scripts/ci/_run_history.py
+    state: to_be_created
+  - path: .github/workflows/post-merge-suite.yml
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    GREEN IS A POSITIVE FINDING, NEVER A DEFAULT. The classifier returns green only when
+    the run job produced a readable first-run report with no collection error and at least
+    one test collected, and every first-run failure passed on the retry. Any input it does
+    not recognise is did_not_complete.
+  - >-
+    WHO OBSERVES WHICH ENDING (the verdict job inside the suite workflow is the
+    classifier; the old flag job is retired). Collection error and empty
+    selection: seen by the run job, recorded in its report. Setup failure before the
+    module ran, a failed retry job, an absent or corrupt artifact: seen by the `verdict`
+    job (needs `run` and `retry`, runs always) from the dependency results plus artifact
+    presence. Cancellation or timeout of the whole run, and a run that cannot start
+    (conclusion `startup_failure`, for example a broken workflow file): no job of the run
+    can record anything, so the run-history conclusion itself (`cancelled`, `timed_out`,
+    `startup_failure`, or anything other than `success`) is the did-not-complete signal,
+    read by the hold and by the notice job from the run resource. That is why the hold
+    reads conclusions and not artifacts.
+  - >-
+    THE VERDICT JOB MUST RUN ON EVERY ENDING IT CAN. Conditioned to run always — not
+    "unless cancelled". Where the runner cannot distinguish cancellation from timeout, the
+    stage is worded "cancelled or timed out" rather than guessed. Whether a job exceeding
+    `timeout-minutes` concludes `failure` or `cancelled` is UNVERIFIED; the wording above
+    makes the answer irrelevant.
+  - >-
+    SUPERSEDED CANCELLATIONS — THE TECHNICAL RULE (consequence of user decision B; the
+    BA's own finding). Implemented ONCE, in scripts/ci/_run_history.py, and imported by
+    the hold (-vi), the notice (-iii), the re-evaluation (-xv), the verdict job's window
+    (-xiii) and the demotion counter (-x):
+    (1) INPUT: one page of `GET /actions/workflows/post-merge-suite.yml/runs?branch=main&
+    exclude_pull_requests=true&per_page=30` — ALL statuses. Never `status=completed`,
+    which hides the newer waiting or in-progress run and is exactly the read that would
+    freeze every PR during a merge burst. No pagination: at about ten merges a day, 30
+    runs is about three days; a page with no settled run is itself a stale state.
+    (2) FILTER: keep runs with `head_branch == "main"` and `event` in {push, schedule,
+    workflow_dispatch}.
+    (3) ORDER: sort by `run_number` descending (monotonic per workflow; re-runs keep it);
+    the API's own order is UNVERIFIED and never trusted.
+    (4) SETTLED: `status == "completed"` AND NOT (`conclusion == "cancelled"` AND some
+    kept run has a greater `run_number`, in any status). The newest settled run is the
+    verdict run. A lone newest cancellation is settled (did-not-complete), so a human
+    cancelling the only run cannot cancel the hold away.
+    (5) EMPTY: no kept runs at all -> never_run (-xiv); kept runs but none settled within
+    the page -> state `stale` with reason "no settled run among the most recent 30" (no
+    seventh wording; runs that never settle for three days are runs that stopped).
+    (6) VERDICT CHANGE (-xv): compare the class (green vs not-green) of the triggering
+    settled run with the newest settled run whose `run_number` is lower.
+  - >-
+    "THE WHOLE POPULATION" IS THE LANE'S OWN COLLECTION, NON-EMPTY AND ERROR-FREE. A
+    selection that silently lost half the lane is TQ-600a-13-i's union assertion, now over
+    three sets (default, correctness lane, timing lane — TQ-600a-13-xii). No hard-coded
+    expected count.
+  - >-
+    DISTINCT WORDING IS PART OF THE CONTRACT. "Did not complete", the stage, and never a
+    "failing tests:" heading over an empty list — on the notice, in the hold's output and
+    in the PR comment.
+  - >-
+    "PRODUCED, NOT SIMULATED" — WHERE THAT IS CHEAP AND WHERE IT IS NOT. Collection error
+    and empty selection: real child pytest sessions in synthetic projects via the
+    workflow-step executor. Unreadable result: a real corrupt artifact. Setup failure,
+    cancellation, superseded cancellation, timeout and startup failure CANNOT be produced
+    in the unit layer — they are events of the hosting service — so the honest form is to
+    execute the verdict job's real steps with the dependency results the runner gives it,
+    and the hold and notice modules against served run histories carrying those
+    conclusions. Stated explicitly so a reviewer does not read the substitution as the
+    expensive thing having been done.
+  - >-
+    RED vs DID-NOT-COMPLETE ON THE HOLD SIDE. For a settled non-success run the hold
+    classifies with one read of the run's jobs (`GET /actions/runs/{id}/jobs?filter=latest`):
+    the step `Verdict: red` concluded failure -> red; anything else (run-level
+    cancelled / timed_out / startup_failure, the `Verdict: did not complete` step, a
+    failed `run` job, no verdict job at all) -> did_not_complete. The notice is not
+    consulted for this, so the wording survives a failed notice write. This classifier
+    also lives in scripts/ci/_run_history.py, so this record can prove it before the
+    hold module exists; -vi proves the hold uses it.
+  - >-
+    BUILD ORDER. This record precedes the hold (-vi depends on it), so its descriptors
+    assert the hold's half through the run-history functions the hold is required to
+    import, and -vi carries the hold-level burst descriptor. Neither record may satisfy
+    the superseded-run rule with a private copy.
+  - >-
+    THE TESTS COST UNDER 1.2 s, IN THE DEFAULT SUITE. Two real child pytest sessions
+    (collection error, empty selection) in synthetic projects; everything else in-process
+    against served run histories.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-iii
+    contract: >-
+      The verdict object with `verdict: did_not_complete` and `stage` one of "setup" |
+      "collection" | "empty_selection" | "retry_failed" | "cancelled_or_timed_out" |
+      "startup_failure" | "result_unreadable" | "unknown"; when no artifact exists the
+      notice job derives did_not_complete from the triggering run's conclusion.
+  - agent: python-coder
+    ac_id: TQ-600a-13-vi
+    contract: >-
+      scripts/ci/_run_history.py `select_verdict_run(runs: list[dict]) -> Selection`
+      (name indicative), where Selection carries `kind` ("settled" | "never_run" |
+      "no_settled_in_page"), `run` (the settled run dict or null) and `skipped` (list of
+      {`id`, `reason`: "superseded_cancellation" | "not_completed" | "not_main"}); the
+      settled run's conclusion `success` is green, any other is held, with red vs
+      did_not_complete decided from the jobs read described above.
+  - agent: python-coder
+    ac_id: TQ-600a-13-xv
+    contract: >-
+      `verdict_changed(runs, triggering_run_id) -> bool | None` from the same module:
+      None when the triggering run is not settled (superseded, not main), so the fan-out
+      does nothing.
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      The green/red verdict for runs that executed the lane, in the
+      `post-merge-verdict.json` shape; the verdict job's `Verdict: red` /
+      `Verdict: did not complete` steps; and scripts/ci/_run_history.py as created.
+test_spec:
+  - name: test_tq600a_13_v_every_incomplete_ending_is_not_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "the verdict job's `run:` steps of .github/workflows/post-merge-suite.yml executed by the shared workflow-step executor, with each dependency result supplied, then the notice module against the recording fake server"
+    description: >-
+      Setup failure (no artifact), failed retry job, truncated artifact, corrupt artifact:
+      did_not_complete with the right stage; the notice is raised or updated, never
+      closed; the text says the run did not complete and names the stage.
+  - name: test_tq600a_13_v_an_empty_population_is_never_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the run job's real `run:` step in a synthetic project with no correctness-lane tests (real child pytest session, exit 5), then the verdict job"
+    must_catch:
+      - "the selection matches nothing — a renamed marker, a moved directory — and the run is green because no test failed"
+      - "a setup failure skips the verdict step and the absence of a red verdict is read as green"
+      - "the verdict job is conditioned to skip on cancellation, so a cancellation leaves no record"
+    description: >-
+      THE DESCRIPTOR THAT CANNOT BE DROPPED: an empty run is the cheapest way for this
+      whole mechanism to report clean forever. Verdict did_not_complete, stage
+      empty_selection, verdict job exit non-zero.
+  - name: test_tq600a_13_v_a_collection_error_is_not_a_test_failure_and_not_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    surface_invoked: "the run job's real step in a synthetic project where one lane module raises at import and one lane test passes"
+    must_catch:
+      - "the passing test runs despite the collection error and the run is green"
+      - "the collection error is reported as a failing test by node id"
+    description: >-
+      did_not_complete with stage collection.
+  - name: test_tq600a_13_v_a_superseded_cancellation_is_no_verdict
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/_run_history.py's settled-run selection and post_merge_notice.py, in-process, through the real REST client against the recording fake server serving run lists in ALL statuses"
+    must_catch:
+      - "the read is `status=completed&per_page=1`, finds the displaced waiting run's `cancelled`, and every pull request is held as did-not-complete during a burst of merges"
+      - "a cancelled run with no newer run is skipped as if superseded, so a human cancelling the only run makes the verdict an older green run"
+      - "the notice posts did-not-complete for a displaced run"
+      - "the fake server records a run-history request carrying `status=completed`"
+    description: >-
+      History by run_number (served out of order): waiting C, cancelled B (displaced),
+      in-progress A, green G. Selected run G (green); no notice write for B. History:
+      cancelled X (newest, nothing newer), green G: X selected, did_not_complete. 30 kept
+      runs none settled: `no_settled_in_page`. Empty list: `never_run`.
+  - name: test_tq600a_13_v_run_level_endings_are_read_from_the_conclusion
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/_run_history.py's selection and red/did-not-complete classifier, in-process, against served latest runs with conclusions cancelled, timed_out, startup_failure, failure, neutral and an unknown string, with served jobs lists"
+    description: >-
+      Every non-success conclusion is not green; none is green; run-level endings and a
+      failure whose jobs list shows `Verdict: did not complete` (or no verdict job) are
+      did_not_complete; only a failed `Verdict: red` step is red.
+  - name: test_tq600a_13_v_a_complete_passing_run_is_green
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "post_merge_suite.py + post_merge_notice.py + _run_history.py in-process against the fake server"
+    description: >-
+      The paired control. Green closes the open notice and the selection is green.
+test_rationale: |
+  The empty-selection case is singled out because it is the one most likely to happen by
+  accident and the one whose wrong answer looks most like the right one.
+
+  The superseded-cancellation case is new with the per-merge cadence. The obvious
+  implementation of the hold — read the single newest completed run — is exactly the one
+  that turns every burst of merges into a repository-wide false hold, because the
+  displaced waiting run is completed and cancelled and newer than the run still in
+  progress. Its paired case, a lone cancellation, keeps the fix from becoming "ignore all
+  cancellations", which would let a human cancel the hold away.
+
+  Endings the hosting service produces are not reproducible in the unit layer; the tests
+  serve the conclusions it reports and say so. The hold-level version of the burst case
+  is -vi's descriptor, because -vi is built after this record. Under 1.2 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- reason: 'USER-APPROVED REDESIGN AFTER TWO EXPERT REVIEWS (2026-10-08), decisions
+    A, B and F. (A) The hold now reads the run''s conclusion, so "not green" is asserted
+    on the hold''s verdict and wording as well as on the notice; SUPERSEDED premise
+    "the flag is closed by a green night and raised by a red one" as the whole consequence.
+    (B) Added the superseded-cancellation clause: coalescing per-merge runs displaces
+    waiting runs, which end cancelled, and those must carry no verdict or every burst
+    of merges becomes a false did-not-complete hold — a gap neither review named,
+    found while carrying decision B through. Added "cannot start at all because its
+    definition is invalid" (conclusion startup_failure). Classification moves from
+    the old flag job to the suite workflow''s own verdict job. (F) SUPERSEDED note
+    "UNDER-SPECIFIED, NOT INVENTED: A NIGHT THAT NEVER STARTS" — now TQ-600a-13-xiv.
+    Names: nightly -> post-merge. Readiness returned to draft for IT PO re-enrichment.
+    Full prior text: commit e79d35ef4.'
+  by: business-analyst
+  at: 2026-10-08
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_v.py
+- unit_tests/suite_performance/test_tq_600a_13_v_history.py
+- unit_tests/suite_performance/test_tq_600a_13_v_review.py
+implemented_by:
+- scripts/ci/_post_merge_stages.py
+- scripts/ci/post_merge_suite.py
+- scripts/ci/_lane_report_plugin.py
+- scripts/ci/_run_history.py
+- scripts/ci/post_merge_notice.py
+- scripts/ci/_notice_render.py
+- .github/workflows/post-merge-suite.yml
+change_target: pipeline
+risk_surface: internal
+notes: |
+  RESOLVED 2026-10-08: A RUN THAT NEVER STARTS. Moved to TQ-600a-13-xiv (stale, disabled,
+  never run), which the run-history verdict makes cheap.
+
+  RESOLVED AT RE-ENRICHMENT (2026-10-08): the bound is one page of 30 runs in all
+  statuses, sorted by run_number client-side; no settled run in the page is the `stale`
+  state with its own reason line. See it_requirements.

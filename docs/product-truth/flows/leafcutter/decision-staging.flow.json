@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 1,
+  "version": 3,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -27,32 +27,138 @@
     {
       "id": "detect",
       "label": "Spot an approved decision",
-      "human": "At the end of the run, the decision executor sees a completed decision that a human approved.",
+      "description": "At the end of the run, the kernel spots a completed decision that a person approved.",
       "order": 1,
       "agent": "kernel decision executor",
+      "actor_kind": "deterministic",
       "consumes": [
-        "resolved decision (approved_by: human)"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)"
       ],
-      "produces": [
-        "decision to stage"
-      ],
+      "produces": [],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.yaml_per_decision_component_folders",
+                "opt.reuse_ac_store_conventions",
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "build-record",
       "label": "Build the record",
-      "human": "The record builder collects the question, options, criteria, evidence references (locators and hashes, no text), the ranking you saw, the precedents considered, and provenance: run id, Langfuse trace id, repository revision and versions. It refuses an approver who is not human or a missing approved_at.",
+      "description": "The kernel builds a record of the question, options, criteria, evidence references, the ranking you saw, precedents and provenance, refusing it unless a person approved it.",
       "order": 2,
       "agent": "kernel record builder",
+      "actor_kind": "deterministic",
       "consumes": [
-        "decision to stage"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)",
+        "option/id: string (required)",
+        "option/title: string (required)",
+        "option/approval_status: string (optional; default \"not_required\")",
+        "option/approved_by: null|string (optional; default null)",
+        "criterion/id: string (required)",
+        "criterion/question: string (required)",
+        "criterion/priority: string (optional; default \"required\")",
+        "criterion/kind: string (optional; default \"evidence_answerable\")",
+        "evidence/id: string (required)",
+        "evidence/source/locator: string (required)",
+        "evidence/content_hash: string (required)"
       ],
       "produces": [
-        "DecisionRecord"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "reads": [
         "Decision"
@@ -61,44 +167,546 @@
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "option",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          },
+          {
+            "contract": "criterion",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/priority",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "required"
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "evidence_answerable"
+              }
+            ]
+          },
+          {
+            "contract": "evidence",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source/locator",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/content_hash",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "option_ids": [
+                "opt.yaml_per_decision_component_folders",
+                "opt.reuse_ac_store_conventions",
+                "opt.yaml_files_plus_generated_index",
+                "opt.added.1"
+              ],
+              "selected_option_id": "opt.added.1",
+              "status": "resolved",
+              "approval_status": "approved",
+              "approved_by": "human:user",
+              "approved_at": "2026-10-01T14:48:31Z"
+            }
+          },
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "write-staged",
       "label": "Write it under the run folder",
-      "human": "The file backend writes the YAML to <run_root>/runs/<run_id>/staged/decisions/<id>.yaml, never into the repository: during a run the kernel only reads the repository (ADR-060).",
+      "description": "The kernel writes the record into the run folder, never into the repository, which a run only ever reads.",
       "order": 3,
       "agent": "kernel memory file backend",
+      "actor_kind": "deterministic",
       "consumes": [
-        "DecisionRecord"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "writes": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "announce",
       "label": "Tell you how to publish",
-      "human": "The run's result says \"decision record staged: <path>\" and gives the command python -m kernel decisions publish --run-id R. The /leafcutter skill shows you this and never publishes by itself.",
+      "description": "Claude Code tells you the decision record is staged, which folder publishing writes it into and a publish command that runs as printed, and never publishes on its own.",
       "order": 4,
       "screen": "decision-record-staged",
       "agent": "/leafcutter skill (claude_code)",
+      "actor_kind": "llm",
       "consumes": [
-        "staged record (<run_root>/runs/<run_id>/staged/decisions/<id>.yaml)"
+        "decision_record/id: string (required)",
+        "decision_record/selected_option_id: string (required)",
+        "decision_record/approval/approved_by: string (required)",
+        "decision_record/approval/approved_at: string (required)",
+        "decision_record/provenance/run_id: string (required)"
       ],
       "produces": [
-        "publish instruction"
+        "capability_result/limitations: array (optional; default [])",
+        "capability_result/output_payload: null|object (optional; default null)"
       ],
       "reads": [
         "Decision"
       ],
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision_record",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_by",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/approval/approved_at",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/provenance/run_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/output_payload",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "decision_record",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Existing decision-record scenario: decision_record",
+            "value": {
+              "id": "dec-ef8ddcb79d668a67",
+              "title": "Kernel-contract YAML per decision",
+              "decision_type": "design",
+              "selected_option_id": "opt.added.1",
+              "components": [
+                "decision_kernel",
+                "knowledge_management"
+              ],
+              "approval": {
+                "approval_status": "approved",
+                "approved_by": "human:user",
+                "approved_at": "2026-10-01T14:48:31Z",
+                "note": "approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore)."
+              },
+              "provenance": {
+                "run_id": "run-2fbb4ef43b1345f6",
+                "created_at": "2026-10-01T14:48:31Z"
+              }
+            }
+          },
+          {
+            "contract": "capability_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative staging notice with installation path placeholders (no whitespace in paths, so nothing is quoted)",
+            "value": {
+              "limitations": [
+                "decision record staged: <run_root>/runs/run-2fbb4ef43b1345f6/staged/decisions/dec-ef8ddcb79d668a67.yaml; publish writes it into <repo_root>/docs/decisions (the kernel checkout); publish it for review with: <python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-2fbb4ef43b1345f6"
+              ],
+              "output_payload": {
+                "limitations": [
+                  "decision record staged: <run_root>/runs/run-2fbb4ef43b1345f6/staged/decisions/dec-ef8ddcb79d668a67.yaml; publish writes it into <repo_root>/docs/decisions (the kernel checkout); publish it for review with: <python> <repo_root>/scripts/run_kernel.py decisions publish --run-id run-2fbb4ef43b1345f6"
+                ]
+              }
+            }
+          },
+          {
+            "contract": "capability_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative Windows staging notice: a checkout path with a space is quoted and the command starts with &",
+            "value": {
+              "limitations": [
+                "decision record staged: C:\\Users\\Ada Lovelace\\leafcutter\\.leafcutter\\kernel\\runs\\run-2fbb4ef43b1345f6\\staged\\decisions\\dec-ef8ddcb79d668a67.yaml; publish writes it into C:\\Users\\Ada Lovelace\\leafcutter\\docs\\decisions (the kernel checkout); publish it for review with: & \"C:\\Users\\Ada Lovelace\\leafcutter\\.venv\\Scripts\\python.exe\" \"C:\\Users\\Ada Lovelace\\leafcutter\\scripts\\run_kernel.py\" decisions publish --run-id run-2fbb4ef43b1345f6"
+              ],
+              "output_payload": {
+                "limitations": [
+                  "decision record staged: C:\\Users\\Ada Lovelace\\leafcutter\\.leafcutter\\kernel\\runs\\run-2fbb4ef43b1345f6\\staged\\decisions\\dec-ef8ddcb79d668a67.yaml; publish writes it into C:\\Users\\Ada Lovelace\\leafcutter\\docs\\decisions (the kernel checkout); publish it for review with: & \"C:\\Users\\Ada Lovelace\\leafcutter\\.venv\\Scripts\\python.exe\" \"C:\\Users\\Ada Lovelace\\leafcutter\\scripts\\run_kernel.py\" decisions publish --run-id run-2fbb4ef43b1345f6"
+                ]
+              }
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
@@ -107,14 +715,96 @@
       "from": "detect",
       "condition": "the decision was resolved by the host alone or has no human approval",
       "label": "Nothing is staged",
-      "human": "No record is written, so there is nothing to publish and no later run can find this decision as precedent.",
+      "description": "The kernel writes no record, so there is nothing to publish and no later run can find this decision as precedent.",
       "agent": "kernel decision executor",
+      "actor_kind": "deterministic",
       "consumes": [
-        "resolved decision (approved_by: human)"
+        "decision/question: string (required)",
+        "decision/status: string (required)",
+        "decision/selected_option_id: null|string (optional; default null)",
+        "decision/approval_status: string (optional; default \"not_required\")",
+        "decision/approved_by: null|string (optional; default null)",
+        "decision/approved_at: null|string (optional; default null)"
       ],
       "outcome_kind": "exit",
       "impl_asof": "2026-10-02",
-      "impl_status": "not_started"
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "decision",
+            "fields": [
+              {
+                "path": "/question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selected_option_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approval_status",
+                "types": [
+                  "string"
+                ],
+                "required": false,
+                "default": "not_required"
+              },
+              {
+                "path": "/approved_by",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/approved_at",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "decision",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Illustrative refusal: no human-approved resolved decision",
+            "value": {
+              "question": "Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.",
+              "status": "blocked",
+              "selected_option_id": null,
+              "approval_status": "not_required",
+              "approved_by": null,
+              "approved_at": null
+            }
+          }
+        ]
+      },
+      "produces": []
     }
   ],
   "acceptance_scenarios": [
@@ -140,7 +830,7 @@
       "for": "announce",
       "given": "a staged decision record",
       "when": "the run's result is returned to Claude Code",
-      "then": "the message names the staged path and the publish command, and the skill does not publish on its own"
+      "then": "the message names the staged path, the docs/decisions folder in the kernel checkout that publishing writes into, and a publish command that runs as printed from any shell and directory (the kernel's own interpreter and scripts/run_kernel.py, no PYTHONPATH), and the skill does not publish on its own"
     },
     {
       "for": "not-stageable",
@@ -155,6 +845,18 @@
       "by": "flow-author (decision-lifecycle product-truth session)",
       "date": "2026-10-02",
       "note": "Sub-flow 2 of leafcutter/decision-lifecycle (kernel decision dec-5e7445182eaec1f2): the automatic staging of a human-approved decision at the end of a run."
+    },
+    {
+      "action": "extended",
+      "by": "product-truth-expert",
+      "date": "2026-10-03",
+      "note": "Migrated every node to source-backed checked handoffs and labeled examples; preserved runtime, approvals and AC status."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (TICKET-20261002-KernelRunnablePublishCommand)",
+      "date": "2026-10-06",
+      "note": "Updated the announce step to the runnable publish command (PR #999): the notice now names the docs/decisions folder publishing writes into and prints the kernel's own interpreter with scripts/run_kernel.py instead of python -m kernel. Prose, illustrative examples and the announce scenario only; no step, contract binding, approval or AC link changed."
     }
   ],
   "impl_summary": {
@@ -163,5 +865,25 @@
     "not_started": 5,
     "total": 5,
     "asof": "2026-10-02"
+  },
+  "contract_definitions": {
+    "capability_result": {
+      "model": "capability_result"
+    },
+    "criterion": {
+      "model": "criterion"
+    },
+    "decision": {
+      "model": "decision"
+    },
+    "decision_record": {
+      "model": "decision_record"
+    },
+    "evidence": {
+      "model": "evidence"
+    },
+    "option": {
+      "model": "option"
+    }
   }
 }

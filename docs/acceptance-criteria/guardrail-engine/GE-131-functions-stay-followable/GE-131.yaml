@@ -1,0 +1,89 @@
+id: GE-131
+title: "Functions stay simple enough for a person to follow"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L0
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No function quietly becomes too tangled to follow.
+
+  A function with too many paths through it is where bugs hide and where nobody
+  dares to change anything. The package says it stops you committing one, and
+  points you at a skill that helps you untangle it. In fact that check has never
+  run on a single commit. It cannot simply be switched on either, because the
+  project already holds over a hundred functions above the limit, and a flat check
+  would stop work on every file that holds one. After this goal, a function that is
+  already too complex can still be worked on but never made more complex, no new
+  function arrives over the limit, the check runs on every ordinary commit, and
+  being stopped tells you which function, by how much, and where to get help.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/commit-guardian/open-blocker-ki-cg-20260909-gate-complexity.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The register entry this tree answers. Its definition of done is this tree's
+      cut: existing offenders stay committable, a new or worsened one is refused,
+      the gate is registered, and refusal is proven by running it. Its figures are
+      stale; use the measurement in notes.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The precedent. GE-127 broke the same deadlock for file length with a ratchet
+      judged against the previous committed version. Not the host: GE-127 is about
+      files, this is about functions.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2200-adoption-floor/ACD-2200b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The generic "existing shortfalls never block you, new ones are refused" policy.
+      This tree instantiates it for function complexity and does not re-argue it.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-131a
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  AUTHORED BY THE BUSINESS ANALYST AT BRAINCANDY'S DIRECT REQUEST, including this L0
+  and its L1, which are ordinarily the Product Owner's. Re-authored the same day at
+  roughly a quarter of the first draft's size (that draft is preserved in commit
+  1ef5f8db0) after BrainCandy and an independent review judged it disproportionate.
+  Intended to be built as one ticket.
+
+  MEASURED BACKLOG — 2026-10-09, origin/main 7c9cc469a.
+    Method: imported calculate_complexities, MAX_COMPLEXITY_SCORE and
+    COMPLEXITY_EXCLUDED_DIRS from templates/scripts/commit_guardian (the shipped
+    checker's own counting function and settings, read-only) and scored the
+    committed blob of every file `git ls-files '*.py'` lists. 2,221 files, none
+    failed to parse, none in the skipped directories.
+    Result: 109 functions score above the limit of 15, in 90 files. Scores run 16 to
+    65, median 19. Spread across every area, no file holds more than 4. Worst:
+    _compute_output_mappings 65 (scripts/build_helpers.py).
+  The figures 65 and 79 in the inventory comment and 49-of-915 in the register are
+  stale. Re-measure at build time rather than trusting 109; no test may hard-code it.
+
+  ONE L1. A single L1 under this L0 trips the non-blocking sparse-tree advisory
+  (ACS-100c-2, fewer than three children). Accepted: the work is one ticket, and
+  splitting it to satisfy an advisory would recreate the over-specification this
+  re-authoring removed.
+
+  RELATED, NOT A DEPENDENCY: BP-1600a-2 (its triage covers this script among its
+  unregistered set). Whichever lands first adds the hook entry; the other finds it
+  present and asserts it. No depends_on edge in either direction.

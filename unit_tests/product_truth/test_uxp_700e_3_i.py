@@ -53,11 +53,13 @@ def _journey(flow_id: str, steps: list[dict], branches: list[dict] | None = None
 
 
 def _step(step_id: str, order: int, **extra) -> dict:
-    return {"id": step_id, "label": step_id, "human": f"the actor does {step_id}", "order": order, **extra}
+    return {"id": step_id, "label": step_id, "description": f"the actor does {step_id}", "actor_kind": "human", "order": order,
+            "io_contracts": {"not_applicable": "This actor action tests expansion-reference shapes and exchanges no JSON."}, **extra}
 
 
 def _branch(branch_id: str, **extra) -> dict:
-    return {"id": branch_id, "from": "act", "condition": "something differs", "label": branch_id, **extra}
+    return {"id": branch_id, "from": "act", "condition": "something differs", "label": branch_id,
+            "io_contracts": {"not_applicable": "This branch tests reference shape normalization without a serialized handoff."}, **extra}
 
 
 class TestSingleValueExpansionReferenceIsReadAsAListOfOne(unittest.TestCase):

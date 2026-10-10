@@ -1,0 +1,68 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.retrieval_needs_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Original question and bounded candidate meanings, independent of backend support.",
+  "properties": {
+    "catalog": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "description": "For each dimension, the meanings offered (label to description); the host may choose only these labels.",
+      "title": "Catalog",
+      "type": "object"
+    },
+    "context": {
+      "description": "Earlier text that may disambiguate the question; unverified, never a permission.",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Context",
+      "type": "array"
+    },
+    "known_ids": {
+      "description": "Identifiers the caller has already seen; offered to the host as target candidates, not as requested targets.",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 64,
+      "title": "Known Ids",
+      "type": "array"
+    },
+    "original_question": {
+      "description": "The caller's question, verbatim; the host interprets only this text.",
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Original Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_scope": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "Which sources the interpretation concerns; echoed back unchanged in the output.",
+      "title": "Source Scope",
+      "type": "object"
+    }
+  },
+  "required": [
+    "original_question",
+    "catalog"
+  ],
+  "title": "RetrievalNeedsRequest",
+  "type": "object"
+}

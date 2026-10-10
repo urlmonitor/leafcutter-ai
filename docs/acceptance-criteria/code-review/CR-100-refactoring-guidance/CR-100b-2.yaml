@@ -1,0 +1,222 @@
+id: CR-100b-2
+title: "When a complexity check stops you, the skill it tells you to use is installed and its numbers are the checker's own"
+component: code-review
+components:
+  - review_system
+  - skills_system
+  - commit_guardian
+level: L2
+status: active
+req_status: active
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a project the package has been installed into,
+    and an author who has been refused by a complexity check (the Python
+    per-function check or the SQL per-file check), or told by a refusal or by
+    the python-coder instructions to use the complexity-reduction skill,
+  When the author looks for that skill by that name in the installed project,
+  Then a skill named complexity-reduction is installed there and loads by that name,
+  And it states what each of the two checks counts and which constructs carry
+    the score,
+  And it treats the limits as the project's own settings: it names where they
+    are read from and how to print them, and states no limit of its own that
+    could disagree with them,
+  And every before/after example it gives is labelled with the score the
+    shipped checker assigns to it, and every label equals what that checker
+    computes for that example,
+  And the commands it gives for measuring a score and printing the limits refer
+    to checker files that exist in the installed project,
+  And it never offers removing logging or RAISE NOTICE statements as a way to
+    lower a score,
+  So that the fix a refusal names exists, and following it gives correct numbers.
+depends_on:
+  - CR-100b
+doc_links:
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100b.yaml
+    relationship: parent
+    status: exists
+    relevance: >-
+      "Every finding tells you the exact fix." A complexity refusal is a finding,
+      and its prescription is "use the complexity-reduction skill". Until this
+      record that prescription resolved to nothing: templates/skills/ held no
+      such skill.
+  - path: templates/skills/complexity-reduction/SKILL.md
+    relationship: implements
+    status: exists
+  - path: config/skill_registry.json
+    relationship: configures
+    status: exists
+  - path: templates/scripts/commit_guardian/check_complexity.py
+    relationship: related
+    status: exists
+    relevance: "Its refusal prints: Use the `complexity-reduction` skill to safely refactor and extract components."
+  - path: templates/scripts/commit_guardian/check_sql_complexity.py
+    relationship: related
+    status: exists
+  - path: templates/agents/python-coder.md
+    relationship: related
+    status: exists
+    relevance: "Requires the complexity-reduction skill to exist in .claude/skills/ and invokes it for every function over the threshold."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      GE-120h-5 judges what the folder-density refusal names. Its IT PO note
+      found that "the complexity-reduction skill resolves to nothing". After this
+      record it resolves to a packaged skill. Whether that skill is usable help
+      for a crowded-folder refusal is still GE-120h-5's judgement: the skill
+      covers function and file complexity, and says plainly that folder density
+      is out of its scope. This record does not close or weaken GE-120h-5.
+assigned_agent: llm-expert
+estimated_complexity: S
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    type: object
+    required:
+      - id
+      - name
+      - portable
+      - domain
+      - template_path
+      - dependencies
+      - description
+      - components
+    properties:
+      id:
+        const: complexity-reduction
+      portable:
+        const: true
+      domain:
+        type: "null"
+      template_path:
+        const: leafcutter/templates/skills/complexity-reduction/
+      components:
+        type: array
+        minItems: 1
+  reference_file_path: config/skill_registry.json
+  n_location_rule: '1'
+  required_skills:
+    - llm-expert
+    - add-skill-to-package
+  post_write_commands:
+    - python scripts/build.py --validate-only
+    - python scripts/build.py --target-dir .
+  constraints:
+    - >-
+      Package surface, written together as add-skill-to-package describes: the
+      template templates/skills/complexity-reduction/SKILL.md and one new entry
+      in config/skill_registry.json. No other registry entry changes. The root
+      README.md already lists complexity-reduction under code-quality skills, so
+      it needs no edit.
+    - >-
+      The template is portable. Checker paths use the {{config.output_root}}
+      placeholder, which the build renders, and never a path from one project.
+      Examples use neutral names and no single project's domain terms.
+    - >-
+      No limit is hard-coded as a fact. The shipped defaults (complexity 15,
+      sql_complexity 75) may appear only as "shipped default", next to the
+      commit_guardian.json keys that set them.
+    - >-
+      Every fenced python or sql example carries a first-line marker,
+      "# measured: name=score[, name=score]" or "-- measured: score", which
+      the test suite recomputes with the shipped calculators.
+    - >-
+      The skill says plainly that check-complexity ships but is not in the
+      default hook manifest, and that check-sql-complexity is.
+test_required: true
+test_spec:
+  - name: test_every_measured_example_matches_the_shipped_checker
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Parse every fenced python/sql block in templates/skills/complexity-reduction/SKILL.md, read its measured marker, recompute the score with calculate_complexities / calculate_sql_complexity from templates/scripts/commit_guardian, and assert equality. Every fenced python/sql block must carry a marker."
+    must_catch:
+      - "an example whose labelled score is not what the checker computes (the source skill claimed guard clauses lower the score; they do not)"
+      - "an example added without a measured label"
+  - name: test_shipped_defaults_quoted_by_the_skill_match_commit_guardian_json
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The shipped-default limits in the skill's limits table equal complexity.max_score and sql_complexity.max_score in templates/scripts/commit_guardian/commit_guardian.json, and the table names both keys."
+    must_catch:
+      - "the skill quoting a SQL limit of 65 while the package ships 75"
+  - name: test_skill_never_recommends_removing_observability
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The skill carries the never-remove-observability rule, and no technique heading offers removing logging or RAISE NOTICE."
+  - name: test_registry_entry_points_at_the_template
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: seam
+    description: "config/skill_registry.json has exactly one entry with id complexity-reduction, portable true, domain null, a template_path that resolves to templates/skills/complexity-reduction/, and non-empty components; the template's frontmatter name is complexity-reduction."
+  - name: test_every_refusal_naming_the_skill_names_a_packaged_skill
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: reachability
+    description: "Every commit_guardian checker source that tells the author to use the complexity-reduction skill names a skill that has both a template directory and a registry entry."
+  - name: test_installed_project_has_the_skill_and_the_files_its_commands_use
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "In the deployed reference layout, .claude/skills/complexity-reduction/SKILL.md exists with frontmatter name complexity-reduction and no unrendered {{...}} placeholder. Every commit_guardian directory its commands put on sys.path exists there and holds check_complexity.py, check_sql_complexity.py, config.py and commit_guardian.json."
+test_rationale: |
+  The skill is an instruction document, so the tests pin what can be checked
+  without a model: the numbers it states, the files it points at, and whether it
+  is installed. The measured-marker test is the strongest one. The skill this
+  record ports from another project stated several scores the checker does not
+  produce: guard clauses "saving" points, a comprehension `if` "costing" one, and
+  `IF ... IS NULL` "saving" two where it saves one. A test that recomputes every
+  label keeps that kind of error from coming back.
+change_target:
+  - prompt
+  - config
+risk_surface: internal
+declares_side_effect: false
+delivers_to: null
+expects_from: null
+origin_agent: "Claude main session (user-authorized hand-authored AC, 2026-10-09)"
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - "unit_tests/test_complexity_reduction_skill.py"
+implemented_by:
+  - "templates/skills/complexity-reduction/SKILL.md"
+  - "config/skill_registry.json"
+notes: |
+  USER DECISION 2026-10-09: add the complexity-reduction skill from the
+  Bybit-Trader project (.agents/skills/complexity-reduction/SKILL.md) to the
+  package as a template. The user chose to have this one AC hand-authored in
+  the same PR instead of going through /plan-feature. It exists because the
+  commit-msg hook check-package-surface-declaration requires a package_surface
+  AC for a new skill_registry.json entry.
+
+  WHAT CHANGED IN THE PORT. Every score was re-measured against the shipped
+  checkers. Corrected: guard clauses do not lower the Python score; a
+  comprehension's `if` filter is not counted; a nested `def` does not reset
+  the enclosing function's count; `IF ... IS NULL` to COALESCE saves 1, not 2;
+  each additional CTE in one WITH clause costs nothing. Added: notice text is
+  scanned, so a RAISE NOTICE message containing "for", "and" or "with" scores.
+  The fix is to reword the message, never to remove it. Removed: hard-coded
+  limits (the source said SQL 65; the package ships 75), Poetry-only commands,
+  and trading-domain examples.
+
+  PLACEMENT. GE-120h ("a check the package says protects you is actually
+  switched on") is the closer theme, but it already holds 5 L2s, the cap.
+  CR-100b ("every finding tells you the exact fix") had one child and fits the
+  refusal's prescription.
+
+  KNOWN GAP, NOT FIXED HERE. python-coder's registry entry (skills_invoked)
+  does not list complexity-reduction, although its template invokes it. That
+  belongs to the AR-300 / INF-600 records, not this one.

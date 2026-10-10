@@ -5,21 +5,25 @@
       "description": "Two evidence items that disagree on a point relevant to the question.",
       "properties": {
         "a": {
+          "description": "Id of one of the two evidence items that disagree.",
           "title": "A",
           "type": "string"
         },
         "b": {
+          "description": "Id of the other evidence item.",
           "title": "B",
           "type": "string"
         },
         "note": {
           "default": "",
+          "description": "What they disagree about.",
           "title": "Note",
           "type": "string"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -37,6 +41,7 @@
       "properties": {
         "access": {
           "default": "internal",
+          "description": "Visibility label of the item (internal or restricted), so restricted evidence can be handled with care.",
           "pattern": "^(internal|restricted)$",
           "title": "Access",
           "type": "string"
@@ -51,23 +56,28 @@
             }
           ],
           "default": null,
+          "description": "Reference to a stored artifact holding the content when no excerpt is kept.",
           "title": "Artifact Ref"
         },
         "category": {
-          "$ref": "#/$defs/EvidenceCategory"
+          "$ref": "#/$defs/EvidenceCategory",
+          "description": "What kind of evidence it is (guidance, prior decision, existing pattern, ...), which decides the needs it can satisfy and its role in a decision."
         },
         "content_hash": {
+          "description": "Hash of the body; with the locator it forms the evidence id, so identical text is one item.",
           "minLength": 8,
           "title": "Content Hash",
           "type": "string"
         },
         "created_at": {
+          "description": "When the record was first created (UTC), so history can be ordered and audited.",
           "format": "date-time",
           "title": "Created At",
           "type": "string"
         },
         "created_seq": {
           "default": 0,
+          "description": "Kernel-wide creation counter that orders records exactly where clock times tie.",
           "minimum": 0,
           "title": "Created Seq",
           "type": "integer"
@@ -82,14 +92,17 @@
             }
           ],
           "default": null,
+          "description": "The source text verbatim (whitespace kept), so its hash matches the stored one.",
           "title": "Excerpt"
         },
         "id": {
+          "description": "Identifier other records cite this one by; the kernel assigns it, or derives it from the content for evidence and findings.",
           "pattern": "^[a-z]+-[0-9a-f]{16}$",
           "title": "Id",
           "type": "string"
         },
         "limitations": {
+          "description": "Caveats on this item, such as a cut excerpt, that the reader should weigh.",
           "items": {
             "type": "string"
           },
@@ -97,33 +110,40 @@
           "type": "array"
         },
         "provenance": {
-          "$ref": "#/$defs/Provenance"
+          "$ref": "#/$defs/Provenance",
+          "description": "How the evidence was produced."
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "semantic_type": {
-          "$ref": "#/$defs/SemanticType"
+          "$ref": "#/$defs/SemanticType",
+          "description": "Whether the text is a repository fact, documentation, human input, synthesis or task context."
         },
         "source": {
-          "$ref": "#/$defs/EvidenceSource"
+          "$ref": "#/$defs/EvidenceSource",
+          "description": "Where the evidence came from."
         },
         "truncated": {
           "default": false,
+          "description": "True when the excerpt was cut to fit a limit, so more text exists in the source.",
           "title": "Truncated",
           "type": "boolean"
         },
         "updated_at": {
+          "description": "When the record last changed (UTC), so a reader can tell a stale copy from the current one.",
           "format": "date-time",
           "title": "Updated At",
           "type": "string"
         },
         "verification": {
           "$ref": "#/$defs/Verification",
-          "default": "unverified"
+          "default": "unverified",
+          "description": "How far the text was checked against its source (unverified, host reported, source verified)."
         }
       },
       "required": [
@@ -155,14 +175,17 @@
       "description": "Where an Evidence item came from.",
       "properties": {
         "id": {
+          "description": "Id of the configured source the evidence came from.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "kind": {
-          "$ref": "#/$defs/SourceKind"
+          "$ref": "#/$defs/SourceKind",
+          "description": "What kind of source it is (repository file, knowledge node, host research, human, task input)."
         },
         "locator": {
+          "description": "Where to find the text again (file path with anchor, node id, or similar); part of the evidence id.",
           "minLength": 1,
           "title": "Locator",
           "type": "string"
@@ -178,6 +201,7 @@
             }
           ],
           "default": null,
+          "description": "When the source itself was last modified (UTC), to judge how fresh the evidence is.",
           "title": "Observed Modified At"
         },
         "retrieved_at": {
@@ -191,11 +215,13 @@
             }
           ],
           "default": null,
+          "description": "When the kernel read the source (UTC).",
           "title": "Retrieved At"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -209,6 +235,7 @@
             }
           ],
           "default": null,
+          "description": "Position of the excerpt inside the source, such as a heading or line range.",
           "title": "Section Locator"
         },
         "source_version": {
@@ -220,10 +247,12 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Revision of the source that was read."
         },
         "title": {
           "default": "",
+          "description": "Human-readable name of the source, for display.",
           "title": "Title",
           "type": "string"
         }
@@ -241,11 +270,13 @@
       "description": "A source-linked claim: fact, inference, assumption or reported human input.",
       "properties": {
         "claim": {
+          "description": "The statement being made; its id is derived from this text.",
           "minLength": 1,
           "title": "Claim",
           "type": "string"
         },
         "contradicting_evidence_ids": {
+          "description": "Evidence that argues against the claim, kept so disagreement stays visible.",
           "items": {
             "type": "string"
           },
@@ -253,25 +284,30 @@
           "type": "array"
         },
         "created_at": {
+          "description": "When the record was first created (UTC), so history can be ordered and audited.",
           "format": "date-time",
           "title": "Created At",
           "type": "string"
         },
         "created_seq": {
           "default": 0,
+          "description": "Kernel-wide creation counter that orders records exactly where clock times tie.",
           "minimum": 0,
           "title": "Created Seq",
           "type": "integer"
         },
         "id": {
+          "description": "Identifier other records cite this one by; the kernel assigns it, or derives it from the content for evidence and findings.",
           "pattern": "^[a-z]+-[0-9a-f]{16}$",
           "title": "Id",
           "type": "string"
         },
         "kind": {
-          "$ref": "#/$defs/FindingKind"
+          "$ref": "#/$defs/FindingKind",
+          "description": "Whether the claim is a source fact, an inference, an assumption or reported human input."
         },
         "limitations": {
+          "description": "Caveats on the claim that the reader should weigh.",
           "items": {
             "type": "string"
           },
@@ -279,6 +315,7 @@
           "type": "array"
         },
         "producer": {
+          "description": "Who or what produced the finding, for audit.",
           "title": "Producer",
           "type": "string"
         },
@@ -292,15 +329,18 @@
             }
           ],
           "default": null,
+          "description": "Version of that producer (template or model), so findings can be compared across versions.",
           "title": "Producer Version"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "supporting_evidence_ids": {
+          "description": "Evidence that backs the claim; a source fact must cite some.",
           "items": {
             "type": "string"
           },
@@ -308,6 +348,7 @@
           "type": "array"
         },
         "updated_at": {
+          "description": "When the record last changed (UTC), so a reader can tell a stale copy from the current one.",
           "format": "date-time",
           "title": "Updated At",
           "type": "string"
@@ -358,6 +399,7 @@
             }
           ],
           "default": null,
+          "description": "The human or host actor who supplied it, when it did not come from a kernel retrieval.",
           "title": "Actor"
         },
         "invocation_id": {
@@ -370,9 +412,11 @@
             }
           ],
           "default": null,
+          "description": "Capability invocation that produced it, linking evidence to its trace.",
           "title": "Invocation Id"
         },
         "producer": {
+          "description": "Component that produced the evidence, for audit.",
           "title": "Producer",
           "type": "string"
         },
@@ -386,6 +430,7 @@
             }
           ],
           "default": null,
+          "description": "The query text that found it.",
           "title": "Query"
         },
         "rank": {
@@ -399,6 +444,7 @@
             }
           ],
           "default": null,
+          "description": "Its position among the candidates the strategy found (0 is best).",
           "title": "Rank"
         },
         "relayed_by": {
@@ -411,6 +457,7 @@
             }
           ],
           "default": null,
+          "description": "The client that relayed a submission from that actor.",
           "title": "Relayed By"
         },
         "relevance": {
@@ -425,11 +472,13 @@
             }
           ],
           "default": null,
+          "description": "Judged relevance to the need (0 to 1).",
           "title": "Relevance"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -443,9 +492,11 @@
             }
           ],
           "default": null,
+          "description": "Retrieval strategy that found it (for example repository text or knowledge map).",
           "title": "Strategy"
         },
         "terms": {
+          "description": "Search terms that matched, showing why it was retrieved.",
           "items": {
             "type": "string"
           },
@@ -497,16 +548,19 @@
             }
           ],
           "default": null,
+          "description": "Commit the source was read at, so evidence can be told stale when the repository moves on.",
           "title": "Commit"
         },
         "dirty": {
           "default": false,
+          "description": "True when the working tree differed from that commit, so the text may not match any commit.",
           "title": "Dirty",
           "type": "boolean"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -519,16 +573,19 @@
       "description": "A source that could not be consulted, with the reason.",
       "properties": {
         "reason": {
+          "description": "Why it could not be consulted, so the reader can tell a gap from a miss.",
           "title": "Reason",
           "type": "string"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "source_id": {
+          "description": "Id of the source that could not be consulted.",
           "title": "Source Id",
           "type": "string"
         }
@@ -539,6 +596,37 @@
       ],
       "title": "UnavailableSource",
       "type": "object"
+    },
+    "VerbatimJson": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "object"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/VerbatimJson"
+          },
+          "type": "array"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "Verification": {
       "description": "Verification status of Evidence.",
@@ -556,7 +644,19 @@
   "additionalProperties": false,
   "description": "leafcutter.evidence_bundle.v1: the bundle plus its inline evidence and findings.",
   "properties": {
+    "assessments": {
+      "additionalProperties": {
+        "additionalProperties": {
+          "$ref": "#/$defs/VerbatimJson"
+        },
+        "type": "object"
+      },
+      "description": "Attributed conditional assessments; never independently verified source facts.",
+      "title": "Assessments",
+      "type": "object"
+    },
     "attempted_sources": {
+      "description": "Ids of the sources consulted, so an empty result can be told from a search never made.",
       "items": {
         "type": "string"
       },
@@ -564,6 +664,7 @@
       "type": "array"
     },
     "contradictions": {
+      "description": "Pairs of evidence that disagree, surfaced for the reader to resolve.",
       "items": {
         "$ref": "#/$defs/Contradiction"
       },
@@ -574,10 +675,12 @@
       "additionalProperties": {
         "$ref": "#/$defs/NeedStatus"
       },
+      "description": "For each evidence need id, whether it was satisfied, partly met or unavailable.",
       "title": "Coverage",
       "type": "object"
     },
     "evidence": {
+      "description": "The evidence items themselves, carried inline so the receiver needs no lookup.",
       "items": {
         "$ref": "#/$defs/Evidence"
       },
@@ -585,6 +688,7 @@
       "type": "array"
     },
     "evidence_ids": {
+      "description": "Ids of the evidence items found for the request.",
       "items": {
         "type": "string"
       },
@@ -592,6 +696,7 @@
       "type": "array"
     },
     "finding_ids": {
+      "description": "Ids of the findings drawn from that evidence.",
       "items": {
         "type": "string"
       },
@@ -599,6 +704,7 @@
       "type": "array"
     },
     "findings": {
+      "description": "The findings themselves, carried inline.",
       "items": {
         "$ref": "#/$defs/Finding"
       },
@@ -606,6 +712,7 @@
       "type": "array"
     },
     "limitations": {
+      "description": "Caveats on the bundle's completeness, such as cut-off retrieval.",
       "items": {
         "type": "string"
       },
@@ -619,6 +726,7 @@
         },
         "type": "array"
       },
+      "description": "Per need id, the ids of its evidence that passed relevance (a claim need names its option).",
       "title": "Need Evidence",
       "type": "object"
     },
@@ -629,6 +737,7 @@
         },
         "type": "array"
       },
+      "description": "Per need id, the retrieval cut notes of that need (a decision summarises them per need).",
       "title": "Need Limitations",
       "type": "object"
     },
@@ -642,20 +751,24 @@
         }
       ],
       "default": null,
+      "description": "Id of the request this bundle answers.",
       "title": "Request Id"
     },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "truncated": {
       "default": false,
+      "description": "True when limits cut the result, so more matching evidence may exist.",
       "title": "Truncated",
       "type": "boolean"
     },
     "unavailable_sources": {
+      "description": "Sources that could not be consulted, with the reason.",
       "items": {
         "$ref": "#/$defs/UnavailableSource"
       },
@@ -663,6 +776,7 @@
       "type": "array"
     },
     "unknowns": {
+      "description": "What a synthesis said it could not find (gaps the next round can aim a query at).",
       "items": {
         "type": "string"
       },

@@ -73,9 +73,10 @@ import importlib.util
 import json
 import logging
 import sys
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
+from types import ModuleType
 
 logger = logging.getLogger(__name__)
 
@@ -111,50 +112,8 @@ class NodeRecord(NamedTuple):
     missing: bool = False
 
 
-class EdgeRecord(NamedTuple):
-    """A directed edge between two nodes in the knowledge graph.
-
-    Attributes:
-        source_id: Node id of the source.
-        target_id: Node id of the target.
-        edge_type: Semantic label for the edge (e.g. 'spawn_allowlist',
-            'depends_on', 'files_touched').
-        anchor: The '#symbol' or '::test' suffix stripped from a file-path
-            value during canonicalisation (KM-KGS-100d-4), or None when the
-            value carried none or the edge is not a file-path edge.
-    """
-
-    source_id: str
-    target_id: str
-    edge_type: str
-    anchor: str | None = None
-
-
-# ---------------------------------------------------------------------------
-# Surface-specific edge fields
-# ---------------------------------------------------------------------------
-
-# NOTE: _SURFACE_EDGE_FIELDS is kept only as a legacy fallback for callers
-# that invoke extract_edges() without passing edge_fields explicitly.
-# The authoritative source of edge_fields is the ``edge_fields`` array in each
-# surface entry of paths.json (loaded by load_surfaces_with_meta).
-# Do NOT add new surfaces here — declare them in paths.json instead.
-_SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
-    "agents": ["spawn_allowlist", "spawned_by", "skills_used", "components"],
-    "skills": ["dependencies", "components"],
-    "tickets": ["depends_on", "files_touched", "components"],
-    "docs": ["related_docs", "components"],
-    "adrs": ["related_docs", "components"],
-    "components": ["related_docs", "components"],
-    "roadmap": ["components"],
-    "glossary": [],
-}
-
-# Fields that use "component_membership" edge type (targeting component hub nodes)
-_COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
-
-# Fields whose values may be file paths that need stem resolution
-_PATH_FIELDS: frozenset[str] = frozenset({"depends_on"})
+# EdgeRecord, _SURFACE_EDGE_FIELDS, _COMPONENT_FIELDS and _PATH_FIELDS moved
+# to knowledge_edges.py and are re-exported below (same objects).
 
 # Canonical outbound edge types produced by the ``acs`` surface.
 #
@@ -201,7 +160,7 @@ _AC_EDGE_TYPES: frozenset[str] = frozenset(
 # names unchanged.
 # ---------------------------------------------------------------------------
 
-def _load_sibling_module(module_name: str):
+def _load_sibling_module(module_name: str) -> ModuleType:
     """Load a "<module_name>.py" sibling module by file path.
 
     Resolved relative to THIS file's own __file__ (never sys.path, never a
@@ -256,6 +215,27 @@ _parse_yaml_file = _reader._parse_yaml_file
 # marking, and decline reporting for every file_path_fields-declared field.
 _file_nodes = _load_sibling_module("knowledge_file_nodes")
 SYNTHETIC_SURFACE_LABELS = _load_sibling_module("knowledge_surface_check").SYNTHETIC_SURFACE_LABELS
+
+# GE-118f: the ONE shared accepted-shape rule (also used by the commit guard).
+_resolver = _load_sibling_module("frontmatter_path_resolver")
+resolve_frontmatter_path_entry = _resolver.resolve_frontmatter_path_entry
+PathEntryRefusal = _resolver.PathEntryRefusal
+
+# KM-KGS-100d-3 / GE-127: edge extraction and routing, re-exported as the SAME
+# objects so every existing caller of knowledge_query.<name> is unchanged.
+_edges = _load_sibling_module("knowledge_edges")
+if TYPE_CHECKING:
+    from scripts.knowledge_edges import EdgeRecord  # a real type for the checker
+else:
+    EdgeRecord = _edges.EdgeRecord
+extract_edges = _edges.extract_edges
+_SURFACE_EDGE_FIELDS = _edges._SURFACE_EDGE_FIELDS
+_COMPONENT_FIELDS = _edges._COMPONENT_FIELDS
+_PATH_FIELDS = _edges._PATH_FIELDS
+_resolve_depends_on_target = _edges._resolve_depends_on_target
+_route_edges = _edges._route_edges
+_extract_json_registry_edges = _edges._extract_json_registry_edges
+_extract_dir_edges = _edges._extract_dir_edges
 
 
 def _extract_frontmatter_end_line(text: str) -> int:
@@ -438,8 +418,13 @@ def build_knowledge_map(
     project_root: Path,
     paths_json: Path,
     surface_filter: str | None = None,
+    *,
+    node_filter: Callable[[NodeRecord], bool] | None=None,
 ) -> KnowledgeMap:
     """Build the full knowledge map and return graph data plus surface audit metadata.
+
+    The optional keyword-only ``node_filter`` selects primary nodes before edge
+    extraction. Excluded documents can still resolve as referenced file nodes.
 
     Traverses every surface declared in paths.json (skipping optional absent
     surfaces), collects all NodeRecords and EdgeRecords, applies phantom-edge
@@ -473,7 +458,7 @@ def build_knowledge_map(
         name for name in surfaces_meta if not surface_filter or name == surface_filter
     }
 
-    all_nodes, all_edges, declines, primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter)
+    all_nodes, all_edges, declines, primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter, node_filter=node_filter)
 
     # A surface contributed only when a PRIMARY node -- read from its own
     # path before synthetic hub/files nodes were added -- carries its label.
@@ -798,6 +783,35 @@ def _extract_nodes_from_json(surface: str, path: Path) -> Generator[NodeRecord, 
     except json.JSONDecodeError:
         return
 
+    entries = _registry_entries(data, surface)
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        node_id = str(entry.get("id") or entry.get("name") or "")
+        if not node_id:
+            continue
+        title = str(entry.get("name") or entry.get("title") or node_id)
+        description = str(entry.get("description") or "")
+        yield NodeRecord(
+            id=node_id,
+            surface=surface,
+            title=title,
+            description=description,
+            path=path,
+        )
+
+
+def _registry_entries(data: Any, surface: str) -> list[Any]:
+    """Select the registry list using the existing ordered key fallback.
+
+    Args:
+        data: Decoded registry JSON, which may be a list or keyed envelope.
+        surface: Preferred registry key before common and first-list fallbacks.
+
+    Returns:
+        Selected entries in source order, or an empty list when none exists.
+    """
     # Support: {"agents": [...]} or {"skills": [...]} or {"phases": [...]}
     # Prefer matching the surface name as the array key
     entries: list[Any] = []
@@ -816,21 +830,7 @@ def _extract_nodes_from_json(surface: str, path: Path) -> Generator[NodeRecord, 
                     entries = v
                     break
 
-    for entry in entries:
-        if not isinstance(entry, dict):
-            continue
-        node_id = str(entry.get("id") or entry.get("name") or "")
-        if not node_id:
-            continue
-        title = str(entry.get("name") or entry.get("title") or node_id)
-        description = str(entry.get("description") or "")
-        yield NodeRecord(
-            id=node_id,
-            surface=surface,
-            title=title,
-            description=description,
-            path=path,
-        )
+    return entries
 
 
 def _extract_nodes_from_md_file(surface: str, path: Path) -> Generator[NodeRecord, None, None]:
@@ -888,23 +888,7 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
     for md_file in md_files:
         if md_file.name in _SKIP_MD:
             continue
-        try:
-            text = md_file.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        fm = _parse_frontmatter(text)
-        node_id = str(fm.get("id") or md_file.stem)
-        title = str(fm.get("title") or md_file.stem)
-        description = str(
-            fm.get("description") or _first_body_line(text) or ""
-        )
-        yield NodeRecord(
-            id=node_id,
-            surface=surface,
-            title=title,
-            description=description,
-            path=md_file,
-        )
+        yield from _extract_nodes_from_md_file(surface, md_file)
 
     try:
         yaml_files = sorted(path.glob("**/*.yaml"))
@@ -944,81 +928,8 @@ def _extract_nodes_from_dir(surface: str, path: Path) -> Generator[NodeRecord, N
 # ---------------------------------------------------------------------------
 
 
-def _resolve_depends_on_target(value: str) -> str:
-    """Resolve a depends_on value to a node ID (filename stem).
-
-    If the value contains '/' or ends with '.md', it is treated as a file path
-    and reduced to its filename stem. Otherwise it is returned unchanged.
-
-    Args:
-        value: Raw depends_on value from frontmatter.
-
-    Returns:
-        Node ID string (filename stem or unchanged bare ID).
-    """
-    if "/" in value or value.endswith(".md"):
-        return Path(value).stem
-    return value
-
-
-def extract_edges(
-    surface: str,
-    record: NodeRecord,
-    raw_data: dict[str, Any],
-    edge_fields: list[str] | None = None,
-) -> Generator[EdgeRecord, None, None]:
-    """Yield EdgeRecords from a node's raw data.
-
-    Reads the edge fields configured for the surface and produces one edge per
-    value in each field. String values become single edges; list values produce
-    one edge per element.
-
-    For fields in ``_COMPONENT_FIELDS`` (i.e. ``components``), the edge type is
-    set to ``component_membership`` instead of the field name.
-
-    For fields in ``_PATH_FIELDS`` (i.e. ``depends_on``), path values are
-    resolved to filename stems before being used as target IDs.
-
-    Args:
-        surface: Surface name (e.g. 'agents', 'tickets').
-        record: The source NodeRecord.
-        raw_data: Dict of raw data for the node (e.g. a registry entry or
-            frontmatter dict). May contain edge fields as strings or lists.
-        edge_fields: Explicit list of field names to treat as edges. When
-            ``None``, falls back to the legacy ``_SURFACE_EDGE_FIELDS`` lookup
-            keyed by ``surface``. Callers that load surface metadata from
-            paths.json (via ``load_surfaces_with_meta``) should pass the
-            ``edge_fields`` value from that metadata so that no new surface
-            requires a corresponding change in this module.
-
-    Yields:
-        EdgeRecord for each outbound edge.
-    """
-    if edge_fields is None:
-        edge_fields = _SURFACE_EDGE_FIELDS.get(surface, [])
-    for field in edge_fields:
-        value = raw_data.get(field)
-        if value is None:
-            continue
-        # Determine edge type: components field uses "component_membership"
-        edge_type = "component_membership" if field in _COMPONENT_FIELDS else field
-        if isinstance(value, str):
-            if value:
-                target = _resolve_depends_on_target(value) if field in _PATH_FIELDS else value
-                yield EdgeRecord(
-                    source_id=record.id,
-                    target_id=target,
-                    edge_type=edge_type,
-                )
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, str) and item:
-                    target = _resolve_depends_on_target(item) if field in _PATH_FIELDS else item
-                    yield EdgeRecord(
-                        source_id=record.id,
-                        target_id=target,
-                        edge_type=edge_type,
-                    )
+# extract_edges and its routing helpers live in knowledge_edges.py (loaded
+# near the top of this module and re-exported as the same objects).
 
 
 # ---------------------------------------------------------------------------
@@ -1026,102 +937,7 @@ def extract_edges(
 # ---------------------------------------------------------------------------
 
 
-def _route_edges(edges, surface_name, node, surface_info, all_edges, pending) -> None:
-    """Route each candidate edge to ``all_edges`` or to ``pending``.
-
-    A candidate whose ``edge_type`` is one the SOURCE surface declared in
-    its own ``file_path_fields`` is a file-path candidate (KM-KGS-100d-4):
-    it is deferred to ``pending`` for canonicalisation and path-index
-    resolution once every surface's primary nodes are known, rather than
-    kept as a raw-string leaf. Every other candidate is an ordinary
-    node-to-node edge and is appended unchanged, exactly as before.
-
-    Args:
-        edges: Candidate EdgeRecords from one node's raw data.
-        surface_name: The surface these candidates were produced from.
-        node: The source NodeRecord.
-        surface_info: This surface's ``load_surfaces_with_meta`` entry.
-        all_edges: Mutable list of ordinary edges (appended to in place).
-        pending: Mutable list of ``(surface, node, field, raw_value)``
-            file-path candidates (appended to in place).
-    """
-    file_fields = surface_info.get("file_path_fields", [])
-    for edge in edges:
-        if edge.edge_type in file_fields:
-            pending.append((surface_name, node, edge.edge_type, edge.target_id))
-        else:
-            all_edges.append(edge)
-
-
-def _extract_json_registry_edges(surface_name, node, surface_path, surface_edge_fields, surface_info, all_edges, pending) -> None:
-    """Extract and route candidate edges for one node of a JSON-registry surface.
-
-    Split out of ``_collect_all_ex`` purely to keep that function's own
-    cyclomatic complexity down; behaviour is unchanged.
-
-    Args:
-        surface_name: The surface this node belongs to.
-        node: The NodeRecord to extract edges for.
-        surface_path: The surface's resolved JSON registry path.
-        surface_edge_fields: This surface's declared edge_fields.
-        surface_info: This surface's ``load_surfaces_with_meta`` entry.
-        all_edges: Mutable list of ordinary edges (appended to in place).
-        pending: Mutable list of file-path candidates (appended to in place).
-    """
-    try:
-        data = json.loads(surface_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return
-    entries: list[Any] = []
-    if isinstance(data, list):
-        entries = data
-    elif isinstance(data, dict):
-        for key in (surface_name, "agents", "skills", "phases", "items"):
-            if key in data and isinstance(data[key], list):
-                entries = data[key]
-                break
-        if not entries:
-            for v in data.values():
-                if isinstance(v, list):
-                    entries = v
-                    break
-    for entry in entries:
-        if isinstance(entry, dict) and str(entry.get("id") or entry.get("name") or "") == node.id:
-            _route_edges(extract_edges(surface_name, node, entry, surface_edge_fields), surface_name, node, surface_info, all_edges, pending)
-
-
-def _extract_dir_edges(surface_name, node, surface_edge_fields, surface_info, all_edges, pending) -> None:
-    """Extract and route candidate edges for one node of a directory surface.
-
-    Split out of ``_collect_all_ex`` purely to keep that function's own
-    cyclomatic complexity down; behaviour is unchanged. Handles both a
-    markdown node (frontmatter) and a YAML node (e.g. the acs surface).
-
-    Args:
-        surface_name: The surface this node belongs to.
-        node: The NodeRecord to extract edges for.
-        surface_edge_fields: This surface's declared edge_fields.
-        surface_info: This surface's ``load_surfaces_with_meta`` entry.
-        all_edges: Mutable list of ordinary edges (appended to in place).
-        pending: Mutable list of file-path candidates (appended to in place).
-    """
-    if node.path.is_file() and node.path.suffix == ".md":
-        try:
-            text = node.path.read_text(encoding="utf-8")
-        except OSError:
-            return
-        fm = _parse_frontmatter(text)
-        _route_edges(extract_edges(surface_name, node, fm, surface_edge_fields), surface_name, node, surface_info, all_edges, pending)
-    elif node.path.is_file() and node.path.suffix == ".yaml":
-        try:
-            text = node.path.read_text(encoding="utf-8")
-        except OSError:
-            return
-        fields = _parse_yaml_file(text)
-        _route_edges(extract_edges(surface_name, node, fields, surface_edge_fields), surface_name, node, surface_info, all_edges, pending)
-
-
-def _create_component_hub_nodes(all_edges, existing_ids: set[str]) -> list[NodeRecord]:
+def _create_component_hub_nodes(all_edges: list[EdgeRecord], existing_ids: set[str]) -> list[NodeRecord]:
     """Create one synthetic ``components``-surface hub node per new target.
 
     Args:
@@ -1146,7 +962,7 @@ def _create_component_hub_nodes(all_edges, existing_ids: set[str]) -> list[NodeR
     return hub_nodes
 
 
-def _filter_dangling_edges(all_edges, node_ids: set[str]) -> list[EdgeRecord]:
+def _filter_dangling_edges(all_edges: list[EdgeRecord], node_ids: set[str]) -> list[EdgeRecord]:
     """Keep only edges whose source and target both exist in ``node_ids``.
 
     No edge-type exemption (KM-KGS-100d-2, amended): every file-path edge
@@ -1174,7 +990,7 @@ def _filter_dangling_edges(all_edges, node_ids: set[str]) -> list[EdgeRecord]:
     return filtered_edges
 
 
-def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | None = None) -> tuple[list[NodeRecord], list[EdgeRecord], list, frozenset[str]]:
+def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | None = None, *, node_filter: Callable[[NodeRecord], bool] | None=None, entry_declines: list | None = None, field_counts: dict | None = None) -> tuple[list[NodeRecord], list[EdgeRecord], list, frozenset[str]]:
     """Traverse all surfaces and collect nodes, edges, declines, and primary surfaces.
 
     After collecting all primary nodes and candidate edges, this function:
@@ -1216,12 +1032,14 @@ def _collect_all_ex(project_root: Path, paths_json: Path, surface_filter: str | 
             continue
         # Collect nodes
         for node in extract_nodes(surface_name, surface_path):
+            if node_filter is not None and not node_filter(node):
+                continue
             all_nodes.append(node)
             # Best-effort: extract edges from JSON-registry surfaces
             if surface_path.is_file() and surface_path.suffix == ".json":
-                _extract_json_registry_edges(surface_name, node, surface_path, surface_edge_fields, surface_info, all_edges, pending)
+                _extract_json_registry_edges(surface_name, node, surface_path, surface_edge_fields, surface_info, all_edges, pending, entry_declines, field_counts)
             elif surface_path.is_dir() or (surface_path.is_file() and surface_path.suffix == ".md"):
-                _extract_dir_edges(surface_name, node, surface_edge_fields, surface_info, all_edges, pending)
+                _extract_dir_edges(surface_name, node, surface_edge_fields, surface_info, all_edges, pending, entry_declines, field_counts)
 
     # Post-processing step 1: create synthetic hub nodes for component values
     # that appear as targets in component_membership edges but don't exist yet.
@@ -1274,136 +1092,10 @@ def _collect_all(project_root: Path, paths_json: Path, surface_filter: str | Non
 # ---------------------------------------------------------------------------
 
 
-def _files_and_missing_counts(nodes: list[NodeRecord]) -> tuple[int, int]:
-    """Return (files-surface node count, of-those marked missing) (KM-KGS-100d-4-ii).
-
-    Shared by ``render_text`` and ``render_json`` so both renderers report
-    the identical pair from one place.
-
-    Args:
-        nodes: The full (unfiltered) node set for the build.
-
-    Returns:
-        ``(files_nodes, missing_files)``, zero included.
-    """
-    files_nodes = [n for n in nodes if n.surface == "files"]
-    return len(files_nodes), sum(1 for n in files_nodes if n.missing)
-
-
-def render_text(
-    nodes: list[NodeRecord], edges: list[EdgeRecord], query: str | None,
-    show_edges: bool, declined: int = 0,
-) -> str:
-    """Render the knowledge index as human-readable text.
-
-    Args:
-        nodes: List of NodeRecords to include.
-        edges: List of EdgeRecords to include.
-        query: Optional keyword filter (case-insensitive).
-        show_edges: When True, append the full edge list section.
-        declined: Number of relationship values declined as not a repo path
-            (KM-KGS-100d-4-iii). Zero included, never omitted.
-
-    Returns:
-        Multi-line formatted string.
-    """
-    # Files/Missing are whole-build figures (KM-KGS-100d-4-ii), computed
-    # from the unfiltered node set so a --query keyword never changes them.
-    files_count, missing_count = _files_and_missing_counts(nodes)
-
-    if query:
-        q_lower = query.lower()
-        nodes = [
-            n
-            for n in nodes
-            if q_lower in (n.title or "").lower()
-            or q_lower in (n.description or "").lower()
-        ]
-
-    # Build edge lookup for nodes that passed the filter
-    node_ids = {n.id for n in nodes}
-    filtered_edges = [e for e in edges if e.source_id in node_ids]
-
-    # Group by surface
-    by_surface: dict[str, list[NodeRecord]] = {}
-    for node in nodes:
-        by_surface.setdefault(node.surface, []).append(node)
-
-    lines: list[str] = []
-    lines.append("# Knowledge Index")
-    lines.append(
-        f"Surfaces: {len(by_surface)}   Nodes: {len(nodes)}   Edges: {len(filtered_edges)}   "
-        f"Files: {files_count}   Missing: {missing_count}   Declined: {declined}"
-    )
-    lines.append("")
-
-    for surface_name, snodes in sorted(by_surface.items()):
-        lines.append(f"## {surface_name} ({len(snodes)})")
-        for node in snodes:
-            desc = node.description or "(no description)"
-            lines.append(f"  [{node.surface}] {node.id} — {desc}")
-            # Inline edges for this node
-            node_edges = [e for e in filtered_edges if e.source_id == node.id]
-            for edge in node_edges:
-                lines.append(f"    -> {edge.edge_type}: {edge.target_id}")
-        lines.append("")
-
-    if show_edges and edges:
-        lines.append("## edges")
-        for edge in edges:
-            lines.append(f"  {edge.source_id} --[{edge.edge_type}]--> {edge.target_id}")
-        lines.append("")
-
-    return "\n".join(lines)
-
-
-def render_json(
-    nodes: list[NodeRecord],
-    edges: list[EdgeRecord],
-    declined: int = 0,
-) -> str:
-    """Render the knowledge index as JSON.
-
-    Args:
-        nodes: List of NodeRecords.
-        edges: List of EdgeRecords.
-        declined: Number of relationship values declined as not a repo path
-            (KM-KGS-100d-4-iii). Zero included, never omitted.
-
-    Returns:
-        JSON string with top-level 'nodes' and 'edges' keys, plus the
-        always-emitted integer keys 'files_nodes', 'missing_files' and
-        'declined' (KM-KGS-100d-4-ii/-iii), zero included.
-    """
-    files_nodes, missing_files = _files_and_missing_counts(nodes)
-    return json.dumps(
-        {
-            "nodes": [
-                {
-                    "id": n.id,
-                    "surface": n.surface,
-                    "title": n.title,
-                    "description": n.description,
-                    "path": str(n.path),
-                    "missing": n.missing,
-                }
-                for n in nodes
-            ],
-            "edges": [
-                {
-                    "source": e.source_id,
-                    "target": e.target_id,
-                    "type": e.edge_type,
-                    "anchor": e.anchor,
-                }
-                for e in edges
-            ],
-            "files_nodes": files_nodes,
-            "missing_files": missing_files,
-            "declined": declined,
-        },
-        indent=2,
-    )
+_rendering = _load_sibling_module("knowledge_rendering")
+_files_and_missing_counts = _rendering._files_and_missing_counts
+render_text = _rendering.render_text
+render_json = _rendering.render_json
 
 
 # ---------------------------------------------------------------------------
@@ -1502,15 +1194,21 @@ def main(argv: list[str] | None = None) -> int:
             print(name)
         return 0
 
-    nodes, edges, declines, _primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter=args.surface)
+    entry_declines: list = []
+    field_counts: dict[str, dict[str, int]] = {}
+    nodes, edges, declines, _primary_surfaces = _collect_all_ex(project_root, paths_json, surface_filter=args.surface, entry_declines=entry_declines, field_counts=field_counts)
     for decline in declines:
         print(_file_nodes.format_decline_line(decline), file=sys.stderr)
+    root_posix = project_root.as_posix()
+    for surface, record, field, entry, reason in entry_declines:
+        doc = _file_nodes._canonical_node_source(record.path, root_posix)
+        print(_file_nodes.format_entry_decline_line(surface, doc, field, entry, reason), file=sys.stderr)
 
     if args.format == "json":
-        print(render_json(nodes, edges, declined=len(declines)))
+        print(render_json(nodes, edges, declined=len(declines), entries_declined=len(entry_declines), field_counts=field_counts))
         return 0
 
-    print(render_text(nodes, edges, query=args.query, show_edges=args.edges, declined=len(declines)))
+    print(render_text(nodes, edges, query=args.query, show_edges=args.edges, declined=len(declines), entries_declined=len(entry_declines), field_counts=field_counts))
     return 0
 
 
@@ -1790,5 +1488,28 @@ DECISION HISTORY
   scripts/build_phases_knowledge.py's _manifest_workflow_tool_scripts and
   scripts/build_phases_workflows.py's build_workflow_tools, alongside
   knowledge_file_nodes.py.
+- 2026-10-09 [python-coder/KM-KGS-100d-3-i]: extract_edges() gained optional
+  declines and field_counts out-parameters (None default; the canonical_loader
+  and visualiser callers are unchanged). Per-field edges/declined figures are
+  counted at yield, BEFORE _filter_dangling_edges, so "contributed nothing"
+  differs from "had nothing to contribute". The `if item == ""` early skip was
+  removed so the shared resolver refuses empty entries like any other.
+  render_json emits field_counts; render_text emits one Field line per field.
+- 2026-10-09 [python-coder/KM-KGS-100d-3 GE-127 size ratchet]: Moved the
+  edge-extraction path verbatim into the new sibling scripts/knowledge_edges.py
+  (EdgeRecord, the _SURFACE_EDGE_FIELDS/_COMPONENT_FIELDS/_PATH_FIELDS
+  constants, extract_edges, _resolve_depends_on_target, _bump, _route_edges,
+  _extract_json_registry_edges, _extract_dir_edges) because the check-file-size
+  ratchet refused this file growing while already over its limit. The module is
+  loaded via _load_sibling_module("knowledge_edges") and every moved name is
+  re-exported here as the SAME object, so knowledge_query.extract_edges,
+  .EdgeRecord and ._collect_all callers (canonical_loader, the visualiser) are
+  unchanged. knowledge_edges never imports knowledge_query (circular); it
+  reads nodes through a structural protocol. Behaviour is unchanged. Deploy
+  wiring: "knowledge_edges.py" added to WORKFLOW_TOOL_SCRIPTS in
+  scripts/build_phases_knowledge.py, the one list both the deploy
+  (build_workflow_tools) and the manifest read.
+  The `if TYPE_CHECKING` import gives mypy a real EdgeRecord type; at runtime
+  EdgeRecord is the loaded module's class.
 ====================================================================
 """

@@ -11,9 +11,11 @@ ARCHITECTURE: Pure data contracts plus compute_gap_key. RunEnvelope validators e
 
 from __future__ import annotations
 
+from kernel.contracts.verbatim import VerbatimJson
+
 from datetime import datetime
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import Field, model_validator
 
 from kernel.contracts import schema_ids
 from kernel.contracts.base import (
@@ -84,15 +86,18 @@ class CapabilityGap(PersistedModel):
     scope_component_ids: list[str] = Field(default_factory=list)
     registry_snapshot_hash: str | None = None
     candidates_considered: list[str] = Field(default_factory=list)
-    #: Why each considered capability could not serve the request (`capability_id: reason_code`).
     candidate_exclusions: dict[str, str] = Field(default_factory=dict)
-    #: Readable form of the need for titles; `normalized_need` stays the dedup identity.
+    """Why each considered capability could not serve the request (`capability_id: reason_code`)."""
     need_title: str = ""
+    """Readable form of the need for titles; `normalized_need` stays the dedup identity."""
     why_insufficient: str = ""
     occurrence_count: int = Field(default=1, ge=1)
     example_run_ids: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLE_RUNS)
-    #: Trace URLs of the example runs (when tracing exported one), so a gap row links to evidence.
     example_trace_urls: list[str] = Field(default_factory=list, max_length=MAX_EXAMPLE_RUNS)
+    (
+        "Trace URLs of the example runs (when tracing exported one), so a gap row links to "
+        "evidence."
+    )
     fallback_outcome: FallbackOutcome = FallbackOutcome.NONE
     missing_native_capability: str | None = None
     proposal: GapProposal | None = None
@@ -115,15 +120,18 @@ class OutputRef(KernelModel):
     """The requested output: schema id plus payload."""
 
     schema_id: str
-    payload: dict[str, JsonValue]
+    payload: dict[str, VerbatimJson]
 
 
 class TraceRefs(KernelModel):
     """Where to inspect the run's trace and whether export is healthy."""
 
     trace_id: str | None = None
+    """Id of the run's trace in the observability backend, for looking it up."""
     trace_url: str | None = None
+    """Link to the run's trace, when the backend provides one."""
     observability: ObservabilityStatus = ObservabilityStatus.OK
+    """Whether trace export is healthy, so a missing trace can be told from a failed export."""
 
 
 def with_trace_refs(output: OutputRef | None, refs: TraceRefs) -> OutputRef | None:

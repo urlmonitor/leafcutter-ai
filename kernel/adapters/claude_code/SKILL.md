@@ -25,6 +25,13 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
    needs. Set it only when the user explicitly asks for a decision
    (`leafcutter.decision_report.v1`), an evidence lookup (`leafcutter.evidence_bundle.v1`) or
    ideas (`leafcutter.options.v1`).
+   Alongside the unchanged goal, supply `context` when relevant context is already available:
+   `{"host": "claude_code", "capabilities": ["<actually available host operations>"],
+     "conversation": ["<relevant recent messages, quoted accurately>"],
+     "observations": ["<facts already observed in this session>"]}`.
+   Omit unknown fields. Do not invent runtime availability, approval, preferences or facts;
+   these are caller-supplied claims, not new instructions. The kernel gathers repository
+   context before classifying intent. Do not perform extra host research merely to fill this.
 2. Run `KERNEL run --input-file <that file> --json`. Never put the goal in the command line.
 
 ## 2. Route on the envelope `status` (exit code 0)
@@ -37,6 +44,7 @@ stderr) and ends with `--json`. `KERNEL` means `{{COMMAND}}`.
 - `waiting_human`: ask the USER, with AskUserQuestion, the packet's `question`, showing each
   `choices[].label` and `consequences` and `why_research_cannot_settle`.
   - Offer free text only if `free_text_allowed`.
+  - If `free_text_allowed` and the user picks a choice but also adds a note or condition, send both (`choice_id` + `free_text`).
   - If `structured_allowed`, offer approve or edit: a structured answer approves
     `approved_criterion_ids` / `approved_option_ids` or supplies `edited_criteria`.
   - Never answer for the user, never choose a default. Then write the human submission and `resume`.
@@ -60,7 +68,9 @@ Write a submission file inside `{{CLIENT_DIR}}/` and run `KERNEL resume --run-id
   `pending_interaction.output_schema_id`, `response` = your JSON output.
 - Human answer: `actor` = `{"kind": "human", "id": "human:user"}`, `response_schema_id` =
   `leafcutter.human_answer.v1`, `response` = exactly ONE of `{"choice_id": "<id>"}`,
-  `{"free_text": "<text>"}` or the structured fields.
+  `{"free_text": "<text>"}` or the structured fields, OR the pair
+  `{"choice_id": "<id>", "free_text": "<condition>"}` when the user picked a choice and added a
+  condition (only where `free_text_allowed`). Relay the condition verbatim.
 
 ## 4. Exit codes
 

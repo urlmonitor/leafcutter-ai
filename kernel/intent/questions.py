@@ -18,6 +18,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from kernel.contracts import CapabilityDescriptor, RequestKind, RequestProposal, schema_ids
+from kernel.contracts.context import EnrichedContext
+from kernel.contracts.entity_context import EntityContext
 from kernel.contracts.interaction import Choice
 from kernel.contracts.payloads import HumanQuestionRequestPayload
 from kernel.intent.classify import (
@@ -79,12 +81,23 @@ def _follow_up(prior: ClarificationAnswer | None) -> str:
             "to do with it. ")
 
 
-def intent_question(goal: str, prior: ClarificationAnswer | None = None) -> RequestProposal:
+def intent_question(goal: str, prior: ClarificationAnswer | None = None, *,
+                    context: EnrichedContext | EntityContext | None = None) -> RequestProposal:
     """Ask what kind of answer the goal needs, offering the answer kinds as choices."""
     question = (f'{_follow_up(prior)}What kind of answer would you like for "'
                 f'{shorten(goal, MAX_GOAL_CHARS)}"? Pick the closest one, or say it in your own '
                 "words, for example " + " or ".join(EXAMPLE_REPHRASINGS[:2]) + ".")
-    return _proposal(goal, question, _WHY_INTENT, kind_choices())
+    why = _WHY_INTENT
+    if isinstance(context, EntityContext):
+        why = ("The recognized names explain references in the request, but do not establish "
+               "which kind of answer you want.")
+    elif context is not None:
+        why = (f"Initial context gathering finished with status {context.status}: "
+               f"{context.files_scanned} file(s) checked and {len(context.evidence)} excerpt(s) "
+               "retained. That context still does not establish which kind of answer you want.")
+        if context.limitations:
+            why += " Limits: " + "; ".join(context.limitations[:3])
+    return _proposal(goal, question, why, kind_choices())
 
 
 def _first_sentence(text: str) -> str:
@@ -148,4 +161,5 @@ def answer_of(request_payload: Mapping[str, Any], output: Mapping[str, Any] | No
 #   answer kinds (or the eligible capabilities' first description sentence) as choices with free
 #   text still allowed; a follow-up quotes the earlier answer and is a different question, so the
 #   dedup guard does not mistake it for a repeat. (#KernelBootstrapV0/INTENT)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

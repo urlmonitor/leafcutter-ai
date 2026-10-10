@@ -1,6 +1,6 @@
 """
 MODULE: tests.kernel.contracts.test_schema_catalog
-GOAL: Test the 12-id payload catalog: valid/invalid fixtures per id, JSON Schema agreement,
+GOAL: Test the registered payload catalog: valid/invalid fixtures per id, JSON Schema agreement,
     committed schema files, and semantic reference checks.
 BUSINESS CONTEXT: External boundaries (TaskInput payloads, host and human submissions) accept
     only registered, validated payloads; fixtures prove both directions for every id.
@@ -46,7 +46,7 @@ class TestCatalog(unittest.TestCase):
 
     def test_catalog_keys_equal_known_ids(self) -> None:
         self.assertEqual(set(SCHEMA_CATALOG), set(sid.KNOWN_SCHEMA_IDS))
-        self.assertEqual(len(SCHEMA_CATALOG), 12)
+        self.assertEqual(len(SCHEMA_CATALOG), 18)
 
     def test_every_schema_id_has_valid_and_invalid_fixtures(self) -> None:
         for kind in ("valid", "invalid"):
@@ -93,7 +93,7 @@ class TestSchemaExport(unittest.TestCase):
     def test_export_writes_deterministic_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             written = export_json_schemas(Path(tmp))
-            self.assertEqual(len(written), 12)
+            self.assertEqual(len(written), 18)
             for path in written:
                 self.assertEqual(path.read_text(encoding="utf-8"),
                                  render_json_schema(path.name.removesuffix(".schema.json")))

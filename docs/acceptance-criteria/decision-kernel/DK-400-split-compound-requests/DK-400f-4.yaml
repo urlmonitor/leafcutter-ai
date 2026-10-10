@@ -1,0 +1,75 @@
+id: DK-400f-4
+title: "How-to: read a split's progress and its report section"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a person whose run split a request,
+  When they read the kernel how-to section on following a split,
+  Then it explains each part outcome shown, pending, decided, answered and not run, and where each
+    part's link leads: a staged decision record or research findings,
+  And it explains the report's split section, one line per part, and the plain line a rejected split
+    leaves,
+  And it states that a decided part's record is staged and that the person publishes it, as for any
+    other decision.
+depends_on:
+  - DK-400f
+  - DK-400f-1
+  - DK-400f-2
+  - DK-400f-3
+doc_links:
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: The kernel how-to; reading the split belongs beside Step 6 (read the result).
+  - path: docs/product-truth/mockups/leafcutter/decision-split-progress.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: Screen decision-split-progress (v2).
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400f-2
+  contract: "The report's split section the how-to explains."
+change_target: docs
+it_requirements:
+  - 'Describes the built progress block and report section only: each part outcome and where its link leads, the
+    line forms of DK-400f-2 and DK-400f-2-i, and the rejected-split lines of DK-400f-3, quoted from a real run''s
+    report.'
+  - Edits docs/how-to/run-the-decision-kernel.md beside Step 6 and states that a decided part's record is staged
+    and published by a person with the existing publish command.
+  - Uses the terms of ADR-067 and links the reference entry of DK-400a-5.
+risk_surface: internal
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ADR-067 doc_link set to exists.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400f documentation_triggers [how-to].

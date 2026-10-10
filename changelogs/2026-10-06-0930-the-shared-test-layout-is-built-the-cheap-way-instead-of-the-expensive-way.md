@@ -1,0 +1,13 @@
+---
+title: The shared test layout is built the cheap way instead of the expensive way
+date: "2026-10-06"
+time: "09:30"
+type: manual
+components: 
+  - testing_quality
+  - build_pipeline
+summary: "The reusable deployed copy that tests share is now produced by building straight into an empty directory, rather than by copying the whole repository and building on top of itself. It becomes worthwhile from the first test that uses it instead of the sixth."
+description: "Changes _shared_layout_producer._produce from a self-targeting build (copy the repository into a staging directory, then run that copy's build.py with --target-dir pointed at itself) to a directed build (run the real build.py with --target-dir pointed at an empty staging directory). The deployed output is identical in shape at the same relative paths, 493 output_mappings in both with no errors; what the directed tree omits is the package SOURCE sitting underneath it, dropping the tree from 11,675 files to 775. The cost that matters is not the build but the integrity guard: shared_layout_integrity is registered in pytest.ini addopts and re-walks and re-digests the entire tree after EVERY reader-marked test, so the tree size is a per-reader tax, measured at about 6.0s against about 0.24s, a factor of 16. Combined with the cheaper production, break-even for the shared layout falls from roughly six migrated readers to roughly one, because the directed produce cost IS a private build, the same invocation the first reader was going to pay anyway. At full migration the two shapes differ by only 34s on production but about 478s once the walk is included, and that gap grows with every test migrated. Two sentinel assertions that checked for scripts/build.py at the layout root are switched to .build_manifest.json, which is what the publish gate already keys on and which test_tq_600a_1_i.py already used for the same purpose. The README's justification is replaced rather than trimmed: it had cited setup_ticket_worktree.py's self-hosting pattern, which does not transfer because that script self-targets into a target that is already a source checkout, and it had separately defended the expensive shape by the existence of the scripts/build.py sentinel, which the shape itself made possible. One property is recorded rather than resolved: because the directed build's --target-dir is not also its package_root, the written manifest's package_root is a relative path that escapes the layout back into the live repository, making the layout non-hermetic for anything that runs the deployed drift gates against it. No current consumer does so, and this must be re-measured the first time a drift-gate test is migrated."
+---
+
+## Entry

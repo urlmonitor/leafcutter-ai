@@ -1,0 +1,259 @@
+id: TQ-600a-12
+components:
+  - testing_quality
+  - build_pipeline
+title: "The shared-layout fixture's own tests stop producing the layout twenty-three times to run twenty-seven tests"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the 27 tests under unit_tests/suite_performance/, 1,535 s between them and
+    29% of all measured suite time, each of which starts a child pytest session in a
+    separate operating-system process,
+  And the shared layout's run identity, which prefers the run-identifier environment
+    variable the parallel runner sets and otherwise falls back to a value generated
+    once per operating-system process — so a child session, inheriting no such
+    variable, resolves a run identity of its own, finds no layout at it, and produces
+    one from scratch, roughly 23 times across the 27 tests,
+  And the measured cost of one production: 3.58 s to copy the source tree, 11,651
+    entries and 96 MB, plus 45.36 s for the self-targeting build against that copy,
+    48.94 s in total — against 2.07 s to copy a layout that already exists, a ratio
+    of 23.7,
+  And the already-verified fact that the helper starting those child sessions
+    already assembles an environment dictionary and applies caller overrides to it,
+    so the shared route needs no production change at all,
+  When a parent test module produces the layout once and starts each of its child
+    sessions carrying that same run identity in the child's environment,
+  Then every child session resolves the one layout its parent already produced and
+    runs no build of its own,
+  And the layout root each child reports is the one the parent produced,
+  And for a caller that needs a private root rather than the shared one, the
+    private-copy route accepts a seed directory and copies that finished layout,
+    instead of copying the source tree and running a build against the copy,
+  And a private root obtained from a seed is indistinguishable in content from one
+    obtained the long way: the same entries, the same bytes, and the same
+    completeness record the private route already requires before it hands a root
+    back,
+  And the elapsed time for the 17 eligible tests named in TQ-600a-12-ii falls to at
+    most one quarter of their measured 1,069 s, compared against a baseline taken on
+    the same machine in the same sitting.
+depends_on:
+  - TQ-600a
+  - TQ-600a-1
+  - TQ-600a-5
+doc_links:
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE, and the file the whole mechanism turns on. `run_key()` at line 66
+      returns PYTEST_XDIST_TESTRUNUID when set and otherwise a per-process UUID; that
+      one line is why 23 productions happen. The shared half of this AC needs no
+      change here — it exploits the behaviour as written — but the seed option and
+      the run-base resolution it implies live alongside it.
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. `_produce_private_copy()` at line 224 is the function that gains
+      the seed-directory option. Verified at source: it copytree's the worktree root
+      and then runs build.py with --target-dir pointed at that same copy — the
+      expensive shape, not the cheap one its own docstring claims to mirror.
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. Owns `get_or_produce_shared_layout`, `_produce`, and the
+      completeness check performed before a layout is handed out. The seed option has
+      to satisfy the same completeness check, not bypass it.
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE for the test side. Verified at source: `run_child_session()` at
+      line 44 already builds `env = dict(os.environ)` and applies `env_overrides`, so
+      passing the parent's run identity to a child is a caller-side change only.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-2-the-speed-programmes-own-tests.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      The measurement and the seedable/not-seedable split this AC is specified
+      against. Marked planned because it lives on branch ci/shard-pytest-suite and is
+      not yet reachable from main.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The standing "Tests must not spawn their own build.py" rule, including the
+      read-versus-mutate boundary and the two marker spellings, which this change
+      must not disturb.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+  - path: scripts/suite_performance/_shared_layout_producer.py
+    state: existing
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE SHARED HALF NEEDS NO PRODUCTION CHANGE, AND THAT WAS VERIFIED AT SOURCE, NOT
+    ASSUMED. `run_key()` already prefers PYTEST_XDIST_TESTRUNUID; `_produce()` already
+    publishes under the run base; the publish check already returns the published
+    layout on a later call with the same key; and `run_child_session()` already
+    accepts env_overrides. The parent module produces once and passes the key down.
+    If you find yourself editing run_key(), stop — you are solving a different
+    problem, and changing it affects every xdist worker.
+  - >-
+    ONLY `_produce_private_copy()` (and `_produce()`, for the same reason) GAINS THE
+    SEED OPTION. Keep the change to one new optional input and one branch. A seeded
+    production copies the seed; an unseeded one behaves exactly as today.
+  - >-
+    THE SEED MUST PASS THE SAME COMPLETENESS CHECK AS A BUILT LAYOUT. `_produce()`
+    already inspects the build manifest for completeness before publishing. A seeded
+    copy goes through that same check — do not route around it on the grounds that
+    the seed was already checked once, because the copy is what the caller receives.
+  - >-
+    SEEDING IS OPT-IN AND CARRIES AN EXCLUSION LIST. See TQ-600a-12-ii. Do not make
+    seeding the default for the private route "because it is faster": the deploy-count
+    tests take that route and would pass vacuously.
+  - >-
+    MEASURE THE 17-TEST FIGURE IN ONE SITTING AND ASSERT A RATIO. 1,069 s was measured
+    on a loaded shared WSL host and is an upper bound. Take a before and an after on
+    the same machine in the same run and assert at most one quarter; an absolute
+    threshold will be flaky and will be disabled.
+  - >-
+    DO NOT TOUCH THE TWO MARKER SPELLINGS OR THE ROUTING SELECTOR. `_select_route`
+    reads markers and nothing else, which is why the seed is invisible to routing.
+    TQ-600a-5's undeclared-test safety net and TQ-600a-2's carve-out both depend on
+    that, and a seed that influenced routing would quietly break both.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-12-i
+    contract: >-
+      The seed-directory option on the private-copy route, as the thing whose refusal
+      behaviour TQ-600a-12-i specifies.
+  - agent: python-coder
+    ac_id: TQ-600a-12-ii
+    contract: >-
+      The per-test request mechanism by which a seed is asked for, which TQ-600a-12-ii
+      constrains to be opt-in and to exclude the deploy-count family.
+expects_from:
+  - ac_id: TQ-600a-1
+    contract: >-
+      The shared reference layout, its run-scoped publish location, and the
+      completeness check performed before a root is handed out.
+  - ac_id: TQ-600a-5
+    contract: >-
+      The marker-driven routing selector and the private-copy route, which this
+      record extends with a seed option and must leave otherwise intact.
+test_spec:
+  - name: test_tq600a_12_child_sessions_carrying_the_parents_run_identity_run_no_build
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      A parent produces the layout, then starts two child sessions with the parent's
+      run identity in their environment. The execution log records exactly one deploy
+      — the parent's — and neither child adds one.
+  - name: test_tq600a_12_child_sessions_report_the_root_the_parent_produced
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The root path each child reports equals the parent's. NAMED MUTATION: drop the
+      run-identity override from the child environment; this test must go RED, which
+      is also the proof that the override is what makes the reuse happen.
+  - name: test_tq600a_12_a_seeded_private_root_matches_a_built_private_root_entry_for_entry
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Produce one private root the long way and one from a seed of a real finished
+      layout. Compare the entry sets and the file contents. They match, and both
+      satisfy the completeness check.
+  - name: test_tq600a_12_the_seeded_route_is_at_least_ten_times_cheaper_than_the_built_route
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Time both routes in the same sitting. The seeded route takes at most a tenth of
+      the built route. Ratio only; the measured ratio was 23.7, so a tenth leaves
+      generous headroom for load.
+  - name: test_tq600a_12_the_seventeen_eligible_tests_cost_at_most_a_quarter_of_their_baseline
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Run the three eligible files with seeding off and with seeding on, same machine
+      same sitting, and assert the ratio. This is the descriptor that makes the whole
+      change worth building, and the only one that measures the population rather
+      than a mechanism.
+test_rationale: |
+  The mechanism half of this change is cheap to prove and the value half is not, so
+  the descriptors are split accordingly: two on the shared route, two on the seeded
+  private route, and one on the population.
+
+  The run-identity descriptor names its injection because the whole shared half is a
+  caller-side change — nothing in the production code moves — and a test that merely
+  observes one deploy could be observing a cache hit from an unrelated cause. Removing
+  the override must turn it red, or it is not measuring what it claims.
+
+  Content equivalence is asserted against a REAL finished layout rather than a
+  synthetic directory tree, because the claim being made is that a copy of a built
+  layout is byte-identical to a build — and a fixture tree nobody built cannot test
+  that.
+
+  Every timing descriptor is a ratio measured in one sitting. This workspace is a
+  shared host under variable agent load; the absolute figures in the criteria were
+  taken under load and are upper bounds.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by:
+  - TQ-600a-12-i
+  - TQ-600a-12-ii
+  - TQ-600a-12-iii
+  - TQ-600a-12-iv
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE PROGRAMME THAT EXISTS TO DELETE THE SUITE'S BUILD SUBPROCESSES IS THE SUITE'S
+  LARGEST CONSUMER OF BUILD SUBPROCESSES. 27 tests, 1,535 s, 29% of measured time,
+  0.5% of the measured tests. These are good tests — cross-process behaviour can only
+  be proven by real processes — and the cost is not carelessness. It is one line:
+  `run_key()` falls back to a per-process UUID, and every child session is a new
+  process.
+
+  THE HONEST OBJECTION, AND WHY IT DOES NOT BITE. "You are testing the fixture with
+  the fixture." Seeding means a child's layout came from a copy this harness made
+  rather than from a build the child ran. If the build broke, would the 17 eligible
+  tests notice? No — and they do not notice today either. That is not their job. The
+  three deploy-count files that stay on real builds notice, the roughly 20 build-guard
+  tests notice, and every CI job that builds before pytest notices. The 17 assert
+  routing, reporting and integrity comparison; a seed that is byte-identical to a
+  built layout changes nothing any of them can observe. What makes this safe is
+  TQ-600a-12-i (the seed is refused when it is not byte-equivalent) and TQ-600a-12-ii
+  (the tests for which the deploy count IS the assertion can never be handed one).
+
+  SIZING. Roughly 23 productions become roughly 6 real deploys for the three KEEP
+  files, plus one seed build, plus roughly 16 copies: about 1,069 s down to about
+  120 s, a saving near 950 s — about 16 minutes on an idle local run, and larger than
+  the entire estimate for the build-sharing work this L1 was originally scoped
+  around.
+
+  INDEPENDENT OF TQ-600a-11. This record and the YAML-parser record share no code and
+  no ordering. Build them in either order, or at the same time.

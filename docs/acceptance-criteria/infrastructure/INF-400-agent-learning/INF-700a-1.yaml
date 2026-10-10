@@ -108,6 +108,9 @@ superseded_by: null
 covered_by:
   - INF-700a-1-i
   - INF-700a-1-ii
+  - INF-700a-1-iii
+  - INF-700a-1-iv
+  - INF-700a-1-v
 implemented_by:
 - templates/workflows-js/build-epic.js
 - templates/workflows-js/fast-lane-ship.js

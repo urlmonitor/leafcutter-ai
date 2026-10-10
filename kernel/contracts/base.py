@@ -91,18 +91,33 @@ def is_kernel_id(value: str, prefix: str | None = None) -> bool:
 class KernelModel(BaseModel):
     """Frozen, extra-forbidding base for every kernel contract."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=True,
+                              use_attribute_docstrings=True)
 
     schema_version: Literal["1.0"] = "1.0"
+    (
+        "Version of this contract's shape, so a reader can reject a payload written for another "
+        "shape."
+    )
 
 
 class PersistedModel(KernelModel):
     """Base for persisted entities: id, UTC timestamps and a kernel-assigned sequence."""
 
     id: KernelId
+    (
+        "Identifier other records cite this one by; the kernel assigns it, or derives it from "
+        "the content for evidence and findings."
+    )
     created_at: datetime = Field(default_factory=utc_now)
+    """When the record was first created (UTC), so history can be ordered and audited."""
     updated_at: datetime = Field(default_factory=utc_now)
+    (
+        "When the record last changed (UTC), so a reader can tell a stale copy from the current "
+        "one."
+    )
     created_seq: int = Field(default=0, ge=0)
+    """Kernel-wide creation counter that orders records exactly where clock times tie."""
 
     @field_validator("created_at", "updated_at")
     @classmethod
@@ -149,6 +164,10 @@ class TraceContext(KernelModel):
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: KernelModel sets use_attribute_docstrings so a docstring under a
+#   field becomes its schema description, which host packets send to the LLM and Atlas shows;
+#   every contract field now says why it exists.
+#   (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-09-30 22:00 [python-coder]: Correlation/trace value objects live here (not in
 #   observability) so contracts never import the observability package. (#KernelBootstrapV0/P1)
 # ====================================================================

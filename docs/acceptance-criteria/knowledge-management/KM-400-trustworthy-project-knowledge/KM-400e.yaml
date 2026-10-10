@@ -1,0 +1,90 @@
+id: KM-400e
+title: "Use project knowledge when it helps and continue honestly when it cannot"
+component: knowledge-management
+components: [knowledge_management]
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: in_progress
+child_limit_override: 6
+criteria: |
+  Use evidence deliberately and recognize when it is unavailable.
+
+  Agents choose when project knowledge is needed, obtain attributable evidence through their existing working process, and stop once they have enough. The project remains usable when this capability is disabled, and outages or missing prerequisites are never presented as proof that no knowledge exists.
+parent: KM-400
+depends_on: [KM-400]
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: context
+    status: exists
+    relevance: Reuse canonical identities and declared relationship semantics; do not create competing models.
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100.yaml
+    relationship: context
+    status: exists
+    relevance: Reuse existing graph-surface and requirement-to-test traceability requirements without relabeling them as implemented.
+  - path: docs/acceptance-criteria/knowledge-management/KM-ADM-100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest treatment of declared, inferred and missing connections.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that reported figures state coverage and method.
+documentation_triggers: [how-to, reference-doc, component-diagram]
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+  - '2026-10-09: business-analyst added KM-400e-6, KM-400e-7 and KM-400e-8 after a
+    measured capacity incident in which the backend filled, latched read-only and had
+    to be destroyed and recreated, and after 60 consecutive synchronization failures
+    caused partly by guessed configuration defaults. The three children add a
+    headroom check that refuses an unsafe publication before writing, an operator
+    surface that makes retained generations and remaining capacity visible, and a
+    rule that an unset required backend setting fails loudly instead of being guessed.
+    work_status moved from done to in_progress because three children are todo, and
+    KM-400e-5 was amended in the same pass. A temporary child_limit_override of 8 was
+    taken, to be removed by a structural rebalance. That rebalance has since happened —
+    see the following entry; the override now stands at 6 and two of the three children
+    named above no longer live here.'
+  - '2026-10-09: product-owner carried out that rebalance on the user''s instruction.
+    KM-400e-6 and KM-400e-7 were re-parented to a dedicated retention-and-capacity L1,
+    KM-400f, as KM-400f-3 and KM-400f-4; they had to be renamed because parentage in
+    this store is derived from the id string, which was safe because both ids were one
+    day old, uncommitted and referenced nowhere outside their own files and their
+    parents. KM-400e-8 deliberately stayed: it is about honest configuration — an unset
+    required backend setting failing loudly instead of being guessed — which is this
+    L1''s own subject of continuing honestly when the capability cannot be used, it
+    comes from a different incident (60 consecutive synchronization failures) and it
+    depends on KM-400e-5''s synchronization job. KM-400f''s subject is staying inside
+    declared storage limits, and its wording was not stretched to absorb a fifth child
+    it does not honestly describe. That leaves six children here, so
+    child_limit_override is reduced from 8 to 6 rather than removed — a deliberate,
+    smaller waiver, not an oversight. work_status stays in_progress, correctly:
+    KM-400e-5 is in_progress and KM-400e-8 is todo.'
+superseded_by: null
+covered_by:
+  - KM-400e-1
+  - KM-400e-2
+  - KM-400e-3
+  - KM-400e-4
+  - KM-400e-5
+  - KM-400e-8
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored by PO for the user-authorized full Knowledge Retrieval implementation
+  (guide dated 2026-10-01, stages 0-4). Approval records the user's delegation to
+  orchestrate building and to have PO, BA and IT PO create/amend/use ACs; it is not
+  evidence of completion. All work remains todo until behavioral proof exists.
+  KM-400 is the next available flat family after KM-300; existing IDs are retained.
+  Stage 0 must reconcile the guide with actual canonical entities, capability
+  contracts, kernel integration and tracing ownership before production mapping.
+  Graph-only delivery is an intermediate milestone, not completion of this family.
+  No roadmap or vision changes are authorized or made by these records.

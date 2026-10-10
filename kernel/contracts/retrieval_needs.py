@@ -1,0 +1,146 @@
+"""MODULE: retrieval_needs
+GOAL: Define model-neutral contracts for host interpretation of retrieval needs.
+BUSINESS CONTEXT: Interpret the same bounded offers as the isolated Jev experiment.
+ARCHITECTURE: Registered host payloads; no query execution or classifier promotion.
+"""
+from __future__ import annotations
+
+import re
+from typing import Literal
+
+from pydantic import ConfigDict, Field, JsonValue, field_validator, model_validator
+
+from kernel.contracts.base import KernelModel, fail
+
+DIMENSIONS = ("entity_types", "target_ids", "required_fields", "document_types", "relationships")
+LITERAL_ID = re.compile(r"\b[A-Z][A-Z0-9]*(?:-[A-Z]+)*-\d+[a-z]?(?:-\d+)?(?:-[ivx]+)?\b")
+
+
+def _dimensions(value: dict) -> dict:
+    """Require all five known dimensions without permitting hidden extra fields."""
+    if set(value) != set(DIMENSIONS):
+        fail("Exactly the five retrieval-needs dimensions are required")
+    return value
+
+
+class RetrievalNeedsRequest(KernelModel):
+    """Original question and bounded candidate meanings, independent of backend support."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=False)
+    original_question: str = Field(min_length=1, max_length=8000)
+    """The caller's question, verbatim; the host interprets only this text."""
+    context: list[str] = Field(default_factory=list, max_length=32)
+    """Earlier text that may disambiguate the question; unverified, never a permission."""
+    known_ids: list[str] = Field(default_factory=list, max_length=64)
+    (
+        "Identifiers the caller has already seen; offered to the host as target candidates, not "
+        "as requested targets."
+    )
+    source_scope: dict[str, JsonValue] = Field(default_factory=dict)
+    """Which sources the interpretation concerns; echoed back unchanged in the output."""
+    catalog: dict[str, dict[str, str]]
+    (
+        "For each dimension, the meanings offered (label to description); the host may choose "
+        "only these labels."
+    )
+
+    @field_validator("catalog")
+    @classmethod
+    def finite_catalog(cls, value: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+        """Refuse oversize offers rather than changing the interpreted vocabulary."""
+        _dimensions(value)
+        for options in value.values():
+            if len(options) > 64:
+                fail("A needs dimension may offer at most 64 values")
+            for key, meaning in options.items():
+                if not key or len(key) > 128 or not meaning or len(meaning) > 1200:
+                    fail("Offer labels/descriptions must be nonempty and bounded")
+        return value
+
+    @model_validator(mode="after")
+    def grounded_candidates(self) -> RetrievalNeedsRequest:
+        """Validate identities/context before the system augments literal candidates."""
+        if not self.original_question.strip() or any(len(text) > 8000 for text in self.context):
+            fail("Question/context must contain bounded text")
+        for identifier in (*self.known_ids, *self.catalog["target_ids"]):
+            if not identifier or len(identifier) > 128:
+                fail("Candidate identifiers must contain 1 to 128 characters")
+        for identifier in self.catalog["target_ids"]:
+            literal = re.search(r"(?<![\w-])" + re.escape(identifier) + r"(?![\w-])", self.original_question)
+            if not literal and identifier not in self.known_ids:
+                fail(f"Ungrounded target candidate: {identifier}")
+        return self
+
+
+class RetrievalNeedsOutput(KernelModel):
+    """Host interpretation, never a retrieved answer or approval of a classifier."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, str_strip_whitespace=False)
+    original_question: str = Field(min_length=1, max_length=8000)
+    """The question echoed back unchanged, so the output can be matched to its request."""
+    source_scope: dict[str, JsonValue]
+    """The request's source scope echoed back unchanged; the host may not widen it."""
+    selections: dict[str, list[str]]
+    """For each dimension, the offered labels the host judges the question needs."""
+    uncertain: dict[str, list[str]]
+    """For each dimension, the offered labels the host could not decide on."""
+    detail_mode: Literal["fields", "full_document", "bounded_context", "unknown"]
+    (
+        "How much of each selected item the question needs: requested fields, the whole "
+        "document, or bounded surroundings."
+    )
+    completeness: Literal["single_entity", "selected_entities", "exhaustive_set", "exhaustive_count", "examples", "unknown"]
+    (
+        "Whether the question wants one entity, chosen entities, a full set, a count, or just "
+        "examples."
+    )
+    hierarchy_scope: Literal["not_applicable", "exclude_root", "exclude_parents", "include_root", "unknown"]
+    """Whether a population answer includes or excludes the chosen root and its parents."""
+    scope_resolution: Literal["sufficient", "discovery_needed", "user_choice_missing", "unknown"]
+    """Whether retrieval may start, needs discovery first, or lacks a user choice."""
+    unresolved: list[str] = Field(default_factory=list, max_length=32)
+    """Meanings the catalog could not express, unknowns and contradictions, left for resolution."""
+    rationale: str = Field(default="", max_length=4000)
+    """Brief reason for the interpretation, for human review."""
+    engine: Literal["host_llm"] = "host_llm"
+    """Which interpreter produced the output; always the host language model."""
+    status: Literal["decided", "needs_resolution"] = "decided"
+    """Whether the interpretation is usable (decided) or needs resolution before retrieval."""
+    model_id: str | None = Field(default=None, max_length=200)
+    """Model that produced the interpretation, when known; reported usage is authoritative."""
+
+    @field_validator("selections", "uncertain")
+    @classmethod
+    def finite_selections(cls, value: dict[str, list[str]]) -> dict[str, list[str]]:
+        """Validate bounded dimension arrays before offer membership checks."""
+        _dimensions(value)
+        for items in value.values():
+            if len(items) > 64 or len(set(items)) != len(items):
+                fail("Selections must be unique and contain at most 64 values")
+        return value
+
+    @field_validator("unresolved")
+    @classmethod
+    def bounded_unresolved(cls, value: list[str]) -> list[str]:
+        """Keep explanatory unresolved needs finite without inventing semantic certainty."""
+        if any(not item or len(item) > 500 for item in value):
+            fail("Unresolved descriptions must contain 1 to 500 characters")
+        return value
+
+
+def prepare_request(request: RetrievalNeedsRequest) -> RetrievalNeedsRequest:
+    """Add only literal/supplied target candidates before compiling the host request."""
+    body = request.model_dump(mode="json")
+    targets = body["catalog"]["target_ids"]
+    for identifier in request.known_ids:
+        targets.setdefault(identifier, "Caller-observed candidate, not necessarily the requested target.")
+    for identifier in LITERAL_ID.findall(request.original_question):
+        targets.setdefault(identifier, "Literal identifier in the original question; assess its requested role.")
+    return RetrievalNeedsRequest.model_validate(body)
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-09 [python-coder]: Field purposes added so the host interpreting a question knows what
+#   each dimension and mode means. (#TICKET-20261009-KernelContractFieldDescriptions)
+# - 2026-10-03 00:00 [python-coder]: Preserve the frozen needs experiment semantics through typed host work. (#TICKETLESS reason=user-requested-isolated-host-experiment)

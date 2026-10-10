@@ -5,11 +5,13 @@
       "description": "A source-linked claim: fact, inference, assumption or reported human input.",
       "properties": {
         "claim": {
+          "description": "The statement being made; its id is derived from this text.",
           "minLength": 1,
           "title": "Claim",
           "type": "string"
         },
         "contradicting_evidence_ids": {
+          "description": "Evidence that argues against the claim, kept so disagreement stays visible.",
           "items": {
             "type": "string"
           },
@@ -17,25 +19,30 @@
           "type": "array"
         },
         "created_at": {
+          "description": "When the record was first created (UTC), so history can be ordered and audited.",
           "format": "date-time",
           "title": "Created At",
           "type": "string"
         },
         "created_seq": {
           "default": 0,
+          "description": "Kernel-wide creation counter that orders records exactly where clock times tie.",
           "minimum": 0,
           "title": "Created Seq",
           "type": "integer"
         },
         "id": {
+          "description": "Identifier other records cite this one by; the kernel assigns it, or derives it from the content for evidence and findings.",
           "pattern": "^[a-z]+-[0-9a-f]{16}$",
           "title": "Id",
           "type": "string"
         },
         "kind": {
-          "$ref": "#/$defs/FindingKind"
+          "$ref": "#/$defs/FindingKind",
+          "description": "Whether the claim is a source fact, an inference, an assumption or reported human input."
         },
         "limitations": {
+          "description": "Caveats on the claim that the reader should weigh.",
           "items": {
             "type": "string"
           },
@@ -43,6 +50,7 @@
           "type": "array"
         },
         "producer": {
+          "description": "Who or what produced the finding, for audit.",
           "title": "Producer",
           "type": "string"
         },
@@ -56,15 +64,18 @@
             }
           ],
           "default": null,
+          "description": "Version of that producer (template or model), so findings can be compared across versions.",
           "title": "Producer Version"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "supporting_evidence_ids": {
+          "description": "Evidence that backs the claim; a source fact must cite some.",
           "items": {
             "type": "string"
           },
@@ -72,6 +83,7 @@
           "type": "array"
         },
         "updated_at": {
+          "description": "When the record last changed (UTC), so a reader can tell a stale copy from the current one.",
           "format": "date-time",
           "title": "Updated At",
           "type": "string"
@@ -104,6 +116,7 @@
   "description": "leafcutter.findings.v1.",
   "properties": {
     "agreements": {
+      "description": "Points on which the evidence sources agree.",
       "items": {
         "type": "string"
       },
@@ -111,6 +124,7 @@
       "type": "array"
     },
     "assumptions": {
+      "description": "Premises taken without evidence, listed so a reader can challenge them.",
       "items": {
         "type": "string"
       },
@@ -118,6 +132,7 @@
       "type": "array"
     },
     "constraints": {
+      "description": "Constraints the evidence puts on any option.",
       "items": {
         "type": "string"
       },
@@ -125,6 +140,7 @@
       "type": "array"
     },
     "disagreements": {
+      "description": "Points on which sources conflict; the decision keeps them as context rather than choosing.",
       "items": {
         "type": "string"
       },
@@ -132,6 +148,7 @@
       "type": "array"
     },
     "findings": {
+      "description": "Source-linked claims the synthesis reached, each citing its evidence.",
       "items": {
         "$ref": "#/$defs/Finding"
       },
@@ -141,10 +158,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "unknowns": {
+      "description": "What the evidence could not establish; the next research round aims queries at these.",
       "items": {
         "type": "string"
       },

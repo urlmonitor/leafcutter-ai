@@ -1,0 +1,136 @@
+{
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "question",
+      "options"
+    ],
+    "properties": {
+      "question": {
+        "type": "string",
+        "minLength": 1
+      },
+      "context": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": []
+      },
+      "options": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "brief",
+              "full"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 3
+          }
+        }
+      }
+    }
+  },
+  "flow": {
+    "id": "fixture/query",
+    "component": "knowledge-management",
+    "name": "Interpret a query",
+    "level": "pipeline",
+    "summary": "Typed request handoff fixture",
+    "kind": "data",
+    "source": "real",
+    "realization": "built",
+    "status": "active",
+    "readiness": "draft",
+    "version": 1,
+    "shape_version": 2,
+    "entities": [],
+    "contract_definitions": {
+      "request": {
+        "schema": "config/request.schema.json"
+      }
+    },
+    "steps": [
+      {
+        "id": "interpret",
+        "label": "Interpret request",
+        "agent": "System",
+        "order": 1,
+        "description": "Pass the documented request.", "actor_kind": "human",
+        "implements": [],
+        "io_contracts": {
+          "consumes": [
+            {
+              "contract": "request",
+              "fields": [
+                {
+                  "path": "/question",
+                  "types": [
+                    "string"
+                  ],
+                  "required": true
+                },
+                {
+                  "path": "/context",
+                  "types": [
+                    "array"
+                  ],
+                  "required": false,
+                  "default": []
+                },
+                {
+                  "path": "/options/mode",
+                  "types": [
+                    "string"
+                  ],
+                  "required": true
+                }
+              ]
+            }
+          ],
+          "produces": [],
+          "examples": [
+            {
+              "contract": "request",
+              "mode": "full",
+              "origin": "illustrative",
+              "label": "Request",
+              "value": {
+                "question": "Which tests apply?",
+                "options": {
+                  "mode": "brief"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "branches": []
+  },
+  "index": {
+    "artifacts": [
+      {
+        "id": "fixture/query",
+        "type": "flow",
+        "component": "knowledge-management",
+        "path": "flows/fixture/query.flow.json",
+        "status": "active",
+        "readiness": "draft",
+        "version": 1
+      }
+    ],
+    "entity_registry": []
+  }
+}

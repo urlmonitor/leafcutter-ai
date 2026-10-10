@@ -4,6 +4,14 @@
   "additionalProperties": false,
   "description": "leafcutter.goal_request.v1: a free-form goal for the root capability request.",
   "properties": {
+    "clarifications": {
+      "description": "The caller's answers to earlier clarifying questions, verbatim, so intent is not paraphrased.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Clarifications",
+      "type": "array"
+    },
     "context_summary": {
       "anyOf": [
         {
@@ -14,10 +22,12 @@
         }
       ],
       "default": null,
+      "description": "The caller's short summary of surrounding context, offered as background for the goal.",
       "title": "Context Summary"
     },
     "goal": {
-      "maxLength": 4000,
+      "description": "The caller's goal in their own words, kept verbatim for intent classification and the record.",
+      "maxLength": 16000,
       "minLength": 1,
       "title": "Goal",
       "type": "string"
@@ -25,6 +35,7 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     }

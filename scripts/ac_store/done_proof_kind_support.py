@@ -350,7 +350,7 @@ def _run_pytest_with_kind_plugin(
         )
         print(f"WARNING: fast_lane: {message}", file=sys.stderr)
         return {_PYTEST_RUN_INCOMPLETE_SENTINEL: message}, {}
-    outcomes = _parse_pytest_verbose_output(proc.stdout)
+    outcomes = _parse_pytest_verbose_output(proc.stdout, proc.returncode)
     kinds = _load_kind_map(kind_output_path, outcomes)
     return outcomes, kinds
 

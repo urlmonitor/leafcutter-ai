@@ -1,14 +1,97 @@
 {
   "$defs": {
+    "ContextEnrichmentConfig": {
+      "additionalProperties": false,
+      "description": "Read, time and payload bounds independent of the later research capability.",
+      "properties": {
+        "enabled": {
+          "description": "Whether the bounded initial context pass runs before intake.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "max_chars": {
+          "description": "Most characters the pass may read in total.",
+          "maximum": 20000,
+          "minimum": 1,
+          "title": "Max Chars",
+          "type": "integer"
+        },
+        "max_context_chars": {
+          "description": "Most characters of context carried forward to later steps.",
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Context Chars",
+          "type": "integer"
+        },
+        "max_evidence": {
+          "description": "Most evidence items the pass may attach.",
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Evidence",
+          "type": "integer"
+        },
+        "max_excerpt_chars": {
+          "description": "Longest excerpt the pass keeps.",
+          "maximum": 4000,
+          "minimum": 1,
+          "title": "Max Excerpt Chars",
+          "type": "integer"
+        },
+        "max_files": {
+          "description": "Most files the pass may read.",
+          "maximum": 1000,
+          "minimum": 1,
+          "title": "Max Files",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "description": "Longest the pass may run, so it cannot delay the run.",
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_sources": {
+          "description": "Most sources the pass may consult.",
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Sources",
+          "type": "integer"
+        },
+        "source_ids": {
+          "description": "Sources the pass may read.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "source_ids",
+        "max_files",
+        "max_sources",
+        "max_evidence",
+        "max_chars",
+        "max_context_chars",
+        "max_excerpt_chars",
+        "max_seconds"
+      ],
+      "title": "ContextEnrichmentConfig",
+      "type": "object"
+    },
     "DataPolicyConfig": {
       "additionalProperties": false,
       "description": "What may leave the process (Jev, Langfuse).",
       "properties": {
         "send_repo_excerpts_to_jev": {
+          "description": "Whether repository text may leave the process in Jev calls.",
           "title": "Send Repo Excerpts To Jev",
           "type": "boolean"
         },
         "telemetry_excerpts": {
+          "description": "How excerpts appear in telemetry: truncated, only a hash, or not at all.",
           "enum": [
             "truncated",
             "hash",
@@ -18,6 +101,7 @@
           "type": "string"
         },
         "telemetry_max_field_chars": {
+          "description": "Longest text field written to telemetry before it is cut.",
           "minimum": 1,
           "title": "Telemetry Max Field Chars",
           "type": "integer"
@@ -36,71 +120,84 @@
       "description": "Decision-graph thresholds.",
       "properties": {
         "conflict_threshold": {
+          "description": "Probability that evidence conflicts at which the conflict must be resolved before deciding.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Conflict Threshold",
           "type": "number"
         },
         "design_judgement_threshold": {
+          "description": "A criterion counts as a design judgement (a property of the proposed options that research cannot settle) when Jev's probability for that reading reaches this value.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Design Judgement Threshold",
           "type": "number"
         },
         "max_grounding_evidence": {
+          "description": "Most evidence items attached to one options request (bounds the host input).",
           "minimum": 1,
           "title": "Max Grounding Evidence",
           "type": "integer"
         },
         "max_research_rounds": {
+          "description": "Most research rounds one decision may request before it hands the ranked options to a human.",
           "minimum": 1,
           "title": "Max Research Rounds",
           "type": "integer"
         },
         "missing_min_probability": {
+          "description": "Lowest probability a kind of missing knowledge needs to be recorded as missing.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Missing Min Probability",
           "type": "number"
         },
         "preference_threshold": {
+          "description": "Probability that the choice turns on a human preference at which the human is asked.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Preference Threshold",
           "type": "number"
         },
         "progress_epsilon": {
+          "description": "No material progress: every score moved by at most this between assessments after new evidence.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Progress Epsilon",
           "type": "number"
         },
         "require_option_grounding": {
+          "description": "Options generated for an unknown option set must cite the evidence they rest on; an ungrounded option is refused (True) or only flagged as a limitation (False).",
           "title": "Require Option Grounding",
           "type": "boolean"
         },
         "reserve_assessments": {
+          "description": "Final decision assessments whose Jev calls stay reserved (research must leave them).",
           "minimum": 0,
           "title": "Reserve Assessments",
           "type": "integer"
         },
         "reserve_extra_options": {
+          "description": "Options added to the size of the reserved assessment (a human may add one when ranked).",
           "minimum": 0,
           "title": "Reserve Extra Options",
           "type": "integer"
         },
         "reserve_margin_calls": {
+          "description": "Calls kept beyond the reserved assessments for routing a child request and other overhead.",
           "minimum": 0,
           "title": "Reserve Margin Calls",
           "type": "integer"
         },
         "satisfies_threshold": {
+          "description": "Probability that an option satisfies a criterion at which it passes (at or below one minus this it fails).",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Satisfies Threshold",
           "type": "number"
         },
         "sufficiency_threshold": {
+          "description": "Probability that evidence suffices for a criterion at which the criterion counts as answered; below it the criterion stays uncertain.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Sufficiency Threshold",
@@ -125,6 +222,109 @@
       "title": "DecisionConfig",
       "type": "object"
     },
+    "EntityContextConfig": {
+      "additionalProperties": false,
+      "description": "Independent entity-index and interpretation limits.",
+      "properties": {
+        "enabled": {
+          "description": "Whether entity recognition runs on the caller's text before intake.",
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "index_path": {
+          "description": "Where the entity index is read from, relative to the repository root.",
+          "title": "Index Path",
+          "type": "string"
+        },
+        "max_ambiguity_candidates": {
+          "description": "Most candidate meanings kept for an ambiguous term.",
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Max Ambiguity Candidates",
+          "type": "integer"
+        },
+        "max_caller_chars": {
+          "description": "Most characters of the caller's text scanned for entities.",
+          "maximum": 12000,
+          "minimum": 1,
+          "title": "Max Caller Chars",
+          "type": "integer"
+        },
+        "max_entities": {
+          "description": "Most recognised entities carried forward.",
+          "maximum": 16,
+          "minimum": 1,
+          "title": "Max Entities",
+          "type": "integer"
+        },
+        "max_lookups": {
+          "description": "Most index lookups per request, bounding recognition work.",
+          "maximum": 64,
+          "minimum": 1,
+          "title": "Max Lookups",
+          "type": "integer"
+        },
+        "max_meaning_chars": {
+          "description": "Longest meaning text kept per entity.",
+          "maximum": 300,
+          "minimum": 1,
+          "title": "Max Meaning Chars",
+          "type": "integer"
+        },
+        "max_seconds": {
+          "description": "Longest recognition may run, so it cannot delay the run.",
+          "exclusiveMinimum": 0,
+          "maximum": 2,
+          "title": "Max Seconds",
+          "type": "number"
+        },
+        "max_serialized_chars": {
+          "description": "Largest size of the entity context when carried in run state.",
+          "maximum": 8000,
+          "minimum": 1000,
+          "title": "Max Serialized Chars",
+          "type": "integer"
+        },
+        "max_unknown_chars": {
+          "description": "Longest text kept per unresolved term.",
+          "maximum": 128,
+          "minimum": 1,
+          "title": "Max Unknown Chars",
+          "type": "integer"
+        },
+        "max_unknowns": {
+          "description": "Most unresolved terms reported.",
+          "maximum": 8,
+          "minimum": 1,
+          "title": "Max Unknowns",
+          "type": "integer"
+        },
+        "source_ids": {
+          "description": "Sources whose entities may be recognised.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "enabled",
+        "index_path",
+        "source_ids",
+        "max_caller_chars",
+        "max_lookups",
+        "max_entities",
+        "max_ambiguity_candidates",
+        "max_meaning_chars",
+        "max_serialized_chars",
+        "max_unknowns",
+        "max_unknown_chars",
+        "max_seconds"
+      ],
+      "title": "EntityContextConfig",
+      "type": "object"
+    },
     "EvidenceCategory": {
       "description": "Generic evidence categories (no vendor names).",
       "enum": [
@@ -143,23 +343,28 @@
       "description": "Host-handoff settings.",
       "properties": {
         "enabled": {
+          "description": "Whether work may be handed to the host client at all.",
           "title": "Enabled",
           "type": "boolean"
         },
         "fallback_on_no_match": {
+          "description": "Whether a request no native capability matches falls back to the host.",
           "title": "Fallback On No Match",
           "type": "boolean"
         },
         "formulate_questions": {
+          "description": "Whether the host rewords questions for the human; false asks the original wording.",
           "title": "Formulate Questions",
           "type": "boolean"
         },
         "max_input_chars": {
+          "description": "Most characters of input placed in one host packet.",
           "minimum": 1,
           "title": "Max Input Chars",
           "type": "integer"
         },
         "max_repair_attempts": {
+          "description": "How often a malformed host submission may be sent back for repair.",
           "minimum": 0,
           "title": "Max Repair Attempts",
           "type": "integer"
@@ -180,17 +385,20 @@
       "description": "Thresholds for the intake answer-kind classification and the clarification cap.",
       "properties": {
         "max_clarifications": {
+          "description": "Most clarifying questions intake may ask for one request.",
           "minimum": 0,
           "title": "Max Clarifications",
           "type": "integer"
         },
         "min_confidence": {
+          "description": "Lowest provider confidence intake accepts for its classification.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Min Confidence",
           "type": "number"
         },
         "min_selected_probability": {
+          "description": "Lowest probability the chosen answer kind needs at intake.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Min Selected Probability",
@@ -210,16 +418,19 @@
       "description": "Jev provider settings.",
       "properties": {
         "max_questions_per_call": {
+          "description": "Most questions batched into one Jev call.",
           "minimum": 1,
           "title": "Max Questions Per Call",
           "type": "integer"
         },
         "max_state_chars": {
+          "description": "Most characters of run state sent with a Jev call, bounding the input.",
           "minimum": 1,
           "title": "Max State Chars",
           "type": "integer"
         },
         "model": {
+          "description": "Name of the model Jev asks.",
           "title": "Model",
           "type": "string"
         },
@@ -233,19 +444,23 @@
               "type": "null"
             }
           ],
+          "description": "Price of one input token in US dollars, used to estimate cost; null when unknown.",
           "title": "Price Per Input Token Usd"
         },
         "retry_backoff_seconds": {
+          "description": "Base delay before retrying a failed Jev call, doubled per retry.",
           "minimum": 0,
           "title": "Retry Backoff Seconds",
           "type": "number"
         },
         "timeout_seconds": {
+          "description": "Longest one Jev call may take.",
           "exclusiveMinimum": 0,
           "title": "Timeout Seconds",
           "type": "number"
         },
         "transport": {
+          "description": "How Jev is reached: the local classifier or an HTTP service.",
           "enum": [
             "classifier",
             "http"
@@ -266,23 +481,157 @@
       "title": "JevConfig",
       "type": "object"
     },
+    "KnowledgeBindingConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "description": "Knowledge backend: none turns graph retrieval off, neo4j serves it from Neo4j.",
+          "title": "Backend",
+          "type": "string"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Neo4j database to query; null uses the server default.",
+          "title": "Database"
+        },
+        "embedding_dimensions": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Vector size the embedding model returns, to match the stored index.",
+          "title": "Embedding Dimensions"
+        },
+        "embedding_endpoint_env": {
+          "description": "Name of the environment variable holding the embedding service URL.",
+          "title": "Embedding Endpoint Env",
+          "type": "string"
+        },
+        "embedding_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Embedding model to ask; required once embeddings are enabled.",
+          "title": "Embedding Model"
+        },
+        "embedding_token_env": {
+          "description": "Name of the environment variable holding the embedding service token.",
+          "title": "Embedding Token Env",
+          "type": "string"
+        },
+        "embeddings_enabled": {
+          "description": "Whether embedding-based search supplements graph queries.",
+          "title": "Embeddings Enabled",
+          "type": "boolean"
+        },
+        "neo4j_password_env": {
+          "description": "Name of the environment variable holding the Neo4j password.",
+          "title": "Neo4J Password Env",
+          "type": "string"
+        },
+        "neo4j_uri_env": {
+          "description": "Name of the environment variable holding the Neo4j URI (never the URI).",
+          "title": "Neo4J Uri Env",
+          "type": "string"
+        },
+        "neo4j_username_env": {
+          "description": "Name of the environment variable holding the Neo4j user name.",
+          "title": "Neo4J Username Env",
+          "type": "string"
+        },
+        "query_catalog_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Folder of admitted query recipes; null means no query catalog.",
+          "title": "Query Catalog Root"
+        },
+        "query_timeout": {
+          "description": "Seconds a graph query may run before it is cut off.",
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Query Timeout",
+          "type": "number"
+        },
+        "repository_id": {
+          "description": "Repository whose knowledge graph is queried; part of every graph scope.",
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "repository_root": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Local git checkout that resolves source text for graph hits; null for none.",
+          "title": "Repository Root"
+        }
+      },
+      "required": [
+        "backend",
+        "repository_id",
+        "repository_root",
+        "query_catalog_root",
+        "neo4j_uri_env",
+        "neo4j_username_env",
+        "neo4j_password_env",
+        "database",
+        "embeddings_enabled",
+        "embedding_endpoint_env",
+        "embedding_token_env",
+        "embedding_model",
+        "embedding_dimensions",
+        "query_timeout"
+      ],
+      "title": "KnowledgeBindingConfig",
+      "type": "object"
+    },
     "LangfuseConfig": {
       "additionalProperties": false,
       "description": "Langfuse export settings (credentials come from secrets, never from here).",
       "properties": {
         "enabled": {
+          "description": "Whether traces are exported to Langfuse.",
           "title": "Enabled",
           "type": "boolean"
         },
         "environment": {
+          "description": "Langfuse environment label the traces are filed under.",
           "title": "Environment",
           "type": "string"
         },
         "flush_on_exit": {
+          "description": "Whether pending traces are sent before the process exits.",
           "title": "Flush On Exit",
           "type": "boolean"
         },
         "trace_name": {
+          "description": "Name given to each run's trace.",
           "title": "Trace Name",
           "type": "string"
         }
@@ -301,26 +650,31 @@
       "description": "Run limits (Rev 3 section 13.2).",
       "properties": {
         "capability_timeout_seconds": {
+          "description": "Longest a single capability may run before it is cut off.",
           "exclusiveMinimum": 0,
           "title": "Capability Timeout Seconds",
           "type": "number"
         },
         "langgraph_recursion_limit": {
+          "description": "Step limit handed to the graph engine, a backstop against endless graph loops.",
           "minimum": 1,
           "title": "Langgraph Recursion Limit",
           "type": "integer"
         },
         "max_active_seconds": {
+          "description": "Most active seconds a run may spend before it stops.",
           "exclusiveMinimum": 0,
           "title": "Max Active Seconds",
           "type": "number"
         },
         "max_concurrent_host": {
+          "description": "Most host handoffs outstanding at once.",
           "minimum": 1,
           "title": "Max Concurrent Host",
           "type": "integer"
         },
         "max_concurrent_native": {
+          "description": "Most native capabilities running at once.",
           "minimum": 1,
           "title": "Max Concurrent Native",
           "type": "integer"
@@ -335,24 +689,29 @@
               "type": "null"
             }
           ],
+          "description": "Most estimated spend per run in US dollars; null means no cost cap.",
           "title": "Max Cost Usd"
         },
         "max_depth": {
+          "description": "Deepest chain of child requests a run may spawn.",
           "minimum": 1,
           "title": "Max Depth",
           "type": "integer"
         },
         "max_host_operations": {
+          "description": "Most host operations one run may hand off.",
           "minimum": 0,
           "title": "Max Host Operations",
           "type": "integer"
         },
         "max_jev_calls": {
+          "description": "Most Jev calls one run may make.",
           "minimum": 0,
           "title": "Max Jev Calls",
           "type": "integer"
         },
         "max_retries": {
+          "description": "How often one work item is retried before it is marked failed.",
           "minimum": 0,
           "title": "Max Retries",
           "type": "integer"
@@ -367,14 +726,17 @@
               "type": "null"
             }
           ],
+          "description": "Most scheduler rounds per run; null derives the limit from the graph recursion limit.",
           "title": "Max Scheduler Iterations"
         },
         "max_work_items": {
+          "description": "Most work items one run may create, bounding runaway planning.",
           "minimum": 1,
           "title": "Max Work Items",
           "type": "integer"
         },
         "no_progress_limit": {
+          "description": "Consecutive scheduler rounds without progress after which the run stops.",
           "minimum": 1,
           "title": "No Progress Limit",
           "type": "integer"
@@ -403,12 +765,14 @@
       "description": "Decision store backend and precedent lookup settings.",
       "properties": {
         "applies_threshold": {
+          "description": "Jev's probability that a precedent applies at which it becomes evidence for the decision.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Applies Threshold",
           "type": "number"
         },
         "backend": {
+          "description": "`file` reads docs/decisions through the generated index; `null` remembers nothing.",
           "enum": [
             "file",
             "null"
@@ -417,25 +781,30 @@
           "type": "string"
         },
         "criterion_evidence_max": {
+          "description": "Most evidence ids cited per criterion assessment and record criterion (not all of them).",
           "minimum": 1,
           "title": "Criterion Evidence Max",
           "type": "integer"
         },
         "criterion_evidence_min_overlap": {
+          "description": "Content words an evidence item must share with a criterion to be cited for it.",
           "minimum": 1,
           "title": "Criterion Evidence Min Overlap",
           "type": "integer"
         },
         "decisions_dir": {
+          "description": "The store folder, relative to the repository root.",
           "title": "Decisions Dir",
           "type": "string"
         },
         "max_precedents": {
+          "description": "Most past decisions pulled into one decision (0 switches precedent lookup off).",
           "minimum": 0,
           "title": "Max Precedents",
           "type": "integer"
         },
         "min_candidate_score": {
+          "description": "Content-word overlap a record's question must reach to be a candidate at all.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Min Candidate Score",
@@ -450,9 +819,11 @@
               "type": "null"
             }
           ],
+          "description": "The repository part of a record's identity key (ADR-061); null uses the scope's workspace id.",
           "title": "Repository Id"
         },
         "reuse_threshold": {
+          "description": "Jev's probability at which the human is asked to reuse the precedent or decide anew.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Reuse Threshold",
@@ -478,10 +849,12 @@
       "description": "File-system locations (relative to the repository root unless absolute).",
       "properties": {
         "registry": {
+          "description": "Path of the capability registry that lists what the kernel can route to.",
           "title": "Registry",
           "type": "string"
         },
         "run_root": {
+          "description": "Folder where each run's state and artifacts are written.",
           "title": "Run Root",
           "type": "string"
         }
@@ -498,14 +871,17 @@
       "description": "Research-graph thresholds and category descriptions offered to Jev.",
       "properties": {
         "allow_synthesis": {
+          "description": "Whether research may ask the host to synthesise findings from the evidence.",
           "title": "Allow Synthesis",
           "type": "boolean"
         },
         "answer_aware_coverage": {
+          "description": "A need counts as satisfied only when Jev judges the kept evidence answers its question.",
           "title": "Answer Aware Coverage",
           "type": "boolean"
         },
         "answer_threshold": {
+          "description": "Probability the answer judgement must reach for a relevance-satisfied need to stay so.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Answer Threshold",
@@ -515,6 +891,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "What each evidence category means, offered to Jev when it chooses which categories to search.",
           "propertyNames": {
             "$ref": "#/$defs/EvidenceCategory"
           },
@@ -522,28 +899,33 @@
           "type": "object"
         },
         "evaluable_threshold": {
+          "description": "Lowest probability that the gathered evidence is enough to evaluate the question; below it research reports the shortfall.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Evaluable Threshold",
           "type": "number"
         },
         "max_claim_needs": {
+          "description": "Most claim checks for human-added options planned per run; the rest are named.",
           "minimum": 0,
           "title": "Max Claim Needs",
           "type": "integer"
         },
         "max_targeted_needs": {
+          "description": "Most gap needs planned per research run; the rest are named, not researched.",
           "minimum": 0,
           "title": "Max Targeted Needs",
           "type": "integer"
         },
         "need_required_threshold": {
+          "description": "Probability that an evidence category is needed at which it becomes a required need.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Need Required Threshold",
           "type": "number"
         },
         "need_supporting_threshold": {
+          "description": "Probability that an evidence category is needed at which it becomes a supporting need (must not exceed the required threshold).",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Need Supporting Threshold",
@@ -569,23 +951,27 @@
       "description": "Repository retrieval bounds.",
       "properties": {
         "bm25_b": {
+          "description": "Length-normalisation strength of the keyword ranking (0 none, 1 full); orders candidates only.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Bm25 B",
           "type": "number"
         },
         "bm25_k1": {
+          "description": "BM25 term-count saturation and length-normalisation strength (0 = none); orders only.",
           "exclusiveMinimum": 0,
           "title": "Bm25 K1",
           "type": "number"
         },
         "coverage_relevance_threshold": {
+          "description": "Relevance a kept item needs to count towards a need's coverage (lower ones stay context).",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Coverage Relevance Threshold",
           "type": "number"
         },
         "deny_globs": {
+          "description": "Path patterns retrieval must never read (secrets, build output).",
           "items": {
             "type": "string"
           },
@@ -593,94 +979,112 @@
           "type": "array"
         },
         "excerpt_context_lines": {
+          "description": "Lines of context kept around the best-matching lines of an excerpt.",
           "minimum": 0,
           "title": "Excerpt Context Lines",
           "type": "integer"
         },
         "max_candidates": {
+          "description": "Most candidates gathered per need before reranking.",
           "minimum": 1,
           "title": "Max Candidates",
           "type": "integer"
         },
         "max_excerpt_chars": {
+          "description": "Longest excerpt kept per item.",
           "minimum": 1,
           "title": "Max Excerpt Chars",
           "type": "integer"
         },
         "max_explicit_locators": {
+          "description": "Most explicit locators fetched per request (`retrieval_request.explicit_locators`).",
           "minimum": 0,
           "title": "Max Explicit Locators",
           "type": "integer"
         },
         "max_file_bytes": {
+          "description": "Largest file retrieval reads.",
           "minimum": 1,
           "title": "Max File Bytes",
           "type": "integer"
         },
         "max_query_terms": {
+          "description": "Most search terms one retrieval query carries (goal first, then hints, then need filler).",
           "minimum": 1,
           "title": "Max Query Terms",
           "type": "integer"
         },
         "max_section_lines": {
+          "description": "Longest section (lines) scored whole; a longer one is cut into windows of this many lines.",
           "minimum": 10,
           "title": "Max Section Lines",
           "type": "integer"
         },
         "path_match_weight": {
+          "description": "Score per rarity unit of each distinctive path word (a file NAMED after the topic).",
           "minimum": 0,
           "title": "Path Match Weight",
           "type": "integer"
         },
         "pool_fair_min_ratio": {
+          "description": "Share of the best score a source's candidate must reach to take a guaranteed place in the first rerank batch.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Pool Fair Min Ratio",
           "type": "number"
         },
         "pool_fair_share": {
+          "description": "Candidates per source guaranteed in the first batch if they score this share of the best.",
           "minimum": 0,
           "title": "Pool Fair Share",
           "type": "integer"
         },
         "pool_sections_per_file": {
+          "description": "Sections of one file the FIRST rerank batch may hold (later pool places: sections_per_file).",
           "minimum": 1,
           "title": "Pool Sections Per File",
           "type": "integer"
         },
         "registry_pin_min_terms": {
+          "description": "A JSON registry is pinned when this many query words are names in its vocabulary.",
           "minimum": 1,
           "title": "Registry Pin Min Terms",
           "type": "integer"
         },
         "relevance_threshold": {
+          "description": "Relevance a candidate needs to be kept as evidence at all.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Relevance Threshold",
           "type": "number"
         },
         "rerank_max_batches": {
+          "description": "Batches one need may judge; further ones only until it has enough evidence (rerank_min_items).",
           "minimum": 1,
           "title": "Rerank Max Batches",
           "type": "integer"
         },
         "rerank_max_per_need": {
+          "description": "Candidates one rerank batch sends to Jev (`max_candidates` is the pool); with `jev.max_questions_per_call` at least this large a batch is one call.",
           "minimum": 1,
           "title": "Rerank Max Per Need",
           "type": "integer"
         },
         "rerank_min_items": {
+          "description": "A need judges more batches until this many items passed `relevance_threshold` ...",
           "minimum": 0,
           "title": "Rerank Min Items",
           "type": "integer"
         },
         "rerank_stop_ratio": {
+          "description": "... and skips one when the best unjudged candidate scores below this share of the judged.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Rerank Stop Ratio",
           "type": "number"
         },
         "review_path_markers": {
+          "description": "File-name markers that identify a review of a run rather than evidence for it.",
           "items": {
             "type": "string"
           },
@@ -688,50 +1092,59 @@
           "type": "array"
         },
         "review_quote_ratio": {
+          "description": "Goal share a document quotes (beside a run or trace id), or file-name marker, to review its run.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Review Quote Ratio",
           "type": "number"
         },
         "satisfied_min_items": {
+          "description": "A need is `satisfied` only with at least this many kept items at or above `coverage_relevance_threshold` ...",
           "minimum": 1,
           "title": "Satisfied Min Items",
           "type": "integer"
         },
         "satisfied_strong_threshold": {
+          "description": "... or with a single kept item whose relevance reaches this stronger bar.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Satisfied Strong Threshold",
           "type": "number"
         },
         "sections_per_file": {
+          "description": "Sections (headings, top-level keys, top-level defs) returned per file, best first.",
           "minimum": 1,
           "title": "Sections Per File",
           "type": "integer"
         },
         "self_reference_penalty": {
+          "description": "Factor on the relevance of a self-referencing candidate (cited ones are exempt).",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Self Reference Penalty",
           "type": "number"
         },
         "self_reference_ratio": {
+          "description": "A candidate repeating this share of the goal near-verbatim reviews the run asking, not evidence for it, and is demoted (0 disables this and the review test).",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Self Reference Ratio",
           "type": "number"
         },
         "source_candidate_floor": {
+          "description": "Fewest candidates a source may offer when it is small (capped by `max_candidates`).",
           "minimum": 1,
           "title": "Source Candidate Floor",
           "type": "integer"
         },
         "source_candidate_ratio": {
+          "description": "Candidates a source may offer per scanned file (bounded by `max_candidates`).",
           "exclusiveMinimum": 0,
           "title": "Source Candidate Ratio",
           "type": "number"
         },
         "top_k": {
+          "description": "Most evidence items kept per need.",
           "minimum": 1,
           "title": "Top K",
           "type": "integer"
@@ -778,18 +1191,21 @@
       "description": "Routing thresholds.",
       "properties": {
         "min_confidence": {
+          "description": "Lowest provider confidence routing accepts for its answer.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Min Confidence",
           "type": "number"
         },
         "min_selected_probability": {
+          "description": "Lowest probability the chosen capability needs before routing selects it.",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Min Selected Probability",
           "type": "number"
         },
         "on_insufficient_context": {
+          "description": "What routing does when the context cannot decide: ask a human or block the run.",
           "enum": [
             "human",
             "block"
@@ -810,7 +1226,14 @@
       "additionalProperties": false,
       "description": "One entry of the source catalog (where evidence may come from).",
       "properties": {
+        "automatic_research": {
+          "default": true,
+          "description": "Whether research may choose this source on its own; false means only explicit sources or locators select it.",
+          "title": "Automatic Research",
+          "type": "boolean"
+        },
         "categories": {
+          "description": "Evidence categories the source can serve.",
           "items": {
             "$ref": "#/$defs/EvidenceCategory"
           },
@@ -819,6 +1242,7 @@
           "type": "array"
         },
         "deny_globs": {
+          "description": "Path patterns this source must never read, added to the global retrieval deny list.",
           "items": {
             "type": "string"
           },
@@ -826,13 +1250,16 @@
           "type": "array"
         },
         "id": {
+          "description": "Unique id of the source, cited by evidence and by source restrictions.",
           "title": "Id",
           "type": "string"
         },
         "kind": {
+          "description": "How the source is read: repository text, knowledge map, graph query or host research.",
           "enum": [
             "repo_text",
             "knowledge_map",
+            "graph_query",
             "host_research"
           ],
           "title": "Kind",
@@ -849,9 +1276,11 @@
             }
           ],
           "default": null,
+          "description": "Largest file this source reads; null uses the global retrieval limit.",
           "title": "Max File Bytes"
         },
         "roots": {
+          "description": "Folders or files the source reads, relative to the repository root.",
           "items": {
             "type": "string"
           },
@@ -859,6 +1288,7 @@
           "type": "array"
         },
         "surfaces": {
+          "description": "Named knowledge-map surfaces the source exposes.",
           "items": {
             "type": "string"
           },
@@ -880,43 +1310,68 @@
   "additionalProperties": false,
   "description": "Complete kernel configuration.",
   "properties": {
+    "context_enrichment": {
+      "$ref": "#/$defs/ContextEnrichmentConfig",
+      "description": "Bounds of the initial context pass."
+    },
     "data_policy": {
-      "$ref": "#/$defs/DataPolicyConfig"
+      "$ref": "#/$defs/DataPolicyConfig",
+      "description": "What may leave the process in Jev calls and telemetry."
     },
     "decision": {
-      "$ref": "#/$defs/DecisionConfig"
+      "$ref": "#/$defs/DecisionConfig",
+      "description": "Thresholds that turn Jev's probabilities into decision outcomes."
+    },
+    "entity_context": {
+      "$ref": "#/$defs/EntityContextConfig",
+      "description": "Bounds of entity recognition on the caller's text."
     },
     "host": {
-      "$ref": "#/$defs/HostConfig"
+      "$ref": "#/$defs/HostConfig",
+      "description": "Settings for handing work to the host client."
     },
     "intent": {
-      "$ref": "#/$defs/IntentConfig"
+      "$ref": "#/$defs/IntentConfig",
+      "description": "Thresholds for classifying what the caller asked for."
     },
     "jev": {
-      "$ref": "#/$defs/JevConfig"
+      "$ref": "#/$defs/JevConfig",
+      "description": "Settings of the Jev provider."
+    },
+    "knowledge": {
+      "$ref": "#/$defs/KnowledgeBindingConfig",
+      "description": "How optional knowledge retrieval is bound to the kernel."
     },
     "langfuse": {
-      "$ref": "#/$defs/LangfuseConfig"
+      "$ref": "#/$defs/LangfuseConfig",
+      "description": "Settings for exporting traces."
     },
     "limits": {
-      "$ref": "#/$defs/LimitsConfig"
+      "$ref": "#/$defs/LimitsConfig",
+      "description": "Bounds on how much a run may do."
     },
     "memory": {
-      "$ref": "#/$defs/MemoryConfig"
+      "$ref": "#/$defs/MemoryConfig",
+      "description": "Decision store and precedent lookup settings."
     },
     "paths": {
-      "$ref": "#/$defs/PathsConfig"
+      "$ref": "#/$defs/PathsConfig",
+      "description": "Where run state and the capability registry live."
     },
     "research": {
-      "$ref": "#/$defs/ResearchConfig"
+      "$ref": "#/$defs/ResearchConfig",
+      "description": "Thresholds and category meanings for planning research."
     },
     "retrieval": {
-      "$ref": "#/$defs/RetrievalConfig"
+      "$ref": "#/$defs/RetrievalConfig",
+      "description": "Bounds and ranking settings for repository retrieval."
     },
     "routing": {
-      "$ref": "#/$defs/RoutingConfig"
+      "$ref": "#/$defs/RoutingConfig",
+      "description": "Thresholds for choosing a capability."
     },
     "sources": {
+      "description": "The catalog of places evidence may come from.",
       "items": {
         "$ref": "#/$defs/SourceConfig"
       },
@@ -925,10 +1380,13 @@
     }
   },
   "required": [
+    "knowledge",
     "paths",
     "limits",
     "routing",
     "intent",
+    "context_enrichment",
+    "entity_context",
     "decision",
     "research",
     "retrieval",

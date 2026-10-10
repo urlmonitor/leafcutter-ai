@@ -141,15 +141,35 @@ Tests that cannot meet this threshold must be marked manual by appending
 
 ```python
 def test_heavy_database_scan_MANUAL(self):
-    """Manual: requires full DB table scan (~30s). Run with pytest -k _MANUAL."""
+    """Manual: requires full DB table scan (~30s). Run with pytest -m manual."""
     ...
 ```
 
-The pre-commit suite excludes `_MANUAL` tests. They are invoked explicitly:
+The default pytest run deselects `_MANUAL` tests: a plugin
+(`scripts/suite_performance/pytest_manual_deselect.py`) auto-marks every test whose name
+ends in `_MANUAL` with the `manual` marker, and `pytest.ini` runs with
+`-m "not manual and not timing_ratio"`. Opt in explicitly with the marker (`-k "_MANUAL"`
+alone returns nothing, because the default `-m` selection still applies):
 
 ```bash
-python -m pytest unit_tests/ -k "_MANUAL"
+python -m pytest unit_tests/ -m manual
 ```
+
+### Post-merge lanes
+
+Tests excluded from the default run are not dropped; two post-merge workflows run them
+after every merge to main and on a 12-hour heartbeat. Both retry failing tests once on a
+fresh runner before reporting a verdict.
+
+| Lane | Workflow | Selects | On failure |
+|------|----------|---------|------------|
+| Correctness | `Post-merge suite` | `_MANUAL` tests (`-m "manual and not timing_ratio"`) | Opens or updates the `post-merge-red` issue. The `Post-merge suite status` check holds pull requests while the lane is red, did not complete, or is stale (over 30 hours). It is not a required check yet. |
+| Timing | `Post-merge timing suite` | `timing_ratio` tests (wall-clock ratio assertions) | Opens or updates the separate `post-merge-timing` issue, which names tests that newly entered the lane and the commit that touched them. It never holds a pull request. |
+
+Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and out of
+the holding correctness lane into the timing lane. That is a reviewed change: name the
+test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
+`-m manual` for the correctness lane).
 
 ---
 

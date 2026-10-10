@@ -1,0 +1,384 @@
+id: BP-1300e-1-v
+components:
+  - precommit_hooks
+  - commit_guardian
+  - build_pipeline
+title: "A linter whose version differs from the one CI installs refuses the commit, naming both versions — a verdict from a different linter is never shown as passed"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Background:
+    Given the version of the linter CI's required lint check installs is declared
+      exactly, as the single version string "0.15.15",
+    And "differs" means the two version strings are not identical, character for
+      character — no range, no "same minor version", no "newer is fine".
+
+  Scenario: A different linter version refuses a clean commit
+    Given the linter available to the commit-time check reports version "0.15.14",
+    And a staged change to an in-scope Python file that carries no violation,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal states that the local linter version "0.15.14" differs from
+      the version CI uses, "0.15.15",
+    And the refusal gives an instruction that installs exactly version "0.15.15",
+    And no output of the commit presents the lint check as passed.
+
+  Scenario: Findings reached under a different version are not presented as CI's verdict
+    Given the linter available to the commit-time check reports version "0.15.14",
+    And a staged in-scope file that introduces rule E741 at line 12,
+    When the commit is attempted,
+    Then the commit is refused for the version mismatch, naming both versions,
+    And the output does not present any finding as the verdict CI's required
+      check would reach.
+
+  Scenario: A newer patch version is refused just as an older one is
+    Given the linter available to the commit-time check reports version "0.15.16",
+    And a staged change to a clean in-scope Python file,
+    When the commit is attempted,
+    Then the commit is refused, naming "0.15.16" and "0.15.15".
+
+  Scenario: The matching version is judged normally
+    Given the linter available to the commit-time check reports version "0.15.15",
+    And a staged change to a clean in-scope Python file,
+    When the commit is attempted,
+    Then the commit completes,
+    And the output names "0.15.15" as the linter version used.
+
+  Scenario: The required version is the version CI installs, by construction
+    Given the one place CI's lint check reads its linter version from is changed
+      from "0.15.15" to "0.15.16", and nothing else is changed,
+    When a commit carrying a clean staged in-scope file is attempted with a local
+      linter reporting "0.15.15",
+    Then the commit is refused, naming "0.15.15" as local and "0.15.16" as CI's,
+    And with a local linter reporting "0.15.16" the same commit completes,
+    And no second copy of the version needed editing for either result.
+
+  Scenario: Nothing in scope completes whatever the linter version
+    Given the linter available to the commit-time check reports version "0.15.14",
+    And a staged change that touches no in-scope Python file,
+    When the commit is attempted,
+    Then the commit completes,
+    And the check reports that it had nothing to inspect,
+    And it neither refuses for the version nor states that it inspected files.
+
+  Scenario: An adopter's own version declaration governs
+    Given an installed project whose own dependency declaration pins the linter
+      exactly at "0.14.2",
+    And the linter available to the commit-time check reports "0.15.15",
+    When a commit carrying a staged in-scope file is attempted,
+    Then the commit is refused, naming "0.15.15" as local and "0.14.2" as the
+      project's declared version,
+    And this package's own pinned version plays no part in the decision.
+
+  Scenario: An adopter who declares no exact version is told no version check applies
+    Given an installed project that declares no exact version for the linter
+      (no declaration at all, or only a range such as ">=0.15"),
+    And the linter available to the commit-time check reports "0.15.15",
+    When a commit carrying a clean staged in-scope file is attempted,
+    Then the commit completes,
+    And the output states explicitly that no exact linter version is declared for
+      the project, so no version check was applied,
+    And the output names "0.15.15" as the linter version used.
+depends_on:
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling this record parallels: a verdict reached under conditions CI does not share is not CI's verdict and is never shown as passed; 'nothing to inspect' is decided before the linter is probed."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The one-definition rule this record applies to the linter version."
+  - path: requirements-dev.txt
+    relationship: related
+    status: exists
+    relevance: "Line 29 `ruff==0.15.15` -- the place CI's lint job actually reads the version from today (ci.yml job lint, step 'Install dev dependencies', runs `pip install -r requirements-dev.txt`). THE VERSION SOURCE this record reads; it is read, never edited, by this record."
+  - path: .github/workflows/ci.yml
+    relationship: related
+    status: exists
+    relevance: "Job lint / 'Lint (ruff)': installs the linter from requirements-dev.txt; it carries no version string of its own. Must keep carrying none (binding test in test_spec)."
+  - path: leafcutter-lint.json
+    relationship: modifies
+    status: planned
+    relevance: "Created by BP-1300e-1-i. This record adds ONE optional key, linter_version_source (a path, never a version), and sets it to \"requirements-dev.txt\" in this repository's file."
+  - path: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Sign-off runner that claims to match CI; as a thin adapter over check_lint_gate.py --mode files it inherits this version check and maps a mismatch to tooling-unavailable."
+  - path: scripts/run_ci_local.py
+    relationship: related
+    status: exists
+    relevance: "Manual CI mirror; once BP-1300e-1-i points its lint gate at check_lint_gate.py --mode full it inherits this version check with no edit of its own."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "Component home of check_lint_gate.py and its helpers."
+  - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
+    relationship: describes
+    status: exists
+    relevance: "templates/scripts/commit_guardian/ is canonical; the version-source reader lives there beside _lint_scope.py."
+  - path: docs/reference/commit-time-lint-gate.md
+    relationship: describes
+    status: planned
+    relevance: "Reference doc produced by BP-1300e-4; must document linter_version_source, its default and the version-check outcomes."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "WHERE THE REQUIRED VERSION COMES FROM -- THE FILE CI INSTALLS FROM, NEVER A COPY. The required version is read from the pip requirements file that the project's CI installs its linter from. For this repository that is requirements-dev.txt (line 29 `ruff==0.15.15`), which ci.yml's lint job installs via `pip install -r requirements-dev.txt`; ci.yml itself carries no version string. leafcutter-lint.json (BP-1300e-1-i) gains ONE OPTIONAL key, `linter_version_source`: a repo-relative POSIX path (same path rules as steps[].paths: no globs, no absolute, no '..') naming that requirements file. It holds a PATH, never a version string. This repository's leafcutter-lint.json sets it to \"requirements-dev.txt\". REJECTED: a version field in leafcutter-lint.json that requirements-dev.txt is checked against -- that is two copies of the version, so changing the pin CI installs from would itself refuse every commit until the second copy was edited, which fails scenario 5 ('no second copy of the version needed editing')."
+  - "DEFAULT AND ADOPTERS. `linter_version_source` absent (or leafcutter-lint.json absent) means the single default constant \"requirements-dev.txt\", declared ONCE in the same module as BP-1300e-1-i's default scope -- so an adopter whose requirements-dev.txt pins ruff exactly is checked with no configuration (scenario 7), and an adopter whose CI installs from another file declares that file's path in `linter_version_source`. This package's own pin is never consulted in an adopter project: the source is always resolved against the subject root (BP-1300e-1-iv). No version check applies -- stated in the output, scenario 8 -- when (a) the key is absent and the default file does not exist, or (b) the resolved file exists but contains no ruff requirement, or only a non-exact one. The no-check line must name the file that was consulted (or that none existed) and say that no exact linter version is declared for the project, so no version check was applied. An EXPLICITLY declared `linter_version_source` that does not exist or cannot be read is NOT 'undeclared': it is could_not_check, reason linter_version_source_unreadable, naming the path -- a declared source that silently stops being read would turn the check off without anyone deciding to."
+  - "WHAT COUNTS AS AN EXACT PIN. Parse the requirements file as pip does for the linter's line: name compared PEP 503-normalised ('ruff', case-insensitive, '-'/'_'/'.' equivalent), comments and blank lines ignored, line continuations joined, `-r`/`--requirement` includes followed relative to the including file and confined to the subject root (CI's pip follows them too). Exact = a single `==<version>` specifier with no wildcard. `==0.15.*`, `>=`, `~=`, `!=`, a bare name, or no ruff line at all = not exact (no check, stated). Any of these is could_not_check, reason linter_version_source_unreadable, naming the file and line: two different exact ruff pins across the file and its includes; a ruff line carrying an environment marker; `===`; an include that escapes the subject root or cannot be read. Parsing is stdlib-only (no `packaging` import: hooks run in adopter environments where it is not guaranteed); the pure parser has no try/except."
+  - "WHERE IT IS READ FROM, PER MODE -- SAME RULE AS THE DECLARATION. Staged mode reads the version source (and any include) from the INDEX (`git show :<path>`), so a commit that bumps the pin is judged against the version it will commit; full and files modes read the working tree (identical to the committed file in a CI checkout). Same split as BP-1300e-1-i's _lint_scope.load(source=...)."
+  - "COMPARISON IS EXACT STRING EQUALITY. The local version is the version token from the locator's single `<prefix> --version` probe (BP-1300e-1-iii; e.g. 'ruff 0.15.14' -> '0.15.14'). Mismatch = the two strings differ character for character. Older and newer both refuse. No range, semver or 'same minor' logic exists anywhere in the check. An unparseable --version output is could_not_check, reason ruff_failed_to_start (the locator's failure), never 'no check'."
+  - "OUTCOME: could_not_check, NEW REASON linter_version_mismatch, EXIT NON-ZERO. A mismatch is a 'could not reach CI's verdict' refusal, not a findings refusal: it uses BP-1300e-1-iii's could_not_check outcome and its BLOCK disposition (pre-commit prints Passed beside any exit 0). The reason line names the local version, the required version and the file it was read from, and gives an install command for exactly the required version against the interpreter the locator probed: `<sys.executable> -m pip install ruff==<required>` (so the module form, which the locator tries first, finds it next time). Two new reasons join -1-iii's vocabulary: linter_version_mismatch and linter_version_source_unreadable."
+  - "ORDER OF DECISIONS -- AND NO FINDINGS UNDER THE WRONG VERSION. (1) Compute the in-scope staged set from the declaration and git alone; empty -> nothing_to_inspect, exit 0, and neither the version source nor the linter is consulted (scenario 6). (2) Locate and probe ruff (-1-iii). (3) Resolve the version source and compare. (4) Only on a match, or on 'no exact version declared', run the declared steps. On a mismatch ruff check is NOT run over any file, and the --json payload carries findings: [] -- the simplest way to guarantee scenario 2 (no finding presented as CI's verdict). Do not print findings 'for information'."
+  - "EVERY RUNNER APPLIES IT, BY CONSTRUCTION, NOT BY COPY. The check lives inside check_lint_gate.py and runs identically in --mode staged, full and files. run_ci_local.py (which BP-1300e-1-i points at --mode full) and BO-570-3's sign-off adapter (--mode files --json) therefore apply it with no code of their own; BO-570-3 maps could_not_check -> tooling-unavailable and carries the reason. No runner holds its own version string or its own requirements parser. The edit-time hook templates/hooks/check_exception_handling_hook.py is NOT a CI mirror and does not apply this check (it stays self-contained per GE-108e)."
+  - "CI'S OWN RUN CANNOT FAIL THIS CHECK SPURIOUSLY -- GUARANTEED, NOT ASSUMED. In ci.yml's lint job the installed version and the required version come from the SAME file in the SAME checkout: `pip install -r requirements-dev.txt` installs exactly the `==` pin the check then reads from requirements-dev.txt, and the gate step runs in the same job under the same setup-python interpreter, so the locator's module-form probe sees the version pip just installed. Hold that with a binding test that parses the REAL .github/workflows/ci.yml with a YAML parser and asserts: the lint job installs with `pip install -r <F>` (or `python -m pip install -r <F>`) where <F> equals the version source resolved from the REAL leafcutter-lint.json; the gate step comes after that install in the same job; and no step of the lint job installs, upgrades or pins ruff any other way (no other `pip install` naming ruff, no `ruff==` anywhere in ci.yml). If those ever diverge the outcome is a visible red required check (could_not_check, non-zero), never a silent pass -- the check fails closed in CI too."
+  - "JSON PAYLOAD. check_lint_gate.py --json gains, in every mode: required_ruff_version: str|null, version_source: str|null (repo-relative path consulted, null when none existed), version_check: 'matched'|'mismatched'|'not_declared'|'not_reached' ('not_reached' on nothing_to_inspect and on any could_not_check decided before step 3). The existing ruff_version field keeps its meaning. The human output always names the linter version used when one was probed (scenarios 4 and 8)."
+  - "SCHEMA OF THE DECLARATION. BP-1300e-1-i's hand-written validator rejects unknown keys; `linter_version_source` must be added to its known-key set as optional and validated with the same path rules, in the same change -- otherwise every leafcutter-lint.json that declares it is refused as malformed. The helper that reads the requirements file lives in templates/scripts/commit_guardian/ (underscore-prefixed, stdlib only, no {{config.*}} tokens -- build.py's inject_config rewrites contiguous config literals in deployed .py), beside _lint_scope.py, so build_commit_guardian()'s rglob deploys it without a deploy_map edit."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4): reading the version source (git show / open) is wrapped in a specific except (OSError, subprocess.SubprocessError, UnicodeDecodeError), logged at WARNING and converted to could_not_check reason linter_version_source_unreadable; the pure requirements parser and the version comparison have no try/except."
+test_spec:
+  - name: test_bp_1300e_1_v_older_ruff_refuses_clean_commit_naming_both_versions_and_install_command
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "warns about the version but exits 0"
+      - "prints an install instruction that does not pin the required version"
+    description: "A stub ruff module on the hook interpreter's path answers --version with 'ruff 0.15.14' and delegates every other call to the real ruff; fixture requirements-dev.txt pins ruff==0.15.15; a clean staged in-scope .py: commit refused, output names 0.15.14 and 0.15.15, contains an install command with ruff==0.15.15, RESULT: could_not_check with reason linter_version_mismatch, and pre-commit's line for the hook reads Failed, never Passed."
+  - name: test_bp_1300e_1_v_mismatch_with_e741_presents_no_finding
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "runs ruff under the mismatched version and lists its findings alongside the mismatch"
+    description: "Same 0.15.14 stub; staged file carrying E741 at line 12: refused for the version mismatch naming both versions; output contains neither 'E741' nor ':12:'; --json findings is []."
+  - name: test_bp_1300e_1_v_newer_patch_version_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    must_catch:
+      - "accepts any version >= the pin"
+      - "compares major.minor only"
+    description: "Stub reports 0.15.16; clean staged in-scope file: refused naming 0.15.16 and 0.15.15."
+  - name: test_bp_1300e_1_v_matching_version_commits_and_names_it
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Stub reports 0.15.15 and the fixture pin is 0.15.15: clean staged file commits; output names 0.15.15 as the version used; --json version_check is 'matched'. (Stubbed, not the suite's real ruff, so a developer whose local ruff differs from the pin gets a deterministic result.)"
+  - name: test_bp_1300e_1_v_changing_only_the_ci_install_file_moves_the_required_version
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    must_catch:
+      - "a second copy of the version string exists in leafcutter-lint.json, the hook, or any constant"
+    description: "Edit ONLY the fixture's requirements-dev.txt from ruff==0.15.15 to ruff==0.15.16 and stage it; with the stub reporting 0.15.15 the commit is refused naming 0.15.15 local and 0.15.16 required; with the stub reporting 0.15.16 the same commit completes; no other fixture file changes between the runs (asserted by comparing every other file's bytes)."
+  - name: test_bp_1300e_1_v_nothing_in_scope_commits_without_consulting_version
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Stub reports 0.15.14; docs-only staged change: commit completes; output contains RESULT: nothing_to_inspect, no version-mismatch text and no 'inspected <N>' with N > 0."
+  - name: test_bp_1300e_1_v_adopter_pin_governs_not_the_packages
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    must_catch:
+      - "reads the package's own requirements-dev.txt or a version baked into the deployed script"
+    description: "Adopter fixture project using the shared deployed layout, its requirements-dev.txt pinning ruff==0.14.2 and no linter_version_source key; stub reporting 0.15.15: commit refused naming 0.15.15 local and 0.14.2 as the project's declared version; the message never mentions 0.15.15 as required."
+  - name: test_bp_1300e_1_v_adopter_without_exact_pin_is_told_no_version_check_applied
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Two adopter fixtures on the deployed layout: (a) no requirements-dev.txt at all, (b) requirements-dev.txt with ruff>=0.15; stub reporting 0.15.15. Clean staged file commits in both; output states no exact linter version is declared so no version check was applied, names 0.15.15 as the version used, and --json version_check is 'not_declared'."
+  - name: test_bp_1300e_1_v_declared_but_missing_version_source_is_could_not_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - "treats an explicitly declared but missing source as 'no version declared'"
+    description: "leafcutter-lint.json sets linter_version_source to tools/missing.txt, which does not exist; staged in-scope file: refused, could_not_check reason linter_version_source_unreadable naming tools/missing.txt."
+  - name: test_bp_1300e_1_v_requirements_parser_exactness_table
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Pure parser over a table: 'ruff==0.15.15' -> exact; 'Ruff == 0.15.15  # c' -> exact; 'ruff==0.15.*', 'ruff>=0.15', 'ruff~=0.15.0', 'ruff' -> not exact; no ruff line -> not exact; '-r other.txt' with the pin in other.txt -> exact; two different exact pins -> unreadable; marker line \"ruff==0.15.15; python_version<'3.12'\" -> unreadable."
+  - name: test_bp_1300e_1_v_staged_pin_bump_is_judged_from_the_index
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "reads the version source from the working tree in staged mode"
+    description: "Index holds requirements-dev.txt pinning 0.15.15 while the working copy (unstaged) says 0.15.16; local ruff 0.15.15 and a clean staged file: commit completes."
+  - name: test_bp_1300e_1_v_files_and_full_modes_apply_the_same_check
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: "check_lint_gate.py --mode files --json (BO-570-3's contract); check_lint_gate.py --mode full (run_ci_local.py and CI)"
+    description: "With the 0.15.14 stub, both modes report outcome could_not_check, reason linter_version_mismatch, required_ruff_version 0.15.15, exit non-zero; with a 0.15.15 stub both report version_check 'matched'."
+  - name: test_bp_1300e_1_v_ci_lint_job_installs_from_the_declared_version_source_only
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Parse the REAL .github/workflows/ci.yml with a YAML parser and the REAL leafcutter-lint.json: the lint job's install step is `pip install -r <F>` with <F> equal to the resolved version source; the gate step follows it in the same job; no lint-job step installs ruff any other way and the string 'ruff==' appears nowhere in ci.yml. The live form of 'CI's own run matches by construction' is CI's own lint job, whose --mode full output must show version_check 'matched' -- not a local test, because a developer's local ruff legitimately may differ from the pin."
+test_rationale: >-
+  The version check is only meaningful when observed through a real commit,
+  because the defect it prevents is a printed 'Passed' under a linter CI never
+  runs; every commit-path test therefore asserts on pre-commit's own status line
+  as well as the hook's text, as BP-1300e-1-iii's tests do. Versions other than
+  the suite's real 0.15.15 are produced by a stub ruff module on the hook
+  interpreter's path that answers only --version and delegates everything else
+  to the real ruff -- the environment is manipulated for real, not the locator
+  patched, so the module-first discovery path is exercised exactly as in use.
+  Scenario 5 is the anti-copy arm: it edits ONLY the requirements file and
+  byte-compares every other fixture file, so any second copy of the version
+  fails it. The CI-binding test is deliberately a parse of the real ci.yml plus
+  a live full-mode run, not a grep: it pins the one fact that makes CI's own run
+  match by construction (same file installed, same file read, same job). The
+  adopter arms run on the shared deployed layout in a separate fixture project,
+  because the source tree is the one layout where 'this package's pin leaks into
+  an adopter' cannot happen. Commit-path tests reuse
+  _bp_1300e_lint_gate_fixture.py and declare @pytest.mark.shared_layout_reader
+  with @pytest.mark.usefixtures("shared_reference_layout"); none spawns build.py.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      To BP-1300e-1 and (via the CLI) BO-570-3 and scripts/run_ci_local.py: in
+      every mode of check_lint_gate.py, a version check whose mismatch yields
+      outcome 'could_not_check', reason 'linter_version_mismatch' (or
+      'linter_version_source_unreadable'), non-zero exit, findings [] ; and the
+      --json fields required_ruff_version: str|null, version_source: str|null,
+      version_check: 'matched'|'mismatched'|'not_declared'|'not_reached'
+      alongside the existing ruff_version: str|null.
+  - agent: reference-author
+    contract: >-
+      To BP-1300e-4: leafcutter-lint.json's optional key linter_version_source
+      (repo-relative path to the pip requirements file CI installs the linter
+      from; default "requirements-dev.txt"), what counts as an exact pin, the
+      not_declared behaviour (no check, stated), the two new could_not_check
+      reasons, and the install command format
+      `<python> -m pip install ruff==<required>`.
+expects_from:
+  - ac_id: BP-1300e-1-iii
+    contract: "_ruff_locator.locate() -> argv prefix list[str] plus the version token parsed from its single '<prefix> --version' probe (str), or a NotInstalled result; and the could_not_check reason vocabulary to which this record adds linter_version_mismatch and linter_version_source_unreadable."
+  - ac_id: BP-1300e-1-i
+    contract: "_lint_scope.load(subject_root, source='index'|'worktree') extended to accept and return the optional linter_version_source path (validated with the steps[].paths rules), plus the single module that holds the default constants."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  USER DECISION 2026-10-09: a linter version that differs from the version CI
+  uses REFUSES the commit. Decided, not open. Before this record the family only
+  required the hook to PRINT its linter version (BP-1300e-1 it_requirements,
+  constraint "PRINT THE RUFF VERSION USED", which says "This AC does not enforce
+  the pin ... recorded as a caveat"). This record retires that caveat; the
+  IT-PO should amend that constraint's wording when enriching, since the parent
+  was edited here only to add covered_by.
+
+  WHY IT PARALLELS BP-1300e-1-iii. -1-iii refuses when the linter is absent,
+  cannot start, or its configuration cannot be read, because a verdict under
+  different rules (e.g. built-in defaults) is not CI's verdict. A different
+  linter version is the same defect by another route: new rules, changed rule
+  behaviour and changed defaults between versions mean the same content can get
+  a different verdict. So it gets the same disposition: refuse, name the reason,
+  give the fix, never show "passed". Like -1-iii, "nothing to inspect" is
+  decided first and is not blocked by the version, so a docs-only commit is
+  never refused over a linter it had no use for.
+
+  WHERE CI'S VERSION LIVES TODAY (verified 2026-10-09 in this worktree, cut from
+  origin/main). Not in .github/workflows/ci.yml: the lint job's step "Install
+  dev dependencies" runs `pip install -r requirements-dev.txt`, and
+  requirements-dev.txt line 29 pins `ruff==0.15.15` (the only exact pin in that
+  file's tooling block; pytest and mypy are ranges). The IT-PO's 0.15.15 is
+  correct; its location is requirements-dev.txt, not ci.yml. Whatever mechanism
+  the IT-PO chooses, the commit-time check must read the version from the place
+  CI installs from (or CI must install from the place the check reads) -- a
+  second hard-coded "0.15.15" in the hook, in leafcutter-lint.json beside a
+  separate pin, or anywhere else fails scenario 5.
+
+  WHAT "DIFFERS" MEANS, RECORDED. Exact string equality of the version the local
+  linter reports against the exactly pinned version. Older and newer both
+  refuse (scenarios 1 and 3). This mirrors CI, which installs exactly one
+  version; any looser comparison would accept a linter CI never runs.
+
+  ASSUMPTION (adopters), flagged because not certain. Read from the user's
+  adopter decision (BP-1300e notes, decision 2: the adopter's own lint
+  configuration governs): the adopter's own exact version declaration governs;
+  this package's pin never applies to an adopter. When the adopter declares no
+  exact version (none, or only a range), the CI the adopter runs installs
+  whatever version resolves, so there is no single CI version to compare
+  against; no version check applies, and the output says so explicitly
+  (scenario 8) so the adopter is not left believing a version check ran. Risk if
+  wrong: if the user instead wants an undeclared version to refuse (or to fall
+  back to this package's pin), scenario 8 inverts. Where an adopter declares the
+  version is the IT-PO's to decide, consistent with -1-i's single declaration.
+
+  FOR THE IT-PO (not decided here). (a) Which outcome the mismatch carries --
+  it is a "could not reach CI's verdict" refusal, not a findings refusal, which
+  suggests -1-iii's could-not-check vocabulary with a new reason; -1-iii's
+  delivers_to reason list would need it. (b) Whether the other local runners
+  that claim to mirror CI (the manual "run CI locally" helper, BO-570-3's
+  sign-off runner) apply the same version check; -1-i's "every local runner
+  reads the same definition" suggests yes. (c) In CI itself the installed
+  version matches by construction, so the check must not make CI's own lint job
+  fail spuriously.
+
+  Behaviour only. assigned_agent, it_requirements, test_spec and doc_links
+  detail are the IT-PO's.
+
+  IT-PO ENRICHMENT 2026-10-09 -- ANSWERS TO THE THREE OPEN POINTS.
+  (a) Outcome: could_not_check with the new reason linter_version_mismatch (and
+  linter_version_source_unreadable for a declared-but-unreadable source), exit
+  non-zero, findings never run. BP-1300e-1-iii's delivers_to reason list is
+  extended accordingly.
+  (b) Runners: yes. The check lives inside check_lint_gate.py and runs in all
+  three modes, so run_ci_local.py (--mode full) and BO-570-3's adapter (--mode
+  files --json) apply it without code of their own. BO-570-3 is APPROVED; its
+  amendment is recorded on that file.
+  (c) CI: the required version is read from requirements-dev.txt, the very file
+  ci.yml's lint job runs `pip install -r` on, in the same checkout and job, so
+  installed == required by construction. A binding test parses the real
+  ci.yml and leafcutter-lint.json to pin that, and a divergence would be a red
+  required check (fail closed), never a silent pass.
+  VERSION SOURCE DECISION: leafcutter-lint.json carries a PATH
+  (linter_version_source, default "requirements-dev.txt"), never a version; a
+  version field there checked against requirements-dev.txt was rejected as a
+  second copy that fails scenario 5.
+  ASSUMPTION FOR THE ADOPTER ARM (resolves the BA's flagged assumption in the
+  direction the BA read it): an adopter is checked against the file their own
+  CI installs from, default requirements-dev.txt; no exact pin there means no
+  check, stated. If the user wants an undeclared adopter version to refuse
+  instead, scenario 8 and the 'not_declared' branch invert together.
+  CAVEAT: pyproject.toml dependency tables ([project.optional-dependencies],
+  [dependency-groups]) and lock files are NOT version sources in this record --
+  only pip requirements format. An adopter whose CI installs ruff from
+  pyproject gets 'no exact version declared' until a follow-up AC adds it.

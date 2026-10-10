@@ -1,7 +1,8 @@
 # Development and CI dependencies for leafcutter-ai.
 #
 # These are the only third-party packages the package's own scripts and test
-# suites import at runtime (pyyaml, jsonschema) plus the test/lint/type tools.
+# suites import at runtime (pyyaml, jsonschema, referencing) plus the
+# test/lint/type tools.
 # The repo has no production install target — it is a template package compiled
 # into consumer projects by build.py — so there is no separate requirements.txt.
 #
@@ -10,7 +11,16 @@
 
 # Runtime imports used by scripts/ and the test suites
 pyyaml>=6.0
-jsonschema>=4.0
+# >=4.18, not >=4.0: docs/product-truth/scripts/product_truth_contracts.py does
+# `from referencing.exceptions import Unresolvable`, and `referencing` is only a
+# jsonschema dependency from 4.18 onward. Under the old >=4.0 floor a dev or CI
+# environment could install cleanly and still fail at runtime -- which is exactly
+# what happened on a host carrying Debian's jsonschema 4.10.3 (UXP-300-4).
+jsonschema>=4.18
+# Declared directly because the module above imports it directly, rather than
+# relying on it arriving as a jsonschema transitive. If jsonschema ever drops the
+# dependency, that import must keep resolving.
+referencing>=0.28.4
 docstring_parser>=0.15
 psutil>=5.9
 
@@ -24,6 +34,15 @@ mypy>=1.8
 # distinguish "once per run" from "once per worker" under real multi-worker
 # execution.
 pytest-xdist>=3.5
+
+# Partitions the collected test set across parallel CI shards
+# (`--splits N --group K`), which is how .github/workflows/ci.yml re-enables
+# the full suite that was disabled on 2026-10-02 for runtime. CI-only in
+# practice: the plugin is inert unless --splits is passed, so a local run is
+# unaffected whether or not it is installed. Balance comes from the committed
+# .test_durations file -- see the test-shard job's comment for why count-based
+# splitting is not an acceptable fallback for this suite.
+pytest-split>=0.9
 
 # Runs the AC guardrail hooks in the ac-store-valid CI job. The job invokes the
 # same .pre-commit-config.yaml the local guardrails use so the two rule sets
@@ -47,3 +66,6 @@ langchain==1.4.3
 langchain-typesafe==0.0.1a3
 langfuse==4.16.0
 pydantic==2.13.5
+
+# Real Neo4j acceptance checks are part of the knowledge proof-of-done gate.
+neo4j==6.0.3

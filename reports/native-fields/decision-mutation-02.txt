@@ -1,0 +1,9 @@
+FFFFF                                                                    [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected[supersedes]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected[superseded_by]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected[related]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected[corrections]
+FAILED tests/knowledge/test_native_decision.py::test_decision_supersession_requires_reciprocal_source_and_preserves_original
+5 failed in 0.23s

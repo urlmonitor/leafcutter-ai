@@ -1,0 +1,161 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.retrieval_needs_output.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Host interpretation, never a retrieved answer or approval of a classifier.",
+  "properties": {
+    "completeness": {
+      "description": "Whether the question wants one entity, chosen entities, a full set, a count, or just examples.",
+      "enum": [
+        "single_entity",
+        "selected_entities",
+        "exhaustive_set",
+        "exhaustive_count",
+        "examples",
+        "unknown"
+      ],
+      "title": "Completeness",
+      "type": "string"
+    },
+    "detail_mode": {
+      "description": "How much of each selected item the question needs: requested fields, the whole document, or bounded surroundings.",
+      "enum": [
+        "fields",
+        "full_document",
+        "bounded_context",
+        "unknown"
+      ],
+      "title": "Detail Mode",
+      "type": "string"
+    },
+    "engine": {
+      "const": "host_llm",
+      "default": "host_llm",
+      "description": "Which interpreter produced the output; always the host language model.",
+      "title": "Engine",
+      "type": "string"
+    },
+    "hierarchy_scope": {
+      "description": "Whether a population answer includes or excludes the chosen root and its parents.",
+      "enum": [
+        "not_applicable",
+        "exclude_root",
+        "exclude_parents",
+        "include_root",
+        "unknown"
+      ],
+      "title": "Hierarchy Scope",
+      "type": "string"
+    },
+    "model_id": {
+      "anyOf": [
+        {
+          "maxLength": 200,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Model that produced the interpretation, when known; reported usage is authoritative.",
+      "title": "Model Id"
+    },
+    "original_question": {
+      "description": "The question echoed back unchanged, so the output can be matched to its request.",
+      "maxLength": 8000,
+      "minLength": 1,
+      "title": "Original Question",
+      "type": "string"
+    },
+    "rationale": {
+      "default": "",
+      "description": "Brief reason for the interpretation, for human review.",
+      "maxLength": 4000,
+      "title": "Rationale",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "scope_resolution": {
+      "description": "Whether retrieval may start, needs discovery first, or lacks a user choice.",
+      "enum": [
+        "sufficient",
+        "discovery_needed",
+        "user_choice_missing",
+        "unknown"
+      ],
+      "title": "Scope Resolution",
+      "type": "string"
+    },
+    "selections": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "description": "For each dimension, the offered labels the host judges the question needs.",
+      "title": "Selections",
+      "type": "object"
+    },
+    "source_scope": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "The request's source scope echoed back unchanged; the host may not widen it.",
+      "title": "Source Scope",
+      "type": "object"
+    },
+    "status": {
+      "default": "decided",
+      "description": "Whether the interpretation is usable (decided) or needs resolution before retrieval.",
+      "enum": [
+        "decided",
+        "needs_resolution"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "uncertain": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "description": "For each dimension, the offered labels the host could not decide on.",
+      "title": "Uncertain",
+      "type": "object"
+    },
+    "unresolved": {
+      "description": "Meanings the catalog could not express, unknowns and contradictions, left for resolution.",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 32,
+      "title": "Unresolved",
+      "type": "array"
+    }
+  },
+  "required": [
+    "original_question",
+    "source_scope",
+    "selections",
+    "uncertain",
+    "detail_mode",
+    "completeness",
+    "hierarchy_scope",
+    "scope_resolution"
+  ],
+  "title": "RetrievalNeedsOutput",
+  "type": "object"
+}

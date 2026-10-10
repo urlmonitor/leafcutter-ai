@@ -11,7 +11,9 @@ ARCHITECTURE: Capabilities emit RequestProposal (no identity); the kernel assign
 
 from __future__ import annotations
 
-from pydantic import Field, JsonValue, model_validator
+from kernel.contracts.verbatim import VerbatimJson, VerbatimString
+
+from pydantic import Field, model_validator
 
 from kernel.contracts.base import (
     KernelModel,
@@ -34,18 +36,20 @@ class RequestBody(KernelModel):
     """Fields a capability may propose for follow-up work."""
 
     kind: RequestKind
-    goal: str | None = None
+    goal: VerbatimString | None = None
     question: str | None = None
     payload_schema: str
-    payload: dict[str, JsonValue]
+    payload: dict[str, VerbatimJson]
     requested_output_schema: str
     evidence_needs: list[EvidenceNeed] = Field(default_factory=list)
     priority: Priority = Priority.REQUIRED
     context_refs: list[str] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
-    #: Registry operation the request needs (for example `bounded_research`); the scheduler
-    #: passes it to the eligibility filter so fixed-routing candidates do not tie.
     operation: str | None = None
+    (
+        "Registry operation the request needs (for example `bounded_research`); the scheduler "
+        "passes it to the eligibility filter so fixed-routing candidates do not tie."
+    )
 
     @model_validator(mode="after")
     def _validate_schemas_and_payload(self) -> RequestBody:
@@ -84,7 +88,7 @@ class Continuation(KernelModel):
 
     capability_id: str
     capability_version: str
-    state: dict[str, JsonValue] = Field(default_factory=dict)
+    state: dict[str, VerbatimJson] = Field(default_factory=dict)
     resume_reason: str = Field(pattern="^(children_done|interaction_answered|retry)$")
     wait_child_ids: list[str] = Field(default_factory=list)
 
@@ -128,7 +132,7 @@ class CapabilityInvocation(PersistedModel):
     capability_id: StableId
     capability_version: str
     input_payload_schema: str
-    input_payload: dict[str, JsonValue]
+    input_payload: dict[str, VerbatimJson]
     context_refs: list[str] = Field(default_factory=list)
     continuation: Continuation | None = None
     child_outcomes: list[ChildOutcome] = Field(default_factory=list)
@@ -152,4 +156,5 @@ class CapabilityInvocation(PersistedModel):
 #   operation instead of tying on the lowest id. (#KernelBootstrapV0/INT)
 # - 2026-09-30 22:00 [python-coder]: Request and RequestProposal share RequestBody so the
 #   identity-free proposal cannot drift from the registered request. (#KernelBootstrapV0/P1)
+# - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================

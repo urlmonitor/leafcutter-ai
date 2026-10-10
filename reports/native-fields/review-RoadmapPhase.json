@@ -1,0 +1,78 @@
+{
+  "kind": "RoadmapPhase",
+  "reviewed_on": "2026-10-02",
+  "status": "ready_for_coder",
+  "authority": [
+    "config/paths.json#/surfaces/roadmap/path",
+    "config/roadmap.schema.json",
+    "templates/scripts/commit_guardian/check_roadmap_schema.py",
+    "docs/roadmap.json",
+    "scripts/knowledge_query.py#_extract_nodes_from_json"
+  ],
+  "discovery": {
+    "default_source": "docs/roadmap.json",
+    "configured_source": "Use the roadmap surface path in config/paths.json when present; resolve inside the supplied immutable repository root.",
+    "record_selector": "/phases/{zero_based_index}",
+    "record_kind": "RoadmapPhase",
+    "native_id": "Exact phase.id string; retain case and spelling without string coercion.",
+    "source_path": "Repository-relative configured roadmap JSON path.",
+    "source_locator": "RFC 6901 pointer /phases/{zero_based_index}; the index records source order, while phase.id remains the stable identity.",
+    "title": "Exact phase.title string.",
+    "description": "Exact phase.description when present and a string; an absent optional description must remain absent in metadata.",
+    "scope": "One record per phase. Do not create a second root roadmap record or ingest generated roadmap renderings.",
+    "missing_source": "Return no records for a genuinely absent optional source; malformed JSON, invalid envelope, missing or invalid identity, duplicate IDs and paths escaping the snapshot must fail explicitly.",
+    "reader_contract": "knowledge.native_types.roadmap_phase.extract(root) -> list[common.NativeRecord]"
+  },
+  "phase_fields": [
+    {"name": "id", "required": true, "shape": "string", "constraints": "^[a-z][a-z0-9_]*$", "meaning": "Stable phase identity."},
+    {"name": "title", "required": true, "shape": "string", "constraints": "minLength 1", "meaning": "Phase title."},
+    {"name": "exit_criteria", "required": true, "shape": "ordered array of strings", "constraints": "Each item minLength 1; an empty array is schema-valid.", "meaning": "Criteria needed to exit this phase."},
+    {"name": "tickets_advancing_outcome", "required": true, "shape": "ordered array of strings", "constraints": "Empty array and empty individual strings are not forbidden by the schema.", "meaning": "Authored ticket paths or slugs; preserve exactly and do not silently normalize or invent relationships."},
+    {"name": "description", "required": false, "shape": "string", "constraints": "Empty string permitted.", "meaning": "Longer authored phase description."},
+    {"name": "status", "required": false, "shape": "string", "constraints": "active | planned | complete | deferred", "meaning": "Phase status, independent of the roadmap's current_phase selector."},
+    {"name": "components", "required": false, "shape": "ordered array of strings", "constraints": "Empty array permitted; schema does not impose uniqueness.", "meaning": "Explicit component IDs touched by the phase; source order and duplicates must survive even if graph edges are deduplicated."}
+  ],
+  "root_context": {
+    "placement": "Copy every root field except phases into record.derived.roadmap_context. Never merge these root fields into the phase metadata map or claim they were authored separately on each phase.",
+    "ordering": "Optionally add record.derived.phase_index as the zero-based source index; do not add it to native phase metadata.",
+    "fields": [
+      {"name": "current_phase", "required": true, "shape": "nonempty string", "meaning": "Roadmap-wide selected phase ID."},
+      {"name": "current_outcome", "required": true, "shape": "nonempty string", "meaning": "Roadmap-wide highest-priority outcome, not a per-phase outcome."},
+      {"name": "last_updated", "required": false, "shape": "string", "meaning": "Roadmap-wide authored update text. Description suggests ISO date but schema applies no format; do not coerce to a date."},
+      {"name": "_comment", "required": false, "shape": "string", "meaning": "Root source comment text, retained as data without executing its instructions."}
+    ],
+    "phases_field": "Required nonempty ordered array of phase objects. Do not copy the full phases array into every phase's context."
+  },
+  "nested_shapes": [
+    "phases is the owning ordered list, represented through one record per phase plus source locator/index.",
+    "Within a phase the current schema has three scalar-list fields and no nested maps or lists of objects.",
+    "The separate roadmap_context map must use the shared lossless derived-property projection so each root field is queryable without being confused with a native phase field."
+  ],
+  "validation_findings": [
+    "The schema has additionalProperties:false at both root and phase level, and declares exactly seven phase fields and five root fields including phases.",
+    "The pre-commit hook can fail open on infrastructure errors and is staged-file-only; invoking the hook does not prove a reader's input was validated.",
+    "The hook's manual fallback checks current_phase membership in phase IDs. Its jsonschema branch returns before that check, and the JSON Schema itself does not encode this membership constraint. Do not describe schema success as proof of referential integrity.",
+    "Neither the JSON Schema nor the hook ensures unique phase IDs. The graph reader must reject duplicates to prevent identity collapse.",
+    "Preserve the entire authored phase object as metadata rather than using a seven-field whitelist. If a future source schema expands, the shared projection must expose those fields without a manual mapper change. Invalid source structures must not be silently skipped or defaulted."
+  ],
+  "observed_source": {
+    "phase_count": 13,
+    "all_seven_phase_fields_present_on_each": true,
+    "root_fields": ["_comment", "current_phase", "current_outcome", "last_updated", "phases"],
+    "duplicate_phase_ids": [],
+    "current_phase": "phase_1",
+    "status_counts": {"active": 2, "planned": 11},
+    "semantic_trap": "Two phases have status active while only phase_1 equals current_phase. Never rewrite active to mean current, or use the source active status as the graph generation current flag.",
+    "validation": "The actual roadmap passed jsonschema.Draft7Validator(config/roadmap.schema.json).validate. This review did not execute the staged-file commit hook."
+  },
+  "acceptance_tests_for_coder": [
+    "A full seven-field phase round-trips exactly through metadata; preserve list order, duplicates and empty ticket lists.",
+    "Optional absent description/status/components remain absent; no invented defaults appear in metadata.",
+    "Root _comment/current_phase/current_outcome/last_updated survive only under derived.roadmap_context, and no full phases array is copied there.",
+    "Multiple active phases retain their independent statuses; current_phase selection is not inferred from status.",
+    "Each record carries the exact phase.id and correct /phases/index locator; changing list position does not change native_id.",
+    "Configured source paths work; malformed JSON/envelopes, non-object phases, invalid or duplicate IDs, and traversal/absolute outside-root paths fail explicitly.",
+    "Extra authored source fields are not dropped by extraction; root extra fields remain root context, phase extra fields remain phase metadata.",
+    "Check source fidelity against the real 13-phase roadmap as well as bounded fixtures; record red/green evidence and meaningful negative mutation proof."
+  ]
+}

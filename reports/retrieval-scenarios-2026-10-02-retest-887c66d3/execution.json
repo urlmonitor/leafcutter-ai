@@ -1,0 +1,858 @@
+{
+  "recorded_at": "2026-10-02T18:02:38.750363+00:00",
+  "code_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "code_sources_unchanged_during_retest": true,
+  "source": {
+    "repository_id": "leafcutter",
+    "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+    "generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+    "mapper_version": "7",
+    "diagnostics": [
+      "projection_scope:acs,adrs,agents,capabilities,changelogs,components,decisions,docs,flows,glossary,mock_data,mockups,roadmap,skills,tickets",
+      "excluded_noncanonical_ac_documents:7",
+      "optional_declined_references:33",
+      "optional_unresolved:ADR-004-consolidated-output-root:related_docs:docs/how-to/output-layout/adopt-consolidated-output-root.md",
+      "optional_unresolved:ADR-007-contract-driven-acs:related_docs:tickets/00_inbox/epics/EPIC-ContractDrivenACs/01_adr_contract_driven_acs.md",
+      "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:docs/architecture/diagrams/c2-001-ac-driven-pipeline.md",
+      "optional_unresolved:ADR-010-ac-store-as-authoritative-backlog:related_docs:tickets/00_inbox/epics/EPIC-ACDrivenDevelopment/01_ac_scanner_and_ticket_generator.md",
+      "optional_unresolved:ADR-011-learning-emission-sink:related_docs:tickets/99_done/EPIC-AgentLearningLoop/01_harvester_agent_and_adr.md",
+      "optional_unresolved:ADR-012-retire-create-ticket-js:related_docs:templates/workflows-js/create-ticket.js",
+      "optional_unresolved:ADR-013-portable-skill-script-deployment-boundary:related_docs:tickets/00_inbox/epics/EPIC-AcPipelineDeployGaps/03_reconcile_ac_scanner_portability.md",
+      "optional_unresolved:ADR-014-exception-guard-enforcement-scope:related_docs:docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/",
+      "optional_unresolved:ADR-020-live-surface-tester:related_docs:tickets/00_inbox/epics/EPIC-LiveSurfaceTesting/01_adr_live_surface_testing.md",
+      "optional_unresolved:ADR-022-mockups-are-the-real-app-in-mock-mode:related_docs:docs/how-to/product-truth-schema-reference.md",
+      "optional_unresolved:ADR-023-product-truth-flow-first-upstream-layer:related_docs:docs/how-to/product-truth-schema-reference.md",
+      "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-constraints.md",
+      "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/reference/workflow-authoring-contract.md",
+      "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/acceptance-criteria/build-orchestration/BO-2300-interactive-pause-resume/",
+      "optional_unresolved:ADR-024-interactive-pause-resume:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+      "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/architecture/agent_knowledge_plane.md",
+      "optional_unresolved:ADR-026-ac-driven-build-v2-phased-migration:related_docs:docs/roadmap.json",
+      "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/explanation/tdd-workflow.md",
+      "optional_unresolved:ADR-027-tdd-workflow-enforcement:related_docs:docs/how-to/writing-a-tdd-ticket.md",
+      "optional_unresolved:ADR-028-test-fixture-convention:related_docs:docs/testing/README.md",
+      "optional_unresolved:ADR-029-adr-number-collision-prevention:related_docs:docs/conventions/adr-numbering.md",
+      "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/reference/workflow-authoring-contract.md",
+      "optional_unresolved:ADR-030-dual-engine-workflow-support:related_docs:docs/architecture/diagrams/df-001-dual-engine-workflow-build-transform.md",
+      "optional_unresolved:ADR-031-worktree-quality-gate-guard:related_docs:docs/retrospectives/EPIC-AcPipelineDeployGaps.md",
+      "optional_unresolved:ADR-032-tiered-parallel-code-smell-review:related_docs:docs/acceptance-criteria/code-review/",
+      "optional_unresolved:ADR-033-agent-model-tiers:related_docs:docs/agents/conventions.md",
+      "optional_unresolved:ADR-034-knowledge-write-ownership:related_docs:docs/known-issues/build-pipeline.md",
+      "optional_unresolved:ADR-035-fast-lane-closed-producer-roster:related_docs:docs/known-issues/build-orchestration.md",
+      "optional_unresolved:ADR-036-documentation-dispatch-caller-boundary:related_docs:docs/known-issues/supervisor-system.md",
+      "optional_unresolved:ADR-037-whole-collection-uniqueness-pass:related_docs:docs/conventions/adr-numbering.md",
+      "optional_unresolved:ADR-039-fast-lane-occupied-workspace-refusal:related_docs:docs/known-issues/build-orchestration.md",
+      "optional_unresolved:ADR-041-recomputed-attribution-at-item-granularity:related_docs:docs/known-issues/build-pipeline.md",
+      "optional_unresolved:ADR-046-completion-demanded-set-is-record-only:related_docs:docs/known-issues/build-orchestration.md",
+      "optional_unresolved:ADR-047-single-writer-ticket-close-path:related_docs:docs/known-issues/build-orchestration.md",
+      "optional_unresolved:ADR-048-order-independent-per-ticket-completion:related_docs:docs/known-issues/build-orchestration.md",
+      "optional_unresolved:ADR-049-record-checker-trigger-scope:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+      "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/architecture/diagrams/c3-010-reachability-guard-data-flow.md",
+      "optional_unresolved:ADR-050-runtime-reachability-guard-refuses-not-warns:related_docs:docs/how-to/resolve-a-reachability-guard-finding.md",
+      "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+      "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+      "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+      "optional_unresolved:ADR-052-capabilities-replace-agents-prompts-are-compiled:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+      "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+      "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+      "optional_unresolved:ADR-053-intelligence-selection-deterministic-jev-llm-human:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-3-contracts.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+      "optional_unresolved:ADR-054-process-representation-and-maturity-model:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+      "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+      "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+      "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+      "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md",
+      "optional_unresolved:ADR-055-capability-registry-starts-empty:related_docs:tickets/00_inbox/TICKET-20260930-KernelBootstrapV0.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/vision.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-5-client-observability-safeguards.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-6-gaps-build-verification.md",
+      "optional_unresolved:ADR-056-colony-memory-evidence-reinforcement:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-7-later-stages.md",
+      "optional_unresolved:ADR-062-standalone-knowledge-retrieval:related_docs:docs/analysis/2026-10-01-knowledge-retrieval-stage0.md",
+      "optional_unresolved:ADR-064-persona-discovery-before-feature-planning:related_docs:docs/analysis/2026-10-01-repository-query-catalog.md",
+      "optional_unresolved:ADR-064-persona-discovery-before-feature-planning:related_docs:docs/analysis/2026-10-01-repository-query-evaluation-cases.json",
+      "optional_unresolved:commit-guardian:related_docs:docs/architecture/diagrams/c3-006-whole-collection-uniqueness-pass.md",
+      "optional_unresolved:commit-guardian:related_docs:docs/how-to/managing-pre-commit-hooks.md",
+      "optional_unresolved:commit-guardian:related_docs:docs/reference/commit-guardian-negative-control-liveness.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/how-to/run-the-decision-kernel.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md",
+      "optional_unresolved:decision-kernel:related_docs:docs/analysis/2026-10-01-decision-kernel-v0-demo-report.md",
+      "optional_unresolved:interactive-pause-resume-substrate:related_docs:docs/how-to/resume-a-paused-plan-feature-run.md",
+      "optional_unresolved:knowledge-retrieval:related_docs:docs/how-to/run-knowledge-retrieval.md",
+      "optional_unresolved:knowledge-retrieval:related_docs:docs/reference/knowledge-retrieval-answers.md",
+      "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c2-006-feature-to-merged-pr.md",
+      "optional_unresolved:phantom-done-prevention:related_docs:docs/how-to/done-proof-reachability-gates.md",
+      "optional_unresolved:phantom-done-prevention:related_docs:docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-0000-changelog-v0-0-1-v0-0-2-2026-05-19.md:component_membership:config",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-0000-changelog-v0-0-1-v0-0-2-2026-05-19.md:component_membership:scripts",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-0000-changelog-v0-0-1-v0-0-2-2026-05-19.md:component_membership:templates",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1717-changelog-v0-0-2-v0-0-3-2026-05-19.md:component_membership:scripts",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1717-changelog-v0-0-2-v0-0-3-2026-05-19.md:component_membership:tickets",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:config",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:docs",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:scripts",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:templates",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:tests",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1718-changelog-v0-0-3-v0-0-4-2026-05-19.md:component_membership:tickets",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-19-1800-disambiguate-build-feature-skill-name-collision-complete.md:component_membership:build_system",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-05-30-0000-epic-completionmanifestsignoff-structured-completion-manifests.md:component_membership:signoff_workflow",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-06-05-1359-EPIC-ACDrivenDevelopment-complete.md:component_membership:ac-store",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-06-05-1359-EPIC-ACDrivenDevelopment-complete.md:component_membership:ticket-creation",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-06-05-1430-acs-400-ac-store-governance-complete.md:component_membership:ac-store",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-06-23-1405-scope-check-ac-schema-hook-to-staged-files-instead-of-the-whole-store-complete.md:component_membership:guardrail-engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-07-07-1034-check-ac-limits-hardening-ge-114-h2-complete.md:component_membership:guardrail-engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-07-07-1710-restore-green-ci-test-baseline-on-main-build-guard-6-failing-tests-complete.md:component_membership:build-pipeline",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-07-07-1710-restore-green-ci-test-baseline-on-main-build-guard-6-failing-tests-complete.md:component_membership:guardrail-engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-07-08-0855-finalize-feature-js-pre-flight-branch-detection-anchored-to-epic-worktree.md:component_membership:build-pipeline",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-13-2355-renumber-colliding-adrs-and-repair-the-citation-graph.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-1612-fix-guardrail-engine-gate-and-correctly-route-the-two-ge-123-documentation-acs.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-1655-ge-120-epic-generated-and-the-ac-schema-taught-the-target-epic-field-its-own-generator-writes.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-1908-fix-guardrail-engine-gate-the-remaining-three-ge-123-documentation-acs-and-reroute-the-two-that-target-a-skill-file.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-1930-reopen-nine-phantom-done-acs-close-two-coverage-gaps-and-hand-the-build-orchestration-findings-over.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-1950-spec-guardrail-engine-specify-registering-the-uniqueness-guard-and-scaffolding-the-roots-it-needs.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-25-2043-fix-guardrail-engine-the-durable-effect-derivation-keys-on-what-is-written-not-on-the-word-written.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-26-0715-reconcile-pr-495-with-main-so-ci-can-finally-run-on-the-uniqueness-guard.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-26-1100-adr-034-resolves-to-one-decision-again-the-uniqueness-pass-moves-to-037.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-31-0812-fix-guardrail-engine-rationale-is-not-assertion-and-ge-123-is-approved-for-build.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-31-0947-feat-guardrail-engine-generate-epic-suppressionnarrowsneverdisables-from-ge-123.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-08-31-1905-ten-ge-123-acceptance-criteria-now-declare-their-real-edit-surface.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-01-1930-criteria-for-a-guard-that-has-never-said-no.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-01-2015-name-the-document-not-its-path.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-07-0000-fix-stale-ref-false-clean-in-post-merge-diff-audit-and-flag-git-restore-mid-merge-hazard.md:component_membership:claude-md",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-07-0000-fix-stale-ref-false-clean-in-post-merge-diff-audit-and-flag-git-restore-mid-merge-hazard.md:component_membership:docs",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-07-1620-the-commit-guardian-census-moves-to-the-category-that-names-what-it-does.md:component_membership:ac-store",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-14-1120-a-retired-requirement-is-no-longer-offered-as-something-to-change.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-14-1920-five-checks-the-package-has-always-said-protect-you-now-actually-run.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-14-2300-three-documented-procedures-stop-pointing-at-files-that-do-not-exist.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-15-0925-the-acceptance-criteria-for-the-gate-work-are-approved-rather-than-stranded-as-drafts-and-four-findings-that-only-existed-in-conversation-are-written-down.md:component_membership:guardrail_engine",
+      "optional_unresolved:ChangelogEntry:changelogs/2026-09-23-1610-the-precommit-done-proof-waiver-reaches-its-own-conjunction.md:component_membership:phantom_done_prevention",
+      "native_metadata_counts:{\"ADR\":56,\"AcceptanceCriterion\":4528,\"Agent\":61,\"Capability\":9,\"ChangelogEntry\":526,\"Component\":46,\"Document\":707,\"Flow\":14,\"GlossaryTerm\":41,\"MockData\":2,\"Mockup\":10,\"RoadmapPhase\":13,\"Skill\":42,\"SourceFile\":1006,\"Test\":431,\"Ticket\":1525}"
+    ],
+    "status": "ready",
+    "node_count": 9047,
+    "edge_count": 23612,
+    "supported_kinds": [
+      "ADR",
+      "AcceptanceCriterion",
+      "Agent",
+      "Capability",
+      "ChangelogEntry",
+      "Component",
+      "Decision",
+      "Document",
+      "Flow",
+      "GlossaryTerm",
+      "MockData",
+      "Mockup",
+      "RoadmapPhase",
+      "Skill",
+      "SourceFile",
+      "Test",
+      "Ticket"
+    ],
+    "supported_fields": {
+      "ADR": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "AcceptanceCriterion": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator",
+        "status",
+        "req_status",
+        "work_status",
+        "readiness",
+        "priority",
+        "level",
+        "parent",
+        "covered_by",
+        "implemented_by",
+        "depends_on",
+        "test_required",
+        "criteria",
+        "structural_parent",
+        "has_children"
+      ],
+      "Agent": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Capability": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "ChangelogEntry": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Component": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Decision": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Document": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Flow": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "GlossaryTerm": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "MockData": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Mockup": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "RoadmapPhase": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Skill": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "SourceFile": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Test": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ],
+      "Ticket": [
+        "canonical_id",
+        "kind",
+        "title",
+        "source_sha",
+        "source_locator"
+      ]
+    },
+    "supported_relationships": [
+      "component_membership",
+      "covered_by",
+      "depends_on",
+      "implemented_by",
+      "related_docs"
+    ],
+    "semantic_ready": false,
+    "embedding_model": null,
+    "embedding_dimensions": null
+  },
+  "oracle": "docs/analysis/2026-10-02-retrieval-active-source-oracle.json",
+  "oracle_matches_source": true,
+  "live": [
+    {
+      "scenario_id": "RS-02",
+      "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+      "status": "waiting_human",
+      "answer": null,
+      "question": "Please supply the missing population choices: population, population. For inclusion choose root_excluded (exclude only the selected root), terminal_leaves (exclude every parent), or include_root. Reply with JSON containing scope and, if requested, required_fields. Population may be returned_entities, ac_descendants or declared_dependents; a whole-project enumeration is unsupported and must be scoped explicitly. Original question: Facts about the task itself that the requester supplied or that the workspace shows. Question: How many ACs concern test writing? Exclude parent requirements.",
+      "seconds": 1.661,
+      "usage": {
+        "schema_version": "1.0",
+        "jev_calls": 3,
+        "host_operations": 0,
+        "input_tokens": 3684,
+        "output_tokens": 624,
+        "cost_usd_known": 0.00015472799999999997,
+        "cost_unknown_calls": 0,
+        "usage": [
+          {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 3684,
+            "output_tokens": 624,
+            "duration_ms": 856,
+            "cost_usd": 0.00015472799999999997,
+            "cost_provenance": "estimated",
+            "calls": 3
+          }
+        ]
+      },
+      "generation_names": [
+        "jev.research.plan_needs",
+        "jev.knowledge.answer_contract",
+        "jev.knowledge.answer_contract"
+      ],
+      "actual_provider_calls": 3,
+      "routing": [
+        {
+          "outcome": "selected",
+          "selected": "research",
+          "reason_codes": [
+            "intent_bound"
+          ]
+        },
+        {
+          "outcome": "selected",
+          "selected": "retrieve.repository",
+          "reason_codes": [
+            "deterministic"
+          ]
+        }
+      ],
+      "context_enrichment": [
+        {
+          "status": "unavailable",
+          "sources_consulted": [],
+          "files_scanned": 0,
+          "evidence_count": 0,
+          "truncated": false,
+          "limitations": [
+            "context source unavailable: repo.docs",
+            "context source unavailable: repo.components",
+            "context source unavailable: repo.config",
+            "context source unavailable: repo.decisions",
+            "context source unavailable: repo.principles",
+            "context source unavailable: repo.patterns",
+            "no matching repository context found; missing facts remain unknown"
+          ]
+        }
+      ],
+      "graph_query_executed": false,
+      "retrieval_capability_entered": true
+    },
+    {
+      "scenario_id": "RS-03",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "status": "waiting_human",
+      "answer": null,
+      "question": "Please supply the missing population choices: population, population. For inclusion choose root_excluded (exclude only the selected root), terminal_leaves (exclude every parent), or include_root. Reply with JSON containing scope and, if requested, required_fields. Population may be returned_entities, ac_descendants or declared_dependents; a whole-project enumeration is unsupported and must be scoped explicitly. Original question: The project's own stated rules, conventions and principles. Question: For KM-500c-2, what must tests demonstrate?",
+      "seconds": 2.267,
+      "usage": {
+        "schema_version": "1.0",
+        "jev_calls": 5,
+        "host_operations": 0,
+        "input_tokens": 6513,
+        "output_tokens": 1158,
+        "cost_usd_known": 0.000273546,
+        "cost_unknown_calls": 0,
+        "usage": [
+          {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 6513,
+            "output_tokens": 1158,
+            "duration_ms": 1280,
+            "cost_usd": 0.000273546,
+            "cost_provenance": "estimated",
+            "calls": 5
+          }
+        ]
+      },
+      "generation_names": [
+        "jev.research.plan_needs",
+        "jev.knowledge.answer_contract",
+        "jev.knowledge.answer_contract",
+        "jev.knowledge.answer_contract",
+        "jev.knowledge.answer_contract"
+      ],
+      "actual_provider_calls": 5,
+      "routing": [
+        {
+          "outcome": "selected",
+          "selected": "research",
+          "reason_codes": [
+            "intent_bound"
+          ]
+        },
+        {
+          "outcome": "selected",
+          "selected": "retrieve.repository",
+          "reason_codes": [
+            "deterministic"
+          ]
+        },
+        {
+          "outcome": "selected",
+          "selected": "retrieve.repository",
+          "reason_codes": [
+            "deterministic"
+          ]
+        }
+      ],
+      "context_enrichment": [
+        {
+          "status": "unavailable",
+          "sources_consulted": [],
+          "files_scanned": 0,
+          "evidence_count": 0,
+          "truncated": false,
+          "limitations": [
+            "context source unavailable: repo.docs",
+            "context source unavailable: repo.components",
+            "context source unavailable: repo.config",
+            "context source unavailable: repo.decisions",
+            "context source unavailable: repo.principles",
+            "context source unavailable: repo.patterns",
+            "no matching repository context found; missing facts remain unknown"
+          ]
+        }
+      ],
+      "graph_query_executed": false,
+      "retrieval_capability_entered": true
+    }
+  ],
+  "active_grades": {
+    "RQE-01-P": true,
+    "RQE-01-N": true,
+    "RQE-02-P": true,
+    "RQE-02-N": true,
+    "RQE-03-P": true,
+    "RQE-03-N": true,
+    "RQE-06-P": true,
+    "RQE-06-N": true
+  },
+  "active_passed": 8,
+  "active_total": 8,
+  "additional_controls": {
+    "pagination": true,
+    "terminal_leaves": true
+  },
+  "historical_denominators": {
+    "total": 12,
+    "executed": 12,
+    "passed": 4,
+    "failed": 8,
+    "not_run": 0
+  },
+  "active_answers_and_evidence_equal_previous": true,
+  "scripted_kernel_starts": 3,
+  "live_provider_calls": 8,
+  "live_full_target_passes": 0,
+  "full_target_scenarios_live_started": 2,
+  "full_target_scenarios_not_run": 27,
+  "prior_receipts_preserved": 35,
+  "source_policy_ref": "source-policy-comparison.json",
+  "post_run_harness_error": {
+    "process_exit": 1,
+    "error": "TypeError: AnswerAssessment is not JSON serializable in final console summary",
+    "query_receipts_saved_before_error": true,
+    "raw_log": "continuation-checks.log",
+    "queries_rerun": false
+  },
+  "scenarios": [
+    {
+      "scenario_id": "RS-01",
+      "title": "Caller asks for an answer, not an operation",
+      "original_catalog_question_and_fixture": "BA-02: “Do we already specify what happens when research lacks required inputs? Show the relevant criteria.” Caller supplies only that sentence; host supplies one authorized repository, source and budget. Catalog offers exact lookup where an ID is known, search and bounded navigation.",
+      "target_path_gap": "Question-only search/navigation choice and answer not exercised.",
+      "previous_observed_verdict": "Not executed for its original question.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-02",
+      "title": "Ambiguous population gets a focused clarification",
+      "original_catalog_question_and_fixture": "BA-01: “How many ACs concern test writing? Exclude parent requirements.” The phrase could mean the TQ-500 family or a broader semantic topic; no family/root is supplied or authorized as the intended population.",
+      "target_path_gap": "Genuine population/root ambiguity remains; clarification uses duplicate jargon and JSON rather than a focused natural question. No live human resume.",
+      "previous_observed_verdict": "Live: ability-choice wait before retrieval, not focused population clarification. Scripted: count-scope wait with technical wording.",
+      "full_target_journey_execution": "live_start",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Live reaches research and answer-contract planning, then technical population clarification; no count or evidence."
+    },
+    {
+      "scenario_id": "RS-03",
+      "title": "Known exact ID can take a simple route",
+      "original_catalog_question_and_fixture": "QA-01: “For KM-500c-2, what must tests demonstrate?” The ID is present, the registered exact-source contract is offered, and its required arguments are trusted and complete.",
+      "target_path_gap": "Answer-contract gate stops first. Exact-ID catalog/binding gap remains separately visible in scripted offered-query control.",
+      "previous_observed_verdict": "Live: low-confidence ability-choice wait, no answer. Direct clauses correct; invalid script correctly refused.",
+      "full_target_journey_execution": "live_start",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-02-P"
+      ],
+      "observed_answer_or_facet_verdict": "Live reaches research and recognizes KM-500c-2, but population gating asks a count-scope question; no exact-ID query or answer."
+    },
+    {
+      "scenario_id": "RS-04",
+      "title": "Relevant advice cannot choose for Jev or widen access",
+      "original_catalog_question_and_fixture": "ITPO-03: “Can the catalog answer which tests cover this component?” One advisory strategy record from a previous run recommends a graph query but is pinned to another source/version; a second is compatible but only suggests candidate methods.",
+      "target_path_gap": "Automatic advisory applicability/reuse absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-05",
+      "title": "The catalog contract must fit the answer requirement",
+      "original_catalog_question_and_fixture": "BA-01 after clarification requests all TQ-500f L2/L3 descendants excluding only the root, grouped by `work_status`. One offered operation returns direct children only; another declares full descendants, field availability, completeness and population rule.",
+      "target_path_gap": "Jev choosing between fitting/misleading contracts untested.",
+      "previous_observed_verdict": "Count/field facet correct in active RQE-01-P.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-01-P"
+      ],
+      "observed_answer_or_facet_verdict": "Count/field facet correct in active RQE-01-P."
+    },
+    {
+      "scenario_id": "RS-06",
+      "title": "Missing query input is discovered or clarified",
+      "original_catalog_question_and_fixture": "BA-03: “Which requirements depend on the query-result field contract?” A relevant registered query needs a canonical contract ID, but no ID is in the question; a permitted bounded discovery result offers two plausible IDs.",
+      "target_path_gap": "Generic typed argument-preparation handoff absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-07",
+      "title": "Caller keywords suffice without model generation",
+      "original_catalog_question_and_fixture": "BA-02 with optional keywords “missing research input; clarification; resume”; an offered keyword search contract accepts them and its source/filter is authorized.",
+      "target_path_gap": "Target known-keyword bypass/shared comparison absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-08",
+      "title": "Optional term generation is bound and checked",
+      "original_catalog_question_and_fixture": "PO-02: “What prevents us from saying KM-500 is ready for everyday use?” The selected search contract needs terms, useful caller/known terms are absent, and host budget permits one optional generation request.",
+      "target_path_gap": "Optional five-term LLM handoff absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-09",
+      "title": "Multiple searches stay separate until shared comparison",
+      "original_catalog_question_and_fixture": "ITPO-01 asks for ADRs and contracts governing a retrieval operation. Offered keyword and ready vector methods cover complementary sources; one returns an ADR clause, the other returns a relevant schema locator, and both fit the same trusted scope.",
+      "target_path_gap": "Target keyword/vector portfolio comparison absent; active semantic source not ready.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-10",
+      "title": "Failed search preserves a useful sibling result",
+      "original_catalog_question_and_fixture": "QA-04 asks which fixtures distinguish no matching tests from unsupported mapping. Keyword search returns a cited fixture; vector search times out after spending part of the run budget.",
+      "target_path_gap": "Useful sibling preservation across the specified two methods untested.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-11",
+      "title": "Follow declared graph edges with direction and scope",
+      "original_catalog_question_and_fixture": "BA-03 asks which requirements directly depend on `TQ-500f-2`. Graph frontier offers that node and typed incoming `depends_on` neighbors; its serving manifest includes the relation.",
+      "target_path_gap": "Interactive Jev frontier navigation absent.",
+      "previous_observed_verdict": "Five direct declared dependents correct.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-03-P"
+      ],
+      "observed_answer_or_facet_verdict": "Five direct declared dependents correct."
+    },
+    {
+      "scenario_id": "RS-12",
+      "title": "Follow repository folders and files without inventing dependencies",
+      "original_catalog_question_and_fixture": "CODER-01: “Where does `work_status` travel from AC YAML into returned evidence?” A pinned repository frontier offers relevant directories and files, including the canonical loader and disclosure code, under an authorized read root.",
+      "target_path_gap": "Offered code-folder/file traversal absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-13",
+      "title": "Cyclic frontier does not repeat completed reads",
+      "original_catalog_question_and_fixture": "ITPO-02 asks for consumers of evidence provenance. The graph exposes A→B→A and a useful unvisited C; checkpoint records A and B as visited with their attempt IDs.",
+      "target_path_gap": "Frontier cycle/checkpoint and multi-axis budgets absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-14",
+      "title": "Escaped or stale path is refused without losing history",
+      "original_catalog_question_and_fixture": "CODER-05 asks about a field omission. A proposed path leaves the authorized root, or a previously observed file has changed before a working-tree read; an earlier valid excerpt already exists.",
+      "target_path_gap": "Target stale/escaped observed-file refusal path absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-15",
+      "title": "Partial navigation cannot prove absence or exact totals",
+      "original_catalog_question_and_fixture": "BA-01 asks for a count; folder or graph traversal returns a bounded first page with `truncated=true`, while another observed frontier remains unread.",
+      "target_path_gap": "Target traversal coverage/continuation absent.",
+      "previous_observed_verdict": "Partial-page facet correct; no exact total.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-03-N"
+      ],
+      "observed_answer_or_facet_verdict": "Partial-page facet correct; no exact total."
+    },
+    {
+      "scenario_id": "RS-16",
+      "title": "Switch method after a bounded dead end",
+      "original_catalog_question_and_fixture": "QA-02 asks for actual proof of completed KM-500 ACs. A graph traversal finds declared `covered_by` links but no run receipts; an offered repository-file path can reach a historical report.",
+      "target_path_gap": "Traversal-to-new-method/advisory transition absent.",
+      "previous_observed_verdict": "Older proof-assessment replay lacks expected declarations under mapper 3.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-17",
+      "title": "Compare observed attempts against the same question",
+      "original_catalog_question_and_fixture": "ITPO-03 asks whether tests covering a component can be listed. A registered query returns only AC→component links; a file search finds a test manifest with unknown completeness. Both are observed under the same source and budget.",
+      "target_path_gap": "Common observed-attempt comparison absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-18",
+      "title": "Deduplicate records while keeping every provenance path",
+      "original_catalog_question_and_fixture": "BA-02 receives the same canonical AC from registered query and keyword search, with different excerpts and attempt IDs, plus one distinct ADR.",
+      "target_path_gap": "Shared cross-method provenance-preserving combination absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-19",
+      "title": "Successful execution with missing requested field stays unresolved",
+      "original_catalog_question_and_fixture": "BA-01 requests `work_status` counts. Retrieval executes successfully and returns 15 AC IDs and lifecycle `status`, but the required `work_status` field is withheld from disclosure.",
+      "target_path_gap": "Main target assessment path not executed.",
+      "previous_observed_verdict": "Missing work-status facet correct; counts withheld.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-01-N"
+      ],
+      "observed_answer_or_facet_verdict": "Missing work-status facet correct; counts withheld."
+    },
+    {
+      "scenario_id": "RS-20",
+      "title": "Complete enumeration and source-backed exact count",
+      "original_catalog_question_and_fixture": "BA-01 clarifies TQ-500f root-excluded descendants at an immutable source. A population operation supplies all pages, stable IDs, `level`, `work_status` and independent complete-population proof; the controlled historical oracle is 15 descendants, five done and ten todo at its own pinned revision.",
+      "target_path_gap": "Target combination/all-page orchestration not executed.",
+      "previous_observed_verdict": "Exact active-source 15/5/10 facet correct.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-01-P"
+      ],
+      "observed_answer_or_facet_verdict": "Exact active-source 15/5/10 facet correct."
+    },
+    {
+      "scenario_id": "RS-21",
+      "title": "Answer wording must preserve limits and citations",
+      "original_catalog_question_and_fixture": "ITPO-04 asks whether a merge reached the graph. Evidence contains requested SHA, published SHA and readiness but no actual merge-trigger receipt; wording is needed to explain the distinction.",
+      "target_path_gap": "Specified wording acceptance and merge-trigger evidence not exercised.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-22",
+      "title": "Structured facts can bypass extra wording",
+      "original_catalog_question_and_fixture": "QA-01 requests the exact title and criteria locator for known `KM-500c-2`; accepted evidence already has the structured fields needed for a concise response.",
+      "target_path_gap": "Target conditional wording-bypass transition not executed.",
+      "previous_observed_verdict": "Direct structured criterion/locator facet correct.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-02-P"
+      ],
+      "observed_answer_or_facet_verdict": "Direct structured criterion/locator facet correct."
+    },
+    {
+      "scenario_id": "RS-23",
+      "title": "Missing source fact, field mapping and query are different",
+      "original_catalog_question_and_fixture": "ITPO-03 asks for tests covering a component. Three controlled manifests differ: (a) canonical source lacks test links, (b) links exist but are unprojected/undisclosed, (c) links are mapped and disclosed but no offered query expresses the requested path.",
+      "target_path_gap": "Three-state current-manifest comparison/build routing not exercised.",
+      "previous_observed_verdict": "Retained mapper-3 fitness controls return unknown, build ineligible.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-24",
+      "title": "Query build is governed and resumes once",
+      "original_catalog_question_and_fixture": "A supported mapped relation is answerable in principle, no offered query fits, and an identical active build request already exists for the same source/requirements.",
+      "target_path_gap": "Build dedup/admission/resume/common comparison untested here.",
+      "previous_observed_verdict": "Not run in this evaluation.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-25",
+      "title": "One failure is not global failure; no useful route stops honestly",
+      "original_catalog_question_and_fixture": "BA-05 asks whether a proposed behavior conflicts with ACs/ADRs. The selected query is unavailable; a permitted search can still inspect relevant clauses. In a second fixture, all offered routes are denied or exhausted with no useful evidence.",
+      "target_path_gap": "Alternate-method continuation/all-routes control absent.",
+      "previous_observed_verdict": "Deliberate outage correctly unresolved.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-06-N"
+      ],
+      "observed_answer_or_facet_verdict": "Deliberate outage correctly unresolved."
+    },
+    {
+      "scenario_id": "RS-26",
+      "title": "Focused clarification after evidence preserves findings",
+      "original_catalog_question_and_fixture": "PO-01 asks what to prioritize next. Retrieved ACs have priorities and work status, but no agreed benefit-ranking policy; useful findings are already present.",
+      "target_path_gap": "Policy clarification after retained evidence untested.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    },
+    {
+      "scenario_id": "RS-27",
+      "title": "Budget exhaustion yields an attributable partial answer",
+      "original_catalog_question_and_fixture": "QA-02 requests proof levels for completed KM-500 ACs. The run has cited declarations and one historical report, but further file reads exceed cumulative byte/time budget before all ACs are inspected.",
+      "target_path_gap": "Whole requested proof inventory and cumulative traversal limits untested.",
+      "previous_observed_verdict": "Clipped criterion/four-result facets correctly partial.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-02-N",
+        "RQE-03-N"
+      ],
+      "observed_answer_or_facet_verdict": "Clipped criterion/four-result facets correctly partial."
+    },
+    {
+      "scenario_id": "RS-28",
+      "title": "Advisory learning records observation, not truth or approval",
+      "original_catalog_question_and_fixture": "ITPO-05 asks why `ok` omitted work statuses and where its trace is. Two attempts yield a query result missing the field and a source quote showing the disclosure gap; no verified remote trace is available.",
+      "target_path_gap": "Advisory recording, future reuse and remote-trace diagnosis absent/unrun.",
+      "previous_observed_verdict": "Withheld field/disabled observation honest; no diagnosis output.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [
+        "RQE-06-P"
+      ],
+      "observed_answer_or_facet_verdict": "Withheld field/disabled observation honest; no diagnosis output."
+    },
+    {
+      "scenario_id": "RS-29",
+      "title": "Non-reading traversal decision bypasses read and post-read judgment",
+      "original_catalog_question_and_fixture": "CODER-01 asks for the `work_status` field path. At a valid offered file frontier, an earlier source excerpt already answers the requested mapping, or Jev chooses a different method, clarification or stop before any further read.",
+      "target_path_gap": "Target non-reading frontier branch absent.",
+      "previous_observed_verdict": "Not run.",
+      "full_target_journey_execution": "not_run",
+      "full_target_pass_demonstrated": false,
+      "facet_observations": [],
+      "observed_answer_or_facet_verdict": "Not run in this retest."
+    }
+  ],
+  "limits": [
+    "No live human/host resumes or further model calls.",
+    "Scripted choices prove controls, not semantic quality.",
+    "Graph-only canary source policy differs from default repo_text sources.",
+    "Historical mapper3 failures are projection-precondition mismatch, not eight current wrong answers.",
+    "No graph writes, indexing, query activation, embeddings or Langfuse export.",
+    "Missing/proposed target features are not simulated as passing cases."
+  ]
+}

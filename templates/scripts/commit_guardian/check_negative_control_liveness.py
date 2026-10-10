@@ -193,12 +193,32 @@ DECISION HISTORY
   credential and blocked the family commit; no `.security-allowlist` entry
   was added since the fix is a plain rename.
   (#EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/02)
+- 2026-10-07 [python-coder, GE-120g-4]: `main()` called `_write_manifest`
+  unconditionally on every run, and `_write_manifest`'s `json.dumps(data,
+  indent=2)` left `ensure_ascii` at its default True -- a run that changed
+  nothing still rewrote the manifest it was handed, and any write escaped
+  every non-ASCII character in the document's prose (measured: 0 -> 110
+  escaped em-dashes from a single invocation against a repaired deployed
+  config, tripping the next commit's check-output-drift). Fixed both halves,
+  neither alone: (1) `main()` now takes a `copy.deepcopy` snapshot of `data`
+  BEFORE calling `_build_records` (which mutates `data` in place) and calls
+  `_write_manifest` only when the mutated document differs from that
+  snapshot -- a guard on the rendered TEXT would always be true, since this
+  file's hand-authored indentation never round-trips through `json.dumps`
+  byte-for-byte even with `ensure_ascii` fixed, so the guard compares the
+  parsed DATA instead; (2) `_write_manifest`'s `json.dumps` call now passes
+  `ensure_ascii=False`, so a genuine write preserves prose it was not asked
+  to change. The verdict path (`_build_records`'s records, `_format_result_
+  line`'s lines, `_exit_code_for`'s exit code) is untouched; the existing
+  OSError log-and-raise on the write path is untouched.
+  (#GE-120g-4)
 ====================================================================
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import logging
 import os
@@ -336,7 +356,7 @@ def _write_manifest(manifest_path: Path, data: dict) -> None:
         OSError: The file could not be written.
     """
     try:
-        manifest_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        manifest_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     except OSError as exc:
         logger.warning("Could not write manifest %s: %s", manifest_path, exc)
         raise
@@ -750,12 +770,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
+    # Snapshot the parsed document BEFORE `_build_records` mutates it in
+    # place (its own docstring: "with `currently` blocks updated in place").
+    # A shallow copy would not isolate this snapshot -- `hooks` is a nested
+    # list of dicts that `_build_records` mutates by reference. Only a run
+    # that actually changed something may write: the rendered JSON never
+    # reproduces this file's own hand-authored indentation byte-for-byte
+    # (see the module docstring's GE-120g-4 DECISION HISTORY entry), so a
+    # guard comparing rendered text against current text would always be
+    # true and write on every run. Comparing the parsed DATA instead of the
+    # rendered text is the only guard that is ever false.
+    before_sweep = copy.deepcopy(data)
     records = _build_records(hooks, args.check_id)
 
-    try:
-        _write_manifest(manifest_path, data)
-    except OSError:
-        return 2
+    if data != before_sweep:
+        try:
+            _write_manifest(manifest_path, data)
+        except OSError:
+            return 2
 
     for record in records:
         print(_format_result_line(record))

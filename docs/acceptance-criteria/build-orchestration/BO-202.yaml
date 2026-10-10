@@ -11,11 +11,26 @@ criteria: |
   Given an AC YAML file referenced in ac_traceability has work_status: todo
   And the branch diff contains file paths that intersect with the ticket's files_touched
   When the ac-fulfillment-gate agent detects this matching evidence
-  Then it sets work_status to done in the AC YAML file
+  Then, when the AC is a leaf (its covered_by lists no child AC ids),
+    it sets work_status to done in the AC YAML file
   And it populates implemented_by with file paths from the diff
     that intersect with files_touched
   And it populates covered_by with test file paths from the diff
     that contain a "# covers: <AC-ID>" tag matching this AC's ID
+
+  Given an AC YAML file referenced in ac_traceability whose covered_by lists
+    one or more child AC ids (a composite, at any level from L0 to L3)
+  And the branch diff contains file paths that intersect with the ticket's files_touched
+  When the ac-fulfillment-gate agent detects this matching evidence
+  Then it sets work_status to done only when every child AC is done and proven
+    done by the same rule the commit-time done-proof check applies to a done
+    composite
+  And when the composite has work_status: todo or in_progress and any child is
+    not yet done and proven, it sets work_status to in_progress
+    and the sign-off comment names each unfinished child
+  And when the composite already has work_status: done and any child is not
+    done and proven, it refuses the update with a report naming each unfinished
+    child, and it never lowers work_status silently
 
   Given an AC YAML file already has entries in implemented_by or covered_by
   When the auto-fix runs
@@ -61,13 +76,93 @@ notes: |
   means either extending the gate to L3 and to unit_tests/, or narrowing this criterion to
   match BO-201's wording -- and stating which was chosen.
 superseded_by: null
-amended_by: []
+amended_by:
+  - date: 2026-10-06
+    agent: business-analyst
+    reason: "user decision 2026-10-06, flag F6 (build-tooling fix design, sections 5 and 8; delivered by ticket T6). Field evidence: the gate set DK-400a-1 from todo to done on diff evidence alone, while its covered_by held only child AC ids (DK-400a-1-i, DK-400a-1-ii). The gate treated only L0/L1 as composite and counted any non-empty covered_by as coverage. The first scenario's done rule now applies to leaves only, which is today's behaviour. A scenario was added for composites, defined as in the commit-time done-proof check: covered_by holds child AC ids, at any level. A composite is set done only when every child is done and proven by that check's rule. A todo or in_progress composite with an unfinished child goes to in_progress and the sign-off names the unfinished children. An already-done composite with an unproven child is refused, never silently downgraded. This is consistent with approved BO-2500b-1-ii. The implemented_by, covered_by, append-only, idempotence and audit scenarios are unchanged. readiness (reviewed) and work_status (todo, reopened 2026-08-25) were left untouched. The reopen question in notes (extend the gate to L3 and unit_tests/, or narrow the covered_by clause) is still open and is not settled by this amendment."
+  - date: 2026-10-06
+    agent: it-po
+    reason: "it-po-build-tooling-fix: user decision 2026-10-06, flag F6 (build-tooling fix design, sections 5 and 8; ticket T6). Criteria untouched. Added doc_links and assigned_agent python-coder. The executable surface is scripts/ac_store/mark_ac_done.py, the one writer the gate calls; the edit to templates/agents/ac-fulfillment-gate.md is a companion llm-expert surface named in it_requirements. Also added estimated_complexity M and a structured it_requirements object, required because this AC is package-surface (python-coder + build-orchestration). It names mark_ac_done.py as the one writer, the composite helper shared with check_done_proof (_composite_child_ids / _unproven_composite_children), the gate's Step 3a call (mark_ac_done.py --ac <id> --test-root .), the composite outcomes, leaf preservation, anchored writes, idempotence and ADR-001 parity. Also added test_required true, a seven-case test_spec from design section 5, and test_rationale. readiness (reviewed), work_status (todo), change_target, covered_by and implemented_by untouched. Gap reported to the coordinator, not authored here: finalize-feature.js and build-ac call mark_ac_done without --test-root. No existing AC covers that; BO-2500b-1-ii is the commit-time check and ACD-600a is the script's own --ac/--ticket contract."
 implemented_by:
   - "templates/agents/ac-fulfillment-gate.md"
 covered_by:
   - "tests/test_ac_fulfillment_gate.py"
-change_target: prompt
+change_target: [prompt, code]
 risk_surface: internal
+doc_links:
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-047-single-writer-ticket-close-path.md
+    relationship: context
+    status: exists
+    relevance: "The single-writer principle for a ticket's done state: the finished state is written only by the mechanism that checks it. This AC applies the same principle to an AC's work_status, with mark_ac_done.py as the one writer."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500b-1-iii.yaml
+    relationship: context
+    status: exists
+    relevance: "The commit-time composite rule (covered_by holds child AC ids, at any level; test-path entries never make an AC composite) that the mark-time writer must share rather than copy."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: scripts/ac_store/mark_ac_done.py
+  n_location_rule: "1 -- the work_status write path in mark_ac_done.py, which becomes the one writer the gate calls. The shared helper in check_done_proof.py and the gate template's Steps 2b, 2f and 3a are companion edits named in constraints."
+  required_skills:
+    - python-coder
+    - test-writer
+    - llm-expert
+  post_write_commands:
+    - "python scripts/build.py"
+    - "python -m pytest tests/ac_store/test_mark_ac_done.py unit_tests/ac_store/test_acs200f_3_mark_ac_done_anchored_write.py tests/test_ac_fulfillment_gate.py"
+  constraints:
+    - "One writer: every work_status change the ac-fulfillment-gate makes goes through scripts/ac_store/mark_ac_done.py. The gate's Step 3a calls mark_ac_done.py --ac <id> --test-root . instead of editing the AC YAML itself. No second route that writes work_status may remain in the gate (ADR-047's single-writer principle, applied to AC work_status)."
+    - "One composite rule, shared and not copied: an AC is composite when _composite_child_ids(covered_by) is non-empty, and it is proven when _unproven_composite_children returns nothing. These are the helpers check_done_proof.py already uses at commit time (BO-2500b-1-ii, BO-2500b-1-iii). mark_ac_done.py imports them from one place, so the mark-time and commit-time rules cannot drift. A covered_by entry that is a test-file path never makes an AC composite."
+    - "Composite outcomes: if every child is done and proven, set done. If the composite is todo or in_progress and any child is not done and proven, set in_progress, succeed, and name each unfinished child in the output the gate copies into its sign-off. If the composite is already done and any child is unproven, refuse: the caller must be able to tell the refusal from success (non-success exit), the output names each unfinished child, and the file is left unchanged. work_status is never lowered silently."
+    - "Leaves unchanged: an AC whose covered_by holds no child AC ids keeps today's behaviour, including the ACD-600a contract (preconditions, messages, exit codes, idempotence) and ACS-200f (a genuinely covered AC can be marked done through the normal path)."
+    - "Writes stay anchored and atomic (ACS-200f-3): the in_progress write changes only the work_status line, exactly as the done write does, and leaves every other byte of the record unchanged."
+    - "Idempotent: re-running on an in_progress composite whose children have not changed leaves the file byte-identical. Once every child is done and proven, the next run sets done."
+    - "ADR-001 parity: scripts/commit_guardian/check_done_proof.py and its packaged copy templates/scripts/commit_guardian/check_done_proof.py change together through python scripts/build.py. The shared helper must be importable from both deployed locations (.leafcutter/scripts/ac_store/ and .leafcutter/scripts/commit_guardian/), so verify it from the deployed layout, not only from the dev tree. check_done_proof's own verdicts must not change (BO-2500b-1-ii and BO-2500b-1-iii tests stay green)."
+    - "Companion prompt edit in the same ticket (llm-expert surface, templates/agents/ac-fulfillment-gate.md): Steps 2b and 2f use the covered_by composite rule at every level, not only L0/L1, and stop counting child AC ids as test coverage for an L2. Step 3a calls the script and reports its outcome (done; in_progress with the unfinished children; refused) in the sign-off audit list. This edit does not settle the open reopen question in notes (extend the gate to L3 and unit_tests/, or narrow the covered_by clause)."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_composite_with_an_unfinished_child_goes_to_in_progress
+    target_dir: tests/ac_store/
+    type: integration
+    angle: criterion
+    description: "In a real temporary AC store, an L2 composite with work_status todo whose covered_by lists two child AC ids, one still todo (the DK-400a-1 shape), is run through mark_ac_done.py --ac <id> --test-root <root>. Its work_status becomes in_progress, the run succeeds, and the output names the unfinished child."
+  - name: test_composite_with_all_children_done_and_covered_goes_to_done_and_passes_real_done_proof
+    target_dir: tests/ac_store/
+    type: integration
+    angle: real_artifact
+    description: "Every child is done and carries a covers tag under the test root. The composite becomes done, and the real check_done_proof run over the same store accepts it."
+  - name: test_leaf_is_marked_done_as_before
+    target_dir: tests/ac_store/
+    type: integration
+    angle: boundary
+    description: "A leaf, whether its covered_by is empty or holds only test-file paths, is marked done with today's message and exit. The composite rule does not affect it."
+  - name: test_already_done_unproven_composite_is_refused_and_never_downgraded
+    target_dir: tests/ac_store/
+    type: integration
+    angle: failure
+    description: "A composite already done, with a child that is not done and proven, is refused with a non-success exit naming each unfinished child, and the file is byte-identical afterwards."
+  - name: test_in_progress_composite_rerun_is_idempotent_until_children_finish
+    target_dir: tests/ac_store/
+    type: integration
+    angle: boundary
+    description: "Re-running on an in_progress composite whose children have not changed leaves the file byte-identical. Once every child is done and covered, the next run sets done."
+  - name: test_mark_time_and_commit_time_agree_on_what_is_composite
+    target_dir: tests/ac_store/
+    type: integration
+    angle: seam
+    description: "For the same store and covered_by shapes (child ids, test paths, mixed, empty), mark_ac_done.py and check_done_proof classify each AC as composite or leaf identically and name the same unproven children."
+  - name: test_in_progress_write_changes_only_the_work_status_line
+    target_dir: unit_tests/ac_store/
+    type: integration
+    angle: real_artifact
+    description: "The in_progress write is anchored and atomic. Only the work_status line changes; every other byte (comments, key order, block scalars) is identical."
+test_rationale: "The gate is a prompt, so its decision is only provable where it executes: in mark_ac_done.py, the one writer the gate's Step 3a calls. The cases run the real script against a real temporary store and check the result with the real check_done_proof, so the agreement between the mark-time and commit-time composite rules is shown, not asserted. tests/test_ac_fulfillment_gate.py checks only the template's frontmatter and does not cover this. The template wording (Steps 2b, 2f and 3a) is reviewed, not unit-tested."
 product_truth:
   - flow: leafcutter/how-acs-are-built
     node: acfulfill
