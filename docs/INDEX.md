@@ -249,6 +249,7 @@ task, then pull only those files.
 | Name | Path | Description |
 |------|------|-------------|
 | adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
+| POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
 
 ## Retrospectives
