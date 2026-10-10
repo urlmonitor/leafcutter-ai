@@ -61,10 +61,15 @@ it_requirements:
     the run end blocked. capability_gap_recorded stays false while the question is open and becomes true only with
     that unresolved ending.'
   - 'A request that falls back to the clarification question after a rejected or too-small ambiguous split is never
-    offered a split again in the same run: the item keeps its closed split record, so the bundle check is skipped
-    for it even after the person''s answer changes its effective goal, and it routes normally from there. This holds
-    even when the clarification answer itself bundles several questions: the user chose today''s clarification,
-    and today''s clarification path never splits; the person can start a new run to get a split.'
+    offered a split again in the same run: the item keeps its Decomposition (rejected_clarify) and its split_checked
+    flag (DK-400c-3), so the bundle check is skipped for it even after the person''s answer changes its effective
+    goal, and it routes normally from there. This holds even when the clarification answer itself bundles several
+    questions: the user chose today''s clarification, and today''s clarification path never splits; the person can
+    start a new run to get a split.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -114,6 +119,16 @@ amended_by:
     summary: 'Ambiguous rejection re-enriched to rejected_clarify with today''s clarification question; added its
       test and the gap-only-if-unresolved test; mock-data doc_link relevance refreshed to v6. Coordinator default
       for Q4: the no-second-split rule now carries its rationale.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      split_checked flag reference (Open Question 1).'
 superseded_by: null
 covered_by: []
 implemented_by: []

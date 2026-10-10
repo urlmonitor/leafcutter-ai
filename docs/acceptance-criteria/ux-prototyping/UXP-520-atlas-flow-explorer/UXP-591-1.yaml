@@ -1,0 +1,211 @@
+id: UXP-591-1
+title: "A flow's canonical address opens the Atlas on that flow, selected and drawn"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the flows leafcutter/flow-render-pipeline (source real, kind data),
+    fern-and-fig/customer-buys-a-plant (source mock, kind user) and
+    leafcutter/product-truth-architecture (source real, kind architecture) exist,
+  When a person opens /flows/leafcutter/flow-render-pipeline in a new tab from a link pasted
+    into chat, a ticket or a PR,
+  Then the Atlas answers 200 and draws leafcutter/flow-render-pipeline as the selected flow
+    with no step drawer open,
+  And the filters show Source Real, Kind Data and Realization All, so the flow selector lists
+    the linked flow instead of the first flow of the default filters,
+  And the breadcrumb shows only "How a flow renders in the Atlas", with no parent trail,
+  And the address bar keeps /flows/leafcutter/flow-render-pipeline, with the '/' inside the
+    flow id a literal path separator rather than %2F,
+  And opening /flows/fern-and-fig/customer-buys-a-plant the same way shows Source Mock, Kind User
+    and Realization All, and opening /flows/leafcutter/product-truth-architecture shows
+    Source Real, Kind Architecture and Realization All.
+depends_on:
+  - UXP-591
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: L
+change_target:
+  - code
+  - ui
+  - config
+  - dependency
+risk_surface: contract_boundary
+it_requirements:
+  - 'Route: add the catch-all server route leafcutter-web/app/flows/[...id]/page.tsx; it joins params.id
+    with ''/'' and resolves the id against the flow set loaded by leafcutter-web/lib/data/flows.ts, answering
+    200 for a known id. leafcutter-web/app/flows/page.tsx stays the bare /flows entry. A single optional
+    catch-all app/flows/[[...id]]/page.tsx in place of page.tsx is an acceptable alternative, but not
+    both: Next.js 14 rejects a page.tsx beside an optional catch-all at the same level.'
+  - A flow id is exactly two path segments (the leafcutter/atlas-flows invariant ^[a-z0-9-]+/[a-z0-9-]+$);
+    a path with any other segment count never resolves to a flow (UXP-591-1-ii, UXP-591-1-iii).
+  - Flow lookup matches the requested id against the loaded flow set; a URL-supplied id is never turned
+    into a filesystem path (no path traversal through lib/data/flows.ts).
+  - 'The route passes the selected flow, its filters and the one-flow breadcrumb into leafcutter-web/components/flows/flows-view.tsx
+    as initial props, replacing today''s hard-wired selectedId default. Source and Kind come from the
+    flow record''s own source and kind fields, Realization is ''all''; nothing is hard-coded per flow.
+    The linked flow is in the server-rendered HTML: no first paint of leafcutter/deliver-a-feature and
+    no hydration mismatch.'
+  - 'One address format: a single edge-safe module (proposed leafcutter-web/lib/flow-url.ts) exports flowHref(flowId,
+    stepId?) building ''/flows/<flow id>'' and ''/flows/<flow id>?step=<node id>'' with the ''/'' literal,
+    and parses requested paths. It is imported by middleware (Edge runtime), server components and client
+    components, so it must not import node:fs or ''server-only'' and must not live in lib/data/flows.ts.
+    Every producer of a flow address in UXP-591 (route, middleware redirect, history writes, AC detail
+    links) uses it; no hand-built ''/flows?flow='' string or encodeURIComponent(flowId) remains.'
+  - Existing suites under leafcutter-web/components/flows/__tests__ and leafcutter-web/lib/data/__tests__
+    stay green, and `npm run build` (type-check included) passes.
+  - 'Documentation companion, outside this AC''s .ts/.tsx surface: the ''The views'' table in leafcutter-web/README.md
+    must list /flows/<product>/<flow>[?step=<id>] and the legacy 308; route it to the generated ticket''s
+    documentation phase.'
+  - 'Playwright harness (owner decision 2026-10-09), owned here because every UXP-591 AC with a Playwright
+    descriptor depends on UXP-591-1: add @playwright/test as a leafcutter-web devDependency within Next.js
+    14''s optional peer range ^1.41.2, with package-lock.json updated; add leafcutter-web/playwright.config.ts
+    with testDir ./e2e, Chromium only, and a webServer that serves the production build with `next start`
+    on a fixed port; add an `e2e` npm script running `playwright test`. Specs live in leafcutter-web/e2e/
+    (no e2e convention exists in the repo yet; this sets it).'
+  - vitest must not collect leafcutter-web/e2e/ (its default include also matches *.spec.ts), and the
+    atlas-contracts job's `npx tsc --noEmit` must still pass with the Playwright config and specs in the
+    tree.
+  - 'CI (owner decision 2026-10-09): after the leafcutter-web `npm ci` (the setup-node v4 + npm ci steps
+    PR #1026 added to the test shards; the atlas-contracts job in .github/workflows/ci.yml already runs
+    the same pair in leafcutter-web), add `npx playwright install --with-deps chromium`, `npm run build`
+    and `npm run e2e`. They run once per CI run, appended to the atlas-contracts job, not inside the 8-leg
+    test-shard matrix, which would build the app and run the suite 8 times. A separate job would add a
+    concurrency slot that the ci.yml header counts (21 per PR against a cap of 20 on Free), so that count
+    and any guard test pinning it would then have to change. The steps are blocking and upload the Playwright
+    report and traces as an artifact on failure.'
+  - The done-proof gate in CI proves `// covers:` tags in .ts/.tsx files by running them with vitest (ci.yml,
+    BO-2500e-6), so a covers-tagged Playwright spec would be run under the wrong runner and fail closed.
+    Until that gate can run Playwright specs, Playwright specs carry no `// covers:` tag and each AC's
+    coverage proof stays on its vitest tests.
+delivers_to:
+  - agent: frontend-coder
+    contract: 'Canonical flow address ''/flows/'' + Flow.id with the ''/'' literal, served by leafcutter-web/app/flows/[...id]/page.tsx
+      (HTTP 200 for a known two-segment id). The route passes FlowsView the initial props {flowId: string,
+      crumbs: [flowId], filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data'' | ''architecture'',
+      realization: ''all''}, step: string | null}. The edge-safe address module (proposed leafcutter-web/lib/flow-url.ts)
+      exports flowHref(flowId: string, stepId?: string | null): string returning ''/flows/<id>'' or ''/flows/<id>?step=<stepId>''.
+      UXP-591-2, UXP-591-3, UXP-591-4, UXP-591-5 and their children build on both.'
+  - agent: frontend-coder
+    contract: 'Playwright harness: `npm run e2e` in leafcutter-web runs the specs in leafcutter-web/e2e/
+      with Chromium against `next start` of a production build (baseURL from leafcutter-web/playwright.config.ts),
+      in CI after `npm ci` in the atlas-contracts job. Used by the Playwright descriptors of UXP-591-1-iii,
+      UXP-591-2-iii, UXP-591-4, UXP-591-4-i, UXP-591-5 and UXP-591-5-ii.'
+expects_from: {}
+test_spec:
+  - name: catch-all flows route opens leafcutter/flow-render-pipeline selected and drawn with Real, Data,
+      All and a one-flow breadcrumb
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: default export of leafcutter-web/app/flows/[...id]/page.tsx with params.id ['leafcutter',
+      'flow-render-pipeline'], reading the real on-disk flow store
+    description: Awaits the server route, renders its output and asserts the selected flow, its filters,
+      a one-flow breadcrumb, no open drawer, and that notFound() was not called.
+    must_catch:
+      - the catch-all route is missing and the view still opens leafcutter/deliver-a-feature
+      - the route resolves the flow but FlowsView ignores the initial flow prop
+  - name: linked mock-journey and architecture flows open with their own Source and Kind and Realization
+      All
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+    description: fern-and-fig/customer-buys-a-plant opens at Mock, User, All and leafcutter/product-truth-architecture
+      at Real, Architecture, All, so the selector lists the linked flow, not the default filters' first
+      flow.
+  - name: flowHref keeps the slash inside a flow id literal and never emits %2F or the ?flow= form
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: unit
+    angle: criterion
+    description: flowHref('leafcutter/flow-render-pipeline') is '/flows/leafcutter/flow-render-pipeline'
+      and flowHref with a step appends exactly one ?step= value.
+    must_catch:
+      - flowHref percent-encodes the id with encodeURIComponent, producing /flows/leafcutter%2Fflow-render-pipeline
+      - flowHref emits the legacy /flows?flow=<id> form
+  - name: every selected FlowRoute without a step in atlas-flows.mock.json opens with its rendered_flow,
+      crumbs, filters and address_bar
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: real_artifact
+    description: Reads docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json and replays each
+      FlowRoute whose resolution is 'selected' and requested_step is null through the route props and
+      the view.
+  - name: under next start a canonical flow address opens leafcutter/flow-render-pipeline selected and
+      drawn in a real browser
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: page.goto('/flows/leafcutter/flow-render-pipeline') against `next start` of a production
+      build, started by the Playwright webServer
+    description: 'Proves the harness end to end: HTTP 200, the flow drawn, Real, Data, All filters, a
+      one-flow breadcrumb and the address bar unchanged. No `// covers:` tag until the done-proof gate
+      can run Playwright specs (see UXP-591-1).'
+    must_catch:
+      - the e2e suite runs against `next dev` instead of a production build
+test_rationale: 'The route-level test is the reachability proof: a FlowsView rendered from hand-made props
+  stays green if the catch-all route is never added or never passes the flow through. The dataset replay
+  ties the build to the approved product truth, and the flowHref test pins the one address format every
+  later UXP-591 AC consumes. The Playwright spec proves the harness that the later real-browser descriptors
+  rely on, against a production build.'
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - UXP-591-1-i
+  - UXP-591-1-ii
+  - UXP-591-1-iii
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'openByLink'
+  (records FlowRoute route-shared-data-pipeline, route-shared-mock-journey,
+  route-bookmarked-agent-subflow, route-shared-architecture-map in the leafcutter/atlas-flows
+  dataset). Branches 'bareFlows' and 'flowNotFound' are the L3 children. Specified, not built:
+  today the Flows view reads no address and always opens leafcutter/deliver-a-feature.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: openByLink
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowRoute
+    source: real
+    asof: '2026-10-09'

@@ -6,7 +6,7 @@ diagram_type: component
 status: active
 type: reference
 created: 2026-07-14
-last_updated: 2026-10-05
+last_updated: 2026-10-09
 components:
   - ux_prototyping
   - ac_store
@@ -163,8 +163,9 @@ Flow-level `contract_definitions` and each step or branch's `io_contracts`
 are the authored source for input and output details. Atlas passes them from
 the loader through the explorer to the drawer, which groups exact field paths
 under each input or output contract and shows JSON examples separately.
-With usable structured metadata it displays the authored narrative once and
-omits generated compatibility labels and the generated narrative suffix.
+The drawer shows each step's one-sentence `description` once, with its
+`actor_kind` as a badge beside the agent, and with usable structured metadata
+omits the generated compatibility labels.
 Legacy or unusable metadata retains readable fallback text; this display
 fallback does not waive repository validation.
 

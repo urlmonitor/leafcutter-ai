@@ -23,7 +23,7 @@ def _flow(native_id="leafcutter/example"):
         "readiness": "approved",
         "version": 1,
         "entities": ["Ticket"],
-        "steps": [{"id": "start", "label": "Start", "human": "A person starts", "order": 7}],
+        "steps": [{"id": "start", "label": "Start", "description": "A person starts", "actor_kind": "human", "order": 7}],
     }
 
 
@@ -97,7 +97,7 @@ def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
         {
             "id": "next",
             "label": "Next",
-            "human": "Continues",
+            "description": "Continues", "actor_kind": "human",
             "order": 2,
             "expands_to": ["leafcutter/child"],
         }
@@ -108,7 +108,7 @@ def test_flow_all_nested_fields_preserved_and_manifest_separate(tmp_path):
             "from": "start",
             "condition": "cancel",
             "label": "Stop",
-            "human": "Cancel",
+            "description": "Cancel", "actor_kind": "human",
             "screen": "screen",
             "agent": "agent",
             "produces": [],
@@ -171,17 +171,31 @@ def test_flow_real_corpus_deep_equality_and_no_rewrites():
     before = {p: p.read_bytes() for p in paths}
     source = {json.loads(data)["id"]: json.loads(data) for data in before.values()}
     records = _extract(root)
-    assert len(records) == len(paths) == 25
+    assert paths
+    assert len(records) == len(paths) == len(source)
+    assert {record.source_path for record in records} == {
+        p.relative_to(root).as_posix() for p in paths
+    }
     assert {record.native_id: record.metadata for record in records} == source
-    assert all(record.derived["registered"] for record in records)
     manifest = json.loads((root / "docs/product-truth/index.json").read_text(encoding="utf-8-sig"))
     registered = {row["id"]: row for row in manifest["artifacts"] if row["type"] == "flow"}
-    assert {record.native_id: record.derived["manifest_entry"] for record in records} == registered
-    assert all(record.description == source[record.native_id]["summary"] for record in records)
-    assert (
-        sum(record.description != record.derived["manifest_entry"]["summary"] for record in records)
-        == 14
-    )
+    assert set(registered) <= set(source)
+    assert {
+        record.native_id: record.derived["manifest_entry"]
+        for record in records
+        if record.native_id in registered
+    } == registered
+    for record in records:
+        assert record.description == source[record.native_id]["summary"]
+        assert record.derived["registered"] == (record.native_id in registered)
+        if record.native_id not in registered:
+            assert "manifest_entry" not in record.derived
+    # Reviewed anchor (KM-400a-1-x): the registration carries a shorter summary.
+    finalize = "leafcutter/finalize-feature"
+    assert len(registered[finalize]["summary"]) < len(source[finalize]["summary"])
+    by_id = {record.native_id: record for record in records}
+    assert by_id[finalize].description == source[finalize]["summary"]
+    assert by_id[finalize].derived["manifest_entry"]["summary"] == registered[finalize]["summary"]
     assert all(p.read_bytes() == data for p, data in before.items())
 
 
@@ -282,7 +296,8 @@ def test_flow_invalid_source_fails(tmp_path, contents):
         ("version", True),
         ("entities", [1]),
         ("steps", []),
-        ("steps", [{"id": "start", "label": "Start", "human": "Start", "order": True}]),
+        ("steps", [{"id": "start", "label": "Start", "description": "Start", "actor_kind": "human", "order": True}]),
+        ("steps", [{"id": "start", "label": "Start", "actor_kind": "human", "order": 1}]),
         ("branches", None),
         ("branches", [{"id": "branch"}]),
     ],
@@ -313,3 +328,14 @@ def test_flow_no_manifest_and_normalized_registration_spelling(tmp_path):
     (record,) = _extract(tmp_path)
     assert record.metadata == raw and record.derived["registered"] is True
     assert record.derived["manifest_entry"]["path"] == entry["path"]
+
+
+def test_flow_pinned_source_in_the_older_step_text_shape_still_reads(tmp_path):
+    # covers: KM-400a-3-i
+    # test type: unit
+    # angle: boundary
+    raw = _flow()
+    raw["steps"] = [{"id": "start", "label": "Start", "human": "A person starts", "order": 7}]
+    _source(tmp_path, raw)
+    (record,) = _extract(tmp_path)
+    assert record.metadata == raw

@@ -28,19 +28,19 @@ doc_links:
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
   - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
     relationship: related
     status: exists
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-run, split-part-unsettled, split-report, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-run, split-part-unsettled, split-report, with their acceptance scenarios.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 delivers_to: null
@@ -55,7 +55,8 @@ it_requirements:
     drawn inside existing containers (kernel scheduler, host handoffs, run root, RunService and CLI, host skill),
     never as new containers.
   - 'Uses the names of the built code and of ADR-067: host.decompose_goal, leafcutter.goal_decomposition_request.v1,
-    leafcutter.goal_decomposition.v1, the split record and its states, and the run statuses waiting_host and waiting_human.'
+    leafcutter.goal_decomposition.v1, leafcutter.split_answer.v1, leafcutter.decomposition.v1, the split record
+    and its states, and the run statuses waiting_host and waiting_human.'
   - Starts where DK-400c-5 stops (the approved split) and shows the one-at-a-time part order, each part's own decision
     or research steps and approvals, precedent judged by Jev, and the not-settled ending with its not-run dependants,
     as built.
@@ -70,6 +71,11 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      named leafcutter.split_answer.v1 and leafcutter.decomposition.v1; ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []

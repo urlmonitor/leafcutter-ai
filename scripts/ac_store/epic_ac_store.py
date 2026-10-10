@@ -50,8 +50,11 @@ def _get_ac_title(ac_id: str, ac_store_root: Path) -> str:
     """
     for yaml_path in sorted(ac_store_root.rglob("*.yaml")):
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): no measured benefit established
+            # (criterion 1) -- see /home/henzeh/tq600a1-backup/narrow_report.md.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError):
             continue
         else:
@@ -75,8 +78,10 @@ def _find_ac_yaml_path(ac_id: str, store_root: Path) -> Path | None:
     """
     for yaml_path in sorted(store_root.rglob("*.yaml")):
         try:
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) -- no
+            # measured benefit (criterion 1); see sibling _get_ac_title above.
             with open(yaml_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh)
+                data = yaml.load(fh, Loader=yaml.SafeLoader)
         except (yaml.YAMLError, OSError):
             continue
         else:
@@ -95,8 +100,10 @@ def _read_target_epic_from_file(yaml_path: Path) -> str | None:
         The target_epic value as a string, or None if not set.
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07) -- no
+        # measured benefit (criterion 1); see _get_ac_title above.
         with open(yaml_path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (yaml.YAMLError, OSError):
         return None
     else:

@@ -1313,7 +1313,7 @@
         "change_set_source": "handed_by_commit_path",
         "always_run": true,
         "script": "check_folder_density.py",
-        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files, default 15).",
+        "description": "Refuses a commit that takes a directory from at-or-under to over the permitted count of non-markdown files (folder_density.max_files_per_folder, default 15).",
         "_comment": "GE-120h-3: documented live at README.md line 42 and configured since the initial extract, but named by no hooks_manifest entry and therefore never run. always_run with no files key because main() resolves its own staged set via get_staged_files() (`git diff --cached`) and ignores argv; a files regex would be a filter the script never consults, which check-hook-trigger-reachability flags as a contradiction. Safe to register as-is: _classify_folders raises a violation only when a folder crosses the threshold IN THIS COMMIT (after > limit and before <= limit), so the 113 directories already over 15 classify as warnings. Verified against a real staged set, where templates/scripts/commit_guardian (109) and unit_tests/commit_guardian (142) both reported PRE-EXISTING rather than blocking."
       },
       {
@@ -1331,6 +1331,22 @@
         "script": "check_test_fixture_bloat.py",
         "description": "Warns (or blocks, once armed) when a staged test_*.py carries inline fixture data over the ADR-028 thresholds.",
         "_comment": "GE-120h-3: written for EPIC-TestFixtureConvention/02 and never registered. always_run with no files key because main() enumerates staged test files itself via `git diff --cached --name-only`. INERT ON REGISTRATION, DELIBERATELY: `test_fixture_bloat` is NOT among this file's top-level keys, so main() resolves config = {} (:327-337), `enabled` defaults to False (:339), and every violation path returns 0 (:392-394). That absence is load-bearing — it is what makes registering this zero-risk. Adding the test_fixture_bloat block with enabled: true is a separate, deliberate step to be reviewed on its own merits; do not 'complete' the config as though the key were missing by oversight."
+      },
+      {
+        "id": "check-complexity",
+        "tier": "judgment",
+        "name": "Check Complexity (GE-131a-2 — per-function complexity ratchet)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_complexity.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "verbose": true,
+        "script": "check_complexity.py",
+        "description": "Refuses a staged Python function that grew past its own previous score when it was already over complexity.max_score, or a new or crossing function scoring above complexity.max_score (default 15)."
       },
       {
         "id": "check-sql-complexity",
@@ -1445,6 +1461,10 @@
         "always_run": true,
         "script": "check_ac_done_on_merge.py",
         "description": "After a merge, marks each source AC work_status: done for every ticket the merge moved to status: done.",
+        "negative_control": {
+          "not_applicable": true,
+          "reason": "check-ac-done-on-merge cannot be exercised as a negative control: main() returns 0 unconditionally under every input it is given, and its __main__ guard additionally swallows OSError/ValueError into sys.exit(0), so no input drives it to a non-zero exit. It is a fire-and-forget AC-closer side effect dispatched on the post-merge stage, not a judgment gate that can refuse a commit, so it has no known-bad input for this AC's negative_control shape to reject."
+        },
         "_comment": "GE-120h-3: never registered in either manifest, so no AC has ever been auto-closed on merge. Unlike the four gates above it consults NEITHER argv NOR the staged set — it reads `git diff HEAD~1 HEAD` on the post-merge stage. Cannot block: main() returns 0 unconditionally (:213) and the __main__ guard swallows OSError/ValueError into sys.exit(0) (:219-224). Note the call direction: this script INVOKES scripts/ac_store/mark_ac_done.py by subprocess (:148-162); mark_ac_done.py:6 naming this hook is a back-reference, not an invocation, and has been misread as one. FIRST post-merge entry in this manifest — build_precommit.py renders the stage verbatim, but the git shim is installed by install_pre_commit_shims.collect_stages, which only setup_ticket_worktree.py calls, so an existing checkout that never ran it has no post-merge shim and this gate stays silent there. Verified present in this repository's .git/hooks/post-merge (a genuine pre-commit shim, --hook-type=post-merge)."
       },
       {
@@ -1813,10 +1833,6 @@
     {
       "script": "check_outcome.py",
       "ground": "BP-100n-4-i declared non-gate: a shared library module (declares the INDETERMINATE/reason= outcome vocabulary other commit_guardian checks emit) with no __main__ entry point; it is imported by other checks, never itself invoked as a gate."
-    },
-    {
-      "script": "check_complexity.py",
-      "ground": "BP-100n-4 correction: FUNCTIONAL, not broken -- distinct from the six argparse/NameError crashes above. It would run cleanly if registered: invoked positionally (pass_filenames defaults true, no files/always_run set) it parses staged filenames and reports without crashing. It is withheld from registration solely because this repository currently carries 65 functions over the complexity.max_score threshold (15) across scripts/ and templates/scripts/commit_guardian/, including _build_agents_map (76, generate_ticket_from_ac.py), _compute_output_mappings (70, build_helpers.py), _check_file (47, check_ac_governance.py), _collect_all (44, knowledge_query.py), and validate_agent_self_description (43, which lived in build_phases.py when that count was taken and moved to build_phases_agent_validation.py in main's #806 size split -- the function and its score are unchanged, only its home). The hook scans `git diff --cached`, so registering it now would block ANY commit that merely stages one of those 65 files, even when the commit does not touch the offending function -- and several are high-traffic modules this branch itself repeatedly commits to. This branch already paid down the 7 over-threshold functions in the four files the reachability census itself depends on, but the remaining 65 are pre-existing debt tracked as separate work, not a permanent exemption: once that debt is paid down (or the threshold/scope is otherwise reconciled), this entry should be removed and check-complexity registered as a real gate. Note the 65 count predates #806's split, which moved functions between files without changing their complexity."
     },
     {
       "id": "check-paths-integrity",

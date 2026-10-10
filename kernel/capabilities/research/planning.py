@@ -27,6 +27,7 @@ from kernel.capabilities.call_costs import (
     rerank_calls,
 )
 from kernel.capabilities.decision.jev_support import ask_jev, make_batch, noul_question
+from kernel.capabilities.research.baseline import baseline_needs
 from kernel.capabilities.research.state import Plan
 from kernel.capabilities.research.targeting import (
     NeedQuery,
@@ -165,7 +166,7 @@ async def _select_needs(ctx: ExecutionContext, invocation: CapabilityInvocation,
         needs.append(EvidenceNeed(
             id=f"need.{category.value}", category=category, priority=priority,
             question=f"{described[category]} Question: {plan.question}"))
-    return needs, [result.usage]
+    return needs or baseline_needs(plan.question, described), [result.usage]
 
 
 def _native_available(ctx: ExecutionContext, source: SourceConfig) -> str | None:
@@ -435,6 +436,8 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
 
+# - 2026-10-09 [python-coder]: A goal for which Jev selects no category plans the baseline needs
+#   (task context, existing patterns) instead of none. (#TICKET-20261009-KernelEvidenceLookupNoNeeds)
 # - 2026-10-01 20:00 [python-coder]: Bind optional knowledge through existing scoped retrieval contracts. (#TICKET-20261001-KM-400e-3)
 
 # - 2026-10-02 04:36 [conflict-resolver]: Preserve split graph sources and evidence packets alongside rerank limits. (#TICKETLESS reason=kernel-v01-integration)

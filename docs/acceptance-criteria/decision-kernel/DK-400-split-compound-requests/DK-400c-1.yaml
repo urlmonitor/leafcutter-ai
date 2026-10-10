@@ -34,19 +34,19 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
     relationship: implements
     status: exists
-    relevance: "Flow v5 node(s) split-propose, with their acceptance scenarios."
+    relevance: Flow v5 node(s) split-propose, with their acceptance scenarios.
   - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
     relationship: specified-by
     status: exists
-    relevance: "Invariants on parts (2 to 5, unique ids, covers verbatim, depends_on acyclic); record dcp-reusable-criteria-proposed."
+    relevance: Invariants on parts (2 to 5, unique ids, covers verbatim, depends_on acyclic); record dcp-reusable-criteria-proposed.
   - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
     relationship: specified-by
     status: exists
-    relevance: "Screen decision-split-approve (v2)."
+    relevance: Screen decision-split-approve (v2).
   - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
     relationship: constrains
     status: exists
-    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+    relevance: Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first.
   - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
     relationship: describes
     status: exists
@@ -65,9 +65,9 @@ doc_links:
     relevance: Host or human handoff, validated resume, repair and finalize as built.
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: python-coder
 estimated_complexity: L
 delivers_to:
@@ -102,11 +102,20 @@ it_requirements:
     produces [leafcutter.goal_decomposition.v1], side_effect_class none, permissions_required [], admission native_registration
     with decision_ref ADR-067; its binding is registered at the composition root. It is never chosen as a no_match
     fallback and never eligible for any other request.'
-  - 'ADR-067 (pinned number, file docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md)
-    must exist before this AC''s registry entry lands. Dispatch adr-author directly with the number and filename
-    pinned. It records the decisions settled in this tree''s it_requirements: detection order and cost, where bundled_accepted
-    is caught, no nesting, the gate answer limits, the five-part cut, repair exhaustion, dependency release, per-part
-    budgets, the split root''s output, gap accounting, config and the off switch.'
+  - 'ADR-067 (docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md, Accepted) records
+    the decisions settled in this tree''s it_requirements: detection order and cost, where bundled_accepted is caught,
+    no nesting, the gate answer limits, the five-part cut, repair exhaustion, dependency release, per-part budgets,
+    the split root''s output, gap accounting, config and the off switch. The registry entry''s decision_ref names
+    it.'
+  - 'ADR-067 is the binding source for the four schema ids it pins (§4): leafcutter.goal_decomposition_request.v1
+    and leafcutter.goal_decomposition.v1, registered in SCHEMA_CATALOG and KNOWN_SCHEMA_IDS with exported schema
+    files and fixtures by this AC; leafcutter.split_answer.v1, registered by DK-400d-1; and leafcutter.decomposition.v1,
+    registered by DK-400e-1. The catalog, the exported kernel/schemas/<id>.schema.json files, the registry entry
+    and the tests use exactly those ids; where an AC differs, the ADR wins.'
+  - 'Request max_parts (ADR-067 Open Question 3, settled by the IT PO): leafcutter.goal_decomposition_request.v1
+    carries max_parts = split.max_parts and is never lowered by the run''s remaining allowance. The host proposes
+    the parts the request holds; the conversion applies the allowance deterministically (ADR-053 section 5), and
+    anything cut stays visible as not_covered.'
   - Proposing is host (LLM) work only. Jev is never asked to write, merge, reword, order or judge parts, and every
     conversion check is deterministic code (ADR-053 sections 2 and 5).
   - 'Conversion order is fixed: schema validation; dependency validation over all proposed ids (DK-400c-1-ii); allowed-capability
@@ -124,6 +133,10 @@ it_requirements:
   - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
     work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
     unchanged.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target:
   - code
   - schema
@@ -185,6 +198,17 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): ADR-067 path and its binding schema ids; its tests enable
+      splitting explicitly, because split.enabled ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ADR-067 marked Accepted; the four schema ids and their registering ACs; request max_parts (Open Question 3);
+      ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by:
   - DK-400c-1-i

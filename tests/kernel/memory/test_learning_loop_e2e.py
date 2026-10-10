@@ -26,6 +26,7 @@ import subprocess
 from pathlib import Path
 
 from kernel.adapters.cli import main
+from kernel.capabilities.decision.publish_command import publish_command
 from kernel.contracts import (
     Actor,
     ActorKind,
@@ -130,7 +131,7 @@ class TestRunOneStagesARecordThatPublishFiles(LoopCase):
         self.assertFalse((self.repo / "docs" / "decisions").exists())  # the kernel wrote no repo file
         (record,) = self.staged_for(done.run_id)
         note = next(x for x in done.limitations if x.startswith("decision record staged:"))
-        self.assertIn(f"python -m kernel decisions publish --run-id {done.run_id}", note)
+        self.assertIn(publish_command(done.run_id), note)
         self.assertEqual(record.question, GOAL)
         self.assertEqual(record.approval.approved_by, "human:user")
         self.assertEqual(record.provenance.run_id, done.run_id)

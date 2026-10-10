@@ -28,7 +28,6 @@ from pathlib import Path
 
 import yaml
 
-
 # ---------------------------------------------------------------------------
 # Bundled fallback shim template
 # ---------------------------------------------------------------------------
@@ -104,9 +103,16 @@ def collect_stages(repo_root: Path) -> list[str]:
         FileNotFoundError: If ``.pre-commit-config.yaml`` does not exist.
         yaml.YAMLError: If the file cannot be parsed as YAML.
     """
+    # Reverted to the pure-Python loader (loader-audit, TQ-600a-11 fix-pass,
+    # 2026-10-07): this function's own docstring promises
+    # "Raises: yaml.YAMLError" on a malformed config -- a documented
+    # equivalence/behavior contract (criterion 3) that a more permissive
+    # parser would silently break, dropping a hook stage from installation
+    # instead of failing loudly. One config file read once per install run --
+    # no speed case for the fast loader here.
     config_path = repo_root / ".pre-commit-config.yaml"
     with config_path.open(encoding="utf-8") as fh:
-        config = yaml.safe_load(fh)
+        config = yaml.load(fh, Loader=yaml.SafeLoader)
 
     stages: set[str] = set()
     for repo_entry in config.get("repos", []):

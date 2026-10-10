@@ -16,39 +16,62 @@ from typing import Literal
 
 from pydantic import Field, JsonValue, model_validator
 
-from kernel.contracts.base import KernelModel, StableId, fail
+from kernel.contracts.base import KernelModel, fail
 from kernel.contracts.decision import CriterionAssessment, Criterion, Option, Rationale
-from kernel.contracts.enums import ApprovalStatus, DecisionStatus, Priority, ProposalStatus
+from kernel.contracts.enums import ApprovalStatus, DecisionStatus, ProposalStatus
 from kernel.contracts.evidence import EvidenceBundlePayload, EvidenceNeed, Finding
-from kernel.contracts.interaction import Choice
 from kernel.contracts.run import TraceRefs
-
-
-def _unique(ids: list[str], what: str) -> None:
-    """Fail if ids contains duplicates."""
-    if len(ids) != len(set(ids)):
-        fail(f"duplicate {what} ids")
+from kernel.contracts.payloads_human import (  # noqa: F401
+    AddedOption,
+    CriterionEdit,
+    HumanAnswerPayload,
+    HumanQuestionRequestPayload,
+    unique_ids as _unique,
+)
 
 
 class GoalRequestPayload(KernelModel):
     """leafcutter.goal_request.v1: a free-form goal for the root capability request."""
 
     goal: VerbatimString = Field(min_length=1, max_length=16000)
+    (
+        "The caller's goal in their own words, kept verbatim for intent classification and the "
+        "record."
+    )
     clarifications: list[VerbatimString] = Field(default_factory=list)
+    (
+        "The caller's answers to earlier clarifying questions, verbatim, so intent is not "
+        "paraphrased."
+    )
     context_summary: str | None = None
+    """The caller's short summary of surrounding context, offered as background for the goal."""
 
 
 class DecisionRequestPayload(KernelModel):
     """leafcutter.decision_request.v1."""
 
     question: str = Field(min_length=1)
+    """The decision question the kernel must answer."""
     options: list[Option] = Field(default_factory=list)
+    """Candidate answers the caller already has; empty when the kernel should find them."""
     criteria: list[Criterion] = Field(default_factory=list)
+    """What an option must satisfy; give them here or set criteria_missing."""
     criteria_missing: bool = False
+    (
+        "Set when the caller supplies no criteria, so the kernel proposes some for approval; it "
+        "contradicts a non-empty criteria list."
+    )
     evidence_ids: list[str] = Field(default_factory=list)
+    """Evidence the caller already holds, so research does not fetch it again."""
     constraint_ids: list[str] = Field(default_factory=list)
+    """Ids of evidence items that state constraints the chosen option must respect."""
     approval_required: bool = False
+    """Whether a human must approve the selected option before the decision counts as resolved."""
     decision_scope: str | None = None
+    (
+        "Free-text note on what the decision covers; recorded with the request and not "
+        "interpreted by the kernel."
+    )
 
     @model_validator(mode="after")
     def _criteria_or_flag(self) -> DecisionRequestPayload:
@@ -66,16 +89,33 @@ class DecisionReportPayload(KernelModel):
     """leafcutter.decision_report.v1."""
 
     status: DecisionStatus
+    (
+        "Where the decision stands, so the caller knows whether to act, supply more, or wait for "
+        "a human."
+    )
     recommendation: str | None = None
+    """The plain-language answer to the question, shown to the caller when there is one."""
     selected_option_id: str | None = None
+    """Id of the option the decision picked; set only on a resolved report."""
     criterion_assessments: list[CriterionAssessment] = Field(default_factory=list)
+    """How options fared against each criterion, so the choice can be audited."""
     supporting_evidence_ids: list[str] = Field(default_factory=list)
+    """Evidence that backs the recommendation, for the caller to inspect."""
     contradicting_evidence_ids: list[str] = Field(default_factory=list)
+    """Evidence that argues against the recommendation, kept visible rather than dropped."""
     open_questions: list[str] = Field(default_factory=list)
+    """What is still unanswered; an unresolved report lists what would settle it."""
     approval_status: ApprovalStatus = ApprovalStatus.NOT_REQUIRED
+    """Whether a human has approved the outcome, for decisions that require approval."""
     limitations: list[str] = Field(default_factory=list)
+    (
+        "Known weaknesses of the result (cut-off retrieval, missing sources) the reader should "
+        "weigh."
+    )
     rationale: Rationale | None = None
+    """Short explanation of why the option was chosen, with who wrote it."""
     trace_refs: TraceRefs | None = None
+    """Where to inspect this run's trace, for finding out how the result came about."""
 
     @model_validator(mode="after")
     def _resolved_selects(self) -> DecisionReportPayload:
@@ -92,94 +132,138 @@ class OptionContext(KernelModel):
     """One option the decision researches for: what it is and what it already cites."""
 
     option_id: str = Field(min_length=1)
+    """Id of the option research is gathering evidence for."""
     title: str = Field(min_length=1)
+    """The option's short name, used as query text."""
     description: str | None = None
-    #: Evidence ids plus any file paths or symbol names the option's text mentions.
+    """What the option means, used as query text beside the title."""
     cited_refs: list[str] = Field(default_factory=list)
-    #: True for an option a human added: its claims are unverified and research checks them.
+    """Evidence ids plus any file paths or symbol names the option's text mentions."""
     human_added: bool = False
+    """True for an option a human added: its claims are unverified and research checks them."""
 
 
 class ResearchRequestPayload(KernelModel):
     """leafcutter.research_request.v1."""
 
     question: str = Field(min_length=1)
-    #: Original answer obligations; the neutral adapter validates their typed contract.
+    """The question research must find evidence for."""
     answer_requirements: dict[str, JsonValue] | None = None
-    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    """Original answer obligations; the neutral adapter validates their typed contract."""
     assessment: dict[str, VerbatimJson] | None = None
+    """Scoped supplied evidence interpreted conditionally by the neutral retrieval port."""
     evidence_needs: list[EvidenceNeed] = Field(default_factory=list)
+    """Specific pieces of evidence to find; empty means Jev chooses the categories to search."""
     source_restrictions: list[str] = Field(default_factory=list)
+    (
+        "Ids of the only sources research may use; empty means no restriction beyond the run's "
+        "scope."
+    )
     existing_evidence_ids: list[str] = Field(default_factory=list)
+    """Evidence already held, so research does not fetch or count it twice."""
     expected_coverage: Literal["all_required", "best_effort"] = "all_required"
-    #: Research exactly the given needs: Jev adds no further evidence categories.
+    (
+        "Whether every required need must be satisfied (all_required) or partial coverage is "
+        "acceptable (best_effort)."
+    )
     evidence_needs_only: bool = False
-    #: The options the decision has so far (empty before options exist); research reads it.
+    """Research exactly the given needs: Jev adds no further evidence categories."""
     option_context: list[OptionContext] = Field(default_factory=list)
-    #: The approved criteria's questions, used as query text beside the goal.
+    """The options the decision has so far (empty before options exist); research reads it."""
     criteria_context: list[str] = Field(default_factory=list)
-    #: What an earlier synthesis said it could not find; each becomes a targeted need.
+    """The approved criteria's questions, used as query text beside the goal."""
     gaps: list[str] = Field(default_factory=list)
-    #: Jev calls the requester keeps for itself afterwards (its final assessment); research plans
-    #: no more needs than the rest of its budget affords and never spends into this reserve.
+    (
+        "Open unknowns (synthesis gaps, research unknowns, option-design feasibility facts); the "
+        "first research.max_targeted_needs of them become targeted needs."
+    )
     jev_reserve: int = Field(default=0, ge=0)
+    (
+        "Jev calls the requester keeps for itself afterwards (its final assessment); research "
+        "plans no more needs than the rest of its budget affords and never spends into this "
+        "reserve."
+    )
 
 
 class RetrievalLimits(KernelModel):
     """Result limits for one retrieval request."""
 
     top_k: int | None = Field(default=None, ge=1)
+    """Most evidence items to return; null uses the configured default."""
     max_chars: int | None = Field(default=None, ge=1)
+    """Most characters of evidence to return in total; null uses the configured default."""
 
 
 class RetrievalRequestPayload(KernelModel):
     """leafcutter.retrieval_request.v1."""
 
-    #: Neutral knowledge request fields, fully validated by the capability adapter.
     knowledge: dict[str, VerbatimJson] | None = None
-    #: Preserved across research, clarification and progressive source disclosure.
+    """Neutral knowledge request fields, fully validated by the capability adapter."""
     answer_requirements: dict[str, JsonValue] | None = None
-    #: Scoped supplied evidence interpreted conditionally by the neutral retrieval port.
+    """Preserved across research, clarification and progressive source disclosure."""
     assessment: dict[str, VerbatimJson] | None = None
+    """Scoped supplied evidence interpreted conditionally by the neutral retrieval port."""
     need: EvidenceNeed
+    """The evidence need to retrieve for; its question and category steer the search."""
     source_ids: list[str] = Field(default_factory=list)
+    """Sources to search; empty means every eligible source."""
     detail: Literal["excerpt", "summary", "locator"] = "excerpt"
+    """How much of each hit to return: an excerpt, a summary, or its locator only."""
     limits: RetrievalLimits = Field(default_factory=RetrievalLimits)
-    #: Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.
+    """Bounds on how much evidence the request may return."""
     explicit_locators: list[str] = Field(default_factory=list)
-    #: Texts to search for before the need's own wording: the goal first, then criteria, options.
+    (
+        "Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, "
+        "`path::Symbol`."
+    )
     query_hints: list[str] = Field(default_factory=list)
-    #: Most rerank batches this request may judge (the requester's Jev budget affords no more
-    #: than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.
+    """Texts to search for before the need's own wording: the goal first, then criteria, options."""
     max_rerank_batches: int | None = Field(default=None, ge=1)
-    #: Jev calls retained for the requester; graph planning must not spend this reserve.
+    (
+        "Most rerank batches this request may judge (the requester's Jev budget affords no more "
+        "than this beside its reserve); null means the configured `retrieval.rerank_max_batches`."
+    )
     jev_reserve: int = Field(default=0, ge=0)
+    """Jev calls retained for the requester; graph planning must not spend this reserve."""
 
 
 class OptionsRequestPayload(KernelModel):
     """leafcutter.options_request.v1."""
 
     problem: VerbatimString = Field(min_length=1)
+    """The decision problem to generate options for, verbatim from the caller."""
     clarifications: list[VerbatimString] = Field(default_factory=list)
+    """Human answers to earlier questions, verbatim, that narrow which options to generate."""
     constraint_ids: list[str] = Field(default_factory=list)
+    """Ids of evidence items stating constraints every generated option must respect."""
     existing_option_ids: list[str] = Field(default_factory=list)
+    """Ids of options the caller already has, so generators do not duplicate them."""
     evidence_ids: list[str] = Field(default_factory=list)
+    """Evidence the generated options may rest on."""
     max_options: int = Field(default=5, ge=0)
+    """Most new options to propose."""
     propose_criteria: bool = False
-    #: Every proposed option must cite, in `source_refs`, evidence ids from `evidence_ids`.
+    """Whether to also propose criteria for human approval."""
     require_grounding: bool = False
-    #: Accepted synthesis findings as `[id] claim`, so the host does not re-derive them.
+    """Every proposed option must cite, in `source_refs`, evidence ids from `evidence_ids`."""
     findings: list[str] = Field(default_factory=list)
+    """Accepted synthesis findings as `[id] claim`, so the host does not re-derive them."""
 
 
 class OptionsPayload(KernelModel):
     """leafcutter.options.v1: every option is a proposal, never pre-approved."""
 
     options: list[Option] = Field(default_factory=list)
-    #: Options the goal names, verified by the kernel (supplied, never proposals). Kernel-set only.
+    """Candidate options the host generated; every one is a proposal awaiting approval."""
     named_options: list[Option] = Field(default_factory=list)
+    (
+        "Options the goal names, verified by the kernel (supplied, never proposals). Kernel-set "
+        "only."
+    )
     proposed_criteria: list[Criterion] = Field(default_factory=list)
+    """Criteria the host suggests; every one is a proposal awaiting approval."""
     unresolved_feasibility: list[str] = Field(default_factory=list)
+    """Feasibility facts the host could not settle; they become targeted research."""
 
     @model_validator(mode="after")
     def _all_proposed(self) -> OptionsPayload:
@@ -198,103 +282,41 @@ class SynthesisLimits(KernelModel):
     """Analysis limits for a synthesis request."""
 
     max_findings: int | None = Field(default=None, ge=1)
+    """Most findings the synthesis may return."""
     max_chars: int | None = Field(default=None, ge=1)
+    """Most characters the synthesis may return."""
 
 
 class SynthesisRequestPayload(KernelModel):
     """leafcutter.synthesis_request.v1."""
 
     operation: str = Field(min_length=1)
+    """The kind of analysis wanted, which selects the host's instructions."""
     question: str = Field(min_length=1)
+    """The question the synthesis must answer from the evidence."""
     evidence_ids: list[str] = Field(default_factory=list)
+    """The evidence to analyse; the synthesis may cite only these."""
     output_requirements: list[str] = Field(default_factory=list)
+    """Extra instructions the host must follow in its output."""
     limits: SynthesisLimits = Field(default_factory=SynthesisLimits)
+    """Bounds on the size of the synthesis."""
 
 
 class FindingsPayload(KernelModel):
     """leafcutter.findings.v1."""
 
     findings: list[Finding] = Field(default_factory=list)
+    """Source-linked claims the synthesis reached, each citing its evidence."""
     agreements: list[str] = Field(default_factory=list)
+    """Points on which the evidence sources agree."""
     disagreements: list[str] = Field(default_factory=list)
+    """Points on which sources conflict; the decision keeps them as context rather than choosing."""
     constraints: list[str] = Field(default_factory=list)
+    """Constraints the evidence puts on any option."""
     assumptions: list[str] = Field(default_factory=list)
+    """Premises taken without evidence, listed so a reader can challenge them."""
     unknowns: list[str] = Field(default_factory=list)
-
-
-class HumanQuestionRequestPayload(KernelModel):
-    """leafcutter.human_question_request.v1."""
-
-    question: str = Field(min_length=1)
-    choices: list[Choice] = Field(default_factory=list)
-    free_text_allowed: bool = False
-    structured_allowed: bool = False
-    why_research_cannot_settle: str = ""
-    decision_id: str | None = None
-    subject_ids: list[str] = Field(default_factory=list)
-    #: Evidence the question rests on (shown to the human as relevant evidence).
-    evidence_ids: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _answerable(self) -> HumanQuestionRequestPayload:
-        """Offer choices, free text or a structured answer; choice ids must be unique."""
-        if not self.choices and not self.free_text_allowed and not self.structured_allowed:
-            fail("offer choices or allow free text or a structured answer")
-        _unique([c.id for c in self.choices], "choice")
-        return self
-
-
-class CriterionEdit(KernelModel):
-    """One criterion the human supplies or edits inside a structured approval answer."""
-
-    id: StableId | None = None
-    question: str = Field(min_length=1)
-    priority: Priority = Priority.REQUIRED
-
-
-class AddedOption(KernelModel):
-    """One option the human adds inside a structured approval answer."""
-
-    title: str = Field(min_length=1)
-    description: str = ""
-
-
-class HumanAnswerPayload(KernelModel):
-    """leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.
-
-    The structured answer answers an approve-or-edit question about proposed criteria and
-    options: `approved_*_ids` approve a subset (the listed ids are approved, every other pending
-    proposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the
-    human's own (an entry with the id of a proposal edits it, an entry without an id is new).
-    """
-
-    choice_id: str | None = None
-    free_text: str | None = None
-    approved_option_ids: list[str] | None = None
-    approved_criterion_ids: list[str] | None = None
-    edited_criteria: list[CriterionEdit] | None = Field(default=None, min_length=1)
-    #: Options the human adds (they become human-supplied, approved options).
-    added_options: list[AddedOption] | None = Field(default=None, min_length=1)
-
-    @property
-    def is_structured(self) -> bool:
-        """True if any structured approval field is set."""
-        return any(v is not None for v in (self.approved_option_ids, self.approved_criterion_ids,
-                                           self.edited_criteria, self.added_options))
-
-    @model_validator(mode="after")
-    def _exactly_one(self) -> HumanAnswerPayload:
-        """Exactly one of choice_id, non-empty free_text and the structured fields must be set."""
-        has_text = bool(self.free_text and self.free_text.strip())
-        modes = [self.choice_id is not None, has_text, self.is_structured]
-        if sum(modes) != 1:
-            fail("set exactly one of choice_id, free_text and a structured approval answer")
-        if self.approved_criterion_ids is not None and self.edited_criteria is not None:
-            fail("approved_criterion_ids and edited_criteria are alternatives")
-        _unique(self.approved_option_ids or [], "approved option")
-        _unique(self.approved_criterion_ids or [], "approved criterion")
-        _unique([e.id for e in self.edited_criteria or [] if e.id], "edited criterion")
-        return self
+    """What the evidence could not establish; the next research round aims queries at these."""
 
 
 __all__ = [
@@ -308,6 +330,11 @@ __all__ = [
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: Field purposes added; the human question/answer payloads moved to
+#   payloads_human.py (re-exported here) to keep this file under 400 lines.
+#   (#TICKET-20261009-KernelContractFieldDescriptions)
+# - 2026-10-02 [python-coder]: human_answer.v1 accepts the pair {choice_id, free_text}: a choice
+#   with a condition; other mixes stay rejected. (#KernelChoiceWithCondition)
 # - 2026-10-01 [python-coder]: Research now reads option_context; the request also carries
 #   criteria_context and gaps (what a synthesis could not find), OptionContext.human_added marks
 #   unverified claims, and retrieval_request.query_hints lets queries lead with the goal.

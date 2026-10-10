@@ -237,7 +237,7 @@ class TestConflict(DecisionTestCase):
                        {"free_text": "ADR 2 supersedes ADR 1."})
         done = self.run_decision(resume(inv, asked, [ruling]), ctx)
         self.assertEqual(done.status, ResultStatus.COMPLETED)
-        self.assertIn("ADR 2 supersedes ADR 1.", as_json(self.jev.batches[-1].state)["constraints"])
+        self.assertIn("human-stated: ADR 2 supersedes ADR 1.", as_json(self.jev.batches[-1].state)["constraints"])
 
 
 class TestProviderFailure(DecisionTestCase):

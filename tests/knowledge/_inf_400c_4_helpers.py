@@ -30,6 +30,7 @@ _HARVESTER_REQUIRED_SIBLINGS: tuple[str, ...] = (
     "sink_resolution.py",
     "capture_write.py",
     "harvest_cli.py",
+    "harvest_status.py",
 )
 
 _REAL_SURFACES: tuple[tuple[str, Path, tuple[str, ...]], ...] = (

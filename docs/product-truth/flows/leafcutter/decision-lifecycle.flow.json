@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "draft",
   "superseded_by": null,
-  "version": 6,
+  "version": 7,
   "shape_version": 2,
   "tags": [
     "decision-kernel",
@@ -34,9 +34,10 @@
         "DK-600b-3"
       ],
       "label": "Form the decision",
-      "human": "You ask a question; compact entity meanings help classify intent, then the kernel retrieves decision evidence, assesses options and asks you to approve and choose.\n\nExamples use the existing decision-record scenario in docs/decisions/dec-ef8ddcb79d668a67.yaml. They illustrate the current contracts; they are not a replay or receipt of every earlier execution phase.\n\nContract fields and examples (generated)\nConsumes:\n  task_input/goal: string (required)\n  task_input/caller: object (required)\n  task_input/scope: object (required)\n  task_input/context: object (optional)\n  task_input/requested_output_schema: null|string (optional; default null)\n  Runtime contract: [task_input](kernel/contracts/task.py)\nProduces:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n\nDecision-record scenario: task_input — task_input; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"goal\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"caller\": {\n    \"kind\": \"human\",\n    \"id\": \"user\"\n  },\n  \"scope\": {\n    \"workspace_id\": \"leafcutter-ai\",\n    \"repository_root\": \"C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\typed-research-binding-v01\"\n  },\n  \"context\": {\n    \"conversation\": []\n  }\n}\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
+      "description": "You ask a question, and the kernel uses short meanings of its terms to classify the intent, gathers evidence, weighs the options and asks you to approve and choose.",
       "order": 1,
       "agent": "kernel",
+      "actor_kind": "deterministic",
       "produces": [
         "decision/question: string (required)",
         "decision/status: string (required)",
@@ -208,9 +209,10 @@
     {
       "id": "stage",
       "label": "Stage the record",
-      "human": "When the run ends, the approved decision is saved as a record in the run folder (never in the repository), and you are told how to publish it.\n\nThe internal Decision is converted to a DecisionRecord. Its serialized storage is YAML; shown JSON is a projection of the parsed model, not a new API envelope. Staging can return None on refusal or storage failure; that does not fail an otherwise resolved decision.\n\nContract fields and examples (generated)\nConsumes:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\nProduces:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\n\nDecision-record scenario: decision — decision; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.yaml_per_decision_component_folders\",\n    \"opt.reuse_ac_store_conventions\",\n    \"opt.yaml_files_plus_generated_index\",\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}",
+      "description": "When the run ends, the kernel saves the approved decision as a record in the run folder, never in the repository, and tells you where publishing writes it and how to publish.",
       "order": 2,
       "agent": "kernel decision executor",
+      "actor_kind": "deterministic",
       "consumes": [
         "decision/question: string (required)",
         "decision/status: string (required)",
@@ -392,9 +394,10 @@
     {
       "id": "publish",
       "label": "Publish the record",
-      "human": "You run the publish command; the record is validated, written to docs/decisions/, the index is regenerated, and the change goes through a normal git review.\n\nThe shown index value is one IndexEntry inside index.json records[], not the whole index file. Git review is a separate human action.\n\nContract fields and examples (generated)\nConsumes:\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision_index_entry/id: string (required)\n  decision_index_entry/file: string (required)\n  decision_index_entry/sha256: string (required)\n  decision_index_entry/selected_option_id: string (required)\n  decision_index_entry/approved_by: string (required)\n  decision_index_entry/approved_at: string (required)\n  Runtime contract: [decision_index_entry](kernel/memory/index.py)\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nDecision-record scenario: decision_index_entry — decision_index_entry; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"file\": \"dec-ef8ddcb79d668a67.yaml\",\n  \"sha256\": \"d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-01T14:48:31Z\"\n}",
+      "description": "You run the printed publish command, which checks the record and writes it with a regenerated index into the decision folder, and the change then goes through a normal Git review.",
       "order": 3,
       "agent": "python -m kernel decisions publish",
+      "actor_kind": "deterministic",
       "consumes": [
         "decision_record/id: string (required)",
         "decision_record/selected_option_id: string (required)",
@@ -563,9 +566,10 @@
     {
       "id": "reuse",
       "label": "Reuse it as precedent",
-      "human": "A later decision run finds the record through the index; Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.\n\nDecisionQuery is passed to the memory port; matching DecisionHit objects carry parsed DecisionRecord values plus score/path. Only a fresh human answer can approve the new decision; the earlier approval is evidence.\n\nContract fields and examples (generated)\nConsumes:\n  decision_query/text: string (required)\n  decision_query/components: array (optional; default [])\n  decision_query/roadmap_phase: array (optional; default [])\n  decision_query/limit: integer (optional; default 3)\n  decision_query/min_score: number (optional; default 0.0)\n  Runtime contract: [decision_query](kernel/memory/port.py)\n  decision_record/id: string (required)\n  decision_record/selected_option_id: string (required)\n  decision_record/approval/approved_by: string (required)\n  decision_record/approval/approved_at: string (required)\n  decision_record/provenance/run_id: string (required)\n  Runtime contract: [decision_record](kernel/memory/models.py)\nProduces:\n  decision/question: string (required)\n  decision/status: string (required)\n  decision/selected_option_id: null|string (optional; default null)\n  decision/approval_status: string (optional; default \"not_required\")\n  decision/approved_by: null|string (optional; default null)\n  decision/approved_at: null|string (optional; default null)\n  Runtime contract: [decision](kernel/contracts/decision.py)\n\nDecision-record scenario: decision_query — decision_query; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"text\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"components\": [\n    \"decision_kernel\"\n  ],\n  \"limit\": 3,\n  \"min_score\": 0.0\n}\n\nDecision-record scenario: decision_record — decision_record; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"dec-ef8ddcb79d668a67\",\n  \"title\": \"Kernel-contract YAML per decision\",\n  \"decision_type\": \"design\",\n  \"selected_option_id\": \"opt.added.1\",\n  \"components\": [\n    \"decision_kernel\",\n    \"knowledge_management\"\n  ],\n  \"approval\": {\n    \"approval_status\": \"approved\",\n    \"approved_by\": \"human:user\",\n    \"approved_at\": \"2026-10-01T14:48:31Z\",\n    \"note\": \"approved_at is the decision's updated_at: the kernel Decision had no approved_at field when this decision was approved (added by #KernelDecisionStore).\"\n  },\n  \"provenance\": {\n    \"run_id\": \"run-2fbb4ef43b1345f6\",\n    \"created_at\": \"2026-10-01T14:48:31Z\"\n  }\n}\n\nIllustrative fresh later human approval — decision; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"question\": \"Decide how Leafcutter should file decision records as JSON or YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields a record needs, which classification filters it carries (component, file type or language, repository-wide, roadmap phase), the folder layout and file naming, and how human approval and later corrections are recorded.\",\n  \"option_ids\": [\n    \"opt.added.1\"\n  ],\n  \"selected_option_id\": \"opt.added.1\",\n  \"status\": \"resolved\",\n  \"approval_status\": \"approved\",\n  \"approved_by\": \"human:user\",\n  \"approved_at\": \"2026-10-03T00:00:00Z\",\n  \"precedent_ids\": [\n    \"dec-ef8ddcb79d668a67\"\n  ],\n  \"criterion_ids\": []\n}",
+      "description": "A later decision run finds the record through the index, Jev judges whether it applies, and a strong match asks you to reuse it or decide anew.",
       "order": 4,
       "agent": "kernel precedent step",
+      "actor_kind": "deterministic",
       "consumes": [
         "decision_query/text: string (required)",
         "decision_query/components: array (optional; default [])",
@@ -826,7 +830,7 @@
     {
       "for": "publish",
       "given": "a staged decision record",
-      "when": "a human runs python -m kernel decisions publish --run-id R",
+      "when": "a human runs the printed publish command (<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id R)",
       "then": "the record is validated, written to docs/decisions/<id>.yaml, the index is regenerated, and the change is reviewed and merged in git"
     },
     {
@@ -872,6 +876,12 @@
       "by": "product-truth expert",
       "date": "2026-10-05",
       "note": "Preserved merged DK-300 recognition-before-intent behavior and AC links while restoring reviewed storage, precedent and illustrative-example contract caveats. No approval, runtime behavior or historical receipt changed."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (TICKET-20261002-KernelRunnablePublishCommand)",
+      "date": "2026-10-06",
+      "note": "Updated the stage and publish steps to the runnable publish command (PR #999): the staged notice names the docs/decisions folder publishing writes into and prints the kernel's own interpreter with scripts/run_kernel.py instead of python -m kernel. Prose and the publish scenario only; contract bindings, approvals and AC links are unchanged."
     }
   ],
   "impl_summary": {

@@ -4,26 +4,35 @@
   "product": "Leafcutter",
   "name": "Exploring product-truth flows in the Atlas",
   "level": "journey",
-  "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a step to inspect its acceptance criteria's live status plus the mock records and mockup it uses, and cross-jump from an acceptance criterion back to the flows it appears in. This is how a person sees product truth visually rather than reading JSON.",
+  "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a step to inspect its acceptance criteria's live status plus the mock records and mockup it uses, and cross-jump from an acceptance criterion back to the flows it appears in. This is how a person sees product truth visually rather than reading JSON. Each flow and step also gets one shareable address (/flows/<flow id>, ?step=<id>); this address layer is specified, not yet built.",
   "kind": "user",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 4,
+  "version": 5,
   "tags": [
     "product-truth",
     "atlas",
     "flows",
-    "explorer"
+    "explorer",
+    "canonical-url",
+    "deep-link",
+    "browser-history"
   ],
-  "entities": [],
+  "entities": [
+    "Flow",
+    "FlowRoute",
+    "FlowAppearance",
+    "FlowNavigation"
+  ],
   "steps": [
     {
       "id": "open",
       "label": "Open the Flows view",
-      "human": "The server loads flows and hands serializable FlowsView props to the client. The visible list initially follows the client source/kind/realization filters; it is not an unfiltered promise that every flow appears at once. [Page handoff](leafcutter-web/app/flows/page.tsx) and [client filters](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  view_props/flows: array (required)\n  view_props/mocks: object (required)\n  view_props/screenTitles: object (optional; default {})\n  Schema: [view_props](docs/product-truth/schemas/atlas-flows-view-props.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: reconstructed component props projection — view_props; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"flows\": [\n    {\n      \"id\": \"leafcutter/flow-render-pipeline\",\n      \"component\": \"ux-prototyping\",\n      \"name\": \"How a flow renders in the Atlas\",\n      \"kind\": \"data\",\n      \"source\": \"real\",\n      \"level\": \"pipeline\",\n      \"realization\": \"built\",\n      \"mockDataRef\": null,\n      \"filePath\": \"docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json\",\n      \"steps\": [\n        {\n          \"id\": \"resolve\",\n          \"label\": \"Resolve live AC status\",\n          \"implements\": [\n            \"UXP-411\"\n          ],\n          \"implStatus\": \"done\",\n          \"fallbackStatus\": \"done\",\n          \"acs\": [\n            {\n              \"id\": \"UXP-411\",\n              \"workStatus\": \"done\",\n              \"resolved\": true\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  \"mocks\": {\n    \"leafcutter/flow-render-pipeline\": null\n  },\n  \"screenTitles\": {}\n}",
+      "description": "The person opens the Flows view and sees the list of flows that match the current source, kind and realization filters.",
+      "actor_kind": "human",
       "order": 1,
       "implements": [
         "UXP-520"
@@ -117,7 +126,8 @@
     {
       "id": "filter",
       "label": "Choose source (mock/real) and kind (user/data/architecture)",
-      "human": "The person changes source and realization filters over the already-loaded Flow records. React updates local state and the visible subset; no network request or persisted filter DTO is produced. [Filter implementation](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/id: string (required)\n  atlas_flow/source: string (required)\n  atlas_flow/kind: string (required)\n  atlas_flow/realization: string (required)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: one flow considered by the local filter — atlas_flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/flow-render-pipeline\",\n  \"source\": \"real\",\n  \"kind\": \"data\",\n  \"realization\": \"built\"\n}",
+      "description": "The person filters the loaded flows by source, kind and realization, and the visible list updates at once without saving anything.",
+      "actor_kind": "human",
       "order": 2,
       "implements": [
         "UXP-521"
@@ -187,7 +197,8 @@
     {
       "id": "select",
       "label": "Select a flow to render its graph",
-      "human": "The person chooses a kind and an existing flow ID from the filtered records. Local selectedId/path state drives FlowExplorer; it does not select a retrieval query or create a new server response. [Selection](leafcutter-web/components/flows/flows-view.tsx).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/id: string (required)\n  atlas_flow/name: string (required)\n  atlas_flow/kind: string (required)\n  atlas_flow/level: string (required)\n  atlas_flow/steps: array (required)\n  atlas_flow/branches: array (required)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: selected normalized flow projection — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/flow-render-pipeline\",\n  \"component\": \"ux-prototyping\",\n  \"name\": \"How a flow renders in the Atlas\",\n  \"kind\": \"data\",\n  \"source\": \"real\",\n  \"level\": \"pipeline\",\n  \"realization\": \"built\",\n  \"mockDataRef\": null,\n  \"filePath\": \"docs/product-truth/flows/leafcutter/flow-render-pipeline.flow.json\",\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"label\": \"Resolve live AC status\",\n      \"implements\": [\n        \"UXP-411\"\n      ],\n      \"implStatus\": \"done\",\n      \"fallbackStatus\": \"done\",\n      \"acs\": [\n        {\n          \"id\": \"UXP-411\",\n          \"workStatus\": \"done\",\n          \"resolved\": true\n        }\n      ]\n    }\n  ]\n}",
+      "description": "The person picks one of the filtered flows and Atlas draws its graph.",
+      "actor_kind": "human",
       "order": 3,
       "implements": [
         "UXP-522"
@@ -296,7 +307,8 @@
     {
       "id": "inspect",
       "label": "Open a step to see its ACs' live status + mock records + mockup",
-      "human": "The step drawer reads the normalized step and its ioContracts with the flow contractDefinitions. It shows a heading per contract, exact field tables and separate JSON examples, including authority and projection/source labels. It shows the authored narrative once and hides generated compatibility text/badges when valid structured metadata is present. Missing metadata or a shape the display guard cannot use keeps the readable fallback; full repository validation remains separate. Live AC references, mock records and screen titles remain available; opening the drawer changes local selection, not repository data. [Drawer](leafcutter-web/components/flows/flow-drawer.tsx).\n\nThe inspector groups consumed and produced contract fields with their exact keys, types, requiredness and defaults. It shows raw JSON examples with full/projection and provenance labels, preserves the narrative once, and retains the legacy view when structured metadata is unavailable or unusable.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  atlas_flow/steps/*/id: string (required)\n  atlas_flow/steps/*/human: string (required)\n  atlas_flow/steps/*/consumes: array (required)\n  atlas_flow/steps/*/produces: array (required)\n  atlas_flow/steps/*/screen: null|string (required)\n  atlas_flow/steps/*/acs/*/id: string (required)\n  atlas_flow/steps/*/acs/*/workStatus: string (required)\n  atlas_flow/contractDefinitions: object (optional)\n  atlas_flow/steps/*/ioContracts: object (optional)\n  Schema: [atlas_flow](docs/product-truth/schemas/atlas-normalized-flow.schema.json)\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  view_props/mocks: object (required)\n  view_props/screenTitles: object (optional; default {})\n  Schema: [view_props](docs/product-truth/schemas/atlas-flows-view-props.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: selected resolved step projection — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"label\": \"Resolve live AC status\",\n      \"implements\": [\n        \"UXP-411\"\n      ],\n      \"implStatus\": \"done\",\n      \"fallbackStatus\": \"done\",\n      \"acs\": [\n        {\n          \"id\": \"UXP-411\",\n          \"workStatus\": \"done\",\n          \"resolved\": true\n        }\n      ]\n    }\n  ]\n}\n\nInput: no mock dataset or screen title for this code-flow example — view_props; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"mocks\": {\n    \"leafcutter/flow-render-pipeline\": null\n  },\n  \"screenTitles\": {}\n}\n\nInput: optional structured metadata, one selected input binding only — atlas_flow; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"contractDefinitions\": {\n    \"raw_flow\": {\n      \"schema\": \"docs/product-truth/schemas/flow.schema.json\"\n    }\n  },\n  \"steps\": [\n    {\n      \"id\": \"resolve\",\n      \"ioContracts\": {\n        \"consumes\": [\n          {\n            \"contract\": \"raw_flow\",\n            \"fields\": [\n              {\n                \"path\": \"/steps/*/id\",\n                \"types\": [\n                  \"string\"\n                ],\n                \"required\": true\n              },\n              {\n                \"path\": \"/steps/*/implements\",\n                \"types\": [\n                  \"array\"\n                ],\n                \"required\": false\n              },\n              {\n                \"path\": \"/steps/*/impl_status\",\n                \"types\": [\n                  \"string\"\n                ],\n                \"required\": false\n              }\n            ]\n          }\n        ]\n      }\n    }\n  ]\n}",
+      "description": "The person opens a step's drawer to see the live status of its acceptance criteria, its inputs and outputs with examples, and the mock records and mockup it uses.",
+      "actor_kind": "human",
       "order": 4,
       "implements": [
         "UXP-523",
@@ -320,8 +332,16 @@
                 "required": true
               },
               {
-                "path": "/steps/*/human",
+                "path": "/steps/*/description",
                 "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/actorKind",
+                "types": [
+                  "null",
                   "string"
                 ],
                 "required": true
@@ -491,7 +511,8 @@
       },
       "consumes": [
         "atlas_flow/steps/*/id: string (required)",
-        "atlas_flow/steps/*/human: string (required)",
+        "atlas_flow/steps/*/description: string (required)",
+        "atlas_flow/steps/*/actorKind: null|string (required)",
         "atlas_flow/steps/*/consumes: array (required)",
         "atlas_flow/steps/*/produces: array (required)",
         "atlas_flow/steps/*/screen: null|string (required)",
@@ -507,7 +528,8 @@
     {
       "id": "cross",
       "label": "Jump from an AC to the flows it appears in",
-      "human": "The AC detail UI looks up its appearances in the internal map built by flowAppearancesByAc, then offers links naming flow and step/branch. The historical stepId property can identify either node kind. Following a link is UI navigation, not a JSON mutation. [Map producer](leafcutter-web/lib/data/flows.ts).\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check.\n  appearances/*/*/flowId: string (required)\n  appearances/*/*/flowName: string (required)\n  appearances/*/*/stepId: string (required)\n  appearances/*/*/stepLabel: string (required)\n  Schema: [appearances](docs/product-truth/schemas/atlas-flow-appearances.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput: reconstructed AC appearance map — appearances; reconstructed; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"UXP-411\": [\n    {\n      \"flowId\": \"leafcutter/flow-render-pipeline\",\n      \"flowName\": \"How a flow renders in the Atlas\",\n      \"stepId\": \"resolve\",\n      \"stepLabel\": \"Resolve live AC status\"\n    }\n  ]\n}",
+      "description": "From an acceptance criterion's details, the person follows a link to each flow step or branch where that criterion appears.",
+      "actor_kind": "human",
       "order": 5,
       "implements": [
         "UXP-524"
@@ -577,15 +599,865 @@
         "appearances/*/*/stepLabel: string (required)"
       ],
       "produces": []
+    },
+    {
+      "id": "acStepLink",
+      "label": "'Appears in flows' links open the step itself",
+      "description": "Each 'Appears in flows' link in the criterion's drawer points at the step or branch that realizes the criterion, using its flow's own address with that step named.",
+      "order": 6,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas AC detail drawer (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowAppearance",
+        "Flow"
+      ],
+      "implements": [
+        "UXP-591-3"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "appearances",
+            "fields": [
+              {
+                "path": "/*/*/flowId",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/flowName",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/stepId",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/*/*/stepLabel",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "appearances",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: UXP-210d-2's entries in the appearance map, reconstructed from the stored flows (two branches)",
+            "value": {
+              "UXP-210d-2": [
+                {
+                  "flowId": "fern-and-fig/checkout-and-pay",
+                  "flowName": "Checkout & pay (inside the buy-a-plant checkout step)",
+                  "stepId": "declined",
+                  "stepLabel": "Payment declined"
+                },
+                {
+                  "flowId": "fern-and-fig/customer-buys-a-plant",
+                  "flowName": "Customer buys a plant",
+                  "stepId": "paymentFailed",
+                  "stepLabel": "Payment declined"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "appearances/*/*/flowId: string (required)",
+        "appearances/*/*/flowName: string (required)",
+        "appearances/*/*/stepId: string (required)",
+        "appearances/*/*/stepLabel: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "openByLink",
+      "label": "Open a flow from its canonical link",
+      "description": "When someone opens a flow's own address, Atlas shows that flow selected and drawn, with filters set to match it, no drawer open and a breadcrumb naming only that flow.",
+      "order": 7,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-1"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the linked flow's id, source and kind, reconstructed from the stored flow",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline",
+              "source": "real",
+              "kind": "data"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Requested flow id and ?step= handed from the /flows/<flow id> address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes how every address resolves (FlowRoute requested_flow_id, requested_step, rendered_flow, filters, crumbs, open_drawer, http_status, notice, step_notice) but defines no route-parameter or FlowsView prop shape that carries the requested flow id and ?step= to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/source: string (required)",
+        "atlas_flow/kind: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "openStepLink",
+      "label": "Open a step link with its drawer open",
+      "description": "When someone opens a step link, Atlas shows the flow as for a flow link with the named step's or branch's drawer already open, keeping the step in the address.",
+      "order": 8,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-2"
+      ],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/branches/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the node ids a ?step= value is matched against, reconstructed from fern-and-fig/checkout-and-pay",
+            "value": {
+              "id": "fern-and-fig/checkout-and-pay",
+              "steps": [
+                {
+                  "id": "review"
+                },
+                {
+                  "id": "payDetails"
+                },
+                {
+                  "id": "authorize"
+                },
+                {
+                  "id": "confirmed"
+                }
+              ],
+              "branches": [
+                {
+                  "id": "declined"
+                },
+                {
+                  "id": "soldOutAtPay"
+                }
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Requested flow id and ?step= handed from the /flows/<flow id> address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes how every address resolves (FlowRoute requested_flow_id, requested_step, rendered_flow, filters, crumbs, open_drawer, http_status, notice, step_notice) but defines no route-parameter or FlowsView prop shape that carries the requested flow id and ?step= to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/steps/*/id: string (required)",
+        "atlas_flow/branches/*/id: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "drawerUrl",
+      "label": "Opening a drawer writes ?step= in place",
+      "description": "When the person opens a step's or branch's drawer, Atlas rewrites the address in place to name that step without adding a Back entry, even from the bare Flows page.",
+      "order": 9,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-4"
+      ],
+      "io_contracts": {
+        "not_applicable": "A click on a step or branch node changes the explorer's open-drawer state and rewrites the current history entry's URL to <canonical URL>?step=<id> in place (history replace). No request is made and no JSON payload is passed; the drawer's contents are documented on the inspect step."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "drawerClose",
+      "label": "Closing the drawer removes ?step= in place",
+      "description": "When the person closes the drawer, Atlas removes the step from the address in place, leaving the flow's own address and adding no Back entry.",
+      "order": 10,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-4-ii"
+      ],
+      "io_contracts": {
+        "not_applicable": "The X button or a canvas click clears the open-drawer state and rewrites the current history entry's URL to the flow's canonical URL without a query (history replace). No request is made and no JSON payload is passed."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "navPush",
+      "label": "Select, drill and breadcrumb push the flow's URL",
+      "description": "Picking a flow, drilling into a sub-flow or clicking a breadcrumb makes Atlas add a history entry with the target flow's address, while filter changes never add one.",
+      "order": 11,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-5"
+      ],
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Breadcrumb trail and filters kept with each history entry",
+            "direction": "produces",
+            "reason": "Back and Forward must restore each entry's breadcrumb trail (FlowNavigation pop invariant; nav-drill-and-return-4 returns to Deliver a feature end-to-end > How a ticket is built) and, by the dataset's assumption that the owner has not ruled on, its Source, Kind and Realization filters (nav-filter-replace-6). A canonical URL names one flow, and a fresh load of it shows only that flow with that flow's own filters (FlowRoute invariants), so this state has to travel with the history entry. The design defines no history-state or stored shape for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "backForward",
+      "label": "Back and Forward move between flows",
+      "description": "The browser's Back and Forward buttons move between flow entries, and Atlas restores each one's address, flow, breadcrumb trail, open drawer and filters as they were left.",
+      "order": 12,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-5-ii"
+      ],
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Breadcrumb trail and filters restored from a history entry on Back or Forward",
+            "direction": "consumes",
+            "reason": "Back and Forward must restore each entry's breadcrumb trail (FlowNavigation pop invariant; nav-drill-and-return-4 returns to Deliver a feature end-to-end > How a ticket is built) and, by the dataset's assumption that the owner has not ruled on, its Source, Kind and Realization filters (nav-filter-replace-6). A canonical URL names one flow, and a fresh load of it shows only that flow with that flow's own filters (FlowRoute invariants), so this state has to travel with the history entry. The design defines no history-state or stored shape for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
     }
   ],
-  "branches": [],
+  "branches": [
+    {
+      "id": "filterRepicksFlow",
+      "from": "filter",
+      "condition": "the new Source, Kind or Realization filters no longer include the entry flow",
+      "label": "Filter change re-picks the flow: address replaced",
+      "description": "Atlas draws the first flow the new filters list, with a fresh breadcrumb and no drawer, and replaces the current address with that flow's address without adding a Back entry.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-5-iii"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/realization",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the flow the Spec filter leaves in scope, reconstructed from the stored flow",
+            "value": {
+              "id": "leafcutter/define-a-feature",
+              "source": "real",
+              "kind": "user",
+              "realization": "spec"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Breadcrumb trail and filters kept with each history entry",
+            "direction": "produces",
+            "reason": "Back and Forward must restore each entry's breadcrumb trail (FlowNavigation pop invariant; nav-drill-and-return-4 returns to Deliver a feature end-to-end > How a ticket is built) and, by the dataset's assumption that the owner has not ruled on, its Source, Kind and Realization filters (nav-filter-replace-6). A canonical URL names one flow, and a fresh load of it shows only that flow with that flow's own filters (FlowRoute invariants), so this state has to travel with the history entry. The design defines no history-state or stored shape for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/source: string (required)",
+        "atlas_flow/kind: string (required)",
+        "atlas_flow/realization: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "filterKeepsFlow",
+      "from": "filter",
+      "condition": "the new Source, Kind or Realization filters still include the entry flow",
+      "label": "Filter change keeps the flow: address unchanged",
+      "description": "Atlas leaves the drawn flow, the breadcrumb trail, any open drawer and the address exactly as they were, adding no Back entry.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-5-iv"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/realization",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the entry flow that still matches the Built filter, reconstructed from the stored flow",
+            "value": {
+              "id": "leafcutter/deliver-a-feature",
+              "source": "real",
+              "kind": "user",
+              "realization": "built"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Breadcrumb trail and filters kept with each history entry",
+            "direction": "produces",
+            "reason": "Back and Forward must restore each entry's breadcrumb trail (FlowNavigation pop invariant; nav-drill-and-return-4 returns to Deliver a feature end-to-end > How a ticket is built) and, by the dataset's assumption that the owner has not ruled on, its Source, Kind and Realization filters (nav-filter-replace-6). A canonical URL names one flow, and a fresh load of it shows only that flow with that flow's own filters (FlowRoute invariants), so this state has to travel with the history entry. The design defines no history-state or stored shape for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/source: string (required)",
+        "atlas_flow/kind: string (required)",
+        "atlas_flow/realization: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "bareFlows",
+      "from": "openByLink",
+      "condition": "the address is the bare /flows, with no flow id",
+      "label": "Bare /flows keeps its address",
+      "description": "Atlas keeps the plain Flows address and draws the default flow with the default filters and a breadcrumb naming only that flow.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-1-i"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the default entry flow's id, reconstructed from the stored flow",
+            "value": {
+              "id": "leafcutter/deliver-a-feature"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "flowNotFound",
+      "from": "openByLink",
+      "condition": "the flow id in the address names no flow",
+      "label": "Flow not found (404)",
+      "description": "Atlas answers with a 404 Flow not found notice that quotes the requested id and links back to the Flows view, drawing no flow and keeping the bad address to correct.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-1-ii"
+      ],
+      "outcome_kind": "failure",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the stored flow id that the typo leafcutter/flow-render-pipline fails to match",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Requested flow id and ?step= handed from the /flows/<flow id> address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes how every address resolves (FlowRoute requested_flow_id, requested_step, rendered_flow, filters, crumbs, open_drawer, http_status, notice, step_notice) but defines no route-parameter or FlowsView prop shape that carries the requested flow id and ?step= to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "stepNotFound",
+      "from": "openStepLink",
+      "condition": "the ?step= value names no step or branch of the flow",
+      "label": "Step not found",
+      "description": "Atlas opens the flow as usual but with no drawer, and shows a Step not found notice quoting the unknown step until the person opens a real one.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-2-i"
+      ],
+      "outcome_kind": "failure",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/branches/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: leafcutter/python-coder-internal's node ids, none of which is 'lint' (reconstructed)",
+            "value": {
+              "id": "leafcutter/python-coder-internal",
+              "steps": [
+                {
+                  "id": "conventions"
+                },
+                {
+                  "id": "implement"
+                },
+                {
+                  "id": "docenforce"
+                },
+                {
+                  "id": "complexity"
+                },
+                {
+                  "id": "tests"
+                },
+                {
+                  "id": "signoff"
+                }
+              ],
+              "branches": []
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Requested flow id and ?step= handed from the /flows/<flow id> address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes how every address resolves (FlowRoute requested_flow_id, requested_step, rendered_flow, filters, crumbs, open_drawer, http_status, notice, step_notice) but defines no route-parameter or FlowsView prop shape that carries the requested flow id and ?step= to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/steps/*/id: string (required)",
+        "atlas_flow/branches/*/id: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "stepNoticeCleared",
+      "from": "openStepLink",
+      "condition": "the link's ?step= named no step or branch, and the person then opens a real step's or branch's drawer",
+      "label": "Open a real step after 'Step not found'",
+      "description": "Atlas clears the Step not found notice and replaces the unknown step in the address with the opened one, in place and without adding a Back entry.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-2-ii"
+      ],
+      "outcome_kind": "failure",
+      "io_contracts": {
+        "not_applicable": "A click on a real step or branch node clears the 'Step not found' state, opens that node's drawer and rewrites the current history entry's unknown ?step= value to the node's id in place (history replace). No request is made and no JSON payload is passed."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "legacyRedirect",
+      "from": "openStepLink",
+      "condition": "the link is a legacy /flows?flow=<id>&step=<step> link",
+      "label": "Legacy ?flow= link redirects (308)",
+      "description": "Atlas permanently redirects the old-style link to the matching step link, opening that flow with the step's drawer open and leaving the old address out of the history.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas /flows route (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowRoute"
+      ],
+      "implements": [
+        "UXP-591-2-iii"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "not_applicable": "An HTTP 308 Permanent Redirect: the request carries only the legacy query string (?flow=<percent-encoded id>&step=<step>) and the response carries the step link /flows/<id>?step=<step> in its Location header, with no JSON body and no view props. The page it lands on is the step link documented on openStepLink."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "drawerSwitch",
+      "from": "drawerUrl",
+      "condition": "another step's or branch's drawer is already open",
+      "label": "Switch from one drawer to another",
+      "description": "Atlas swaps the open drawer for the newly clicked one and replaces the step in the address in place, so only one drawer and one step are ever shown.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-4-i"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "not_applicable": "A click on another node swaps the open-drawer state and rewrites the current history entry's ?step= value in place (history replace). No request is made and no JSON payload is passed."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "pushFromOpenDrawer",
+      "from": "navPush",
+      "condition": "a step's or branch's drawer is open when the person selects or drills",
+      "label": "Leave a flow while its drawer is open",
+      "description": "Atlas closes the drawer and adds a history entry for the target flow with no step, while the entry left behind keeps its open step so Back returns to it.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [
+        "UXP-591-5-i"
+      ],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Breadcrumb trail and filters kept with each history entry",
+            "direction": "produces",
+            "reason": "Back and Forward must restore each entry's breadcrumb trail (FlowNavigation pop invariant; nav-drill-and-return-4 returns to Deliver a feature end-to-end > How a ticket is built) and, by the dataset's assumption that the owner has not ruled on, its Source, Kind and Realization filters (nav-filter-replace-6). A canonical URL names one flow, and a fresh load of it shows only that flow with that flow's own filters (FlowRoute invariants), so this state has to travel with the history entry. The design defines no history-state or stored shape for it.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-09",
+      "impl_status": "not_started"
+    }
+  ],
   "impl_summary": {
     "done": 5,
     "in_progress": 0,
-    "not_started": 0,
-    "total": 5,
-    "asof": "2026-07-20"
+    "not_started": 16,
+    "total": 21,
+    "asof": "2026-10-09"
   },
   "acceptance_scenarios": [
     {
@@ -623,6 +1495,102 @@
       "given": "the structured JSON contract metadata and the applicable source contracts",
       "when": "Open a step to see its ACs' live status + mock records + mockup",
       "then": "The inspector groups consumed and produced contract fields with their exact keys, types, requiredness and defaults. It shows raw JSON examples with full/projection and provenance labels, preserves the narrative once, and retains the legacy view when structured metadata is unavailable or unusable."
+    },
+    {
+      "for": "acStepLink",
+      "given": "AC UXP-411 is implemented by the step 'resolve' of leafcutter/flow-render-pipeline and AC UXP-210d-2 by the branch 'declined' of fern-and-fig/checkout-and-pay",
+      "when": "the person opens each AC's detail drawer in the Atlas",
+      "then": "the 'Appears in flows' links point at /flows/leafcutter/flow-render-pipeline?step=resolve and /flows/fern-and-fig/checkout-and-pay?step=declined, with the '/' in the flow id unencoded and no /flows?flow= form"
+    },
+    {
+      "for": "openByLink",
+      "given": "the flow leafcutter/flow-render-pipeline exists with source real and kind data",
+      "when": "a person opens the shared link /flows/leafcutter/flow-render-pipeline in a new tab",
+      "then": "the Atlas answers 200 and renders that flow selected with no drawer open, the filters show Source Real, Kind Data and Realization All, the breadcrumb shows only that flow, and the address bar keeps /flows/leafcutter/flow-render-pipeline"
+    },
+    {
+      "for": "bareFlows",
+      "given": "flows can be opened by their canonical links",
+      "when": "the person opens /flows from the sidebar 'Flows' link",
+      "then": "the address bar stays /flows, the default flow leafcutter/deliver-a-feature renders with Source Real, Kind User and Realization All, and the breadcrumb shows only that flow"
+    },
+    {
+      "for": "flowNotFound",
+      "given": "no flow has the id leafcutter/flow-render-pipline",
+      "when": "a person opens /flows/leafcutter/flow-render-pipline",
+      "then": "the Atlas answers 404 with a 'Flow not found' notice that quotes 'leafcutter/flow-render-pipline' and links to /flows, the flow selector is shown, no flow is drawn and the breadcrumb is empty, and the address bar keeps /flows/leafcutter/flow-render-pipline"
+    },
+    {
+      "for": "openStepLink",
+      "given": "'resolve' is a step of leafcutter/flow-render-pipeline and 'declined' is a branch of fern-and-fig/checkout-and-pay",
+      "when": "a person opens /flows/leafcutter/flow-render-pipeline?step=resolve or /flows/fern-and-fig/checkout-and-pay?step=declined",
+      "then": "the Atlas answers 200 and renders that flow with exactly that step's or branch's drawer open, the filters take the flow's own Source and Kind with Realization All, the breadcrumb shows only that flow, and the address bar keeps the ?step= value"
+    },
+    {
+      "for": "stepNotFound",
+      "given": "leafcutter/python-coder-internal has no step or branch with the id 'lint'",
+      "when": "a person opens /flows/leafcutter/python-coder-internal?step=lint",
+      "then": "the Atlas answers 200 and renders that flow with no drawer open and a 'Step not found' notice that quotes 'lint', the breadcrumb shows only that flow, and the address bar keeps ?step=lint"
+    },
+    {
+      "for": "legacyRedirect",
+      "given": "an old link /flows?flow=leafcutter%2Fflow-render-pipeline&step=resolve",
+      "when": "a person follows it",
+      "then": "the server answers 308 with the location /flows/leafcutter/flow-render-pipeline?step=resolve, the page opens that flow with the 'resolve' drawer open exactly as a new step link, and the legacy URL is not left in the tab's history"
+    },
+    {
+      "for": "drawerUrl",
+      "given": "the tab has one history entry showing leafcutter/deliver-a-feature with no drawer, either at /flows/leafcutter/deliver-a-feature or at the bare /flows",
+      "when": "the person clicks the 'Plan' step",
+      "then": "the 'Plan' drawer opens, the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan in both cases, and the tab still has one history entry because the entry was replaced, not pushed"
+    },
+    {
+      "for": "drawerSwitch",
+      "given": "the 'Plan' drawer is open at /flows/leafcutter/deliver-a-feature?step=plan",
+      "when": "the person clicks the 'Build' step",
+      "then": "only the 'Build' drawer is open, the address bar becomes /flows/leafcutter/deliver-a-feature?step=build with a single ?step= value, and no history entry is added"
+    },
+    {
+      "for": "drawerClose",
+      "given": "the 'Build' drawer is open at /flows/leafcutter/deliver-a-feature?step=build",
+      "when": "the person closes it with the X button or by clicking the canvas beside it",
+      "then": "the drawer closes, the address bar becomes /flows/leafcutter/deliver-a-feature with no query, and no history entry is added"
+    },
+    {
+      "for": "navPush",
+      "given": "/flows/leafcutter/deliver-a-feature is open with no drawer",
+      "when": "the person drills into the sub-flow of the 'Build' step",
+      "then": "a new history entry is pushed, the address bar shows /flows/leafcutter/how-acs-are-built with no ?step=, and the breadcrumb reads Deliver a feature end-to-end > How a ticket is built (the phase chain); selecting a flow or clicking a breadcrumb pushes that flow's canonical URL the same way"
+    },
+    {
+      "for": "pushFromOpenDrawer",
+      "given": "/flows/leafcutter/flow-render-pipeline?step=resolve is open with the 'resolve' drawer open",
+      "when": "the person picks 'Inside python-coder (the coder's internal workflow)' in the flow selector",
+      "then": "the drawer closes, a new entry /flows/leafcutter/python-coder-internal with no ?step= is pushed, and pressing Back returns to /flows/leafcutter/flow-render-pipeline?step=resolve with the 'resolve' drawer open"
+    },
+    {
+      "for": "backForward",
+      "given": "the person opened /flows, drilled into 'Build' (/flows/leafcutter/how-acs-are-built) and then into 'Coders make it green (prio 6-8)' (/flows/leafcutter/python-coder-internal)",
+      "when": "they press Back twice and then Forward once",
+      "then": "the view shows How a ticket is built with the breadcrumb Deliver a feature end-to-end > How a ticket is built, then the default flow at /flows, then How a ticket is built again with that same breadcrumb, and each time the address bar matches the screen"
+    },
+    {
+      "for": "filterRepicksFlow",
+      "given": "the person drilled from /flows/leafcutter/deliver-a-feature into How a ticket is built and opened the 'Coders make it green (prio 6-8)' drawer, so the tab has two history entries and the address is /flows/leafcutter/how-acs-are-built?step=code with filters Real, User, All",
+      "when": "they set the Realization filter to 'Spec'",
+      "then": "'Define a feature the product-truth way' renders with a one-flow breadcrumb and no drawer, the current entry is replaced with /flows/leafcutter/define-a-feature so the tab still has two entries, and Back returns to /flows/leafcutter/deliver-a-feature"
+    },
+    {
+      "for": "filterKeepsFlow",
+      "given": "the person drilled from /flows/leafcutter/deliver-a-feature into How a ticket is built and opened the 'Coders make it green (prio 6-8)' drawer, so the address is /flows/leafcutter/how-acs-are-built?step=code with filters Real, User, All",
+      "when": "they set the Realization filter to 'Built'",
+      "then": "Deliver a feature end-to-end stays the entry flow, How a ticket is built keeps rendering with the breadcrumb Deliver a feature end-to-end > How a ticket is built and its drawer open, the address bar stays /flows/leafcutter/how-acs-are-built?step=code, and no history entry is added"
+    },
+    {
+      "for": "stepNoticeCleared",
+      "given": "/flows/leafcutter/python-coder-internal?step=lint is open with the 'Step not found' notice and no drawer, and the tab has one history entry",
+      "when": "the person clicks the 'Doc-enforcer' step",
+      "then": "the notice disappears, the 'Doc-enforcer' drawer opens, the address bar becomes /flows/leafcutter/python-coder-internal?step=docenforce, and the tab still has one history entry, so no later Back press returns to ?step=lint"
     }
   ],
   "provenance": [
@@ -649,6 +1617,12 @@
       "by": "Codex release integrator",
       "date": "2026-10-05",
       "note": "Linked the reviewed contract-display and authoring acceptance criteria to their actual behavior; corrected the validator stdout boundary."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (/plan-feature, ux-prototyping)",
+      "date": "2026-10-09",
+      "note": "v5: canonical, shareable Atlas flow URLs, from the owner-approved dataset leafcutter/atlas-flows v2 (commit e7c04e5f8) and the mockup leafcutter/atlas-flows-canonical-url (screen atlas-flows-canonical-url, commit 46255a446). Set entities to Flow, FlowRoute, FlowAppearance and FlowNavigation; the steps reach the dataset leafcutter/atlas-flows through the canonical-URL mockup. The flow-level mock_data_ref was left unset so this product-truth commit does not rewrite the back-references of done UXP-520 ACs, whose missing test coverage is ticketed separately. Added steps acStepLink, openByLink, openStepLink, drawerUrl, drawerClose, navPush and backForward, and branches bareFlows, flowNotFound, stepNotFound, legacyRedirect, drawerSwitch and pushFromOpenDrawer, each wired to the mockup screen with one acceptance scenario and empty implements for the business-analyst. Updated the cross step's narrative with today's legacy link form; kept its scenario and its UXP-524 link. Existing step ids, orders, contracts and AC links are unchanged. Approved by the owner at the flow gate on 2026-10-09 with three rulings that keep the URL matching the screen: (1) opening a drawer on bare /flows replaces the URL with the default flow's canonical URL plus ?step=<id>; (2) opening a real step's drawer after 'Step not found' clears the notice and replaces the unknown ?step=; (3) when a Source, Kind or Realization filter change makes a different flow render, the URL is replaced (no new Back entry) with that flow's canonical URL, and a filter change that keeps the flow leaves the URL unchanged. Same day, still v5, the rulings were wired from dataset v3 (uncommitted at the time; FlowNavigation nav-drawer-on-bare-flows-1..3, nav-clear-step-notice-1..4, nav-filter-replace-1..7): the drawerUrl scenario and the drawerUrl, drawerClose, stepNotFound, navPush and backForward narratives now state the rulings; branches stepNoticeCleared (from openStepLink), filterRepicksFlow and filterKeepsFlow (from filter) were added; the history-entry missing binding now also covers filters, which the dataset assumes travel with each entry (not an owner ruling). Readiness, lowered to draft for the gate, is approved again."
     }
   ],
   "contract_definitions": {

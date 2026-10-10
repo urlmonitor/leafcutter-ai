@@ -48,6 +48,10 @@ it_requirements:
   - For a research item the split names no decision record (whole_decision_id stays null) and the item returns its
     evidence bundle to its parent as today.
   - Reachability uses the injected test producer of DK-400b-2; the mid-run path is dormant in production.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -81,6 +85,11 @@ amended_by:
     date: '2026-10-05'
     by: it-po
     summary: Mid-run reachability wording aligned with the dormant, injected-producer rule.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
 implemented_by: []

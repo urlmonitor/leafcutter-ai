@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-09'
 components:
   - build_orchestration
 related_docs:
@@ -68,7 +68,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 56** (4 blocker, 33 high, 19 low) · **Resolved: 25**
+**Open: 60** (4 blocker, 34 high, 22 low) · **Resolved: 26** (recounted from the directory 2026-10-09)
 
 ## Open
 
@@ -113,6 +113,8 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `high` | KI-BO-20260928-stage-commit-leaves-the-edited-parent-unstaged — plan-feature's stage commit stages only the reported AC ids, never the parent whose covered_by the agent edited, so check-ac-parent-covered-by refuses every stage that adds children to an existing parent | [open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md](build-orchestration/open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md) |
 | `high` | KI-BO-20260928-release-decline-reported-as-partial-success — when the fast lane's release agent declines, its schema-shaped `released: []` reply is reported as "Release: partially succeeded", so the claimed ACs stay in_progress and nothing marks the release as failed | [open-high-ki-bo-20260928-release-decline-reported-as-partial-success.md](build-orchestration/open-high-ki-bo-20260928-release-decline-reported-as-partial-success.md) |
 | `high` | KI-BO-20260928-fast-lane-worktree-step-runs-another-clones-script — the worktree step names no repository root, so from a deleted cwd the agent ran another clone's script and opened the build worktree inside an unrelated project; launched from inside a worktree it opens it under worktrees/worktrees/ | [open-high-ki-bo-20260928-fast-lane-worktree-step-runs-another-clones-script.md](build-orchestration/open-high-ki-bo-20260928-fast-lane-worktree-step-runs-another-clones-script.md) |
+| `high` | KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path — ten approved BO-100d ACs pin the pre-drive sink probe to the relative `debugging/logs/agent_telemetry.jsonl`, so once INF-500d-4 moves the telemetry stream to a declared absolute root the probe tests a file nobody writes to (latent false green) | [open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md](build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md) |
+| `high` | KI-BO-20261009-1833 — `/build-feature`'s red-baseline gate outlives the relaying agent's 120s Bash timeout, and the agent returns `{output: "", exit_code: 0}` from a stale empty read, so a gate that passed halts the drive as unverifiable | [open-high-ki-bo-20261009-1833.md](build-orchestration/open-high-ki-bo-20261009-1833.md) |
 | `low` | KI-BO-008 — A structural test makes code comments load-bearing | [open-low-ki-bo-008.md](build-orchestration/open-low-ki-bo-008.md) |
 | `low` | KI-BO-009 — The harness default stub is generically positive, so a new gate silently breaks older fixtures | [open-low-ki-bo-009.md](build-orchestration/open-low-ki-bo-009.md) |
 | `low` | KI-BO-021 — TODO: `BO-2400e-4` is closed on two of its four specified tests, and the two missing ones are the pair that would survive a writer swap | [open-low-ki-bo-021.md](build-orchestration/open-low-ki-bo-021.md) |
@@ -131,6 +133,9 @@ Fixed issues move to [`build-orchestration/resolved/`](build-orchestration/resol
 | `low` | KI-BO-20260907-0803 — `blocked` and `deferred` are valid ticket statuses that no transition can reach, so the only way to park a ticket is to bypass the tool | [open-low-ki-bo-20260907-0803.md](build-orchestration/open-low-ki-bo-20260907-0803.md) |
 | `low` | KI-BO-20260927-quick-fix-gitignored-target — /quick-fix takes a gitignored deployed copy as target_file, so a coder that correctly edits the tracked template trips the scope-expansion halt | [open-low-ki-bo-20260927-quick-fix-gitignored-target.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-gitignored-target.md) |
 | `low` | KI-BO-20260927-quick-fix-cannot-target-an-existing-leaf-ac — /quick-fix always authors a new AC, so it cannot build an approved leaf that /plan-feature wrote for it, and a file with no L1 mapping can only go through a full /plan-feature round | [open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md](build-orchestration/open-low-ki-bo-20260927-quick-fix-cannot-target-an-existing-leaf-ac.md) |
+| `low` | KI-BO-20261009-fast-lane-changelog-publishes-absolute-local-paths — the fast lane writes the coder's `files_modified` into its changelog entry exactly as reported, so 12 of the 15 fast-lane entries on main publish a contributor's home directory and worktree name | [open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md](build-orchestration/open-low-ki-bo-20261009-fast-lane-changelog-publishes-absolute-local-paths.md) |
+| `low` | KI-BO-20261009-setup-reply-truncated-on-new-worktree — on a first /plan-feature run the setup agent relays the bootstrap's whole stderr, cuts its reply before the JSON line, and the run halts saying the setup named no workspace | [open-low-ki-bo-20261009-setup-reply-truncated-on-new-worktree.md](build-orchestration/open-low-ki-bo-20261009-setup-reply-truncated-on-new-worktree.md) |
+| `low` | KI-BO-20261009-1832 — `/build-feature` refuses a handoff to a phase the handing phase just added (architect-review → adr-author), because it checks the target against the planner's opening snapshot of the agents map, not the live record | [open-low-ki-bo-20261009-1832.md](build-orchestration/open-low-ki-bo-20261009-1832.md) |
 
 ## Resolved
 

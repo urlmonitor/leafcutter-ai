@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-10-01
+last_updated: 2026-10-05
 components:
   - documentation_system
 related_docs:
@@ -46,6 +46,7 @@ below by hand.
 | [artifact-knowledge-graph-data-map.md](artifact-knowledge-graph-data-map.md) | Node and edge type map for the cross-artifact knowledge graph (ACs, tickets, tests, flows, mockups, changelog entries, components), with a per-edge enforcement and shape trust rating. |
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it â€” this index does. |
 
+| [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 
 ## Documentation & Architecture Conventions
@@ -95,6 +96,13 @@ below by hand.
 | Doc | What it's for |
 |---|---|
 | [frontend-coder-capabilities.md](frontend-coder-capabilities.md) | Cross-reference of every capability the legacy `frontend-design` skill and `frontend-coder` agent had, and where each now lives after their unification. |
+
+## Decision Kernel
+
+| Doc | What it's for |
+|---|---|
+| [kernel-request-splitting.md](kernel-request-splitting.md) | Part 1 of the ADR-067 specification for splitting a bundled request into person-approved parts: detection gates, the host operation, and the four schemas (goal_decomposition_request, goal_decomposition, decomposition, split_answer). |
+| [kernel-request-splitting-2-conversion-gate-runs-config.md](kernel-request-splitting-2-conversion-gate-runs-config.md) | Part 2: proposal conversion and bounds, the split gate, trigger-keyed endings, part runs and budgets, gap accounting, configuration and the staged `split.enabled` rollout. |
 
 ## Product Truth
 

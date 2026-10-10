@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from knowledge.contracts import Entity
     from knowledge.adapters.neo4j_backend import Neo4jBackend
 
+from knowledge.adapters.domain_schema import EDGE_TYPES, NODE_LABELS, RELATIONSHIPS
 from knowledge.adapters.neo4j_backend import scope_key, entity_from_row
 from knowledge.contracts import Relation
 from knowledge.errors import NotReady, KnowledgeError
@@ -72,7 +73,9 @@ async def query(
     }
     if operation == "get_entities":
         rows = await db._run(
-            "MATCH (n:KREntity {generation_key:$key}) WHERE n.canonical_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
+            "MATCH (n:"
+            + NODE_LABELS
+            + " {generation_key:$key}) WHERE n.canonical_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
             params,
         )
         return [entity_from_row(row) for row in rows]
@@ -80,7 +83,7 @@ async def query(
         if "structural_parent" not in manifest.supported_fields.get("AcceptanceCriterion", []):
             raise NotReady("generation does not establish the canonical parent mapping")
         rows = await db._run(
-            "MATCH (n:KREntity {generation_key:$key,kind:'AcceptanceCriterion'}) WHERE n.parent_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
+            "MATCH (n:AC {generation_key:$key,kind:'AcceptanceCriterion'}) WHERE n.parent_id IN $ids RETURN n.payload AS payload ORDER BY n.canonical_id LIMIT $limit",
             params,
         )
         return [entity_from_row(row) for row in rows]
@@ -111,12 +114,17 @@ async def query(
         status=arguments.get("status"),
         decision_type=arguments.get("decision_type"),
     )
-    arrow = "<-[r:KR_LINK]-" if direction == "incoming" else "-[r:KR_LINK]->"
+    physical_edge = RELATIONSHIPS[edge_type]
+    arrow = f"<-[r:{physical_edge}]-" if direction == "incoming" else f"-[r:{physical_edge}]->"
     # The final limit alone is not our work limit: each seed expansion is bounded first.
     rows = await db._run(
-        "UNWIND $ids AS id MATCH (s:KREntity {generation_key:$key,canonical_id:id}) CALL { WITH s MATCH (s)"
+        "UNWIND $ids AS id MATCH (s:"
+        + NODE_LABELS
+        + " {generation_key:$key,canonical_id:id}) CALL { WITH s MATCH (s)"
         + arrow
-        + "(n:KREntity {generation_key:$key}) WHERE r.generation_key=$key AND r.edge_type=$edge_type AND ($kind IS NULL OR n.kind=$kind) AND ($status IS NULL OR n.status=$status) AND ($decision_type IS NULL OR n.decision_type=$decision_type) RETURN n ORDER BY n.canonical_id LIMIT $limit } RETURN DISTINCT n.payload AS payload,n.canonical_id AS id ORDER BY id LIMIT $limit",
+        + "(n:"
+        + NODE_LABELS
+        + " {generation_key:$key}) WHERE r.generation_key=$key AND r.edge_type=$edge_type AND ($kind IS NULL OR n.kind=$kind) AND ($status IS NULL OR n.status=$status) AND ($decision_type IS NULL OR n.decision_type=$decision_type) RETURN n ORDER BY n.canonical_id LIMIT $limit } RETURN DISTINCT n.payload AS payload,n.canonical_id AS id ORDER BY id LIMIT $limit",
         params,
     )
     return [entity_from_row(row) for row in rows]
@@ -152,7 +160,13 @@ async def neighbors(
         "limit": bounded_limit(limit),
     }
     rows = await db._run(
-        "UNWIND $ids AS id MATCH (s:KREntity {generation_key:$key,canonical_id:id}) CALL { WITH s MATCH (s)-[r:KR_LINK]-(n:KREntity {generation_key:$key}) WHERE r.generation_key=$key AND r.edge_type IN $types RETURN n,r ORDER BY n.canonical_id,r.key LIMIT $limit } RETURN n.payload AS payload,r.payload AS relation ORDER BY n.canonical_id LIMIT $limit",
+        "UNWIND $ids AS id MATCH (s:"
+        + NODE_LABELS
+        + " {generation_key:$key,canonical_id:id}) CALL { WITH s MATCH (s)-[r:"
+        + EDGE_TYPES
+        + "]-(n:"
+        + NODE_LABELS
+        + " {generation_key:$key}) WHERE r.generation_key=$key AND r.edge_type IN $types RETURN n,r ORDER BY n.canonical_id,r.key LIMIT $limit } RETURN n.payload AS payload,r.payload AS relation ORDER BY n.canonical_id LIMIT $limit",
         params,
     )
     nodes = {row["payload"]: entity_from_row(row) for row in rows}

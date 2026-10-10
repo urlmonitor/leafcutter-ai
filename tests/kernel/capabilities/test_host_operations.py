@@ -40,6 +40,7 @@ from tests.kernel.capabilities.host_support import (
     ANSWER_AFTER,
     OPTIONS_REQUEST,
     QUESTION_REQUEST,
+    EXPERIMENT_ONLY,
     REQUESTS,
     RESEARCH_REQUEST,
     SCHEMAS,
@@ -152,7 +153,7 @@ class TestBootstrapBindings(unittest.TestCase):
     def test_each_host_descriptor_gets_its_operation_and_refuses_to_execute(self) -> None:
         config = Path(__file__).resolve().parents[3] / "config" / "capability_registry.json"
         table = build_bindings(load_registry(config))
-        for capability_id in SCHEMAS:
+        for capability_id in sorted(set(SCHEMAS) - EXPERIMENT_ONLY):
             with self.subTest(capability_id):
                 executor = as_type(table.resolve(capability_id, NATIVE_VERSION),
                                    HostOperationExecutor)

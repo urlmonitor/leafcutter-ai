@@ -1,0 +1,92 @@
+id: BO-4400
+title: "Your machine stays clean no matter how much automation runs on it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+risk_surface: safety
+criteria: |
+  Work finishes, space comes back -- nothing piles up behind you.
+
+  Every run that does work on your behalf tidies up after itself as soon as its
+  work is safely handed over for review, not days later when someone remembers to
+  run a separate wrap-up step. Its workspace, its supporting material and its
+  temporary files all go with it, leaving nothing behind anywhere on the machine,
+  while work that never reached the team is always kept. Whatever does slip through
+  is swept up routinely, and you are warned long before space runs out.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The one door that clears a workspace (no prompt, refuses while unsent work remains,
+      authorisation given up front). BO-4400 USES it; it does not re-specify it.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The holds-work / holds-nothing verdict (incl. squash-merge detection, BO-4100c-1-i)
+      every cleanup decision in this tree relies on.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e.yaml
+    relationship: related
+    status: exists
+    relevance: Complete listing of workspaces, including unregistered leftovers.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400a, BO-4400b, BO-4400c, BO-4400d, BO-4400e, BO-4400f]
+implemented_by: []
+notes: |
+  ORIGIN. The user, 2026-10-09: "and same for the tmp files. we need clear ACs that provide
+  scripts that clean-up when something finishes - latest when opening the PR (finalize
+  feature is used too rarely)". Deliverable is ACs that require concrete cleanup scripts,
+  not guidance -- same "enforcement by construction" framing as BO-4100 / BO-4300.
+
+  WHY A NEW L0 AND NOT BO-4300g. BO-4300 has six L1s, so one more child would fit the cap,
+  but the request is six distinct benefits (when each route cleans up, what "gone" means
+  across the machine, environments that die with the workspace, a recurring sweep, a
+  disk-pressure guard, temporary files). Folding them into one L1 would give BO-4300g far
+  more than its own child cap. BO-4300 promises ONE DOOR for making, finding and clearing;
+  BO-4400 promises that the door is actually USED, on time, by every route, and that the
+  clear is complete. Rule for future requests: "how a workspace is cleared safely" ->
+  BO-4300e; "that it IS cleared, when, and that nothing is left" -> BO-4400.
+
+  CAPABILITIES USED, NOT RE-DERIVED: BO-4300e (the central clear: no prompt, refusal while
+  unsent work, up-front authorisation), BO-4100c (holds-work / holds-nothing verdict incl.
+  BO-4100c-1-i squash-merge detection), BO-4100e (complete listing incl. unregistered
+  leftovers), BO-4300c-1-iii (a build restores tracked files it changes, so a finished
+  workspace does not falsely read as holding work), BO-4300e-4 (comparison workspaces),
+  BO-1800d (housekeeping never disturbs work in flight), TQ-600b-2 (each test gets its own
+  scratch location -- BO-4400f adds the home/expiry rule, not uniqueness), ACD-2100c-5
+  (halted runs keep their work). All of these are todo/unbuilt as of 2026-10-09; the BA
+  must sequence BO-4400 children behind them via depends_on rather than restating them.
+
+  KEY FRAMING DECISION. The cleanup point is the moment the work is up for review (pull
+  request opened = work pushed = nothing unsent), NOT finalize-feature, which runs too
+  rarely. Finalize may still clear, but no route may rely on it.
+
+  DECIDED 2026-10-09 by BrainCandy (resolves BO-4300 Q8): clearing a workspace whose
+  verdict is "holds nothing unsent" (BO-4100c) needs NO caller-supplied confirmation
+  token -- the verdict is the safety check. Up-front permission (BO-4300e-3) is required
+  only to discard unsent work. BO-4400a's automatic end-of-run clear relies on this.
+
+  FINAL GATE 2026-10-09 (BrainCandy): approved, priority high. Decisions: disk guard
+  defaults refuse below 10 GB free / warn below 25 GB, the lower of the Linux volume and the
+  Windows host drive deciding under WSL (BO-4400e); when free space cannot be measured the
+  workspace is still made and the unreadable drive is named (BO-4400e-1-i); scratch root
+  defaults to <user cache>/leafcutter/scratch/ (BO-4400f-1); environment precedence uv.lock >
+  poetry.lock > requirements-dev.txt > requirements.txt > none, a pyproject.toml without a lock
+  file counting as none, uv winning when both lock files exist (BO-4400c-3, c-3-i).

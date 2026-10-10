@@ -55,10 +55,8 @@ class TestContractMigration(unittest.TestCase):
             self.assertEqual(result["binding_gaps"][0][key], value)
         self.assertEqual(result["binding_gaps"][0]["flow_id"], self.flow["id"])
         self.assertEqual(result["binding_gaps"][0]["node_id"], self.flow["steps"][0]["id"])
-        detail = self.checker.render_contract_io(self.flow, self.flow["steps"][0])[2]
-        self.assertIn("PROPOSED", detail)
-        self.assertIn("missing", detail.lower())
-        self.assertIn("traversal_frontier", detail)
+        # A gap yields no compatibility labels; Atlas renders it from io_contracts as a proposal.
+        self.assertEqual(self.checker.render_contract_labels(self.flow, self.flow["steps"][0]), ([], []))
 
     def test_gap_requires_reason_and_existing_bounded_source(self):
         # covers: UXP-300-3
@@ -93,9 +91,8 @@ class TestContractMigration(unittest.TestCase):
         self.assertTrue(self.check()["errors"])
         definition["note"] = "Documentation projection reviewed against its producer; no automatic source-code parity check."
         self.assertEqual(self.check()["errors"], [])
-        detail = self.checker.render_contract_io(self.flow, self.flow["steps"][0])[2]
-        self.assertIn("SOURCE-REVIEWED", detail)
-        self.assertIn(definition["note"], detail)
+        # The explanation stays in the contract definition Atlas renders; no step text copies it.
+        self.assertNotIn(definition["note"], json.dumps(self.flow["steps"]))
 
     def test_real_retrieval_needs_wire_cannot_be_replaced_with_a_gap(self):
         # covers: UXP-300-3

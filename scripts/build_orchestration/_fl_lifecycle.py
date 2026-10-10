@@ -311,8 +311,15 @@ def claim_build_set(
             }
 
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): no `except yaml.YAMLError` guards this
+            # read at all, so a parse failure is meant to propagate and
+            # crash this concurrency-safety claim operation rather than
+            # proceed on corrupted data. CSafeLoader's permissiveness on
+            # malformed input (not raising where SafeLoader would) removes
+            # that fail-closed guarantee silently.
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=yaml.SafeLoader)
         except OSError as exc:
             _LOG.warning("claim_build_set: cannot read %s: %s", yaml_path, exc)
             error = f"Cannot read {ac_id!r} from {yaml_path}: {exc}"
@@ -443,8 +450,11 @@ def filter_already_claimed(
             continue
 
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): same unguarded shape as claim_build_set
+            # above -- see that comment.
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=yaml.SafeLoader)
         except OSError as exc:
             _LOG.warning("filter_already_claimed: cannot read %s: %s", yaml_path, exc)
             to_build.append(ac_id)
@@ -552,8 +562,11 @@ def check_no_stale_todo(
             continue
 
         try:
+            # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+            # fix-pass, 2026-10-07): same unguarded shape as claim_build_set
+            # above -- see that comment.
             with yaml_path.open(encoding="utf-8") as fh:
-                record = yaml.safe_load(fh)
+                record = yaml.load(fh, Loader=yaml.SafeLoader)
         except OSError as exc:
             _LOG.warning("check_no_stale_todo: cannot read %s: %s", yaml_path, exc)
             stale.append(ac_id)

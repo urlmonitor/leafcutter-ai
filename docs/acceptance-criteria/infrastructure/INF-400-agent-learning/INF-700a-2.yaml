@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-700a.yaml"
@@ -71,8 +71,14 @@ origin_agent: BrainCandy
 created: 2026-09-07
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_inf_700a_2.py
+- unit_tests/workflows/test_inf_700a_2.py
+implemented_by:
+- scripts/knowledge/harvest_status.py
+- scripts/knowledge/harvest_cli.py
+- scripts/knowledge/harvest_learnings.py
+- scripts/knowledge/sink_resolution.py
 test_spec:
   - name: test_a_never_run_tree_and_a_ran_after_every_unit_of_work_tree_report_differently
     target_dir: tests/knowledge/

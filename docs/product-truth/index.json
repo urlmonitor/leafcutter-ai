@@ -30,6 +30,9 @@
     "Decision",
     "CriterionCategory",
     "CriterionCategoryAggregate",
+    "FlowRoute",
+    "FlowAppearance",
+    "FlowNavigation",
     "Decomposition"
   ],
   "artifacts": [
@@ -221,20 +224,28 @@
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
       "status": "active",
       "readiness": "approved",
-      "version": 4,
-      "entities": [],
+      "version": 5,
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 0,
-        "total": 5,
-        "asof": "2026-07-20"
+        "not_started": 16,
+        "total": 21,
+        "asof": "2026-10-09"
       },
       "tags": [
         "product-truth",
         "atlas",
         "flows",
-        "explorer"
+        "explorer",
+        "canonical-url",
+        "deep-link",
+        "browser-history"
       ]
     },
     {
@@ -827,7 +838,7 @@
       "path": "flows/leafcutter/decision-lifecycle.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [
         "Decision"
       ],
@@ -837,7 +848,7 @@
         "in_progress": 2,
         "not_started": 0,
         "total": 4,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "tags": [
         "decision-kernel",
@@ -858,7 +869,7 @@
       "path": "flows/leafcutter/decision-forming.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 8,
+      "version": 11,
       "entities": [
         "Decision",
         "Decomposition"
@@ -867,9 +878,9 @@
       "impl_summary": {
         "done": 13,
         "in_progress": 4,
-        "not_started": 21,
-        "total": 38,
-        "asof": "2026-10-06"
+        "not_started": 24,
+        "total": 41,
+        "asof": "2026-10-09"
       },
       "tags": [
         "decision-kernel",
@@ -893,7 +904,7 @@
       "path": "flows/leafcutter/decision-staging.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision"
       ],
@@ -903,7 +914,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "tags": [
         "decision-kernel",
@@ -923,7 +934,7 @@
       "path": "flows/leafcutter/decision-publishing.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 2,
+      "version": 3,
       "entities": [
         "Decision"
       ],
@@ -933,7 +944,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 10,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "tags": [
         "decision-kernel",
@@ -963,7 +974,7 @@
         "in_progress": 2,
         "not_started": 0,
         "total": 8,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "tags": [
         "decision-kernel",
@@ -981,7 +992,7 @@
       "path": "mock-data/leafcutter/decisions.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 9,
       "entities": [
         "Decision",
         "Decomposition"
@@ -1023,14 +1034,14 @@
       "id": "leafcutter/decision-ranked-choice",
       "type": "mockup",
       "title": "The ranked choice",
-      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / add-your-own / free-text answers. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
+      "summary": "Options ranked by Jev's per-criterion judgement, each with its rank, N of 3 required criteria likely met, required-criteria mean and per-criterion lines with evidence, an explicit note that the ranking is evidence and not a decision, and the choose-one / choose-and-add-a-condition / add-your-own / free-text answers, where the choice decides and the condition is kept verbatim. Populated from dec-5e7445182eaec1f2, where the human chose rank 2.",
       "screen": "decision-ranked-choice",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-ranked-choice.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1071,14 +1082,14 @@
       "id": "leafcutter/decision-record-staged",
       "type": "mockup",
       "title": "Record staged",
-      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the python -m kernel decisions publish command, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
+      "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the decisions publish command (the kernel's own interpreter and scripts/run_kernel.py, runnable as printed from any shell) with the publish_folder it writes into, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
       "screen": "decision-record-staged",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-record-staged.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1094,14 +1105,14 @@
       "id": "leafcutter/decision-record-published",
       "type": "mockup",
       "title": "Published record in review",
-      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction.",
+      "summary": "A decision record as reviewed in git or a detail view: title, question, selected option, approval block, precedents considered, supersedes and superseded_by, provenance (run id, Langfuse trace id, repository revision), record path and PR. Populated from dec-d53e1c52cd47c832 (PR #979), with the superseded pair dec-dfb0b8d1eb88ec16 and dec-bcae2c02f17508c1 shown as an illustrative correction, with the condition the human stated on dec-bcae2c02f17508c1.",
       "screen": "decision-record-published",
       "source": "mock",
       "component": "decision_kernel",
       "path": "mockups/leafcutter/decision-record-published.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Decision"
       ],
@@ -1247,6 +1258,67 @@
         "progress",
         "report"
       ]
+    },
+    {
+      "id": "leafcutter/atlas-flows",
+      "type": "mock_data",
+      "title": "Atlas flows view and canonical flow URLs",
+      "summary": "The canonical Flow dataset for the Atlas /flows view: real flows with their canonical /flows/<flow id> URLs, how each address resolves (default entry, selected, 404 not-found), step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step), the redirect of legacy /flows?flow=<id>&step=<step> links, the AC drawer's 'Appears in flows' step links, and browser sessions covering select, drill, breadcrumb, back and forward. v2: opening a step's drawer writes ?step=<id> into the address bar and closing it removes it with history replace (no new Back-button entries), so Back and Forward move between flows; selecting or drilling from an open drawer pushes the new flow's URL with no ?step=, and Back restores the drawer that was last replaced into an entry. v3 (owner rulings at the flow gate, so the URL always matches the screen): opening a drawer on bare /flows replaces it with /flows/leafcutter/deliver-a-feature?step=<id>; opening a real step's drawer after 'Step not found' clears the notice and replaces the unknown ?step=; a Source, Kind or Realization filter change that renders a different flow replaces the URL with that flow's canonical URL (no new Back entry), and one that keeps the flow leaves the URL unchanged. Navigation records now carry the filter state and the 'Step not found' notice, and Back and Forward restore an entry's filters.",
+      "component": "ux-prototyping",
+      "path": "mock-data/leafcutter/atlas-flows.mock.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 3,
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
+      "tags": [
+        "atlas",
+        "flows",
+        "canonical-url",
+        "deep-link",
+        "step-link",
+        "legacy-redirect",
+        "browser-history",
+        "not-found",
+        "ac-appearances",
+        "drawer-history",
+        "filter-replace"
+      ]
+    },
+    {
+      "id": "leafcutter/atlas-flows-canonical-url",
+      "type": "mockup",
+      "title": "Atlas Flows: canonical flow URLs",
+      "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. From leafcutter/atlas-flows v2.",
+      "screen": "atlas-flows-canonical-url",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/leafcutter/atlas-flows-canonical-url.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
+      "mock_data_ref": "leafcutter/atlas-flows",
+      "tags": [
+        "atlas",
+        "flows",
+        "canonical-url",
+        "deep-link",
+        "step-link",
+        "legacy-redirect",
+        "browser-history",
+        "not-found",
+        "drawer-history"
+      ]
     }
   ],
   "by_component": {
@@ -1316,7 +1388,8 @@
         "leafcutter/product-truth-architecture"
       ],
       "mock_data": [
-        "fern-and-fig/catalog"
+        "fern-and-fig/catalog",
+        "leafcutter/atlas-flows"
       ],
       "mockups": [
         "fern-and-fig/cart",
@@ -1327,7 +1400,8 @@
         "fern-and-fig/orders-list",
         "fern-and-fig/plant-detail",
         "fern-and-fig/plant-listing",
-        "fern-and-fig/shipment-tracking"
+        "fern-and-fig/shipment-tracking",
+        "leafcutter/atlas-flows-canonical-url"
       ]
     }
   },
@@ -1436,11 +1510,44 @@
       }
     },
     "Flow": {
-      "canonical_mock_data": {},
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
       "flows": {
         "ux-prototyping": [
           "leafcutter/author-product-truth",
-          "leafcutter/define-a-feature"
+          "leafcutter/define-a-feature",
+          "leafcutter/explore-flows-in-atlas"
+        ]
+      }
+    },
+    "FlowAppearance": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "leafcutter/explore-flows-in-atlas"
+        ]
+      }
+    },
+    "FlowNavigation": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "leafcutter/explore-flows-in-atlas"
+        ]
+      }
+    },
+    "FlowRoute": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {
+        "ux-prototyping": [
+          "leafcutter/explore-flows-in-atlas"
         ]
       }
     },
@@ -1691,9 +1798,9 @@
       "impl_summary": {
         "done": 13,
         "in_progress": 4,
-        "not_started": 21,
-        "total": 38,
-        "asof": "2026-10-06"
+        "not_started": 24,
+        "total": 41,
+        "asof": "2026-10-09"
       },
       "expands": [
         "leafcutter/decision-retrieval"
@@ -1719,7 +1826,7 @@
         "in_progress": 2,
         "not_started": 0,
         "total": 4,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "expands": [
         "leafcutter/decision-forming",
@@ -1743,7 +1850,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 10,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "expands": [],
       "parents": [
@@ -1767,7 +1874,7 @@
         "in_progress": 2,
         "not_started": 0,
         "total": 8,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "expands": [
         "leafcutter/decision-staging"
@@ -1797,7 +1904,7 @@
         "in_progress": 0,
         "not_started": 0,
         "total": 5,
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       "expands": [],
       "parents": [
@@ -1860,15 +1967,20 @@
     "leafcutter/explore-flows-in-atlas": {
       "component": "ux-prototyping",
       "level": "journey",
-      "entities": [],
+      "entities": [
+        "Flow",
+        "FlowRoute",
+        "FlowAppearance",
+        "FlowNavigation"
+      ],
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
-      "impl_status": "done",
+      "impl_status": "in_progress",
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 0,
-        "total": 5,
-        "asof": "2026-07-20"
+        "not_started": 16,
+        "total": 21,
+        "asof": "2026-10-09"
       },
       "expands": [],
       "parents": []
@@ -4908,7 +5020,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -4919,7 +5031,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600a-2": [
@@ -4932,7 +5044,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600a-2-i": [
@@ -4945,7 +5057,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600a-3": [
@@ -4958,7 +5070,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -4969,7 +5081,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600a-4": [
@@ -4982,7 +5094,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-forming",
@@ -4993,7 +5105,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600a-4-i": [
@@ -5006,7 +5118,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-1": [
@@ -5019,7 +5131,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-1-i": [
@@ -5032,7 +5144,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-1-ii": [
@@ -5045,7 +5157,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-2": [
@@ -5058,7 +5170,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-2-i": [
@@ -5071,7 +5183,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-2-ii": [
@@ -5084,7 +5196,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-2-iii": [
@@ -5097,7 +5209,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600b-3": [
@@ -5112,7 +5224,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-lifecycle",
@@ -5125,7 +5237,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-1": [
@@ -5140,7 +5252,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-1-i": [
@@ -5153,7 +5265,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-2": [
@@ -5168,7 +5280,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-2-i": [
@@ -5183,7 +5295,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-3": [
@@ -5198,7 +5310,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-staging",
@@ -5211,7 +5323,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600c-4": [
@@ -5226,7 +5338,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-1": [
@@ -5241,7 +5353,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-1-i": [
@@ -5254,7 +5366,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-2": [
@@ -5269,7 +5381,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-2-i": [
@@ -5282,7 +5394,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-2-ii": [
@@ -5295,7 +5407,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-3": [
@@ -5310,7 +5422,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-publishing",
@@ -5323,7 +5435,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-publishing",
@@ -5336,7 +5448,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-3-i": [
@@ -5351,7 +5463,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600d-4": [
@@ -5366,7 +5478,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-publishing",
@@ -5379,7 +5491,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-1": [
@@ -5394,7 +5506,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-lifecycle",
@@ -5407,7 +5519,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-retrieval",
@@ -5420,7 +5532,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-2": [
@@ -5435,7 +5547,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-retrieval",
@@ -5446,7 +5558,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-2-i": [
@@ -5459,7 +5571,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-3": [
@@ -5474,7 +5586,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       },
       {
         "flow": "leafcutter/decision-retrieval",
@@ -5487,7 +5599,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-3-i": [
@@ -5502,7 +5614,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-3-ii": [
@@ -5515,7 +5627,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-3-iii": [
@@ -5528,7 +5640,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-3-iv": [
@@ -5541,7 +5653,7 @@
         "mock_data": "leafcutter/decisions",
         "entities": [],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "DK-600e-4": [
@@ -5556,7 +5668,7 @@
           "Decision"
         ],
         "source": "real",
-        "asof": "2026-10-06"
+        "asof": "2026-10-09"
       }
     ],
     "FIN-100": [
@@ -7293,7 +7405,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-521": [
@@ -7306,7 +7418,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-522": [
@@ -7319,7 +7431,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-523": [
@@ -7332,7 +7444,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-523-1": [
@@ -7345,7 +7457,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-10-05"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-523-2": [
@@ -7358,7 +7470,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-10-05"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-523-3": [
@@ -7371,7 +7483,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-10-05"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-523-4": [
@@ -7384,7 +7496,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-10-05"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-524": [
@@ -7397,7 +7509,7 @@
         "mock_data": null,
         "entities": [],
         "source": "real",
-        "asof": "2026-07-20"
+        "asof": "2026-10-09"
       }
     ],
     "UXP-530": [
@@ -7524,6 +7636,256 @@
         "entities": [],
         "source": "real",
         "asof": "2026-07-20"
+      }
+    ],
+    "UXP-591-1": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "openByLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-1-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "bareFlows",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-1-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "flowNotFound",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "openStepLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "stepNotFound",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "stepNoticeCleared",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-2-iii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "legacyRedirect",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowRoute"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-3": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "acStepLink",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowAppearance"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerUrl",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerSwitch",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-4-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "drawerClose",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "navPush",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-i": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "pushFromOpenDrawer",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-ii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "backForward",
+        "node_kind": "step",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-iii": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "filterRepicksFlow",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
+      }
+    ],
+    "UXP-591-5-iv": [
+      {
+        "flow": "leafcutter/explore-flows-in-atlas",
+        "node": "filterKeepsFlow",
+        "node_kind": "branch",
+        "flow_kind": "user",
+        "screen": "atlas-flows-canonical-url",
+        "mock_data": null,
+        "entities": [
+          "Flow",
+          "FlowNavigation"
+        ],
+        "source": "real",
+        "asof": "2026-10-09"
       }
     ],
     "UXP-700e-2-ii": [

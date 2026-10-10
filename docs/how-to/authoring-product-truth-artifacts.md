@@ -4,7 +4,7 @@ description: "Step-by-step guide for authoring product-truth artifacts by hand, 
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-10-05
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -126,11 +126,21 @@ in both.
 1. If extending, add steps/branches to the existing flow; if creating, copy the
    shape from `schemas/flow.schema.json` and the seed
    `fern-and-fig/customer-buys-a-plant`.
-2. Write the `summary` (one plain-language paragraph) and, for each step, a
-   `human` narrative explaining who acts, what changes and the actual boundary.
-   Add `io_contracts` for every step/branch using the [worked example](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs); the
-   generator maintains checked compatibility text; Atlas renders the structured
-   fields and examples directly.
+2. Write the `summary` (one plain-language paragraph). Give every step (and
+   any branch that needs one) a `description`: ONE plain sentence, at most 200
+   characters, of WHAT happens and who does it. Beside `agent`, set `actor_kind`
+   to the mechanism that does the work: `deterministic` (code), `jev`, `llm` (an
+   AI agent) or `human` (a person). Each kind of detail has its own home — see
+   [What goes where in a step](product-truth-schema-reference.md#what-goes-where-in-a-step):
+   - **Never in a description:** code paths or file names; symbol, function or
+     field names; build or implementation status ("implemented", "not built",
+     "stub", "TODO"); design notes; ticket, AC, ADR or record ids; contract
+     dumps, JSON, commands or flags; a second sentence. The validator's
+     [description gates](../reference/product-truth-size-bounds.md#step-description-gates)
+     block the length and every code-shaped item.
+   - Inputs and outputs go in `io_contracts` for every step/branch, using the
+     [worked example](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs);
+     Atlas renders those fields and examples next to the description.
 3. Order steps with `order`; add "what-if" `branches` (each `from` a step id,
    with a `condition`).
 4. For entity/mock journeys, name the entities each step `reads`/`writes` and
@@ -172,10 +182,10 @@ fail the commit gate, naming both the declared value and the root.
 the `work_status` of the ACs in each `implements` list — they are never authored
 by hand. The impl-status generator/validator recomputes them and flags drift, and
 the Leafcutter Atlas resolves them live at read time. The generator also owns the
-compatibility `consumes`/`produces` labels and
-contract section of `human`. Author `io_contracts`, not those derived copies.
-Atlas renders structured metadata as contract groups, field tables and separate
-JSON examples. The canonical generator does not emit separate flow Markdown.
+compatibility `consumes`/`produces` labels and never writes into a `description`.
+Author `io_contracts`, not those derived copies; Atlas renders structured metadata
+as contract groups, field tables and separate JSON examples. The canonical
+generator does not emit separate flow Markdown.
 
 ---
 
@@ -183,7 +193,7 @@ JSON examples. The canonical generator does not emit separate flow Markdown.
 
 1. Register a new artifact in `index.json` `artifacts[]` only; update its version
    when extending. Run `python docs/product-truth/scripts/generate_product_truth.py`
-   to rebuild the derived indexes, statuses and contract presentation.
+   to rebuild the derived indexes, statuses and compatibility labels.
 2. Run the validator:
 
    ```bash
@@ -193,7 +203,8 @@ JSON examples. The canonical generator does not emit separate flow Markdown.
    It checks schema conformance, that `index.json` mirrors each artifact,
    entity-registry membership, step/branch id uniqueness,
    `acceptance_scenarios.for` resolution, `impl_summary` correctness, mock-data
-   invariants, and classifier `outcome` consistency. An unresolved `implements`
+   invariants, classifier `outcome` consistency, and that every step and branch
+   `description` passes the description gates. An unresolved `implements`
    AC id is now a hard failure (UXP-700c-1): every pointer is re-resolved
    against the AC store *as it stands right now*, and a broken one is reported
    as `[pointer] <flow id> <step/branch kind> '<node id>': AC pointer '<ac id>'
@@ -267,7 +278,7 @@ Every step and branch needs `io_contracts`. Follow the complete
 requiredness/defaults, examples and authority; genuine no-wire reasons and
 source-backed proposed gaps. Its worked example and review checklist distinguish
 contract aliases from JSON wrappers and schema validity from semantic correctness.
-Generate the compatibility presentation, then run the canonical validator.
+Regenerate the compatibility labels, then run the canonical validator.
 
 ## Verification
 
@@ -279,7 +290,7 @@ Generate the compatibility presentation, then run the canonical validator.
   case any more.
 - Your artifact appears in `index.json` under `artifacts[]` and in each derived
   index (`by_component`, `by_entity`, `by_flow`) it belongs to.
-- For a flow, Atlas reflects the canonical JSON steps, branches and generated contract details. The canonical generator does not emit a separate Markdown rendering.
+- For a flow, Atlas shows each step's description, actor kind and structured contract details from the canonical JSON. The canonical generator does not emit a separate Markdown rendering.
 - In the Leafcutter Atlas (`/flows`), the artifact appears and — once ACs are
   linked via `implements` — is coloured by its live build status.
 - If you added a `confirmed` record (Part 6), the validator's stdout states

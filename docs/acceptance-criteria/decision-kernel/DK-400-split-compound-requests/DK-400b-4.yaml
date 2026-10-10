@@ -29,16 +29,16 @@ doc_links:
   - path: docs/reference/decision-kernel-splits.md
     relationship: describes
     status: planned
-    relevance: "Same reference entry as DK-400a-5."
+    relevance: Same reference entry as DK-400a-5.
   - path: docs/architecture/components/decision-kernel.md
     relationship: describes
     status: exists
-    relevance: "Kernel containers: routing, scheduler, host handoffs, run root."
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
   - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
     relationship: describes
-    status: planned
-    relevance: Pinned ADR for splitting a bundled request; adr-author dispatched directly with this number and filename.
-      Re-verify the number is free before dispatch.
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
 assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to: null
@@ -62,6 +62,11 @@ amended_by:
     summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
 implemented_by: []

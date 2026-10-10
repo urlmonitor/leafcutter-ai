@@ -1,0 +1,85 @@
+id: GE-131a
+title: "The complexity check runs on every commit: an already-complex function can be worked on but never made worse, and no new one arrives over the limit"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L1
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Existing tangles never block your work; new or worse ones are refused, every time.
+
+  A function already over the complexity limit may still be fixed, edited and
+  improved, and a commit that leaves it no more complex than it was goes through. A
+  change that makes it more complex than before is refused. A function that is new,
+  or that crosses the limit for the first time, is held to the limit itself. The
+  check runs on every ordinary commit with nothing extra to invoke. Being stopped
+  tells you which function, its score, what it was allowed, why, and which skill
+  helps. Every place that describes the check describes the rule it applies.
+depends_on:
+  - GE-131
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The ratchet shape being reused (grew: refuse; same or smaller: allow; no
+      previous version: the limit governs), with its lesson that the refusal arm is
+      mandatory because every allowing arm is satisfied by a gate that allows
+      everything.
+  - path: docs/acceptance-criteria/code-review/CR-100-refactoring-guidance/CR-100b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Shipped the complexity-reduction skill a refusal points to (PR #1072). Relied
+      on, not re-specified.
+documentation_triggers:
+  - reference-doc
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-131a-1
+  - GE-131a-2
+  - GE-131a-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE RULE, stated once for all three L2s. With the limit at 15, a staged function is
+  allowed when
+
+      score <= max(15, its highest score across the parent commits)
+
+  A function with no previous version in any parent is held to 15. "Previous" is the
+  committed blob of each parent: HEAD, plus MERGE_HEAD during a merge. The staged
+  version (`git show :path`) is judged, never the working tree. There is no stored
+  baseline: reducing a function from 30 to 20 and committing it makes 20 its ceiling
+  from then on.
+
+  SHAPE. GE-131a-1 is the rule (pure judgement, including fail-closed parsing).
+  GE-131a-2 switches it on and proves it refuses through a real commit, including the
+  refusal wording. GE-131a-3 is the documentation edit that reference-doc requires.
+  Intended as one ticket; target about 11-12 tests in total.
+
+  DEFERRED — named here as follow-ups, deliberately not specified:
+    - A renamed or moved function keeping its previous score (body-hash matching).
+      Until then a pure move of an over-limit function is judged as new and refused
+      unless it is reduced to 15; the refusal tells the author to commit a pure move
+      with SKIP=check-complexity. Trigger for the follow-up: the first time a file
+      split forced by the file-length check (GE-127) is refused by this one.
+    - A "nothing to examine" outcome line when no Python file is staged.
+    - Richer refusal text (describe the function, suggest a split), per GE-127e.
+    - Distinguishing an unreadable previous version from an absent one.
+    - Property getter/setter pairing beyond what qualified name plus position gives.

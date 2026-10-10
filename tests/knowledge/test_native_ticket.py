@@ -152,8 +152,13 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
     candidates = sorted(
         path for path in (root / "tickets").rglob("*.md") if path.name.lower() != "readme.md"
     )
+    before = {path: path.read_bytes() for path in candidates}
     records = _extract(root)
-    assert len(records) == len(candidates) == 1560
+    assert candidates
+    assert len(records) == len(candidates)
+    assert {record.source_path for record in records} == {
+        path.relative_to(root).as_posix() for path in candidates
+    }
     assert len({record.native_id for record in records}) == len(records)
     by_path = {record.source_path: record for record in records}
     fields = set()
@@ -175,5 +180,13 @@ def test_ticket_real_store_preserves_every_frontmatter_field():
     assert {"title", "status", "components", "source_ac"} <= fields
     assert expected_epics
     assert {r.source_path for r in records if r.derived["subtype"] == "epic"} == expected_epics
-    assert len(fields) == 44
-    assert sum(record.derived["subtype"] == "epic" for record in records) == 92
+    # Reviewed anchors (KM-400a-1-vi): an archived epic master plan stays an epic, its child
+    # does not become one because of its folder, and the store README is not a Ticket.
+    epic_folder = "tickets/99_done/EPIC-ACDrivenDevelopment/"
+    epic = epic_folder + "Master_Plan.md"
+    child = epic_folder + "done/00_ac_readiness_gate_and_authoring_pipeline.md"
+    assert by_path[epic].derived["subtype"] == "epic"
+    assert by_path[child].derived["subtype"] == "ticket"
+    assert (root / "tickets/README.md").is_file()
+    assert "tickets/README.md" not in by_path
+    assert all(path.read_bytes() == data for path, data in before.items())

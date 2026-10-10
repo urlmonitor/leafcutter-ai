@@ -6,16 +6,19 @@
       "properties": {
         "description": {
           "default": "",
+          "description": "What the human's option means, used to research and compare it.",
           "title": "Description",
           "type": "string"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "title": {
+          "description": "Short name of the option the human adds.",
           "minLength": 1,
           "title": "Title",
           "type": "string"
@@ -42,13 +45,16 @@
             }
           ],
           "default": null,
+          "description": "Id of the pending proposal being edited; omitted for a criterion the human adds.",
           "title": "Id"
         },
         "priority": {
           "$ref": "#/$defs/Priority",
-          "default": "required"
+          "default": "required",
+          "description": "Whether the human's criterion blocks resolution (required) or only weighs in the ranking (supporting)."
         },
         "question": {
+          "description": "The criterion's question as the human wants it.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
@@ -56,6 +62,7 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -79,7 +86,7 @@
   "$id": "leafcutter.human_answer.v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "leafcutter.human_answer.v1: exactly one of choice_id, free_text or a structured answer.\n\nThe structured answer answers an approve-or-edit question about proposed criteria and\noptions: `approved_*_ids` approve a subset (the listed ids are approved, every other pending\nproposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the\nhuman's own (an entry with the id of a proposal edits it, an entry without an id is new).",
+  "description": "leafcutter.human_answer.v1: one of choice_id, free_text or a structured answer.\n\nThe pair {choice_id, free_text} is also one mode: a choice with a condition. The choice is\nauthoritative and the text is recorded verbatim as the condition.\n\nThe structured answer answers an approve-or-edit question about proposed criteria and\noptions: `approved_*_ids` approve a subset (the listed ids are approved, every other pending\nproposal of that kind is declined) and `edited_criteria` replaces the pending criteria by the\nhuman's own (an entry with the id of a proposal edits it, an entry without an id is new).",
   "properties": {
     "added_options": {
       "anyOf": [
@@ -95,6 +102,7 @@
         }
       ],
       "default": null,
+      "description": "Options the human adds (they become human-supplied, approved options).",
       "title": "Added Options"
     },
     "approved_criterion_ids": {
@@ -110,6 +118,7 @@
         }
       ],
       "default": null,
+      "description": "Pending criteria the human approves; every other pending criterion is declined.",
       "title": "Approved Criterion Ids"
     },
     "approved_option_ids": {
@@ -125,6 +134,7 @@
         }
       ],
       "default": null,
+      "description": "Pending options the human approves; every other pending option is declined.",
       "title": "Approved Option Ids"
     },
     "choice_id": {
@@ -137,6 +147,7 @@
         }
       ],
       "default": null,
+      "description": "Id of the offered choice the human picked.",
       "title": "Choice Id"
     },
     "edited_criteria": {
@@ -153,6 +164,7 @@
         }
       ],
       "default": null,
+      "description": "The human's own criteria, replacing the pending proposals (an entry with a proposal's id edits it, one without is new).",
       "title": "Edited Criteria"
     },
     "free_text": {
@@ -165,11 +177,13 @@
         }
       ],
       "default": null,
+      "description": "The human's own words; with a choice_id it is recorded verbatim as a condition on that choice.",
       "title": "Free Text"
     },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     }

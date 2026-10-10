@@ -14,7 +14,7 @@ criteria: 'Given a node has no structured contract metadata or has metadata the 
 
   When a person opens that node,
 
-  Then the readable narrative and compatibility input and output detail remain available through the fallback
+  Then the step description and compatibility input and output detail remain available through the fallback
   display,
 
   And Atlas does not show an empty structured panel in place of that existing detail,
@@ -36,6 +36,7 @@ created: '2026-10-05'
 amended_by:
 - reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
     after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+- reason: '2026-10-09 business-analyst: kernel decision dec-7b1dcfd47f85cf0a (chosen by the user) renamed the flow step field human to description, holding one plain sentence of what happens, and added actor_kind (deterministic | jev | llm | human); contract detail is no longer generated into the step text. The fallback now keeps the one-sentence description in place of the former narrative. work_status unchanged: the amended behaviour is implemented and its tests pass locally (TICKET-20261009-ProductTruthDescriptionActorKind).'
 superseded_by: null
 covered_by:
 - leafcutter-web/components/flows/__tests__/flow-drawer.contracts.test.tsx
@@ -64,7 +65,7 @@ change_target:
 risk_surface: contract_boundary
 it_requirements:
 - The display guard must reject malformed or incomplete shapes without coercing strings into booleans
-  or discarding the existing narrative.
+  or discarding the step description.
 - Fallback is a display compatibility policy only; it must not introduce exemptions or convert canonical
   validator errors into approval.
 expects_from:
@@ -78,7 +79,7 @@ delivers_to: null
 test_spec:
 - name: keeps the legacy readable fallback when structured metadata is absent or unusable
   target_dir: leafcutter-web/components/flows/__tests__/
-  description: Absent or unusable metadata retains narrative and compatibility detail and does not render
+  description: Absent or unusable metadata retains the description and compatibility detail and does not render
     an empty structured replacement.
   framework: vitest
   type: component

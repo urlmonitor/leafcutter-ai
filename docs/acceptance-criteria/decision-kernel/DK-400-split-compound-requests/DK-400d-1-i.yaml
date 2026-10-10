@@ -48,6 +48,10 @@ it_requirements:
   - A relayed answer (relayed_by claude_code, actor human:user) is recorded with gate_by human:user; the relayer
     appears only as relayed_by.
   - A bare human id is normalised to human:<id>, the same rule the decision-record staging gate applies.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: auth
 test_required: true
@@ -76,6 +80,11 @@ amended_by:
       it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
       -> reviewed. BA criteria and product_truth unchanged. Correction 2026-10-05: the refusal code is actor_mismatch
       (kind_mismatch was retired on 2026-09-30).'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
 superseded_by: null
 covered_by: []
 implemented_by: []

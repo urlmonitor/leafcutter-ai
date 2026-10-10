@@ -31,6 +31,10 @@ ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
+# False positive: line 539 is a DECISION HISTORY comment whose tail tag
+# (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms) scores high entropy. No credential.
+# Per-line on purpose (narrowest exemption); if the line shifts the finding returns.
+ENTROPY_HIGH:templates/scripts/commit_guardian/check_glossary_coverage.py:539
 
 # ---------------------------------------------------------------------------
 # GE-113c-3 backfill (2026-08-18)
@@ -56,6 +60,11 @@ ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
 ENTROPY_HIGH:leafcutter-web/package-lock.json:*
 # Generated artifact: build dataflow graph — "path": "docs/acceptance-criteria/..." slugs (26)
 ENTROPY_HIGH:docs/build-dataflow.json:*
+# Generated artifact: pytest-split durations map — ~9,559 test node ids, many of which
+# contain long parametrised id segments that score as high entropy. Emitted by
+# .github/workflows/test-durations.yml, never hand-edited. Glob rather than per-line:
+# the file is regenerated wholesale, so every line number shifts on each refresh.
+ENTROPY_HIGH:.github/test_durations.json:*
 
 # Sentinel string constants, not credentials. Replaces the stale line-22/27 entries
 # whose target (_SPECIAL_TOKEN) has since drifted to line 29 — glob per the
@@ -678,3 +687,30 @@ ENTROPY_HIGH:reports/entity-graph-selection-independent-green.xml:1
 ENTROPY_HIGH:reports/entity-native-pointer-core-broad.xml:1
 # Deliberately fake redaction fixture; test-file line wildcard follows CLAUDE.md.
 GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
+
+# Committed snapshot of the agent feedback corpus (787 records, 18 sinks, KI-FC-001).
+# Every line is a JSONL record whose feedback_id carries an 8-hex-character suffix
+# (fb_YYYY-MM-DD_xxxxxxxx), and a dense one-line JSON object of ids, phases, tags and
+# prose reads as high entropy to the scanner. There is no credential here, and that
+# was checked rather than assumed before this entry was added: the file was swept for
+# AKIA*, PEM private-key headers, ghp_/github_pat_, sk-*, xox[baprs]-, AIza*, JWTs and
+# user:pass@host URIs (0 hits), and separately for password/secret_key/api_key/bearer/
+# authorization wording (0 hits).
+# Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
+# so a pinned line number would silently stop matching.
+ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# TQ-600a-13-vi App fake: a fixed placeholder token string that a local test server
+# hands its jobs. Not a credential. Duplicated to the workspace-root copy.
+GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*
+# TQ-600a-13-xii previous-run tests: the same kind of fixed placeholder token default.
+GENERIC_SECRET:unit_tests/suite_performance/test_tq_600a_13_xii_previous_run.py:*
+# TQ-600a-13-xiii flaky harness: the same kind of fixed placeholder token default.
+GENERIC_SECRET:unit_tests/suite_performance/_flaky_harness.py:*
+
+# Refreshed feedback corpus snapshot, 2026-10-09 (713 records, KI-FC-001). Same false
+# positive as the 2026-09-30 entry above: fb_YYYY-MM-DD_xxxxxxxx ids in dense one-line
+# JSON read as high entropy. Swept before this entry was added for sk-*, ghp_/
+# github_pat_, AKIA*, PEM headers, password=, secret_key, api_key, bearer, xox[baprs]-,
+# AIza*, JWTs and user:pass@host URIs (0 hits). Glob, not per-line.
+# Duplicated to the workspace-root copy per the dual-update rule.
+ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-10-09.jsonl:*

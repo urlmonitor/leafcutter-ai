@@ -1,0 +1,101 @@
+{
+  "completed_at": "2026-10-09T09:43:43.869808+00:00",
+  "status": "passed",
+  "repository_id": "leafcutter",
+  "source_sha": "9f70de80ebcafe59ff55cce6732deb92069f9541",
+  "compiler_version": "2",
+  "operation": "get_component_tests",
+  "operation_version": "1",
+  "catalogs": [
+    {
+      "catalog": "query-catalog-km500/catalog.json",
+      "old_sha256": "ea12e7cffcde05e26094bbfcdfe716f0abb1810b8b5f3a85fd62e431daa9066d",
+      "new_sha256": "f4bee8a5c6d703e3bbff42611c05ac6b2e406db2420d0355cae2e78f448df057",
+      "digest_mapping": {
+        "c2205f02d65bb1cb3009151bae8923aaac3d7a10bfb82c7dba287732afcd588c": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+      },
+      "entry_count": 1,
+      "descriptor_unchanged": true,
+      "native_only_readback": true
+    },
+    {
+      "catalog": "query-catalog-km500/14f901a2-8798-4f4c-9539-6a40fbffa626/catalog.json",
+      "old_sha256": "1c17abaa004a792b3038ce73766be9570c6760469aa1b5990ae28648558df58e",
+      "new_sha256": "f4bee8a5c6d703e3bbff42611c05ac6b2e406db2420d0355cae2e78f448df057",
+      "digest_mapping": {
+        "c2205f02d65bb1cb3009151bae8923aaac3d7a10bfb82c7dba287732afcd588c": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+      },
+      "entry_count": 1,
+      "descriptor_unchanged": true,
+      "native_only_readback": true
+    }
+  ],
+  "database_writes": false,
+  "private_backups_verified": true,
+  "independent_catalog_readback": true,
+  "verification_method": "Fresh Aura query verification recorded by the publishing agent; independent local readback checks current catalog bytes, backed-up original bytes, unchanged descriptors, native compiled statements and proof digests.",
+  "checks": {
+    "declared_cases_passed": 2,
+    "cases": [
+      {
+        "name": "four_declared_git_vcs_test_files",
+        "expected_ids": [
+          "unit_tests/commit_guardian/test_ge_120e_1_ii.py",
+          "unit_tests/portability/test_ge_120e_4_i.py",
+          "unit_tests/workflows/test_bo4000b_branch_staleness_decision.py",
+          "unit_tests/workflows/test_inf_700a_5_i.py"
+        ],
+        "actual_ids": [
+          "unit_tests/commit_guardian/test_ge_120e_1_ii.py",
+          "unit_tests/portability/test_ge_120e_4_i.py",
+          "unit_tests/workflows/test_bo4000b_branch_staleness_decision.py",
+          "unit_tests/workflows/test_inf_700a_5_i.py"
+        ],
+        "expansion_truncated": false
+      },
+      {
+        "name": "existing_release_component_has_no_declared_test_files",
+        "expected_ids": [],
+        "actual_ids": [],
+        "expansion_truncated": false
+      }
+    ],
+    "invalid_input_rejected": true,
+    "bound_injection_empty": true,
+    "foreign_scope_rejected": true,
+    "semantic_usefulness_proven": false,
+    "verification_method": "fresh compiled-query execution and fixed boundary checks",
+    "compiler_version": "2"
+  },
+  "public_reopen_checks": [
+    {
+      "catalog": "query-catalog-km500",
+      "case": "four_declared_git_vcs_test_files",
+      "status": "ok",
+      "results": 4,
+      "digest": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+    },
+    {
+      "catalog": "query-catalog-km500",
+      "case": "existing_release_component_has_no_declared_test_files",
+      "status": "ok",
+      "results": 0,
+      "digest": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+    },
+    {
+      "catalog": "14f901a2-8798-4f4c-9539-6a40fbffa626",
+      "case": "four_declared_git_vcs_test_files",
+      "status": "ok",
+      "results": 4,
+      "digest": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+    },
+    {
+      "catalog": "14f901a2-8798-4f4c-9539-6a40fbffa626",
+      "case": "existing_release_component_has_no_declared_test_files",
+      "status": "ok",
+      "results": 0,
+      "digest": "e8e3955dea67dce887374da936fa4a9a54798796e7710c8804cdf666c1fe2c15"
+    }
+  ],
+  "public_reopen_method": "Fresh process after compatibility removal: QueryCatalog.request -> build_retriever -> retrieve; each result reported the new operation digest with no truncation."
+}

@@ -11,10 +11,12 @@
       "additionalProperties": {
         "$ref": "#/$defs/JsonValue"
       },
+      "description": "The recipe to verify and activate.",
       "title": "Candidate",
       "type": "object"
     },
     "component_ids": {
+      "description": "Components the recipe is allowed to read.",
       "items": {
         "type": "string"
       },
@@ -32,9 +34,11 @@
         }
       ],
       "default": null,
+      "description": "Digest of the active query this recipe replaces; required when replacing, so a concurrent change is detected.",
       "title": "Expected Active Digest"
     },
     "repository_id": {
+      "description": "Repository the recipe is bound to.",
       "minLength": 1,
       "title": "Repository Id",
       "type": "string"
@@ -42,10 +46,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "source_sha": {
+      "description": "Immutable commit the recipe is verified against.",
       "pattern": "^[a-f0-9]{40}$",
       "title": "Source Sha",
       "type": "string"

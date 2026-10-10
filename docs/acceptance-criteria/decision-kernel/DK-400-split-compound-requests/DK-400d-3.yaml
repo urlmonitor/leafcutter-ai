@@ -62,8 +62,9 @@ expects_from:
   ac_id: DK-400d-1
   contract: "The gate answer path, here with the answer rejected."
 it_requirements:
-  - 'A rejection is recorded atomically with the answer: gate_answer rejected, gate_by, gate_at, the note word for
-    word, every part review rejected and outcome not_run, and no part work item ever created.'
+  - 'A rejection arrives as leafcutter.split_answer.v1 with answer rejected and an empty parts list (ADR-067 §4.4,
+    confirming Open Question 6b); the kernel records it atomically: gate_answer rejected, gate_by, gate_at, the
+    note word for word, every part review rejected and outcome not_run, and no part work item ever created.'
   - 'The ending is chosen deterministically from the split record (trigger, found_at), never by a model: jev_none
     -> state rejected and run blocked (DK-400d-3-i); ambiguous -> state rejected_clarify and today''s insufficient_context
     path, unchanged: with routing.on_insufficient_context ''human'' today''s clarification question is opened (the
@@ -73,8 +74,13 @@ it_requirements:
     rejected_kept_whole and the subject resumes as one (DK-400d-3-ii, DK-400d-3-iii).'
   - A rejection is never inferred from another answer (DK-400d-2-i).
   - 'A request that falls back to the clarification question after a rejected or too-small ambiguous split is never
-    offered a split again in the same run: the item keeps its closed split record, so the bundle check is skipped
-    for it even after the person''s answer changes its effective goal, and it routes normally from there.'
+    offered a split again in the same run: the item keeps its Decomposition (rejected_clarify) and its split_checked
+    flag (DK-400c-3), so the bundle check is skipped for it even after the person''s answer changes its effective
+    goal, and it routes normally from there.'
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
 change_target: code
 risk_surface: contract_boundary
 test_required: true
@@ -114,6 +120,16 @@ amended_by:
     by: it-po
     summary: 'Rejection endings remapped per the final-gate rule: jev_none -> rejected/blocked, ambiguous -> rejected_clarify/waiting_human,
       bundled_accepted or mid_run -> rejected_kept_whole; delivers_to, it_requirements and the trigger test updated.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      rejected answer carries no part entries (Open Question 6b); split_checked flag reference.'
 superseded_by: null
 covered_by:
   - DK-400d-3-i

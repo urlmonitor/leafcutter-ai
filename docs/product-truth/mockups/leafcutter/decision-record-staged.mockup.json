@@ -3,7 +3,7 @@
   "component": "decision_kernel",
   "screen": "decision-record-staged",
   "title": "Record staged",
-  "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the python -m kernel decisions publish command, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
+  "summary": "The completed run's result: status completed, the decision and approver, the staged record path, the decisions publish command (the kernel's own interpreter and scripts/run_kernel.py, runnable as printed from any shell) with the publish_folder it writes into, and a note that publishing writes into the repository and is the user's to run. Populated from dec-7cdc61ea41a206e0, staged and never published.",
   "entities": [
     "Decision"
   ],
@@ -13,7 +13,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 1,
+  "version": 2,
   "shape_version": 1,
   "tags": [
     "decision-kernel",
@@ -28,6 +28,12 @@
       "by": "mockup-author",
       "date": "2026-10-02",
       "note": "Drafted from leafcutter/decisions records; styled from the Atlas tokens via docs/ui-context.md (globals.css, tailwind.config.ts, layout.tsx, kit.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-06",
+      "note": "Publish section now renders Decision.publish_command (<python> <repo_root>/scripts/run_kernel.py decisions publish --run-id ...) and names Decision.publish_folder, per PR #999 and decisions.mock.json v8. Styling and UI-context sources unchanged."
     }
   ]
 }

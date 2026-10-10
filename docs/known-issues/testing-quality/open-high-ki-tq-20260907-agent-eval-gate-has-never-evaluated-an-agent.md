@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-06'
 components:
   - testing_quality
 related_docs:
@@ -109,5 +109,29 @@ examined anything.
 
 **Pattern:** a check that examined nothing must not look like a check that found nothing — and
 when it cannot examine anything, it must not emit a number that looks like a measurement.
+
+**Update 2026-10-06 — the credential failure is now honest; closures narrowed by owner
+decision.** There is still no credential: `gh secret list` shows only the three
+`LEAFCUTTER_NEO4J_*` secrets, so the gate still cannot evaluate an agent. On 2026-10-06 the
+owner decided on "Honest failure + narrow" (`TICKET-20261006-AgentEvalGateHonestAboutCredentials`).
+No credential is provisioned, and the check stays informational. That ticket makes three changes:
+
+1. **Branch 2 now fails up front.** When agents are affected and `ANTHROPIC_API_KEY` is empty,
+   a `Preflight — model credentials` step fails the job before any row runs. It reports an
+   explicit "no model credentials" error and no score, so fix direction 2 holds in CI.
+2. **Narrower closures.** Commit 974fa757f (#1009, 2026-10-05) had widened the `flow-author`
+   and `mock-data-author` closures to the sandbox's transitive dependencies
+   (`kernel/**/*.py`, `config/**`, `docs/acceptance-criteria/**/*.yaml` and others), so the
+   gate fired on most PRs. The ticket narrows them back to each agent's own files.
+3. **Branch 1 says what it did.** A green result still means "nothing affected, nothing
+   evaluated", and the fast-pass line now says exactly that.
+
+This knowingly relaxes the closures without provisioning the credential, which the **Trap**
+paragraph above warns against. It does so together with the honest preflight, not instead of
+it: a gate that fires now says it evaluated nothing.
+
+Still open: fix direction 1 (provision a credential, declined for now), fix direction 3 (a
+periodic proof that the harness can reach a model) and fix direction 4 (split derived from
+authored paths).
 
 ---

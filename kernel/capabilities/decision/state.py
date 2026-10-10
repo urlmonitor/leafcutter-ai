@@ -50,9 +50,11 @@ class DecisionContinuation(KernelModel):
     evidence_ids: list[str] = Field(default_factory=list)
     findings: list[str] = Field(default_factory=list)
     finding_refs: list[str] = Field(default_factory=list)
-    #: What the latest synthesis said it could not find; the next research round aims at it.
     gaps: list[str] = Field(default_factory=list)
+    """What the latest synthesis said it could not find; the next research round aims at it."""
     human_inputs: list[str] = Field(default_factory=list)
+    conditions: list[str] = Field(default_factory=list)
+    """Verbatim conditions a human attached to a choice (the choice stays authoritative)."""
     pending_subjects: list[str] = Field(default_factory=list)
     pending_reason: str = ""
     candidate_option_id: str | None = None
@@ -62,25 +64,32 @@ class DecisionContinuation(KernelModel):
     decision_approved: bool = False
     approved_by: str | None = None
     approved_revision: str | None = None
-    #: Satisfies and sufficiency scores of the last assessment (keys from ranking.score_key) and
-    #: the evidence it saw, so the next one can tell whether new evidence moved anything.
     last_scores: dict[str, float] = Field(default_factory=dict)
+    (
+        "Satisfies and sufficiency scores of the last assessment (keys from ranking.score_key) and "
+        "the evidence it saw, so the next one can tell whether new evidence moved anything."
+    )
     last_scores_evidence: list[str] = Field(default_factory=list)
-    #: The kernel ranking shown to the human, why it was shown, and the option the human chose.
     design_ranking: list[OptionRanking] = Field(default_factory=list)
+    """The kernel ranking shown to the human, why it was shown, and the option the human chose."""
     design_reason: str = ""
     design_choice_id: str | None = None
-    #: Precedent (earlier approved decisions): looked up once, judged by Jev, never authority.
     precedent_checked: bool = False
+    """Precedent (earlier approved decisions): looked up once, judged by Jev, never authority."""
     precedents: list[PrecedentNote] = Field(default_factory=list)
-    #: The precedent offered for reuse, the title of the option it chose, and the human's answer
-    #: (`reuse` or `decide_anew`).
     precedent_offer_id: str | None = None
+    (
+        "The precedent offered for reuse, the title of the option it chose, and the human's answer "
+        "(`reuse` or `decide_anew`)."
+    )
     precedent_offer_option: str | None = None
     precedent_offer_evidence: str | None = None
     precedent_choice: str | None = None
-    #: When the human last approved something in this decision (ISO, UTC); the record's approved_at.
     approved_at: str | None = None
+    (
+        "When the human last approved something in this decision (ISO, UTC); the record's "
+        "approved_at."
+    )
 
 
 #: Prefix of the ids of options a human added at approval (their claims are unverified).
@@ -128,19 +137,21 @@ class Working:
     usage: list[Usage] = field(default_factory=list)
     approval_rejected: bool = False
     revision_commit: str | None = None
-    #: Stable id of the decision record (derived from the work item, so every pause shares it).
     decision_id: str = ""
-    #: Whether generated options must cite evidence, and how much evidence one request carries.
+    """Stable id of the decision record (derived from the work item, so every pause shares it)."""
     require_grounding: bool = True
+    """Whether generated options must cite evidence, and how much evidence one request carries."""
     evidence_cap: int = 12
-    #: The invocation's clock reading (human answers are stamped with it).
     now: datetime | None = None
-    #: Precedent candidates found at the start of this invocation and not judged yet, and the
-    #: evidence items this invocation created (the result hands them to the kernel).
+    """The invocation's clock reading (human answers are stamped with it)."""
     precedent_hits: list[DecisionHit] = field(default_factory=list)
+    (
+        "Precedent candidates found at the start of this invocation and not judged yet, and the "
+        "evidence items this invocation created (the result hands them to the kernel)."
+    )
     new_evidence: list[Evidence] = field(default_factory=list)
-    #: How many evidence ids a criterion assessment cites, and the words it must share (config).
     cite_max: int = 5
+    """How many evidence ids a criterion assessment cites, and the words it must share (config)."""
     cite_overlap: int = 2
     @property
     def usable_options(self) -> list[Option]:

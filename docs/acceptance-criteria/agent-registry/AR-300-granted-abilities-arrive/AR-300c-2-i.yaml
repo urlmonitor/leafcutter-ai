@@ -1,0 +1,109 @@
+id: AR-300c-2-i
+title: "An agent recorded in only one of the two ability fields arrives with exactly that field's abilities in its compiled prompt"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - template_compiler
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent recorded in only one of the two central ability fields -- any of
+    the twelve present in the newer field alone, among them research-agent and
+    the five sql creator agents,
+  When its compiled prompt is read after consolidation and delivery,
+  Then the abilities section names exactly the abilities that one field recorded
+    for it,
+    And it is present for every one of the twelve, each checked individually
+      rather than by sampling one of them,
+    And an agent recorded in the older field alone is treated the same way, so
+      neither side is the privileged one,
+  So the half-completed migration that created the split does not end by
+    completing in the other direction.
+depends_on:
+  - AR-300c-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Where the twelve appear in one field and not the other -- the concrete population this criterion enumerates."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The reviewed-but-unimplemented record that created the split by making the newer field authoritative and keeping the older as an alias. Superseded by AR-300c-1; named here because this criterion is the repair of its consequence."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "Evidence is the COMPILED prompt, not the migrated declaration. A correct consolidation still delivers nothing if delivery is keyed off the field that never held these agents, and reading the declaration here reproduces the exact mistake that makes all 31 granted agents look correct today."
+  - "The single-field population must be DERIVED at run time by differencing the two registry fields, not enumerated as a literal list of twelve names. The twelve named in the criteria (research-agent, adr-author, how-to-author, explanation-author, brainstorm-lead, brainstorm-worker, worktree-agent and the five sql creator agents) are the measurement taken on 2026-09-30, and a hard-coded list stops being the right population the moment the registry changes."
+  - "Each member of the derived population is checked individually and all are reported -- no sampling. The five sql creator agents share a shape the other seven do not, so a sample that lands on one of the five proves nothing about research-agent or worktree-agent."
+  - "The older-field-only case is exercised symmetrically, so neither side is the privileged one. If the derived older-only set is empty on the real registry, the test must construct that case rather than skip it -- a symmetry assertion over an empty set is vacuous."
+  - "Report the size of the derived population; zero is a failure, because a difference operation that resolves to nothing is exactly how this check passes forever."
+  - "Compiled prompts are read from the declared output root across every platform root."
+test_spec:
+  - name: test_each_newer_field_only_agent_receives_exactly_that_fields_abilities
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "For every agent in the derived newer-field-only set, the compiled prompt names exactly the abilities that field recorded -- each checked individually, none sampled."
+  - name: test_the_single_field_population_is_derived_not_enumerated
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The population comes from differencing the two registry fields; adding an agent to one field alone puts it in scope with no test edit."
+  - name: test_older_field_only_agent_is_treated_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "An agent recorded only in the older field also receives exactly that field's abilities; neither side is privileged."
+  - name: test_derived_population_size_is_reported_and_zero_fails
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The check states how many single-field agents it examined; a population of zero fails rather than passing vacuously."
+test_rationale: >-
+  AR-300c-2 constrains the consolidation; this constrains what an agent actually
+  receives, and the two can come apart -- a correct consolidation delivers nothing
+  if delivery reads the field that never held these agents. Only compiled-prompt
+  evidence closes both gaps at once. The derived-population descriptor matters
+  because a hard-coded list of twelve names is a rule that stops reaching the tree
+  the first time the registry changes, and the zero-population descriptor because a
+  set difference that comes back empty is the cheapest way for this whole check to
+  pass forever.
+delivers_to: null
+expects_from:
+  ac_id: AR-300c-2
+  contract: "The union consolidation whose per-agent outcome this criterion pins at the compiled prompt"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS AT THE COMPILED PROMPT AND NOT AT THE DECLARATION. AR-300c-2
+  constrains the consolidation; this constrains the outcome an agent actually
+  receives. The two can come apart: a correct consolidation still delivers
+  nothing if delivery is keyed off the field that never held those twelve. Only
+  evidence taken from the compiled prompt closes both gaps at once, and reading
+  the declaration here would reproduce the exact mistake that makes all 31
+  granted agents look correct today.
+
+  EACH OF THE TWELVE, NOT ONE OF THE TWELVE. The twelve are not interchangeable:
+  the five sql creator agents share a shape the other seven do not, so a sample
+  that happens to pick one of the five proves nothing about research-agent or
+  worktree-agent.

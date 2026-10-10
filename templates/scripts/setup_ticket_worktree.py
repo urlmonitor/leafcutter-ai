@@ -1531,11 +1531,8 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     # Populate submodules (like leafcutter) in the new worktree
     try:
-        subprocess.run(
-            ["git", "submodule", "update", "--init"],
-            cwd=worktree_path,
-            check=True,
-        )
+        subprocess.run(["git", "submodule", "update", "--init"], cwd=worktree_path, check=True,
+                       stdout=sys.stderr)
     except (subprocess.SubprocessError, OSError) as exc:
         raise subprocess.SubprocessError(  # noqa: TRY003
             f"Failed to update submodules in {worktree_path}: {exc}"
@@ -1561,7 +1558,7 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
         )
     if dep_cmd is not None:
         try:
-            subprocess.run(dep_cmd, cwd=worktree_path, check=True)
+            subprocess.run(dep_cmd, cwd=worktree_path, check=True, stdout=sys.stderr)
         except (subprocess.SubprocessError, OSError) as exc:
             print(
                 f"WARNING: dependency install ({dep_cmd[0]}) failed in "
@@ -1582,11 +1579,8 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     build_exc: Exception | None = None
     if build_script is not None:
         try:
-            subprocess.run(
-                [sys.executable, str(build_script), "--target-dir", str(worktree_path)],
-                cwd=str(worktree_path),
-                check=True,
-            )
+            subprocess.run([sys.executable, str(build_script), "--target-dir", str(worktree_path)],
+                           cwd=str(worktree_path), check=True, stdout=sys.stderr)
         except subprocess.CalledProcessError as exc:
             build_exc = exc
             print(
@@ -1698,11 +1692,8 @@ def _install_pre_commit_shims(main_repo: Path) -> None:
     """
     shim_script = main_repo / "scripts" / "commit_guardian" / "install_pre_commit_shims.py"
     try:
-        subprocess.run(
-            [sys.executable, str(shim_script)],
-            cwd=str(main_repo),
-            check=True,
-        )
+        subprocess.run([sys.executable, str(shim_script)], cwd=str(main_repo), check=True,
+                       stdout=sys.stderr)
     except (subprocess.CalledProcessError, FileNotFoundError) as exc:
         print(
             f"WARNING: pre-commit shim install skipped ({exc}); "

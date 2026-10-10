@@ -24,11 +24,17 @@ criteria: |
   And no inferred or transitive membership is presented as a declared component assignment
 
   Given the existing Aura database contains retained generations and registered retrieval queries
-  When the representation is migrated and a subsequent snapshot is published or rolled back
-  Then canonical identities, source revisions, payloads, relationship counts and retained generations are preserved
+  When the retained native graph is inspected and a subsequent snapshot is published, refreshed or rolled back
+  Then retained generations preserve their canonical identities, source revisions, payloads and relationship counts
   And the current marker agrees with the active repository snapshot after the atomic switch
-  And existing registered retrieval queries and their validation digests remain valid and return the same scoped evidence
-  And invalid, unowned or cross-generation records cause the migration to refuse before changing the graph
+  And invalid, unowned, contradictory or cross-generation records cause native inspection to refuse without changing the graph
+  And publication refuses unsupported repository control records before writing a snapshot or changing its active pointer
+
+  Given saved retrieval queries were admitted using an obsolete compiler format
+  When the explicitly authorized native-only catalog replacement runs
+  Then saved queries are recompiled to native labels, freshly verified against their pinned source and replaced with an explicit old-to-new digest mapping
+  And original catalog receipts are retained as private historical backups rather than accepted by runtime compatibility code
+  And unsupported compiler versions and old query pins are rejected instead of silently translated
 
   Given Leafcutter defines native artifact types and their authored fields in schemas, registries or validated source conventions
   When each type is reviewed and projected into Neo4j
@@ -43,7 +49,7 @@ doc_links:
 - path: docs/how-to/run-knowledge-retrieval.md
   relationship: describes
   status: exists
-  relevance: Document domain labels, captions, declared-components filtering and migration verification.
+  relevance: Document native labels, declared-components filtering, native inspection and verified saved-query replacement.
 - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
   relationship: context
   status: exists
@@ -121,15 +127,37 @@ doc_links:
   relationship: evidence
   status: exists
   relevance: Executed native-field delivery evidence; scope and limitations are explicit in the report.
+- path: docs/reference/neo4j-native-queries.md
+  relationship: describes
+  status: exists
+  relevance: Native-only graph inspection and explicit fresh-admission saved-query replacement.
+- path: reports/neo4j-native-query-cutover-2026-10-09.json
+  relationship: evidence
+  status: exists
+  relevance: Actual catalog hashes and old-to-new digest mapping, fresh verification and four public reopen checks.
 assigned_agent: python-coder
 declared_files:
+- path: knowledge/adapters/neo4j_inspection.py
+  state: existing
+- path: tests/knowledge/test_native_inspection.py
+  state: existing
+- path: tests/knowledge_live/native_inspection_checks.py
+  state: existing
+- path: tests/knowledge/test_query_native_compile.py
+  state: existing
+- path: knowledge/query_compile.py
+  state: existing
+- path: knowledge/query_catalog.py
+  state: existing
+- path: knowledge/query_store.py
+  state: existing
+- path: docs/reference/neo4j-native-queries.md
+  state: existing
+- path: reports/neo4j-native-query-cutover-2026-10-09.json
+  state: existing
 - path: knowledge/adapters/domain_schema.py
   state: existing
 - path: knowledge/adapters/neo4j_domain_build.py
-  state: existing
-- path: knowledge/adapters/neo4j_domain_migration.py
-  state: existing
-- path: knowledge/adapters/neo4j_domain_batches.py
   state: existing
 - path: knowledge/adapters/neo4j_backend.py
   state: existing
@@ -138,10 +166,6 @@ declared_files:
 - path: knowledge/migrations/001_projection.cypher
   state: existing
 - path: tests/knowledge_live/domain_graph_checks.py
-  state: existing
-- path: tests/knowledge_live/domain_migration_checks.py
-  state: existing
-- path: knowledge/domain_migrate.py
   state: existing
 - path: docs/how-to/run-knowledge-retrieval.md
   state: existing
@@ -259,18 +283,28 @@ created: '2026-10-02'
 amended_by:
   - '2026-10-02: Hendrik explicitly requested a native-type inventory agent, field review per type and a coder per type to expose native fields in Neo4j; scope expanded to schema-backed metadata completeness.'
   - '2026-10-02: Reconcile actual implementation and executed test references; Aura presentation and remaining evidence checks still pending.'
+  - "2026-10-09: business-analyst amendment review by Codex using templates/agents/business-analyst.md, under Hendrik's explicit request to remove all legacy compatibility and update the actual saved queries. Reviewed this L3 against KM-400a-3, KM-400a and KM-400: native inspection and fresh saved-query admission replace migration/runtime compatibility; old pins fail explicitly, original receipts remain historical evidence, and native identities, declared relationships, source fidelity and repository/snapshot isolation remain required. No new feature or parent-contract amendment."
 superseded_by: null
 covered_by:
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_is_read_only_and_preserves_evidence
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_corrupt_identity
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_corrupt_payload
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_contradictory_labels
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_cross_generation_edges
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_missing_relationships
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_cross_repository_edges
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_rejects_unowned_nodes
+- tests/knowledge_live/native_inspection_checks.py::test_publication_rejects_unsupported_control_schema_without_mutation
+- tests/knowledge_live/native_inspection_checks.py::test_native_inspection_accepts_owned_vector_labels
+- tests/knowledge/test_query_native_compile.py::test_native_catalog_preserves_active_and_retained_pins
+- tests/knowledge/test_query_native_compile.py::test_unsupported_catalog_compiler_requires_readmission
+- tests/knowledge/test_query_native_compile.py::test_stale_or_missing_verification_cannot_be_reused
+- tests/knowledge/test_query_native_compile.py::test_missing_pinned_digest_never_falls_back_to_active_query
+- tests/knowledge/test_query_native_compile.py::test_native_catalog_tampering_fails_without_rewriting
+- tests/knowledge/test_query_native_compile.py::test_new_native_admission_retains_versions_and_rejects_stale_activation
 - tests/knowledge_live/domain_graph_checks.py::test_native_labels_membership_and_retrieval
 - tests/knowledge_live/domain_graph_checks.py::test_current_filter_tracks_publication_and_rollback
 - tests/knowledge_live/domain_graph_checks.py::test_same_generation_publish_cannot_clear_current_markers
-- tests/knowledge_live/domain_migration_checks.py::test_legacy_migration_is_idempotent_and_preserves_evidence
-- tests/knowledge_live/domain_migration_checks.py::test_corrupt_legacy_data_is_rejected_before_mutation
-- tests/knowledge_live/domain_migration_checks.py::test_legacy_rollback_does_not_create_duplicate_repository
-- tests/knowledge_live/domain_migration_checks.py::test_contradictory_labels_are_rejected
-- tests/knowledge_live/domain_migration_checks.py::test_cross_generation_edge_refuses_migration_without_changes
-- tests/knowledge_live/domain_migration_checks.py::test_unowned_node_refuses_migration_without_changes
-- tests/knowledge_live/domain_migration_checks.py::test_retained_catalog_digest_and_result_survive_migration
 - tests/knowledge/test_native_acceptance_criterion.py::test_all_schema_fields_survive_validated_source_extraction
 - tests/knowledge/test_native_acceptance_criterion.py::test_absent_defaults_and_yaml_date_strings_remain_authored
 - tests/knowledge/test_native_acceptance_criterion.py::test_configured_surface_is_used_and_non_records_are_excluded
@@ -312,6 +346,7 @@ covered_by:
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_recovery_payload_is_independent_of_checkout_path
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_ambiguous_or_unrelated_malformations
 - tests/knowledge/test_native_changelog_entry.py::test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries
+- tests/knowledge/test_native_changelog_entry.py::test_changelog_without_frontmatter_fails_naming_source_and_reason
 - tests/knowledge/test_native_component.py::test_component_preserves_every_field_and_registry_identity
 - tests/knowledge/test_native_component.py::test_component_real_registry_fields_match_exact_entries
 - tests/knowledge/test_native_component.py::test_component_absent_registry_ignores_architecture_documents
@@ -444,15 +479,17 @@ covered_by:
 - tests/knowledge_live/native_metadata_checks.py::test_native_metadata_is_typed_queryable_and_round_trips_in_neo4j
 - tests/knowledge_live/native_refresh_recovery_checks.py::test_native_refresh_resumes_a_committed_partial_batch_without_changing_history
 implemented_by:
+- tickets/00_inbox/TICKET-20261009-KM-400a-3-i-native-query-maintenance.md
+- knowledge/adapters/neo4j_inspection.py
+- knowledge/query_compile.py
+- knowledge/query_catalog.py
+- knowledge/query_store.py
 - tickets/00_inbox/TICKET-20261002-KM-400a-3-i.md
 - knowledge/adapters/domain_schema.py
 - knowledge/adapters/neo4j_domain_build.py
-- knowledge/adapters/neo4j_domain_migration.py
-- knowledge/adapters/neo4j_domain_batches.py
 - knowledge/adapters/neo4j_backend.py
 - knowledge/adapters/neo4j_projection.py
 - knowledge/migrations/001_projection.cypher
-- knowledge/domain_migrate.py
 - knowledge/native_types/__init__.py
 - knowledge/native_types/acceptance_criterion.py
 - knowledge/native_types/adr.py
@@ -525,80 +562,166 @@ test_spec:
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_legacy_migration_is_idempotent_and_preserves_evidence
+- name: test_native_inspection_is_read_only_and_preserves_evidence
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
-  angle: reachability
-  description: In domain_migration_checks.py, directly seed a synthetic legacy graph, migrate it twice, and
-    assert the canonical fingerprint, AC label, retrieved entity payload and original generation digest are
-    preserved.
+  angle: real_artifact
+  description: In native_inspection_checks.py, inspect two retained native snapshots twice; assert stable canonical
+    fingerprints and byte-equivalent physical graph state.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_corrupt_legacy_data_is_rejected_before_mutation
+- name: test_native_inspection_rejects_corrupt_identity
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: failure
-  description: In domain_migration_checks.py, corrupt a persisted entity kind; assert inspection refuses it
-    and repository metadata retains its legacy label.
+  description: In native_inspection_checks.py, corrupt persisted kind metadata; inspection must refuse while
+    preserving the captured graph state.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_legacy_rollback_does_not_create_duplicate_repository
+- name: test_native_inspection_rejects_corrupt_payload
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: In native_inspection_checks.py, corrupt persisted JSON; inspection must refuse while preserving
+    the captured graph state.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_native_inspection_rejects_contradictory_labels
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: boundary
-  description: In domain_migration_checks.py, request rollback against a legacy repository; assert migration
-    is required and the active-repository count stays one.
+  description: In native_inspection_checks.py, give an AC an additional ADR label; inspection refuses the contradictory
+    classification without writes.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_contradictory_labels_are_rejected
+- name: test_native_inspection_rejects_cross_generation_edges
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: failure
-  description: In domain_migration_checks.py, give a legacy AcceptanceCriterion an ADR label; assert inspection
-    refuses the conflicting classification.
+  description: In native_inspection_checks.py, add an edge across retained generations; inspection refuses
+    and graph properties, endpoints and active pointers remain unchanged.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_cross_generation_edge_refuses_migration_without_changes
+- name: test_native_inspection_rejects_missing_relationships
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: failure
-  description: In domain_migration_checks.py, inspect two valid retained generations, add an edge crossing
-    their boundary, then attempt migration with the earlier plan; assert rejection and byte-equivalent captured
-    graph properties, labels, endpoints and active pointer.
+  description: In native_inspection_checks.py, remove one declared relationship; count validation refuses without
+    changing the remaining graph.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_unowned_node_refuses_migration_without_changes
+- name: test_native_inspection_rejects_cross_repository_edges
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
   angle: failure
-  description: In domain_migration_checks.py, inspect a valid legacy snapshot, then add an ExternalRecord node
-    in its generation; assert migration refuses it and all captured graph properties, labels, endpoints and
-    active pointer remain unchanged.
+  description: In native_inspection_checks.py, connect separately published repositories; inspection refuses
+    from either repository and preserves the captured graph.
   covers:
   - KM-400a-3-i
   requires_db: true
-- name: test_retained_catalog_digest_and_result_survive_migration
+- name: test_native_inspection_rejects_unowned_nodes
   target_dir: tests/knowledge_live/
   framework: pytest
   type: integration
-  angle: seam
-  description: In domain_migration_checks.py, admit two catalog versions against the legacy graph and pin the
-    inactive version; compare exact catalog.json bytes, stored compiled and verification digests, source revision
-    and public retrieval evidence before and after migration.
+  angle: failure
+  description: In native_inspection_checks.py, add an unowned physical node inside a generation; inspection
+    refuses without changing records or pointers.
   covers:
   - KM-400a-3-i
   requires_db: true
+- name: test_publication_rejects_unsupported_control_schema_without_mutation
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: In native_inspection_checks.py, seed unsupported repository controls; publication and pointer
+    switching refuse before creating snapshots or changing graph state.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_native_inspection_accepts_owned_vector_labels
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: In native_inspection_checks.py, build native vector indexes; inspection accepts their manifest-owned
+    labels and semantic retrieval returns the expected entity.
+  covers:
+  - KM-400a-3-i
+  requires_db: true
+- name: test_native_catalog_preserves_active_and_retained_pins
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: In test_query_native_compile.py, freshly admit native versions, pin the retained version and
+    assert original native catalog bytes and scoped public execution remain stable.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_unsupported_catalog_compiler_requires_readmission
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: In test_query_native_compile.py, obsolete, absent and unknown compiler versions fail closed
+    without rewriting their catalog.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_stale_or_missing_verification_cannot_be_reused
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: In test_query_native_compile.py, reject a current compiled query paired with obsolete or absent
+    compiler verification even if receipt hashes are recomputed.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_missing_pinned_digest_never_falls_back_to_active_query
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: In test_query_native_compile.py, reject a missing digest through descriptor and public request
+    APIs instead of resolving the active operation.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_native_catalog_tampering_fails_without_rewriting
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: In test_query_native_compile.py, tamper with descriptor, compiled statement or verification
+    data; reject it without modifying the saved file.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
+- name: test_new_native_admission_retains_versions_and_rejects_stale_activation
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: In test_query_native_compile.py, freshly verified native admission retains old native versions
+    and refuses stale active pointers or mutable version reuse.
+  covers:
+  - KM-400a-3-i
+  requires_db: false
 - name: test_all_schema_fields_survive_validated_source_extraction
   target_dir: tests/knowledge/
   framework: pytest
@@ -820,15 +943,15 @@ test_spec:
   - KM-400a-3-i
   requires_db: true
 test_rationale: |
-  The change alters persisted graph representation and the trusted query execution seam.
-  Public-entry and real-database checks are required in addition to structural unit checks;
-  generated Cypher strings alone cannot establish a safe migration or usable Aura view.
-  The ten named tests exist and ran against synthetic fixtures on actual local Neo4j;
-  they are not tests of the human Aura interface or a production source-format fixture.
-  The actual hosted migration receipt is separate evidence. The broader 63-test run
-  covers existing query admission, vectors, projection and environment regressions.
-  Remaining acceptance evidence is tracked explicitly below instead of represented by
-  invented test names or inferred from a successful database operation.
+  Native representation and the trusted query execution seam require public-entry and
+  real-database checks, not only generated statement inspection. Current coverage checks
+  native snapshot identity, source fidelity, counts, ownership and read-only refusal,
+  then verifies publication/rollback and vector behavior on actual local Neo4j.
+  Catalog tests require current-compiler proof, immutable native versions, explicit pin
+  rejection and fresh admission; old compiler receipts cannot authorize current queries.
+  The sanitized cutover report separately records the two actual local catalogs and
+  fresh Aura verification/public retrieval. Historical reports below retain their
+  original measured scope; they are not claims that removed migration tests still run.
 notes: |
   Authorization: in this Codex chat on 2026-10-02, Hendrik asked why the graph exposes KR
   categories instead of AC/ADR concepts and how to filter on component finalize, then
@@ -891,3 +1014,19 @@ notes: |
   Screenshot and direct AC field inspection are recorded in reports/native-fields/aura-ui.json.
   Decision support is implemented, but this published source contains no Decision records.
   No commit, PR, unperformed sign-off, or unrelated merge resolution is asserted.
+
+  User-authorized native-only follow-up, 2026-10-09: Hendrik explicitly requested
+  removal of all legacy compatibility and updating the actual saved queries.
+  This supersedes only the prior requirement to accept original compiler digests
+  indefinitely. Native graph scope, evidence fidelity, component membership and
+  metadata contracts remain unchanged; fresh native verification and a recorded
+  digest mapping replace runtime translation. Historical delivery notes above
+  describe their original tested revisions, not the pending native-only update.
+
+  Native-only follow-up verification, 2026-10-09: legacy graph conversion and compiler
+  support are removed. The focused compiler suite passed 78 tests; adapter checks passed
+  nine unit cases and 15 recovery cases. Independent local Neo4j verification passed 19
+  cases, including ten native inspection/refusal controls. Both actual catalogs were
+  backed up and replaced with fresh native admission at the original pinned Aura source,
+  then passed four public retrieval checks in a fresh process. See the sanitized cutover
+  report for hashes, digest mapping and exact measured checks. No Aura graph data changed.

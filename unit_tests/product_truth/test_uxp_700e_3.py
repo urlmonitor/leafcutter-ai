@@ -51,7 +51,7 @@ def _journey(flow_id: str, component: str, tags: list[str]) -> dict:
         "id": flow_id, "component": component, "name": flow_id, "summary": "fixture journey",
         "kind": "user", "source": "mock", "status": "active", "readiness": "draft", "version": 1,
         "tags": tags, "entities": [],
-        "steps": [{"id": "act", "label": "act", "human": "the actor acts", "order": 1,
+        "steps": [{"id": "act", "label": "act", "description": "the actor acts", "actor_kind": "human", "order": 1,
                    "io_contracts": {"not_applicable": "This actor action tests label classification and has no JSON handoff."}}],
         "branches": [],
     }
