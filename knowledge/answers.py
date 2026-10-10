@@ -81,7 +81,7 @@ def _hard_failure(
         Whether missing evidence prevents fulfillment regardless of best-effort mode.
     """
     return (
-        (result.truncated and "criteria" in need.required_fields)
+        (result.truncated and bool({"criteria", "content"}.intersection(need.required_fields)))
         or result.status not in {"ok", "partial"}
         or any(
             value in limitations
@@ -158,9 +158,11 @@ def _limitations(
             limits.append("requested population scope is not established")
         if not actual.get("complete", False):
             limits.append("complete population enumeration is not established")
+    expected_ids = set(scope.entity_ids)
     if request.operation == "get_entities":
-        if set(request.arguments["entity_ids"]) - set(items):
-            limits.append("requested identities are missing from returned evidence")
+        expected_ids.update(request.arguments["entity_ids"])
+    if expected_ids - set(items):
+        limits.append("requested identities are missing from returned evidence")
     return list(dict.fromkeys(limits))
 
 
@@ -175,3 +177,5 @@ def _scope_matches(scope: AnswerScope, actual: dict) -> bool:
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
+
+# - 2026-10-09 18:49 [python-coder]: Check original target coverage after every query and disclosure path. (#KM-500/KM-500e-1-i)

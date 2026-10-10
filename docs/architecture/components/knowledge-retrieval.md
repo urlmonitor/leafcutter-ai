@@ -7,7 +7,7 @@ status: active
 flight_level: L3-Component
 diagram_type: component
 created: '2026-10-01'
-last_updated: '2026-10-03'
+last_updated: '2026-10-09'
 components: [knowledge_management, decision_kernel]
 related_docs:
   - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
@@ -26,12 +26,11 @@ snapshot pointer. The canonical entity/relationship payload contracts are unchan
 Diagnostic metadata uses `Repository` and `Snapshot`; the saved component search
 excludes it. Aura's **In Scene** legend shows only the categories in the result.
 
-The physical-schema adapter preserves previously registered compiler digests by
-translating trusted legacy read patterns at execution. Both physical schemas can
-be read during migration; writes require migrated repository metadata. Explicit
-operator migration validates and backs up all retained snapshots before bounded,
-pointer-guarded transactions alter presentation. Each edge replacement is atomic;
-keys, canonical payloads and source revisions are retained and fingerprint-checked.
+The application reads and writes the current native graph format. Retired legacy
+compatibility does not translate old persisted query pins at runtime. An obsolete
+query catalog requires the separately verified replacement described in the
+[native saved-query contract](../../reference/neo4j-native-queries.md#saved-native-queries);
+retrieval does not silently migrate or publish graph data.
 
 ```mermaid
 flowchart LR
@@ -71,6 +70,49 @@ These storage fields do not enlarge the retrieval disclosure allowlist.
 
 The kernel adapter binds configured repository identity/root, validates results, records request/execution metadata and obtains selected source detail within cumulative limits. It delegates ordinary file retrieval unchanged and adds no driver, query language, scheduler or checkpoint model to the kernel. Configuration and payload schemas are generated from existing model conventions; schema parity tests cover the added fields.
 
+## Information needs before query selection
+
+For authorized configured graph-source research without explicit caller
+`answer_requirements`, the research LangGraph first dispatches the registered
+`host.retrieval_needs` operation. The host LLM proposes all information dimensions
+in one packet; System validates the pending request identity and offered labels,
+then retains `retrieval_needs` and derives `answer_requirements` for retrieval
+children. Jev continues to own finite evidence-category and operation choices.
+
+The integration adapter owns repository catalog meanings and the projection to
+answer fields/population. The kernel owns host/human continuations, accepted
+submission records, permissions and cumulative budgets. Explicit answer contracts
+and native-only research retain their existing compatible paths. A missing user
+choice can resume the same research after clarification. Unsupported meaning or
+failed prerequisites remain partial; a successful host submission is not answer
+correctness or classifier approval.
+
+See [the public run/resume guide](../../how-to/kernel-query-growth.md#interpret-a-question-before-selecting-its-query)
+and [the current Product Truth flow](../../product-truth/flows/leafcutter/retrieval-current-baseline.flow.json).
+The Oct3 experiment remains frozen evidence, and the wider search/traversal/learning
+strategy remains proposed.
+
+This route currently projects fields and supported single relationships. Whole-document
+or combined-relationship needs remain explicit unresolved outcomes. Generic query
+creation retains its existing component-scoped contract. Retrieval limits still
+apply: the default top_k of 6 cannot prove an exhaustive fifteen-record population.
+The returned typed-needs assessment remains attributable to its actual source and
+never treats a missing final answerability judgment as success.
+
+Requested `test_spec` is an additive source disclosure at level 3, not a new graph
+mapping. `knowledge/requested_fields.py` reads its exact span from the pinned
+file. Neutral evidence retains `field_contents` and field locators; the integration
+emits a separate public source citation while preserving `/criteria`. Both source
+and caller budgets still apply. [The answer contract reference](../../reference/knowledge-retrieval-evidence.md#field-provenance-and-availability)
+specifies these fields and their unavailable/truncated outcomes.
+
+The executable needs handoff currently accepts `detail_mode: fields` and one
+supported entity/document pair: ac/ac_yaml, adr/adr, ticket/ticket,
+component/component, flow/flow or decision/decision. Multiple pairs,
+`bounded_context`, `full_document` and unsupported document kinds are unresolved
+before query execution. Returned entity kinds must match. The standalone
+interpreter can describe broader needs; that does not make them executable here.
+
 ## Entity-guided operation selection
 
 The built-in selection path is specified by `DK-300d-4` and `DK-300d-5`.
@@ -79,8 +121,9 @@ read operations for permitted recognized IDs and trusted component scope. Jev
 chooses a finite operation or target; deterministic code binds and validates the
 arguments. It does not accept model-authored argument JSON or Cypher. Repository
 identity, root, selected sources, source revision and remaining budgets stay pinned.
-The built-in selector applies when the separate query catalog is not configured;
-a configured catalog retains the authored query-growth workflow below.
+The entity-guided selector applies with and without the separate query catalog.
+A configured catalog retains its governed construction/admission fallback only
+for a supported missing operation; it does not restore component-only selection.
 
 Natural AC descendant requests use a Python-bound recipe covering levels L0
 through L3 and excluding the selected root. Discovery precedes authorization of

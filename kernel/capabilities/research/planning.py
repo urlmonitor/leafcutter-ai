@@ -47,6 +47,7 @@ from kernel.contracts.capability import Usage
 from kernel.contracts.enums import EvidenceCategory, NeedStatus, Priority, RequestKind
 from kernel.contracts.evidence import EvidenceNeed, UnavailableSource
 from kernel.contracts.payloads import RetrievalRequestPayload
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from kernel.contracts.work import CapabilityInvocation, RequestProposal
 
 PURPOSE = "research.plan_needs"
@@ -215,7 +216,8 @@ def retrieval_operation(payload: dict, sources: list[SourceConfig]) -> str:
 def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig],
            query: NeedQuery, answer_requirements: dict[str, JsonValue] | None = None,
            assessment: dict[str, JsonValue] | None = None, *,
-           batches: int | None = None, jev_reserve: int = 0) -> RequestProposal:
+           batches: int | None = None, jev_reserve: int = 0,
+           retrieval_needs: RetrievalNeedsOutput | None = None) -> RequestProposal:
     """Build one retrieval child with original answer obligations and its rerank allowance.
 
     Query hints go to every child; exact locators and their owners stay on file-search
@@ -242,7 +244,7 @@ def _child(need: EvidenceNeed, source_ids: list[str], sources: list[SourceConfig
     file_search = native and not graph_only
     holders = locator_sources(query.locators, sources) if file_search else []
     payload = RetrievalRequestPayload(
-        need=need, answer_requirements=answer_requirements, assessment=assessment,
+        need=need, retrieval_needs=retrieval_needs, answer_requirements=answer_requirements, assessment=assessment,
         source_ids=list(dict.fromkeys([*source_ids, *holders])),
         query_hints=query.hints, explicit_locators=query.locators if file_search else [],
         max_rerank_batches=batches, jev_reserve=jev_reserve)
@@ -272,7 +274,7 @@ def _children(need: EvidenceNeed, chosen: list[SourceConfig], sources: list[Sour
               [s.id for s in chosen if s.kind != "graph_query"]]
     return [_child(need, group, sources, query,
                    answer_requirements=plan.answer_requirements, assessment=plan.assessment,
-                   batches=batches, jev_reserve=plan.jev_reserve)
+                   batches=batches, jev_reserve=plan.jev_reserve, retrieval_needs=plan.retrieval_needs)
             for group in groups if group]
 
 
@@ -313,7 +315,16 @@ def _defer_host_only(out: Resolution) -> None:
 
 
 def _permitted_entity_locator(ctx: ExecutionContext, source: SourceConfig, locator: str) -> bool:
-    """Check a cached locator against the current resolved-path and source restrictions."""
+    """Check a cached locator against the current resolved-path and source restrictions.
+
+    Args:
+        ctx: Trusted execution scope, configuration and services.
+        source: Configured source with permitted root paths.
+        locator: Candidate repository source locator.
+
+    Returns:
+        Whether this locator belongs to an allowed source root.
+    """
     policy = ReadPolicy(Path(ctx.scope.repository_root), tuple(ctx.scope.read_roots),
                         (*ctx.config.retrieval.deny_globs, *source.deny_globs),
                         source.max_file_bytes or ctx.config.retrieval.max_file_bytes)
@@ -328,7 +339,15 @@ def _permitted_entity_locator(ctx: ExecutionContext, source: SourceConfig, locat
 
 
 def _entity_locators(ctx: ExecutionContext, plan: Plan) -> list[str]:
-    """Recheck resolved meaning locators against current scope and source policy before hints."""
+    """Recheck resolved meaning locators against current scope and source policy before hints.
+
+    Args:
+        ctx: Trusted execution scope, configuration and services.
+        plan: Original research plan and caller restrictions.
+
+    Returns:
+        Existing readable source locators from accepted native cards.
+    """
     if ctx.entity_context is None:
         return []
     sources = {source.id: source for source in ctx.config.sources
@@ -346,7 +365,16 @@ def _entity_locators(ctx: ExecutionContext, plan: Plan) -> list[str]:
 
 
 def _context_query(ctx: ExecutionContext, query: NeedQuery, locators: list[str]) -> NeedQuery:
-    """Carry bounded caller claims and later clarifications as search hints, never evidence."""
+    """Carry bounded caller claims and later clarifications as search hints, never evidence.
+
+    Args:
+        ctx: Trusted execution scope, configuration and services.
+        query: Existing bounded need query.
+        locators: Scoped repository locations to include.
+
+    Returns:
+        Bounded need query augmented with permitted source context.
+    """
     context = ctx.entity_context or ctx.context_enrichment
     caller = ([*reversed(context.caller_context.conversation), *context.caller_context.observations]
               if context is not None else [])
@@ -443,3 +471,5 @@ def resolve_sources(ctx: ExecutionContext, needs: list[EvidenceNeed], plan: Plan
 # - 2026-10-02 04:36 [conflict-resolver]: Preserve split graph sources and evidence packets alongside rerank limits. (#TICKETLESS reason=kernel-v01-integration)
 # - 2026-10-03 17:00 [python-coder]: Select context-only owner stores through explicit sources or resolved locators, preserving ordinary research behavior. (#DK-300/entity-context)
 # - 2026-10-03 22:24 [Codex]: Keep graph-only retrieval children scoped to their graph sources while retaining explicit locator ownership on file-search siblings. (#TICKETLESS reason=user-approved-DK-300d-5)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

@@ -48,7 +48,22 @@ def test_entity_question_selects_bound_graph_operation_and_yields_evidence(rig, 
     task = rig.goal_task(case["goal"])
     task = task.model_copy(update={"scope": task.scope.model_copy(update={
         "component_ids": case.get("components", []), "revision": prepared.context().scope.revision})})
-    envelope = asyncio.run(rig.service().start_run(task))
+    pending = asyncio.run(rig.service().start_run(task))
+    from tests.kernel.retrieval.needs_public_support import resume_graph_needs
+    meanings = {
+        "exact-ac": (AC_ID, "ac", "ac_yaml", None, "single_entity"),
+        "real-adr-stem": (ADR_ID, "adr", "adr", None, "single_entity"),
+        "relationship-paraphrase": (AC_ID, "test", "code", "covered_by", "examples"),
+        "trusted-component": ("decision_kernel", "adr", "adr", "governing_adrs", "examples"),
+    }
+    target, entity_type, document_type, relationship, completeness = meanings[case["name"]]
+    if entity_type == "adr":
+        prepared.port.response_entity = (ADR_ID, "ADR", f"docs/architecture/adrs/{ADR_ID}.md", "")
+    elif entity_type == "test":
+        write(rig.repo, "pkg/test_graph_record.py", "# " + GRAPH_FACT + "\n")
+        prepared.port.response_entity = ("Test:pkg/test_graph_record.py", "Test", "pkg/test_graph_record.py", "")
+    envelope = asyncio.run(resume_graph_needs(rig.service, pending, target=target,
+        entity_type=entity_type, document_type=document_type, relationship=relationship, completeness=completeness))
     selections = [b for b in rig.jev.batches if b.purpose == "knowledge.operation_select"]
     assert len(selections) == 1, [b.purpose for b in rig.jev.batches]
     assert case["operation"] in _choices(selections[0])

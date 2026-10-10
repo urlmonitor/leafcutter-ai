@@ -226,3 +226,7 @@ The connection URI of Leafcutter's Neo4j settings family: `LEAFCUTTER_NEO4J_URI`
 ### out_of_domain
 
 A `GapType` value in the Decision Kernel (`kernel/contracts/enums.py`) and a choice of the intake intent classification (`kernel/intent/classify.py`): the request is not about software engineering in the repository. The kernel declines it and records it as a capability gap.
+
+### Atlas
+
+The Leafcutter project's frontend — a Next.js (App Router) web application located at `leafcutter-web/`. Atlas reads the project repository live on every request, rendering acceptance criteria graphs, product-truth flows, the roadmap, and pipeline status. Run locally with `npm run dev -- -p 4319` (conventionally on port 4319 at http://localhost:4319). Note: the `/atlas` route surfaces the "AC Atlas" view (acceptance criteria graph), distinct from other frontend views like `/flows`. Registered as component `atlas_frontend`; see `leafcutter-web/README.md`.

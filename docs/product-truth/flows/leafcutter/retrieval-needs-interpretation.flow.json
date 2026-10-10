@@ -4,13 +4,13 @@
   "product": "Leafcutter",
   "name": "Interpret what a retrieval question needs",
   "level": "pipeline",
-  "summary": "An isolated host LLM interprets a question into typed information needs; production retrieval does not call it.",
+  "summary": "The standalone host interpretation shares public research contracts; its saved model evaluation stays historical.",
   "kind": "data",
   "source": "real",
   "realization": "built",
   "status": "active",
   "readiness": "draft",
-  "version": 6,
+  "version": 7,
   "shape_version": 2,
   "tags": [
     "retrieval",
@@ -24,9 +24,7 @@
       "id": "prepare-request",
       "label": "Prepare the question and offered meanings",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 1,
-      "description": "The system validates the question, context and catalog of offered meanings within the size limit, adding as candidates only identifiers given or named in the question.",
       "consumes": [
         "retrieval_needs_request/original_question: string (required)",
         "retrieval_needs_request/catalog: object (required)",
@@ -311,15 +309,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The system validates the question, context and catalog of offered meanings within the size limit, adding as candidates only identifiers given or named in the question.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "start-run",
       "label": "Start the isolated kernel run",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 2,
-      "description": "The kernel starts an isolated run that allows exactly one host operation, with Jev calls, knowledge reads and memory turned off.",
       "consumes": [
         "task_input/goal: string (required)",
         "task_input/caller: object (required; applies actor schema)",
@@ -478,15 +476,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel starts an isolated run that allows exactly one host operation, with Jev calls, knowledge reads and memory turned off.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "wait-for-host",
       "label": "Save the request and wait for the host",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 3,
-      "description": "The kernel saves the request and its input for the external host, then pauses the run until the host answers, without calling any model itself.",
       "consumes": [
         "capability_invocation/input_payload_schema: string (required)",
         "capability_invocation/input_payload: object (required; applies retrieval_needs_request schema)",
@@ -749,15 +747,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel saves the request and its input for the external host, then pauses the run until the host answers, without calling any model itself.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "interpret",
       "label": "Interpret all information needs together",
       "agent": "Host LLM",
-      "actor_kind": "llm",
       "order": 4,
-      "description": "The host model reads the request and, using only the offered labels, interprets in one pass which entity types, targets, fields, documents and relationships the question needs.",
       "consumes": [
         "host_work_request/output_schema_id: string (required)",
         "host_work_request/output_json_schema: object (optional; default {})",
@@ -789,7 +787,8 @@
         "retrieval_needs_output/rationale: string (optional; default \"\")",
         "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
         "retrieval_needs_output/status: string (optional; default \"decided\")",
-        "retrieval_needs_output/model_id: null|string (optional; default null)"
+        "retrieval_needs_output/model_id: null|string (optional; default null)",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
       ],
       "implements": [],
       "impl_asof": "2026-10-03",
@@ -1024,6 +1023,14 @@
                 ],
                 "required": false,
                 "default": null
+              },
+              {
+                "path": "/hierarchy_levels",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -1072,15 +1079,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The host model reads the request and, using only the offered labels, interprets in one pass which entity types, targets, fields, documents and relationships the question needs.",
+      "actor_kind": "llm"
     },
     {
       "id": "submit",
       "label": "Submit the interpretation to its wait",
       "agent": "Host controller",
-      "actor_kind": "deterministic",
       "order": 5,
-      "description": "The host controller wraps the interpretation for the original run and wait and submits it to the kernel, leaving unknown model or token usage unclaimed.",
       "consumes": [
         "run_envelope/run_id: string (required)",
         "host_work_request/id: string (required)",
@@ -1102,7 +1109,8 @@
         "retrieval_needs_output/rationale: string (optional; default \"\")",
         "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
         "retrieval_needs_output/status: string (optional; default \"decided\")",
-        "retrieval_needs_output/model_id: null|string (optional; default null)"
+        "retrieval_needs_output/model_id: null|string (optional; default null)",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
       ],
       "produces": [
         "interaction_submission/run_id: string (required)",
@@ -1285,6 +1293,14 @@
                 ],
                 "required": false,
                 "default": null
+              },
+              {
+                "path": "/hierarchy_levels",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -1386,15 +1402,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The host controller wraps the interpretation for the original run and wait and submits it to the kernel, leaving unknown model or token usage unclaimed.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "validate",
       "label": "Check the response before accepting it",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 6,
-      "description": "The kernel checks that the response fits the current wait and schema, keeps the question unchanged and uses only offered, non-overlapping labels, which proves form, not correctness.",
       "consumes": [
         "interaction_submission/run_id: string (required)",
         "interaction_submission/interaction_id: string (required)",
@@ -1587,15 +1603,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel checks that the response fits the current wait and schema, keeps the question unchanged and uses only offered, non-overlapping labels, which proves form, not correctness.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "accept-and-resume",
       "label": "Record acceptance and resume the run",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 7,
-      "description": "The kernel records the accepted response in its durable ledger before resuming the run, so an identical replay changes nothing and a conflicting one is refused.",
       "consumes": [
         "interaction_submission/run_id: string (required)",
         "interaction_submission/interaction_id: string (required)",
@@ -1702,15 +1718,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel records the accepted response in its durable ledger before resuming the run, so an identical replay changes nothing and a conflicting one is refused.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "normalize-needs",
       "label": "Normalize the interpretation",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 8,
-      "description": "The kernel adds structural gaps to the unresolved reasons, marks the interpretation as decided or needing resolution, and records a model only if the host reported one.",
       "consumes": [
         "interaction_submission/response: object (required; applies retrieval_needs_output schema)",
         "interaction_submission/usage: array (optional; default [])",
@@ -1736,7 +1752,8 @@
         "retrieval_needs_output/rationale: string (optional; default \"\")",
         "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
         "retrieval_needs_output/status: string (optional; default \"decided\")",
-        "retrieval_needs_output/model_id: null|string (optional; default null)"
+        "retrieval_needs_output/model_id: null|string (optional; default null)",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
       ],
       "implements": [],
       "impl_asof": "2026-10-03",
@@ -1933,6 +1950,14 @@
                 ],
                 "required": false,
                 "default": null
+              },
+              {
+                "path": "/hierarchy_levels",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -1972,15 +1997,15 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel adds structural gaps to the unresolved reasons, marks the interpretation as decided or needing resolution, and records a model only if the host reported one.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "return-needs",
       "label": "Return the typed needs",
       "agent": "System",
-      "actor_kind": "deterministic",
       "order": 9,
-      "description": "The kernel returns the typed needs as a completed interpretation, which does not mean any retrieval or answer has happened.",
       "consumes": [
         "retrieval_needs_output/original_question: string (required)",
         "retrieval_needs_output/source_scope: object (required)",
@@ -1998,7 +2023,8 @@
         "retrieval_needs_output/rationale: string (optional; default \"\")",
         "retrieval_needs_output/engine: string (optional; default \"host_llm\")",
         "retrieval_needs_output/status: string (optional; default \"decided\")",
-        "retrieval_needs_output/model_id: null|string (optional; default null)"
+        "retrieval_needs_output/model_id: null|string (optional; default null)",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
       ],
       "produces": [
         "capability_result/status: string (required)",
@@ -2144,6 +2170,14 @@
                 ],
                 "required": false,
                 "default": null
+              },
+              {
+                "path": "/hierarchy_levels",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -2323,7 +2357,9 @@
             }
           }
         ]
-      }
+      },
+      "description": "The kernel returns the typed needs as a completed interpretation, which does not mean any retrieval or answer has happened.",
+      "actor_kind": "deterministic"
     }
   ],
   "branches": [
@@ -2332,10 +2368,8 @@
       "from": "prepare-request",
       "label": "Reject an invalid request",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "Input is malformed, ungrounded or outside the request bounds",
       "outcome_kind": "failure",
-      "description": "The system rejects the task before any host wait is created, without trimming the catalog, inventing targets or reinterpreting the question.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2343,17 +2377,17 @@
         "not_applicable": "The Python build_llm_needs_task call raises a validation/value error before a TaskInput or RunEnvelope exists. The rejected arguments do not become an accepted request DTO. There is no separate serialized error payload at this API boundary; the callable does not start a host wait."
       },
       "consumes": [],
-      "produces": []
+      "produces": [],
+      "description": "The system rejects the task before any host wait is created, without trimming the catalog, inventing targets or reinterpreting the question.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "host-pending",
       "from": "wait-for-host",
       "label": "Keep waiting across a restart",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "The host has not submitted a response",
       "outcome_kind": "alternative",
-      "description": "The kernel keeps the saved wait open, even across a restart, so the original run resumes when a valid response finally arrives.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2461,17 +2495,17 @@
         "run_envelope/state_revision: integer (required)",
         "run_envelope/status: string (required)",
         "run_envelope/pending_interaction: null|object (optional; default null)"
-      ]
+      ],
+      "description": "The kernel keeps the saved wait open, even across a restart, so the original run resumes when a valid response finally arrives.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "submission-refused",
       "from": "validate",
       "label": "Refuse the wrong submission",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "The wrapper, actor, run, wait, revision or response kind is invalid",
       "outcome_kind": "failure",
-      "description": "The kernel refuses the submission without recording it or changing the run, so the host must resend it correctly for the current wait.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2540,17 +2574,17 @@
         "interaction_submission/actor: object (required)",
         "interaction_submission/response_schema_id: string (required)"
       ],
-      "produces": []
+      "produces": [],
+      "description": "The kernel refuses the submission without recording it or changing the run, so the host must resend it correctly for the current wait.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "repair-content",
       "from": "validate",
       "label": "Return to the host for correction",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "The payload fails schema or request-bound validation and its first correction remains",
       "outcome_kind": "alternative",
-      "description": "The kernel records the rejection and sends the request back to the host with the reasons, allowing one corrected response.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2668,17 +2702,17 @@
         "host_work_request/rejections: array (optional; default [])",
         "host_work_request/rejections/*/code: string (required)",
         "host_work_request/rejections/*/message: string (optional; default \"\")"
-      ]
+      ],
+      "description": "The kernel records the rejection and sends the request back to the host with the reasons, allowing one corrected response.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "repair-exhausted",
       "from": "validate",
       "label": "Stop after correction fails",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "A second payload fails schema or request-bound validation after the one allowed correction",
       "outcome_kind": "failure",
-      "description": "The kernel records the second rejection, fails the work item and closes the wait without accepting any response.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2787,17 +2821,17 @@
         "capability_result/error: null|object (optional; default null)",
         "capability_result/error/code: string (required)",
         "capability_result/error/retryable: boolean (optional; default false)"
-      ]
+      ],
+      "description": "The kernel records the second rejection, fails the work item and closes the wait without accepting any response.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "unresolved-needs",
       "from": "normalize-needs",
       "label": "Return unsupported or unresolved needs",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "Valid output contains unresolved reasons or structural missing dimensions",
       "outcome_kind": "alternative",
-      "description": "The kernel keeps the question, the selected and uncertain values and the reasons, and returns the interpretation as needing resolution without asking anyone or searching.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -2822,6 +2856,14 @@
               },
               {
                 "path": "/unresolved",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/hierarchy_levels",
                 "types": [
                   "array"
                 ],
@@ -2864,6 +2906,14 @@
                   "string"
                 ],
                 "required": true
+              },
+              {
+                "path": "/hierarchy_levels",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
               }
             ]
           }
@@ -2889,24 +2939,26 @@
       "consumes": [
         "retrieval_needs_output/hierarchy_scope: string (required)",
         "retrieval_needs_output/completeness: string (required)",
-        "retrieval_needs_output/unresolved: array (optional; default [])"
+        "retrieval_needs_output/unresolved: array (optional; default [])",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
       ],
       "produces": [
         "retrieval_needs_output/status: string (optional; default \"decided\")",
         "retrieval_needs_output/unresolved: array (optional; default [])",
         "retrieval_needs_output/hierarchy_scope: string (required)",
-        "retrieval_needs_output/scope_resolution: string (required)"
-      ]
+        "retrieval_needs_output/scope_resolution: string (required)",
+        "retrieval_needs_output/hierarchy_levels: array (optional; default [])"
+      ],
+      "description": "The kernel keeps the question, the selected and uncertain values and the reasons, and returns the interpretation as needing resolution without asking anyone or searching.",
+      "actor_kind": "deterministic"
     },
     {
       "id": "normalization-failed",
       "from": "normalize-needs",
       "label": "Report a conversion failure",
       "agent": "System",
-      "actor_kind": "deterministic",
       "condition": "Accepted submission cannot produce a valid normalized result",
       "outcome_kind": "failure",
-      "description": "The kernel reports a failed result instead of a completed interpretation, even though the response was already accepted.",
       "implements": [],
       "impl_asof": "2026-10-03",
       "impl_status": "not_started",
@@ -3015,7 +3067,9 @@
         "capability_result/error: null|object (optional; default null)",
         "capability_result/error/code: string (required)",
         "capability_result/error/message: string (optional; default \"\")"
-      ]
+      ],
+      "description": "The kernel reports a failed result instead of a completed interpretation, even though the response was already accepted.",
+      "actor_kind": "deterministic"
     }
   ],
   "acceptance_scenarios": [
@@ -3176,6 +3230,18 @@
       "by": "product-truth expert",
       "date": "2026-10-05",
       "note": "Reconciled current TaskInput admission bounds and entity-context host-artifact channels after merging main. Historical N03 receipts remain unchanged and explicitly historical; experiment-only scope, typed request/output, topology, AC status and semantic evaluation limits are preserved."
+    },
+    {
+      "action": "extended",
+      "by": "business-analyst / IT PO / flow-author",
+      "date": "2026-10-09",
+      "note": "Document the KM-500e-1-i public needs-to-selection integration against the current contracts. Keep broader target method strategies proposed and Oct3 experimental receipts unchanged. Controlled integration tests and live model quality remain separate evidence."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author",
+      "date": "2026-10-09",
+      "note": "Semantically merged the upstream plain-sentence descriptions and explicit actor mechanisms while retaining the committed typed contracts, source-bound examples, original target obligations, host interpretation steps and separate historical evidence limits."
     }
   ],
   "impl_summary": {

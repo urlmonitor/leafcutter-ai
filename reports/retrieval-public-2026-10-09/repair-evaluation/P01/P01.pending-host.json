@@ -1,0 +1,9 @@
+{
+  "case_id": "P01",
+  "step": "started",
+  "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-repair-9904vj04\\packets\\P01.started.json",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-repair-9904vj04\\kernel\\P01\\runs\\run-5c8af6a836a74d84\\artifacts\\input-int-9f623c337f084232.json"
+  ],
+  "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-repair-9904vj04\\responses\\P01.started.json"
+}

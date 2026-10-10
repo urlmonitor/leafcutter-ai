@@ -1,0 +1,252 @@
+{
+  "case_id": "N10",
+  "original_rejected_receipt": "../N10.result.json",
+  "response_sha256": "9a62fb2d25f7e9c239a9b4e5a8d3da82b93b66ce42d8bd5b6b689e693d2c1001",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-b9c4fc7909af4bcb",
+    "root_task_id": "task-48aeaab530854f85",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "What was each employee's payroll amount last month?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog",
+          "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "rationale": "The requested per-employee payroll amounts for last month cannot be represented by the offered software requirement, implementation, and report catalog. The supplied source scope is preserved.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-b9c4fc7909af4bcb\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-94228d89ce15790c",
+        "created_at": "2026-10-09T15:35:04.999257Z",
+        "updated_at": "2026-10-09T15:35:04.999257Z",
+        "created_seq": 0,
+        "gap_key": "b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195",
+        "gap_type": "host_only",
+        "goal": "What was each employee's payroll amount last month?",
+        "normalized_need": "amount each employee last month payroll s was what",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "What was each employee's payroll amount last month?",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-b9c4fc7909af4bcb"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: What was each employee's payroll amount last month?",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195.md"
+        },
+        "first_seen": "2026-10-09T15:35:04.999257Z",
+        "last_seen": "2026-10-09T15:35:04.999257Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 450041,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "f4eb8ca20b8d30cdfe0f4428e2b609e0",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "What was each employee's payroll amount last month?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "unknown",
+    "unresolved": [
+      "needs_outside_catalog",
+      "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+      "entity_types",
+      "document_types",
+      "required_fields",
+      "scope_resolution"
+    ],
+    "rationale": "The requested per-employee payroll amounts for last month cannot be represented by the offered software requirement, implementation, and report catalog. The supplied source scope is preserved.",
+    "engine": "host_llm",
+    "status": "needs_resolution",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "What was each employee's payroll amount last month?",
+        "expected": "What was each employee's payroll amount last month?"
+      },
+      {
+        "name": "exclude.entity_types",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "ac",
+            "source_file",
+            "test",
+            "adr",
+            "schema",
+            "report",
+            "component"
+          ]
+        }
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "criteria",
+            "work_status",
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "needs_resolution",
+        "expected": [
+          "needs_resolution"
+        ]
+      },
+      {
+        "name": "unsupported_need_disclosed",
+        "passed": true,
+        "actual": [
+          "needs_outside_catalog",
+          "Employee payroll entities and payroll amount fields are absent from the offered catalog.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "expected": "Explicit unmet catalog dimension, unresolved; no synthetic confidence"
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}
