@@ -1,6 +1,6 @@
 ---
 title: "Decision lifecycle documentation: six DK-600 diagrams, two how-tos and the decision-record reference"
-status: todo
+status: done
 components:
   - decision_kernel
 created: 2026-10-10
@@ -59,7 +59,7 @@ agents:
   reference-author: signed_off
   documentation-verifier: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # Decision lifecycle documentation: six DK-600 diagrams, two how-tos and the decision-record reference
@@ -345,7 +345,7 @@ them separately: `docs/architecture/diagrams/c2-007-decision-kernel-flows-overvi
 - [x] reference-author — 2026-10-10 13:50
 - [x] documentation-verifier — 2026-10-10 13:07
 - [x] commit — 2026-10-10 14:05
-- [ ] pull-request
+- [x] pull-request — 2026-10-10 14:20
 
 ## Comments
 
@@ -495,3 +495,19 @@ completion_manifest:
   commit_message_valid: true
   ticket_staged: true
 Auto-authorized commit gate: subject "docs(decision-kernel): add decision lifecycle diagrams, how-tos and decision-record reference"; staged files: 23 docs, DK-600 AC yamls and this ticket. Pre-commit probe passed (failing_checks empty).
+
+### 2026-10-10 14:20 — pull-request (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  branch_pushed: true
+  pr_created: true
+  pr_body_complete: true
+Pushed the branch and opened https://github.com/urlmonitor/leafcutter-ai/pull/1139 against main. All other agents were signed off, so status is now done.
+
+### 2026-10-10 14:30 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "chore(ticket): finalize pull-request sign-off"; staged files: tickets/00_inbox/TICKET-20261010-DecisionLifecycleDocs.md. Pre-commit probe passed (failing_checks empty).
