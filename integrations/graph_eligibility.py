@@ -135,7 +135,7 @@ def operation_fit(offers: dict[str, GraphOffer], payload: RetrievalRequestPayloa
         JSON facts for the existing paid selector; only incompatible rows are removed.
     """
     expected = _requested_population(payload, requirements)
-    source_fields = [field for field in requirements.required_fields if field in _SOURCE_FIELDS] if requirements else []
+    source_fields: list[JsonValue] = [field for field in requirements.required_fields if field in _SOURCE_FIELDS] if requirements else []
     facts: dict[str, JsonValue] = {}
     for name, offer in offers.items():
         result = offer.result_contract
@@ -152,3 +152,4 @@ def operation_fit(offers: dict[str, GraphOffer], payload: RetrievalRequestPayloa
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-10 10:51 [python-coder]: Separate proved contract mismatches from unknown identity overlap and eventual completeness. (#KM-500/KM-500a-2-i)
+# - 2026-10-10 11:49 [python-coder]: Make the existing selector JSON shapes explicit for type checking without changing eligibility rules. (#KM-500/KM-500a-2-i)

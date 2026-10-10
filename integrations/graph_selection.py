@@ -237,7 +237,8 @@ async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityIn
     scoped = selection_context(ctx)
     offers, options = _operation_options(scoped, payload, capabilities, catalog, allow_catalog)
     fit = operation_fit(offers, payload, requirements)
-    incompatible = {name for name, facts in fit.items() if facts["status"] == "incompatible"}
+    incompatible = {name for name, facts in fit.items()
+                    if isinstance(facts, dict) and facts["status"] == "incompatible"}
     if incompatible and incompatible == set(offers):
         return RetrievalChoice(False, "graph", "unsupported",
             "All bound candidates return a population incompatible with the original requirements."), []
@@ -279,3 +280,4 @@ async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityIn
 
 # - 2026-10-09 18:49 [python-coder]: Keep all original selected targets mandatory and reject incompatible operation cardinality. (#KM-500/KM-500e-1-i)
 # - 2026-10-10 10:51 [python-coder]: Remove proved population contradictions before the unchanged finite Jev judgment. (#KM-500/KM-500a-2-i)
+# - 2026-10-10 11:49 [python-coder]: Make the existing selector JSON shapes explicit for type checking without changing eligibility rules. (#KM-500/KM-500a-2-i)
