@@ -785,7 +785,7 @@
       "path": "flows/leafcutter/retrieval-current-baseline.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 6,
+      "version": 7,
       "entities": [],
       "tags": [
         "retrieval",
@@ -1136,7 +1136,7 @@
       "path": "flows/leafcutter/retrieval-needs-interpretation.flow.json",
       "status": "active",
       "readiness": "draft",
-      "version": 8,
+      "version": 9,
       "entities": [],
       "tags": [
         "retrieval",

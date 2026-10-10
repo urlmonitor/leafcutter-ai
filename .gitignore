@@ -107,3 +107,21 @@ reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoint
 reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoints.sqlite-wal
 reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite-shm
 reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite-wal
+
+# Closed live precision replay databases, sidecars and locks remain local.
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/checkpoints.sqlite-shm
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/checkpoints.sqlite-wal
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/runs/run-72f17b89c0bb4c5c/run.lock
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/checkpoints.sqlite-shm
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/checkpoints.sqlite-wal
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/runs/run-5f1ecc1f585e413c/run.lock
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/checkpoints.sqlite-shm
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/checkpoints.sqlite-wal
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/runs/run-351eabde9d54499e/run.lock
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/checkpoints.sqlite
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/checkpoints.sqlite-shm
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/checkpoints.sqlite-wal
+/reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/runs/run-190a11ef041b4942/run.lock

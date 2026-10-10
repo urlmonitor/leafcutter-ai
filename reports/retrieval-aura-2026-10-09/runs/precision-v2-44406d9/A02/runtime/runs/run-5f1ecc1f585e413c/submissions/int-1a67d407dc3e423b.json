@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-5f1ecc1f585e413c",
+  "interaction_id": "int-1a67d407dc3e423b",
+  "sha256": "fda00e193394113488165db288175a5372daf9320d54840674c14de495cc34ab",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-5f1ecc1f585e413c",
+    "interaction_id": "int-1a67d407dc3e423b",
+    "expected_state_revision": 2,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-aura-proof",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The requested demonstration comprises the required acceptance behavior and the authored verification scenarios, assertions and failure checks for the named criterion. Both criteria and test_spec are needed; the question does not ask which test records exist or whether any tests passed.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-10T06:21:26.700198Z"
+}

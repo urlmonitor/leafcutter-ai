@@ -4,7 +4,7 @@ description: 'Configure the kernel query catalog and resume human and coding-age
 type: how-to
 status: active
 created: '2026-10-01'
-last_updated: '2026-10-09'
+last_updated: '2026-10-10'
 components:
 - knowledge_management
 - decision_kernel
@@ -113,8 +113,15 @@ with semantic readiness false. The
 [closed Aura evaluation](../../reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/review.html)
 matched selected criteria in 3/3 positives but answered the whole question in 0/3:
 the fresh interpretations omitted authored test specifications. Terminal statuses
-were partial, partial and completed; the stale control passed. The field-precision
-repair requires a new independent semantic evaluation and Aura retest.
+were partial, partial and completed; the stale control passed. That baseline stays
+unchanged. The [later interpretation gate](../../reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.html)
+passed 16/16 frozen cases. The authorized [live retest](../../reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/review.html)
+then retained both fields in 4/4 interpretations and delivered 2/3 correct complete
+positive answers, with a passing stale control. One correct interpretation stopped
+at query selection: 0.71 probability was below the unchanged 0.80 gate, so no
+retrieval ran. The narrow interpretation fix is accepted; query-selection reliability
+and the full live positive gate remain open. The retest used runtime `44406d923`,
+source `2a8ebc87`, six Jev calls and four accepted host results without retries.
 Multi-method search, traversal and automatic strategy learning remain outside
 this integration.
 

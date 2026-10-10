@@ -10,7 +10,7 @@
   "realization": "built",
   "status": "active",
   "readiness": "draft",
-  "version": 6,
+  "version": 7,
   "tags": [
     "retrieval",
     "research",
@@ -6248,6 +6248,12 @@
       "by": "IT PO / business-analyst / flow-author (retrieval_acceptance_next)",
       "date": "2026-10-09",
       "note": "Clarified indispensable answer facts versus optional discovery hints and reference values versus linked-record populations, retaining existing topology and statuses. Frozen stage1 scored 10/12 interpretations: complementary criteria+test_spec positives passed, but IP07 retained a redundant relationship and IP11 added an investigative covered_by field despite honestly refusing unavailable execution proof. Historical IP01-IP12 expectations and outcomes are unchanged. Revision2 and four independent holdouts remain pending; new H04 disallows investigative content while historical IP11 retains its original allowance. Evidence: reports/retrieval-needs-precision-2026-10-09/stage1/review.html. Illustrative examples are not execution or model-quality receipts."
+    },
+    {
+      "action": "extended",
+      "by": "BA / IT PO / flow-author (retrieval_acceptance_next)",
+      "date": "2026-10-10",
+      "note": "Independent read-only review verified all 163 closed live artifact hashes and exact criteria/test_spec values, locators and source pins for A01/A03. Frozen semantic revision 2 passed 16/16; authorized live runtime 44406d923e2a0e2f40079a317135d0736534c654 against source 2a8ebc87ce937a0a2fec65ab26220f79a72e4859 retained both fields in 4/4 interpretations, completed 2/3 positive answers and passed 1/1 actual stale control, using 6 Jev calls and 4 accepted host results without retries. A02 preserved its correct obligations but get_entities probability 0.71 fell below unchanged 0.80 (confidence 0.64 exceeded 0.50), so no retrieval or evidence followed. The narrow interpretation repair is accepted; selection reliability remains queued as issue 02, the original whole-question exit is unmet and broader ACs stay in_progress. No catalog-causation inference, aggregate, full-document, CI-outcome or vector proof, or new workflow follows. Historical 0/3 live and 10/12 semantic receipts stay unchanged. Evidence: reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.html and reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/review.html. Topology, examples, contracts and derived statuses are unchanged."
     }
   ],
   "impl_summary": {

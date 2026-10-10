@@ -1,0 +1,198 @@
+{
+  "closed_at": "2026-10-10T06:25:26.252778+00:00",
+  "mode": "Production build_environment; real TypeSafe Jev and read-only Aura; RecordingTracer only override; fresh blind host via genuine packets and durable ledger.",
+  "positive_interpretations_sufficient": 3,
+  "positive_interpretations_total": 3,
+  "all_interpretations_sufficient": 4,
+  "all_interpretations_total": 4,
+  "correct_complete_positive_answers": 2,
+  "positive_cases": 3,
+  "chosen_fields_faithfully_delivered_positive_cases": 2,
+  "stale_controls_passed": 1,
+  "stale_controls": 1,
+  "actual_jev_calls": 6,
+  "accepted_host_results": 4,
+  "jev_model_ids": [
+    "jev-1.13.0"
+  ],
+  "host_model_id": null,
+  "host_tokens": null,
+  "underlying_host_model_call_count": null,
+  "code_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "runtime_fingerprint": "bb93a68bda69411d810a645e28211416434e95bc959f7e6a0f0a77195ebe7b82",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "writer_code_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "database": "84379aa6",
+  "semantic_ready": false,
+  "readiness_checks_matching": 9,
+  "no_retries": true,
+  "no_threshold_or_gold_changes": true,
+  "graph_or_catalog_writes": 0,
+  "langfuse_exports": 0,
+  "source_oracle_sha256": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "cases": [
+    {
+      "id": "A01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "completed",
+      "interpretation_sufficient": true,
+      "required_fields_bound_before_selection": {
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "scope": {
+          "population": "returned_entities",
+          "entity_ids": [
+            "KM-500c-2"
+          ],
+          "root_id": null,
+          "levels": null,
+          "inclusion": null
+        },
+        "require_complete": true
+      },
+      "retrieval_invocation_id": "inv-c3edabfd48434271",
+      "chosen_fields_faithfully_delivered": true,
+      "correct_complete_answer": true,
+      "stale_control_passed": null,
+      "receipt": "A01/resume-0002/envelope.json",
+      "trace_path": "A01/resume-0002/trace.json"
+    },
+    {
+      "id": "A02",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": true,
+      "status": "partial",
+      "interpretation_sufficient": true,
+      "required_fields_bound_before_selection": {
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "scope": {
+          "population": "returned_entities",
+          "entity_ids": [
+            "KM-500c-2"
+          ],
+          "root_id": null,
+          "levels": null,
+          "inclusion": null
+        },
+        "require_complete": true
+      },
+      "retrieval_invocation_id": "inv-8b6457c161bc4bf0",
+      "chosen_fields_faithfully_delivered": false,
+      "correct_complete_answer": false,
+      "stale_control_passed": null,
+      "receipt": "A02/resume-0002/envelope.json",
+      "trace_path": "A02/resume-0002/trace.json"
+    },
+    {
+      "id": "A03",
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "completed",
+      "interpretation_sufficient": true,
+      "required_fields_bound_before_selection": {
+        "original_question": "For KM-500c-1, what must tests demonstrate?",
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "scope": {
+          "population": "returned_entities",
+          "entity_ids": [
+            "KM-500c-1"
+          ],
+          "root_id": null,
+          "levels": null,
+          "inclusion": null
+        },
+        "require_complete": true
+      },
+      "retrieval_invocation_id": "inv-da363c5764a84283",
+      "chosen_fields_faithfully_delivered": true,
+      "correct_complete_answer": true,
+      "stale_control_passed": null,
+      "receipt": "A03/resume-0002/envelope.json",
+      "trace_path": "A03/resume-0002/trace.json"
+    },
+    {
+      "id": "A04",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "partial",
+      "interpretation_sufficient": true,
+      "required_fields_bound_before_selection": {
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "scope": {
+          "population": "returned_entities",
+          "entity_ids": [
+            "KM-500c-2"
+          ],
+          "root_id": null,
+          "levels": null,
+          "inclusion": null
+        },
+        "require_complete": true
+      },
+      "retrieval_invocation_id": "inv-d91d5e1b6b3c4578",
+      "chosen_fields_faithfully_delivered": false,
+      "correct_complete_answer": false,
+      "stale_control_passed": true,
+      "receipt": "A04/resume-0002/envelope.json",
+      "trace_path": "A04/resume-0002/trace.json"
+    }
+  ],
+  "residual_failure": {
+    "observed_case": "A02",
+    "trace_path": "A02/resume-0002/trace.json",
+    "state_path": "A02/resume-0002/state.json",
+    "interpretation_and_child_contract_correct": true,
+    "required_fields": [
+      "criteria",
+      "test_spec"
+    ],
+    "target_ids": [
+      "KM-500c-2"
+    ],
+    "relationships": [],
+    "population": "returned_entities",
+    "require_complete": true,
+    "selected_operation": "get_entities",
+    "selected_probability": 0.71,
+    "minimum_selected_probability": 0.8,
+    "confidence": 0.64,
+    "minimum_confidence": 0.5,
+    "competing_get_related_tests_probability": 0.27,
+    "finite_probability_labels": [
+      "get_entities",
+      "get_related_tests",
+      "get_declared_dependents",
+      "unsupported",
+      "unsupported_population"
+    ],
+    "paid_calls_preserved": 1,
+    "retrieval_executed": false,
+    "evidence_returned": false,
+    "next_issue": "Operation-choice reliability / existing queued issue02; preserve thresholds and use independent discriminating cases before any separately authorized retest.",
+    "causal_limit": "The failed case had catalog enabled, but this single paired observation does not isolate catalog configuration as the cause. Host wording and model variability are not controlled causal factors here.",
+    "merge_recommendation": "Approve the scoped interpretation repair; do not mark the full retrieval delivery or catalog-enabled positive gate complete."
+  },
+  "independent_review": {
+    "scoped_interpretation_repair": "Approved: frozen16/16 interpretation contrasts plus all4 live interpretations preserve criteria/test_spec; narrower meanings remain covered by unchanged contrast evidence.",
+    "source_fidelity": "A01 and changed-ID A03 return exact canonical criteria and semantically equal authored test_spec with correct field pointers, source paths, immutable revision and generation.",
+    "contract_scope_and_privacy": "No new contract or scope violation observed in this batch. Both fields remain bound before A02 refusal; A04 exercises actual stale boundary and returns no evidence; outputs and external-call configuration remain within approved bounds.",
+    "merge_recommendation": "Merge the scoped interpretation repair when required release checks pass, while keeping broad retrieval ACs in_progress and queued operation-choice work open.",
+    "not_proven": "This four-case batch does not establish general query reliability, catalog-enabled answering, exhaustive counts, unknown-population discovery, full documents, broader traversal, classifier learning, CI outcome retrieval or vector readiness."
+  }
+}
