@@ -7,7 +7,7 @@ diagram_type: container
 status: draft
 root: true
 created: 2026-09-30
-last_updated: 2026-10-02
+last_updated: 2026-10-10
 source_ticket: null
 components:
   - decision_kernel
@@ -22,6 +22,7 @@ children:
   - docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
   - docs/architecture/diagrams/c3-021-decision-kernel-flows-regression-memory.md
   - docs/architecture/diagrams/c3-022-decision-kernel-flows-open-points.md
+  - docs/architecture/diagrams/c3-023-decision-kernel-split-components.md
 related_docs:
   - docs/architecture/components/decision-kernel.md
   - docs/architecture/components/colony-memory.md
@@ -194,6 +195,7 @@ flowchart LR
 | [Learning loop](c3-020-decision-kernel-flows-learning-loop.md) | Live: approved records → Git → precedent. Planned: Langfuse → evaluator → Neo4j → routing |
 | [Regression memory](c3-021-decision-kernel-flows-regression-memory.md) | Confirmed mistakes → Langfuse datasets → regression evaluation before a change |
 | [Open points](c3-022-decision-kernel-flows-open-points.md) | Where the sources are silent or disagree, with their 2026-10-02 status |
+| [Split components](c3-023-decision-kernel-split-components.md) | Where the split of a bundled request sits among the kernel's containers: `host.decompose_goal` beside the other host handoffs, detection, the quote check, the split gate, the part scheduler, the report's split section, and the split record in the run root (ADR-067, in progress) |
 
 ## Definitions
 
