@@ -22,7 +22,7 @@ ac_traceability:
   ac_path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces
   l3:
   - BO-4300a-1-ib
-ac_coverage: 0/1
+ac_coverage: 1/1
 tags:
 - BO-4300
 - re-cut-2026-09-28
@@ -38,20 +38,20 @@ files_touched:
 - templates/skills/feature/SKILL.md
 - unit_tests/build_orchestration/test_bo_4300a_1_ib.py
 agents:
-  ac-fulfillment-gate: needed
-  ac-validator: needed
-  architect-review: needed
-  commit: needed
+  ac-fulfillment-gate: signed_off
+  ac-validator: signed_off
+  architect-review: signed_off
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
-  llm-expert: needed
-  pr-reviewer: needed
+  llm-expert: signed_off
+  pr-reviewer: signed_off
   pull-request: not_needed
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
-  test-writer: needed
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 ---
 
@@ -89,7 +89,7 @@ And no step asks an agent to create, copy, set up, link or repair a workspace
   by steps of the agent's own choosing.
 ```
 
-- [ ] AC-1: BO-4300a-1-ib -- Entry skills run the one maker and hand its answer to the workflow unchanged
+- [x] AC-1: BO-4300a-1-ib -- Entry skills run the one maker and hand its answer to the workflow unchanged
 
 ## Test Requirements
 
@@ -211,13 +211,13 @@ tests:
 
 ### llm-expert
 
-- [ ] AC-1: BO-4300a-1-ib -- Entry skills run the one maker and hand its answer to the workflow unchanged
+- [x] AC-1: BO-4300a-1-ib -- Entry skills run the one maker and hand its answer to the workflow unchanged <!-- signed: llm-expert -->
 
 **Depends on:** test-writer's red baseline for the tests above and the producers under Expects From.
 
 ### test-writer
 
-- [ ] AC-1: red tests for BO-4300a-1-ib per `## Test Requirements`
+- [x] AC-1: red tests for BO-4300a-1-ib per `## Test Requirements`
 
 **Delivers to:** llm-expert (red baseline).
 
@@ -235,7 +235,7 @@ tests:
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | |
+| AC-1 | test_bo_4300a_1_ib.py:test_command_published_by_each_deployed_entry_skill_runs_the_maker; test_deployed_workspace_skill_publishes_no_alternative_recipe; test_build_single_ticket_step1_command_yields_ticket_inside_the_workspace; test_no_deployed_entry_surface_spells_a_commit_with_dash_c; test_ticket_09_reachable_from_entry_point | Rewrote feature skill to one maker invocation; entry commands/skills run the maker once and pass args.workspace; build-single-ticket maps TICKET_PATH only from ticket_path_in_worktree | ok — 2026-10-10 |
 
 ## Risk & Safety
 
@@ -245,15 +245,104 @@ tests:
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] llm-expert
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] ac-validator
-- [ ] ac-fulfillment-gate
-- [ ] commit
+- [x] architect-review — 2026-10-10 12:00
+- [x] test-writer — 2026-10-10 13:00
+- [x] llm-expert — 2026-10-10 18:20
+- [x] test-runner — 2026-10-10 19:00
+- [x] pr-reviewer — 2026-10-10 18:26
+- [x] ac-validator — 2026-10-10 19:30
+- [x] ac-fulfillment-gate — 2026-10-10 20:00
+- [x] commit — 2026-10-10 20:30
 
 ## Comments
 
 _(Append-only log -- leave blank when authoring.)_
+
+### 2026-10-10 12:00 — architect-review (status: ok)
+feedback-id: fb_2026-10-10_749541f6
+completion_manifest:
+  rubric_evaluated: true
+  research_agent_spawned:
+    result: false
+    reason: "Agent tool unavailable in this phase; blast radius taken from the ticket's own files_touched and targeted greps."
+    remediation: "None needed; scope is prompt templates only."
+Classification: LARGE by threshold (10 files > 5); no always-large trigger fired (no Alembic, hypertable, FastAPI or ADR-file change). Opus deep review not spawned (no Agent tool); escalation recorded as opus-by-threshold for the supervisor. Components: worktree_manager and skills_system (2). requires_adr stays false: the maker contract is owned by the existing worktree-maker amendment ADR and this ticket only consumes it; no new cross-cutting policy. Design concerns: build-single-ticket (lines ~79, 369, 375) and quick-fix still carry the ticket_path_final mapping and the dash-C commit spelling and must be rewritten; plan-feature command must pass args.workspace; feature skill must be reduced to the single maker invocation. Acceptance adjustments: none. suggested_adr: null; suggested_diagrams: [].
+
+### 2026-10-10 18:20 — llm-expert (status: ok)
+feedback-id: fb_2026-10-10_9c21dc62
+completion_manifest:
+  template_written: true
+  prompt_quality_checklist_passed: true
+  convention_violations_resolved: true
+Reduced the feature skill to the one maker invocation; plan-feature, fast-lane-build and quick-fix commands plus the plan-feature, quick-fix and build-single-ticket skills now run `worktree.py ensure` once by absolute path, stop on non-zero, and pass the answer as args.workspace. build-feature and finalize-feature leave the workspace to the workflow. build-single-ticket maps TICKET_PATH only from ticket_path_in_worktree, and the dash-C commit spellings and old creation recipes are gone. The new test module passes (5 passed) against the deployed build.
+
+### 2026-10-10 19:00 — test-runner (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Suite: unit_tests/build_orchestration/test_bo_4300a_1_ib.py (routed by files_touched; templates + build_orchestration). Tests run: 5   Failures: 0   Errors: 0   Skipped: 0 (104 subtests passed). Elapsed: 106.6s.
+
+## Escalation
+
+Branch: opus
+Reason: affected files (10) exceed the 5-file threshold; no always-large trigger.
+
+### 2026-10-10 13:00 — test-writer (status: ok)
+feedback-id: fb_2026-10-10_2f221244
+completion_manifest:
+  red_tests_written: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "deployed worktree.py ensure answer (ticket_path_in_worktree, workspace_path)"
+    consuming_side: "deployed build-single-ticket skill text / entry command that maps it to TICKET_PATH and args.workspace"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "the maker command published in deployed .claude/commands/plan-feature.md, executed as written via subprocess against a temp hub project"
+red_baseline:
+  - test_name: test_deployed_workspace_skill_publishes_no_alternative_recipe
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ib.py
+    kind: assertion
+    error: "AssertionError: ... still spells setup_ticket_worktree\.py (non-strict run: xfailed; strict run: failed)"
+  - test_command_published_by_each_deployed_entry_skill_runs_the_maker
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ib.py
+    kind: assertion
+    error: "AssertionError: expected exactly one maker command, got [] (per-surface subtests)"
+  - test_ticket_09_reachable_from_entry_point
+    file: unit_tests/build_orchestration/test_bo_4300a_1_ib.py
+    kind: assertion
+    error: "AssertionError: plan-feature must pass args.workspace"
+Five tests written in unit_tests/build_orchestration/test_bo_4300a_1_ib.py against the DEPLOYED surfaces (shared ensure_deployed_layout build). Non-strict run: 2 passed, 30 xfailed. Strict run hit DeployedMakerNotFoundError (build timeout under load) for part of it; rerun strict when idle.
+
+### 2026-10-10 18:26 — pr-reviewer (status: ok)
+feedback-id: fb_2026-10-10_baecf076
+completion_manifest:
+  review_run: true
+  high_findings: 0
+Reviewed the entry-surface diff (5 commands, 4 skills, new test module). Contract pass: every maker invocation is one absolute-path worktree.py ensure with a valid verb, kind and flags per Expects From; non-zero exit stops; answer passed verbatim as workspace; build-single-ticket maps TICKET_PATH only from ticket_path_in_worktree; no dash-C commit spelling, clone, symlink or copy recipes remain. 5 tests pass (104 subtests). No high-confidence findings. [M-1] Cross-file: the workflows that consume args.workspace (tickets 10 and 11) are outside this diff and not verifiable here. [M-2] The working tree also carries unrelated changes (precommit_canary.py, 4300c/4300d tests, tickets 07 and 15) that belong to other tickets; keep them out of this ticket's commit. Suppressed: 0 low. Escalation: not escalated, medium count 2 (threshold > 3).
+
+### 2026-10-10 19:30 — ac-validator (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_coverage_checked: true
+  store_alignment_exit: 0
+All 1 ACs covered.
+AC-1 covered:
+  implementation: templates/commands/plan-feature.md (Workflow plan-feature with workspace: maker-answer, worktree.py ensure); templates/skills/build-single-ticket/SKILL.md:82 (ticket_path_in_worktree -> TICKET_PATH); templates/skills/feature/SKILL.md reduced to one maker invocation; no dash-C commit spelling or ticket_path_final remaining in the listed surfaces.
+  test: test_command_published_by_each_deployed_entry_skill_runs_the_maker, test_deployed_workspace_skill_publishes_no_alternative_recipe, test_build_single_ticket_step1_command_yields_ticket_inside_the_workspace, test_no_deployed_entry_surface_spells_a_commit_with_dash_c, test_ticket_09_reachable_from_entry_point (unit_tests/build_orchestration/test_bo_4300a_1_ib.py, covers: BO-4300a-1-ib)
+Store alignment script exit 0. Contract note: consumers of args.workspace (tickets 10, 11) are outside this diff. Unrelated staged changes (test_bo_4300d_*, tickets 07/15, precommit_canary.py) belong to other tickets and must stay out of this ticket's commit.
+
+### 2026-10-10 20:00 — ac-fulfillment-gate (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  ac_store_verified: true
+All 1 L3 ACs verified. BO-4300a-1-ib: work_status done (mark_ac_done.py: 'marked BO-4300a-1-ib work_status=done'; first attempt refused on a transient reachability-test error, passed standalone and on retry), implemented_by auto-fixed (appended 9 files_touched template paths), covered_by auto-fixed (appended unit_tests/build_orchestration/test_bo_4300a_1_ib.py). check_ac_schema exit 0. 2 auto-fixes applied. Commit phase may proceed.
+
+### 2026-10-10 20:30 — commit (status: ok)
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Auto-authorized commit gate: subject "feat(entry): entry skills run the one maker and hand its answer to the workflow unchanged"; committed by explicit path so unrelated staged work (ticket 07, 4300d tests, 4300c-6) stays out, per pr-reviewer M-2.

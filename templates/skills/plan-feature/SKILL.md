@@ -122,95 +122,35 @@ via the `emit_event.py` script (non-blocking; failures are ignored).
 
 ---
 
-## §WSP — Workspace-Setup Permission Pre-flight
+## §WS — Workspace (run the one maker, pass its answer on)
 
 **This section runs BEFORE the workflow is invoked, and before §PRR below.**
-It must complete before `Workflow(...)` is called. If it is skipped, the
-workflow has no way to establish whether the isolated-workspace setup step
-(fetch, branch-create, `git worktree add`) is permitted to run, and its own
-fail-closed guard will halt the run at Stage 0 (see "§WSP.3 — Fail-closed
-guard" below).
+The workflow never makes its own workspace when this entry already knows the
+work: it consumes the answer of the one workspace maker, passed in as
+`args.workspace`.
 
-### §WSP.1 — Why this runs here, not inside the workflow (ACD-2100b-5)
+### §WS.1 — Run the maker once
 
-The isolated-workspace setup step the workflow dispatches later runs
-repository-mutating shell commands. It must only ever be dispatched to an
-agent whose registered charter (`config/agent_registry.json`) grants
-`permits_shell: true`. Establishing that fact requires reading a local file
--- but the E2 workflow engine (ADR-030) contextifies a workflow script's body
-with EXACTLY the injected globals `agent`, `parallel`, `pipeline`, `phase`,
-`log`, `args`, `workflow`, and `budget` -- no module loader and no filesystem
-primitive of any kind (canonical statement: `unit_tests/
-_workflow_engine_harness.py`'s docstring, "ENGINE FIDELITY" section). A
-workflow body physically cannot read `config/agent_registry.json` itself.
-
-This skill runs in the main agent loop, which has real Bash/Read access, so
-it performs the read here and passes the result into the workflow through
-`args` -- the only injected global that carries caller-supplied data.
-Precedent for a skill-invoked pre-flight script on this same surface: §PRR
-below already invokes `scripts/ac_store/scan_ac_orphans.py` by absolute path
-from this skill for the identical reason.
-
-### §WSP.2 — Running the pre-flight
-
-Resolve `scripts/worktree/check_workspace_setup_permission.py` to its
-repository-anchored, absolute, deployed location (the same resolution
-mechanism §PRR.2 and the workflow's own `resolveRepoAnchoredScriptPath()`
-use), then run it:
+Derive a short kebab-case `<slug>` from the request, then run the maker as ONE
+command by the absolute path of the deployed `worktree.py` (the install's
+`scripts/worktree.py`; the path `worktree.py where` prints). Never use a
+cwd-relative path and never chain commands:
 
 ```bash
-python3 <resolved-absolute-path>/scripts/worktree/check_workspace_setup_permission.py \
-    --agent-id <workspace_setup_agent, default "worktree-agent">
+python <absolute-install-root>/scripts/worktree.py ensure --kind ac --slug <slug> --repo-root <absolute-project-root>
 ```
 
-The script makes NO agent dispatch and NO network call -- it reads
-`config/agent_registry.json` locally, resolved repository-anchored (the same
-worktree-aware, `git rev-parse --git-common-dir`-based way ACD-2100a-1 /
-ACD-2100a-3 already established), so it reaches the project's real registry
-even when this skill is running from inside a linked git worktree that holds
-no `.leafcutter/` of its own. It always prints exactly one JSON object to
-stdout and exits 0 -- including when the verdict denies permission or the
-registry could not be read or parsed; a non-zero exit here means the
-invocation itself was malformed, not that the check ran and denied.
+- **Non-zero exit:** stop. Report the maker's answer verbatim and do NOT invoke
+  the workflow. Do not make a workspace by any other means.
+- **Exit 0:** the one JSON object on stdout is the answer.
 
-The verdict's shape is `{"permits": bool, "outcome": "<str>", ...}`, where
-`outcome` is one of `granted`, `read_failure`, `parse_failure`,
-`agent_not_found`, `no_entries_collection`, `permission_denied` -- kept
-distinguishable from one another so the workflow can report the SAME
-specific facts ACD-2100b-1 through -3 require, rather than a single
-collapsed boolean.
+### §WS.2 — Pass the answer into the workflow
 
-**Error handling:** if the script itself cannot be found or fails to run at
-all (as opposed to running and reporting a verdict), do NOT fabricate a
-permitted verdict. Proceed to invoke the workflow without
-`args.workspace_setup_permission` set -- its own fail-closed guard (§WSP.3)
-will halt the run with a report naming the missing pre-flight, which is the
-honest fact in that situation.
-
-### §WSP.3 — Passing the verdict into the workflow
-
-Pass the pre-flight's raw stdout JSON through VERBATIM as
-`args.workspace_setup_permission` when invoking the workflow -- never
-re-derive or re-shape it. The workflow reads this key and nothing else for
-this check: no dispatch, no filesystem access, and it fails closed (halts
-before any authoring agent is dispatched) whenever the key is absent, not an
-object, or has `permits !== true`.
-
-This is also the guard against the bypass a skill-only check would otherwise
-open: a caller who invokes the deployed workflow directly (for example
-`Workflow({scriptPath: '.leafcutter/workflows/plan-feature.js'})`, a real and
-currently-used invocation path that skips this skill's own pre-flight step)
-supplies no `args.workspace_setup_permission` at all, so the workflow halts
-with a report naming the MISSING pre-flight -- never a permission verdict it
-never established.
-
-### §WSP.4 — Performance Constraint
-
-The pre-flight is a single local file read (plus, on the happy path, one
-`git rev-parse` call to resolve the repository root) -- no network call and
-no agent dispatch. It must not add a per-run cost beyond that; this section
-exists to REMOVE the latency of the round-trip dispatch it replaces, not to
-reintroduce it elsewhere.
+Pass the maker's stdout JSON through VERBATIM as `args.workspace` when invoking
+the workflow -- never re-derive, trim or re-shape it. The workflow applies its
+own acceptance check to the answer and halts before any authoring agent is
+dispatched when the answer is absent or not accepted. The authoring workspace
+is the answer's `workspace_path`.
 
 ---
 
@@ -342,7 +282,7 @@ accept `y`, `n`, `d` as shorthand).
 
 2. Commit them with a fixed message by dispatching the `commit` agent, not a
    raw commit (the `enforce_commit_delegation` hook blocks a raw commit,
-   including the `git -C <path> commit` spelling). Pass it
+   whatever the git spelling). Pass it
    `AUTHORING_WORKTREE_PATH`, the same file list, and the message
    `chore: commit orphaned AC files from prior session`.
 
@@ -558,7 +498,7 @@ This section documents the supported — and common — case where the user invo
 
 The AC-authoring pipeline is structurally isolated from the user's current
 checkout.  The dedicated authoring worktree is **always** branched from
-`origin/main` by `scripts/setup_ticket_worktree.py create-ac-worktree`, regardless
+`origin/main` by the one workspace maker (kind `ac`), regardless
 of which branch the user currently has checked out.  This means:
 
 1. **The authoring worktree is independent of the user's current branch.**
@@ -714,13 +654,11 @@ owed.
 - `docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md` — the authoring
   pipeline sequence diagram, updated to reflect the Partial-Run Recovery step.
 - `scripts/ac_store/scan_ac_orphans.py` — orphan detection script.
-- `scripts/worktree/check_workspace_setup_permission.py` — workspace-setup
-  permission pre-flight (§WSP), invoked by this skill before the workflow;
-  reads `config/agent_registry.json` locally and emits the verdict passed
-  through `args.workspace_setup_permission`.
+- `scripts/worktree.py` — the one workspace maker (§WS), run by this skill
+  before the workflow; its stdout JSON is passed through as `args.workspace`.
 - `docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md` —
-  documents the E2 injected-globals sandbox that forced §WSP out of the
-  workflow body and into this skill.
+  documents the E2 injected-globals sandbox that keeps filesystem work in this
+  skill rather than in the workflow body.
 - `docs/architecture/adrs/ADR-024-interactive-pause-resume.md` — the
   pause-resume mechanism; `resolveGate()`/`pauseAtGate()` implement it, and
   §RS documents the producer (skill/caller) side of the same contract.
@@ -729,6 +667,10 @@ owed.
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-10 [TICKET-20260928-BO-4300-entry-skills/llm-expert]:
+  Replaced §WSP (workspace-setup permission pre-flight) with §WS: the skill
+  runs the one workspace maker once and passes its answer as args.workspace.
+  Dropped the dash-C commit spelling and the old per-script creation reference.
 - 2026-09-14 [TICKET-20260826-ACD-2100c-4/llm-expert]:
   Added §RS (Resuming a Paused Run) documenting the resume_answer contract's
   skill-side half: what a `paused_awaiting_input` terminal payload means

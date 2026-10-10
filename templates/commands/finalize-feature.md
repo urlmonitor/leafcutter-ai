@@ -23,6 +23,11 @@ Pass the epic or ticket name as a plain string (e.g. `"EPIC-FooBar"` or
 CWD-based detection, which is usually wrong when invoked from a different
 working directory.
 
+This entry makes no workspace and passes no `workspace` argument: the workflow
+resolves the work from the name and, where it needs a workspace, runs the one
+workspace maker itself and consumes the answer unchanged. Do not create, copy,
+set up or repair a workspace here by hand.
+
 ## Progress Relay Protocol (launcher responsibility)
 
 After the `finalize-feature` background run is started, the launcher (the main

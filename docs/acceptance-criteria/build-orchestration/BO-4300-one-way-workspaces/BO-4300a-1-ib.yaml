@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -155,9 +155,19 @@ amended_by:
     --landing-root override (Q5), and --kind/--slug normalise to <kind>/<slug> with legacy aliases (Q4).
     Entry skills still pass kind plus the raw identity they hold. readiness stays approved.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300a_1_ib.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/09_TICKET-20260928-BO-4300-entry-skills.md
+- templates/commands/plan-feature.md
+- templates/commands/build-feature.md
+- templates/commands/fast-lane-build.md
+- templates/commands/quick-fix.md
+- templates/commands/finalize-feature.md
+- templates/skills/plan-feature/SKILL.md
+- templates/skills/quick-fix/SKILL.md
+- templates/skills/build-single-ticket/SKILL.md
+- templates/skills/feature/SKILL.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), entry-skill half. Criteria are extracted from the parent''s
   clauses (''receives the workspace maker''s answer as part of its input'', ''run unchanged and its answer
   relayed word for word'', ''no ... create, copy, set up, link or repair ... by steps of the agent''s

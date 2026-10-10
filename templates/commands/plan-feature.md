@@ -13,10 +13,28 @@ description: |
 in your environment, this command will not work — do not attempt to run it
 manually as an LLM conversation.**
 
-Invoke the `plan-feature` workflow script via the Workflow tool:
+## Step 1 — Get the authoring workspace (run the maker once)
+
+Derive a short kebab-case `<slug>` from `$ARGUMENTS`, then run the workspace
+maker as ONE command by the absolute path of the deployed `worktree.py` (the
+path `worktree.py where` prints; never a cwd-relative `python scripts/...`
+path):
+
+```bash
+python <absolute-install-root>/scripts/worktree.py ensure --kind ac --slug <slug> --repo-root <absolute-project-root>
+```
+
+If the maker exits non-zero, stop: report its answer verbatim and do NOT invoke
+the workflow. On exit 0, keep the one JSON object it printed, unchanged, as
+`<maker-answer>`.
+
+## Step 2 — Invoke the workflow
+
+Invoke the `plan-feature` workflow script via the Workflow tool, passing the
+maker's answer word for word as `workspace`:
 
 ```
-Workflow("plan-feature", { userInput: $ARGUMENTS })
+Workflow("plan-feature", { userInput: $ARGUMENTS, workspace: <maker-answer> })
 ```
 
 If the Workflow tool is unavailable or the script returns an error, stop

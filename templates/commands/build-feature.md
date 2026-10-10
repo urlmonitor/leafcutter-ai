@@ -18,6 +18,13 @@ Invoke the `build-feature` workflow script via the Workflow tool:
 Workflow("build-feature", { target: $ARGUMENTS })
 ```
 
+This entry cannot know the work identity before the workflow resolves the epic
+or ticket from `$ARGUMENTS`, so it makes no workspace itself and passes no
+`workspace` argument. The workflow runs the one workspace maker once, with the
+identity it resolved, and consumes the maker's answer unchanged. Do not create,
+copy, set up or repair a workspace here by hand; if the workflow reports that
+the workspace could not be made, stop and report that answer verbatim.
+
 If the Workflow tool is unavailable or the script returns an error, stop
 immediately and report the failure. Do NOT improvise an LLM-mediated
 alternative. The correct response to a missing Workflow tool is:
