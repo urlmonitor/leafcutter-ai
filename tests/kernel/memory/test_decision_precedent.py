@@ -26,14 +26,22 @@ from kernel.contracts.enums import (
     RequestKind,
     ResultStatus,
 )
-from kernel.contracts.payloads import DecisionReportPayload, HumanQuestionRequestPayload
+from kernel.contracts.payloads import (
+    DecisionReportPayload,
+    HumanQuestionRequestPayload,
+)
 from kernel.contracts.task import RevisionInfo
 from kernel.memory.codec import dump_record, load_record_file
 from kernel.memory.file_store import FileColonyMemory, staged_files
 from kernel.memory.publish import rebuild_index
 from kernel.memory.validate import validate_store
 from kernel.providers.fakes import noul_answer
-from tests.kernel.capabilities.support import child, decision_payload, invocation, resume
+from tests.kernel.capabilities.support import (
+    child,
+    decision_payload,
+    invocation,
+    resume,
+)
 from tests.kernel.capabilities.test_decision_graph import DECISION, DecisionTestCase
 from tests.kernel.capabilities.test_design_ending import DesignCase
 from tests.kernel.helpers import as_json, narrow
@@ -199,6 +207,8 @@ class TestAMatchingPrecedentBeforeAnyBasis(PrecedentCase):
 
     def test_decide_anew_continues_the_normal_flow_and_keeps_the_precedent_as_evidence(
             self) -> None:
+        # covers: DK-600e-3-i
+        # angle: criterion
         inv, ctx, waiting = self.goal()
         again = self.answer(inv, ctx, waiting, {"choice_id": "decide_anew"})
         self.assertEqual(again.status, ResultStatus.WAITING)

@@ -191,12 +191,16 @@ class TestFinalLinks(unittest.TestCase):
         self.assertEqual((supersedes, related, final[0].action), ([], [FIRST], "reused"))
 
     def test_deciding_anew_to_the_same_option_relates_only(self) -> None:
+        # covers: DK-600e-3-i
+        # angle: criterion
         supersedes, related, final = final_links(
             self.notes(), offer_id=FIRST, offer_title="One YAML file per decision",
             choice=DECIDE_ANEW, selected_title="one yaml file per decision")
         self.assertEqual((supersedes, related, final[0].action), ([], [FIRST], "set_aside"))
 
     def test_deciding_anew_to_a_different_option_supersedes_and_says_why(self) -> None:
+        # covers: DK-600e-3-i
+        # angle: criterion
         supersedes, related, final = final_links(
             self.notes(), offer_id=FIRST, offer_title="One YAML file per decision",
             choice=DECIDE_ANEW, selected_title="A graph database")
