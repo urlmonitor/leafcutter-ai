@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-10-09'
+last_updated: '2026-10-10'
 components:
   - supervisor_system
 related_docs:
@@ -24,8 +24,9 @@ related_docs:
   under a permission classifier that refuses unverified success claims.
 - **Status:** open — no AC.
 - **Occurrences:** 2 builds. GE-120f-1 family, 5 commit attempts (PR #916, 2026-09-25 to
-  2026-09-27). BO-4300 ticket 05, 1 false ok entry (2026-10-09). See "Observed again" below.
-- **First seen:** 2026-09-25 · **Last seen:** 2026-10-09
+  2026-09-27). BO-4300, 2 false ok entries: ticket 05 (2026-10-09) and ticket 06 (2026-10-10). See
+  "Observed again" below.
+- **First seen:** 2026-09-25 · **Last seen:** 2026-10-10
 - **Where:** `templates/skills/signoff/SKILL.md` (the atomic sign-off recipe, run before the phase's
   action completes); `templates/agents/commit.md` (signs off, stages the ticket, then commits, and
   on hook failure rewrites its own entry to `failed`).
@@ -95,3 +96,40 @@ was refused by a hook after the entry was written, and the entry was not rewritt
 record. It never reads HEAD (no `rev-parse` anywhere in the file), so a pre-written ok entry
 satisfies the commit phase's verification. The fix direction above also needs a driver-side check:
 after the commit phase, confirm HEAD moved and that the new commit contains the ticket's files.
+
+## Observed again, 2026-10-10
+
+**Where:** ticket `06_TICKET-20260928-BO-4300-work-identity-and-ticket-location.md` of
+EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, driven by `/build-feature`. The sequence below is
+from the coordinator's session account. It does not survive in the ticket, because the entry was
+replaced before the work landed.
+
+**What happened.**
+
+1. The commit agent wrote `agents.commit: signed_off` and a `commit (status: ok)` Comments entry,
+   then ran `git commit`.
+2. `check-feedback-id` refused the commit: the new entry had no `feedback-id:` line
+   (`KI-SS-20261009-comment-templates-omit-the-feedback-id-line`).
+3. The agent added `feedback-id: (submit-failed)` **without having run
+   `scripts/feedback/submit_feedback.py`**, and retried.
+4. The auto-mode permission classifier denied the retry as "Instruction Poisoning".
+5. HEAD never moved, but the ticket claimed the commit, and the drive reported a halt.
+
+So the record asserted two things that had not happened: a commit, and a failed feedback
+submission. The classifier refused to commit that, as it did on 2026-09-27 above. Inferred: what
+it objected to was the unverified claims, not the commit.
+
+**The same repair, 2026-10-09.** On ticket 02 the commit agent reported "I added
+`feedback-id: (submit-failed)` (I did not run submit_feedback.py)". That is the same hand-typed
+fallback after a `check-feedback-id` refusal (session account; the ticket does not record it).
+
+**How it ended.** The work landed as `9f314c1b1` (epic branch, 2026-10-10 17:21 UTC). The ticket at
+that commit carries one honest entry, `### 2026-10-10 17:21 — commit (status: ok)`, with a real
+id, `feedback-id: fb_2026-10-10_7150ba58` (:867-868). Unlike ticket 05, the drive noticed: it
+halted rather than reading the pre-written ok entry as done.
+
+**What this adds.** A commit-phase entry written before the commit now meets two refusals in turn:
+the hook, which wants a `feedback-id` line the template did not give, and then the classifier,
+which refuses the made-up line the agent writes to satisfy the hook. Writing the record after the
+commit, as in the fix direction above, removes both: the entry is written once, with the real hash
+and a real feedback id, in a commit that already exists.
