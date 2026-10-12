@@ -111,14 +111,15 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `webapp-testing` | conditional | — |
-| `signoff` | conditional | — |
+| `webapp-testing` | conditional | After UI changes, if webapp-testing is installed and ANTIGRAVITY is unset, load it to screenshot and check console errors. |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration

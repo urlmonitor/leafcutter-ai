@@ -119,13 +119,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 | `doc-enforcer` | always | — |
 | `complexity-reduction` | always | — |
 | `run-tests` | conditional | — |
@@ -136,7 +137,7 @@ flowchart TD
 | Key | Required | Description |
 |-----|----------|-------------|
 | `test_command_live_trader` | No | Command to run the fast unit test suite |
-| `test_output_dir` | No | Temp directory for test output (outside project root) |
+| `test_output_dir` | No | Folder for test output (outside project root); empty means the scratch home (scratch.py test-output-dir) |
 | `collector_enforcer_paths` | No | Paths that trigger the collector-enforcer skill |
 | `file_size_limit_py` | No | Maximum lines for new .py files; referenced as {{config.file_size_limit_py}} |
 | `testing_context.max_test_duration_seconds` | No | 5-second ceiling for auto-run tests |
