@@ -165,6 +165,7 @@ acceptance criterion for this section is [INF-500d-4-vii](../acceptance-criteria
 - **Asking without filing.** `python3 .leafcutter/scripts/knowledge/sink_resolution.py
   --print-location {root|feedback|telemetry|knowledge}` prints one absolute path and creates
   nothing. A missing declaration or key, or an unusable stream: no stdout, an ERROR, exit 1.
+  Shipped prompts pass no log path of their own; they rely on the writers' declared defaults or ask this query (INF-500d-4-vi).
 - **When the location cannot be determined.** `submit_feedback.py` without `--jsonl` prints
   one `destination could not be written` line naming the declaration and the condition
   (absent, unreadable, unparseable, missing key, not absolute, not under the root, or stale),

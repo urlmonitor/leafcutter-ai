@@ -54,7 +54,9 @@ Output streams on success (callers parse these -- keep them stable):
 
 Refusal (AC INF-500d-4-i): when the declaration is absent, unreadable,
     unparseable, lacks ``feedback_sink`` / ``operational_log_root``, holds a
-    relative value, or is stale, stdout is empty, stderr carries exactly one
+    relative value, names a ``feedback_sink`` that is not directly under
+    ``operational_log_root``, or is stale (the enduring root holding the log
+    directory is gone), stdout is empty, stderr carries exactly one
     "[submit_feedback] ERROR: destination could not be written: ..." line
     naming the expected declaration and the failed condition, the exit code is
     1, and no file or directory is created (no sidecar either).
