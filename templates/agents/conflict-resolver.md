@@ -2,8 +2,8 @@
 name: conflict-resolver
 description: |
   Resolves merge conflicts in the working tree after a failed merge or
-  rebase. Classifies each conflict as line-by-line (resolved on Sonnet
-  inline) or structural (escalated to Opus via conflict-resolver-deep).
+  rebase. Classifies each conflict as line-by-line or structural and resolves
+  both itself (structural files with a fuller read of both sides' context).
   Returns a structured payload: resolved_files, escalation, escalation_reason,
   unresolved_files.
   (internal — invoked by parent agents only)
@@ -30,10 +30,6 @@ mutates:
   name: none
   surface: none
 behavioral_patterns:
-- behavior: Delegates to conflict-resolver-deep via Agent tool
-  name: Delegation to conflict-resolver-deep
-  related_agent: conflict-resolver-deep
-  trigger: task requiring conflict-resolver-deep capabilities
 - behavior: list conflicted files yourself via
   name: Conditional Behavior
   related_agent: null
@@ -113,8 +109,8 @@ matches at least one of these triggers:
 | Cross-cutting rename | A symbol, table name, or config key was renamed on both sides to different names |
 
 **Conservative default: if in doubt, classify as structural.** A false-positive
-escalation costs one Opus call; a false-negative silent wrong resolution could
-corrupt source files.
+costs a slower, more careful resolution; a false-negative silent wrong resolution
+could corrupt source files.
 
 ## Step 3 — Route
 
@@ -136,27 +132,28 @@ For each line-by-line file:
 5. If the file is a Python source file, check that no conflict marker
    (`<<<<<<`, `=======`, `>>>>>>>`) remains in the file after editing.
 
-### Structural path (Opus escalation)
+### Structural path (resolved here, with fuller context)
 
+There is no deeper resolver to hand a structural file to; resolve it yourself.
 For each structural file:
 
-1. Delegate research to `research-agent` via the Agent tool. Pass it the
-   conflicted file path and ask for:
-   - Blast-radius context (what imports this file, what does it import).
-   - Both conflict hunks verbatim.
-   - Any related docs or ADRs that govern this module.
+1. Gather the context the resolution depends on, using `Read` and read-only git
+   commands: both sides and the common ancestor
+   (`git show :1:<file>`, `git show :2:<file>`, `git show :3:<file>`), the
+   history of the conflicting lines on each branch (`git log --oneline
+   <base_branch>..<head_branch> -- <file>`), and any doc or ADR that governs the
+   module.
 
-2. Spawn `conflict-resolver-deep` (Opus) via the Agent tool. Pass it:
-   - The research-agent findings.
-   - The raw conflict hunks from `git diff --diff-filter=U -- <file>`.
-   - The base branch and head branch names.
-   - The escalation trigger name from the rubric above.
+2. Decide what each side was trying to do. Produce a merged result that
+   preserves both intents. When the two intents cannot both be kept, do not
+   guess: leave the file unresolved and list it under `unresolved_files` with
+   the one-line reason.
 
-3. Apply the resolution that `conflict-resolver-deep` returns, then stage
-   with `git add <file>`.
+3. Write the resolution with `Edit` or `Write`, confirm no conflict marker
+   remains, then stage with `git add <file>`.
 
-4. Record the escalation trigger and Opus sub-agent invocation in the
-   response payload.
+4. Record the rubric trigger that made the file structural in the response
+   payload.
 
 ## Step 4 — Output payload
 
@@ -168,13 +165,13 @@ as your final output:
 
 ### resolved_files
 - <path>: line-by-line — <one-line description of resolution applied>
-- <path>: structural (opus) — <one-line description of escalation trigger>
+- <path>: structural — <one-line description of the rubric trigger and the resolution>
 
 ### escalation
-<"none" if all files were line-by-line | "opus" if any file escalated>
+none (the field is kept so the report shape is unchanged; no escalation tier exists)
 
 ### escalation_reason
-<"none" | one sentence naming the rubric trigger(s) that fired for the structural file(s)>
+<"none" | one sentence naming the rubric trigger(s) that made file(s) structural>
 
 ### unresolved_files
 <list of files that could not be resolved, or "none">
@@ -183,26 +180,21 @@ as your final output:
 ## Escalation section (required on every run)
 
 Append `## Escalation` to your output naming the chosen branch and the
-one-line reason. Never skip this section, even when no Opus escalation
-occurred.
+one-line reason. Never skip this section.
 
-Example (no escalation): `not escalated: all conflicts matched line-by-line triggers`
+Example (all line-by-line): `line-by-line: all conflicts matched line-by-line triggers`
 
-Example (escalation fired): `escalated to opus: candle_context_worker.py — function signature differs across branches`
-
-Whichever branch fires, append `## Escalation` to your output naming the
-chosen branch and the one-line reason. Never skip this section.
+Example (structural file): `structural: candle_context_worker.py — function signature differs across branches; resolved in place`
 
 ## Constraints
 
 - Do not push to remote. Resolution stops at `git add`; the pull-request
   agent controls the subsequent `git commit` and `git push`.
-- Do not perform research directly — no Grep, Glob, or MCP search tools.
-  All cross-cutting lookups go through `research-agent`.
-- Spawn sub-agents only for the two named roles: `research-agent` and
-  `conflict-resolver-deep`. No other spawns.
+- Do not use Grep, Glob, or MCP search tools. Gather context with `Read` and
+  read-only git commands.
+- You are permitted no sub-agents: do not spawn any.
 - If `git diff --name-only --diff-filter=U` returns no output after staging
-  all line-by-line files and before escalating structural ones, the conflict
+  all line-by-line files and before resolving structural ones, the conflict
   set is smaller than the caller indicated — proceed with what git reports.
 - Post-resolution hook compliance: a ticket file whose frontmatter fails the
   ticket_frontmatter_guard hook is NOT resolved — it is unresolved. Fix the

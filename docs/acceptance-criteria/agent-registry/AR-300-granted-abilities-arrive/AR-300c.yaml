@@ -7,7 +7,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -49,6 +49,7 @@ covered_by:
   - AR-300c-2
   - AR-300c-3
   - AR-300c-4
+  - AR-300c-5
 implemented_by: []
 documentation_triggers:
   - reference-doc

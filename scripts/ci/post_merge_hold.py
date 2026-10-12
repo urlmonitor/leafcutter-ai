@@ -86,7 +86,7 @@ from pathlib import Path
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_hold.py`: make `scripts.ci` importable
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy  # noqa: E402
 from scripts.ci._hold_comment import EventError, read_event, render_comment, sync_comment  # noqa: E402, F401 -- render_comment is this module's public API
 from scripts.ci._hold_exempt import Claim, apply_claim, match_declaration, read_body  # noqa: E402, F401 -- match_declaration is this module's public API (the proof workflow calls the same function)
 from scripts.ci._hold_publish import GREEN_STATES, conclusion_for, publish  # noqa: E402, F401 -- conclusion_for is this module's public API
@@ -379,13 +379,13 @@ def main(argv: list[str] | None = None) -> int:
         print("Post-merge suite status could not be read: GITHUB_API_URL, GITHUB_TOKEN or GITHUB_REPOSITORY is missing or malformed.")
         return EXIT_BAD_INPUT
     try:
-        client = GitHubClient(api_url, token, timeout=timeout_seconds())
-    except GitHubError as exc:
+        pr_number, head_sha = read_event(os.environ.get("GITHUB_EVENT_PATH"))
+    except EventError as exc:  # fail closed: nothing is judged, nothing is commented
         print(f"Post-merge suite status could not be read: {exc}")
         return EXIT_BAD_INPUT
     try:
-        pr_number, head_sha = read_event(os.environ.get("GITHUB_EVENT_PATH"))
-    except EventError as exc:  # fail closed: nothing is judged, nothing is commented
+        client = GitHubClient(api_url, token, timeout=timeout_seconds(), policy=WritePolicy(repo=repo, notice_comments=True, pr_comment=pr_number))
+    except GitHubError as exc:
         print(f"Post-merge suite status could not be read: {exc}")
         return EXIT_BAD_INPUT
     evaluate_with_body = partial(evaluate_pull_request, body=read_body(os.environ.get("GITHUB_EVENT_PATH")))  # the description: read here, never printed

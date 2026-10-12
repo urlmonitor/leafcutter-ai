@@ -176,7 +176,8 @@ def evaluate(url, *, claim=None, sleeps=None, timeout=TIMEOUT):
     retry fails on its own assertion, never on a TypeError).
     """
     hold = import_production(HOLD_MODULE)
-    client = import_production("scripts.ci._github_rest").GitHubClient(url, "fake-token", timeout=timeout)
+    rest = import_production("scripts.ci._github_rest")
+    client = rest.GitHubClient(url, "fake-token", timeout=timeout, policy=rest.WritePolicy(repo=REPO, notice_comments=True))  # the hold's grant (the exemption record); no PR comment here
     kwargs = {"now": NOW}
     if claim is not None:
         kwargs["claim"] = claim

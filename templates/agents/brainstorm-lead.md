@@ -13,7 +13,12 @@ description: |
   **only** the right escalation when mechanical adjudication has been
   exhausted; cap is 1 invocation per ticket per `building-epics` §4.
 model: opus
-tools: Read, Bash, Agent
+tools: Read, Bash, Agent, Skill
+spawn_allowlist:
+- brainstorm-worker
+skills:
+- skill_id: building-epics
+  mode: always
 portable: true
 signoff: false
 domain: null

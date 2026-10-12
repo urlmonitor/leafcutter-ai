@@ -11,7 +11,16 @@ description: |
   This agent operates exclusively at L2/L3 and produces AC YAML files.
 model: opus
 name: business-analyst
-tools: Read, Write, Edit, Bash, Skill  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
+tools: Read, Write, Edit, Bash, Skill, Agent  # Write/Edit scoped to docs/acceptance-criteria/ only. Edit is required by S6b.
+spawn_allowlist:
+- research-agent
+skills:
+- skill_id: knowledge-query
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
+- skill_id: ac-tree-split
+  mode: conditional
+  condition: When a split L1 is overcrowded, load ac-tree-split to redistribute its L2s (Pattern C).
 portable: true
 requires_verification: true
 signoff: false
@@ -19,9 +28,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used:
-  - ac-tree-split  # Loaded for L2 redistribution when a split L1 is overcrowded (Pattern C steps 1-2, 6).
-  - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the PO has produced L0/L1
   ACs. Never called directly by users. Produces AC YAML files in the feature folder.
@@ -984,13 +990,8 @@ emission step runs whether or not this agent was spawned with a `ticket_path`.
 - Never assign more than one agent per AC — split instead.
 - Never skip the self-review checklist.
 - Never produce more than 5 L2s without checkpointing.
-- Spawn sub-agents only for the agents in your spawn allowlist.
-
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
 ## Machine-Parsed Dispatch Output Contract
 

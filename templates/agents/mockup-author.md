@@ -27,7 +27,6 @@ config_keys:
   ui_context_path:
     required: false
     description: "Path to the UI context pointer file (default: docs/ui-context.md). Injected at build time so projects that place the file elsewhere can override without editing this template."
-skills_used: []
 adopter_notes: |
   Internal. Spawned by the product-truth authoring pipeline after mock-data-author.
   Produces / extends *.mockup.json + *.html screens. Reproduces the SHAPE and quality

@@ -168,6 +168,88 @@ amended_by:
       the evidence favours that branch over implementing the exclusion.
     by: business-analyst
     at: 2026-10-07
+  - reason: child-tq-600a-11-and-its-three-children-retired-subject-deleted
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      criteria, readiness, req_status, work_status, priority and child_limit_override
+      are UNTOUCHED, and covered_by is UNCHANGED. This L1 is amended only so the
+      retirement of one of its thirteen children is visible from the parent, per the
+      AC-store rule that a parent is staged alongside the child whose place in the tree
+      moves — the hooks validate only what is in the commit's index, so a parent never
+      staged is a parent never checked.
+
+
+      WHAT CHANGED BELOW THIS RECORD. TQ-600a-11 and its children TQ-600a-11-i, -ii and
+      -iii all moved status active -> deprecated, req_status draft -> superseded and
+      readiness approved -> reviewed on 2026-10-09; all four were already work_status
+      todo. Each also had test_spec CLEARED to null with test_required: false, its
+      fifteen descriptors between them moved into notes under "THE RETIRED TEST
+      CONTRACT", and its test_rationale replaced with a statement that the record
+      declares no test contract. Those fields are the house shape for a retired
+      record, measured
+      across all thirteen pre-existing deprecated records in the store: readiness
+      reviewed on 13 of 13, work_status todo on 11 of 11 that carry the field. The
+      generalised form, and why each demotion is right on the merits rather than
+      merely conventional, is written up on INF-600b-2's notes under "HOW TO RETIRE AN
+      AC".
+
+
+      THE readiness DEMOTION AND THE test_spec MARKERS WERE A SECOND PASS, AND THE
+      REASON IS WORTH RECORDING. The first pass retired these four on status and
+      req_status alone and left readiness: approved, on the reasoning that approval is
+      a fact about the past. It is — but approved means cleared FOR BUILDING, and the
+      past is preserved by writing it down, not by leaving a field that invites work.
+      The four would otherwise have passed check-ac-schema's approved-code-AC rule
+      only because they carry test_spec blocks that are now FALSE: written against
+      `_scan_all_ac_assignments`, the walk this change deletes. Passing a gate by
+      holding a dishonest artifact is worse than failing it, because nothing asks
+      again. THE FIRST ATTEMPT AT NEUTRALISING THEM WAS ALSO WRONG, AND THE PATTERN
+      IS THE POINT: it kept the descriptors in test_spec behind per-entry "RETIRED —
+      DO NOT AUTHOR" markers and added test_required: false alongside, which
+      check-ac-schema refused — the two fields are ONE declaration, so that says "no
+      tests needed" and "here are the tests" at once. The underlying mistake was the
+      same one already made on work_status and on readiness: a PRESENT-TENSE field
+      being used to carry history. Three fields, three gates, one error. The content
+      is preserved — every descriptor is named and summarised in each record's notes
+      under "THE RETIRED TEST CONTRACT", with the three whose substance outlives the
+      retirement written out in full — and the fields now say what is true: no test
+      contract. The generalised four-field shape, and the warning about arguing to
+      leave a field wrong in order to preserve something true, is on INF-600b-2. Their subject was removed by an unrelated change: agent cards become
+      static, which deletes the agent-card generator's whole-AC-store walk — the one
+      call site TQ-600a-11's 2026-10-08 amendment had already narrowed the entire
+      criterion down to. Each of the four carries its own retirement reasoning; start
+      with TQ-600a-11's final amended_by entry.
+
+
+      covered_by DELIBERATELY STILL LISTS TQ-600a-11. A deprecated record is retained
+      for audit and is excluded from active enforcement by its status, not by being
+      unlinked from its parent. Removing the entry would orphan a record that six
+      sibling records cite and would make the retirement invisible from here, which is
+      the opposite of what this amendment is for.
+
+
+      THE OVERRIDE ARITHMETIC IS UNCHANGED AND THIS IS NOT A FREED SLOT. The entry
+      above anticipates a slot freeing "when TQ-600a-13 closes" and asks for the
+      override to be reduced at a product-owned split. A retired child is not a closed
+      one: child_limit_override stays at 13 because the file still exists and still
+      counts. What the retirement DOES settle is half of that entry's re-parenting
+      instruction — "at that split, re-parent TQ-600a-11 and TQ-600a-13 onto their
+      proper L1s". TQ-600a-11 no longer needs re-parenting; it needs nothing. The
+      confessed misfit recorded for it above is now a historical note rather than an
+      outstanding debt, and only TQ-600a-13's half of that instruction survives.
+
+
+      ONE FINDING THAT IS THIS L1's BUSINESS AND NOT ONLY THE CHILD'S. TQ-600a-11 and
+      its three children all read work_status: todo with implemented_by [], and the
+      retirement was proposed on the strength of those fields. They are stale: five
+      test modules named for that family, plus scripts/ac_store/yaml_safe_loader.py,
+      exist on origin/main as of 2026-10-09. Two of the family's test descriptors are
+      written against a function the static-cards change deletes. The store said
+      nothing was built and the repository said otherwise — that is a phantom-TODO, the
+      inverse of the phantom-done this tree's guardrails are aimed at, and it is worth
+      a sweep across the rest of this L1's children before any of them is scheduled or
+      retired on the strength of a work_status field.
 superseded_by: null
 covered_by:
   - TQ-600a-1

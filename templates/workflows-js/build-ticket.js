@@ -279,16 +279,12 @@ const phaseOrder = [
   "architect-review",            // priority 4
   "test-writer",                 // priority 5
   "python-coder",                // priority 6
-  "sql-coder",                   // priority 7
-  "sql-query",                   // priority 7
+  "sql-coder", "sql-query",      // priority 7
   "frontend-coder",              // priority 8
   "llm-expert",                  // priority 8 — implements agent-template / skill / slash-command prompt work
+  "restructuring-specialist",    // priority 8.5 — restructures code after a refusal; default not_needed
   "test-runner",                 // priority 9
-  "change-scope-reviewer",       // priority 10
-  "documentation-expert",        // priority 10
-  "explanation-author",          // priority 10
-  "how-to-author",               // priority 10
-  "reference-author",            // priority 10
+  "change-scope-reviewer", "documentation-expert", "explanation-author", "how-to-author", "reference-author", // priority 10
   "pr-reviewer",                 // priority 11
   "ac-validator",                // priority 11.5 — AC coverage gate, MUST precede commit
   "user-surface-smoker",         // priority 11.5

@@ -59,7 +59,7 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_notice.py`
 from scripts.ci import _notice_render as render  # noqa: E402
 from scripts.ci._flaky_notice import FLAKY, FLAKY_LABEL, may_close, not_reproduced, plan_flaky_writes, repeated_lines, wants_write  # noqa: E402
 from scripts.ci._flaky_window import load_tunables  # noqa: E402
-from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy  # noqa: E402
 from scripts.ci._notice_entrants import find_entrants, render_entrant_lines  # noqa: E402
 from scripts.ci._notice_render import CORRECTNESS, LANES, LaneSpec  # noqa: E402
 from scripts.ci._notice_unrerunnable import unrerunnable_lines  # noqa: E402
@@ -411,7 +411,7 @@ def run_apply(opts: argparse.Namespace, token: str) -> int:
         logger.warning("%s notice: refusing repository name %r", label, opts.repo)
         return EXIT_BAD_INPUT
     try:
-        client = GitHubClient(opts.api_url, token)
+        client = GitHubClient(opts.api_url, token, policy=WritePolicy(repo=opts.repo, notices=True))
         writes, reason, verdict = _decide(opts, client)
     except (GitHubError, ValueError, OSError, TypeError, KeyError) as exc:  # the last three: an unreadable or malformed tunables file
         logger.warning("%s notice: cannot decide what to write: %s", label, exc)

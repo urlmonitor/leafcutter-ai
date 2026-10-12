@@ -26,6 +26,7 @@ declared set) live in the sibling _test_helpers_tq_600a_11.py.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -46,13 +47,9 @@ sys.path.insert(0, str(_HERE))
 
 from _test_helpers_tq_600a_11 import (  # noqa: E402
     DECLARED_C_PARSER_SITES,
-    STORE_ROOT as _STORE_ROOT,
-    build_card_phase_root,
     derive_c_parser_resolutions,
     is_decision_point,
     real_store_paths,
-    run_walk_arm,
-    yaml_files_on_disk,
 )
 
 
@@ -102,57 +99,6 @@ class TestTq600a11ParserSpeed(unittest.TestCase):
             f"accessor sweep was only {ratio:.2f}x faster than the pure-Python "
             f"sweep over {len(paths)} files (pure={pure_seconds:.2f}s, "
             f"accessor={accessor_seconds:.2f}s) -- the AC requires at least 5x.",
-        )
-
-
-class TestTq600a11AgentCardWalk(unittest.TestCase):
-    """The ENTRY-POINT claim, at the one call site where it is true."""
-
-    @pytest.mark.timing_ratio
-    def test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline(self):
-        # covers: TQ-600a-11
-        # angle: real_artifact
-        """
-        Run scripts/generate_agent_cards.py::_scan_all_ac_assignments -- the
-        walk build.py actually calls; its sibling _scan_ac_assignments has NO
-        production caller, so timing it would time dead code -- over the REAL
-        store twice in this process: as shipped, then with the loader resolver
-        forced to the pure-Python SafeLoader. Asserts (a) fast <= 1/5 of pure,
-        as a ratio; (b) both arms return EQUAL output; (c) each arm's
-        parsed-file count is equal to the other's AND to the files on disk, so
-        an arm that parsed nothing cannot pass; (d) both raw figures are in the
-        failure message (and printed on every run) so "host loaded" and "walk
-        left the accessor" are distinguishable. Never an absolute threshold.
-
-        The fast arm runs first, so a cold page cache penalises the arm the
-        claim favours -- the conservative direction.
-        """
-        import generate_agent_cards as gac
-
-        on_disk = yaml_files_on_disk()
-        fast_out, fast_n, fast_s = run_walk_arm(gac, gac.get_safe_yaml_loader)
-        pure_out, pure_n, pure_s = run_walk_arm(gac, lambda: yaml.SafeLoader)
-
-        figures = (
-            f"fast={fast_s:.2f}s ({fast_n} files) pure-Python={pure_s:.2f}s "
-            f"({pure_n} files) on_disk={on_disk} "
-            f"ratio={pure_s / fast_s if fast_s else float('inf'):.2f}x (floor 5.0x)"
-        )
-        print(f"\n[TQ-600a-11 agent-card walk] {figures}")
-
-        self.assertGreater(on_disk, 0, f"real store is empty -- {figures}")
-        self.assertEqual(fast_n, pure_n, f"arms parsed different file counts -- {figures}")
-        self.assertEqual(
-            fast_n, on_disk, f"arms did not parse every record file on disk -- {figures}"
-        )
-        self.assertGreater(len(fast_out), 0, f"walk returned no groupings -- {figures}")
-        self.assertEqual(fast_out, pure_out, f"arms returned different output -- {figures}")
-        self.assertLessEqual(
-            fast_s * 5.0,
-            pure_s,
-            f"agent-card store walk is not at least 5x faster than forced "
-            f"pure-Python: either the walk has left the accessor or the host is "
-            f"pathologically loaded -- {figures}",
         )
 
 
@@ -263,33 +209,33 @@ class TestTq600a11RequiredGateKeepsErrorFidelity(unittest.TestCase):
 
 
 class TestTq600a11Reachability(unittest.TestCase):
-    """The accessor's one caller is a build.py phase running from the package tree."""
+    """The card phase runs the way build.py runs it: from the package tree."""
 
-    def test_tq600a_11_the_accessor_is_reachable_the_way_the_build_reaches_it(self):
+    def test_tq600a_11_the_card_phase_runs_the_way_the_build_runs_it(self):
         # covers: TQ-600a-11
         # angle: reachability
         """
         In a FRESH interpreter whose only sys.path entry is scripts/ (how
-        build.py runs its phases -- the card generator then reaches
-        scripts/ac_store/ through its own sys.path insertion, the fragile
-        seam), run the real "Agent cards" phase
+        build.py runs its phases), run the real "Agent cards" phase
         (build_phases_agent_validation.build_agent_cards, the function
         build.py registers) against a tmp target root holding one agent
-        template and one REAL AC record copied verbatim from the store. Assert
-        the phase completes and the written card lists that AC under its
-        agent -- i.e. the walk ran and its grouping was consumed, not merely
-        imported.
+        template and a registry. Assert the phase completes and writes that
+        agent's card. Nothing is asserted about AC ids: cards no longer carry
+        AC-store data (the walk was removed 2026-10-09).
         """
-        records = sorted(_STORE_ROOT.rglob("TQ-600a-11.yaml"))
-        self.assertEqual(len(records), 1, f"expected one TQ-600a-11.yaml, got {records}")
-        record = records[0]
-        data = yaml.safe_load(record.read_text(encoding="utf-8"))
-        agent, ac_id = data["assigned_agent"], data["id"]
-        self.assertEqual(data["status"], "active", "precondition: the walk only groups active ACs")
+        agent = "reachability-stub"
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            build_card_phase_root(root, agent, record)
+            (root / "templates" / "agents").mkdir(parents=True)
+            (root / "templates" / "agents" / f"{agent}.md").write_text(
+                f"---\nname: {agent}\ndescription: reachability stub\n---\nbody\n",
+                encoding="utf-8",
+            )
+            (root / "config").mkdir()
+            (root / "config" / "agent_registry.json").write_text(
+                json.dumps([{"id": agent}]), encoding="utf-8"
+            )
 
             script = (
                 "import sys\n"
@@ -314,12 +260,6 @@ class TestTq600a11Reachability(unittest.TestCase):
             )
             card = root / "docs" / "agents" / "cards" / f"{agent}.card.md"
             self.assertTrue(card.is_file(), f"phase wrote no card at {card}: {result.stdout!r}")
-            self.assertIn(
-                ac_id,
-                card.read_text(encoding="utf-8"),
-                "the card lacks the AC the store walk should have grouped under "
-                "its agent -- the walk's result was not consumed",
-            )
 
     def test_tq600a_11_the_vestigial_deploy_map_entry_still_deploys_an_importable_accessor(self):
         # covers: TQ-600a-11
@@ -383,3 +323,11 @@ if __name__ == "__main__":
 # - 2026-10-08 [test-writer]: moved the helpers into
 #   _test_helpers_tq_600a_11.py to stay under the 400-measured-line file-size
 #   limit; no assertion changed.
+# - 2026-10-09 [python-coder/agent-cards-static]: deleted
+#   TestTq600a11AgentCardWalk (it benchmarked _scan_all_ac_assignments, which
+#   was removed: the AC store is the source of truth, and caching it in
+#   generated card markdown produced an uncommittable, permanently dirty tree).
+#   Rewrote the reachability test to keep its surviving half -- the card phase
+#   completes and writes the card under a fresh interpreter with only scripts/
+#   on sys.path -- and dropped its assertion that an AC id is in the card, which
+#   the change directly contradicts. Dead-test deletion, not softening.

@@ -24,7 +24,14 @@ description: 'TDD test-first authoring agent. Spawned by ticket-supervisor at pr
   '
 model: sonnet
 name: test-writer
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+- test-runner
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null
@@ -1051,14 +1058,8 @@ red_baseline:
 - Do NOT modify existing test files unless the ticket explicitly requires it.
 - Do NOT use `Grep`, `Glob`, or MCP search tools — delegate to `research-agent`.
 - The `## Test Requirements` section you read must conform to `leafcutter/config/test_requirements.schema.json` (`$id`: `https://leafcutter/config/test_requirements.schema.json`, version `1.0.0`).
-- Spawn sub-agents only for the agents in your spawn allowlist:
-
-## Your Available Sub-Agents
-
-| Agent | Role | Tier |
-|---|---|---|
-| research-agent | analysis | utility |
-| test-runner | quality | phase |
+- Spawn sub-agents only for the agents in your spawn allowlist (the generated
+  sub-agent section at the end of this prompt).
 
 ## Machine-Parsed Dispatch Output Contract
 

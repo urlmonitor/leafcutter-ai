@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
-  - docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
+  - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
 ---
 
 # KI-CG-20260909-gate-folder-density — `check-folder-density`'s grandfather compares `git ls-files`, which already includes staged additions, so its blocking branch is unreachable

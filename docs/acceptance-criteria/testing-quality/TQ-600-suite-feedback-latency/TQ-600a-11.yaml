@@ -5,13 +5,25 @@ components:
 title: "The fast YAML parser earns its place at the one whole-store walk whose volume pays for it, and nowhere else"
 component: testing-quality
 level: L2
-status: active
-req_status: draft
+status: deprecated
+req_status: superseded
 work_status: todo
-readiness: approved
+readiness: reviewed
 priority: high
 roadmap_phase: phase_1
 criteria: |
+  RETIRED 2026-10-09. THIS CRITERION'S SUBJECT NO LONGER EXISTS. Do not build it, do
+    not re-point it at another call site, and do not read the text below as a live
+    requirement. The one whole-AC-store walk whose VOLUME admitted the C-backed parser
+    is the agent-card generator's scan of every record by assigned_agent, and that scan
+    is being removed — agent cards become static. With it goes the only call site in
+    the package that satisfies all four parts of this record's own admission test, and
+    the record's central speed clause has nothing left to measure. The reasoning, the
+    live artifacts this retirement strands, and the part of this record that is STILL
+    WORTH SOMETHING and is NOT retired with it, are in the final amended_by entry and
+    under "WHY THIS RECORD IS RETIRED" in the notes. Everything below is preserved
+    verbatim for audit.
+
   AMENDED 2026-10-08. Three clauses of the original text are RETRACTED, not merely
     unmet — one of them has had its intent reversed. The retracted text is preserved
     verbatim under "WHAT WAS STRUCK" in this record's notes, and the reasoning is in
@@ -237,118 +249,15 @@ delivers_to:
       The shared parser accessor, as the thing whose output the record-by-record
       agreement comparison checks against the pure-Python parser's output.
 expects_from: null
-test_spec:
-  - name: test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: real_artifact
-    description: >-
-      Over the REAL on-disk store, in one process, time a full sweep with the
-      pure-Python parser and a full sweep through the shared accessor. The accessor
-      sweep takes at most one fifth of the pure-Python sweep. Assert the ratio, never
-      an absolute number of seconds. UNCHANGED BY THE 2026-10-08 AMENDMENT, with one
-      clarification: this descriptor measures the PARSER, not any entry point, so a
-      green result here is NOT evidence that any gate, hook or check got faster. The
-      descriptor below is the one that measures an entry point.
-  - name: test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: real_artifact
-    description: >-
-      REPLACES test_tq600a_11_the_required_store_validation_check_beats_a_quarter_of_its_baseline,
-      whose name encoded the retracted claim and which cannot pass: that gate is
-      pure-Python by design now and both of its arms are identical code (measured
-      forced-pure=28.81s, fast=28.78s, 1.00x). Run the agent-card generator's
-      whole-AC-store walk over the REAL store twice in one process: once as shipped,
-      once with the loader forced to pure-Python. Exercise the walk the BUILD calls
-      (`_scan_all_ac_assignments`) — its sibling `_scan_ac_assignments` has no
-      production caller, so timing that one measures dead code. Assert (a) the accessor arm takes at
-      most ONE FIFTH of the forced-pure arm, as a RATIO — never an absolute second
-      count, this host has shown 3.8x-10.74x variation with no code change; (b) the two
-      arms return EQUAL output, so the ratio is about the same work; (c) each arm
-      reports the number of record files it parsed, the two counts are equal, and the
-      count equals the files on disk, so a fast arm that parsed nothing fails; (d) both
-      raw arm figures are printed on failure, so "the host was loaded" and "the walk
-      left the accessor" are distinguishable. Expected ~10-13x; the floor is five.
-  - name: test_tq600a_11_no_undeclared_call_site_resolves_the_c_backed_parser
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: unit
-    angle: seam
-    description: >-
-      REPLACES test_tq600a_11_no_store_reader_names_the_pure_python_parser_directly AND
-      its _DOCUMENTED_EXCEPTIONS allowlist, both of which are inverted by the
-      amendment. Derive mechanically from the source the set of call sites that resolve
-      the C-backed parser — importing/calling the shared accessor, OR the inline
-      `getattr(yaml, "CSafeLoader", …)` idiom, which must count the same or the seam is
-      bypassable by copy-paste. Assert that derived set equals a small DECLARED set
-      (currently: the two whole-store-walk call sites in scripts/generate_agent_cards.py,
-      plus the pre-existing inline site in scripts/render_effective_prompt.py). An
-      undeclared adopter FAILS. Also assert the declared set contains no
-      commit-guardian hook, not scripts/ac_store/validate_ac_schema.py, and nothing that
-      decides BLOCK or PASS. Assert the set is NON-EMPTY, so deleting the last adopter
-      is a failure rather than a vacuous pass. Do NOT assert anything about the ~81
-      files that name the pure-Python parser: that is the default and needs no test.
-  - name: test_tq600a_11_the_required_store_validation_gate_rejects_a_record_the_c_parser_accepts
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: discrimination
-    description: >-
-      The behavioural guard on the RETRACTION, so the choice of error fidelity over
-      speed at the required gate is enforced rather than merely documented. Feed the
-      store-wide schema validation entry point a record containing a tab character
-      inside a flow sequence (`key: [\t]`). Assert it reports a violation / exits
-      non-zero. In the SAME test, assert the accessor parses that identical input to
-      `{'key': []}` without raising — so the test proves the divergence is real on this
-      install and that the gate sits on the strict side of it. This test must go RED if
-      anyone re-routes that gate onto the accessor; a version that only greps the
-      source for `yaml.SafeLoader` does not satisfy this descriptor.
-  - name: test_tq600a_11_the_accessor_is_reachable_the_way_the_build_reaches_it
-    target_dir: unit_tests/ac_store/
-    framework: unittest
-    type: integration
-    angle: reachability
-    description: >-
-      REPLACES test_tq600a_11_the_accessor_is_reachable_from_a_deployed_commit_hook,
-      which now tests a relationship that no longer exists — no deployed hook imports
-      the accessor. The real seam is that the accessor's one caller is a build.py phase
-      running from the package tree and reaching scripts/ac_store/ through a `sys.path`
-      insertion. Import and run the card-generation walk the way the build phase does
-      and assert it completes and returns non-empty agent groupings. If the
-      now-vestigial deploy-map entry is kept, assert the deployed copy still imports;
-      if it is pruned, assert no deployed module imports it.
-test_rationale: |
-  The obvious weak test for this change is a unit test that imports the accessor and
-  asserts it returned the C class. That test passes on a change nobody adopted, on a
-  store of three fixture files, and at a call site that must not have it — which are
-  precisely the ways this has already shipped broken, twice in opposite directions.
-
-  So: the speed claim is asserted over the REAL store, because the cost is entirely a
-  function of the store's size and a synthetic fixture reproduces none of it; it is
-  asserted at the ENTRY POINT that is supposed to benefit, not at the parser, because
-  a fast parser attached to nothing is what the first round of this AC shipped; and it
-  is paired with an output-equality and a parsed-count assertion, because the cheapest
-  way to make any of this look fast is to parse fewer files.
-
-  The seam test is INVERTED relative to the original. Asserting "no reader names the
-  pure-Python parser" was a demand on a population of ~81 files that grows every week,
-  and the _DOCUMENTED_EXCEPTIONS allowlist that softened it had to grow with them.
-  Asserting "no UNDECLARED site resolves the C parser" is a demand on a bounded set of
-  three, and it fails in the direction that actually hurt: silent re-spread of a
-  permissive parser into a guardrail path. One of those two framings has to be
-  maintained forever; it should be the short one.
-
-  The discrimination descriptor exists because a retraction that lives only in prose
-  gets re-litigated. Someone will read the 13x figure and re-route the required gate.
-  A test that goes red when they do is the only durable form of that decision.
-
-  The ratio form is deliberate. An absolute threshold on a shared host under agent
-  load is a flaky test, and a flaky guard is removed within a month. This record's own
-  first amendment was caused by reasoning from absolute figures taken in a different
-  sitting; do not do it a third time.
+test_required: false
+test_spec: null
+test_rationale: >-
+  RETIRED 2026-10-09. This record declares NO test contract: it is deprecated and the
+  code its five descriptors targeted is removed by the static-cards change. The
+  descriptors and the original rationale are preserved in the notes under "THE
+  RETIRED TEST CONTRACT", as a historical record and not as work waiting to be done.
+  One of the five has a subject that outlives this record and is flagged there for
+  whoever hosts the negative invariant.
 origin_agent: BrainCandy
 created: 2026-10-05
 amended_by:
@@ -455,6 +364,144 @@ amended_by:
       resolves.
     by: claude-opus-5
     at: 2026-10-08
+  - reason: retired-subject-deleted-agent-cards-become-static
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      status active -> deprecated, req_status draft -> superseded, readiness approved
+      -> reviewed, test_required added as false, and every test_spec descriptor
+      prefixed with a retirement marker. criteria text is UNTOUCHED below the
+      retirement banner; doc_links, it_requirements, test_rationale and declared_files
+      are untouched; superseded_by stays null; work_status was already todo. The three
+      children TQ-600a-11-i, -ii and -iii are retired in the same pass and each carries
+      its own entry.
+
+
+      readiness WAS INITIALLY LEFT AT approved AND THAT WAS WRONG. The first version of
+      this entry kept it, reasoning that approved was a fact about the past a demotion
+      would erase. The fact is right, the conclusion was not: approved means cleared
+      FOR BUILDING, and a retired record is the one thing nobody should build. The
+      history is preserved by writing it down — THIS RECORD STOOD AT readiness:
+      approved FROM 2026-10-05 UNTIL 2026-10-09 — rather than by leaving a field that
+      says it is ready for work. Store precedent is unanimous and was measured across
+      all thirteen pre-existing deprecated records: readiness is `reviewed` on 13 of
+      13, work_status `todo` on 11 of 11 that carry the field. The full shape, and why
+      each demotion is right on the merits, is written up on INF-600b-2's notes under
+      "HOW TO RETIRE AN AC".
+
+
+      test_spec IS CLEARED TO null AND ITS CONTENT MOVED TO notes. THE FIRST ATTEMPT
+      AT THIS WAS WRONG IN A WAY WORTH RECORDING, BECAUSE IT IS THE SAME ERROR AS THE
+      TWO ABOVE. That attempt kept all five descriptors in test_spec, prefixed each
+      with a "RETIRED — DO NOT AUTHOR" marker, and added test_required: false
+      alongside. check-ac-schema refused it: "test_spec lists 5 test(s) but
+      test_required is false — remove test_required: false or clear test_spec". The
+      gate is right, and not merely pedantic: test_required and test_spec are ONE
+      declaration, so that record said "no tests are needed" and "here are the five
+      tests" simultaneously. THE UNDERLYING MISTAKE IS THE ONE THIS ENTRY ALREADY
+      DESCRIBES TWICE: test_spec is a PRESENT-TENSE instruction to test-writer, and it
+      was being used to carry history. Same move as keeping work_status: done because
+      the work had happened, and as keeping readiness: approved because the record had
+      been approved. Third field, same error. The fix is the same each time — write
+      the history down in prose and let the field be honest — and here that means
+      test_spec: null, test_required: false, and the five descriptors preserved in
+      notes under "THE RETIRED TEST CONTRACT". Nothing is lost: all five are named,
+      their angles and assertions summarised, and the original test_rationale's two
+      generalisable arguments quoted.
+
+
+      THAT ALSO RETIRES A CONSTRAINT THE FIRST ATTEMPT RAN INTO. It wanted a per-entry
+      `retired` flag on each descriptor and could not have one, because test_spec items
+      are additionalProperties: false and `description` was the only per-entry surface
+      available. That constraint only ever mattered because the content was in the
+      wrong field; with test_spec empty there are no entries to flag.
+
+
+      ONE DESCRIPTOR'S SUBJECT OUTLIVES THIS RECORD AND IS FLAGGED IN THE notes BLOCK.
+      test_tq600a_11_the_required_store_validation_gate_rejects_a_record_the_c_parser_accepts
+      is the executable form of the negative invariant this retirement says needs a new
+      home — it feeds the required gate a tab inside a flow sequence and proves the
+      gate sits on the strict side of the divergence. It is written out in full there
+      so whoever hosts that invariant carries it across rather than re-deriving it.
+
+
+      WHY RETIRED RATHER THAN RE-POINTED. This record's criteria admit the C-backed
+      parser only at a call site satisfying ALL FOUR parts of its admission test, and
+      the first part is VOLUME — "the call site parses a large, bounded portion of the
+      store in one operation". The 2026-10-08 amendment narrowed the record to exactly
+      one such site and said so in as many words: "WHERE THE CLAIM IS REPOINTED:
+      scripts/generate_agent_cards.py's _scan_ac_assignments / _scan_all_ac_assignments
+      — ONE whole-AC-store walk per build.py run", with the record's own notes adding
+      that only _scan_all_ac_assignments is reachable in production, so "the accessor's
+      live production footprint is ONE call site". Making the cards static deletes that
+      walk. Nothing is left that passes part (1) and also passes parts (2), (3) and
+      (4): the store-wide schema validation behind the required pull-request check is
+      disqualified by this record's own text on part (2), and the shared commit-guardian
+      store index is disqualified on the same ground. The only remaining site that
+      resolves the C parser at all is the pre-existing inline
+      `getattr(yaml, "CSafeLoader", yaml.SafeLoader)` in scripts/render_effective_prompt.py,
+      which parses one small frontmatter block at a time and therefore fails part (1) —
+      so under this record's own criteria it would have to be removed, which would empty
+      the declared set, which this record's own seam descriptor forbids ("Assert the set
+      is NON-EMPTY, so deleting the last adopter is a failure rather than a vacuous
+      pass"). The record becomes internally unsatisfiable, not merely unbuilt. Searching
+      for a substitute walk was considered and rejected: inventing a replacement subject
+      to keep a record alive is how a criterion stops describing anything.
+
+
+      THE PREMISE "NOTHING BUILT IS BEING THROWN AWAY" IS FALSE, AND THIS IS THE MOST
+      IMPORTANT LINE IN THIS ENTRY. This family is work_status: todo with implemented_by
+      [], and the retirement was proposed on the strength of those two fields. They are
+      stale. Measured against origin/main on 2026-10-09 by listing the tree, not by
+      reading the store: scripts/ac_store/yaml_safe_loader.py EXISTS on main (this
+      record's doc_links still mark it `status: planned` and say it "exists only on the
+      implementation branch"), and so do FIVE test modules —
+      unit_tests/ac_store/test_tq_600a_11.py, test_tq_600a_11_i.py,
+      test_tq_600a_11_ii.py, test_tq_600a_11_iii.py and the shared
+      _test_helpers_tq_600a_11.py. TQ-600a-13-xix independently corroborates this,
+      reasoning about "the two TQ-600a-11 timing-ratio tests in the default run" as live
+      CI-blocking tests. So the store says todo and the repository says shipped. CONCRETE
+      CONSEQUENCE FOR THE CHANGE THAT RETIRES THIS RECORD: the descriptor
+      test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline
+      is specified against _scan_all_ac_assignments and cannot survive that function's
+      deletion; and the seam descriptor
+      test_tq600a_11_no_undeclared_call_site_resolves_the_c_backed_parser asserts the
+      declared set equals "the two whole-store-walk call sites in
+      scripts/generate_agent_cards.py, plus the pre-existing inline site in
+      scripts/render_effective_prompt.py", which goes red when the two card sites
+      vanish. Those modules must be retired or re-pointed DELIBERATELY as part of the
+      removal, not left to go red. This entry is the notice; the disposition belongs to
+      whoever lands the code change.
+
+
+      WHAT IS NOT RETIRED WITH THIS RECORD, AND NEEDS A HOME. This record's own notes
+      state that "THIS RECORD'S CENTRE OF GRAVITY HAS MOVED from a speed claim to a
+      NEGATIVE INVARIANT — where the permissive parser may not go", and that the
+      invariant "is the part a future 'let's finish the rollout' pass would destroy".
+      That judgement is correct and it survives the loss of the speed claim intact. The
+      surviving content is: (a) CSafeLoader and the pure-Python SafeLoader differ in
+      ERROR behaviour, `"key: [\t]\n"` returning `{'key': []}` where SafeLoader raises;
+      (b) therefore no commit-guardian hook, no store-wide schema validation and no
+      other BLOCK/PASS decision point may resolve the C parser, error fidelity
+      outranking speed; (c) the 2026-10-07 revert of 83 of 85 call sites is a DECISION,
+      not an incomplete rollout, and widening the accessor's footprint is a regression.
+      With the volume-qualifying site gone, that invariant simplifies — the pure-Python
+      parser becomes the only parser anywhere except one pre-existing inline site — and
+      it needs its own record under a parent whose subject is correctness rather than
+      suite latency. THAT RECORD IS DELIBERATELY NOT AUTHORED HERE: it is a new subject,
+      not a decomposition of anything in hand, and authoring it would be exactly the
+      "invent a replacement subject to keep the record alive" move this retirement
+      refuses. It is raised for the user instead.
+
+
+      CITATIONS INTO THIS RECORD STILL RESOLVE. A deprecated record is retained for
+      audit, so the six siblings that cite it keep working: TQ-600a-9's test_spec cites
+      "3.8x to 10.74x variance ... recorded in TQ-600a-11" and that figure is in the
+      criteria text preserved below; TQ-600a-13-xix, TQ-600a-10, TQ-600a-10-ii,
+      TQ-600a-12 and TQ-600a-13 cite it for shape, boundary or independence. None of
+      them is amended by this pass — a citation to a retired record is a pointer to
+      history, and TQ-600a-13-xix's reasoning about the timing tests becomes MORE
+      relevant, not less, now that those tests are known to be live.
 superseded_by: null
 covered_by:
   - TQ-600a-11-i
@@ -464,6 +511,127 @@ implemented_by: []
 change_target: pipeline
 risk_surface: internal
 notes: |
+  ==========================================================================
+  WHY THIS RECORD IS RETIRED (2026-10-09). READ THIS BEFORE ANYTHING BELOW IT.
+  ==========================================================================
+  Everything from "WHY THIS LEVER IS DIFFERENT" onward was written while this record
+  had a subject. It no longer does. Agent cards are becoming STATIC: the trailing
+  per-agent AC-assignment section is removed from every card, and with it the
+  whole-AC-store walk that produced it. That walk WAS this record — the 2026-10-08
+  amendment had already narrowed the whole criterion down to it, and the notes below
+  record that only one of its two functions is even reachable in production. Delete
+  the walk and the speed claim has nothing to measure, the four-part admission test
+  has nothing to admit, and the declared set the seam test requires to be non-empty
+  holds only a site that fails part (1) of the test itself.
+
+  THREE THINGS A LATER READER MUST NOT CONCLUDE FROM THIS RETIREMENT.
+
+    - NOT "the C parser was a bad idea". It is 10-13x faster and that measurement
+      stands. What changed is that the one place where that speed was both large
+      enough to matter and safe enough to take has been removed for unrelated reasons.
+    - NOT "nothing was built here". The store's work_status: todo and implemented_by
+      [] are stale. scripts/ac_store/yaml_safe_loader.py and five test modules under
+      unit_tests/ac_store/ named for this record and its three children all exist on
+      origin/main as of 2026-10-09. The final amended_by entry names them and states
+      the consequence: two of this record's descriptors cannot survive the deletion of
+      _scan_all_ac_assignments and must be retired or re-pointed deliberately.
+    - NOT "the negative invariant went with it". The prohibition on the permissive
+      parser reaching any BLOCK/PASS decision point, and the DO-NOT-RE-MIGRATE
+      instruction behind it, are the most valuable content in this file and they are
+      not retired — they are homeless. They need a record under a correctness parent
+      rather than under a suite-latency one. That record is deliberately not authored
+      here; see the final amended_by entry.
+
+  THE THREE CHILDREN GO WITH IT, each for its own reason, stated on its own record:
+  -i covers the fallback branch of an accessor whose only caller is the deleted walk;
+  -ii is the evidence that licenses a substitution that is no longer being made; -iii
+  exists only to prove -ii's instrument has a needle.
+
+  ==========================================================================
+  THE RETIRED TEST CONTRACT (moved here from test_spec, 2026-10-09).
+  NONE OF THIS IS WORK WAITING TO BE DONE. DO NOT AUTHOR ANY OF THESE TESTS.
+  ==========================================================================
+  test_spec is now null and test_required is false. The five descriptors below stood
+  in test_spec until this retirement; they are recorded here so the reasoning is not
+  lost, and moved OUT of test_spec because that field is a present-tense instruction
+  to test-writer and these are a contract against code that no longer exists.
+
+  (1) test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser
+      — integration / real_artifact. Timed a full pure-Python sweep against a full
+      accessor sweep over the real store, in one process, asserting the RATIO and
+      never an absolute second count. Its standing caveat: it measured the PARSER,
+      not any entry point, so a green result was never evidence that any gate, hook
+      or check got faster.
+
+  (2) test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline
+      — integration / real_artifact. THE DESCRIPTOR THAT CANNOT SURVIVE AT ALL: it
+      was written against `_scan_all_ac_assignments`, the whole-AC-store walk the
+      static-cards change deletes. Ran that walk twice in one process, once as
+      shipped and once forced to pure-Python, asserting (a) the accessor arm at most
+      one fifth of the forced-pure arm as a ratio, (b) both arms returning EQUAL
+      output so the ratio was about the same work, (c) each arm reporting its parsed
+      file count, the two equal and equal to the files on disk, so a fast arm that
+      parsed nothing failed, and (d) both raw figures printed on failure so a loaded
+      host and a walk that left the accessor were distinguishable. The (b)/(c)
+      pairing is the reusable part: the cheapest way to make anything look fast is to
+      do less work, and an output-equality plus a counted-population assertion is
+      what closes that off.
+
+  (3) test_tq600a_11_no_undeclared_call_site_resolves_the_c_backed_parser
+      — unit / seam. Derived the set of C-parser call sites mechanically from source,
+      counting the inline `getattr(yaml, "CSafeLoader", …)` idiom the same as the
+      shared accessor so the seam could not be bypassed by copy-paste, and asserted
+      it equalled a small DECLARED set. Also asserted the set was NON-EMPTY, so
+      deleting the last adopter failed rather than passing vacuously. Its declared
+      set named the two call sites in scripts/generate_agent_cards.py that this
+      change removes, so the assertion is false on arrival. The INVERSION is the
+      reusable idea: an allowlist of exceptions cannot describe a world where the
+      exception is the rule, so assert over the small bounded set, never the large
+      growing one.
+
+  (4) test_tq600a_11_the_required_store_validation_gate_rejects_a_record_the_c_parser_accepts
+      — integration / discrimination. **THIS IS THE ONE WHOSE SUBJECT OUTLIVES THE
+      RETIREMENT, AND IT IS THE REASON THIS BLOCK EXISTS.** It fed the store-wide
+      schema validation entry point a record containing a tab character inside a flow
+      sequence (`key: [\t]`), asserted that it reported a violation and exited
+      non-zero, and IN THE SAME TEST asserted that the accessor parses that identical
+      input to `{'key': []}` without raising — proving the divergence is real on this
+      install and that the gate sits on the strict side of it. It was required to go
+      RED if anyone re-routed that gate onto the accessor, and a version that only
+      grepped the source for `yaml.SafeLoader` did not satisfy it.
+      FOR WHOEVER HOSTS THE NEGATIVE INVARIANT: this descriptor is the executable
+      form of that invariant, and it should be carried into that record rather than
+      re-derived. The retirement entry explains why the invariant needs a new home
+      under a correctness parent rather than under this suite-latency one. A
+      retraction that lives only in prose gets re-litigated; someone will read the
+      13x figure and re-route the required gate, and a test that goes red when they
+      do is the only durable form of that decision.
+
+  (5) test_tq600a_11_the_accessor_is_reachable_the_way_the_build_reaches_it
+      — integration / reachability. Imported and ran the card-generation walk the way
+      the build phase reaches it, through the `sys.path` insertion of
+      scripts/ac_store/, asserting it completed and returned non-empty groupings.
+      Targets the deleted walk.
+
+  THE ORIGINAL test_rationale, PRESERVED BECAUSE TWO OF ITS ARGUMENTS GENERALISE.
+  The weak test it was written against was "import the accessor and assert it
+  returned the C class" — which passes on a change nobody adopted, on a store of
+  three fixture files, and at a call site that must not have it, "which are precisely
+  the ways this has already shipped broken, twice in opposite directions". From that:
+  assert the speed claim over the REAL store, because the cost is a function of the
+  store's size and a synthetic fixture reproduces none of it; assert it at the ENTRY
+  POINT that is supposed to benefit rather than at the parser, "because a fast parser
+  attached to nothing is what the first round of this AC shipped"; and pair it with
+  output-equality and parsed-count assertions. And on form: the RATIO rather than an
+  absolute threshold, because "an absolute threshold on a shared host under agent
+  load is a flaky test, and a flaky guard is removed within a month" — this record's
+  own first amendment was caused by reasoning from absolute figures taken in a
+  different sitting.
+
+  ==========================================================================
+  BELOW THIS LINE: THE RECORD AS IT STOOD BEFORE RETIREMENT, PRESERVED VERBATIM.
+  ==========================================================================
+
   WHY THIS LEVER IS DIFFERENT FROM EVERY OTHER CHILD OF TQ-600a. The rest of this L1
   is about not repeating an expensive deploy. This one is about a single operation
   being 13x slower than it needs to be in a library the package already depends on.

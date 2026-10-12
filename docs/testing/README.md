@@ -191,6 +191,36 @@ Every held message also says "This is not caused by this pull request." and ends
 - The hold refuses to run (`could_not_read`, naming both keys) if `staleness_hours` is not greater than `heartbeat_max_hours` (12).
 - Age is measured from the run's `run_started_at`, so a re-run counts as fresh.
 
+### Break-glass: merging a repair when the hold itself is broken (owner only)
+
+**Agents: never do this. If the hold blocks you and no exemption applies, stop and report to the owner.**
+
+The owner (BrainCandy) removes only `Post-merge suite status` from ruleset 17810993, merges the repair, and restores it. The check is not required yet (TQ-600a-13-x), so this is the procedure for when it is.
+
+1. **Use it only when no exemption can help.** The hold errors on every PR; it never reports because `pull_request_target` runs are blocked; the hold App (ID 5249547) credential cannot be obtained or the App is uninstalled, so no check run is published; the correctness workflow cannot start; or a fix to the hold is itself held.
+2. **Read and record the ruleset.** Save the output.
+
+   ```bash
+   gh api repos/urlmonitor/leafcutter-ai/rulesets/17810993
+   ```
+
+3. **Remove only the `Post-merge suite status` context** from the required status checks, in the ruleset UI or with a `PUT` of the saved ruleset (with its read-only fields dropped) whose `required_status_checks` list lacks that one entry. This needs admin rights. **Never add a bypass actor:** every agent acts as the same admin account, so a bypass lets any agent merge past all required checks without a trace.
+
+   ```bash
+   gh api --method PUT repos/urlmonitor/leafcutter-ai/rulesets/17810993 --input /tmp/ruleset-minus-hold.json
+   ```
+
+4. **Merge the repairing PR.**
+5. **Restore the identical entry, sourced from the hold App (integration 5249547).** Never source it from GitHub Actions (15368) or "any source": either silently reopens the check-name spoof, because any Actions job could post a check under that name.
+6. **Read the ruleset back.** Confirm the six other contexts are untouched (`Lint (ruff)`, `Component vocab style (components.json)`, `Test suite (pytest)`, `Proof-of-done coverage check (BO-2500b)`, `Changelog entry present`, `AC store valid`), and that the hold is present and pinned to App 5249547.
+7. **Re-observe a held PR reported unmergeable**, as TQ-600a-13-x requires.
+8. **Log the use**: date, reason, repairing PR, and the time the requirement was restored. Put it on the open `post-merge-red` notice, or in the table below when none is open.
+
+The procedure is rehearsed once on the real repository within the first day after the check becomes required, by removing and restoring with no repair pending. Record the rehearsal in the table and in the notes of TQ-600a-13-xvii. Not yet rehearsed: the check is not required yet.
+
+| Date | Kind (use / rehearsal) | Reason | Repairing PR | Removed at | Restored at | Re-observed held PR |
+|---|---|---|---|---|---|---|
+
 ---
 
 ## Test Output Rules
