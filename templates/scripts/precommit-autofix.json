@@ -22,11 +22,11 @@
       "hook_id": "check-complexity",
       "category": "structural",
       "model": "sonnet",
-      "subagent_type": "python-coder",
+      "subagent_type": "restructuring-specialist",
       "description": "Cyclomatic complexity violation. Refactor the flagged function to reduce branching.",
       "disposition": "engage-specialist",
-      "instruction": "Cyclomatic complexity violation. Refactor the flagged function to reduce branching.",
-      "agent": "python-coder",
+      "instruction": "Bring in the restructuring specialist to apply the complexity-reduction skill to the named function; never raise the limit.",
+      "agent": "restructuring-specialist",
       "skills": [
         "complexity-reduction"
       ]
@@ -94,7 +94,7 @@
       "description": "Documentation frontmatter field missing or malformed. Add or correct required frontmatter fields.",
       "disposition": "mechanical-autofix",
       "instruction": "Documentation frontmatter field missing or malformed. Add or correct required frontmatter fields.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -105,7 +105,7 @@
       "description": "Documentation file exceeds maximum length. Trim or split the document.",
       "disposition": "mechanical-autofix",
       "instruction": "Documentation file exceeds maximum length. Trim or split the document.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -114,7 +114,7 @@
       "model": "haiku",
       "subagent_type": "general-purpose",
       "description": "Dead link detected in documentation. Fix or remove the broken link.",
-      "disposition": "mechanical-autofix",
+      "disposition": "author-clears",
       "instruction": "Dead link detected in documentation. Fix or remove the broken link.",
       "agent": null,
       "skills": []
@@ -138,7 +138,7 @@
       "description": "Ticket frontmatter agents: map does not match ## Sign-offs section. Bring all three parity locations into sync.",
       "disposition": "mechanical-autofix",
       "instruction": "Ticket frontmatter agents: map does not match ## Sign-offs section. Bring all three parity locations into sync.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -160,7 +160,7 @@
       "description": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
       "disposition": "mechanical-autofix",
       "instruction": "Agent comment is missing feedback-id: line. Add the feedback-id per signoff SKILL.md \u00a72a.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -171,7 +171,7 @@
       "description": "Agent registry inconsistency detected. Ensure agent_registry.json and template files are bidirectionally consistent.",
       "disposition": "mechanical-autofix",
       "instruction": "Agent registry inconsistency detected. Ensure agent_registry.json and template files are bidirectionally consistent.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -182,7 +182,7 @@
       "description": "Build output has drifted from template source. Re-run build.py to resync.",
       "disposition": "mechanical-autofix",
       "instruction": "Build output has drifted from template source. Re-run build.py to resync.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -193,7 +193,7 @@
       "description": "Placeholder default value detected in deployed output. Replace with real configuration.",
       "disposition": "mechanical-autofix",
       "instruction": "Placeholder default value detected in deployed output. Replace with real configuration.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {
@@ -204,7 +204,7 @@
       "description": "roadmap.json schema violation. Correct required fields and structure.",
       "disposition": "mechanical-autofix",
       "instruction": "roadmap.json schema violation. Correct required fields and structure.",
-      "agent": null,
+      "agent": "general-purpose",
       "skills": []
     },
     {

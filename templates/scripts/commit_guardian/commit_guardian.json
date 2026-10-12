@@ -1647,6 +1647,10 @@
       "run_hook.py",
       "regenerate_*.py"
     ],
+    "_platform_agents_comment": "GE-132a-2: the closed list of agents the platform provides, which have no entry in config/agent_registry.json. A remedy declaration may name one of these without a registry entry. Widening it is a reviewed edit to this data, never a code change.",
+    "platform_agents": [
+      "general-purpose"
+    ],
     "_undeclared_remedy_baseline_comment": "GE-132a-1: ids of pre-commit judgment gates that had no remedy declaration (a rules[] entry with a disposition in templates/scripts/precommit-autofix.json) when the rule landed. It may lose entries and never gain one: check_hook_parity.py compares it with the list in HEAD and every MERGE_HEAD parent. Seeded from the same population the check derives from this manifest; re-measure, never hand-extend.",
     "undeclared_remedy_baseline": [
       "check-ac-circular-deps",
