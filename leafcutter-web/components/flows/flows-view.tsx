@@ -7,123 +7,71 @@
  *     ≥1 flow for the current source,
  *   - a per-flow selector listing only flows matching source + kind, each with a
  *     live "done/total" badge.
- * Everything is a pure client swap (no route change). <FlowExplorer> is remounted
+ * Initial selection comes from the route as flat props (flowId, crumbs, filters,
+ * step). Everything after that is a pure client swap. <FlowExplorer> is remounted
  * (via key) whenever the selected flow changes, so the canvas refits and the step
  * drawer resets. Empty source+kind combos render a small empty state.
  */
 import * as React from "react";
-import { PageHeader, Badge, EmptyState } from "@/components/ui/kit";
-import { cn, humanize } from "@/lib/utils";
-import { WORK_STATUS_TONE } from "@/lib/status";
-import type {
-  Flow,
-  FlowKind,
-  FlowLevel,
-  FlowRealization,
-  FlowSource,
-  MockData,
-} from "@/lib/data/types";
+import { PageHeader, EmptyState } from "@/components/ui/kit";
+import { humanize } from "@/lib/utils";
+import type { Flow, FlowKind, FlowRealization, FlowSource, MockData } from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
-import { RealizationBadge, realizationMeta } from "./realization-badge";
-import { Workflow, ChevronRight, Layers } from "lucide-react";
+import {
+  FlowCrumbs,
+  FlowSelector,
+  KINDS,
+  REALIZATIONS,
+  REALIZATION_LABEL,
+  SOURCES,
+  Segmented,
+  type RealizationFilter,
+} from "./flows-view-controls";
+import {
+  FlowNotice,
+  LevelChip,
+  RealizationBanner,
+  StepRollup,
+  type FlowsViewNotice,
+} from "./flows-view-banners";
+import { RealizationBadge } from "./realization-badge";
+import { Workflow } from "lucide-react";
 
-const SOURCES: FlowSource[] = ["mock", "real"];
-const KINDS: FlowKind[] = ["user", "data", "architecture"];
-// "all" plus the three realizations, in built→spec→mock order (most→least real).
-type RealizationFilter = "all" | FlowRealization;
-const REALIZATIONS: FlowRealization[] = ["built", "spec", "mock"];
-const REALIZATION_LABEL: Record<RealizationFilter, string> = {
-  all: "All",
-  built: "Built",
-  spec: "Spec",
-  mock: "Sample",
-};
-const DEFAULT_ENTRY = "leafcutter/deliver-a-feature";
+export type { FlowsViewNotice };
 
-// HSL accents for the flow-level chip (journey → pipeline → agent = drill deeper).
-const LEVEL_HSL: Record<FlowLevel, string> = {
-  journey: "205 78% 60%",
-  pipeline: "150 64% 52%",
-  agent: "265 60% 66%",
-};
-
-function LevelChip({ level }: { level: FlowLevel }) {
-  const hsl = LEVEL_HSL[level];
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium"
-      style={{
-        color: `hsl(${hsl})`,
-        background: `hsl(${hsl} / 0.12)`,
-        borderColor: `hsl(${hsl} / 0.3)`,
-      }}
-      title={`Flow level: ${level}`}
-    >
-      <Layers className="h-3 w-3" />
-      {humanize(level)}
-    </span>
-  );
-}
-
-function Segmented<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-  render,
-}: {
-  label: string;
-  options: T[];
-  value: T;
-  onChange: (next: T) => void;
-  render: (opt: T) => React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-        {label}
-      </span>
-      <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border/70 bg-card/60 p-1">
-        {options.map((opt) => {
-          const active = opt === value;
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(opt)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
-                active
-                  ? "bg-primary/15 font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-              )}
-            >
-              {render(opt)}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+export interface FlowsViewFilters {
+  source: FlowSource;
+  kind: FlowKind;
+  realization: RealizationFilter;
 }
 
 export function FlowsView({
   flows,
   mocks,
   screenTitles = {},
+  flowId,
+  crumbs: initialCrumbs,
+  filters,
+  notice,
 }: {
   flows: Flow[];
   mocks: Record<string, MockData | null>;
   screenTitles?: Record<string, string>;
+  /** The flow the address selected; null draws no flow. */
+  flowId: string | null;
+  /** Drill path (flow ids) the address opens with. */
+  crumbs: string[];
+  filters: FlowsViewFilters;
+  /** Step drawer target — step addresses arrive in a later group. */
+  step: string | null;
+  notice?: FlowsViewNotice;
 }) {
-  const [source, setSource] = React.useState<FlowSource>("real");
-  const [kind, setKind] = React.useState<FlowKind>("user");
-  const [realization, setRealization] = React.useState<RealizationFilter>("all");
-  const [selectedId, setSelectedId] = React.useState<string>(() =>
-    flows.some((f) => f.id === DEFAULT_ENTRY) ? DEFAULT_ENTRY : "",
-  );
+  const [source, setSource] = React.useState<FlowSource>(filters.source);
+  const [kind, setKind] = React.useState<FlowKind>(filters.kind);
+  const [realization, setRealization] = React.useState<RealizationFilter>(filters.realization);
+  const [selectedId, setSelectedId] = React.useState<string>(flowId ?? "");
   // Drill path (flow ids) from the entry flow down into sub-flows.
-  const [path, setPath] = React.useState<string[]>([]);
+  const [path, setPath] = React.useState<string[]>(initialCrumbs);
 
   const flowById = React.useMemo(() => {
     const m = new Map<string, Flow>();
@@ -176,14 +124,24 @@ export function FlowsView({
   );
 
   // The ENTRY flow (top-level selector), falling back to the first match in scope.
-  const entryFlow = filtered.find((f) => f.id === selectedId) ?? filtered[0] ?? null;
+  // With nothing selected (not-found address) no flow is drawn — never a fallback.
+  const entryFlow = selectedId
+    ? filtered.find((f) => f.id === selectedId) ?? filtered[0] ?? null
+    : null;
 
   // Reset the drill path to the entry whenever the entry flow changes
   // (selector click, source/kind switch). Drilling pushes onto path without
-  // touching the entry, so this does not fire on drill.
+  // touching the entry, so this does not fire on drill. The first run keeps the
+  // path the address opened with.
+  const entryId = entryFlow?.id;
+  const mounted = React.useRef(false);
   React.useEffect(() => {
-    setPath(entryFlow ? [entryFlow.id] : []);
-  }, [entryFlow?.id]);
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setPath(entryId ? [entryId] : []);
+  }, [entryId]);
 
   // The flow actually rendered = deepest crumb, or the entry before the effect runs.
   const renderedId = path[path.length - 1];
@@ -206,8 +164,6 @@ export function FlowsView({
 
   const crumbs = path.map((id) => flowById.get(id)).filter((f): f is Flow => Boolean(f));
 
-  const s = flow?.implSummary;
-
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -226,55 +182,10 @@ export function FlowsView({
           "Interactive maps of how a product actually behaves, step by step."
         }
       >
-        {/* Step rollup is meaningless for a stepless architecture map — it
-            rendered "0 done · 0 in progress · 0 not started of 0 steps", a
-            fabricated progress claim. Suppress it for architecture kinds. */}
-        {flow && s && flow.kind !== "architecture" && (
-          <div className="flex flex-wrap items-center justify-end gap-1.5">
-            {flow.realization !== "built" && (
-              <RealizationBadge realization={flow.realization} className="mr-1" />
-            )}
-            <Badge tone={WORK_STATUS_TONE.done} dot>
-              {s.done} done
-            </Badge>
-            <Badge tone={WORK_STATUS_TONE.in_progress} dot>
-              {s.in_progress} in progress
-            </Badge>
-            <Badge tone={WORK_STATUS_TONE.not_started} dot>
-              {s.not_started} not started
-            </Badge>
-            <span className="ml-1 text-xs text-muted-foreground">
-              of <span className="font-mono tabular-nums text-foreground">{s.total}</span> steps
-            </span>
-          </div>
-        )}
+        {flow && <StepRollup flow={flow} />}
       </PageHeader>
 
-      {/* Realization banner — never let a reviewer read a spec/sample flow as a live map.
-          Excluded for architecture maps: the banner asserts "the system it maps
-          does not exist yet", which is false for a schema of the live repo. */}
-      {flow && flow.realization !== "built" && flow.kind !== "architecture" && (() => {
-        const meta = realizationMeta(flow.realization);
-        if (!meta) return null;
-        return (
-          <div
-            className="mb-4 flex items-start gap-3 rounded-lg border px-4 py-3"
-            style={{
-              borderColor: `hsl(${meta.hsl} / 0.5)`,
-              background: `hsl(${meta.hsl} / 0.1)`,
-            }}
-          >
-            <RealizationBadge realization={flow.realization} />
-            <p className="text-sm leading-relaxed text-foreground/90">
-              {meta.description}{" "}
-              <span className="text-muted-foreground">
-                The step colours below track whether each step&apos;s acceptance
-                criteria are authored — not whether this system is running.
-              </span>
-            </p>
-          </div>
-        );
-      })()}
+      {flow && <RealizationBanner flow={flow} />}
 
       {/* source + kind controls */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -311,77 +222,14 @@ export function FlowsView({
         )}
       </div>
 
-      {/* per-flow selector (only flows matching source + kind) */}
       {filtered.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-            Flow
-          </span>
-          <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border/70 bg-card/60 p-1">
-            {filtered.map((f) => {
-              const active = f.id === entryFlow?.id;
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setSelectedId(f.id)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
-                    active
-                      ? "bg-primary/15 font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-                  )}
-                >
-                  <span>{f.name}</span>
-                  {f.realization !== "built" && (
-                    <RealizationBadge realization={f.realization} size="sm" />
-                  )}
-                  <span
-                    className={cn(
-                      "rounded px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
-                      active
-                        ? "bg-success/15 text-success"
-                        : "bg-muted/50 text-muted-foreground",
-                    )}
-                  >
-                    {f.implSummary.done}/{f.implSummary.total} done
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <FlowSelector flows={filtered} activeId={entryFlow?.id} onSelect={setSelectedId} />
       )}
 
       {flow ? (
         <>
-          {/* breadcrumb drill path — click a crumb to zoom back out to that level */}
           {crumbs.length > 1 && (
-            <nav className="mb-3 flex flex-wrap items-center gap-1 text-sm">
-              {crumbs.map((c, i) => {
-                const last = i === crumbs.length - 1;
-                return (
-                  <React.Fragment key={c.id}>
-                    {i > 0 && (
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-                    )}
-                    <button
-                      type="button"
-                      disabled={last}
-                      onClick={() => setPath(path.slice(0, i + 1))}
-                      className={cn(
-                        "rounded-md px-2 py-1 transition-colors",
-                        last
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-                      )}
-                    >
-                      {c.name}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-            </nav>
+            <FlowCrumbs crumbs={crumbs} onSelect={(i) => setPath(path.slice(0, i + 1))} />
           )}
 
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -418,6 +266,8 @@ export function FlowsView({
             onDrill={drillTo}
           />
         </>
+      ) : notice ? (
+        <FlowNotice notice={notice} />
       ) : (
         <EmptyState
           icon={<Workflow className="h-6 w-6" />}

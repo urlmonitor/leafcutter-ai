@@ -21,11 +21,51 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { RAW_FLOW_ID_HEADER } from "@/lib/flow-url";
+
+const FLOWS_PREFIX = "/flows/";
+
+/**
+ * The flow id exactly as requested (still percent-encoded, trailing slash kept,
+ * no query) for a /flows/<id> address; null for any other path.
+ */
+function rawFlowId(pathname: string): string | null {
+  return pathname.startsWith(FLOWS_PREFIX) && pathname.length > FLOWS_PREFIX.length
+    ? pathname.slice(FLOWS_PREFIX.length)
+    : null;
+}
+
+/**
+ * Trailing-slash handling (UXP-591-1-iii). next.config.mjs sets
+ * skipTrailingSlashRedirect so /flows/<product>/<flow>/ reaches this file
+ * unchanged and can 404; every other path keeps Next.js's slash-less 308.
+ */
+function trailingSlashRedirect(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  if (pathname.length <= 1 || !pathname.endsWith("/") || rawFlowId(pathname) !== null) {
+    return null;
+  }
+  // A plain URL: NextURL would re-add the slash it was asked to drop.
+  const url = new URL(request.url);
+  url.pathname = pathname.slice(0, -1);
+  return NextResponse.redirect(url, 308);
+}
 
 export function middleware(request: NextRequest): NextResponse {
+  const redirect = trailingSlashRedirect(request);
+  if (redirect) return redirect;
+
+  // Hand the route the raw flow id; always drop a client-supplied copy first.
+  const flowId = rawFlowId(request.nextUrl.pathname);
+  const withRawFlowId = (h: Headers): Headers => {
+    h.delete(RAW_FLOW_ID_HEADER);
+    if (flowId !== null) h.set(RAW_FLOW_ID_HEADER, flowId);
+    return h;
+  };
+
   // Production lock: ignore all overrides, clear stale mock cookie.
   if (process.env.LEAFCUTTER_MOCK_LOCK === "real") {
-    const reqHeaders = new Headers(request.headers);
+    const reqHeaders = withRawFlowId(new Headers(request.headers));
     reqHeaders.set("x-mock-active", "0");
     const response = NextResponse.next({ request: { headers: reqHeaders } });
     response.cookies.delete("mock");
@@ -43,7 +83,7 @@ export function middleware(request: NextRequest): NextResponse {
 
   // Forward the resolved override as a request header so isMockActive() sees it
   // in the SAME request (cookies set on the response only arrive on the next request).
-  const reqHeaders = new Headers(request.headers);
+  const reqHeaders = withRawFlowId(new Headers(request.headers));
   if (resolved !== null) {
     reqHeaders.set("x-mock-active", resolved);
   } else {
