@@ -1,0 +1,123 @@
+id: ACD-2100c-3-iii
+components:
+  - ac_driven_dev
+readiness: approved
+priority: high
+title: "Resuming a paused run never treats that run's own waiting drafts as leftovers"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: done
+roadmap_phase: phase_1
+criteria: |
+  Given a run paused at a decision point whose durable pause record exists on disk, is
+    not stale, and lists in its context the ids of the drafts that run produced and is
+    waiting to have approved, with those drafts still uncommitted in the authoring
+    worktree,
+  When the route is started again freshly (same run id, the person's answer supplied for
+    that decision point, no harness resume) and the partial-run recovery scan runs,
+  Then the drafts listed in that run's own pause record are not offered as leftovers from
+    a crashed earlier session, no leftover-recovery decision is raised for them, and the
+    person's answer is applied to the decision the run is paused at exactly as
+    ACD-2100c-3 requires,
+  And any uncommitted draft NOT listed in that pause record is still offered as a leftover
+    as it is today,
+  And when no answer is supplied the recovery scan behaves exactly as it does today,
+  And the existing pause record is never rewritten to name a different decision point
+    during a resume; if the record cannot be read the run ends with the existing
+    "pause_record_unreadable" status rather than falling through to the leftover decision,
+  And the bug symptom ("Resuming a paused /plan-feature run freshly (same run_id, args.resume_answer for gate-ba, no harness resumeFromRunId) on 2026-10-09 (run_id pf-workspace-scratch-cleanup-20261009) did not apply the approval: the Partial-Run Recovery scan classified the run's OWN 42 business-analyst drafts (origin_agent business-analyst, readiness draft, uncommitted in the authoring worktree) as orphans from a crashed prior session and paused at gate 'resolve-orphans-choice'. That pause OVERWROTE the run's existing durable pause record for gate-ba (.leafcutter/paused_runs/<run_id>.json now named resolve-orphans-choice), so the person's gate-ba approval could never be applied and the run burned 2.1M tokens for nothing.") must not occur.
+depends_on: [ACD-2100c-3, ACD-2100c-3-ii]
+doc_links:
+  - path: templates/workflows-js/plan-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Canonical source. The Partial-Run Recovery orphan scan runs before any resume handling and pauses at resolve-orphans-choice via pauseAtGate, which replaces the run's existing pause record."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The resume contract this constrains: a resume must reach the decision the run is paused at."
+  - path: docs/how-to/resume-a-paused-plan-feature-run.md
+    relationship: describes
+    status: exists
+    relevance: "Operator how-to authored by ACD-2100e-2; a resume after BA drafting is the flow it describes."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The change lands under templates/workflows-js/plan-feature.js only. .claude/workflows/plan-feature.js is build output."
+  - "When args.resume_answer is present, read the run's durable pause record via readPauseRecordWithRetry BEFORE the orphan scan classifies drafts; if it exists, is not stale, and its context lists AC ids (context.acs), exclude exactly those ids from the orphan set."
+  - "Ids not listed in the record's context.acs remain orphan candidates exactly as today -- the exclusion is by explicit id, never by origin_agent, readiness or a blanket skip."
+  - "If the record read is unreadable, return the existing pause_record_unreadable terminal status; never fall through to the resolve-orphans-choice gate, because pausing there overwrites the record."
+  - "With no args.resume_answer the orphan scan path is unchanged."
+  - "FILE-SIZE RATCHET (GE-127): plan-feature.js is over its 1000-line limit; every added measured line must be offset by removing about two (redundant // comments or blank-line runs, no behaviour change), verified with scripts/commit_guardian/check_file_size.py run from the worktree."
+  - "Must satisfy the repository error-handling policy: reading the pause record is external I/O."
+test_spec:
+  - name: test_resume_with_own_drafts_in_record_raises_no_orphan_gate
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Drive plan-feature through unit_tests/_workflow_engine_harness.py with stubbed agent()
+      replies: resume_answer for gate-ba, pause record exists/not stale with context.acs equal
+      to the uncommitted drafted ids; no resolve-orphans-choice gate is raised and the
+      answer-applied path is reached.
+  - name: test_extra_uncommitted_draft_not_in_record_still_offered_as_orphan
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Same resume, plus one uncommitted draft whose id is not in context.acs; that draft is
+      still offered as an orphan.
+  - name: test_no_resume_answer_orphan_behaviour_unchanged
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Without resume_answer, uncommitted drafts are classified and gated as orphans exactly
+      as before.
+  - name: test_resume_never_rewrites_pause_record_to_a_different_gate
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: >-
+      During a resume (including an unreadable record read, which ends pause_record_unreadable),
+      no pause-store write dispatched by the stubbed agent() names a gate other than the one
+      the run was paused at.
+test_rationale: >-
+  The defect is a misclassification -- the run's own pending drafts read as a crashed
+  session's leftovers -- so each test drives the real workflow code through the engine
+  harness with stubbed agent() replies rather than grepping the template. The own-drafts
+  case proves the resume reaches the answer; the extra-draft case is the discrimination
+  guard that keeps genuine orphans detected; the no-answer case pins unchanged behaviour;
+  the record-never-rewritten case covers the damage that made the approval unrecoverable.
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2100c-3-ii
+    contract: "readPauseRecordWithRetry and the pause_record_unreadable terminal status for an unreadable pause record."
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_acd_2100c_3_iii.py
+implemented_by:
+  - templates/workflows-js/plan-feature.js
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Authored by /quick-fix. Root cause: The orphan scan runs before any resume handling and has no notion of 'this run's own pending drafts': any uncommitted PO/BA/IT-PO draft with readiness draft qualifies as an orphan, including the drafts the paused run itself produced and is waiting to have approved. pauseAtGate then writes a new record for the same run_id, replacing the record of the gate the run is actually paused at. Expected fix (this file only): when args.resume_answer is present, read the run's durable pause record (readPauseRecordWithRetry) before the orphan scan; if it exists, is not stale, and its context lists AC ids (context.acs), exclude exactly those ids from the orphan set (they belong to this run, not a crashed one), so a resume at gate-ba proceeds to apply the answer. Ids not listed in the record are still treated as orphans as today. If the record is unreadable, do not fall through to the orphan gate (that would overwrite it) - return the existing pause_record_unreadable terminal status. Tests must be behavioural through unit_tests/_workflow_engine_harness.py with stubbed agent() replies: (a) resume with record context.acs == drafted ids -> no orphan gate, answer applied path reached; (b) an extra uncommitted draft not in context.acs -> still offered as orphan; (c) no resume_answer -> behaviour unchanged; (d) the existing pause record is never rewritten to a different gate during a resume. FILE-SIZE RATCHET: plan-feature.js is over its 1000-line limit (GE-127); every added measured line must be offset by removing about two (e.g. redundant // comments or blank-line runs, no behaviour change), verified with scripts/commit_guardian/check_file_size.py run from the worktree. Edit only the template; .claude/workflows/plan-feature.js is build output..
+
+  PLACEMENT: ACD-2100c is at its L2 cap of 5, and this is a technical constraint on the
+  already-specified ACD-2100c-3 behaviour (a paused run resumes at the decision it was
+  waiting on with the person's answer applied) -- the recovery scan must not divert the
+  resume into a different decision. Hence an L3 Roman-suffix child, not a new L2 and not
+  a child_limit_override. Sibling ACD-2100c-3-ii (pause_record_unreadable,
+  readPauseRecordWithRetry) supplies the read this relies on.
+
+  PARENT STATE: ACD-2100c-3 carries work_status: done. That claim did not hold on the
+  live run named in the criteria; this todo child is the open constraint against it.
