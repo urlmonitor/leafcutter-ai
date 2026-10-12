@@ -15,6 +15,12 @@ ARCHITECTURE: ``WritePolicy`` is a frozen, explicit grant per caller, bound to O
     created. ``refusal`` returns None for an allowed write, else the reason; it never sends
     anything. Reads are not checked, except that ``path_refusal`` rejects a malformed path
     for every method. Pure logic apart from the injected ``read``.
+    Credentials (AMENDED 2026-10-12, owner decision): the GITHUB_TOKEN ("github") is refused
+    for EVERY re-run. The App's installation token ("app_install") re-runs a
+    ``pull_request_target`` run of the hold workflow of this repository only with ``rerun_hold``,
+    or writes the hold's own check run only with ``check_run_head``; a client holding both is
+    refused every write. The App's JWT ("app_jwt") exchanges only for exactly
+    ``{checks: write}`` or ``{actions: write}`` on the one bound repository.
 """
 
 from __future__ import annotations
@@ -34,6 +40,8 @@ CHECK_CREATE_KEYS = frozenset({"name", "head_sha", "status"})
 CHECK_PATCH_KEYS = frozenset({"status", "conclusion", "output"})
 CHECK_CONCLUSIONS = frozenset({"success", "failure"})  # what _hold_publish.conclusion_for can return
 TOKEN_KINDS = frozenset({"github", "app_jwt", "app_install"})
+EXCHANGE_PERMISSIONS = frozenset({"checks", "actions"})  # the only scopes a token may be minted with (each caller pins ONE): the hold's check run, the re-evaluation's re-run
+EXCHANGE_KEYS = frozenset({"permissions", "repositories"})  # ``repository_ids`` is never sent: an id list cannot be tied to the bound repository
 
 _SEG = r"[A-Za-z0-9._-]+"
 _REPO_PATH = re.compile(rf"/repos/({_SEG})/({_SEG})(/.*)", re.ASCII)
@@ -56,8 +64,9 @@ class WritePolicy:
     notices: bool = False  # create, edit, comment on and label the family's notice issues
     notice_comments: bool = False  # comment on a family notice, nothing else (the hold's exemption record)
     pr_comment: int | None = None  # the evaluated pull request, for the hold's marked comment
-    rerun_hold: bool = False  # re-run a run of the hold workflow
-    check_run_head: str | None = None  # the evaluated head sha, app_install only
+    rerun_hold: bool = False  # re-run a pull_request_target run of the hold workflow: honoured ONLY for token_kind "app_install"
+    check_run_head: str | None = None  # the evaluated head sha, app_install only; never together with rerun_hold in one client
+    exchange_permission: str | None = None  # app_jwt only: the ONE permission (checks | actions, at write) this caller may mint a token for
 
 
 def path_refusal(path: str) -> str | None:
@@ -95,12 +104,15 @@ class WriteGuard:
         if kind not in TOKEN_KINDS:
             return f"{text}: unknown token kind {kind!r}"
         if kind == "app_jwt":
-            return None if method == "POST" and _EXCHANGE.fullmatch(path) else f"{text}: the App JWT only exchanges for an installation token"
+            if method != "POST" or not _EXCHANGE.fullmatch(path):
+                return f"{text}: the App JWT only exchanges for an installation token"
+            why = self._exchange_refusal(body)
+            return None if why is None else f"{text}: {why}"
         found = _REPO_PATH.fullmatch(path)
         if found is None or not self._bound(found.group(1), found.group(2)):
             return f"{text}: not a path under the repository this client is bound to"
         prefix, rest = f"/repos/{found.group(1)}/{found.group(2)}", found.group(3)
-        verdict = self._check_run(method, rest, body) if kind == "app_install" else self._github(method, prefix, rest, body)
+        verdict = self._app_install(method, prefix, rest, body) if kind == "app_install" else self._github(method, prefix, rest, body)
         return None if verdict is True else f"{text}: {verdict}"
 
     def record(self, method: str, path: str, response) -> None:
@@ -119,8 +131,36 @@ class WriteGuard:
             return False
         return self._policy.repo is not None and self._policy.repo == f"{owner}/{name}"
 
+    def _exchange_refusal(self, body: dict | None) -> str | None:
+        """Why this token-exchange body is outside the two permission sets the family requests, or None.
+
+        Exactly the ONE permission this client's caller pinned (``exchange_permission``: ``checks`` for the hold, ``actions`` for the
+        re-evaluation) at level ``write``, compared exactly (case and type), and ``repositories`` equal to the one repository this
+        client is bound to. ``repository_ids`` or any other field is refused, and so is an unpinned or unbound client.
+        """
+        pinned = self._policy.exchange_permission
+        if pinned not in EXCHANGE_PERMISSIONS or not _keys_within(body, EXCHANGE_KEYS) or body.get("permissions") != {pinned: "write"}:
+            return f"the token may be minted only for exactly {{{pinned}: write}}, the one permission this caller pinned"
+        repo = self._policy.repo
+        if repo is None or body.get("repositories") != [repo.split("/", 1)[1]]:
+            return "the token may be minted only for the one repository this client is bound to"
+        return None
+
+    def _app_install(self, method: str, prefix: str, rest: str, body: dict | None):
+        """The installation token's writes: a hold run's re-run (``rerun_hold``) or the hold's own check run (``check_run_head``), never both."""
+        policy = self._policy
+        if policy.rerun_hold and policy.check_run_head is not None:
+            return "an installation client holds either the re-run grant or the check-run grant, never both"
+        found = _RERUN.fullmatch(rest)
+        if method == "POST" and found:
+            ok = policy.rerun_hold and not body and self._is_hold_run(prefix, int(found.group(1)))
+            return True if ok else "the installation token may re-run only a pull_request_target run of the hold workflow of this repository, with no options"
+        return self._check_run(method, rest, body)
+
     def _check_run(self, method: str, rest: str, body: dict | None):
         policy = self._policy
+        if policy.check_run_head is None:
+            return "the installation token may write a check run only with the check-run grant"
         if method == "POST" and rest == "/check-runs":
             ok = policy.check_run_head is not None and _keys_within(body, CHECK_CREATE_KEYS) and (body.get("name"), body.get("head_sha")) == (CHECK_NAME, policy.check_run_head)
             return True if ok else "a check run must be named exactly the hold's and sit on the evaluated head"
@@ -149,9 +189,8 @@ class WriteGuard:
         found = _ONE_COMMENT.fullmatch(rest)
         if method == "PATCH" and found:
             return True if self._is_own_comment(prefix, int(found.group(1)), body) else "not an edit of the hold's own marked comment"
-        found = _RERUN.fullmatch(rest)
-        if method == "POST" and found:
-            return True if policy.rerun_hold and self._is_hold_run(prefix, int(found.group(1))) else "not a re-run of a hold workflow run"
+        if method == "POST" and _RERUN.fullmatch(rest):  # AMENDED 2026-10-12: the workflow credential requests no re-run, whatever the policy says
+            return "the GITHUB_TOKEN may not re-run any run; only the App's installation token re-runs a hold run"
         return "not on the allowed-write list"
 
     def _may_comment(self, prefix: str, number: int, body) -> bool:

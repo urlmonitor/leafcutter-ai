@@ -290,3 +290,9 @@ coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
 | `enabled` | `true` | Set to `false` to disable the hook entirely. |
 | `scanned_source_globs` | `["templates/workflows-js/*.js", "templates/scripts/commit_guardian/*.py"]` | Glob patterns (matched via `fnmatch`) for source files whose presence-only coverage is rejected. DATA read from this key — never hardcoded in the hook. |
 | `waiver_marker` | `"presence-only"` | The comment marker recognised as `# <marker>: <reason>`. |
+
+## Folder Density Check (check-folder-density)
+
+Refuses a commit that takes a folder past 15 non-markdown files; a folder already over may not grow. Folders under a `folder_density.set_aside_locations` entry (`path` plus non-blank `ground`, matched by whole path
+components, never by name) are set aside: the shipped entry is `docs/acceptance-criteria/`, the AC store. Set-aside folders are listed with their ground and counted apart from judged ones, so
+a commit touching only them reports 0 judged. An absent or malformed declaration sets nothing aside and says so; an empty one sets nothing aside (GE-133a).

@@ -181,6 +181,12 @@
     ],
     "exempt_filenames": [
       "__init__.py"
+    ],
+    "set_aside_locations": [
+      {
+        "path": "docs/acceptance-criteria/",
+        "ground": "the AC store is flat by design: records read by tools and navigated by nobody (GE-133a)"
+      }
     ]
   },
   "debug_scripts": {

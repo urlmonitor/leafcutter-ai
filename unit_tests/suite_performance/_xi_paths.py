@@ -8,17 +8,15 @@ Nothing here mocks a write: the in-process entry points are ``post_merge_notice.
 
 from __future__ import annotations
 
-import base64
 import contextlib
 import io
 import json
 import os
 import tempfile
-import time
 from pathlib import Path
 from unittest import mock
 
-from ._app_fake import _openssl, key_pairs
+from ._app_fake import make_jwt
 from ._app_harness import APP_ID, real_now, seed_state
 from ._comment_harness import BOT, MARKER, PR, pr_event, run_main, write_event
 from ._exempt_harness import DECL, ExemptCase
@@ -33,21 +31,6 @@ from ._xi_support import collect_writes, world_of
 
 HEAD = "9" * 40
 TIMING_LABEL = "post-merge-timing"
-
-
-def make_jwt(directory):
-    """An RS256 App JWT signed with the throwaway key the fake trusts, built the way the hold job's shell step builds it."""
-    key = Path(directory) / "app-key.pem"
-    key.write_text(key_pairs()[0].private_pem, encoding="utf-8")
-
-    def b64(raw):
-        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
-
-    now = int(time.time())
-    head = b64(b'{"alg":"RS256","typ":"JWT"}')
-    claims = b64(json.dumps({"iat": now - 60, "exp": now + 540, "iss": APP_ID}).encode())
-    signed = _openssl("dgst", "-sha256", "-sign", str(key), "-binary", data=f"{head}.{claims}".encode())
-    return f"{head}.{claims}.{b64(signed.stdout)}"
 
 
 class PathsCase(ExemptCase):
@@ -172,7 +155,8 @@ class PathsCase(ExemptCase):
                 seed_world(svc, refuse={1009})
                 suite_history(svc, *history)
                 self.assertEqual(0, run_reeval(svc, raw, trigger, 102, SHAS["A"]).code, name)
-                self._record(name, svc, hold_runs={r["id"] for r in svc.workflows[HOLD_FILE]})
+                # the world names only the hold runs the AC allows a re-run of: event pull_request_target (an event-`pull_request` copy is not one)
+                self._record(name, svc, hold_runs={r["id"] for r in svc.workflows[HOLD_FILE] if r["event"] == "pull_request_target"})
 
     # ---- the fix proof (the job that makes no write at all)
     def path_proof_prepare(self):

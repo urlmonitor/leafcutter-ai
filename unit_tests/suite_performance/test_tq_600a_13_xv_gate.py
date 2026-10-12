@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ._ending_harness import Cases
 from ._hold_harness import scratch_default_branch
-from ._reeval_harness import PROOF_NAME, SHAS, SUITE_NAME, ReevalService, run_reeval, seed_world, suite_history, write_event
+from ._reeval_harness import PROOF_NAME, SHAS, SUITE_NAME, ReevalService, app_secrets_env, run_reeval, seed_world, suite_history, write_event
 from ._workflow_jobs import REPO_ROOT, WorkflowRun
 
 FOLLOWUP = REPO_ROOT / ".github" / "workflows" / "post-merge-followup.yml"
@@ -62,7 +62,8 @@ class TestRerunIsOptIn(_Case):
             result = self._run(SUITE_NAME, 102, SHAS["A"], rerun_enabled=False, history=history)
             with rows.case(f"{label}: disabled"):
                 self.assertEqual(0, result.code, result.log)
-                self.assertEqual([], self.svc.write_attempts, "not one write of any kind")
+                self.assertEqual([], self.svc.write_attempts, "not one write of any kind (no credential exchange: with the gate off nothing is minted)")
+                self.assertEqual([], self.svc.minted, "no installation token minted")
                 self.assertNotEqual([], self.svc.reads_of("/pulls"), "every read is still done")
                 self.assertEqual(_disabled_entries(), sorted(result.unrerunnable or [], key=lambda e: e["pr"]))
         result = self._run(SUITE_NAME, 102, SHAS["A"], rerun_enabled=True)
@@ -144,15 +145,17 @@ class TestWorkflowPassesTheVariable(unittest.TestCase):
         # angle: reachability
         """Execute `reevaluate` verbatim: variable unset -> zero POSTs and `rerun_disabled` in the job output; `true` -> the re-runs."""
         rows = Cases()
-        svc, off = self._execute({})
+        svc, off = self._execute(app_secrets_env())  # the secrets are there; the gate is what decides
         with rows.case("variable unset"):
             self.assertEqual("success", off.conclusion, off.log_text()[-1500:])
-            self.assertEqual([], svc.write_attempts)
+            self.assertEqual([], svc.write_attempts, "not one write of any kind, the credential exchange included: nothing is minted")
+            self.assertEqual([], svc.bearers, "the App's JWT is not even presented")
             self.assertEqual(_disabled_entries(), sorted(json.loads(off.outputs["unrerunnable"]), key=lambda e: e["pr"]))
-        svc, on = self._execute({"VARS_POST_MERGE_REEVAL_RERUN": "true"})
+        svc, on = self._execute({"VARS_POST_MERGE_REEVAL_RERUN": "true", **app_secrets_env()})
         with rows.case("variable true"):
             self.assertEqual("success", on.conclusion, on.log_text()[-1500:])
             self.assertEqual([1005, 1009, 1011], svc.rerun_ids())
+            self.assertEqual(1, len(svc.exchange_writes()), "one token is minted for the whole fan-out")
         rows.check()
 
 

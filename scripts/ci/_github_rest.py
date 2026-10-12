@@ -84,7 +84,15 @@ def _transport_kind(exc: BaseException) -> str:
 class GitHubClient:
     """Authenticated JSON client for one GitHub API root."""
 
-    def __init__(self, api_url: str, token: str, timeout: float = DEFAULT_TIMEOUT_SECONDS, policy: WritePolicy | None = None) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        token: str,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        policy: WritePolicy | None = None,
+        *,
+        read_with: GitHubClient | None = None,
+    ) -> None:
         scheme = urllib.parse.urlparse(api_url).scheme
         if scheme not in ALLOWED_SCHEMES:
             message = f"refusing API URL with scheme {scheme!r}"
@@ -92,7 +100,9 @@ class GitHubClient:
         self._root = api_url.rstrip("/")
         self._token = token
         self._timeout = timeout
-        self._guard = WriteGuard(policy or WritePolicy(), self._read_or_none)
+        # ``read_with``: the client that makes the pre-checks of a write (a run's workflow, an issue's labels), so a write-only
+        # credential (the App's installation token) is never used to read.
+        self._guard = WriteGuard(policy or WritePolicy(), (read_with or self)._read_or_none)  # noqa: SLF001 -- the same class
 
     def _read_or_none(self, path: str):
         """GET ``path`` for a write's pre-check; None when it cannot be read (the failure is logged by ``request``)."""

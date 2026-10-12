@@ -22,11 +22,16 @@ ARCHITECTURE: Stdlib only, through the one REST client (``_github_rest``). Two p
     re-run is named in the ``unrerunnable`` output, one line
     ``unrerunnable=<JSON list of {pr, head_sha, reason}>`` appended to ``--output-file``
     (``GITHUB_OUTPUT``) and printed. ``reason`` is ``older_than_30_days`` |
-    ``rerun_refused_<status>`` | ``no_hold_run`` | ``rerun_disabled``. Hotfix 2026-10-12: re-runs are opt-in. The
-    GITHUB_TOKEN re-run POST is accepted live but the re-run ends in ``startup_failure``, so a request is made only when
-    env ``REEVAL_RERUN_ENABLED`` is exactly ``true`` (the workflow passes repo variable ``POST_MERGE_REEVAL_RERUN``);
-    otherwise every read is still done, no POST is made, and each hold that would have been re-run is named
-    ``rerun_disabled``. A fix-proof completion also reads ``GET /actions/runs/{id}/jobs`` and re-runs only when the job
+    ``rerun_refused_<status>`` | ``no_hold_run`` | ``rerun_disabled`` | ``rerun_no_credential``.
+    Two clients, two credentials (owner decision 2026-10-12: the GITHUB_TOKEN re-run ended in ``startup_failure``):
+    EVERY read uses the read-only GITHUB_TOKEN client; the re-run POST alone uses the hold App's installation token,
+    minted lazily by ``AppRerunner`` (``_app_token``) for ``{actions: write}`` on this repository only, from the JWT the
+    workflow step pipes on stdin (never an argument, variable or file), with ``WritePolicy(token_kind="app_install",
+    rerun_hold=True)`` and its pre-reads made through the GITHUB_TOKEN client. A missing JWT or a failed mint re-runs
+    nothing and names every would-be re-run ``rerun_no_credential`` (fail closed, visible). Re-runs are opt-in: a request is
+    made, and a token minted, only when env ``REEVAL_RERUN_ENABLED`` is exactly ``true`` (the workflow passes repo variable
+    ``POST_MERGE_REEVAL_RERUN``); otherwise every read is still done, no POST and no exchange is made, and each hold that would
+    have been re-run is named ``rerun_disabled``. A fix-proof completion also reads ``GET /actions/runs/{id}/jobs`` and re-runs only when the job
     ``Post-merge fix proof`` concluded success or failure (skipped or absent: nothing, output ``[]``). CLI: ``--api-url --repo --event-path
     --output-file``, the token in GITHUB_TOKEN; exit 0 once a decision is reached, 2 on
     unusable input or an unreadable history or pull request list.
@@ -39,6 +44,7 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import NamedTuple
@@ -46,6 +52,7 @@ from typing import NamedTuple
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_reeval.py`: make `scripts.ci` importable
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from scripts.ci._app_token import AppTokenError, mint_installation_token  # noqa: E402
 from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy  # noqa: E402
 from scripts.ci._hold_comment import MAX_PAGES, next_link, valid_sha  # noqa: E402
 from scripts.ci._run_history import verdict_changed  # noqa: E402
@@ -61,7 +68,8 @@ RERUN_WINDOW = timedelta(days=30)
 PAGE_SIZE, HOLD_RUNS_PAGE = 100, 5
 
 ACTION_RERUN, ACTION_SKIP, ACTION_NAME = "rerun", "skip", "name"
-REASON_DISABLED = "rerun_disabled"
+REASON_DISABLED, REASON_NO_CREDENTIAL = "rerun_disabled", "rerun_no_credential"
+RERUN_PERMISSION = "actions"  # the one scope (at write) the re-run token is minted with
 PROOF_JOB = "Post-merge fix proof"  # the proof workflow's `prove` job; skipped when no fix is declared
 PROOF_RAN = ("success", "failure")  # a conclusion that means the proof actually ran
 RERUN_FLAG, RERUN_ON = "REEVAL_RERUN_ENABLED", "true"
@@ -188,16 +196,48 @@ def request_rerun(client: GitHubClient, repo: str, run_id: int) -> str | None:
     return None
 
 
-def reevaluate(client: GitHubClient, repo: str, targets: list[tuple[int | None, str, dict | None]], now: datetime, *, rerun_enabled: bool = False) -> list[dict]:
-    """Re-run each target's completed hold run; return the entries that could not be re-run.
+class AppRerunner:
+    """Requests re-runs with the hold App's installation token, minted on the first re-run and for ``{actions: write}`` only.
 
-    With ``rerun_enabled`` False no request is made: each hold that would have been re-run is named ``rerun_disabled``.
+    Called with a run id, returns None when the re-run was requested, else the reason it was not (``rerun_no_credential`` when
+    there is no JWT or the token cannot be minted; nothing is sent then). The JWT arrives from the caller and goes nowhere but the
+    exchange; the token is used for the re-run POST alone, while the client's pre-reads go through ``reader`` (the GITHUB_TOKEN).
+    """
+
+    def __init__(self, api_url: str, repo: str, jwt: str, reader: GitHubClient) -> None:
+        self._api_url, self._repo, self._jwt, self._reader = api_url, repo, jwt, reader
+        self._client: GitHubClient | None = None
+        self._failed = not jwt
+
+    def _mint(self) -> None:
+        try:
+            token = mint_installation_token(self._api_url, self._repo, self._jwt, RERUN_PERMISSION)
+        except AppTokenError as exc:
+            logger.warning("no re-run credential: %s", exc)
+            self._failed = True
+            return
+        policy = WritePolicy(token_kind="app_install", repo=self._repo, rerun_hold=True)
+        self._client = GitHubClient(self._api_url, token, policy=policy, read_with=self._reader)
+
+    def __call__(self, run_id: int) -> str | None:
+        if self._client is None and not self._failed:
+            self._mint()
+        if self._client is None:
+            return REASON_NO_CREDENTIAL
+        return request_rerun(self._client, self._repo, run_id)
+
+
+def reevaluate(targets: list[tuple[int | None, str, dict | None]], now: datetime, *, rerun: Callable[[int], str | None] | None = None) -> list[dict]:
+    """Re-run each target's completed hold run through ``rerun``; return the entries that could not be re-run.
+
+    ``rerun(run_id)`` returns None or the reason. With ``rerun`` None no request is made and nothing is minted: each hold that
+    would have been re-run is named ``rerun_disabled``.
     """
     named: list[dict] = []
     for pr, sha, run in targets:
         action, reason = classify_hold(run, now)
         if action == ACTION_RERUN and run is not None:
-            reason = request_rerun(client, repo, run["id"]) if rerun_enabled else REASON_DISABLED
+            reason = REASON_DISABLED if rerun is None else rerun(run["id"])
         if reason:
             named.append(_entry(pr, sha, reason))
     return named
@@ -232,21 +272,20 @@ def proof_ran(client: GitHubClient, repo: str, run_id: int | None) -> bool:
     return any(isinstance(j, dict) and j.get("name") == PROOF_JOB and j.get("conclusion") in PROOF_RAN for j in jobs)
 
 
-def decide(client: GitHubClient, opts: argparse.Namespace, trigger: Trigger) -> list[dict]:
-    """Read what the trigger needs and perform the re-runs; return the named pull requests.
+def decide(client: GitHubClient, opts: argparse.Namespace, trigger: Trigger, rerun: Callable[[int], str | None] | None = None) -> list[dict]:
+    """Read what the trigger needs (``client`` is read-only) and perform the re-runs through ``rerun``; return the named pull requests.
 
-    ``opts.rerun_enabled`` (False when absent) gates every re-run request; reads are always done.
+    ``rerun`` None (the gate is off) makes no request; reads are always done.
     Raises ``GitHubError`` on an unreadable history, pull request list, job list or hold run list, before any re-run.
     """
     now = datetime.now(timezone.utc)
-    enabled = bool(getattr(opts, "rerun_enabled", False))
     if trigger.name == PROOF_NAME:
         if not _proof_trusted(trigger, opts.repo) or trigger.head_sha is None:
             return []
         if not proof_ran(client, opts.repo, trigger.run_id):
             logger.info("the %s job did not run in proof run %s; nothing was proved, nothing is re-run", PROOF_JOB, trigger.run_id)
             return []
-        return reevaluate(client, opts.repo, [(None, trigger.head_sha, latest_hold_run(client, opts.repo, trigger.head_sha))], now, rerun_enabled=enabled)
+        return reevaluate([(None, trigger.head_sha, latest_hold_run(client, opts.repo, trigger.head_sha))], now, rerun=rerun)
     if trigger.name != SUITE_NAME:
         logger.info("workflow %r is not one this job re-evaluates for; nothing to do", trigger.name)
         return []
@@ -254,7 +293,7 @@ def decide(client: GitHubClient, opts: argparse.Namespace, trigger: Trigger) -> 
     if verdict_changed(read_runs(client, opts.repo), run_id if run_id is not None else -1) is not True:
         logger.info("the verdict did not change at run %s (or it is not settled); nothing is re-evaluated", run_id)
         return []
-    return reevaluate(client, opts.repo, _pull_request_targets(client, opts.repo), now, rerun_enabled=enabled)
+    return reevaluate(_pull_request_targets(client, opts.repo), now, rerun=rerun)
 
 
 # --------------------------------------------------------------------------- entry point
@@ -281,17 +320,32 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def read_jwt() -> str:
+    """The one line the workflow step pipes on stdin: the App's signed JWT, or an empty string when it could not sign one.
+
+    The JWT is never an argument, an environment variable or a file; an unreadable stdin is the same as no credential.
+    """
+    try:
+        return sys.stdin.readline().strip()
+    except (OSError, ValueError) as exc:
+        logger.warning("cannot read the App JWT from stdin: %s", exc)
+        return ""
+
+
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry point; the token comes from GITHUB_TOKEN."""
+    """CLI entry point; the read token comes from GITHUB_TOKEN, the App JWT from stdin (read here, used only when re-runs are on)."""
     logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
     opts = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
-    opts.rerun_enabled = os.environ.get(RERUN_FLAG, "") == RERUN_ON
+    enabled = os.environ.get(RERUN_FLAG, "") == RERUN_ON
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token or not REPO_RE.fullmatch(opts.repo):
         logger.warning("GITHUB_TOKEN is not set or the repository name %r is refused; nothing re-run", opts.repo)
         return EXIT_BAD_INPUT
+    jwt = read_jwt()
     try:
-        named = decide(GitHubClient(opts.api_url, token, policy=WritePolicy(repo=opts.repo, rerun_hold=True)), opts, read_trigger(opts.event_path))
+        reader = GitHubClient(opts.api_url, token, policy=WritePolicy(repo=opts.repo))  # read-only: every read, no write
+        rerun = AppRerunner(opts.api_url, opts.repo, jwt, reader) if enabled else None
+        named = decide(reader, opts, read_trigger(opts.event_path), rerun)
     except (GitHubError, ValueError) as exc:
         logger.warning("cannot decide what to re-run: %s", exc)
         return EXIT_BAD_INPUT
