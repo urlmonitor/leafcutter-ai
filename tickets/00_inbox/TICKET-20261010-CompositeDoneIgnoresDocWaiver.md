@@ -17,7 +17,7 @@ agents:
   python-coder: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # A composite with documentation children can never be marked done
@@ -80,7 +80,7 @@ tests:
 - [x] python-coder — 2026-10-12 13:20
 - [x] pr-reviewer — 2026-10-12 13:40
 - [x] commit — 2026-10-12 14:00
-- [ ] pull-request
+- [x] pull-request — 2026-10-12
 
 ## Comments
 
@@ -123,3 +123,7 @@ Note: scope item 4 (mark DK-600 ACs done) and templates/ mirror remain for later
 ### 2026-10-12 14:00 — commit (status: ok)
 feedback-id: (submit-failed)
 Auto-authorized commit gate: subject "fix(ac_store): composite done-proof honours the documentation waiver"; staged files: scripts/ac_store/_done_proof_composite.py, unit_tests/commit_guardian/test_bo_2500a_1_ii_composite_waiver.py, ticket.
+
+### 2026-10-12 15:10 — pull-request (status: ok)
+feedback-id: fb_2026-10-12_bdc706cf
+PR #1165 (https://github.com/urlmonitor/leafcutter-ai/pull/1165) was opened by the pull-request phase, which returned without writing this sign-off; recorded afterwards. Scope item 4 done in a follow-up commit: DK-600c-5, DK-600d-5, DK-600a to DK-600e and DK-600 marked done through mark_ac_done.py (each refused before this fix); product-truth derived data regenerated (no flow change).
