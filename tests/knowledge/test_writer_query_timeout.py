@@ -10,6 +10,7 @@ had never once completed.
 
 from __future__ import annotations
 
+import inspect
 import unittest
 from unittest import mock
 
@@ -38,12 +39,13 @@ class TestWriterQueryTimeout(unittest.TestCase):
 
     def test_writer_does_not_use_the_serving_default(self) -> None:
         """A publication must not inherit Neo4jBackend's 3.0s read-shaped default."""
-        backend = _build_writer()
-        default = Neo4jBackend.__init__.__defaults__
-        self.assertIn(3.0, default, "guard assumes 3.0 is still the adapter default")
+        adapter_default = inspect.signature(Neo4jBackend).parameters["query_timeout"].default
+        self.assertEqual(
+            adapter_default, 3.0, "guard assumes 3.0 is still the adapter default"
+        )
         self.assertNotEqual(
-            backend.query_timeout,
-            3.0,
+            _build_writer().query_timeout,
+            adapter_default,
             "writer_backend left the 3.0s serving default in place; a publication "
             "cannot complete ~165 batched transactions under it",
         )
