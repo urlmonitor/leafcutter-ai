@@ -2,15 +2,19 @@
 title: "Feedback Collector — Structured Agent Quality Signals"
 description: "Structured feedback collection system that aggregates agent quality signals into JSONL logs for retrospective analysis and continuous improvement."
 flight_level: L3-Component
+diagram_type: component
 status: active
 type: reference
 created: 2026-06-08
 last_updated: 2026-10-12
+root: true
+source_ticket: "tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/07_TICKET-20261009-INF-500d-4-viii.md"
 components:
   - feedback_collector
 related_docs:
   - docs/architecture/feedback-lifecycle.md
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+  - docs/architecture/components/worktree-manager.md
   - docs/known-issues/feedback-collector.md
 ---
 
@@ -46,6 +50,82 @@ An explicit `--jsonl` is still honoured. `link_feedback.py` and `resolve_feedbac
 the same exclusive lock as `submit_feedback.py` for the whole read-modify-write.
 `feedback_categories.yaml` is still resolved separately, from the script's own
 `.leafcutter/config/` (rule (a)).
+
+## Component diagram — where a drive's logs end up
+
+The build records one enduring log location. The per-drive worktree inherits it from the
+main install, and every writer and reader of the operational log directory reaches that
+one location. The diagram shows the three resolution rules as separate edges. No shared
+resolver serves them.
+
+```mermaid
+C4Component
+    title Feedback Collector — one declared log root for every workspace (ADR-069)
+
+    Container_Boundary(main, "Main install (the enduring project)") {
+        ComponentDb(mainDecl, "main .leafcutter/config/knowledge_sink.json", "JSON, untracked", "Recorded by the main build: operational_log_root, feedback_sink, operational_telemetry_stream, knowledge_emission_sink, all absolute")
+    }
+
+    Container_Boundary(wt, "Per-drive worktree (deleted after the drive)") {
+        Component(boot, "setup_ticket_worktree.py", "_inherited_log_root_args", "Reads the main install's recorded root. Never derives it from main_repo's path")
+        Component(build, "build.py --target-dir worktree", "build_log_root.py", "Records the root exactly as given. A relative --log-root is refused before anything is written. No git, no upward walk")
+        ComponentDb(wtCfg, "worktree .leafcutter/config/", "rule (a): the workspace's own config", "knowledge_sink.json (the same four keys) and feedback_categories.yaml")
+        Component(submit, "submit_feedback.py", "via feedback_sink.py, also used by emit_hook_finding.py", "Appends one entry to feedback_sink")
+        Component(emit, "emit_event.py", "agent-telemetry skill", "Appends one event to operational_telemetry_stream")
+        Component(iwg, "inline_work_guard.py", "PreToolUse hook", "Appends an audit record to operational_log_root/inline_work_guard.jsonl")
+        Component(plan, "plan-feature.js", "emitPtTelemetry", "Asks for the telemetry stream, then appends one line")
+        Component(query, "sink_resolution.py --print-location", "root, feedback, telemetry, knowledge", "Prints one absolute path and creates nothing")
+        Component(readers, "Readers via feedback_reader.py", "aggregate, list_tags, link_feedback, resolve_feedback, trend_report, generate_health_report", "Print 'read N records from path' on stderr")
+        Component(refuse, "Refusal path", "declaration absent, unreadable, unparseable, key missing, or not absolute", "submit_feedback: 'destination could not be written', exit 1. emit_event and inline_work_guard: WARNING, nothing written. Readers and the query: exit 1, nothing on stdout")
+        Component(guards, "Commit-time guards", "commit_guardian _resolve_root.find_project_root", "Judge the tree being committed")
+        ComponentDb(wtTop, "Worktree toplevel", "rule (b)", "The tree that is deleted with the drive. Never used for logs")
+    }
+
+    Container_Boundary(durable, "operational_log_root (outlives every worktree)") {
+        ComponentDb(logs, "Operational log directory", "JSONL, one file per stream", "feedback.jsonl, agent_telemetry.jsonl, knowledge_emissions.jsonl, inline_work_guard.jsonl")
+    }
+
+    Rel(boot, mainDecl, "1. reads operational_log_root (older declaration: parent of knowledge_emission_sink)")
+    Rel(boot, build, "2. --log-root inherited root (unreadable: WARNING, then --no-log-root)")
+    Rel(build, wtCfg, "3. writes knowledge_sink.json")
+    Rel(submit, wtCfg, "rule (a): reads feedback_sink and feedback_categories.yaml")
+    Rel(emit, wtCfg, "rule (a): reads operational_telemetry_stream")
+    Rel(iwg, wtCfg, "rule (a): reads operational_log_root")
+    Rel(readers, wtCfg, "rule (a): reads feedback_sink, operational_telemetry_stream")
+    Rel(query, wtCfg, "rule (a): reads one key")
+    Rel(plan, query, "--print-location telemetry")
+    Rel(wtCfg, refuse, "key unusable: refuse, never fall back to the worktree")
+    Rel(guards, wtTop, "rule (b): resolve to the worktree toplevel")
+    Rel(submit, logs, "rule (c): appends feedback.jsonl")
+    Rel(emit, logs, "rule (c): appends agent_telemetry.jsonl")
+    Rel(iwg, logs, "rule (c): appends inline_work_guard.jsonl")
+    Rel(plan, logs, "rule (c): appends one line to the stream")
+    Rel(readers, logs, "rule (c): reads")
+```
+
+No L2 container doc covers the feedback collector yet, so this diagram is marked
+`root: true`. The decision behind it is [ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md).
+
+How to read it:
+
+- **Rule (a), configuration.** Every script finds the declaration and
+  `feedback_categories.yaml` in its own workspace's `.leafcutter/config/`
+  (`_find_config_root()`, and the `parents[N]` arithmetic in `emit_event.py` and
+  `inline_work_guard.py`). The file is found by rule (a). Only the value it holds is rule (c).
+- **Rule (b), guards.** Commit-time guards resolve to the worktree toplevel through
+  `_resolve_root.find_project_root()`. That tree is deleted with the drive, so the guard
+  resolver is never reused for logs.
+- **Rule (c), logs.** The paths that writers append to and readers read are the absolute values
+  recorded in the declaration, all directly under `operational_log_root`.
+- **`--no-log-root`.** When the bootstrap cannot read the main install's root, the build omits
+  `operational_log_root` and `feedback_sink` only. `submit_feedback.py`, `inline_work_guard.py`,
+  the readers of `feedback_sink`, and `--print-location root|feedback` then refuse.
+  `operational_telemetry_stream` and `knowledge_emission_sink` are still recorded under the
+  worktree's own `debugging/logs`, and `emit_event.py` and `plan-feature.js` keep writing there
+  (`build_log_root.declaration_values`). A bare `build.py --target-dir <worktree>` with neither
+  flag is different: it records the worktree's own `debugging/logs` for all four keys.
+
+Related: [Worktree Manager](worktree-manager.md) (the bootstrap), [Feedback Lifecycle](../feedback-lifecycle.md) (what happens to entries after they are written).
 
 ## Entry Points
 
