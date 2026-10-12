@@ -93,7 +93,8 @@ amended_by:
     directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/47_TICKET-20261012-TKT-600a-3-i.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

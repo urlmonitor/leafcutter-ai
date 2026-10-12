@@ -93,12 +93,7 @@ delivers_to:
 - agent: llm-expert
   contract: Agent template skeleton that ACD-2500c-1 (test design) and ACD-2500d-1/-2/-3 (file findings)
     fill with their procedures.
-expects_from:
-  ac_id: ACD-2500d-5-i
-  contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
-    [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
-    reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
-    POSIX. Non-zero exit and no report on error.'
+expects_from: null
 test_spec:
 - name: test_test_designer_registered_on_sonnet
   target_dir: unit_tests/agents/
@@ -127,6 +122,10 @@ test_spec:
 origin_agent: it-po
 created: '2026-09-25'
 amended_by:
+- reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (with ACD-2500d-5-i)"
+  date: '2026-10-12'
+  by: main-session
+  directed_by: user
 - reason: "reconcile with main: must_catch exists (PR 911, TQ-500f-2). The 'Opus sub-call deferred until must_catch exists' constraint now records that the condition is met, that this agent is must_catch's only writer, and that the Opus sub-call is an open user decision (Sonnet-only until decided). Criteria unchanged."
   date: '2026-09-27'
   by: it-po
@@ -134,7 +133,8 @@ amended_by:
 superseded_by: null
 covered_by:
 - ACD-2500d-5-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/27_TICKET-20261012-ACD-2500d-5.md
 change_target:
 - prompt
 - config
