@@ -1,10 +1,10 @@
 ---
 title: "ADR-069: One Durable Log Root for Every Workspace, Declared as a Build Input"
-description: "config/knowledge_sink.json will name one absolute operational_log_root under which every operational log (feedback, telemetry, knowledge emissions) sits, and a per-drive worktree will inherit that root from the main install's recorded declaration, because a worktree-relative log directory is destroyed with the worktree and the evidence a retrospective needs goes with it."
+description: "config/knowledge_sink.json names one absolute operational_log_root under which every operational log (feedback, telemetry, knowledge emissions) sits, and a per-drive worktree inherits that root from the main install's recorded declaration, because a worktree-relative log directory is destroyed with the worktree and the evidence a retrospective needs goes with it."
 type: "adr"
 status: "active"
 created: "2026-10-09"
-last_updated: "2026-10-09"
+last_updated: "2026-10-12"
 deciders:
   - adr-author
   - architect-review
@@ -26,7 +26,11 @@ related_docs:
 related_code:
   - scripts/build_phases_knowledge.py
   - scripts/build.py
+  - scripts/build_log_root.py
   - scripts/knowledge/sink_resolution.py
+  - templates/scripts/feedback/feedback_sink.py
+  - templates/skills/agent-telemetry/scripts/emit_event.py
+  - templates/hooks/inline_work_guard.py
   - scripts/ci/check_sink_parity.py
   - templates/scripts/setup_ticket_worktree.py
   - scripts/setup_ticket_worktree.py
@@ -39,10 +43,13 @@ related_code:
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed |
+| **Status** | Proposed — implemented on `epic/one-durable-log-root-for-every-workspace` 2026-10-12, not yet merged (see [Implementation record](#implementation-record-2026-10-12)) |
 | **Date** | 2026-10-09 |
 | **Author** | adr-author (dispatched for ticket INF-500d-4-iii after architect-review) |
 | **Supersedes** | None |
+
+The status stays `Proposed` until the epic is merged. Promotion to `Accepted` is the user's
+call ([write-adr §5](../../how-to/documentation/write-adr.md#5-status-values)).
 
 ---
 
@@ -62,8 +69,8 @@ every new worktree, so the worktree's declaration names `<worktree>/debugging/lo
 directory is deleted when the worktree is removed. The agent-telemetry log, the
 knowledge-emission log and the feedback log all live there, and all three are deleted with
 it. INF-400c-4-v records this as an open gap: a build run inside a worktree declares the
-worktree's own root. The feedback sink is not in the declaration at all yet. Its writers
-work out their own location, so it can disagree with the other two streams.
+worktree's own root. Before this ADR the feedback sink was not in the declaration at all.
+Its writers worked out their own location, so it could disagree with the other two streams.
 
 Not deciding has a known cost. The repo's pre-drive checklist was written after a drive in
 which 23 `submit-failed` events went unnoticed and no telemetry was captured, which left
@@ -239,10 +246,47 @@ extracted into `sink_resolution.py` or a new helper rather than added to those f
   are re-bootstrapped or rebuilt with `--log-root`.
 - A bare manual `build.py --target-dir <worktree>` without `--log-root` still declares the
   worktree's own root. The NOTE now names that root, so the operator can see it.
-- The pre-drive feedback-sink check in `CLAUDE.md` and the related probes will get their
-  location from the location query instead of a hard-coded `debugging/logs/` path.
+- The pre-drive feedback-sink check in `CLAUDE.md` and the probes in `building-epics` §1.0
+  and `epic-supervisor` get their location from the location query instead of a hard-coded
+  `debugging/logs/` path.
 - `docs/architecture/components/worktree-manager.md`, `knowledge-system.md` and
-  `feedback-collector.md` need to describe rule (c) and link back to this ADR.
+  `feedback-collector.md` describe rule (c) and link back to this ADR.
+
+---
+
+## Implementation record (2026-10-12)
+
+What was built on the epic branch, where it refines the decision above:
+
+- **The usable-stream rule.** A declared stream is usable only when the declaration also
+  records an absolute `operational_log_root` and the stream is an absolute path directly
+  under it. `sink_resolution.read_usable_stream` is the rule. `emit_event.py` stays
+  standard-library only and carries an inline copy in `_declared_stream`. Every stream
+  writer, every reader that defaults to the declaration, `--print-sink` and the `feedback`,
+  `telemetry` and `knowledge` keys of `--print-location` refuse a stream that fails it. This covers hand-written and legacy two-key
+  declarations as well as new ones.
+- **§4 option chosen: `--no-log-root` records an empty declaration.**
+  `build_log_root.declaration_values` returns `{}`, so no root, sink or stream is recorded,
+  not only the root. The build prints a NOTE that writers will refuse. Every writer then
+  refuses: nothing is written into the worktree. The bootstrap is not refused.
+- **Stale means the enduring root is gone.** `sink_resolution.enduring_root_exists` checks
+  the directory holding `operational_log_root`: its parent, or the project above it when
+  that parent is `debugging` (`enduring_holder`). A declared sink that differs from
+  `<project>/debugging/logs` is not stale, because an inherited root (§3) differs on
+  purpose. A log directory missing under a live root is a fresh install and gets its first
+  write. `feedback_sink.py`, `emit_event.py` and `inline_work_guard.py` apply the same rule,
+  and the last two keep an inline copy. These three writers and `plan-feature.js` create only
+  up to the log directory, and only under a live root. A vanished project is refused and
+  never recreated.
+- **Retry for older worktree builds.** When the worktree's own `build.py` predates
+  `--log-root` / `--no-log-root` and exits 2 with `unrecognized arguments`,
+  `setup_ticket_worktree._bootstrap` retries the build once without the flag. It prints a
+  WARNING that the worktree has no durable log root. This case is not reported as
+  `missing_config`.
+- **§6 query refusal extended.** `--print-location` also refuses a `telemetry`, `knowledge`
+  or `feedback` stream that fails the usable-stream rule. It does not test staleness.
+- **Gemini copies.** The `.gemini` deployments of `emit_event.py` and `inline_work_guard.py`
+  step out of the `gemini` directory, so they read the same install's declaration.
 
 ---
 

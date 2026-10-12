@@ -549,31 +549,43 @@ User, you cannot access this content (createPullRequest)".
 ### Feedback sink reachable
 
 **What to check:** Before the drive begins, check that the install declares a telemetry
-stream and a feedback sink, and that their directory is writable. Both live under one
+stream and a feedback sink, and that they can be written. Both live directly under one
 durable `operational_log_root` recorded at build time in
 `.leafcutter/config/knowledge_sink.json`, which outlives the worktree (ADR-069;
 [feedback-lifecycle.md](docs/architecture/feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
-The check is **read-only** and appends nothing:
+The check is **read-only**: it appends nothing and creates nothing.
 
 ```bash
 # Each prints one absolute path, or nothing on stdout plus an ERROR on stderr (exit 1)
 python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry
 python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location feedback
 
-# Then check the printed file's directory (exit 0 = writable)
-test -w <directory-of-the-printed-path>
+# Then check the nearest existing directory on the way to the printed file (exit 0 = writable)
+test -w <nearest-existing-directory>
 ```
+
+Find `<nearest-existing-directory>` the way the probe in `building-epics` §1.0 and
+`epic-supervisor` check 7 does. Start at the printed file's directory (the log directory). If
+it does not exist yet, step up one directory at a time, stopping at the enduring root: the log
+directory's parent, or the project above it when that parent is `debugging`. A missing log
+directory under a live enduring root is fine. It is a fresh install, and the first write
+creates it. The enduring root itself must exist. If it does not, the declaration is stale and
+the check fails.
 
 Treat empty output as a failure, even with exit 0. A deployed `sink_resolution.py` that is
 older than INF-500d-4-iii has no `--print-location` and prints nothing.
 
 **If the check fails:** Do not start the drive. The causes:
-- **No declaration, or one without these keys.** Writers refuse rather than write into the
-  worktree. `submit_feedback.py` prints `destination could not be written`, exits 1, and
-  agents record `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: rebuild.
-  A worktree bootstrap (`setup_ticket_worktree.py`) passes the main install's recorded
-  root as `--log-root`. A bare `build.py --target-dir <worktree>` without `--log-root`
-  declares the worktree's own, disposable root.
+- **No usable declaration.** The file is absent, a key is missing, or a stream is not
+  directly under an absolute `operational_log_root`. A `--no-log-root` build records an empty
+  declaration, so it lands here too. Writers refuse rather than write into the worktree.
+  `submit_feedback.py` prints `destination could not be written`, exits 1, and agents record
+  `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: rebuild. A worktree
+  bootstrap (`setup_ticket_worktree.py`) passes the main install's recorded root as
+  `--log-root`. A bare `build.py --target-dir <worktree>` without `--log-root` declares the
+  worktree's own, disposable root.
+- **The enduring root is gone** (the project was moved or deleted after the build). Writers
+  refuse as stale and create nothing. Fix: rebuild at the install's current location.
 - **A permissions issue on WSL2 NTFS mounts.** Remount, or use a native Linux path.
 
 The BO-100d probe ACs still describe an appending probe pinned to the relative path. Their

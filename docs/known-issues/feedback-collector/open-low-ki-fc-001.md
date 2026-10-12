@@ -165,6 +165,11 @@ git-based discovery was rejected. The commits are on the epic branch:
 | `81dbae3b2` | INF-500d-4-iv | `emit_event.py`, `inline_work_guard.py` and `plan-feature.js` write under the declared root. |
 | `abb24ba8f` | INF-500d-4-v | Readers default to the declared sink and print `read N records from <path>`. They name a differing populated pre-declaration sink once. |
 | `eede17c6c` | INF-500d-4-vi | Shipped prompts drop their `--jsonl` / `--log` overrides. The pre-drive probes are read-only. |
+| `6dc2df06c` | INF-500d-4-i, -v | One usable-stream rule: a stream counts only directly under an absolute `operational_log_root`. `--no-log-root` records an empty declaration, so writers refuse. `extract_epic_facts.py` reads the declared stream or exits 1. |
+| `2a222cb54` | INF-500d-4-iii | Stale means the enduring root holding `operational_log_root` is gone, so an inherited-root harvest is no longer refused as STALE. |
+| `59ed536f8` | INF-500d-4 review | A fresh install gets its first write. The Gemini copies resolve the install. `weekly_health.py` reads the declared stream. The bootstrap retries an older worktree build without the flag. Rewrites back the sink up first. |
+| `aaffaf70b` | INF-500d-4-iv | `inline_work_guard.py` creates its log directory under a live root and refuses a vanished project. |
+| `9ce8d8052` | INF-500d-4-vi | `knowledge-harvester.md` asks `--print-sink` for the sink instead of naming `debugging/logs`. |
 
 Both anchors in the root cause are gone. With no `--jsonl`, the sink is the declared one.
 Prompts no longer pass a working-directory-relative `--jsonl`. The symlink route described
@@ -182,13 +187,17 @@ entry once those land: move it to `resolved/` and update the index.
 
 **Still open after the epic:**
 
-- `scripts/retrospective/extract_epic_facts.py` keeps a working-directory-relative default
-  telemetry path. The retrospective prompt now passes the declared stream explicitly, but a
-  direct caller still gets the relative default.
-- `templates/agents/knowledge-harvester.md` still names `debugging/logs/knowledge_emissions.jsonl`
-  and `harvest_state.json` paths. That surface belongs to INF-400c-4 and was not changed.
 - The BO-100d probe ACs still pin the relative `debugging/logs/agent_telemetry.jsonl`. See
   [KI-BO-20261009](../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
   Their owner has to change them.
+- The harvester's record identity collides. `harvest_learnings._event_hash` keys a record on
+  `(timestamp, agent, component, destination, entry_kind)` and leaves out `text`. The
+  2026-10-12 knowledge snapshot (PR #1152, `reports/knowledge-snapshots/README.md` on `main`)
+  found 16 distinct records sharing 3 hashes. Once one of them is marked processed, the others
+  look processed too. INF-500d-4 does not change the hash.
+
+Fixed on the branch since the first amendment, and no longer open:
+`extract_epic_facts.py` reads the declared stream or exits 1 (`6dc2df06c`), and
+`knowledge-harvester.md` no longer names `debugging/logs` (`9ce8d8052`).
 
 ---

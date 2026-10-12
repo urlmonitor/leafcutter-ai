@@ -141,37 +141,43 @@ Every log in the operational log directory (`feedback.jsonl`, `agent_telemetry.j
 `operational_log_root`. The per-drive worktree is deleted after the drive; this directory
 outlives it. The build records the directory in `<output_root>/config/knowledge_sink.json`,
 together with `feedback_sink`, `operational_telemetry_stream` and `knowledge_emission_sink`.
-Every value is absolute, and every file sits directly under the root. Writers and readers
-read this declaration. Nothing works the location out at run time. Decision and alternatives:
-[ADR-069](./adrs/ADR-069-durable-log-root-for-workspaces.md). The acceptance criterion for this
-section is [INF-500d-4-vii](../acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-vii.yaml).
+Writers and readers read this declaration. Nothing works the location out at run time.
+Decision and alternatives: [ADR-069](./adrs/ADR-069-durable-log-root-for-workspaces.md). The
+acceptance criterion for this section is [INF-500d-4-vii](../acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-vii.yaml).
 
+- **A usable stream.** A stream counts only when the declaration also records an absolute
+  `operational_log_root` and the stream is an absolute path directly under it
+  (`sink_resolution.read_usable_stream`; `emit_event.py` keeps an inline copy).
 - **How the root is chosen.** `build.py --log-root <abs-dir>` records the given directory.
   A relative value is refused before anything is written. With no flag, an ordinary build
-  records `<project>/debugging/logs`. A worktree bootstrap (`setup_ticket_worktree.py`)
-  passes the root the main install already recorded in
-  `<main>/.leafcutter/config/knowledge_sink.json`. When it cannot read that root, it prints
-  a `WARNING` naming the path and builds with `--no-log-root`, so writers refuse instead
-  of writing into the worktree. `git rev-parse --git-common-dir` was considered and
-  rejected; the reasons are recorded in
-  [INF-400c-4](../acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml)
-  and ADR-069 "Alternatives".
-- **Asking for the location without filing anything.**
-  `python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location {root|feedback|telemetry|knowledge}`
-  prints one absolute path and creates nothing. When the declaration or key is missing,
-  it prints nothing on stdout, names the expected declaration on stderr, and exits 1.
-- **When the location cannot be determined.** `submit_feedback.py` without `--jsonl` refuses
-  with one stderr line, `destination could not be written`. The line names the declaration
-  and the condition (absent, unreadable, unparseable, missing key, not absolute, or stale),
-  and the script exits 1 with no id. It never falls back to the working directory or to the
-  script's own location. Rebuilding declares the location. `emit_event.py` and
-  `inline_work_guard.py` warn and write nothing. Readers (`aggregate.py` and the others)
-  exit 1.
-- **What readers say.** Each reader prints `read N records from <absolute path>` on stderr.
-  It also names, once, any populated pre-declaration `feedback.jsonl` that differs from the
-  sink. It reads, merges and moves none of them.
-- **Earlier reports are not carried over.** Reports written into per-drive worktrees before
-  this change stay where they were written. No sink was moved or merged. The one-off rescue
+  records `<project>/debugging/logs`. `--no-log-root` records an empty declaration (`{}`),
+  so every writer refuses. A worktree bootstrap (`setup_ticket_worktree.py`) passes the
+  root the main install recorded in `<main>/.leafcutter/config/knowledge_sink.json`, or
+  warns and passes `--no-log-root` when it cannot read one. If the worktree's older
+  `build.py` rejects the flag (exit 2, `unrecognized arguments`), the bootstrap retries once
+  without it and warns that the worktree has no durable log root. Git-based discovery was
+  rejected ([INF-400c-4](../acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml), ADR-069).
+- **Stale versus first write.** Stale means the enduring root is gone: the directory holding
+  `operational_log_root` (its parent, or the project above `debugging`;
+  `sink_resolution.enduring_root_exists`). A missing log directory under a live root is a
+  fresh install and gets its first write. `submit_feedback.py`, `emit_event.py` and
+  `inline_work_guard.py` create only up to the log directory, and only under a live root.
+- **Asking without filing.** `python3 .leafcutter/scripts/knowledge/sink_resolution.py
+  --print-location {root|feedback|telemetry|knowledge}` prints one absolute path and creates
+  nothing. A missing declaration or key, or an unusable stream: no stdout, an ERROR, exit 1.
+- **When the location cannot be determined.** `submit_feedback.py` without `--jsonl` prints
+  one `destination could not be written` line naming the declaration and the condition
+  (absent, unreadable, unparseable, missing key, not absolute, not under the root, or stale),
+  exits 1 with no id, and never falls back to the working directory or the script's location.
+  `emit_event.py` and `inline_work_guard.py` warn and write nothing; their `.gemini` copies
+  step out of the `gemini` directory and read the same install's declaration.
+- **Readers.** The feedback readers, `generate_health_report.py`, `weekly_health.py` and
+  `extract_epic_facts.py` print `read N records from <absolute path>` on stderr, or exit 1
+  without a usable declaration. An explicit path is used as given. A feedback reader names,
+  once, a populated pre-declaration `feedback.jsonl` that differs from the sink, and leaves
+  it alone. A rewrite (`link_feedback.py`, `resolve_feedback.py`) first copies the sink to
+  `<sink>.bak-<UTC timestamp>`, removed on success and named on failure.
+- **Earlier reports are not carried over.** No sink was moved or merged. The one-off rescue
   is [`reports/feedback-snapshots/`](../../reports/feedback-snapshots/README.md).
 - **Three rules, kept separate.** (a) Configuration resolves to the workspace's own
   `.leafcutter/config` (INF-100c-1-i). (b) Commit guards resolve to the worktree being

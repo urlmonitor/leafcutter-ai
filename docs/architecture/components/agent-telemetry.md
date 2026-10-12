@@ -34,21 +34,38 @@ directory that outlives per-drive worktrees
 ([ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md); full description in
 [Feedback Lifecycle — Where every log is kept](../feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
 
+- **A usable stream.** The stream counts only when the declaration also records an absolute
+  `operational_log_root` and the stream sits directly under it
+  (`sink_resolution.read_usable_stream`). A build with `--no-log-root` records an empty
+  declaration, so there is no stream and every writer refuses.
+- **Stale versus first write.** Stale means the enduring root is gone: the directory holding
+  `operational_log_root` (its parent, or the project above `debugging`). A log directory
+  missing under a live root is a fresh install, and the first write creates it.
 - **Event writer.** The supervisor-event emitter
   `.claude/skills/agent-telemetry/scripts/emit_event.py` writes to the stream named by
   its own deployed workspace's declaration when `--log` is omitted. It finds that
-  declaration from its own resolved location, never from the caller's directory. If the
-  declaration is unusable, it warns on stderr naming it, writes nothing, and exits 0. Each
-  record is one `os.write` on an `O_APPEND` descriptor. Shipped prompts no longer pass
-  `--log` (INF-500d-4-vi).
-- **Other writers.** `inline_work_guard.py` appends its audit record to
-  `<operational_log_root>/inline_work_guard.jsonl`. `plan-feature.js` gets the stream from
-  `sink_resolution.py --print-location telemetry` and does not compose a path itself.
+  declaration from its own resolved location, never from the caller's directory; the
+  `.gemini` copy steps out of the `gemini` directory and reads the same install's
+  declaration. It stays standard-library only, so `_declared_stream` carries an inline copy
+  of the usable-stream and staleness rules. If the declaration is unusable or stale, it
+  warns on stderr naming it, writes and creates nothing, and exits 0. Otherwise it creates
+  only up to the log directory and appends the record as one `os.write` on an `O_APPEND`
+  descriptor. Shipped prompts no longer pass `--log` (INF-500d-4-vi).
+- **Other writers.** `inline_work_guard.py` (and its `.gemini` copy) appends its audit record
+  to `<operational_log_root>/inline_work_guard.jsonl`. It applies the same staleness rule
+  inline and creates only up to the log directory under a live root; otherwise it warns and
+  writes nothing, and the block/warn exit code is unchanged. `plan-feature.js` gets the
+  stream from `sink_resolution.py --print-location telemetry`, creates the log directory
+  only when the enduring root is live, and does not compose a path itself.
 - **Readers.** `generate_health_report.py` defaults `--telemetry` and `--feedback` to the
-  declared values and prints `read N records from <path>` per stream.
+  declared values. `weekly_health.py` defaults `--telemetry` the same way, through
+  `generate_health_report.resolve_telemetry_stream`. `extract_epic_facts.py` defaults
+  `--telemetry` to the declared stream through `sink_resolution.read_usable_stream`. Each
+  prints `read N records from <path>` per stream, and exits 1 when no usable declaration
+  exists and no explicit path was given. An explicit path is used as given.
 - **Location query.**
   `python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry`
-  prints the stream without writing.
+  prints the stream without writing, or refuses with exit 1 when it is not usable.
 
 ## Responsibilities
 

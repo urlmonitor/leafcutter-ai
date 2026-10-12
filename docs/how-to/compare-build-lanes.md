@@ -19,7 +19,7 @@ related_docs:
 
 The build-lane comparison report answers the question: "Is the fast lane actually
 faster and cheaper than the heavy pipeline, and by how much?" It reads the agent
-telemetry sink (`debugging/logs/agent_telemetry.jsonl`) and groups every recorded
+telemetry sink whose path you pass it and groups every recorded
 invocation by the `lane` field each phase agent wrote at emission time. For each
 lane it computes invocation count, total and average duration, and total and
 average token consumption — giving you a side-by-side cost and time comparison
@@ -37,16 +37,20 @@ This guide covers three tasks:
 
 Before you begin, confirm the following:
 
-- **The telemetry sink exists and has data.** Agent phase completions append
-  records to `debugging/logs/agent_telemetry.jsonl`. If no tickets have been
-  driven yet, the sink will be absent or empty (see [Edge cases](#3-edge-cases-and-what-they-mean)).
+- **The telemetry sink exists and has data.** `emit_agent_telemetry` appends each
+  record to the `sink_path` its caller passes. If no tickets have been driven yet,
+  the sink will be absent or empty (see [Edge cases](#3-edge-cases-and-what-they-mean)).
 
 - **Python 3.9+ is available.** The report function is in the standard library
   only — no third-party packages are required for the comparison report itself.
 
-- **You are running from the repo root.** The default sink path
-  (`debugging/logs/agent_telemetry.jsonl`) is relative to the repo root. Pass
-  an explicit absolute path when calling from a different working directory.
+- **You know which file to pass.** `build_lane_comparison_report` has no default
+  path. The examples below use the relative `debugging/logs/agent_telemetry.jsonl`,
+  which resolves against your working directory. The install's own telemetry stream
+  is declared at build time and lives under the durable `operational_log_root`
+  ([ADR-069](../architecture/adrs/ADR-069-durable-log-root-for-workspaces.md)).
+  `python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry`
+  prints its absolute path without creating anything.
 
 ---
 
