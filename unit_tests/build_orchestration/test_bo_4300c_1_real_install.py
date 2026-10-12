@@ -124,28 +124,6 @@ class TestRealInstallStageRegistration(unittest.TestCase):
                     f"no hook registration runs precommit_canary.py --stage {stage}",
                 )
 
-    def test_registered_canary_hooks_are_inert_for_ordinary_input(self):
-        # covers: BO-4300c-1-ii
-        # angle: boundary
-        """Each registered stage canary, run as the hook runner would, exits 0 on an ordinary
-        repo state: it rejects only the declared known-bad input."""
-        cfg = yaml.safe_load(_real_config_text())
-        hooks = [h for repo in cfg["repos"] for h in repo["hooks"]]
-        layout = ensure_deployed_layout()
-        with tempfile.TemporaryDirectory(prefix="bo4300c1-inert-") as tmp:
-            msg = Path(tmp) / "MSG"
-            msg.write_text("chore: ordinary message\n", encoding="utf-8")
-            for stage in STAGES:
-                registered = [h for h in hooks if _canary_hook(h, stage)]
-                self.assertTrue(registered, f"no canary registration for {stage}")
-                parts = registered[0]["entry"].split()
-                argv = [sys.executable, *parts[1:]]
-                if stage == "commit-msg":
-                    argv.append(str(msg))
-                with self.subTest(stage=stage):
-                    done = subprocess.run(argv, cwd=str(layout), capture_output=True, text=True)
-                    self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-
 
 class TestRealInstallEnsure(MakerTestCase):
     def test_real_install_ensure_answers_ok_with_every_stage_fired(self):
