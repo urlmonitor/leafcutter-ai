@@ -150,10 +150,10 @@ ARCHITECTURE: Reads the ``output_mappings`` section of the
     ``main`` into ``_manifest_blocker`` / ``_default_floor_dirs``. All of it
     is output-drift-specific, so it was NOT put in the shared
     ``_drift_exemptions`` (also imported by check_build_drift.py) or
-    ``_resolve_root``. A new sibling was rejected: minimal-deploy test
-    fixtures ship only the hook plus ``_resolve_root``/``_drift_exemptions``,
-    so it would raise ModuleNotFoundError there, and it would need a
-    deploy-manifest entry. Every stderr line and exit code is unchanged.
+    ``_resolve_root``. The file census (BP-100k-3-vii: os.walk pruning of
+    nested worktrees and git-ignored paths) is the one exception: it lives in
+    the private ``_drift_scan_population`` sibling, imported with an rglob
+    fallback for minimal-deploy fixtures. Stderr lines and exit codes unchanged.
 """
 
 from __future__ import annotations
@@ -206,6 +206,15 @@ except ImportError:
 
     def _package_root_from_manifest(_manifest: Path, _root: Path) -> "Path | None":  # type: ignore[misc]
         return None
+
+try:
+    from _drift_scan_population import collect_output_files as _collect_output_files
+except ImportError:
+    # Sibling absent (minimal-deploy fixture): unfiltered census, no pruning.
+    def _collect_output_files(output_dirs: list, _repo_root: Path, _mappings: dict) -> list:  # type: ignore[misc]
+        """Fallback census: every real file under the dirs, minus ``__pycache__``."""
+        seen = {f for d in output_dirs if d.is_dir() for f in d.rglob("*")}
+        return sorted(f for f in seen if f.is_file() and "__pycache__" not in f.parts)
 
 _HOOK_FILE = Path(__file__).resolve()
 _GATE_NAME = "check-output-drift"
@@ -271,31 +280,6 @@ def _load_manifest(manifest_path: Path) -> dict | None:
     except (json.JSONDecodeError, OSError) as exc:
         _err(f"check-output-drift: WARNING — cannot read manifest {manifest_path}: {exc}")
         return None
-
-
-def _collect_output_files(output_dirs: list[Path]) -> list[Path]:
-    """Return all files under the managed output directories (sorted).
-
-    ``__pycache__`` is excluded — a compiled Python bytecode cache is not
-    source content build.py deploys; it is generated (and re-generated
-    non-reproducibly, differing by Python version and mtime) whenever a
-    deployed skill script is imported. Comparing it would be an inherently
-    unstable target, permanently reporting drift the first time any deployed
-    script is executed once. Mirrors the same exclusion
-    ``build_phases._skill_deploy_files()`` applies on the write side, so
-    neither side ever tries to compare it.
-
-    Args:
-        output_dirs: List of absolute paths to output directories to scan.
-
-    Returns:
-        Sorted list of absolute Path objects for every real file found.
-    """
-    seen: set[Path] = set()
-    for d in output_dirs:
-        if d.is_dir():
-            seen.update(d.rglob("*"))
-    return sorted(f for f in seen if f.is_file() and "__pycache__" not in f.parts)
 
 
 def _derive_scan_dirs(
@@ -371,7 +355,7 @@ def _scan_unrecorded(
 ) -> tuple[int, int]:
     """Pass 1: name real on-disk files ABSENT from the manifest (gap/exempt).
 
-    This is the ONLY thing the rglob()-derived ``output_files`` still drives:
+    This is the ONLY thing the walk-derived ``output_files`` still drives:
     naming a real, deployed file the manifest never recorded. Each such file
     prints ``UNCOMPARABLE: EXEMPT`` (valid registry ground) or
     ``UNCOMPARABLE: GAP``.
@@ -416,7 +400,7 @@ def _scan_unrecorded(
 def _hash_recorded(out_key: str, out_path: Path) -> tuple[str, str | None]:
     """Resolve one recorded key DIRECTLY against disk and hash it if possible.
 
-    Deliberately independent of ``output_files``/rglob(): a manifest key is
+    Deliberately independent of ``output_files``/the walk: a manifest key is
     resolved by stat-ing ``repo_root/key`` itself, so a key that is present
     but unreadable, or present as something other than a regular file, cannot
     silently avoid every bucket.
@@ -825,7 +809,7 @@ def check_output_drift(
     if output_mappings is None:
         return early_exit
 
-    output_files = _collect_output_files(output_dirs)
+    output_files = _collect_output_files(output_dirs, repo_root, output_mappings)
     exemptions = _validate_exemption_registry(_load_exemption_registry(_GATE_NAME))
     package_root = _package_root_from_manifest(manifest_path, repo_root)
     result = _scan_output_files(output_files, output_mappings, repo_root, exemptions, package_root)
@@ -987,7 +971,7 @@ if __name__ == "__main__":
 #   B-2: ``_scan_output_files`` was rewritten around a reconciliation
 #   invariant — every output_mappings key is resolved DIRECTLY against disk
 #   (exists / is_file / hash) rather than via membership in whatever
-#   rglob()-driven ``output_files`` happened to enumerate, so a key that is
+#   walk-driven ``output_files`` happened to enumerate, so a key that is
 #   unreadable (chmod 000) or replaced by a directory/FIFO can no longer
 #   land in NEITHER bucket (previously: not verified, not a gap, not
 #   missing since ``.exists()`` is True for a directory too). A new

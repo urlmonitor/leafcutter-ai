@@ -590,6 +590,30 @@
           ],
           "description": "Local git checkout that resolves source text for graph hits; null for none.",
           "title": "Repository Root"
+        },
+        "retention_max_generations": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Most generations to retain; null means undeclared, and reclaiming is refused until both retention settings are declared.",
+          "title": "Retention Max Generations"
+        },
+        "retention_min_age_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Seconds a generation must have been retired before it may be reclaimed; null means undeclared, and 0 is a declared value.",
+          "title": "Retention Min Age Seconds"
         }
       },
       "required": [
@@ -606,7 +630,9 @@
         "embedding_token_env",
         "embedding_model",
         "embedding_dimensions",
-        "query_timeout"
+        "query_timeout",
+        "retention_max_generations",
+        "retention_min_age_seconds"
       ],
       "title": "KnowledgeBindingConfig",
       "type": "object"

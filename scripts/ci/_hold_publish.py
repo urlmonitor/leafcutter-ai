@@ -34,6 +34,7 @@ import os
 import re
 from collections.abc import Callable, Mapping
 
+from scripts.ci._app_token import KIND_NO_INSTALLATION, KIND_NO_TOKEN, KIND_WIDER_GRANT, AppTokenError, mint_installation_token
 from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy
 from scripts.ci._hold_reads import timeout_seconds
 
@@ -71,7 +72,7 @@ def has_prior_verdict(client: GitHubClient, repo: str, head_sha: str, app_id: st
 
 
 # --------------------------------------------------------------------------- stages
-def _refused(exc: GitHubError, what: str) -> PublishError:
+def _refused(exc: AppTokenError, what: str) -> PublishError:
     """The failure line for a refused credential step: 404 is an uninstalled App, 401 or 403 a rejected credential."""
     if exc.status == 404:
         return PublishError(f"The hold App is not installed on this repository; no check run was published ({what}).")
@@ -103,26 +104,19 @@ def _require_credentials(environ: Mapping[str, str], head_sha: str | None, jwt: 
 
 
 def _mint_token(api_url: str, repo: str, jwt: str) -> str:
-    """Exchange the App JWT for an installation token (lookup, then ``access_tokens``)."""
-    step = "look up the installation"
+    """Exchange the App JWT for an installation token (lookup, then ``access_tokens``), for the check-run write on this repository only."""
     try:
-        app = GitHubClient(api_url, jwt, timeout=timeout_seconds(), policy=WritePolicy(token_kind="app_jwt"))
-        installation = app.get(f"/repos/{repo}/installation")
-        installation_id = installation.get("id") if isinstance(installation, dict) else None
-        if not isinstance(installation_id, int) or isinstance(installation_id, bool):
-            message = "the installation lookup returned no installation id"
-            raise PublishError(message)
-        step = "obtain an installation token"
-        # least privilege: the check-run write permission, on this repository only
-        scope = {"permissions": {"checks": "write"}, "repositories": [repo.split("/", 1)[1]]}
-        granted = app.post(f"/app/installations/{installation_id}/access_tokens", scope)
-    except GitHubError as exc:
-        raise _refused(exc, step) from None
-    token = granted.get("token") if isinstance(granted, dict) else None
-    if not isinstance(token, str) or not token:
-        message = "The hold App's token exchange returned no token; no check run was published."
-        raise PublishError(message)
-    return token
+        return mint_installation_token(api_url, repo, jwt, "checks", timeout=timeout_seconds())  # least privilege
+    except AppTokenError as exc:
+        if exc.kind == KIND_NO_INSTALLATION:
+            raise PublishError(str(exc)) from None
+        if exc.kind == KIND_WIDER_GRANT:
+            message = "The hold App's token was granted more than was asked; it was discarded and no check run was published."
+            raise PublishError(message) from None
+        if exc.kind == KIND_NO_TOKEN:
+            message = "The hold App's token exchange returned no token; no check run was published."
+            raise PublishError(message) from None
+        raise _refused(exc, exc.step) from None
 
 
 def _create_check(api_url: str, token: str, repo: str, head_sha: str) -> tuple[GitHubClient, int]:

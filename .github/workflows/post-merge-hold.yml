@@ -86,7 +86,11 @@ jobs:
             header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
             payload=$(printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now-60))" "$((now+540))" "$HOLD_APP_ID" | b64)
             sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$key") -binary 2>/dev/null | b64)
-            if [ -n "$header" ] && [ -n "$payload" ] && [ -n "$sig" ]; then jwt="$header.$payload.$sig"; fi
+            if [ -n "$header" ] && [ -n "$payload" ] && [ -n "$sig" ]; then
+              jwt="$header.$payload.$sig"
+              # Register the JWT with the runner's masking command at once (printf is a builtin: not an argument of any process).
+              printf '::add-mask::%s\n' "$jwt"
+            fi
           fi
           unset key
           printf '%s\n' "$jwt" | HOLD_APP_KEY_SET="$key_set" python3 scripts/ci/post_merge_hold.py --publish
