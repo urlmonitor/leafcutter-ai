@@ -73,9 +73,12 @@ Run both data-gathering scripts and capture their JSON output:
 
 ```bash
 python scripts/feedback/aggregate.py \
-  --jsonl debugging/logs/feedback.jsonl \
   --format json
 ```
+
+`aggregate.py` reads the install's declared feedback sink and states the file it read and
+the record count on stderr (`read N records from <path>`). Rely on that statement; do not
+open a log path of your own. Quote the stated count in the retrospective.
 
 If the above returns `"total": 0` (no entries), note:
 
@@ -88,8 +91,13 @@ Then fall back to the ticket-comment scanning approach in Step 2b (below).
 ```bash
 python leafcutter/scripts/retrospective/extract_epic_facts.py \
   <epic_folder_path> \
-  --telemetry debugging/logs/agent_telemetry.jsonl
+  --telemetry "$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
 ```
+
+`extract_epic_facts.py` has its own working-directory-relative default for the telemetry
+file, so the declared stream is always passed explicitly through the location query. If
+the query prints nothing (the install declares no stream), say so in the retrospective
+rather than reporting zero telemetry events.
 
 The output JSON provides:
 - `ticket_count`, `completed_ticket_count`
@@ -111,7 +119,7 @@ When `aggregate.py` returned empty results, read every ticket file in the epic f
 ### 2c — Subagent quality data (supervisor-emitted feedback)
 
 ```bash
-python scripts/feedback/aggregate.py   --jsonl debugging/logs/feedback.jsonl   --category subagent-quality   --format json
+python scripts/feedback/aggregate.py   --category subagent-quality   --format json
 ```
 
 Capture output as `subagent_quality_data`. If the script exits non-zero or returns
@@ -188,7 +196,7 @@ Commits: <git_commit_count>
 <Alternatively, invoke generate_health_report.py for the same output:>
 
 ```bash
-python leafcutter/scripts/agent-health/generate_health_report.py   --feedback debugging/logs/feedback.jsonl
+python leafcutter/scripts/agent-health/generate_health_report.py
 ```
 
 <If data is unavailable: show the graceful message from Step 2c.>

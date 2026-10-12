@@ -529,7 +529,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.1 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_mechanical-retry.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." 2>/tmp/feedback_err_mechanical-retry.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If stdout is empty,
    use `(submit-failed)` as the fallback. Include `feedback_id:` in the structured
@@ -541,7 +541,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.2 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_cross-agent-rework.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." 2>/tmp/feedback_err_cross-agent-rework.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -553,7 +553,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.3 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_brainstorm-escalation.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." 2>/tmp/feedback_err_brainstorm-escalation.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -563,7 +563,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.4 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_halt.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." 2>/tmp/feedback_err_halt.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
    Include `feedback_id:` in the blocked payload returned to the caller.

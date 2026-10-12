@@ -35,17 +35,19 @@ The six-step loop from the spec (§6.1). This is the outer driver: it walks an e
 Before entering the main epic loop (`/build-feature` step 1), verify that the feedback
 sink is reachable and writable. This prevents silent telemetry loss for the entire drive.
 
-**Check (POSIX):**
+**Check (POSIX):** read-only. It asks the install where the declared telemetry
+stream is and checks that the location is writable. It creates nothing, and it never
+falls back to a path of its own: if the install declares no location, the probe reports that.
 
 ```bash
-SINK_PATH="debugging/logs/agent_telemetry.jsonl"
-mkdir -p "$(dirname "$SINK_PATH")"
-if echo '{"probe":"pre-drive-reachability-check"}' >> "$SINK_PATH" 2>/dev/null; then
+# pre-drive-reachability-check
+SINK_PATH="$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
+if [ -n "$SINK_PATH" ] && [ -w "$(dirname "$SINK_PATH")" ]; then
   echo "Feedback sink OK: $SINK_PATH"
   SINK_OK=1
 else
-  echo "## Warning: Feedback sink unreachable"
-  echo "Path: $SINK_PATH"
+  echo "## Warning: Feedback sink unreachable or undeclared"
+  echo "Path: ${SINK_PATH:-(no declared telemetry stream)}"
   echo "Telemetry events will not be recorded for this drive."
   SINK_OK=0
 fi
@@ -58,7 +60,7 @@ If the write fails (`SINK_OK=0`):
 1. Emit the structured warning block to the user:
    ```
    ## Warning: Feedback sink unreachable
-   Path: debugging/logs/agent_telemetry.jsonl
+   Path: <the declared telemetry stream printed by the probe, or "(no declared telemetry stream)">
    All telemetry for this drive will be lost (submit-failed events will not be recorded).
    Fix the sink path or confirm before proceeding.
    ```
@@ -172,8 +174,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
     ```bash
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "build-feature" --event supervisor_dispatch \
-      --ticket "<ticket_path>" \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --ticket "<ticket_path>" || true
     ```
 
 5.  WAIT for the entire batch to complete (barrier).
@@ -191,8 +192,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
           --agent "build-feature" --event epic_halted \
-          --outcome blocked \
-          --log debugging/logs/agent_telemetry.jsonl || true
+          --outcome blocked || true
         ```
       ELSE-IF any child returned "blocked" but the blocker is local
               to that ticket (other tickets remain independent):
@@ -205,8 +205,7 @@ or the config is malformed. This probe checks all four conditions simultaneously
         ```bash
         python .claude/skills/agent-telemetry/scripts/emit_event.py \
           --agent "build-feature" --event epic_complete \
-          --outcome ok \
-          --log debugging/logs/agent_telemetry.jsonl || true
+          --outcome ok || true
         ```
       ELSE:
         → GOTO 3.
@@ -526,8 +525,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     ```bash
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "ticket-supervisor" --event agent_start \
-      --ticket "<ticket_path>" --phase "<next_agent>" \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --ticket "<ticket_path>" --phase "<next_agent>" || true
     ```
 
     # post-coder contract-shrinking check (supervisor-side warn, not block)
@@ -562,8 +560,7 @@ and halt the ticket run. Do NOT spawn any phase agent if the status transition f
     python .claude/skills/agent-telemetry/scripts/emit_event.py \
       --agent "ticket-supervisor" --event agent_signoff \
       --ticket "<ticket_path>" --phase "<next_agent>" \
-      --outcome ok \
-      --log debugging/logs/agent_telemetry.jsonl || true
+      --outcome ok || true
     ```
 
 5.  After routing, GOTO 1 unless routing produced a terminal outcome
@@ -733,8 +730,7 @@ Emit `agent_retry` before the respawn (non-blocking):
 python .claude/skills/agent-telemetry/scripts/emit_event.py \
   --agent "ticket-supervisor" --event agent_retry \
   --ticket "<ticket_path>" --phase "<failing_agent>" \
-  --retry-count 1 \
-  --log debugging/logs/agent_telemetry.jsonl || true
+  --retry-count 1 || true
 ```
 
 ### §3.2 Case 2 — Cross-agent rework
@@ -748,8 +744,7 @@ Emit `agent_respawn` before the sibling respawn (non-blocking):
 python .claude/skills/agent-telemetry/scripts/emit_event.py \
   --agent "ticket-supervisor" --event agent_respawn \
   --ticket "<ticket_path>" --phase "<named_sibling>" \
-  --retry-count 1 \
-  --log debugging/logs/agent_telemetry.jsonl || true
+  --retry-count 1 || true
 ```
 
 ### §3.3 Case 3 — Open-ended design choice
@@ -770,8 +765,7 @@ python .claude/skills/agent-telemetry/scripts/emit_event.py \
    python .claude/skills/agent-telemetry/scripts/emit_event.py \
      --agent "ticket-supervisor" --event agent_failure \
      --ticket "<ticket_path>" --phase "<failing_agent>" \
-     --outcome failed \
-     --log debugging/logs/agent_telemetry.jsonl || true
+     --outcome failed || true
    ```
 3. Build the user-escalation payload (§6).
 4. Return `{status: "blocked", payload: ...}` to `epic-supervisor`.

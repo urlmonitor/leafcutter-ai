@@ -239,11 +239,14 @@ On every invocation, before reading any ticket or spawning any
    any `ticket-supervisor`, verify that the telemetry sink is writable.
    Execute the check defined in `building-epics` §1.0:
 
+   The probe is read-only: it asks the install for the declared telemetry
+   stream and checks the location is writable. It creates nothing and never
+   falls back to a path of its own — an undeclared stream is reported.
+
    ```bash
-   SINK_PATH="debugging/logs/agent_telemetry.jsonl"
-   mkdir -p "$(dirname "$SINK_PATH")"
-   echo '{"probe":"pre-drive-reachability-check"}' >> "$SINK_PATH" 2>/dev/null \
-     && SINK_OK=1 || SINK_OK=0
+   # pre-drive-reachability-check
+   SINK_PATH="$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
+   if [ -n "$SINK_PATH" ] && [ -w "$(dirname "$SINK_PATH")" ]; then SINK_OK=1; else SINK_OK=0; fi
    ```
 
    - **If `SINK_OK=1`** (write succeeded): proceed silently.
@@ -355,7 +358,7 @@ for (phase, summary_prefix), affected in groups.items():
         # Emit aggregating subagent-quality entry (non-blocking)
         count = len(affected)
         # Shell equivalent:
-        # FB_ID=$(python scripts/feedback/submit_feedback.py         #   --ticket "<any_affected_ticket_path>" --phase epic-supervisor         #   --category subagent-quality         #   --tags "agent-<phase>,cross-ticket-pattern,n-<count>"         #   --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets."         #   --jsonl debugging/logs/feedback.jsonl 2>/dev/null) || FB_ID="(submit-failed)"
+        # FB_ID=$(python scripts/feedback/submit_feedback.py         #   --ticket "<any_affected_ticket_path>" --phase epic-supervisor         #   --category subagent-quality         #   --tags "agent-<phase>,cross-ticket-pattern,n-<count>"         #   --note "Cross-ticket pattern: <phase> failed with '<summary_prefix>' on <count> tickets." 2>/dev/null) || FB_ID="(submit-failed)"
 ```
 
 **Non-blocking contract:** A failed `submit_feedback.py` call during pattern detection
