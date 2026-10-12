@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 77** (2 blocker, 35 high, 40 low) · **Resolved: 17**
+**Open: 78** (2 blocker, 35 high, 41 low) · **Resolved: 17**
 
 ## Open
 
@@ -157,6 +157,7 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20260925-frontmatter-guard-truncates-at-in-value-dashes — ticket_frontmatter_guard (and check-doc-frontmatter) end the frontmatter at the first triple dash anywhere, including inside a value | [open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md](commit-guardian/open-low-ki-cg-20260925-frontmatter-guard-truncates-at-in-value-dashes.md) |
 | `low` | KI-CG-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts — `check-output-drift` now lets a registry entry excuse content drift on a RECORDED output, contradicting the registry's own charter, and counts that output in both `verified` and `uncomparable`; the counting fix needs an ADR | [open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md](commit-guardian/open-low-ki-cg-20261008-drift-exempt-recorded-key-widens-registry-and-double-counts.md) |
 | `low` | KI-CG-20261008-build-drift-doc-claims-staged-file-trigger — `docs/build-drift-hook.md` says both drift gates fire on a staged file, but both are `always_run` and never read the staged list | [open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md](commit-guardian/open-low-ki-cg-20261008-build-drift-doc-claims-staged-file-trigger.md) |
+| `low` | KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — `check-folder-density` (GE-120h-3) caps every folder at 15 files with no exemption for `docs/acceptance-criteria/`, while the AC store keeps each L0 tree flat in one folder (BO-4300 holds 68, BO-4400 49), so every BA-stage commit of a normal-sized tree is refused; graded medium | [open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md](commit-guardian/open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md) |
 
 ## Resolved
 
