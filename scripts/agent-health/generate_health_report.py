@@ -18,13 +18,15 @@ Usage:
         [--agent AGENT_ID] [--format markdown|json]
 
     Defaults:
-        --telemetry  debugging/logs/agent_telemetry.jsonl
-        --feedback   debugging/logs/feedback.jsonl
+        --telemetry  operational_telemetry_stream from <output_root>/config/knowledge_sink.json
+        --feedback   feedback_sink from <output_root>/config/knowledge_sink.json
         --format     markdown
 
 Exit codes:
-    0: success (table printed to stdout)
-    1: unrecoverable error (e.g. malformed JSONL, filesystem error)
+    0: success (table printed to stdout; one stderr line per stream states the
+       absolute file read and its record count)
+    1: unrecoverable error (e.g. no usable declaration and no explicit path,
+       shared reader not deployed)
 """
 
 from __future__ import annotations
@@ -40,8 +42,8 @@ from typing import Any
 # Constants
 # ---------------------------------------------------------------------------
 
-_DEFAULT_TELEMETRY = Path("debugging") / "logs" / "agent_telemetry.jsonl"
-_DEFAULT_FEEDBACK = Path("debugging") / "logs" / "feedback.jsonl"
+# The script deploys to <output_root>/scripts/agent-health/; the declaration sits at <output_root>/config/.
+_OUTPUT_ROOT = Path(__file__).resolve().parents[2]
 
 # Archetype tags that appear in subagent-quality entries (canonical set)
 ARCHETYPE_TAGS = {"mechanical-retry", "cross-agent-rework", "brainstorm-escalation", "halt"}
@@ -51,8 +53,21 @@ _AGENT_TAG_PREFIX = "agent-"
 
 
 # ---------------------------------------------------------------------------
-# JSONL loading helpers
+# Shared reader and JSONL loading helpers
 # ---------------------------------------------------------------------------
+
+
+def _load_feedback_reader():
+    """Import the install's shared ``scripts/feedback/feedback_reader.py``, or print why not and return None."""
+    reader_dir = _OUTPUT_ROOT / "scripts" / "feedback"
+    if str(reader_dir) not in sys.path:
+        sys.path.insert(0, str(reader_dir))
+    try:
+        import feedback_reader  # type: ignore[import]
+    except ImportError as exc:
+        print(f"ERROR: the shared feedback reader is not deployed under {reader_dir}: {exc}", file=sys.stderr)
+        return None
+    return feedback_reader
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -327,12 +342,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--telemetry",
         default=None,
-        help=f"Path to agent_telemetry.jsonl. Default: {_DEFAULT_TELEMETRY}",
+        help="Path to agent_telemetry.jsonl. Default: operational_telemetry_stream from the build-time declaration.",
     )
     parser.add_argument(
         "--feedback",
         default=None,
-        help=f"Path to feedback.jsonl. Default: {_DEFAULT_FEEDBACK}",
+        help="Path to feedback.jsonl. Default: feedback_sink from the build-time declaration.",
     )
     parser.add_argument(
         "--agent",
@@ -364,11 +379,20 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _build_parser().parse_args(argv)
 
-    telemetry_path = Path(args.telemetry) if args.telemetry else _DEFAULT_TELEMETRY
-    feedback_path = Path(args.feedback) if args.feedback else _DEFAULT_FEEDBACK
+    reader = _load_feedback_reader()
+    if reader is None:
+        return 1
+    paths = reader.resolve(
+        _OUTPUT_ROOT, "generate_health_report",
+        operational_telemetry_stream=args.telemetry, feedback_sink=args.feedback,
+    )
+    if paths is None:
+        return 1
 
-    tele_entries = _load_jsonl(telemetry_path)
-    fb_entries = _load_jsonl(feedback_path)
+    tele_entries = _load_jsonl(paths["operational_telemetry_stream"])
+    fb_entries = _load_jsonl(paths["feedback_sink"])
+    reader.report("generate_health_report", paths["operational_telemetry_stream"], len(tele_entries), None)
+    reader.report("generate_health_report", paths["feedback_sink"], len(fb_entries), None if args.feedback else _OUTPUT_ROOT)
 
     tele_table = _build_telemetry_table(tele_entries)
     archetype_table = _build_archetype_table(fb_entries)

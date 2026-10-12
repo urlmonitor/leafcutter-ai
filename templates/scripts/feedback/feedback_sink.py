@@ -43,12 +43,17 @@ def _load_sink_resolution(output_root: Path):
     return module
 
 
-def _failure(output_root: Path) -> tuple[Path | None, str | None]:
-    """Return ``(sink, None)`` for a usable declaration, else ``(None, condition)``."""
+def read_declared(output_root: Path, keys: tuple[str, ...]) -> tuple[dict[str, str] | None, str | None]:
+    """Return ``({key: absolute path}, None)`` or ``(None, condition)`` for *keys* of the declaration."""
     reader = _load_sink_resolution(output_root)
     if reader is None:
         return None, "unreadable: the shared declaration reader scripts/knowledge/sink_resolution.py is not deployed"
-    values, condition = reader.read_absolute_values(output_root, _KEYS)
+    return reader.read_absolute_values(output_root, keys)
+
+
+def _failure(output_root: Path) -> tuple[Path | None, str | None]:
+    """Return ``(sink, None)`` for a usable declaration, else ``(None, condition)``."""
+    values, condition = read_declared(output_root, _KEYS)
     if values is None:
         return None, condition
     sink = Path(values["feedback_sink"])
