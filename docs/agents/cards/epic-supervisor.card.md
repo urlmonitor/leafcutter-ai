@@ -107,14 +107,13 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
-| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `building-epics` | always | — |
+| `building-epics` | conditional | — |
 | `signoff` | always | — |
 ---
 

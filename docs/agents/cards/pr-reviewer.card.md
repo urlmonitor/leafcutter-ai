@@ -101,14 +101,13 @@ flowchart TD
 | `Read` |
 | `Edit` |
 | `Agent` |
-| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
+| `signoff` | conditional | — |
 ---
 
 ## Configuration

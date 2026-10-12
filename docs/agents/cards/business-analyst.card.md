@@ -88,15 +88,14 @@ flowchart TD
 | `Edit` |
 | `Bash` |
 | `Skill` |
-| `Agent` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `knowledge-query` | — | — |
 | `ac-tree-split` | — | — |
+| `knowledge-query` | — | — |
 ---
 
 ## Configuration

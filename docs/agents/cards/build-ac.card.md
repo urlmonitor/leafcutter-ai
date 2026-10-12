@@ -96,7 +96,6 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
-| `Agent` |
 ---
 
 ## Skills Used

@@ -104,14 +104,13 @@ flowchart TD
 | `Read` |
 | `Bash` |
 | `Agent` |
-| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `building-epics` | always | — |
+| `building-epics` | conditional | — |
 ---
 
 ## Configuration
