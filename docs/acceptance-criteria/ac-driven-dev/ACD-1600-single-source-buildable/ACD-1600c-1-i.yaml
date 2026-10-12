@@ -8,7 +8,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_acbuild_1_foundation
 criteria: |
   Given the store contains ACD-300c-3 and TQ-200a-1, each lacking concrete file targets,

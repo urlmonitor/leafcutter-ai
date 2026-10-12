@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-10-05'
+last_updated: '2026-10-12'
 status: active
 components:
 - documentation_system
@@ -36,7 +36,7 @@ python scripts/adr_refs.py --index --write
 | [ADR-007](ADR-007-contract-driven-acs.md) | Accepted | Contract-Driven Acceptance Criteria | 2026-06-04 |
 | [ADR-008](ADR-008-ac-store-schema-id-format-enforcement.md) | Accepted | AC Store — YAML Schema, ID Format, and Bidirectional Enforcement Model | 2026-06-04 |
 | [ADR-009](ADR-009-itpo-no-source-code-access.md) | Accepted | IT Product Owner v3 — Source Code Access Restriction | 2026-06-05 |
-| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Accepted | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
+| [ADR-010](ADR-010-ac-store-as-authoritative-backlog.md) | Active | AC Store as Authoritative Backlog — Source-of-Truth Inversion | 2026-06-05 |
 | [ADR-011](ADR-011-learning-emission-sink.md) | Active | Learning Emission Sink — Separate knowledge_emissions.jsonl vs Reuse | 2026-06-05 |
 | [ADR-012](ADR-012-retire-create-ticket-js.md) | Accepted | Retire create-ticket.js — /plan-feature + /build-ac as Canonical Ticket-Creation Path | 2026-06-16 |
 | [ADR-013](ADR-013-portable-skill-script-deployment-boundary.md) | Accepted | Portable Skill Script Deployment Boundary — Consumer-Facing vs Package-Internal | 2026-06-17 |

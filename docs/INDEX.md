@@ -200,7 +200,10 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| ac assignments | [docs/reference/ac-assignments.md](reference/ac-assignments.md) | Lookup reference for how AC assignment is read (agent cards carry no AC Assignments section; assigned_agent is grouped at read time) and for the AC persistence guarantee after a quick-fix ticket closes. |
+| ac declared files | [docs/reference/ac-declared-files.md](reference/ac-declared-files.md) | Lookup reference for how the ticket generator builds files_touched: from the declared_files list when a record declares its files (TKT-600a-3), or labelled derived, not declared, for a legacy record (TKT-600a-3-i). The field itself is defined in ac-schema.md. |
 | ac id hierarchy | [docs/reference/ac-id-hierarchy.md](reference/ac-id-hierarchy.md) | Lookup reference for the AC identifier format and full regex, the id-derived parent algorithm, and the direct-children scope rule that governs every covered_by list in the AC store. |
+| ac readiness and assignment gates | [docs/reference/ac-readiness-and-assignment-gates.md](reference/ac-readiness-and-assignment-gates.md) | Lookup reference for the single hold-reason list, the hold_reason record field and scan_ac_store flag behind the implementation-readiness gate, and the assignment-quality verdict, surface-to-craft map and CLI. |
 | ac schema | [docs/reference/ac-schema.md](reference/ac-schema.md) | Field-by-field reference for AC YAML files, the hierarchical ID format and parent derivation algorithm, status lifecycle, and pre-commit hooks that enforce the AC store at commit time. |
 | agent teams constraints | [docs/reference/agent-teams-constraints.md](reference/agent-teams-constraints.md) | Reference: Claude Code Agent Teams Constraints |
 | agent template frontmatter | [docs/reference/agent-template-frontmatter.md](reference/agent-template-frontmatter.md) | Overview of Reference: Agent Template Frontmatter Fields. |
@@ -251,9 +254,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -261,9 +264,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |

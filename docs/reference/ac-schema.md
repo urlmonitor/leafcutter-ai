@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-07
+last_updated: 2026-10-12
 components:
   - build_pipeline
 related_docs:
@@ -12,6 +12,9 @@ related_docs:
   - docs/acceptance-criteria/README.md
   - config/ac_store_schema.json
   - docs/testing/test-angles.md
+  - docs/reference/ac-declared-files.md
+  - docs/reference/ac-assignments.md
+  - docs/reference/ac-readiness-and-assignment-gates.md
 ---
 
 # AC Traceability Store Schema
@@ -69,6 +72,7 @@ Each AC file is a single YAML document with the following fields.
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline (`_build_agents_map`) to look up mandatory guardrail agents. Accepts a single value OR a list when the AC spans multiple targets. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs that predate the computed-gates pipeline (ticket 10 will backfill). |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure of this AC (ADR-017 blast-radius vocabulary). Combined with `change_target` to select mandatory guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
 | `declares_side_effect` | boolean or null | no | **DERIVED, not authored by opinion.** Declares that this AC's work produces a durable, observable side-effect (a file written, a record persisted, a state-changing command) rather than only returning a value. `check_ac_schema.py` computes the value from the record's **own `Then` clause** and blocks the commit when the authored value disagrees or is missing — you do not get to choose it. See [declares_side_effect is derived from the Then clause](#declares_side_effect-is-derived-from-the-then-clause) for the exact rule. Effect once set: `generate_ticket_from_ac.py` routes the `user-surface-smoker` phase agent into the generated ticket's `agents` map as `needed` and propagates the flag to the ticket frontmatter (BP-1100f-5). The gate is **non-overridable** — an explicit `user-surface-smoker: not_needed` is ignored while this is true. Absent/false/null means no side-effect claim and no force-routing (BP-1100f-5-i). |
+| `declared_files` | list of objects | no | Files the work changes, each `{path, state}` with `state` `existing` or `to_be_created`. Absent = "no declared files". See [The `declared_files` Field](#the-declared_files-field). |
 | `test_spec` | list or null | no | Source-of-truth test contract for this AC — the AC, not the ticket, owns what must be tested. Authored by it-po on L2/L3 code ACs; `generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section from it. Null/absent means "no contract authored yet" and the generator falls back to deriving one descriptor per Gherkin `Then` clause plus a mandatory reachability descriptor; an empty list is **not** permitted (use `test_required: false` for genuinely test-free ACs). See the item fields below. |
 | `test_required` | boolean or null | no | Whether `test-writer` must produce failing tests. Distinguishes "intentionally no tests" (`false`) from "contract not yet authored" (null/absent). Defaults to true for code/schema ACs. When `false` the generator omits the `## Test Requirements` section entirely and `test-writer` skips with an accurate reason. |
 | `test_rationale` | string or null | no | Prose justification for the shape of `test_spec`: why this coverage is right and why a weaker shape (typically a direct-import unit test) would not be. Must be a string, never a list. |
@@ -168,6 +172,61 @@ origin_agent: business-analyst
 - The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
 
 ---
+
+### The `declared_files` Field
+
+The only answer, on an AC record, to "which files does this work change"; read only through
+`scripts/ac_store/declared_files.py` (`get_declared_files`).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `declared_files` | list of objects | no | Files the work changes, in declared order. Absent = the state "no declared files". |
+| `declared_files[].path` | string | yes | Repository-root-relative path, forward slashes. |
+| `declared_files[].state` | enum | yes | `existing` (file is in the repository; the work edits it; must be present) or `to_be_created` (the work creates it; expected absent). |
+
+**Path form.** Each rule refuses the record. Relative to the repository root and inside it
+(`/etc/x.py`, `C:/x.py`, `../x.py` refused). Forward slashes only (`scripts\x.py` refused).
+Never a regenerated copy such as `.leafcutter/scripts/x.py` (the message names the source
+path to declare instead). Canonical spelling: no leading `./`, no `//`, no trailing `/`.
+
+**Not a declared file.** `doc_links` entries of any relationship (`modifies`, `describes`, `related`) never count. Nothing fills the list in automatically. A record without the field is in the state "no declared files": never a violation (ADR-026 rule 4); checks report it as `not evaluated: no declared files`, never as passed.
+
+**Refusals and reports.** `check_ac_schema.py` (the load-bearing commit hook) and the
+agent-side `scripts/ac_store/validate_ac_schema.py` share `declared_files_commit_messages`.
+A refusal blocks the commit; a report never does.
+
+| Case | Outcome |
+|---|---|
+| `existing` entry neither present in the tree nor marked `to_be_created` | Refusal |
+| Path outside the repository, with a backslash, inside a regenerated copy, or in non-canonical spelling | Refusal |
+| Empty list (omit the field instead), entry without `path`, or `state` other than the two markers | Refusal |
+| `to_be_created` entry whose file already exists | Report only |
+
+Finished work (`work_status: done`) is exempt from both existence cases; a deleted
+`existing` file appears only in the store-wide report (`python scripts/ac_store/declared_files.py`).
+
+**Migration posture.** Records written before the field have no list. The
+implementation-readiness gate reports them `missing file targets` but, while advisory and
+while they read as `schema_version` < 2, does not hold them (ADR-026 rules 3-4); the
+reasons are in [Hold reasons](ac-readiness-and-assignment-gates.md#hold-reasons). Their
+generated tickets carry a surface labelled "derived, not declared"
+([generated `files_touched`](ac-declared-files.md)).
+
+**Worked example.** One existing file edited, one new file created:
+
+```yaml
+declared_files:
+  - path: scripts/ac_store/scan_ac_store.py
+    state: existing
+  - path: unit_tests/ac_store/test_scan_extra.py
+    state: to_be_created
+```
+
+If `unit_tests/ac_store/test_scan_extra.py` already existed on unfinished work, the
+second entry is the one reported (`declared path '...' is marked to be created but
+already exists`) and the commit proceeds; if `scripts/ac_store/scan_ac_store.py` were
+absent, the first entry would refuse the commit. No requirement rule check reads the
+field in this repository yet, so the seam alone reports this case.
 
 ## ID Format, Hierarchy, and `covered_by` Scope
 
@@ -737,23 +796,9 @@ applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
 is updated to include the child AC ID (this was already done by `build-ac` during
 AC creation). The test-writer only updates the child AC's `covered_by` field.
 
-### Agent cards — no AC Assignments section (removed 2026-10-09)
+### AC Assignments and persistence
 
-`generate_agent_cards.py` no longer emits a `## AC Assignments` section in
-`docs/agents/cards/<agent>.card.md` and no longer scans the AC store.
-`render_ac_assignments`, `_scan_ac_assignments`, `_scan_all_ac_assignments`
-and the `ac_assignments=` parameter of `generate_card` were deleted.
-
-Reason: the AC store is the source of truth, and `assigned_agent` can be
-grouped at read time by any consumer. Caching that query into generated
-markdown made every `build.py` run rewrite the cards (a permanently dirty
-working tree), and the regenerated cards could not be committed because of
-the doc-length growth ratchet.
-
-Source today: the AC YAML store, grouped by `assigned_agent` at read time. The
-field is still live: the ticket generator reads `assigned_agent` to build the
-ticket's `agents:` map and render a single `Assigned agent:` line. AC
-INF-600b-2, which specified the section, is retired as superseded.
+Moved to **[ac-assignments.md](ac-assignments.md)**: why agent cards carry no `## AC Assignments` section (removed 2026-10-09), and the AC persistence guarantee after ticket close (AC BP-600b-3).
 
 ### triage agent (glossary-triage, debug)
 
@@ -836,50 +881,6 @@ ${TMPDIR:-/tmp}/leafcutter-quickfix-<component-id>.lock if the process
 is no longer running.
 ```
 
-### AC persistence guarantee after ticket lifecycle close (AC BP-600b-3)
-
-When the quick-fix workflow completes end-to-end — fix committed and the
-workflow's internal ticket closed — the AC YAML file created during the AC
-creation phase MUST remain untouched in the store.
-
-**Invariant:**
-
-```
-Given the quick-fix workflow has completed end-to-end (fix committed
-  and ticket closed),
-When the user lists AC files under docs/acceptance-criteria/,
-Then the AC YAML file created by the quick-fix workflow still exists,
-And its status field is "active",
-And it is not deleted or moved by the ticket lifecycle close step.
-```
-
-**Implementation constraint for the ticket lifecycle close step:**
-
-The step that marks the quick-fix workflow's internal ticket as `done` (e.g.
-flipping `status: in_progress → done` via `set_ticket_status.py`) MUST NOT
-touch or reference any AC YAML file. Specifically:
-
-- The close step operates only on the ticket markdown file (`*.md`) and the
-  git index for that file.
-- It MUST NOT delete, rename, move, or overwrite any file under
-  `docs/acceptance-criteria/`.
-- It MUST NOT set the AC's `status` field to `deprecated` or `superseded_by`
-  as a side-effect of the ticket closing.
-
-The AC lifecycle (active → deprecated → superseded_by) is governed exclusively
-by human or agent intent expressed in separate commits. A ticket closing is not
-a trigger for AC lifecycle transitions.
-
-**Why this guarantee is necessary:**
-
-The quick-fix workflow creates an AC YAML file as a permanent traceability
-artefact. The AC documents what bug was fixed and what criterion the fix must
-satisfy going forward. If the ticket lifecycle close step were to delete or
-deactivate the AC, the traceability record would be destroyed, the pre-commit
-`check_ac_coverage.py` hook would lose its anchor, and any test tagged
-`# covers: <id>` would reference a ghost criterion. The persistence guarantee
-ensures the AC outlives the workflow that created it.
-
 ---
 
 ## Component Registry (`index.yaml`)
@@ -900,6 +901,6 @@ component IDs to their prefix and description.
 ## See Also
 
 - `docs/how-to/ac-traceability-store.md` — creating, amending, and deprecating ACs. `docs/how-to/declare-component-membership.md` — adding the `components` list to an AC (or any knowledge item) so it joins the component view, and querying a component back to its criteria and delivering code.
-- `docs/acceptance-criteria/README.md` — directory structure and quick-start.
+- `docs/acceptance-criteria/README.md` — directory structure and quick-start. Sibling references: [ac-declared-files.md](ac-declared-files.md) (generated `files_touched` from `declared_files`), [ac-assignments.md](ac-assignments.md) (agent-card assignments, AC persistence), [ac-readiness-and-assignment-gates.md](ac-readiness-and-assignment-gates.md) (hold reasons, readiness gate, assignment quality).
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
 - `docs/INDEX.md` — full documentation index.
