@@ -1,11 +1,11 @@
 ---
 title: "KI-CG-20261010-folder-density-refuses-merges-of-main — check-folder-density takes its before-count from HEAD alone, so merging origin/main into a branch is refused for every folder that main itself took over the limit"
-description: "high — since the hook could first refuse (on main from 2026-10-09), any merge of origin/main into a branch that predates a folder crossing the 15-file limit on main is refused for content the merge did not author. Four folders crossed on main in two days, each through a GitHub server-side merge that runs no local hook. Three merges of main were refused on 2026-10-10: two needed a user-run SKIP=check-folder-density, one was abandoned. The fix is already ticketed on main (see Status)."
+description: "high — since the hook could first refuse (on main from 2026-10-09), any merge of origin/main into a branch that predates a folder crossing the 15-file limit on main is refused for content the merge did not author. Four folders crossed on main in two days, each through a GitHub server-side merge that runs no local hook. Three merges of main were refused on 2026-10-10: two needed a user-run SKIP=check-folder-density, one was abandoned. RESOLVED 2026-10-12 by a104d934c (PR #1143), see Status."
 type: reference
 category: reference
 status: active
 created: '2026-10-10'
-last_updated: '2026-10-10'
+last_updated: '2026-10-12'
 components:
   - commit_guardian
 related_docs:
@@ -30,8 +30,17 @@ related_docs:
   hits it. Not graded blocker: a PR without conflicts can still be merged server side, which runs
   no local hook. Same shape and grade as the resolved `KI-CG-20260908-ratchet-reads-pre-merge-head`
   (`check-file-size`).
-- **Status:** open, no AC. The fix is ticketed on main as
-  `tickets/00_inbox/TICKET-20261010-FolderDensityMergeCommit.md` (`status: todo`, priority high).
+- **Status:** RESOLVED 2026-10-12 (`a104d934c`, PR #1143, ticket
+  `tickets/00_inbox/TICKET-20261010-FolderDensityMergeCommit.md`). The fix follows the Fix
+  direction below: `check_folder_density.py` now takes each folder's BEFORE count as the maximum
+  over HEAD and every MERGE_HEAD parent (octopus included), read by the new helper
+  `templates/scripts/commit_guardian/_density_parents.py`. A folder under the limit in every
+  parent but over it in the merge result is still refused, and an ordinary commit (no MERGE_HEAD)
+  is unchanged. Covered by `unit_tests/commit_guardian/test_folder_density_merge_commit.py`
+  (5 tests on real temp git repos in a real merge state). Not addressed by this fix, and tracked
+  separately: whether the AC store is subject to the cap at all
+  (`KI-CG-20261012-folder-density-conflicts-with-flat-ac-store`).
+- **Status when filed:** open, no AC; ticketed as `status: todo`, priority high.
   The mechanism is verified by reading the hook on `origin/main` `d03830e7c` and by running the
   hook's own counting and classification functions over the real trees (see Mechanism, step 3).
 - **Occurrences:** 3 refused merges of main, all on 2026-10-10:
