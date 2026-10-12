@@ -45,8 +45,9 @@ class AppClientsAreBounded(FaultCase):
         # angle: boundary
         """AC TQ-600a-13-ix (it_requirements): the installation-token client and the check-run client are built with the env timeout."""
         publish = import_production("scripts.ci._hold_publish")
+        token = import_production("scripts.ci._app_token")  # the installation-token client is built by the shared minting helper (TQ-600a-13-xv)
         spy, refused = _Spy(publish), closed_port_url()
-        with mock.patch.object(publish, "GitHubClient", spy), mock.patch.dict(os.environ, {TIMEOUT_ENV: str(TIMEOUT)}):
+        with mock.patch.object(publish, "GitHubClient", spy), mock.patch.object(token, "GitHubClient", spy), mock.patch.dict(os.environ, {TIMEOUT_ENV: str(TIMEOUT)}):
             for call in (lambda: publish._mint_token(refused, REPO, "jwt"), lambda: publish._create_check(refused, "token", REPO, "9" * 40)):
                 with self.assertRaises(publish.PublishError):
                     call()

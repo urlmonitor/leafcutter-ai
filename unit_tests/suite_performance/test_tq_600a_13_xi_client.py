@@ -11,13 +11,17 @@ ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds this) -
                                        issue that carries one; POST /issues/{n}/labels with ONE family label on an issue THIS client created)
       pr_comment: int | None = None    the evaluated pull request: POST /issues/{pr}/comments and PATCH /issues/comments/{id}, body first
                                        line ``<!-- post-merge-suite-status v1 -->``
-      rerun_hold: bool = False         POST /actions/runs/{id}/rerun, after GET /actions/runs/{id} shows ``path`` equals
-                                       ``.github/workflows/post-merge-hold.yml``
+      rerun_hold: bool = False         with token_kind "app_install" ONLY (AMENDED 2026-10-12, owner decision): POST /actions/runs/{id}/rerun,
+                                       after GET /actions/runs/{id} shows ``path`` equals ``.github/workflows/post-merge-hold.yml``,
+                                       ``event`` equals ``pull_request_target`` and ``head_repository`` is this repository. The
+                                       GITHUB_TOKEN ("github") is refused for EVERY re-run, whatever this flag says.
       check_run_head: str | None = None   the evaluated head sha: with token_kind "app_install" only, POST /check-runs named exactly
                                        ``Post-merge suite status`` on that sha, PATCH /check-runs/{id} for an id this client created
   ``GitHubClient(api_url, token, timeout=..., policy=WritePolicy())`` -- the default policy grants nothing: a client built without one
-  is READ-ONLY (reads are unrestricted). ``app_jwt`` clients may only POST /app/installations/{id}/access_tokens; ``app_install``
-  clients may only write check runs; ``github`` clients never write check runs.
+  is READ-ONLY (reads are unrestricted). ``app_jwt`` clients may only POST /app/installations/{id}/access_tokens, for exactly
+  ``{checks: write}`` (the hold) or ``{actions: write}`` (the re-evaluation) on this repository only; ``app_install`` clients may write
+  a check run (``check_run_head`` set) OR re-run a hold run (``rerun_hold`` set), NEVER both in one client (a client holding both is
+  refused everything); ``github`` clients never write check runs and never re-run.
   A write outside the policy raises ``GitHubError`` with ``kind == "refused"`` (``"refused"`` joins ``KINDS``) BEFORE any request is sent.
   Before a write that depends on the service's own state the client reads it: ``GET /repos/{repo}/issues/{n}`` (labels) and
   ``GET /repos/{repo}/actions/runs/{id}`` (``path``); a read that fails refuses the write (an unverifiable write is not on the list).
@@ -25,6 +29,7 @@ ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds this) -
 
 from __future__ import annotations
 
+import dataclasses
 import unittest
 
 from ._ending_harness import CHECK, Cases
@@ -56,6 +61,9 @@ COMMENTS = {  # comment id -> what the service holds: only 9001 is the hold's ow
     9004: {"issue_url": f"https://api.example/repos/{REPO}/issues/{PR}", "body": f"{MARKER}\n\nheld", "user": {"login": "mallory", "type": "User"}},
 }
 MAX = {"notices": True, "pr_comment": PR, "rerun_hold": True, "check_run_head": HEAD}  # every grant on: refusals below are the LIST's, not a missing grant
+NAME = REPO.split("/")[1]
+EXCHANGE_CHECKS = {"permissions": {"checks": "write"}, "repositories": [NAME]}
+EXCHANGE_ACTIONS = {"permissions": {"actions": "write"}, "repositories": [NAME]}
 
 
 def rest():
@@ -68,7 +76,8 @@ def make_client(url, token_kind="github", **grants):
     policy_cls = getattr(module, "WritePolicy", None)
     if policy_cls is None:
         return module.GitHubClient(url, "fake-token")
-    return module.GitHubClient(url, "fake-token", policy=policy_cls(token_kind=token_kind, **{"repo": REPO, **grants}))
+    known = {f.name for f in dataclasses.fields(policy_cls)}
+    return module.GitHubClient(url, "fake-token", policy=policy_cls(token_kind=token_kind, **{k: v for k, v in {"repo": REPO, **grants}.items() if k in known}))  # an unknown grant is dropped, so its rows fail on behaviour
 
 
 def accepted_rows():
@@ -83,9 +92,10 @@ def accepted_rows():
         *((gh, f"comment on notice #{n}", lambda c, n=n: c.post(f"{R}/issues/{n}/comments", {"body": "c"})) for n in (8, 9, 10, 11)),
         (gh, "the hold's marked comment on the evaluated pull request: create", lambda c: c.post(f"{R}/issues/{PR}/comments", MARKED)),
         (gh, "the hold's marked comment: edit", lambda c: c.patch(f"{R}/issues/comments/9001", MARKED)),
-        (gh, "re-run a run of the hold workflow", lambda c: c.post(f"{R}/actions/runs/302/rerun", {})),
+        ("rerun", "AMENDED 2026-10-12: the App re-run token re-runs a pull_request_target run of the hold workflow", lambda c: c.post(f"{R}/actions/runs/302/rerun", {})),
         (app, "create `Post-merge suite status` on the evaluated head", lambda c: c.post(f"{R}/check-runs", {"name": CHECK_NAME, "head_sha": HEAD, "status": "in_progress"})),
-        (jwt, "the App credential exchange", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"checks": "write"}})),
+        ("jwt_checks", "the hold's credential exchange: checks write, this repository only", lambda c: c.post("/app/installations/777/access_tokens", EXCHANGE_CHECKS)),
+        (jwt, "the re-evaluation's credential exchange: actions write, this repository only", lambda c: c.post("/app/installations/777/access_tokens", EXCHANGE_ACTIONS)),
         ("hold", "the hold's exemption record: a comment on a notice", lambda c: c.post(f"{R}/issues/8/comments", {"body": "recorded"})),
     ]
     return rows
@@ -139,6 +149,41 @@ def refused_rows():
         (app, "the App token for a re-run", lambda c: c.post(f"{R}/actions/runs/302/rerun", {}), "refused"),
         (app, "the App token for a commit status", lambda c: c.post(f"{R}/statuses/{HEAD}", {"state": "success"}), "refused"),
         (app, "the installation token at the credential exchange", lambda c: c.post("/app/installations/777/access_tokens", {}), "refused"),
+        # AMENDED 2026-10-12: the GITHUB_TOKEN requests no re-run at all; the App's installation token requests only one kind
+        (gh, "AMENDED: the GITHUB_TOKEN re-runs a pull_request_target run of the hold workflow (rerun_hold is honoured only for app_install)", lambda c: c.post(f"{R}/actions/runs/302/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a run of ci.yml", lambda c: c.post(f"{R}/actions/runs/300/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a run of the suite workflow", lambda c: c.post(f"{R}/actions/runs/301/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a run whose workflow name merely ENDS like the hold's", lambda c: c.post(f"{R}/actions/runs/303/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a run whose workflow name merely STARTS like the hold's", lambda c: c.post(f"{R}/actions/runs/304/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a hold run of a pull_request event", lambda c: c.post(f"{R}/actions/runs/305/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a hold run from a fork", lambda c: c.post(f"{R}/actions/runs/306/rerun", {}), "refused"),
+        ("rerun", "the App re-run token re-runs a run that does not exist", lambda c: c.post(f"{R}/actions/runs/999/rerun", {}), unverifiable),
+        ("rerun", "the App re-run token re-runs with debug logging switched on", lambda c: c.post(f"{R}/actions/runs/302/rerun", {"enable_debug_logging": True}), "refused"),
+        ("rerun", "the App re-run token re-runs only the failed jobs of a hold run", lambda c: c.post(f"{R}/actions/runs/302/rerun-failed-jobs", {}), "refused"),
+        ("rerun", "the App re-run token cancels a hold run", lambda c: c.post(f"{R}/actions/runs/302/cancel", {}), "refused"),
+        ("rerun", "the App re-run token dispatches a workflow", lambda c: c.post(f"{R}/actions/workflows/post-merge-hold.yml/dispatches", {"ref": "main"}), "refused"),
+        ("rerun", "the App re-run token disables a workflow", lambda c: c.request("PUT", f"{R}/actions/workflows/ci.yml/disable", None), "refused"),
+        ("rerun", "the App re-run token re-runs a hold run of ANOTHER repository", lambda c: c.post("/repos/evil/other/actions/runs/302/rerun", {}), "refused"),
+        ("rerun", "the App re-run token creates the hold's check run", lambda c: c.post(f"{R}/check-runs", {"name": CHECK_NAME, "head_sha": HEAD, "status": "in_progress"}), "refused"),
+        ("rerun", "the App re-run token completes a check run", lambda c: c.patch(f"{R}/check-runs/5001", {"status": "completed", "conclusion": "success"}), "refused"),
+        ("rerun", "the App re-run token comments on a notice", lambda c: c.post(f"{R}/issues/8/comments", {"body": "c"}), "refused"),
+        ("rerun", "the App re-run token writes an issue", lambda c: c.post(f"{R}/issues", {"title": "t", "labels": ["post-merge-red"]}), "refused"),
+        # a client must not be allowed both: an installation client holding both grants is refused everything, either write
+        ("both", "an App client holding BOTH grants: the re-run", lambda c: c.post(f"{R}/actions/runs/302/rerun", {}), "refused"),
+        ("both", "an App client holding BOTH grants: the check-run create", lambda c: c.post(f"{R}/check-runs", {"name": CHECK_NAME, "head_sha": HEAD, "status": "in_progress"}), "refused"),
+        # the exchange is bounded to the two permission sets actually requested, on this repository only
+        (jwt, "an exchange with no permissions", lambda c: c.post("/app/installations/777/access_tokens", {"repositories": [NAME]}), "refused"),
+        (jwt, "an exchange asking for BOTH checks and actions", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"checks": "write", "actions": "write"}, "repositories": [NAME]}), "refused"),
+        (jwt, "an exchange asking for actions: read", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "read"}, "repositories": [NAME]}), "refused"),
+        (jwt, "an exchange asking for contents: write", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"contents": "write"}, "repositories": [NAME]}), "refused"),
+        (jwt, "an exchange asking for actions: write AND contents: write", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "write", "contents": "write"}, "repositories": [NAME]}), "refused"),
+        (jwt, "an exchange with no repositories (every repository of the installation)", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "write"}}), "refused"),
+        (jwt, "an exchange for ANOTHER repository", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "write"}, "repositories": ["other"]}), "refused"),
+        (jwt, "an exchange for this repository AND another", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "write"}, "repositories": [NAME, "other"]}), "refused"),
+        (jwt, "an exchange by repository ids", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": {"actions": "write"}, "repository_ids": [1]}), "refused"),
+        (jwt, "an exchange by repository ids beside the repository", lambda c: c.post("/app/installations/777/access_tokens", {**EXCHANGE_ACTIONS, "repository_ids": [1]}), "refused"),
+        (jwt, "an exchange carrying a field beyond permissions and repositories", lambda c: c.post("/app/installations/777/access_tokens", {**EXCHANGE_ACTIONS, "extra": 1}), "refused"),
+        (jwt, "an exchange whose permissions are not a mapping", lambda c: c.post("/app/installations/777/access_tokens", {"permissions": ["actions"], "repositories": [NAME]}), "refused"),
         (jwt, "the App's JWT for an issue comment", lambda c: c.post(f"{R}/issues/8/comments", {"body": "c"}), "refused"),
         (jwt, "the App's JWT for a check run", lambda c: c.post(f"{R}/check-runs", {"name": CHECK_NAME, "head_sha": HEAD}), "refused"),
         ("none", "a client built with no policy: a notice create", lambda c: c.post(f"{R}/issues", {"title": "t", "labels": ["post-merge-red"]}), "refused"),
@@ -189,10 +234,13 @@ class TestTq600a13XiClientAllowlist(unittest.TestCase):
             "norepo": make_client(self.svc.url, repo=None, **MAX),
             "weird": make_client(self.svc.url, "admin", **MAX),
             "gh": make_client(self.svc.url, **MAX),
-            "app": make_client(self.svc.url, "app_install", **MAX),
-            "jwt": make_client(self.svc.url, "app_jwt", **MAX),
+            "app": make_client(self.svc.url, "app_install", check_run_head=HEAD),  # the hold's: check runs, no re-run grant
+            "rerun": make_client(self.svc.url, "app_install", rerun_hold=True),  # the re-evaluation's: re-runs, no check-run grant
+            "both": make_client(self.svc.url, "app_install", rerun_hold=True, check_run_head=HEAD),  # never allowed
+            "jwt": make_client(self.svc.url, "app_jwt", exchange_permission="actions"),  # the re-evaluation's minting client
+            "jwt_checks": make_client(self.svc.url, "app_jwt", exchange_permission="checks"),  # the hold's minting client
             "none": rest().GitHubClient(self.svc.url, "fake-token"),
-            "reeval": make_client(self.svc.url, rerun_hold=True),
+            "reeval": make_client(self.svc.url, rerun_hold=True),  # the OLD re-evaluation grant on the GITHUB_TOKEN: honoured for nothing now
             "notice": make_client(self.svc.url, notices=True),
         }
 
@@ -209,8 +257,11 @@ class TestTq600a13XiClientAllowlist(unittest.TestCase):
         records the write); the allowlist matching by method only (POST /pulls beside POST /issues); a comment on an unlabelled issue
         allowed because comments are; a re-run of ci.yml, of the suite, or of a run whose workflow name merely ends or starts like
         the hold's; a dispatch, disable, enable or cancel allowed because the job holds ``actions: write``; a check run allowed
-        because check runs are, for the GITHUB_TOKEN or under another name or on another sha; the App token accepted for an issue,
-        a comment or a re-run; a client without a policy that writes; a grant wider than its caller needs.
+        because check runs are, for the GITHUB_TOKEN or under another name or on another sha; the App token accepted for an issue
+        or a comment, or for a re-run of anything but a pull_request_target hold run of this repository (AMENDED 2026-10-12); the
+        GITHUB_TOKEN accepted for ANY re-run, even with ``rerun_hold`` set; an App client holding both a re-run and a check-run grant
+        accepted for either; a credential exchange for more than ``{checks: write}`` / ``{actions: write}`` or for more than this
+        repository; a client without a policy that writes; a grant wider than its caller needs.
         """
         cases = Cases()
         with cases.case("the policy interface exists"):
