@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -475,8 +475,11 @@ amended_by:
     on a git failure, the CRLF and empty-message cases, the dangling ORIG_HEAD case, and byte
     comparison of staged names). readiness promoted from draft to approved.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300c_6.py
+- unit_tests/build_orchestration/test_bo_4300c_6_real_install.py
+implemented_by:
+- templates/scripts/commit_guardian/precommit_canary.py
 notes: |
   Origin: user decision dec-0ed3e2e3a1cd8340 (2026-10-10), taken on the 2026-10-09
   investigation of the stage canaries that BO-4300c-1-ii delivered. Placed as a sibling of

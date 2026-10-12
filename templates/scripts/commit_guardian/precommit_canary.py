@@ -30,6 +30,11 @@ DECISION HISTORY
   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
   git call wrapped (check-exception-handling IO-001); git being unrunnable
   (OSError/SubprocessError) now fails CLOSED (exit 1, stderr message, no PRECOMMIT_CANARY_REJECTED marker).
+- 2026-10-10 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/15]:
+  (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/15)
+  BO-4300c-6: git non-zero exits fail closed with a one-line report and no
+  marker; post-merge treats only a missing ORIG_HEAD as "nothing merged";
+  names and commit messages are compared as bytes (never decoded).
 ====================================================================
 """
 
@@ -55,13 +60,46 @@ def declared_spec(stage: str) -> dict | None:
     return spec if isinstance(spec, dict) else None
 
 
-def _git_names(stage: str) -> str:
-    """Return git's NUL-separated path list for *stage* (empty on a non-zero exit); log and re-raise when git cannot be run."""
+def _git(stage: str, args: list[str]) -> subprocess.CompletedProcess:
+    """Run git with *args* for *stage*, capturing raw bytes; log and re-raise when git cannot be started."""
     try:
-        return subprocess.run(["git", *_NAME_ONLY[stage]], capture_output=True, text=True, check=False).stdout
+        return subprocess.run(["git", *args], capture_output=True, check=False)
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"precommit_canary: git failed for {stage}: {exc}", file=sys.stderr)
         raise
+
+
+def _git_failure(args: list[str], done: subprocess.CompletedProcess) -> subprocess.CalledProcessError:
+    """Print the one-line git failure report (command, status, git's own stderr) and return the error to raise."""
+    text = done.stderr.decode("utf-8", errors="replace").strip()
+    print(f"precommit_canary: git {' '.join(args)} exited {done.returncode}: {text}", file=sys.stderr)
+    return subprocess.CalledProcessError(done.returncode, ["git", *args], done.stdout, done.stderr)
+
+
+def _git_names(stage: str) -> list[bytes]:
+    """Return git's NUL-split raw path list for *stage*; raise on any git failure (never read as empty)."""
+    where = ["rev-parse", "--git-dir"]  # a non-repository must report itself, not fall into diff --no-index
+    located = _git(stage, where)
+    if located.returncode != 0:
+        raise _git_failure(where, located)
+    if stage == "post-merge":
+        probe = ["rev-parse", "-q", "--verify", "ORIG_HEAD"]
+        done = _git(stage, probe)
+        if done.returncode == 1:
+            return []  # only a missing ORIG_HEAD record means nothing was merged
+        if done.returncode != 0:
+            raise _git_failure(probe, done)
+    args = _NAME_ONLY[stage]
+    done = _git(stage, args)
+    if done.returncode != 0:
+        raise _git_failure(args, done)
+    return done.stdout.split(b"\0")
+
+
+def _first_line_is(path: str, reserved: str) -> bool:
+    """True when the message file's first line equals *reserved* exactly (bytes compared, CR dropped)."""
+    lines = Path(path).read_bytes().splitlines()
+    return bool(lines) and lines[0].rstrip(bytes([13])) == reserved.encode("utf-8")
 
 
 def _is_reserved(stage: str, spec: dict, args: list[str]) -> bool:
@@ -70,12 +108,11 @@ def _is_reserved(stage: str, spec: dict, args: list[str]) -> bool:
         reserved = spec.get("message")
         if not isinstance(reserved, str) or not args:
             return False
-        lines = Path(args[0]).read_text(encoding="utf-8").splitlines()
-        return bool(lines) and lines[0].rstrip(chr(13)) == reserved
+        return _first_line_is(args[-1], reserved)
     reserved = spec.get("path")
     if not isinstance(reserved, str) or not reserved:
         return False
-    return reserved in _git_names(stage).split(chr(0))
+    return reserved.encode("utf-8") in _git_names(stage)
 
 
 def run_stage(stage: str, args: list[str]) -> int:
