@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 components:
   - build_orchestration
   - supervisor_system
@@ -24,10 +24,12 @@ related_docs:
   gate was overridden. The ticket simply reads `done`, and `done` releases its dependants.
 - **Status:** open, no AC. Mechanism verified by reading `origin/main` `c373b005e` and the ticket's
   committed history. The insertion cause (below) is inferred from the file positions.
-- **Occurrences:** 1 (ticket `02_TICKET-20260928-BO-4300-deployed-maker-test-support.md`,
+- **Occurrences:** 2. Ticket `02_TICKET-20260928-BO-4300-deployed-maker-test-support.md`,
   2026-09-30, the run between commits `08d190daf` (22:50 UTC) and `45e6f2268` (23:06 UTC) on branch
-  `epic/every-piece-of-separate-work-gets-its-workspace`).
-- **First seen:** 2026-09-30 · **Last seen:** 2026-09-30
+  `epic/every-piece-of-separate-work-gets-its-workspace`. Then ticket
+  `46_TICKET-20261012-TKT-600a-3.md`, run `wf_54e15913-aea`, 2026-10-12, where the closed phase
+  was `commit` and the route in mechanism 4 is confirmed. See "Observed again, 2026-10-12".
+- **First seen:** 2026-09-30 · **Last seen:** 2026-10-12
 - **Where:** `templates/workflows-js/build-feature.js`: `readTicketRecordBack` (:1287-1308, sign-offs
   reported "in the order they appear", :1295); `completionVerdictFromRecord` (:957-1060, the latest
   entry is `entries[entries.length - 1]`, :1035-1036); `demandedPhasesFromRecord` (:1096-1107);
@@ -115,3 +117,64 @@ or `needed`, or whose `source_ac` is not `work_status: done`. In the Comments se
 signal that the drive computes and then does not consume. `KI-BO-20260831-1931` is the opposite
 direction of the same per-agent-latest-comment rule. `KI-BO-20260831-1932` recorded the lenient
 completion write as phantom-done before BO-400e-3.
+
+## Observed again, 2026-10-12 — the commit phase, closed with no commit
+
+**Where:** `/build-feature` on EPIC-RightJobRightAgent, run `wf_54e15913-aea`, ticket
+`46_TICKET-20261012-TKT-600a-3.md`. Line numbers are `templates/workflows-js/build-feature.js`
+at `b6249edd3`, the script the run executed. Every step below is read from the run's dispatch
+record, the ticket's staged copy and the branch reflog.
+
+**Sequence.**
+
+1. **The commit agent recorded success first.** In one shell command it set
+   `agents.commit: signed_off`, ticked the Sign-offs box, and appended
+   `### 2026-10-12 19:00 — commit (status: ok)` with `completion_manifest:
+   pre_commit_hooks_pass: true` and "Auto-authorized commit gate: subject 'feat(ac-store):
+   generated ticket surface is the requirement's declared files'". Then it staged ten files and
+   ran a pathspec commit (`KI-SS-20260927-commit-signoff-precedes-the-commit`, occurrence
+   2026-10-12).
+2. **The hook refused the commit.** `check-doc-length` refused
+   `docs/reference/ac-schema.md`, which was already over its 300-line limit and grew from 916 to
+   944 lines (the hook counts lines without frontmatter; the whole file went from 931 to 959).
+   The agent's report calls this "the pre-commit file-size check". The ratchet wording is
+   `check_doc_length.py`'s, and the body is 916 lines at HEAD. The 28 lines came from
+   `documentation-expert` authoring the doc itself on this ticket
+   (`KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver`).
+3. **The agent told the truth in its return.** It checked HEAD and replied `status: blocker`:
+   "The commit did not land. HEAD is still 32a542a65 ... If the retry needs to wait, that status
+   should be changed to blocker." It left the `ok` record in place.
+4. **The classifier saw the problem, and the driver discarded what it said.** The failure
+   classifier returned `cross_agent` (the fix belongs to `documentation-expert`). Its reason
+   text adds "ANOMALY 1: ... this false `ok` entry would let the ticket look finished with
+   nothing committed" and "ANOMALY 2: ... the cross_agent branch only skips the phase. It never
+   re-runs the named sibling". The driver reads only `classification`.
+5. **The skip, then the close.** `cross_agent` pushes `commit` to `skippedPhases` and breaks
+   (:2469-2475). `concludeTicket` (:1503) asks `completionVerdictFromRecord` (:957). The latest
+   `commit` entry reads `ok`, so it passes (:1035). `skippedAgents` is consulted only to word
+   the reason for a phase with no entry (:1021). The verdict is complete. `writeTicketCompletion`
+   (:1522) wrote `status: done`, and the outcome carried `ticket_completed: true`. The run then
+   reported `tickets_completed: 1` and listed ticket 46 in `completed_batches`.
+6. **No commit exists.** The branch reflog has no entry after the attempt, HEAD stayed at the
+   scaffold commit `32a542a65`, and the ticket's ten files stayed staged. They then tripped the
+   staged-leftovers stop that ended the run
+   (`KI-BO-20261009-one-halted-ticket-stops-the-whole-epic-run`, occurrence 2026-10-12).
+
+**What this adds.**
+
+- **Mechanism 4 is no longer inferred.** The record shows the `cross_agent` verdict and then
+  the completion write on the same ticket.
+- **The phase it closed is `commit`.** That is the phase meant to be the last word on a ticket,
+  so the phantom `done` here sits on work that is not in git at all.
+- **The `done` would have been sticky.** A re-run's planner omits `status: done` tickets
+  (prompt step 4, :3080), so the commit would never have been retried. `done` also satisfies
+  `depends_on` for tickets 47 and 48.
+- **The epic payload hides it.** The per-ticket outcome names the skipped phase
+  (`skipped_phases`), but the epic return's `completed_batches` carries only paths. Detect it
+  by checking each completed ticket against the branch log.
+
+**Fix, in addition to the above.** `skip` is never a correct outcome for `commit`. A
+`cross_agent` verdict on the commit phase must either dispatch the named sibling and re-run
+`commit`, or refuse the ticket. It must never fall through to the completion decision. The
+driver-side HEAD check that `KI-SS-20260927` asks for (2026-10-09 note) would also have caught
+this on its own.

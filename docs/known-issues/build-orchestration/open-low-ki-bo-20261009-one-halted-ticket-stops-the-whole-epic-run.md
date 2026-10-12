@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 components:
   - build_orchestration
 related_docs:
@@ -28,8 +28,10 @@ related_docs:
 - **Status:** open, no AC. The run stop is verified by reading the code. That it was the route on
   each of the ~30 re-runs is inferred: the run payloads were not retained here.
 - **Occurrences:** about 30 re-runs over the BO-4300 drive (2026-09-28 to 2026-10-09), 2 bad
-  re-reads (session count).
-- **First seen:** 2026-09-28 · **Last seen:** 2026-10-09
+  re-reads (session count). Then 1 run on EPIC-RightJobRightAgent (`wf_54e15913-aea`,
+  2026-10-12), with the stop confirmed from the run's own payload. See "Observed again,
+  2026-10-12".
+- **First seen:** 2026-09-28 · **Last seen:** 2026-10-12
 - **Where:** `templates/workflows-js/build-feature.js` on `origin/main` `c373b005e`: halt handling
   (:3473-3545, the stop at :3538-3542); the planner (:3074-3091); `recheckEpicTicketSet`
   (:2634-2649).
@@ -85,3 +87,38 @@ non-deterministic steps. A wrong re-read misstates what is left to build.
 **Related.** `KI-BO-025` (plans only the first wave) is the earlier form of "one run cannot finish
 an epic". The driver now re-plans within a run through repeated looks (BO-100e-1), but the stop
 above ends the run before those looks are reached.
+
+## Observed again, 2026-10-12
+
+**Where:** `/build-feature` on EPIC-RightJobRightAgent (48 tickets), run `wf_54e15913-aea`.
+`templates/workflows-js/build-feature.js` at `b6249edd3`, which is the script the run
+executed. The stop is at :3529-3543.
+
+**What happened.** Look 1 planned three batches: batch 1 with tickets 01, 03, 04, 06 and 46,
+batch 2 with 20 and 27, and batch 3 with 22 and 41. All nine have an empty `depends_on`. In
+batch 1, four tickets halted at `documentation-expert`
+(`KI-BO-20261012-documentation-expert-cannot-reach-its-specialists-in-the-flat-driver`). Ticket
+46 was recorded complete even though its commit was refused
+(`KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed`, occurrence 2026-10-12).
+The dirty-state read then found 13 staged paths, and the run stopped: "Stopped: batch 1 left
+staged changes the next commit would sweep in". The payload shows `looks: 1`, `batches_run: 1`
+and `ended_because: "halted"`.
+
+**What this adds.**
+
+- **The stop also abandons batches already planned.** Batches 2 and 3 were in look 1's own
+  plan. All four of their tickets were free of dependencies and none of them halted, but none
+  was started. A halt in one batch costs every later batch of the same look, not only the later
+  looks.
+- **The staged files were mostly not a halted ticket's.** Ten of the 13 paths were ticket 46's:
+  its nine work files plus the ticket, staged by its commit agent for a pathspec commit that
+  `check-doc-length` refused. The run had counted ticket 46 as *completed*. The other three
+  were the ticket files of halted tickets 01, 04 and 06. Inferred: their phases' sign-off
+  writes staged them, since the phase agents in this run report staging the ticket after
+  signing off. So the first fix direction above, scoping the stop to the halted ticket's files,
+  would still have stopped this run. The worst leftover belonged to a ticket the driver
+  believed was finished.
+- **The completion report then hid the cause.** The 39 dependants that the missing look 2
+  would have reached were reported as work "discovered after planning"
+  (`KI-BO-026`, occurrence 2026-10-12). That sent the diagnosis to the planner rather than to
+  this stop.
