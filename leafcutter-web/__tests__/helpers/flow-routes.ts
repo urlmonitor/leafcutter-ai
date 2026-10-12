@@ -89,3 +89,26 @@ export async function load<T = any>(spec: string): Promise<T> {
   if (!key) throw new Error(`module absent: ${spec} does not exist yet`);
   return (await lazyModules[key]()) as T;
 }
+
+/** The open step/branch drawers: the FlowDrawer renders one <aside> per open drawer. */
+export function drawers(): Array<{ id: string; label: string; text: string }> {
+  return Array.from(document.querySelectorAll("aside")).map((a) => ({
+    id: a.querySelector("span.font-mono")?.textContent?.trim() ?? "",
+    label: a.querySelector("h3")?.textContent?.trim() ?? "",
+    text: squash(a.textContent),
+  }));
+}
+
+/** Run the middleware on a legacy URL and read the redirect it answers with. */
+export async function redirectOf(url: string) {
+  const res = await runMiddleware(url);
+  const location = res.headers.get("location");
+  const u = location ? new URL(location) : null;
+  return {
+    res,
+    location,
+    path: u?.pathname ?? null,
+    search: u?.search ?? null,
+    origin: u?.origin ?? null,
+  };
+}
