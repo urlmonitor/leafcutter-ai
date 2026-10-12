@@ -5,7 +5,7 @@ components: [knowledge_system]
 level: L3
 status: active
 req_status: active
-readiness: draft
+readiness: approved
 priority: high
 work_status: todo
 parent: KM-400f-1
