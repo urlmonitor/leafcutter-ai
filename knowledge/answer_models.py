@@ -20,6 +20,8 @@ class AnswerScope(BaseModel):
     population: Literal["returned_entities", "ac_descendants", "declared_dependents"] = (
         "returned_entities"
     )
+    entity_ids: list[Name] = Field(default_factory=list, max_length=64)
+    """Original canonical identities whose evidence is required, independent of query arguments."""
     root_id: Name | None = None
     levels: list[Level] | None = Field(default=None, max_length=4)
     inclusion: Literal["root_excluded", "terminal_leaves", "include_root"] | None = None
@@ -81,3 +83,5 @@ class AnswerAssessment(BaseModel):
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
+
+# - 2026-10-09 18:49 [python-coder]: Retain original selected identities independently of operation arguments. (#KM-500/KM-500e-1-i)

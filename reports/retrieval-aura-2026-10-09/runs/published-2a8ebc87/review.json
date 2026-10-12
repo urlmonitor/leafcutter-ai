@@ -1,0 +1,497 @@
+{
+  "reviewed_at": "2026-10-09T21:10:02.490935+00:00",
+  "mode": "actual Aura + immutable Git source + production TypeSafe Jev + fresh blind host packets",
+  "runtime_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "writer_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "database": "84379aa6",
+  "semantic_ready": false,
+  "jev_model": "jev-1.13.0",
+  "host_model_id": null,
+  "counts": {
+    "positive_cases": 3,
+    "sufficient_interpretations": 0,
+    "selected_fields_fulfilled": 3,
+    "public_completed": 1,
+    "correct_complete_question": 0,
+    "stale_controls_passed": 1,
+    "actual_jev_calls": 7,
+    "accepted_host_results": 6
+  },
+  "axis_note": "The immutable scorer chosen_contract_fulfilled combines selected-field checks with public_completed. This additive review reports the selected-field checks separately; no frozen score, gold or success criterion is changed.",
+  "selected_fields_formula": [
+    "answer_present",
+    "answer_fulfilled",
+    "source_agreement",
+    "chosen_source_fields_match",
+    "not_truncated"
+  ],
+  "readiness_observations": [
+    {
+      "receipt": "A01/resume-0002/readiness.json",
+      "observed_at": "2026-10-09T21:04:00.443351+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A01/resume-0007/readiness.json",
+      "observed_at": "2026-10-09T21:06:03.822962+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A01/started/readiness.json",
+      "observed_at": "2026-10-09T21:00:14.494417+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A02/resume-0002/readiness.json",
+      "observed_at": "2026-10-09T21:04:05.941200+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A02/resume-0007/readiness.json",
+      "observed_at": "2026-10-09T21:06:07.391405+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A02/started/readiness.json",
+      "observed_at": "2026-10-09T21:00:29.800664+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A03/resume-0002/readiness.json",
+      "observed_at": "2026-10-09T21:04:11.845985+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A03/started/readiness.json",
+      "observed_at": "2026-10-09T21:00:33.947741+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A04/resume-0002/readiness.json",
+      "observed_at": "2026-10-09T21:04:17.188812+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    },
+    {
+      "receipt": "A04/started/readiness.json",
+      "observed_at": "2026-10-09T21:00:37.776533+00:00",
+      "active_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "active_generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+    }
+  ],
+  "generation_drift_observed": false,
+  "cases": [
+    {
+      "case_id": "A01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "interpretation_sufficient": false,
+      "selected_fields_fulfilled": true,
+      "public_status": "partial",
+      "correct_complete_question": false,
+      "stale_control_passed": null,
+      "chosen_fields": [
+        "criteria"
+      ],
+      "question_required_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "needs_rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "target": "KM-500c-2",
+      "operations": [
+        {
+          "operation": "get_entities",
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "status": "ok",
+          "retrieval_id": "d6c855e3-a43a-4bc3-b44c-31651cddcb23",
+          "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+        }
+      ],
+      "evidence": [
+        {
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:02.254366Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3"
+        }
+      ],
+      "neutral_assessments": [
+        {
+          "status": "fulfilled",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "entity_ids": [
+              "KM-500c-2"
+            ],
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      ],
+      "jev_answer_probability": 0.53,
+      "jev_evaluable_probability": 0.45,
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.53, below 0.7)",
+        "required need need.question is partial"
+      ],
+      "actual_jev_calls": 2,
+      "accepted_host_results": 2,
+      "links": {
+        "needs_response": "A01/started/host/response.json",
+        "host_packet": "A01/started/host/packet.json",
+        "retrieval_trace": "A01/resume-0002/trace.json",
+        "final_receipt": "A01/resume-0007/envelope.json"
+      }
+    },
+    {
+      "case_id": "A02",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": true,
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "interpretation_sufficient": false,
+      "selected_fields_fulfilled": true,
+      "public_status": "partial",
+      "correct_complete_question": false,
+      "stale_control_passed": null,
+      "chosen_fields": [
+        "criteria"
+      ],
+      "question_required_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "needs_rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "target": "KM-500c-2",
+      "operations": [
+        {
+          "operation": "get_entities",
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "status": "ok",
+          "retrieval_id": "7a4d520b-7859-42cd-8b12-09cf4fa2ad62",
+          "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+        }
+      ],
+      "evidence": [
+        {
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:07.374417Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3"
+        }
+      ],
+      "neutral_assessments": [
+        {
+          "status": "fulfilled",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "entity_ids": [
+              "KM-500c-2"
+            ],
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      ],
+      "jev_answer_probability": 0.54,
+      "jev_evaluable_probability": 0.46,
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.54, below 0.7)",
+        "required need need.question is partial"
+      ],
+      "actual_jev_calls": 2,
+      "accepted_host_results": 2,
+      "links": {
+        "needs_response": "A02/started/host/response.json",
+        "host_packet": "A02/started/host/packet.json",
+        "retrieval_trace": "A02/resume-0002/trace.json",
+        "final_receipt": "A02/resume-0007/envelope.json"
+      }
+    },
+    {
+      "case_id": "A03",
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "interpretation_sufficient": false,
+      "selected_fields_fulfilled": true,
+      "public_status": "completed",
+      "correct_complete_question": false,
+      "stale_control_passed": null,
+      "chosen_fields": [
+        "criteria"
+      ],
+      "question_required_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "needs_rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "target": "KM-500c-1",
+      "operations": [
+        {
+          "operation": "get_entities",
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-1"
+            ]
+          },
+          "status": "ok",
+          "retrieval_id": "22adc542-2659-4a7c-a63b-bb80f2aae009",
+          "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+        }
+      ],
+      "evidence": [
+        {
+          "excerpt": "Given research is waiting on an attributable query-build child\nWhen a matching verified activation receipt is delivered through the existing continuation path\nThen the original run, question and evidence need resume with the newly available catalog version selected at that continuation boundary\nAnd the original repository, pinned source revision, input answers and remaining budget are preserved\nAnd the resumed research invokes the new registered query at most once for that completed build delivery\nAnd a foreign, stale, duplicate or self-certified child result cannot resume unrelated research or execute an unverified candidate\nAnd building or registering a query does not itself count as retrieved evidence or an answered question.\n",
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-1?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml&locator=%2Fcriteria",
+            "title": "Resume the waiting research only after its query becomes usable",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:13.508599Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "c5f00eaf342706a6f305140ec189fba1159cc5c374b498fda9492261c9031fa4"
+        }
+      ],
+      "neutral_assessments": [
+        {
+          "status": "fulfilled",
+          "original_question": "For KM-500c-1, what must tests demonstrate?",
+          "required_fields": [
+            "criteria"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "entity_ids": [
+              "KM-500c-1"
+            ],
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      ],
+      "jev_answer_probability": 0.81,
+      "jev_evaluable_probability": 0.71,
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment."
+      ],
+      "actual_jev_calls": 2,
+      "accepted_host_results": 1,
+      "links": {
+        "needs_response": "A03/started/host/response.json",
+        "host_packet": "A03/started/host/packet.json",
+        "retrieval_trace": "A03/resume-0002/trace.json",
+        "final_receipt": "A03/resume-0002/envelope.json"
+      }
+    },
+    {
+      "case_id": "A04",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "requested_revision": "0000000000000000000000000000000000000000",
+      "interpretation_sufficient": false,
+      "selected_fields_fulfilled": false,
+      "public_status": "partial",
+      "correct_complete_question": null,
+      "stale_control_passed": true,
+      "chosen_fields": [
+        "criteria"
+      ],
+      "question_required_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "needs_rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "target": "KM-500c-2",
+      "operations": [
+        {
+          "operation": "get_entities",
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "status": "stale",
+          "retrieval_id": "70b1f071-cfad-47a0-ac11-43b37a0c15e4",
+          "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887"
+        }
+      ],
+      "evidence": [],
+      "neutral_assessments": [
+        {
+          "status": "unresolved",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "entity_ids": [
+              "KM-500c-2"
+            ],
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": false,
+            "known_count": 0,
+            "exact_total": null,
+            "limitations": [
+              "execution is stale",
+              "requested source revision is not established",
+              "requested identities are missing from returned evidence",
+              "no evidence for the requested facts"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": [
+            "execution is stale",
+            "requested source revision is not established",
+            "requested identities are missing from returned evidence",
+            "no evidence for the requested facts"
+          ]
+        }
+      ],
+      "jev_answer_probability": null,
+      "jev_evaluable_probability": null,
+      "limitations": [
+        "requested revision is not published",
+        "knowledge status: stale",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "execution is stale",
+        "requested source revision is not established",
+        "requested identities are missing from returned evidence",
+        "no evidence for the requested facts",
+        "Original answer requirements remain unresolved",
+        "need need.question: conditional assessment remains unresolved",
+        "required need need.question is unavailable"
+      ],
+      "actual_jev_calls": 1,
+      "accepted_host_results": 1,
+      "links": {
+        "needs_response": "A04/started/host/response.json",
+        "host_packet": "A04/started/host/packet.json",
+        "retrieval_trace": "A04/resume-0002/trace.json",
+        "final_receipt": "A04/resume-0002/envelope.json"
+      }
+    }
+  ],
+  "limitations": [
+    "Only the four frozen exact retrieval cases were exercised. This is not full 29-scenario/persona coverage.",
+    "Authored test_spec retrieval was not exercised by this blind-host run because the host did not request it. Its omission does not establish source absence or an executor disclosure failure.",
+    "A01/A02 answer scores 0.53/0.54 were below the existing 0.7 boundary; normal synthesis did not change partial status. A03 scored 0.81 and completed despite the independently established missing field.",
+    "The host model identity and exact tool dispatch timestamps are unknown; fresh-agent supervision and packet hashes are retained.",
+    "No graph or catalog writes, telemetry export, provider retries, classifier threshold changes or gold changes occurred.",
+    "Generation identity was checked at start/resume; no claim is made about future active generations.",
+    "Jev trace stores template references, input fingerprints and outputs. Raw backend driver Cypher is not separately captured; the chosen registered operation and arguments are preserved."
+  ]
+}

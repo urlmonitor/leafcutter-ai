@@ -283,8 +283,8 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
 
     metadata, body = frontmatter(root / "docs/glossary.md")
     records = _extract(root)
-    # Reviewed current corpus: 41 original sections plus ten authored kernel terms.
-    assert len(records) == 51
+    # Reviewed current corpus: 41 original sections, ten authored kernel terms and Atlas.
+    assert len(records) == 52
     assert "candle_horizon" not in {record.native_id for record in records}
     assert {
         "create-ticket.js",
@@ -293,7 +293,7 @@ def test_native_glossary_real_corpus_matches_all_authored_sections():
         "decision kernel",
         "jev",
         "needs_context",
-        "out_of_domain",
+        "out_of_domain", "atlas",
     } <= {record.native_id for record in records}
     lines = body.splitlines(keepends=True)
     # The reviewed real file has simple top-level sections, independently slice all.

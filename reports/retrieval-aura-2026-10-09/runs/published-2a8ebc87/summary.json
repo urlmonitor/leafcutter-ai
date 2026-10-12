@@ -1,0 +1,1030 @@
+{
+  "scored_at": "2026-10-09T21:07:44.002957+00:00",
+  "evaluated_code_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "evaluated_working_source_sha256": "32a3b2aaa5a351da3b7ec55874231fd574cac4ae9b83f6e984deff1f29ca50f4",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "writer_code_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "semantic_readiness": false,
+  "source_mode": "real Aura + immutable GitSourceResolver",
+  "positive_successes": 0,
+  "negative_passes": 1,
+  "cases": [
+    {
+      "host_dispatch_provenance": [
+        {
+          "case_id": "A01",
+          "run_id": "run-bb966f394da74080",
+          "interaction_id": "int-18fe9b9f28994571",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact follow-up dispatch time unavailable; registration time is not substituted.",
+          "registered_at": "2026-10-09T21:06:00.754402+00:00",
+          "model_id": null,
+          "root_spawn_fork_turns": "none",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "provenance_source": "Root orchestrator confirmed follow-up to the existing fresh blind host; only actual new packets and previously supplied packets were available.",
+          "packet_sha256": "4c4b5126204f0374b8b2f550889c0da78514042e5167f9f12e3462f9bd25ddc8",
+          "response_sha256": "8e0b7b92a5df1e669a8d337e2171bbb8bc6978cac6266026e6aa3081632d45ac",
+          "inputs": [
+            {
+              "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\runtime\\runs\\run-bb966f394da74080\\artifacts\\input-int-18fe9b9f28994571.json",
+              "archived_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\resume-0002\\host\\inputs\\0.json",
+              "sha256": "cb6e12c47ba5946c52eef804d296dd91a6dacbfffbe7cad5b5e069d56019ae11"
+            }
+          ],
+          "blindness_policy": "No source oracle, expected outcomes, grading feedback or prior evaluation responses."
+        },
+        {
+          "schema_version": "1.0",
+          "host_role": "blind_host",
+          "operation": "interpret_retrieval_needs",
+          "interaction_id": "int-cc768901f11b4659",
+          "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\packet.json",
+          "packet_sha256": "70aef7c1ec490b5bf347407034b5f78bc08c71eedb45bf1f29a22f7b17b22c58",
+          "input_artifact_refs": [
+            "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\runtime\\runs\\run-bb966f394da74080\\artifacts\\input-int-cc768901f11b4659.json"
+          ],
+          "archived_inputs": [
+            {
+              "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\inputs\\0.json",
+              "sha256": "abe935ca8779756d78833d6e25689da05e1f3f499468433d1ce2038c01dab55a"
+            }
+          ],
+          "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\response.json",
+          "response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+          "model_id": null,
+          "completed_at": "2026-10-09T21:02:26.8702542Z",
+          "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations.",
+          "run_id": "run-bb966f394da74080",
+          "case_id": "A01",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+          "registered_at": "2026-10-09T21:03:41.452158+00:00",
+          "root_spawn_fork_turns": "none",
+          "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+          "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A01\\started\\host\\dispatch.original-host.json",
+          "original_host_record_sha256": "e697967e2e2ebe5371704e5aa8d3954baded6fb9f1360239b7eaafaafe6bafb4",
+          "validated_packet_sha256": "70aef7c1ec490b5bf347407034b5f78bc08c71eedb45bf1f29a22f7b17b22c58",
+          "validated_response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+          "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+        }
+      ],
+      "id": "A01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "partial",
+      "functional_success": false,
+      "negative_control": null,
+      "interpretation": {
+        "sufficient": false,
+        "checks": {
+          "accepted_decided": true,
+          "original_question": true,
+          "literal_target": true,
+          "content_types": true,
+          "canonical_obligations": false,
+          "detail": true,
+          "scope": true,
+          "single_entity": true,
+          "no_relationship_substitution": true
+        },
+        "expected_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "actual_fields": [
+          "criteria"
+        ]
+      },
+      "execution": {
+        "chosen_contract_fulfilled": false,
+        "checks": {
+          "public_completed": false,
+          "answer_present": true,
+          "answer_fulfilled": true,
+          "source_agreement": true,
+          "chosen_source_fields_match": true,
+          "not_truncated": true
+        },
+        "chosen_source_field_matches": {
+          "criteria": true
+        },
+        "question_source_field_matches": {
+          "criteria": true,
+          "test_spec": false
+        },
+        "all_question_source_fields_present": false,
+        "answer_assessments": [
+          {
+            "status": "fulfilled",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          }
+        ]
+      },
+      "accepted_needs": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "retrieval_diagnostics": [
+        {
+          "knowledge_status": "ok",
+          "knowledge_retrieval_id": "d6c855e3-a43a-4bc3-b44c-31651cddcb23",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 3,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29423,\"max_estimated_tokens\":3163,\"deadline_ms\":9626}",
+          "knowledge_generation": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+          "knowledge_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "knowledge_answer": "{\"status\":\"fulfilled\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\"],\"scope\":{\"population\":\"returned_entities\",\"entity_ids\":[\"KM-500c-2\"],\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-bcc748f9afcd4257\", \"retrieval_id\": \"d6c855e3-a43a-4bc3-b44c-31651cddcb23\", \"execution_status\": \"ok\", \"answer_status\": \"fulfilled\", \"expected\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-bcc748f9afcd4257\"}, \"observed\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-bcc748f9afcd4257\", \"generation_id\": \"72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 2,
+          "knowledge_retrieval_refs": "ffb087cf-a089-4bf9-8d5a-c968ac5fe47a,d6c855e3-a43a-4bc3-b44c-31651cddcb23",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 1.4874871000647545,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "actual_jev_calls": 2,
+      "accepted_host_results": 2,
+      "public_evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-936fb478e09f82b0",
+          "created_at": "2026-10-09T21:04:02.254366Z",
+          "updated_at": "2026-10-09T21:04:02.254366Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:02.254366Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-bcc748f9afcd4257",
+            "strategy": "knowledge:d6c855e3-a43a-4bc3-b44c-31651cddcb23",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [
+            "Derived graph context (not a source quote; scores are ranking signals): {\"seed_id\":null,\"signals\":{},\"path\":[],\"relationships\":[{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"68d2ad4837860e0ae8f8ab1229fcbe58bace4d7ee62ef0832f38f7f3c9daefb4\"},\"source_id\":\"KM-500c\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"covered_by\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"KM-500c\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"228c674c417e3fceef08d43dd844816f1c57c5c20a771719873082b9c2c6da13\"},\"source_id\":\"KM-500e-2\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500f-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"6d0a81e7e391e5834713d3b732ef2b6bb3c9fa4dab76ff0fbe5d73db2a014106\"},\"source_id\":\"KM-500f-2\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500g-1.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"a309e1b0697278034b1b9800a11774c857992773af0727d1651e398fbf6a26d3\"},\"source_id\":\"KM-500g-1\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/components\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"knowledge_management\",\"edge_type\":\"component_membership\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_conflict_recorded\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_failed_child_is_a_limitation_never_an_empty_result\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls\"}],\"related\":[{\"canonical_id\":\"KM-500c\",\"title\":\"Continue the original research with evidence you can assess\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500e-2\",\"title\":\"Return canonical fields and clauses without changing their meaning\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500f-2\",\"title\":\"Keep declared coverage executed proof and deployment proof separate\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500g-1\",\"title\":\"Show execution and original-question fulfillment in the same observable attempt\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"knowledge_management\",\"title\":\"Knowledge Management\",\"kind\":\"Component\"},{\"canonical_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"title\":\"test_research_graph.py\",\"kind\":\"Test\"}]}"
+          ],
+          "truncated": false
+        }
+      ],
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.53, below 0.7)",
+        "required need need.question is partial"
+      ],
+      "receipt": "A01/resume-0007/envelope.json"
+    },
+    {
+      "host_dispatch_provenance": [
+        {
+          "case_id": "A02",
+          "run_id": "run-9ea25d19efd1419b",
+          "interaction_id": "int-fd7d496a989a4b15",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact follow-up dispatch time unavailable; registration time is not substituted.",
+          "registered_at": "2026-10-09T21:06:00.920342+00:00",
+          "model_id": null,
+          "root_spawn_fork_turns": "none",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "provenance_source": "Root orchestrator confirmed follow-up to the existing fresh blind host; only actual new packets and previously supplied packets were available.",
+          "packet_sha256": "c56b044633ccc091cc9be7acb0fbc771212121c3409197cf459fdfb29c58d74c",
+          "response_sha256": "8e0b7b92a5df1e669a8d337e2171bbb8bc6978cac6266026e6aa3081632d45ac",
+          "inputs": [
+            {
+              "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\runtime\\runs\\run-9ea25d19efd1419b\\artifacts\\input-int-fd7d496a989a4b15.json",
+              "archived_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\resume-0002\\host\\inputs\\0.json",
+              "sha256": "bebc2f4cb909e5058945ab4c14ae7e51633b5edb7f4b3ca726d0b35175355a11"
+            }
+          ],
+          "blindness_policy": "No source oracle, expected outcomes, grading feedback or prior evaluation responses."
+        },
+        {
+          "schema_version": "1.0",
+          "host_role": "blind_host",
+          "operation": "interpret_retrieval_needs",
+          "interaction_id": "int-f8f6dac1bf794c9d",
+          "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\packet.json",
+          "packet_sha256": "cb7ef5ded199c16dffdfe83c5b7726abbdd379525223ecfd475759d3576d8804",
+          "input_artifact_refs": [
+            "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\runtime\\runs\\run-9ea25d19efd1419b\\artifacts\\input-int-f8f6dac1bf794c9d.json"
+          ],
+          "archived_inputs": [
+            {
+              "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\inputs\\0.json",
+              "sha256": "58ca21b9a87593b77b0dc6473876479c30b8dbe641674790a3eea350b2c57021"
+            }
+          ],
+          "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\response.json",
+          "response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+          "model_id": null,
+          "completed_at": "2026-10-09T21:02:26.8971709Z",
+          "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations.",
+          "run_id": "run-9ea25d19efd1419b",
+          "case_id": "A02",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+          "registered_at": "2026-10-09T21:03:41.608829+00:00",
+          "root_spawn_fork_turns": "none",
+          "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+          "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A02\\started\\host\\dispatch.original-host.json",
+          "original_host_record_sha256": "14601affc2fa6747b6acfe3a9e0e260804ba635c2c2ba0379d3a1c3eeaaff7b3",
+          "validated_packet_sha256": "cb7ef5ded199c16dffdfe83c5b7726abbdd379525223ecfd475759d3576d8804",
+          "validated_response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+          "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+        }
+      ],
+      "id": "A02",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": true,
+      "status": "partial",
+      "functional_success": false,
+      "negative_control": null,
+      "interpretation": {
+        "sufficient": false,
+        "checks": {
+          "accepted_decided": true,
+          "original_question": true,
+          "literal_target": true,
+          "content_types": true,
+          "canonical_obligations": false,
+          "detail": true,
+          "scope": true,
+          "single_entity": true,
+          "no_relationship_substitution": true
+        },
+        "expected_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "actual_fields": [
+          "criteria"
+        ]
+      },
+      "execution": {
+        "chosen_contract_fulfilled": false,
+        "checks": {
+          "public_completed": false,
+          "answer_present": true,
+          "answer_fulfilled": true,
+          "source_agreement": true,
+          "chosen_source_fields_match": true,
+          "not_truncated": true
+        },
+        "chosen_source_field_matches": {
+          "criteria": true
+        },
+        "question_source_field_matches": {
+          "criteria": true,
+          "test_spec": false
+        },
+        "all_question_source_fields_present": false,
+        "answer_assessments": [
+          {
+            "status": "fulfilled",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          }
+        ]
+      },
+      "accepted_needs": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "retrieval_diagnostics": [
+        {
+          "knowledge_status": "ok",
+          "knowledge_retrieval_id": "7a4d520b-7859-42cd-8b12-09cf4fa2ad62",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 3,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29423,\"max_estimated_tokens\":3163,\"deadline_ms\":9687}",
+          "knowledge_generation": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+          "knowledge_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "knowledge_answer": "{\"status\":\"fulfilled\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\"],\"scope\":{\"population\":\"returned_entities\",\"entity_ids\":[\"KM-500c-2\"],\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-1ed0e2b4e0ac462a\", \"retrieval_id\": \"7a4d520b-7859-42cd-8b12-09cf4fa2ad62\", \"execution_status\": \"ok\", \"answer_status\": \"fulfilled\", \"expected\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-1ed0e2b4e0ac462a\"}, \"observed\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-1ed0e2b4e0ac462a\", \"generation_id\": \"72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 2,
+          "knowledge_retrieval_refs": "b31531d3-7b8d-4289-9b3c-dcc18e3de67f,7a4d520b-7859-42cd-8b12-09cf4fa2ad62",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 1.2035020999610424,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "actual_jev_calls": 2,
+      "accepted_host_results": 2,
+      "public_evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-936fb478e09f82b0",
+          "created_at": "2026-10-09T21:04:07.374417Z",
+          "updated_at": "2026-10-09T21:04:07.374417Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:07.374417Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-1ed0e2b4e0ac462a",
+            "strategy": "knowledge:7a4d520b-7859-42cd-8b12-09cf4fa2ad62",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [
+            "Derived graph context (not a source quote; scores are ranking signals): {\"seed_id\":null,\"signals\":{},\"path\":[],\"relationships\":[{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"68d2ad4837860e0ae8f8ab1229fcbe58bace4d7ee62ef0832f38f7f3c9daefb4\"},\"source_id\":\"KM-500c\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"covered_by\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"KM-500c\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"228c674c417e3fceef08d43dd844816f1c57c5c20a771719873082b9c2c6da13\"},\"source_id\":\"KM-500e-2\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500f-2.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"6d0a81e7e391e5834713d3b732ef2b6bb3c9fa4dab76ff0fbe5d73db2a014106\"},\"source_id\":\"KM-500f-2\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500g-1.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"a309e1b0697278034b1b9800a11774c857992773af0727d1651e398fbf6a26d3\"},\"source_id\":\"KM-500g-1\",\"target_id\":\"KM-500c-2\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/components\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"knowledge_management\",\"edge_type\":\"component_membership\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_conflict_recorded\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_failed_child_is_a_limitation_never_an_empty_result\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75\"},\"source_id\":\"KM-500c-2\",\"target_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls\"}],\"related\":[{\"canonical_id\":\"KM-500c\",\"title\":\"Continue the original research with evidence you can assess\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500e-2\",\"title\":\"Return canonical fields and clauses without changing their meaning\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500f-2\",\"title\":\"Keep declared coverage executed proof and deployment proof separate\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"KM-500g-1\",\"title\":\"Show execution and original-question fulfillment in the same observable attempt\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"knowledge_management\",\"title\":\"Knowledge Management\",\"kind\":\"Component\"},{\"canonical_id\":\"tests/kernel/capabilities/test_research_graph.py\",\"title\":\"test_research_graph.py\",\"kind\":\"Test\"}]}"
+          ],
+          "truncated": false
+        }
+      ],
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: the evidence matched the topic but did not answer the question (answer judgement 0.54, below 0.7)",
+        "required need need.question is partial"
+      ],
+      "receipt": "A02/resume-0007/envelope.json"
+    },
+    {
+      "host_dispatch_provenance": [
+        {
+          "schema_version": "1.0",
+          "host_role": "blind_host",
+          "operation": "interpret_retrieval_needs",
+          "interaction_id": "int-d0d434375ec34205",
+          "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\packet.json",
+          "packet_sha256": "2cf11e3d94ddebb973ff514fb83820c7825cab821c3ac3d56a0ad16dee4d4709",
+          "input_artifact_refs": [
+            "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\runtime\\runs\\run-1e7a4d71ca5a4cff\\artifacts\\input-int-d0d434375ec34205.json"
+          ],
+          "archived_inputs": [
+            {
+              "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\inputs\\0.json",
+              "sha256": "28da79eb340f559a4b46e49130496fde9b6ad2d98b4c26b14d6e373c8eeb9994"
+            }
+          ],
+          "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\response.json",
+          "response_sha256": "acd148eec1177eb525368c84dae084e90e2c564232f4e4b551df1a31f87262a1",
+          "model_id": null,
+          "completed_at": "2026-10-09T21:02:26.9199735Z",
+          "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations.",
+          "run_id": "run-1e7a4d71ca5a4cff",
+          "case_id": "A03",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+          "registered_at": "2026-10-09T21:03:41.763025+00:00",
+          "root_spawn_fork_turns": "none",
+          "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+          "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\dispatch.original-host.json",
+          "original_host_record_sha256": "365c207c2ce149d4cdab5d3d0bc777e581e0a9aba3912e820fe53ef1bfbf4948",
+          "validated_packet_sha256": "2cf11e3d94ddebb973ff514fb83820c7825cab821c3ac3d56a0ad16dee4d4709",
+          "validated_response_sha256": "acd148eec1177eb525368c84dae084e90e2c564232f4e4b551df1a31f87262a1",
+          "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+        }
+      ],
+      "id": "A03",
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "completed",
+      "functional_success": false,
+      "negative_control": null,
+      "interpretation": {
+        "sufficient": false,
+        "checks": {
+          "accepted_decided": true,
+          "original_question": true,
+          "literal_target": true,
+          "content_types": true,
+          "canonical_obligations": false,
+          "detail": true,
+          "scope": true,
+          "single_entity": true,
+          "no_relationship_substitution": true
+        },
+        "expected_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "actual_fields": [
+          "criteria"
+        ]
+      },
+      "execution": {
+        "chosen_contract_fulfilled": true,
+        "checks": {
+          "public_completed": true,
+          "answer_present": true,
+          "answer_fulfilled": true,
+          "source_agreement": true,
+          "chosen_source_fields_match": true,
+          "not_truncated": true
+        },
+        "chosen_source_field_matches": {
+          "criteria": true
+        },
+        "question_source_field_matches": {
+          "criteria": true,
+          "test_spec": false
+        },
+        "all_question_source_fields_present": false,
+        "answer_assessments": [
+          {
+            "status": "fulfilled",
+            "original_question": "For KM-500c-1, what must tests demonstrate?",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-1"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          }
+        ]
+      },
+      "accepted_needs": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-1, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-1"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "retrieval_diagnostics": [
+        {
+          "knowledge_status": "ok",
+          "knowledge_retrieval_id": "22adc542-2659-4a7c-a63b-bb80f2aae009",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 3,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29618,\"max_estimated_tokens\":3212,\"deadline_ms\":9707}",
+          "knowledge_generation": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+          "knowledge_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "knowledge_answer": "{\"status\":\"fulfilled\",\"original_question\":\"For KM-500c-1, what must tests demonstrate?\",\"required_fields\":[\"criteria\"],\"scope\":{\"population\":\"returned_entities\",\"entity_ids\":[\"KM-500c-1\"],\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-92e50253bc0e4b35\", \"retrieval_id\": \"22adc542-2659-4a7c-a63b-bb80f2aae009\", \"execution_status\": \"ok\", \"answer_status\": \"fulfilled\", \"expected\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-92e50253bc0e4b35\"}, \"observed\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-92e50253bc0e4b35\", \"generation_id\": \"72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 2,
+          "knowledge_retrieval_refs": "ab5c009e-a3b8-4731-b1f9-edb450be9ac3,22adc542-2659-4a7c-a63b-bb80f2aae009",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-1\"]}",
+          "kernel.elapsed_s": 1.2565717999823391,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "requested_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "actual_jev_calls": 2,
+      "accepted_host_results": 1,
+      "public_evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-a730517389f10ff4",
+          "created_at": "2026-10-09T21:04:13.508599Z",
+          "updated_at": "2026-10-09T21:04:13.508599Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given research is waiting on an attributable query-build child\nWhen a matching verified activation receipt is delivered through the existing continuation path\nThen the original run, question and evidence need resume with the newly available catalog version selected at that continuation boundary\nAnd the original repository, pinned source revision, input answers and remaining budget are preserved\nAnd the resumed research invokes the new registered query at most once for that completed build delivery\nAnd a foreign, stale, duplicate or self-certified child result cannot resume unrelated research or execute an unverified candidate\nAnd building or registering a query does not itself count as retrieved evidence or an answered question.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://leafcutter@2a8ebc87ce937a0a2fec65ab26220f79a72e4859/KM-500c-1?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml&locator=%2Fcriteria",
+            "title": "Resume the waiting research only after its query becomes usable",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T21:04:13.508599Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "c5f00eaf342706a6f305140ec189fba1159cc5c374b498fda9492261c9031fa4",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-92e50253bc0e4b35",
+            "strategy": "knowledge:22adc542-2659-4a7c-a63b-bb80f2aae009",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [
+            "Derived graph context (not a source quote; scores are ranking signals): {\"seed_id\":null,\"signals\":{},\"path\":[],\"relationships\":[{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"68d2ad4837860e0ae8f8ab1229fcbe58bace4d7ee62ef0832f38f7f3c9daefb4\"},\"source_id\":\"KM-500c\",\"target_id\":\"KM-500c-1\",\"edge_type\":\"covered_by\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/depends_on\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"KM-500c\",\"edge_type\":\"depends_on\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/components\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"knowledge_management\",\"edge_type\":\"component_membership\",\"locator\":\"\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"tests/kernel/interaction/test_restart_resume.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestKilledAroundTheLedgerWrite::test_kill_mid_resume_then_replay_finishes_the_run_without_reapplying\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"tests/knowledge/test_query_growth_adversarial.py\",\"edge_type\":\"covered_by\",\"locator\":\"test_scalar_clarification_preserves_pins_and_cannot_override_scope\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"tests/knowledge/test_query_growth_adversarial.py\",\"edge_type\":\"covered_by\",\"locator\":\"test_resume_rejects_other_verified_version_of_same_operation\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"tests/knowledge/test_query_growth_kernel.py\",\"edge_type\":\"covered_by\",\"locator\":\"TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog\"},{\"source\":{\"repository_id\":\"leafcutter\",\"source_sha\":\"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\",\"path\":\"docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml\",\"locator\":\"/covered_by\",\"content_hash\":\"dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03\"},\"source_id\":\"KM-500c-1\",\"target_id\":\"tests/knowledge_live/query_growth_local_checks.py\",\"edge_type\":\"covered_by\",\"locator\":\"test_local_query_growth_public_proof\"}],\"related\":[{\"canonical_id\":\"KM-500c\",\"title\":\"Continue the original research with evidence you can assess\",\"kind\":\"AcceptanceCriterion\"},{\"canonical_id\":\"knowledge_management\",\"title\":\"Knowledge Management\",\"kind\":\"Component\"},{\"canonical_id\":\"tests/kernel/interaction/test_restart_resume.py\",\"title\":\"test_restart_resume.py\",\"kind\":\"Test\"},{\"canonical_id\":\"tests/knowledge/test_query_growth_adversarial.py\",\"title\":\"test_query_growth_adversarial.py\",\"kind\":\"Test\"},{\"canonical_id\":\"tests/knowledge/test_query_growth_kernel.py\",\"title\":\"test_query_growth_kernel.py\",\"kind\":\"Test\"},{\"canonical_id\":\"tests/knowledge_live/query_growth_local_checks.py\",\"title\":\"query_growth_local_checks.py\",\"kind\":\"Test\"}]}"
+          ],
+          "truncated": false
+        }
+      ],
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment."
+      ],
+      "receipt": "A03/resume-0002/envelope.json"
+    },
+    {
+      "host_dispatch_provenance": [
+        {
+          "schema_version": "1.0",
+          "host_role": "blind_host",
+          "operation": "interpret_retrieval_needs",
+          "interaction_id": "int-0ef77414ef1e4b9a",
+          "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\started\\host\\packet.json",
+          "packet_sha256": "6dc26fce8fa5cacb35c7e22aa1a721c3011719e84d75987468d8504aa46e4655",
+          "input_artifact_refs": [
+            "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\runtime\\runs\\run-2ac128d978244f4e\\artifacts\\input-int-0ef77414ef1e4b9a.json"
+          ],
+          "archived_inputs": [
+            {
+              "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\started\\host\\inputs\\0.json",
+              "sha256": "787acaf6ec5b5a2b122ddaf9cbcf85bce609f60fe45f8768d954b80638cc1e35"
+            }
+          ],
+          "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\started\\host\\response.json",
+          "response_sha256": "342c0707e0f50084136ada288081b597bcb0598c3f220788b481c9ff55a9fb8a",
+          "model_id": null,
+          "completed_at": "2026-10-09T21:02:26.9429433Z",
+          "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations.",
+          "run_id": "run-2ac128d978244f4e",
+          "case_id": "A04",
+          "agent_id": "/root/retrieval_aura_blind_host",
+          "dispatched_at": null,
+          "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+          "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+          "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+          "registered_at": "2026-10-09T21:03:41.940705+00:00",
+          "root_spawn_fork_turns": "none",
+          "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+          "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A04\\started\\host\\dispatch.original-host.json",
+          "original_host_record_sha256": "8c8dd5d355420a8eb1b8116666152330adf74cc4ba3f95ea26a1d1956c8fa792",
+          "validated_packet_sha256": "6dc26fce8fa5cacb35c7e22aa1a721c3011719e84d75987468d8504aa46e4655",
+          "validated_response_sha256": "342c0707e0f50084136ada288081b597bcb0598c3f220788b481c9ff55a9fb8a",
+          "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+        }
+      ],
+      "id": "A04",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "partial",
+      "functional_success": true,
+      "negative_control": {
+        "passed": true,
+        "actual_stale_boundary_exercised": true,
+        "stale_receipts": [
+          {
+            "knowledge_status": "stale",
+            "knowledge_retrieval_id": "70b1f071-cfad-47a0-ac11-43b37a0c15e4",
+            "knowledge_requested_mode": "exact",
+            "knowledge_executed_mode": "exact",
+            "knowledge_operation": "get_entities",
+            "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+            "knowledge_allowed_fallback": "none",
+            "knowledge_disclosure_level": 0,
+            "knowledge_budget": "{\"max_results\":6,\"max_candidates\":50,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":32768,\"max_estimated_tokens\":4000,\"deadline_ms\":10000}",
+            "knowledge_generation": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+            "knowledge_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+            "knowledge_answer": "{\"status\":\"unresolved\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\"],\"scope\":{\"population\":\"returned_entities\",\"entity_ids\":[\"KM-500c-2\"],\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":false,\"known_count\":0,\"exact_total\":null,\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]}",
+            "knowledge_diagnosis": "{\"request_id\": \"inv-a3aef1b8b0fd4eef\", \"retrieval_id\": \"70b1f071-cfad-47a0-ac11-43b37a0c15e4\", \"execution_status\": \"stale\", \"answer_status\": \"unresolved\", \"expected\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"0000000000000000000000000000000000000000\", \"operation\": \"get_entities\", \"request_id\": \"inv-a3aef1b8b0fd4eef\"}, \"observed\": {\"repository_id\": null, \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-a3aef1b8b0fd4eef\", \"generation_id\": \"72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+            "knowledge_rounds": 1,
+            "knowledge_retrieval_refs": "70b1f071-cfad-47a0-ac11-43b37a0c15e4",
+            "knowledge_selection": "selected",
+            "knowledge_selected_operation": "get_entities",
+            "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+            "kernel.elapsed_s": 0.5909113000379875,
+            "kernel.jev_reserved": 1
+          }
+        ]
+      },
+      "interpretation": {
+        "sufficient": false,
+        "checks": {
+          "accepted_decided": true,
+          "original_question": true,
+          "literal_target": true,
+          "content_types": true,
+          "canonical_obligations": false,
+          "detail": true,
+          "scope": true,
+          "single_entity": true,
+          "no_relationship_substitution": true
+        },
+        "expected_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "actual_fields": [
+          "criteria"
+        ]
+      },
+      "execution": {
+        "chosen_contract_fulfilled": false,
+        "checks": {
+          "public_completed": false,
+          "answer_present": true,
+          "answer_fulfilled": false,
+          "source_agreement": true,
+          "chosen_source_fields_match": false,
+          "not_truncated": true
+        },
+        "chosen_source_field_matches": {
+          "criteria": false
+        },
+        "question_source_field_matches": {
+          "criteria": false,
+          "test_spec": false
+        },
+        "all_question_source_fields_present": false,
+        "answer_assessments": [
+          {
+            "status": "unresolved",
+            "original_question": "For KM-500c-2, what must tests demonstrate?",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": false,
+              "known_count": 0,
+              "exact_total": null,
+              "limitations": [
+                "execution is stale",
+                "requested source revision is not established",
+                "requested identities are missing from returned evidence",
+                "no evidence for the requested facts"
+              ]
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": [
+              "execution is stale",
+              "requested source revision is not established",
+              "requested identities are missing from returned evidence",
+              "no evidence for the requested facts"
+            ]
+          }
+        ]
+      },
+      "accepted_needs": {
+        "schema_version": "1.0",
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "leafcutter",
+          "revision": "0000000000000000000000000000000000000000",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "single_entity",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "retrieval_diagnostics": [
+        {
+          "knowledge_status": "stale",
+          "knowledge_retrieval_id": "70b1f071-cfad-47a0-ac11-43b37a0c15e4",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 0,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":50,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":32768,\"max_estimated_tokens\":4000,\"deadline_ms\":10000}",
+          "knowledge_generation": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+          "knowledge_source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+          "knowledge_answer": "{\"status\":\"unresolved\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\"],\"scope\":{\"population\":\"returned_entities\",\"entity_ids\":[\"KM-500c-2\"],\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":false,\"known_count\":0,\"exact_total\":null,\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-a3aef1b8b0fd4eef\", \"retrieval_id\": \"70b1f071-cfad-47a0-ac11-43b37a0c15e4\", \"execution_status\": \"stale\", \"answer_status\": \"unresolved\", \"expected\": {\"repository_id\": \"leafcutter\", \"source_sha\": \"0000000000000000000000000000000000000000\", \"operation\": \"get_entities\", \"request_id\": \"inv-a3aef1b8b0fd4eef\"}, \"observed\": {\"repository_id\": null, \"source_sha\": \"2a8ebc87ce937a0a2fec65ab26220f79a72e4859\", \"operation\": \"get_entities\", \"request_id\": \"inv-a3aef1b8b0fd4eef\", \"generation_id\": \"72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 1,
+          "knowledge_retrieval_refs": "70b1f071-cfad-47a0-ac11-43b37a0c15e4",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 0.5909113000379875,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "requested_revision": "0000000000000000000000000000000000000000",
+      "actual_jev_calls": 1,
+      "accepted_host_results": 1,
+      "public_evidence": [],
+      "limitations": [
+        "requested revision is not published",
+        "knowledge status: stale",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "execution is stale",
+        "requested source revision is not established",
+        "requested identities are missing from returned evidence",
+        "no evidence for the requested facts",
+        "Original answer requirements remain unresolved",
+        "need need.question: conditional assessment remains unresolved",
+        "required need need.question is unavailable"
+      ],
+      "receipt": "A04/resume-0002/envelope.json"
+    }
+  ],
+  "actual_jev_calls": 7,
+  "accepted_host_results": 6,
+  "usage_incomplete_cases": [],
+  "usage_note": "Envelope usage is a known lower bound when usage_incomplete_cases is nonempty; failure traces are retained."
+}

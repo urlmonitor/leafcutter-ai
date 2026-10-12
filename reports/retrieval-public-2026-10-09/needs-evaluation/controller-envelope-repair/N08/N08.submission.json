@@ -1,0 +1,56 @@
+{
+  "run_id": "run-0f8bf2e1ef8c4c08",
+  "interaction_id": "int-ba210910480445cb",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Do we already specify what happens when research lacks required inputs? Show the relevant criteria.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "Discover the criteria that govern missing required research inputs and retrieve their acceptance clauses. The question supplies a topic rather than target identifiers and does not request samples or a hierarchy restriction.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

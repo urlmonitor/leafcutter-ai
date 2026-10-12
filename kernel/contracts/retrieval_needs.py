@@ -13,7 +13,9 @@ from pydantic import ConfigDict, Field, JsonValue, field_validator, model_valida
 from kernel.contracts.base import KernelModel, fail
 
 DIMENSIONS = ("entity_types", "target_ids", "required_fields", "document_types", "relationships")
-LITERAL_ID = re.compile(r"\b[A-Z][A-Z0-9]*(?:-[A-Z]+)*-\d+[a-z]?(?:-\d+)?(?:-[ivx]+)?\b")
+LITERAL_ID = re.compile(
+    r"(?<![\w-])(?:ADR-\d+(?:-[A-Za-z0-9]+)*|[A-Z][A-Z0-9]*(?:-[A-Z]+)*-\d+[a-z]?(?:-\d+)?(?:-[ivx]+)?)(?![\w-])"
+)
 
 
 def _dimensions(value: dict) -> dict:
@@ -47,7 +49,14 @@ class RetrievalNeedsRequest(KernelModel):
     @field_validator("catalog")
     @classmethod
     def finite_catalog(cls, value: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
-        """Refuse oversize offers rather than changing the interpreted vocabulary."""
+        """Refuse oversize offers rather than changing the interpreted vocabulary.
+
+        Args:
+            value: Proposed finite catalog mapping to validate.
+
+        Returns:
+            Bounded catalog with exactly the supported dimensions.
+        """
         _dimensions(value)
         for options in value.values():
             if len(options) > 64:
@@ -96,6 +105,8 @@ class RetrievalNeedsOutput(KernelModel):
     )
     hierarchy_scope: Literal["not_applicable", "exclude_root", "exclude_parents", "include_root", "unknown"]
     """Whether a population answer includes or excludes the chosen root and its parents."""
+    hierarchy_levels: list[Literal["L0", "L1", "L2", "L3"]] = Field(default_factory=list, max_length=4)
+    """Explicit hierarchy level filter; empty means all levels, never an inferred level restriction."""
     scope_resolution: Literal["sufficient", "discovery_needed", "user_choice_missing", "unknown"]
     """Whether retrieval may start, needs discovery first, or lacks a user choice."""
     unresolved: list[str] = Field(default_factory=list, max_length=32)
@@ -129,7 +140,14 @@ class RetrievalNeedsOutput(KernelModel):
 
 
 def prepare_request(request: RetrievalNeedsRequest) -> RetrievalNeedsRequest:
-    """Add only literal/supplied target candidates before compiling the host request."""
+    """Add only literal/supplied target candidates before compiling the host request.
+
+    Args:
+        request: Original typed host request and finite offered meanings.
+
+    Returns:
+        Validated request augmented only by literal or caller-supplied candidates.
+    """
     body = request.model_dump(mode="json")
     targets = body["catalog"]["target_ids"]
     for identifier in request.known_ids:
@@ -144,3 +162,5 @@ def prepare_request(request: RetrievalNeedsRequest) -> RetrievalNeedsRequest:
 # - 2026-10-09 [python-coder]: Field purposes added so the host interpreting a question knows what
 #   each dimension and mode means. (#TICKET-20261009-KernelContractFieldDescriptions)
 # - 2026-10-03 00:00 [python-coder]: Preserve the frozen needs experiment semantics through typed host work. (#TICKETLESS reason=user-requested-isolated-host-experiment)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve canonical acceptance clauses and explicit unresolved meanings in the public host boundary. (#KM-500/KM-500e-1-i)

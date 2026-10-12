@@ -97,7 +97,8 @@ def test_capability_real_registry_exact_fields_and_no_defaults():
     root = Path(__file__).resolve().parents[2]
     raw = json.loads((root / "config/capability_registry.json").read_text(encoding="utf-8"))
     records = _extract(root)
-    assert len(records) == len(raw["capabilities"]) == 9
+    assert len(records) == len(raw["capabilities"]) == 10
+    assert any(record.native_id == "host.retrieval_needs" for record in records)
     assert {r.metadata["execution_mode"] for r in records} == {"native", "host_handoff"}
     assert {r.metadata["routing"] for r in records} == {"semantic", "fixed"}
     for index, (record, entry) in enumerate(zip(records, raw["capabilities"], strict=True)):

@@ -38,6 +38,21 @@
       "title": "Engine",
       "type": "string"
     },
+    "hierarchy_levels": {
+      "description": "Explicit hierarchy level filter; empty means all levels, never an inferred level restriction.",
+      "items": {
+        "enum": [
+          "L0",
+          "L1",
+          "L2",
+          "L3"
+        ],
+        "type": "string"
+      },
+      "maxItems": 4,
+      "title": "Hierarchy Levels",
+      "type": "array"
+    },
     "hierarchy_scope": {
       "description": "Whether a population answer includes or excludes the chosen root and its parents.",
       "enum": [

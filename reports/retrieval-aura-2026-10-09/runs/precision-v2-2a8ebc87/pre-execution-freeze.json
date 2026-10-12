@@ -1,0 +1,19 @@
+{
+  "frozen_at": "2026-10-09T21:48:42.005646+00:00",
+  "reason": "Separate four-case actual Aura verification after the sixteen-case semantic gate. No prior outcomes or gold altered. Fresh blind host interpretation required.",
+  "prior_semantic_gate": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/review.json",
+  "semantic_closure_sha256": "b9f3e50c4f7116d569a23aba748352d30f45e8e260371617734135e1f8da61dc",
+  "unchanged_cases": true,
+  "unchanged_budgets": true,
+  "unchanged_expectations": true,
+  "byte_identical_source_oracles": true,
+  "source_oracle_sha256": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "runtime_fingerprint": "bb93a68bda69411d810a645e28211416434e95bc959f7e6a0f0a77195ebe7b82",
+  "runtime_base_revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "tested_source_manifest_sha256": "ab40a61fe9c6a36c48978eeb7351c5f3d58b5a704a32ada328d22d424d9bbf20",
+  "host_generation_policy": "Fresh agent receives actual packets and inputs only, no oracle/outcomes/prior host context. Unknown model/tokens remain null.",
+  "no_success_chasing_retries": true,
+  "interpretation_and_selected_field_fulfillment_and_complete_answer_are_separate": true
+}

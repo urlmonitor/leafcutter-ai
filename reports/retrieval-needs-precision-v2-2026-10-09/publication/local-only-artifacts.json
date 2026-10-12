@@ -1,0 +1,117 @@
+{
+  "original_bytes_preserved": true,
+  "files": [
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H01/runtime/checkpoints.sqlite",
+      "sha256": "dfdc881418410a1b396a27b41c968c2ec004770094f4fa100b6e6d54fe93cb37",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H02/runtime/checkpoints.sqlite",
+      "sha256": "27e8f574e94efbb32aa5882236a439b9aa9afbb156ff909f3d9a33fe99994957",
+      "bytes": 462848,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H03/runtime/checkpoints.sqlite",
+      "sha256": "e25dff7647557660ce5a12296596b6cdbe64c758879851237a240c079b5716b6",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/H04/runtime/checkpoints.sqlite",
+      "sha256": "ba5a298f7a9160496f28d663be0015718785497653e2f3df43db6f6da2955fe4",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP01/runtime/checkpoints.sqlite",
+      "sha256": "2cd44c7c2b0c9508e55a13d6069c3b6a0d166a38be07764276291a5a15972c8e",
+      "bytes": 458752,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP02/runtime/checkpoints.sqlite",
+      "sha256": "601d4447ad48d958edc537768543e78315d448db0df2fe8aff5967ff2908649f",
+      "bytes": 458752,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP03/runtime/checkpoints.sqlite",
+      "sha256": "17368a86f955a41777120cef6f8a9081d0955e621321cfdf5cc6bc86ec48a788",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP04/runtime/checkpoints.sqlite",
+      "sha256": "c55a94627d764b8248c4f5bf09e17358184e2c898fcb2e3ed544426aa68431c0",
+      "bytes": 450560,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP05/runtime/checkpoints.sqlite",
+      "sha256": "52d83a555d56772d7a8e79c109ece9aea53dba9141ccb212d7ce5bf93a2245ba",
+      "bytes": 458752,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP06/runtime/checkpoints.sqlite",
+      "sha256": "4aaca36b084a259ee1a6df7e83ce337b6131c92ed37f041e7a331044ea6613e7",
+      "bytes": 458752,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP07/runtime/checkpoints.sqlite",
+      "sha256": "ec5820aec1d1d7ba6a80d95cd1d51e1ab5f5363552fd5089d59790fca6ee0d9b",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP08/runtime/checkpoints.sqlite",
+      "sha256": "f037d9c55317cc2fb9f13b306fc22b99397943e3fac3e4b6f47ba48afe712adc",
+      "bytes": 462848,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP09/runtime/checkpoints.sqlite",
+      "sha256": "f1a8217d61fe036f7477eee476433470b236c58dca226f32b83de4090d27ffa3",
+      "bytes": 462848,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP10/runtime/checkpoints.sqlite",
+      "sha256": "966fe7389b64fa459369beada601e23b6f42c1282fff06ad50764e94bd4cf161",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP11/runtime/checkpoints.sqlite",
+      "sha256": "0ca86467362bc315dfa273e8f998113f3d3d501b73c2ebe3d4fb58e2dccd8ea6",
+      "bytes": 466944,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-v2-2026-10-09/stage1b/IP12/runtime/checkpoints.sqlite",
+      "sha256": "d4ee47de17b6273ed4ccec46d197336c35c54ef4c7fd2aa2e6d11a78627cb456",
+      "bytes": 462848,
+      "publication": "local_only",
+      "reason": "Closed replay checkpoint database; exported envelopes, accepted outputs and traces remain reviewable. Preserve locally; do not upload or sanitize this binary."
+    }
+  ]
+}
