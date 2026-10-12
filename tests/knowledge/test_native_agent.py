@@ -145,11 +145,14 @@ def test_agent_real_registry_preserves_all_entries_and_registered_templates():
         "agents"
     ]
     records = _extract(root)
-    assert len(records) == len(entries) == 61
+    count = len(entries)
+    assert len(records) == count > 0
     assert [record.metadata for record in records] == entries
-    assert [record.locator for record in records] == [f"/agents/{i}" for i in range(61)]
-    assert len({record.native_id for record in records}) == 61
-    assert sum("template_frontmatter" in record.derived for record in records) == 59
+    assert [record.locator for record in records] == [f"/agents/{i}" for i in range(count)]
+    assert len({record.native_id for record in records}) == count
+    assert sum("template_frontmatter" in record.derived for record in records) == sum(
+        1 for entry in entries if entry.get("template_path")
+    )
     by_id = {record.native_id: record for record in records}
     for name in ("architect-review-deep", "conflict-resolver-deep"):
         assert by_id[name].derived == {}

@@ -3614,6 +3614,7 @@
                 "signoff",
                 "complexity-reduction"
             ],
+            "priority": 8.5,
             "description": "Restructures named code to meet a complexity or file-size demand without changing behaviour. Brought in by a depth-0 driver after a refusal, as a different party from the coder that wrote the change. Applies complexity-reduction only when the demand is about complexity, and returns a machine-readable skills_applied report.",
             "skills_invoked": [
                 {

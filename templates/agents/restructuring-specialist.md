@@ -180,6 +180,15 @@ You must defer, never proceed, when:
 - No tests cover the code and you cannot write a faithful characterization test.
 - You are tempted to spawn another agent: you have no Agent tool and spawn nobody.
 
+## Machine-Parsed Dispatch Output Contract
+
+When dispatched for a machine-parsed result (a delivery workflow will `JSON.parse`
+your reply or enforce it against a `schema:`), your response MUST be exactly one JSON
+value and nothing else: the Report object above, with no markdown headings and no
+leading or trailing prose. Carry any anomaly, warning, or caveat inside that object
+as an `anomalies` array field. On the interactive path, flag unusual conditions in an
+`## Anomalies` section ahead of the Report.
+
 ## Constraints
 
 - Single-command bash rule: every Bash call is one simple command with absolute

@@ -23,7 +23,7 @@ last_updated: '2026-10-12'
 |-------|-------|
 | Model | sonnet |
 | Tier | phase |
-| Priority | — |
+| Priority | 8.5 |
 | Portable | Yes |
 | Sign-off capable | Yes |
 
@@ -56,7 +56,7 @@ flowchart TD
     classDef target fill:#fee2e2,stroke:#dc2626,stroke-width:3px
 
     ticket_supervisor["ticket-supervisor\n(supervisor tier)"]:::supervisor
-    restructuring_specialist["restructuring-specialist\n(phase tier, priority ?)"]:::target
+    restructuring_specialist["restructuring-specialist\n(phase tier, priority 8.5)"]:::target
 
     ticket_supervisor -->|dispatches| restructuring_specialist
 ```

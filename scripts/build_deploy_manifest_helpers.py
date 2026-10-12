@@ -263,6 +263,25 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     return result
 
 
+def _guard_source_paths_template_standalone(package_root: Path) -> set[str]:
+    """Return SOURCE paths for template-standalone scripts (BP-100n-4 split).
+
+    The tracked-source twin of ``_manifest_template_standalone_scripts`` above:
+    the same files, named by their source path under ``templates/scripts/``.
+    Kept beside it so the two stay 1:1
+    (test_guard_source_paths_match_deployable_set asserts equal cardinality).
+    """
+    source_paths: set[str] = set()
+    templates_scripts = package_root / "templates" / "scripts"
+    if templates_scripts.is_dir():
+        for f in templates_scripts.glob("*.py"):
+            if f.is_file():
+                source_paths.add(f"templates/scripts/{f.name}")
+        if (templates_scripts / "precommit-autofix.json").is_file():
+            source_paths.add("templates/scripts/precommit-autofix.json")
+    return source_paths
+
+
 def _manifest_doc_compliance_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/doc_compliance/<rel>`` entries for the doc-compliance package.
 
