@@ -24,7 +24,6 @@ criteria: |
     later per-entry addition has to be specified before it can be written.
 depends_on:
   - ACD-2500c
-  - ACD-2500c-1
 doc_links:
   - path: docs/reference/ac-schema.md
     relationship: describes
@@ -109,6 +108,10 @@ test_spec:
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "depends_on ACD-2500c-1 removed: it pointed the wrong way (c-1 consumes the entry shape this AC defines, per its expects_from) and formed a cycle; c-3 builds first"
+  date: '2026-10-12'
+  by: main-session
+  directed_by: user
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
