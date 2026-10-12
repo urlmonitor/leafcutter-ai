@@ -15,18 +15,15 @@
 import * as React from "react";
 import { PageHeader, EmptyState } from "@/components/ui/kit";
 import { humanize } from "@/lib/utils";
-import type { Flow, FlowKind, FlowRealization, FlowSource, MockData } from "@/lib/data/types";
+import type { Flow, MockData } from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
 import {
   FlowCrumbs,
   FlowSelector,
-  KINDS,
-  REALIZATIONS,
   REALIZATION_LABEL,
   SOURCES,
   Segmented,
-  type RealizationFilter,
-} from "./flows-view-controls";
+} from "./parts/flows-view-controls";
 import {
   FlowNotice,
   LevelChip,
@@ -34,20 +31,17 @@ import {
   StepNotice,
   StepRollup,
   type FlowsViewNotice,
-} from "./flows-view-banners";
+} from "./parts/flows-view-banners";
 import { StepAddressContext } from "./flow-step-view";
-import { replaceFlowAddress } from "./flow-history";
 import { stepNotFoundDetail } from "@/lib/flow-url";
+import { useFlowsViewState } from "./use-flows-view-state";
+import type { FlowsViewFilters } from "./flow-view-model";
 import { RealizationBadge } from "./realization-badge";
 import { Workflow } from "lucide-react";
 
 export type { FlowsViewNotice };
 
-export interface FlowsViewFilters {
-  source: FlowSource;
-  kind: FlowKind;
-  realization: RealizationFilter;
-}
+export type { FlowsViewFilters };
 
 export function FlowsView({
   flows,
@@ -71,136 +65,31 @@ export function FlowsView({
   step: string | null;
   notice?: FlowsViewNotice;
 }) {
-  const [source, setSource] = React.useState<FlowSource>(filters.source);
-  const [kind, setKind] = React.useState<FlowKind>(filters.kind);
-  const [realization, setRealization] = React.useState<RealizationFilter>(filters.realization);
-  const [selectedId, setSelectedId] = React.useState<string>(flowId ?? "");
-  // Drill path (flow ids) from the entry flow down into sub-flows.
-  const [path, setPath] = React.useState<string[]>(initialCrumbs);
-
-  const flowById = React.useMemo(() => {
-    const m = new Map<string, Flow>();
-    for (const f of flows) m.set(f.id, f);
-    return m;
-  }, [flows]);
-
-  const flowNames = React.useMemo(() => {
-    const r: Record<string, string> = {};
-    for (const f of flows) r[f.id] = f.name;
-    return r;
-  }, [flows]);
-
-  // Kinds that actually have a flow for the current source.
-  const kindsForSource = React.useCallback(
-    (src: FlowSource) => KINDS.filter((k) => flows.some((f) => f.source === src && f.kind === k)),
-    [flows],
-  );
-  const availableKinds = kindsForSource(source);
-  // If the chosen kind has no flows for this source, fall back to the first that does.
-  const effectiveKind = availableKinds.includes(kind) ? kind : availableKinds[0] ?? kind;
-
-  // Realizations actually present in the current source+kind scope. Powers the
-  // realization filter so a reviewer can isolate real (built) flows from
-  // spec/sample seeds. Only offered when >1 realization is present (else noise).
-  const realizationsInScope = React.useMemo(() => {
-    const present = new Set<FlowRealization>();
-    for (const f of flows) {
-      if (f.source === source && f.kind === effectiveKind) present.add(f.realization);
-    }
-    return present;
-  }, [flows, source, effectiveKind]);
-  const availableRealizations = React.useMemo<RealizationFilter[]>(
-    () => ["all", ...REALIZATIONS.filter((r) => realizationsInScope.has(r))],
-    [realizationsInScope],
-  );
-  // Fall back to "all" if the chosen realization has no flows in the current scope.
-  const effectiveRealization: RealizationFilter =
-    realization === "all" || realizationsInScope.has(realization) ? realization : "all";
-
-  const filtered = React.useMemo(
-    () =>
-      flows.filter(
-        (f) =>
-          f.source === source &&
-          f.kind === effectiveKind &&
-          (effectiveRealization === "all" || f.realization === effectiveRealization),
-      ),
-    [flows, source, effectiveKind, effectiveRealization],
-  );
-
-  // The ENTRY flow (top-level selector), falling back to the first match in scope.
-  // With nothing selected (not-found address) no flow is drawn — never a fallback.
-  const entryFlow = selectedId
-    ? filtered.find((f) => f.id === selectedId) ?? filtered[0] ?? null
-    : null;
-
-  // Reset the drill path to the entry whenever the entry flow changes
-  // (selector click, source/kind switch). Drilling pushes onto path without
-  // touching the entry, so this does not fire on drill. The first run keeps the
-  // path the address opened with.
-  const entryId = entryFlow?.id;
-  const mounted = React.useRef(false);
-  React.useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      return;
-    }
-    setPath(entryId ? [entryId] : []);
-  }, [entryId]);
-
-  // The flow actually rendered = deepest crumb, or the entry before the effect runs.
-  const renderedId = path[path.length - 1];
-  const flow = (renderedId && flowById.get(renderedId)) || entryFlow;
+  const {
+    f,
+    r,
+    entryFlow,
+    flow,
+    crumbs,
+    notice: shownNotice,
+    unknownStep,
+    stepAddress,
+    epoch,
+    onSource,
+    onKind,
+    onRealization,
+    onSelectFlow,
+    onCrumb,
+    onDrill,
+  } = useFlowsViewState({ flows, flowId, crumbs: initialCrumbs, filters, step, notice });
+  const { kind: effectiveKind, realization: effectiveRealization, filtered } = r;
   const mock = flow ? mocks[flow.id] ?? null : null;
 
-  const onSelectSource = (next: FlowSource) => {
-    setSource(next);
-    // Auto-select the first kind that has flows in the new source, if the current one doesn't.
-    const kinds = kindsForSource(next);
-    if (!kinds.includes(kind)) setKind(kinds[0] ?? kind);
-  };
-
-  const drillTo = React.useCallback(
-    (childId: string) => {
-      if (flowById.has(childId)) setPath((p) => [...p, childId]);
-    },
-    [flowById],
-  );
-
-  // The address's step seeds the drawer only on the first mount of the flow the
-  // address named. Any drill / flow change, or the first drawer change, spends
-  // it: a later remount (breadcrumb back) then starts with no drawer instead of
-  // re-opening a stale step. A step naming nothing opens that flow with a notice
-  // and no drawer (not a 404); a real drawer change clears the notice.
-  const stepFlow = initialCrumbs[initialCrumbs.length - 1];
-  const seedSpent = React.useRef(false);
-  const [stepTouched, setStepTouched] = React.useState(false);
-  if (flow?.id !== stepFlow || stepTouched) seedSpent.current = true;
-  const seeded = step !== null && !seedSpent.current;
-  const stepKnown = seeded && flow ? [...flow.steps, ...flow.branches].some((x) => x.id === step) : false;
-  const initialStep = stepKnown ? `step:${step}` : null;
-  const stepNotice = seeded && !stepKnown;
-
-  // A drawer opened, switched or closed: replace the address in place (no Back entry).
-  const flowIdNow = flow?.id;
-  const onStepChange = React.useCallback(
-    (nodeId: string | null) => {
-      seedSpent.current = true;
-      setStepTouched(true);
-      if (!flowIdNow) return;
-      replaceFlowAddress(flowIdNow, nodeId ? nodeId.replace(/^step:/, "") : null, {
-        crumbs: path,
-        filters: { source, kind: effectiveKind, realization: effectiveRealization },
-      });
-    },
-    [flowIdNow, path, source, effectiveKind, effectiveRealization],
-  );
-  const stepAddress = React.useMemo(
-    () => ({ initialId: initialStep, onChange: onStepChange }),
-    [initialStep, onStepChange],
-  );
-
-  const crumbs = path.map((id) => flowById.get(id)).filter((f): f is Flow => Boolean(f));
+  const flowNames = React.useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const x of flows) names[x.id] = x.name;
+    return names;
+  }, [flows]);
 
   return (
     <div className="flex flex-col">
@@ -224,32 +113,32 @@ export function FlowsView({
       </PageHeader>
 
       {flow && <RealizationBanner flow={flow} />}
-      {stepNotice && <StepNotice detail={stepNotFoundDetail(step)} />}
+      {flow && unknownStep !== null && <StepNotice detail={stepNotFoundDetail(unknownStep)} />}
 
       {/* source + kind controls */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
         <Segmented
           label="Source"
           options={SOURCES}
-          value={source}
-          onChange={onSelectSource}
+          value={f.source}
+          onChange={onSource}
           render={(opt) => <span>{opt === "mock" ? "Mock" : "Real"}</span>}
         />
-        {availableKinds.length > 0 && (
+        {r.availableKinds.length > 0 && (
           <Segmented
             label="Kind"
-            options={availableKinds}
+            options={r.availableKinds}
             value={effectiveKind}
-            onChange={setKind}
+            onChange={onKind}
             render={(opt) => <span>{humanize(opt)}</span>}
           />
         )}
-        {availableRealizations.length > 2 && (
+        {r.availableRealizations.length > 2 && (
           <Segmented
             label="Realization"
-            options={availableRealizations}
+            options={r.availableRealizations}
             value={effectiveRealization}
-            onChange={setRealization}
+            onChange={onRealization}
             render={(opt) =>
               opt === "all" || opt === "built" ? (
                 <span>{REALIZATION_LABEL[opt]}</span>
@@ -262,13 +151,13 @@ export function FlowsView({
       </div>
 
       {filtered.length > 0 && (
-        <FlowSelector flows={filtered} activeId={entryFlow?.id} onSelect={setSelectedId} />
+        <FlowSelector flows={filtered} activeId={entryFlow?.id} onSelect={onSelectFlow} />
       )}
 
       {flow ? (
         <>
           {crumbs.length > 1 && (
-            <FlowCrumbs crumbs={crumbs} onSelect={(i) => setPath(path.slice(0, i + 1))} />
+            <FlowCrumbs crumbs={crumbs} onSelect={onCrumb} />
           )}
 
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -298,21 +187,21 @@ export function FlowsView({
 
           <StepAddressContext.Provider value={stepAddress}>
             <FlowExplorer
-              key={flow.id}
+              key={`${flow.id}#${epoch}`}
               flow={flow}
               mock={mock}
               flowNames={flowNames}
               screenTitles={screenTitles}
-              onDrill={drillTo}
+              onDrill={onDrill}
             />
           </StepAddressContext.Provider>
         </>
-      ) : notice ? (
-        <FlowNotice notice={notice} />
+      ) : shownNotice ? (
+        <FlowNotice notice={shownNotice} />
       ) : (
         <EmptyState
           icon={<Workflow className="h-6 w-6" />}
-          title={`No ${humanize(effectiveKind)} flows in ${source === "mock" ? "Mock" : "Real"} yet`}
+          title={`No ${humanize(effectiveKind)} flows in ${f.source === "mock" ? "Mock" : "Real"} yet`}
           hint="Pick another source or kind above, or add a flow with that kind + source."
         />
       )}

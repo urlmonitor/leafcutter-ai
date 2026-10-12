@@ -14,6 +14,7 @@ import {
   DEFAULT,
   crumbNames,
   drillNode,
+  flowNotFoundNoticeShown,
   expectOnScreen,
   groupButtonsText,
   h1,
@@ -150,9 +151,10 @@ describe("Back and Forward restore each entry", () => {
     await openNotFoundTab(nav, "/flows/leafcutter/flow-render-pipline");
     selectFlow(nameOf("leafcutter/explore-flows-in-atlas"));
     await expectOnScreen({ flow: "leafcutter/explore-flows-in-atlas" });
-    expect(document.body.textContent).not.toContain("Flow not found");
+    expect(flowNotFoundNoticeShown()).toBe(false);
     await traverse("back");
     await waitFor(() => {
+      expect(flowNotFoundNoticeShown()).toBe(true);
       expect(document.body.textContent).toContain("No flow has the id 'leafcutter/flow-render-pipline'");
       expect(crumbNames()).toEqual([]);
       expect(h1()).not.toContain(nameOf(DEFAULT));

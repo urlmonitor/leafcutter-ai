@@ -223,9 +223,9 @@ export async function replayRows(nav: NavState, rows: any[]) {
         expect(h1(), `${rec.id} flow`).toContain(nameOf(rec.rendered_flow));
         const names = rec.crumbs.map(nameOf);
         expect(crumbNames(), `${rec.id} crumbs`).toEqual(names.length > 1 ? names : []);
-        expect(document.body.textContent).not.toContain("Flow not found");
+        expect(flowNotFoundNoticeShown(), `${rec.id} no notice`).toBe(false);
       } else {
-        expect(document.body.textContent, `${rec.id} notice`).toContain("Flow not found");
+        expect(flowNotFoundNoticeShown(), `${rec.id} notice`).toBe(true);
       }
     });
     if (rec.rendered_flow) {
@@ -242,3 +242,9 @@ export { addressOf };
 
 export const groupButtonsText = (label: string) =>
   groupButtons(label).map((b) => squash(b.textContent));
+
+/** The 'Flow not found' notice element itself (role=alert with that exact heading), not any text on the page. */
+export const flowNotFoundNoticeShown = () =>
+  screen
+    .queryAllByRole("alert")
+    .some((a) => a.querySelector("h2")?.textContent?.trim() === "Flow not found");

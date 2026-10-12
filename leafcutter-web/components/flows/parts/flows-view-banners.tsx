@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/kit";
 import { humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE } from "@/lib/status";
 import type { Flow, FlowLevel } from "@/lib/data/types";
-import { RealizationBadge, realizationMeta } from "./realization-badge";
+import { RealizationBadge, realizationMeta } from "../realization-badge";
 import { Layers } from "lucide-react";
 
 // HSL accents for the flow-level chip (journey → pipeline → agent = drill deeper).

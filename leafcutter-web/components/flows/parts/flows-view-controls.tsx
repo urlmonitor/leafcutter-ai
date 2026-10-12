@@ -8,7 +8,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { Flow, FlowKind, FlowRealization, FlowSource } from "@/lib/data/types";
-import { RealizationBadge } from "./realization-badge";
+import { RealizationBadge } from "../realization-badge";
 import { ChevronRight } from "lucide-react";
 
 export const SOURCES: FlowSource[] = ["mock", "real"];

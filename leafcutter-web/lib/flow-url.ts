@@ -72,3 +72,13 @@ export function legacyFlowLocation(search: string): string | null {
   if (/^\.+$/.test(segment)) segment += "%20"; // "." / ".." would be dot segments
   return `${FLOWS_PREFIX}${segment}${rest.length ? `?${rest.join("&")}` : ""}`;
 }
+
+/** The 'Flow not found' notice for an id exactly as requested. */
+export function flowNotFoundNotice(rawId: string) {
+  return {
+    title: "Flow not found",
+    detail: flowNotFoundDetail(rawId),
+    actionLabel: "Open the Flows view",
+    actionHref: "/flows",
+  };
+}
