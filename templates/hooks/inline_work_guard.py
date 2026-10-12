@@ -90,7 +90,10 @@ def _resolve_audit_path() -> tuple[Path | None, str]:
 
     Standard library only. The audit log lives in the declared operational log
     root (AC INF-500d-4-iv), never beneath the repo root the guard is judging:
-    that is a per-drive workspace which is deleted when the drive ends.
+    that is a per-drive workspace which is deleted when the drive ends. The
+    enduring root must be live (inline mirror of
+    ``sink_resolution.enduring_root_exists``): a vanished project is refused,
+    never recreated; a missing log directory under a live one is a first write.
     """
     try:
         data = json.loads(_declaration_path().read_text(encoding="utf-8"))
@@ -103,6 +106,11 @@ def _resolve_audit_path() -> tuple[Path | None, str]:
         return None, "missing: no 'operational_log_root' entry"
     if not Path(root).is_absolute():
         return None, f"not absolute: 'operational_log_root' is {root!r}"
+    holder = Path(root).parent
+    if holder.name == "debugging":
+        holder = holder.parent
+    if not holder.is_dir():
+        return None, f"stale: {holder} (the enduring root that should hold {root}) no longer exists"
     return Path(root) / AUDIT_LOG_FILENAME, ""
 
 
@@ -134,7 +142,8 @@ def _append_audit_record(
     }
     line = (json.dumps(record) + "\n").encode("utf-8")
     try:
-        audit_path.parent.mkdir(exist_ok=True)  # the final log directory only
+        # Safe to create parents: _resolve_audit_path proved the enduring root live.
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(audit_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
             os.write(fd, line)
@@ -254,6 +263,17 @@ DECISION HISTORY
   untouched. The append is one os.write on an O_APPEND descriptor and creates
   only the final log directory. The audit-failure `except Exception: pass` is
   now a narrow OSError handler that warns.
+- 2026-10-12 [python-coder/INF-500d-4-iv fresh install]: The final-directory-only
+  mkdir lost the first audit record on a fresh install (project exists,
+  debugging/ does not). The hook now creates up to the declared log directory
+  (mkdir parents) but ONLY after proving the enduring root live: the directory
+  holding operational_log_root (its parent, or the project above `debugging`)
+  must exist. A vanished project warns naming the declaration, creates nothing
+  and keeps the exit code. This is an inline mirror of
+  sink_resolution.enduring_root_exists (same rule as feedback_sink and
+  emit_event): the hook stays standard-library only because it deploys as a
+  standalone script and must fail open without the package importable. Keep the
+  copies in step.
 - 2026-05-27 [TICKET-20260527-BuildFeatureInlineWorkGuard]: Initial implementation.
   PreToolUse hook that blocks Edit/Write tool calls while .build-feature.lock
   exists. Uses the lock file protocol: /build-feature writes the lock at start,
