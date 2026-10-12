@@ -286,8 +286,9 @@ class TestLivenessRunStillReportsVerdict(unittest.TestCase):
                 all(reported),
                 msg=f"Malformed result line(s) on stdout: {result.stdout!r}",
             )
+            matches = [m for m in reported if m is not None]
             self.assertEqual(
-                [m.group(1) for m in reported],
+                [m.group(1) for m in matches],
                 expected_ids,
                 msg=(
                     "Expected exactly one NEGATIVE_CONTROL_RESULT line per "
@@ -296,7 +297,7 @@ class TestLivenessRunStillReportsVerdict(unittest.TestCase):
                 ),
             )
             self.assertEqual(
-                [m.group(2) for m in reported],
+                [m.group(2) for m in matches],
                 ["passing"] * len(expected_ids),
                 msg=f"Expected every reported state to be passing: {result.stdout!r}",
             )
