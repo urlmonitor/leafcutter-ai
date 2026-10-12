@@ -3,7 +3,7 @@
  * Not a test file (no .test suffix); vitest does not collect it.
  */
 import { expect } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { NextRequest } from "next/server";
 
 /**
@@ -111,4 +111,39 @@ export async function redirectOf(url: string) {
     search: u?.search ?? null,
     origin: u?.origin ?? null,
   };
+}
+
+/** Click a graph node by its label, the way the explorer's own tests do. */
+export function clickNode(label: string) {
+  const nodes = Array.from(document.querySelectorAll(".react-flow__node"));
+  const node =
+    nodes.find((n) => squash(n.textContent).trim().startsWith(label)) ??
+    nodes.find((n) => squash(n.textContent).includes(label));
+  expect(node, `graph node "${label}"`).toBeTruthy();
+  fireEvent.click(node as Element);
+}
+
+/** Close the open drawer with its X button (the aside's header button). */
+export function closeWithX() {
+  const aside = document.querySelector("aside");
+  expect(aside, "an open drawer").toBeTruthy();
+  fireEvent.click(aside!.querySelector("button")!);
+}
+
+/** Close the open drawer by clicking the empty canvas beside it. */
+export function closeWithCanvas() {
+  const pane = document.querySelector(".react-flow__pane");
+  expect(pane, "the canvas pane").toBeTruthy();
+  fireEvent.click(pane!);
+}
+
+/** pathname + search of a replaceState/pushState url argument, resolved against the page. */
+export function addressOf(url: unknown): string {
+  const u = new URL(String(url), window.location.href);
+  return u.pathname + u.search;
+}
+
+/** Wait until exactly these drawers are open (the drawer animates out on close). */
+export async function expectDrawers(ids: string[]) {
+  await waitFor(() => expect(drawers().map((d) => d.id)).toEqual(ids));
 }
