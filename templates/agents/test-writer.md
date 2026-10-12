@@ -45,7 +45,7 @@ config_keys:
     description: "Command to run the fast unit test suite"
   test_output_dir:
     required: false
-    description: "Temp directory for test output files"
+    description: "Folder for test output; empty means the scratch home (scratch.py test-output-dir)"
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor BEFORE python-coder (priority 5).
   This is test-FIRST: you write failing tests that coders must make green.
@@ -216,8 +216,9 @@ deployed template) — you MUST author at least one **real-artifact behavioral t
 in addition to any dispatch-topology tests. The test must:
 
 1. Invoke the code under review in a way that actually runs it (not solely mock it out).
-2. Allow the code to write to a real location — use `tempfile` or
-   `testing_context.test_output_dir`; do NOT mock the write call itself.
+2. Allow the code to write to a real location — use `tempfile` (TMPDIR points into the
+   run's scratch item) or the folder `python {{config.output_root}}/scripts/scratch.py test-output-dir`
+   prints; do NOT mock the write call itself.
 3. Read the artifact back, or assert its existence and content, after the code runs.
 
 This is the **real-effect round-trip**. A dispatch-topology-only test — one that
@@ -707,7 +708,8 @@ class Test<ClassName>(unittest.TestCase):
 ### 2e — Output rules
 
 - Never write output files to the project root or any project subdirectory.
-- Use `tempfile` or `testing_context.test_output_dir` for any temp artifacts.
+- Use `tempfile` or the folder `python {{config.output_root}}/scripts/scratch.py test-output-dir`
+  prints (the scratch home, or `test_output_dir` when configured) for any temp artifacts.
 
 ### 2f — File placement
 

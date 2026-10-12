@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 components:
   - agent_registry
 related_docs:
@@ -52,13 +52,62 @@ registry entry, the `package_boundary.json` item, the schema descriptions and th
 no longer name either id. This loses nothing that worked, since neither escalation ever ran.
 
 **The follow-up this entry holds.** If a deeper, Opus-tier architectural review or structural-conflict
-resolution is wanted, each needs to be specified properly — acceptance criteria for what the deep
-agent does beyond the base one, a real template, a test that the escalation dispatches and returns,
-and a registry entry that resolves to a deployable definition. An alternative worth weighing first:
-the `Agent` tool accepts a model override, so each gatekeeper could re-dispatch its own work on a
-stronger model without a separate agent at all. The payloads keep their `escalation` and
-`escalation_reason` fields (always `none` today) so a real escalation can be added without changing
-their shape.
+resolution is wanted, it needs to be specified properly: acceptance criteria for what the escalated
+work does beyond the base pass, a test that the escalation actually dispatches and returns, and a
+definition that really deploys. The payloads keep their `escalation` and `escalation_reason` fields
+(always `none` today), so whichever option below is chosen can record an escalation without
+changing their shape. Three options, collected 2026-10-12 so the decision can be made later with
+them side by side (not yet decided):
+
+**Option 1 — Two real deep agents** (`architect-review-deep`, `conflict-resolver-deep`): templates,
+registry entries, spawn permissions, tests.
+
+- Pro: fits today's agent world with no new infrastructure; buildable now through `/plan-feature`.
+- Pro: each deep agent gets its own focused instructions for the hard case, and its own card,
+  evals and feedback stream.
+- Pro: AR-300c-5-iii and the delivery gates already guarantee a declared sub-agent resolves and is
+  delivered, so it cannot silently not exist again.
+- Con: two more prompts to keep consistent with their base agents (rubric, payload, constraints);
+  that duplication is what drifted before.
+- Con: the large/structural decision stays with the base agent's own judgement, an LLM reading a
+  prose rubric, with no confidence and no exact pre-check.
+- Con: runs against ADR-052 (capabilities replace agents), so it is likely to be rebuilt later.
+
+**Option 2 — Re-dispatch on a stronger model.** The gatekeeper, having classified a case as large
+or structural, re-dispatches its own work through the `Agent` tool with a model override (Opus).
+
+- Pro: smallest change; no new agent and no second prompt, so nothing can drift apart.
+- Pro: buildable now; the existing `escalation: opus` value records it.
+- Con: the escalation decision is still the base model's prose judgement, as in Option 1.
+- Con: the stronger run re-reads the same general instructions; it gets no instructions written
+  for the hard case.
+- Con: depends on the platform's model override (Claude Code's `Agent` tool); a platform without
+  it (Gemini, ADR-002) cannot escalate, and the override is a harder seam to test than a named
+  agent.
+
+**Option 3 — A small Decision Kernel flow** (LangGraph, per ADR-052 and ADR-053). Deterministic
+pre-checks first: much of the rubric is countable (files touched, components crossed, new
+dependencies, contract or schema changes; for conflicts, a signature changed on both sides, a
+rename collision, both sides editing the same block). Then Jev judges what remains against the
+rubric's known criteria. A low-confidence answer escalates rather than passing, defaulting to
+"structural". Only then does a `reasoning` step (Opus) do the deep review or merge, with its own
+pre-checks and post-checks.
+
+- Pro: the cheapest mechanism that can answer runs first (ADR-053 §3): code for countable facts,
+  Jev for the bounded "is this large under these criteria?" call, Opus only when warranted.
+- Pro: the escalation decision becomes measurable: typed answers with confidence, traced, and
+  calibratable per decision type (ADR-056), instead of a prose judgement nobody can audit.
+- Pro: matches the target architecture, so it is built once.
+- Con: depends on the kernel hosting engineering capabilities; the capability registry
+  deliberately starts empty (ADR-055), so this cannot ship before that work.
+- Con: the most authoring per check: an executor for every check, Jev criteria and boundary
+  cases, and an `on_uncertain` route.
+- Con: Jev must only decide whether to escalate, never whether the work is right (ADR-053 §4). A
+  confident wrong "small" answer is invisible at run time (§6), so the deterministic pre-checks
+  and the default-to-structural rule carry real weight.
+
+The base agents handle these cases themselves until one is chosen. Options 1 and 2 could serve as
+a bridge to Option 3, but each would then be built twice.
 
 **Pattern:** a capability declared in the registry with no deployable definition behind it — the
 same "described but not delivered" shape the AR-300 tree exists to remove, here for a whole agent

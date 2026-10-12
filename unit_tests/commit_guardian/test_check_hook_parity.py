@@ -564,7 +564,6 @@ class TestIntegrationMain(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.project_root = Path(self._tmp.name)
 
-        # Create the directory structure
         self.runtime_dir = self.project_root / "scripts" / "commit_guardian"
         self.canonical_dir = self.project_root / "templates" / "scripts" / "commit_guardian"
         self.legacy_dir = self.project_root / "templates" / "commit-guardian"
@@ -597,7 +596,6 @@ class TestIntegrationMain(unittest.TestCase):
         (self.canonical_dir / "commit_guardian.json").write_text(
             json.dumps({"hooks_manifest": {"hooks": []}}), encoding="utf-8"
         )
-        # Write minimal legacy manifest
         (self.legacy_dir / "commit_guardian.json").write_text(
             json.dumps({"hooks_manifest": {"hooks": []}}), encoding="utf-8"
         )
@@ -721,7 +719,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
             os.chdir(original_cwd)
 
         # Either 0 (in sync) or 1 (parity violation exists in current repo state).
-        # Just verify it's a valid exit code (0 or 1) and doesn't raise.
         self.assertIn(result, (0, 1), msg="main() must return 0 or 1.")
 
     def test_main_returns_0_when_config_absent(self) -> None:
@@ -775,8 +772,15 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         )
 
     def test_main_returns_0_on_malformed_hooks_manifest(self) -> None:
-        """H-1 fail-open: main() returns 0 when hooks_manifest is not a dict."""
+        """H-1: main() does not raise when hooks_manifest is not a dict; GE-132a-1: reports could-not-check (exit 2).
+
+        The name predates GE-132a-1 and is kept so the contract-shrinking guard and the test's history
+        stay continuous. GE-132a-1: an existing manifest without a hooks_manifest object is
+        could-not-check (exit 2), no longer fail-open; H-1 (no raise) still holds.
+        """
         # covers: H-1 (AttributeError from malformed hooks_manifest is handled)
+        import contextlib
+        import io
         import os
 
         # Set up a full project structure so check_script_parity passes,
@@ -803,7 +807,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         (runtime_dir / "commit_guardian.json").write_text(
             json.dumps({"hook_parity": parity_cfg}), encoding="utf-8"
         )
-        # Write a manifest where hooks_manifest is a string, not a dict
         malformed = {"hooks_manifest": "oops"}
         (canonical_dir / "commit_guardian.json").write_text(
             json.dumps(malformed), encoding="utf-8"
@@ -815,15 +818,13 @@ class TestConfigLoadFailOpen(unittest.TestCase):
         original_cwd = Path.cwd()
         try:
             os.chdir(self.tmp)
-            result = _mod.main()
+            with contextlib.redirect_stdout(io.StringIO()) as captured:
+                result = _mod.main()
         finally:
             os.chdir(original_cwd)
 
-        self.assertEqual(
-            result,
-            0,
-            msg="H-1: malformed hooks_manifest must not raise; main() must return 0.",
-        )
+        self.assertIn("could_not_check", captured.getvalue())
+        self.assertEqual(result, 2, msg="H-1: malformed hooks_manifest must not raise; GE-132a-1: main() returns 2 (could-not-check).")
 
     def test_all_in_sync_silent_stdout_stderr(self) -> None:
         """BP-100i-5: when all dirs are in sync, stdout AND stderr are completely silent."""
@@ -863,7 +864,6 @@ class TestConfigLoadFailOpen(unittest.TestCase):
             json.dumps({"hooks_manifest": {"hooks": [{"id": "check-hook-parity", "enabled": True}]}}),
             encoding="utf-8",
         )
-        # Same hook script in both runtime and canonical dirs
         (runtime_dir / "check_alpha.py").write_text("", encoding="utf-8")
         (canonical_dir / "check_alpha.py").write_text("", encoding="utf-8")
 
@@ -1112,7 +1112,6 @@ class TestDeployedParityContentHash(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # BP-100i-3: Process-level (real subprocess exit code) coverage
 # ---------------------------------------------------------------------------
-#
 # GAP THIS CLASS CLOSES: every test above calls check_deployed_parity(...)
 # directly and inspects the returned Python list. Nothing in the suite runs
 # the hook as an actual OS process and asserts its returncode. An adversarial

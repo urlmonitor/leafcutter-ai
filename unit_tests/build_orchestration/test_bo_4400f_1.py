@@ -11,6 +11,7 @@ PROOF SHAPE: the DEPLOYED scratch module (shared reference build, read-only)
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -19,8 +20,10 @@ from pathlib import Path
 
 import pytest
 
+from . import _bo4400f1_routes as routes
 from ._bo4400f1_helpers import make_sandbox, read_label, snapshot
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _deployed_scripts(layout) -> Path:
@@ -67,6 +70,89 @@ def test_route_throwaway_files_land_only_in_scratch_location(sandbox):
     assert snapshot(*watched) == before, "temp stand-in or project root gained an entry"
     declared = " ".join(locations["durable"])
     assert "test-logs" in declared and "debugging" in declared, declared
+
+
+@pytest.mark.shared_layout_reader
+@pytest.mark.parametrize("script", sorted(routes.ROUTES))
+def test_route_workflow_obtains_its_scratch_item_and_exports_temp_vars(
+    script, sandbox, shared_reference_layout
+):
+    # covers: BO-4400f-1
+    # angle: reachability
+    # must_catch: quick fix still writes qf-*-tmp into the project root
+    # must_catch: subprocess temp writes go to the system temp folder
+    layout = Path(shared_reference_layout)
+    workflow = layout / ".leafcutter" / "workflows" / script
+    route, process_labels = routes.ROUTES[script]
+    item = sandbox.call("new_item", {"owner": "seed", "route": "probe"})["item"]
+    result = routes.run_route(workflow, item, sandbox.project)
+    assert result.error == "", result.error
+    labels = [c.label for c in result.agent_calls]
+    asks = [c for c in result.agent_calls if c.label == routes.SCRATCH_LABEL]
+    assert len(asks) == 1, f"{script} must obtain exactly one scratch item: {labels}"
+    first = labels.index(routes.SCRATCH_LABEL)
+    for label in process_labels:
+        assert label in labels[first + 1:], f"{label} not dispatched after the scratch item: {labels}"
+        prompt = routes.prompt_of(result.agent_calls[labels.index(label, first + 1)])
+        for var in ("TMPDIR", "TEMP", "TMP"):
+            assert var in prompt, f"{script}/{label} does not set {var}"
+        assert f'"{item}"' in prompt, f"{script}/{label} does not point the temp vars at the item"
+    every_prompt = " ".join(routes.prompt_of(c) for c in result.agent_calls)
+    assert "/tmp/quick" not in every_prompt, f"{script} still writes scratch into the system temp folder"
+
+    # The command the step hands its executor really creates a labelled item in
+    # the scratch root, owned by the long-lived process that ran it ($PPID).
+    command = routes.scratch_command(routes.prompt_of(asks[0]))
+    assert command and f"{route}" in command, routes.prompt_of(asks[0])
+    made = subprocess.run(  # noqa: S603
+        ["bash", "-c", command], cwd=layout, env=sandbox.env,
+        capture_output=True, text=True, timeout=60, check=False,
+    )
+    assert made.returncode == 0, made.stderr[-1500:]
+    created = json.loads(made.stdout.strip().splitlines()[-1])["item"]
+    root = Path(sandbox.call("locations", {})["root"])
+    assert root in Path(created).parents, (root, created)
+    label = read_label(created)
+    assert label["route"] == route and label["pid"] == os.getpid(), label
+    now = datetime.now(timezone.utc) + timedelta(hours=48)
+    verdict = sandbox.call("classify", {"item": created, "now": now.isoformat(), "age_limit_hours": 24})
+    assert verdict == {"expired": False, "reason": "owner_active"}, verdict
+
+    # Fail-open: no item means no scratch note and an otherwise identical run.
+    bare = routes.run_route(workflow, None, sandbox.project)
+    assert [c.label for c in bare.agent_calls] == labels
+    assert routes.NOTE_MARKER not in " ".join(routes.prompt_of(c) for c in bare.agent_calls)
+
+
+@pytest.mark.shared_layout_reader
+def test_test_output_dir_defaults_to_the_scratch_home(sandbox):
+    # covers: BO-4400f-1
+    # angle: seam
+    # must_catch: test output still defaults into the system temp folder
+    module = sandbox.scripts_dir / "scratch.py"
+    config = sandbox.project / ".claude" / "skills_config.json"
+    config.parent.mkdir()
+    root = Path(sandbox.call("locations", {})["root"])
+    shipped = json.loads((REPO_ROOT / "config" / "skills_config.default.json").read_text(encoding="utf-8"))
+    # An explicit setting is honoured as given (expanded against the redirected HOME).
+    custom = sandbox.home / "custom-test-output"
+    cases = [(shipped["test_output_dir"], None), ("%TEMP%/leafcutter-tests/", None),
+             ("/tmp/myproject-tests/", None), ("~/custom-test-output", custom)]
+    for value, expected in cases:
+        config.write_text(json.dumps({"test_output_dir": value}), encoding="utf-8")
+        before = snapshot(sandbox.temp_standin, sandbox.project)
+        done = subprocess.run(  # noqa: S603
+            [sys.executable, str(module), "test-output-dir"], cwd=sandbox.project, env=sandbox.env,
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        assert done.returncode == 0, done.stderr[-1500:]
+        path = Path(json.loads(done.stdout.strip().splitlines()[-1])["path"])
+        if expected is None:
+            assert root in path.parents and path.is_dir(), (value, path)
+            assert read_label(str(path))["route"] == "tests", value
+        else:
+            assert path == expected, (value, path)
+        assert snapshot(sandbox.temp_standin, sandbox.project) == before, value
 
 
 @pytest.mark.shared_layout_reader

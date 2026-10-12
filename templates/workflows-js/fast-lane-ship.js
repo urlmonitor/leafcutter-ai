@@ -97,18 +97,11 @@ const TEST_WRITER_SCHEMA = {
   properties: {
     status: { type: "string", enum: ["ok", "blocker", "failed"] },
     tests_written: { type: "array", items: { type: "string" } },
-    // AMENDED 2026-08-17 (BO-2400a-3-v): the red-baseline gate no longer
-    // returns all_red/offender — it returns gate_passed (True when >=1
-    // newly-added covering test is red) plus a named `reason` on halt and
-    // the individual green_at_baseline entries (never collapsed into a
-    // count). The pre-amendment keys are REMOVED, not kept as aliases.
+    // BO-2400a-3-v: gate_passed (true when >=1 newly-added covering test is red), a named `reason`
+    // on halt and the individual green_at_baseline entries; all_red/offender are REMOVED, not aliased.
     gate_passed: { type: "boolean" },
     // KI-BO-004: `reason` is null on a passing gate — verify_red_baseline only
-    // names a reason when it halts. Declaring it string-only made the agent
-    // coerce the null, so the journal recorded the four-character string
-    // "null" (observed on the TKT-600a-1 run). Harmless while the workflow
-    // branches on gate_passed, but a trap for anything that later branches on
-    // reason, where "null" is truthy and matches no named halt reason.
+    // names a reason when it halts. String-only made the agent record the truthy string "null".
     reason: { type: ["string", "null"] },
     green_at_baseline: { type: "array" },
     message: { type: "string" },
@@ -148,14 +141,8 @@ const PR_SCHEMA = {
   },
 };
 
-// BO-2400c-1-iii (2026-08-25 amendment, KI-BO-019): the reply shape now
-// carries `bytes` and `location` alongside `bundle`/`obtained`, because a
-// producer that cannot inline the full text still needs a way to report what
-// it DID do (assemble successfully, N bytes, written to <path>) without that
-// report being mistaken for the content. `bundle` is the ONLY field the lane
-// accepts as content; `bytes`/`location` are read only to build an honest
-// halt message when `bundle` turns out to be a reference, never merged into
-// what is threaded to the test-writer/coder dispatches.
+// BO-2400c-1-iii (KI-BO-019): `bundle` is the ONLY field accepted as content; `bytes`/`location`
+// only build an honest halt message when `bundle` is a reference, never threaded to dispatches.
 const CONTEXT_BUNDLE_SCHEMA = {
   type: "object",
   required: ["obtained"],
@@ -1268,7 +1255,6 @@ if (!contextBundleUsable) {
 }
 
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
-
 // TQ-500f-3-i: --ac-root opts the ONE shared verify_red_baseline reader into
 // its declared-absence-only-red refusal rule. The AC store root is threaded
 // through unchanged (acStoreRoot, the same value every other gate/lifecycle
@@ -1281,6 +1267,11 @@ const redBaselineInvocation =
 const greenCoverageInvocation =
   `python ${gateScript} verify_green_and_coverage` +
   ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
+
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; the
+// test-writer, coder and review dispatches get scratchEnvNote. Fail-open: no item, no note.
+const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "fast-lane-${slug}-$PPID" fast-lane --owner-pid $PPID`, { agentType: "status-checker", label: "scratch-item", phase: "Test Writer", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
 
 // Phase 3 — test-writer: red stubs for the resolved ids + red-baseline gate
 
@@ -1303,7 +1294,7 @@ const testWriterResult = await agent(
   `"reason": <string|null>, "green_at_baseline": [...], "message": "<summary>" }\n\n` +
   `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate ` +
   `them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, ` +
-  `report gate_passed: false.`,
+  `report gate_passed: false.` + scratchEnvNote,
   {
     agentType: "test-writer",
     schema: TEST_WRITER_SCHEMA,
@@ -1389,7 +1380,7 @@ const coderResult = await agent(
   `Parse the JSON: { "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...] }.\n\n` +
   `Return JSON: { "status": "ok", "files_modified": ["<path>", ...], "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...], "message": "<summary>" }\n\n` +
   `CONSTRAINT: implement only what the failing tests require — no gold-plating.\n` +
-  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.`,
+  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.` + scratchEnvNote,
   {
     agentType: "python-coder",
     schema: CODER_SCHEMA,
@@ -1480,7 +1471,7 @@ const reviewResult = await agent(
   `If you cannot reach a classified verdict (the diff could not be read, or the review ` +
   `could not be completed), return { "verdict_obtained": false, "high_findings": [], ` +
   `"medium_findings": [], "low_suppressed_count": 0, "message": "<why no verdict>" } — ` +
-  `never fabricate a clean verdict.`,
+  `never fabricate a clean verdict.` + scratchEnvNote,
   {
     agentType: "pr-reviewer",
     schema: REVIEW_SCHEMA,
@@ -1492,15 +1483,7 @@ const reviewResult = await agent(
 // Fail closed on an unusable verdict — the same plain-falsy read already used
 // for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
 // the ONLY positive signal. A missing key, a null, an unparseable reply, or
-// any other shape takes the not-committed branch.
-//
-// Deliberately NOT accepted: a generic `passed: true`. An earlier cut allowed
-// it so that a test fixture which never stubbed this phase could still reach
-// the commit dispatch — the harness default reply carries `passed: true`. That
-// is a fail-open backdoor wearing a test-compatibility disguise: in production
-// it would let a reply carrying no verdict at all count as a clean review,
-// which is the exact defect this criterion exists to prevent. The fixture was
-// corrected to stub a real verdict instead.
+// any other shape takes the not-committed branch. A generic `passed: true` is NOT accepted (fail-open).
 const reviewVerdictUsable = !!(
   reviewResult && reviewResult.verdict_obtained === true
 );
@@ -1629,9 +1612,6 @@ if (changelogRequired) {
   // (changelog_entry_absent_from_change) KI-BO-001 exists to catch, and it
   // halts exactly like an outright emit error (changelog_emit_failed) — never
   // a warning alongside a reported success.
-  //
-  // A generic `passed: true` is deliberately NOT accepted here either; see the
-  // review guard above for why that escape hatch was removed.
   const changelogEntryOk = !!(
     changelogResult &&
     changelogResult.status === "ok" &&

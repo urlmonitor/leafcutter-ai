@@ -30,7 +30,7 @@ config_keys:
     description: "Command to run the fast unit test suite"
   test_output_dir:
     required: false
-    description: "Temp directory for test output files"
+    description: "Folder for test output; empty means the scratch home (scratch.py test-output-dir)"
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
   `Edit` is granted for one purpose only: the atomic sign-off write into the

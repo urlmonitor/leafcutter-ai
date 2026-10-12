@@ -16,16 +16,26 @@ ASSUMED PRODUCTION CONTRACT (python-coder implements against exactly this):
       label's pid; a missing or unreadable label means owner unknown, with the
       item folder's mtime as its age.
     * ``durable_paths() -> list[str]`` -- includes test-logs and debugging/logs.
+    * ``python scratch.py sweep`` (BO-4400f-1-i / -1-ii) -- removes exactly
+      what classify() calls expired, among the scratch root's items and the
+      declared third-party leftovers (pre-commit stash patch FILES in
+      PRE_COMMIT_HOME or <user cache dir>/pre-commit), and prints one JSON
+      line ``{"removed": {"scratch": N}, "removed_paths": [...], ...}``.
+    * ``python scratch.py new-item <owner> <route> --owner-pid <pid>`` --
+      records ``<pid>`` (the run's long-lived process) as the label's pid.
 The deployed module is only ever driven in a SEPARATE process, below.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DRIVER = '''
@@ -100,6 +110,24 @@ class Sandbox:
             raise AssertionError(f"scratch {action} failed: {done.stderr[-1500:]}")  # noqa: TRY003
         return json.loads(done.stdout.strip().splitlines()[-1])
 
+    def sweep(self, extra_env: dict | None = None) -> dict:
+        """Run the DEPLOYED sweep (``scratch.py sweep``) as a separate process.
+
+        PRE_COMMIT_HOME is dropped from the inherited environment unless the
+        caller supplies it, so the sweep can never reach a real cache folder.
+        """
+        module = self.scripts_dir / "scratch.py"
+        assert module.is_file(), f"deployed layout has no {module}"
+        env = {key: value for key, value in self.env.items() if key != "PRE_COMMIT_HOME"}
+        env.update(extra_env or {})
+        done = subprocess.run(  # noqa: S603
+            [sys.executable, str(module), "sweep"], cwd=self.project, env=env,
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        if done.returncode != 0:
+            raise AssertionError(f"scratch sweep failed ({done.returncode}): {done.stderr[-1500:]}")  # noqa: TRY003
+        return json.loads(done.stdout.strip().splitlines()[-1])
+
     def start_holding_owner(self, owner: str, route: str) -> tuple[subprocess.Popen, str]:
         """An owner run that is still alive: creates an item then waits."""
         proc = subprocess.Popen(  # noqa: S603
@@ -136,3 +164,34 @@ def snapshot(*roots: Path) -> set[str]:
 
 def read_label(item: str) -> dict:
     return json.loads((Path(item) / "label.json").read_text(encoding="utf-8"))
+
+
+def backdate(path: Path, hours: float) -> None:
+    """Set ``path``'s mtime (and every entry under it) ``hours`` into the past."""
+    stamp = time.time() - hours * 3600
+    for dirpath, _dirnames, filenames in os.walk(path):
+        for name in filenames:
+            os.utime(Path(dirpath, name), (stamp, stamp))
+    os.utime(path, (stamp, stamp))
+
+
+def backdate_item(item: str, hours: float) -> None:
+    """Make a labelled item ``hours`` old: its label's created_at and its mtimes."""
+    label = read_label(item)
+    label["created_at"] = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
+    (Path(item) / "label.json").write_text(json.dumps(label), encoding="utf-8")
+    backdate(Path(item), hours)
+
+
+def tree_digest(root: Path) -> str:
+    """sha256 over every entry's relative path and every file's bytes."""
+    digest = hashlib.sha256()
+    for dirpath, dirnames, filenames in sorted(os.walk(root)):
+        dirnames.sort()
+        for name in sorted(filenames):
+            path = Path(dirpath, name)
+            digest.update(str(path.relative_to(root)).encode())
+            digest.update(path.read_bytes())
+        for name in dirnames:
+            digest.update(str(Path(dirpath, name).relative_to(root)).encode() + b"/")
+    return digest.hexdigest()
