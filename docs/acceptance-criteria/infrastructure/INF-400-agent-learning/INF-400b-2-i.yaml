@@ -13,18 +13,49 @@ readiness: approved
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400b-2.yaml"
 criteria: |
   Given the knowledge-capture loop is producing records again at ordinary
-    working volume,
+    working volume, and each record carries the learning it captured as its
+    text,
   And two records describe genuinely different learnings, but were captured
-    on the same day, routed to the same destination, and classified with the
-    same kind,
+    on the same day — down to the same second — by the same agent, in the
+    same component, routed to the same destination, and classified with the
+    same kind, so that the learning text is the only thing that tells them
+    apart,
   When the component that decides whether a record has already been dealt
-    with examines them,
-  Then it treats them as two records and deals with both,
-  And neither is discarded as a repeat of the other,
+    with (routed) examines them,
+  Then it treats them as two records and deals with both, because a record's
+    identity is its timestamp, agent, component, destination and kind
+    together with its learning text,
+  And neither is discarded as a repeat of the other, and dealing with one
+    never marks the other as dealt with,
+  And two records that differ only in a field outside identity — a `ticket`
+    named on one and absent from the other — have the same identity, so
+    naming a ticket on a re-emitted record does not make it a new record,
   And no part of that decision rests on a field that is absent from every
     record the system has ever written,
+  And a record that carries no learning text — as every record written before
+    the text was captured does — is still given an identity of its own and is
+    not reported as missing a required field,
   And running the same decision twice over an unchanged body of records still
-    deals with nothing a second time.
+    deals with nothing a second time,
+  And processed-state written before the text became part of identity is read
+    by one rule: a record counts as already dealt with when its current
+    identity is in that state, or when its earlier identity — the one built
+    without the text — is in that state AND no other record currently in the
+    sink shares that earlier identity,
+  And a record whose earlier identity is shared with any other record
+    currently in the sink is dealt with once more, even though that earlier
+    identity is in the state, because the state cannot tell which of the
+    records sharing it was the one dealt with,
+  And only identities that include the learning text are written to that
+    state from now on; an earlier identity is read, never written,
+  And the two ways this rule can fail are told apart, because they need
+    different answers: the SAME LEARNING DEALT WITH TWICE is visible to a
+    reader of the destination and survivable, and is the accepted worst case
+    of the earlier-identity rule; a LEARNING LOST WHILE MARKED AS DEALT WITH —
+    a record treated as already dealt with on the strength of an identity it
+    shares with a different learning — is seen by no reader and must not
+    happen. A rule that trades a loss for a duplicate is acceptable; one that
+    trades a duplicate for a loss is not.
 depends_on:
   - INF-400b-2
   - INF-400b-2-ii
@@ -46,6 +77,9 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+# Derived from the Then clause (BA amendment 2026-10-12): only identities that
+# include the learning text are written to the persisted processed-state.
+declares_side_effect: true
 it_requirements:
   - "THE DEFECT, STATED CONCRETELY. scripts/knowledge/harvest_learnings.py `_event_hash` builds its SHA-256 digest from the tuple (ticket, timestamp, destination, entry_kind) — verified at lines 129-135 on this branch. `ticket` is absent from all 28 knowledge_captured records in debugging/logs/agent_telemetry.jsonl (one key set across all 28: event, timestamp, agent, component, destination, entry_kind), so `event.get(\"ticket\", \"\")` yields a constant empty string and one of the four key components carries no information. The effective key is three fields wide, not four."
   - "THE KEY MUST BE BUILT ONLY FROM FIELDS THE RECONCILED SHAPE REQUIRES OF EVERY PRODUCER. Under INF-400b-2-ii's recommended resolution that is (timestamp, agent, component, destination, entry_kind). `ticket` becomes optional and must NOT appear in the key under any spelling — including as a defaulted-to-empty lookup, which is exactly the present bug. If INF-400b-2-ii settles the shape differently, take the required set from that decision; do not re-derive it here and do not land ahead of it."
@@ -73,13 +107,13 @@ test_spec:
     framework: unittest
     type: unit
     angle: seam
-    description: "Two records identical in every required field but differing in `ticket` (present versus absent) yield the SAME digest, proving that optional field was not smuggled back into identity. AMENDED 2026-10-12 (INF-400b-2-iii): a record differing in `text` yields a DIFFERENT digest."
+    description: "Two records identical in every required field and in their learning text, differing only in `ticket` (present versus absent), yield the SAME digest — both when neither carries text and when both carry the same text — proving that optional field was not smuggled back into identity. Two records identical in every required field, one carrying a learning text and one not, yield DIFFERENT digests, because the learning text is part of identity. AMENDED 2026-10-12 (BrainCandy, BA amendment; supersedes the coder's wording on PR #1175): previously asserted that `text` present versus absent also left the digest unchanged; that half was retracted with the criteria and now asserts the opposite."
   - name: test_every_required_key_component_is_populated_across_the_real_corpus
     target_dir: tests/knowledge/
     framework: unittest
     type: integration
     angle: real_artifact
-    description: "Over tests/fixtures/harvest_learnings/unroutable_corpus_28.json, no field the digest reads is empty or absent in any record, and the 28 records yield 28 distinct digests. Asserts against the real corpus, not a fixture, because the defect is exactly a field that a hand-written fixture would have populated."
+    description: "Over tests/fixtures/harvest_learnings/unroutable_corpus_28.json, none of the five required identity fields (timestamp, agent, component, destination, entry_kind) is empty or absent in any record, and the 28 records — none of which carries a learning text — yield 28 distinct digests. Asserts against the real corpus, not a fixture, because the defect is exactly a field that a hand-written fixture would have populated. AMENDED 2026-10-12 (BrainCandy, BA amendment): previously read 'no field the digest reads is empty or absent'; the digest now also reads the learning text, which all 28 records lack, so the population check is restated over the required fields and the textless records are shown still to receive distinct identities. The test's assertions are unchanged."
   - name: test_rerunning_over_an_unchanged_corpus_processes_nothing_twice
     target_dir: tests/knowledge/
     framework: unittest
@@ -124,7 +158,7 @@ expects_from:
 origin_agent: BrainCandy
 created: 2026-08-26
 amended_by:
-  - reason: "Learning text became part of record identity (option A, INF-400b-2-iii): the 'do not key on the learning body' requirement and the text half of the optional-field test were replaced."
+  - reason: "BA amendment, 2026-10-12, on BrainCandy's decision of the same day (option A) on the harvester identity collision. SUPERSEDES THE EARLIER CODER EDIT: PR #1175's python-coder had rewritten this AC's 'do not key on the learning body' requirement and one test_spec description and recorded a one-line amended_by entry here; BrainCandy asked for the change to be made properly by a BA, and this entry replaces that one. WHY: identity was a hash over (timestamp, agent, component, destination, entry_kind) and left out the learning text. In the committed knowledge snapshot reports/knowledge-snapshots/knowledge-emissions-2026-10-12.jsonl (PR #1152), 16 distinct learnings share 3 identities, so routing one record marked its same-second siblings processed and they were never routed — a loss, which INF-700a-5-iii (as amended in PR #1078) forbids: a duplicate is acceptable, a loss is not. The original 'do not key on the learning body' requirement is what made that collision possible once emissions resumed in volume. THE DECISION (option A): identity includes the learning text; when reading existing processed-state, a record counts as processed iff its new identity is in state, OR its old identity is in state AND no other record currently in the sink shares that old identity; colliding records are routed once more, so the worst case is a duplicate; only new identities are written from now on. WHAT CHANGED IN CRITERIA: the Given now states that records carry their learning text and that the two records may share every identity field down to the second; the Then names the identity fields including the text; new clauses state that dealing with one record never marks the other, that a field outside identity (`ticket`) still does not change identity, that a textless record (every record predating text capture) still receives an identity and is not reported as missing a required field, the legacy-state rule above, that old identities are read but never written, and the duplicate-versus-loss asymmetry in INF-700a-5-iii's wording. KEPT because still true: the same-day collision scenario, 'neither is discarded as a repeat of the other', 'no part of that decision rests on a field that is absent from every record the system has ever written' (`ticket`), and the re-run idempotency clause. TITLE unchanged (still accurate). TEST_SPEC: test_the_digest_ignores_fields_absent_from_the_required_shape rewritten — its `text` half now asserts a DIFFERENT digest — and test_every_required_key_component_is_populated_across_the_real_corpus restated over the five required fields (the digest now reads the text, which all 28 corpus records lack); both marked AMENDED 2026-10-12. Test names and the other four descriptors unchanged. WHAT IS NOT ACCEPTED: a learning lost while marked routed — any record treated as processed on the strength of an identity it shares with a different learning, including an old identity shared by more than one record currently in the sink. BOUNDARY WITH INF-400b-2-iii: this AC owns what a record's identity is and how legacy state is read against it; INF-400b-2-iii owns the real-snapshot collision, the one shared implementation used by both the harvester and the completion-routing path, and the executable tests of the legacy-state clauses. SCHEMA: declares_side_effect: true added, derived from the new Then clause that only text-bearing identities are written to the persisted processed-state (check-ac-schema requires it once criteria assert a durable effect). UNCHANGED: work_status (done), readiness (approved), implemented_by, covered_by, depends_on, expects_from, doc_links. FLAGGED TO THE IT PO, not edited because it_requirements are the IT PO's: the coder-authored line 'AMENDED 2026-10-12 ... THE LEARNING TEXT IS NOW PART OF IDENTITY' is consistent with these criteria and is left in place; the line 'CHANGING THE KEY INVALIDATES EVERY PREVIOUSLY STORED DIGEST ... records processed under the old digest are no longer recognised as processed' is now stale against the legacy-state rule, which honours an unshared old identity; and expects_from's contract ('builds the idempotency digest from exactly that required set and from nothing else') no longer states the text."
     by: BrainCandy
     at: 2026-10-12
 superseded_by: null
@@ -143,7 +177,9 @@ notes: |
 
   Scope boundaries. INF-400b-2-ii owns which fields the record has; this AC
   owns only which of them establish identity. INF-700b-1 owns `text` and this
-  AC must not key on it. KI-KM-011 (a valid-JSON non-object line crashing the
+  AC must not key on it [SUPERSEDED 2026-10-12 by BrainCandy's option A —
+  see amended_by: the learning text is now part of identity; INF-700b-1
+  still owns the field itself]. KI-KM-011 (a valid-JSON non-object line crashing the
   per-line loop) touches the same function's neighbourhood and is a separate
   defect — do not fold it in.
 
