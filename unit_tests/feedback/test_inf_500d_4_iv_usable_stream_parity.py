@@ -208,8 +208,12 @@ def test_both_copies_agree_on_staleness_and_only_a_live_project_is_usable(tmp_pa
     # fixture sanity: every row passes the SHAPE rule, so only staleness can separate them.
     assert all(v["shape_ok"] for v in verdicts.values()), json.dumps(verdicts, indent=2)
 
+    # The usable verdict is read_usable_stream AND enduring_root_exists, so the shared side's stream only counts
+    # when the project is live; the inline copy folds both checks into one and yields None for a vanished project.
+    # Compare usable verdicts for every row, and streams for the usable rows only (stale rows keep their row).
     disagreements = {n: v for n, v in verdicts.items()
-                     if v["shared_usable"] != v["inline_usable"] or v["shared_stream"] != v["inline_stream"]}
+                     if v["shared_usable"] != v["inline_usable"]
+                     or (v["shared_stream"] if v["shared_usable"] else None) != v["inline_stream"]}
     assert not disagreements, (
         "the shared rule and emit_event's inline copy disagree about staleness (a FINDING): "
         + json.dumps(disagreements, indent=2))
