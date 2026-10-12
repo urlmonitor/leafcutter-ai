@@ -19,6 +19,10 @@ description: |
 model: opus
 name: it-po
 tools: Read, Write, Edit, Bash, Skill  # No source code access — uses architecture docs and registries only. Edit is required by the covered_by update protocol.
+skills:
+- skill_id: knowledge-query
+  mode: conditional
+  condition: Use when you need to search a keyword across agents, skills, docs and ADRs for component context.
 portable: true
 requires_verification: true
 signoff: false
@@ -26,8 +30,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used:
-  - knowledge-query  # Loaded during S1 to query agents, skills, and component docs.
 adopter_notes: |
   Internal. Spawned by the ticket-creation pipeline after the BA has produced
   L2/L3 AC files. Never called directly by users. Enriches AC YAML files in-place

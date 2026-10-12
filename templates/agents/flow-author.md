@@ -20,7 +20,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used: []
 adopter_notes: |
   Internal. Spawned by the product-truth authoring pipeline after mock-data-author and
   mockup-author. Produces / extends *.flow.json artifacts. Reproduces the shape and

@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`agent-registry/resolved/`](agent-registry/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 3** (0 blocker, 0 high, 3 low) · **Resolved: 0**
+**Open: 4** (0 blocker, 0 high, 4 low) · **Resolved: 1**
 
 ## Open
 
@@ -63,8 +63,11 @@ Fixed issues move to [`agent-registry/resolved/`](agent-registry/resolved/) and 
 |---|---|---|
 | `low` | KI-AR-001 — `agent_registry.schema.json` is inert: nothing validates the registry against it | [open-low-ki-ar-001.md](agent-registry/open-low-ki-ar-001.md) |
 | `low` | KI-AR-002 — `_EXTERNAL_CALLERS` is a hardcoded two-item set, so documenting a real spawn relationship fails the build | [open-low-ki-ar-002.md](agent-registry/open-low-ki-ar-002.md) |
-| `low` | KI-AR-003 — `skills_invoked` still declares `signoff` for two agents whose sign-off obligation was removed, and the resulting mismatch is advisory only | [open-low-ki-ar-003.md](agent-registry/open-low-ki-ar-003.md) |
+| `low` | KI-AR-004 — architect-review's and conflict-resolver's Opus escalations were registered but never built, so large-impact reviews and structural conflicts have never escalated | [open-low-ki-ar-004.md](agent-registry/open-low-ki-ar-004.md) |
+| `low` | KI-AR-005 — No project-local agent definition location: declared sub-agents can only resolve to packaged templates | [open-low-ki-ar-005.md](agent-registry/open-low-ki-ar-005.md) |
 
 ## Resolved
 
-None yet.
+| Severity | Issue | File |
+|---|---|---|
+| `low` | KI-AR-003 — stale `signoff` grants on research-agent, worktree-agent and brainstorm-worker (resolved 2026-10-09; pinned by `test_ar_200a_1_no_signoff_grant_without_obligation.py`) | [resolved-low-ki-ar-003.md](agent-registry/resolved/resolved-low-ki-ar-003.md) |

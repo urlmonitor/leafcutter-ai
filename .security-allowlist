@@ -8,14 +8,15 @@ ENTROPY_HIGH:docs/agents/README.md:429
 ENTROPY_HIGH:docs/agents/README.md:430
 ENTROPY_HIGH:docs/agents/README.md:431
 ENTROPY_HIGH:docs/agents/README.md:432
+ENTROPY_HIGH:docs/agents/README.md:*
 ENTROPY_HIGH:docs/how-to/working-with-leafcutter.md:63
 # False positive: shell example in a how-to doc setting a long SCREAMING_SNAKE env-var
 # name (LEAFCUTTER_SHARED_LAYOUT_INTEGRITY_REPORT) to a file path -- not a secret.
 # Glob, not per-line, per CLAUDE.md: line numbers in how-to prose shift.
 ENTROPY_HIGH:docs/how-to/verify-shared-layout-stays-read-only.md:*
 ENTROPY_HIGH:templates/skills/ticket-authoring/SKILL.md:42
-ENTROPY_HIGH:templates/agents/llm-expert.md:39
-ENTROPY_HIGH:templates/agents/llm-expert.md:104
+# Glob, not per-line: the skills: frontmatter block (AR-300c) shifts these PROJECT_CONTEXT.md path strings.
+ENTROPY_HIGH:templates/agents/llm-expert.md:*
 # False positives: guardrail config path constant passed as kwarg in unit tests (not a secret)
 ENTROPY_HIGH:unit_tests/test_generate_ticket_from_ac.py:*
 # False positive: file path string in module docstring of test_llm_expert_artifacts.py (PROJECT_CONTEXT.md path, not a secret)
@@ -699,6 +700,12 @@ GENERIC_SECRET:tests/kernel/entity_context/test_permissions.py:*
 # Glob, not per-line: this is a 787-line data file and a later snapshot will be longer,
 # so a pinned line number would silently stop matching.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-09-30.jsonl:*
+# AR-300 slice 2 test support: RETIRED_SKILLS_TOKEN / RETIRED_SPAWN_TOKEN hold the retired
+# {{my_skills_used}} / {{my_spawn_allowlist}} placeholder strings the tests assert are gone;
+# "TOKEN" in the name trips GENERIC_SECRET. Not credentials. Glob per CLAUDE.md test-file rule.
+GENERIC_SECRET:unit_tests/prompt_assembly/_ar_300ad_support.py:*
+# AR-300 slice 2: the test's docstring names the in-run mutation environment variable and its value.
+ENTROPY_HIGH:unit_tests/prompt_assembly/test_ar_300d_3_i_last_ability.py:*
 # TQ-600a-13-vi App fake: a fixed placeholder token string that a local test server
 # hands its jobs. Not a credential. Duplicated to the workspace-root copy.
 GENERIC_SECRET:unit_tests/suite_performance/_app_fake.py:*

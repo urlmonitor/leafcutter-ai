@@ -20,7 +20,13 @@ description: 'Pre-PR self-review against the working diff. Classifies every find
 memory: true
 model: sonnet
 name: pr-reviewer
-tools: Bash, Read, Edit, Agent
+tools: Bash, Read, Edit, Agent, Skill
+spawn_allowlist:
+- research-agent
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null

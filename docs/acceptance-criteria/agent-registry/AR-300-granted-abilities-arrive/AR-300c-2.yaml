@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -124,7 +124,10 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-300c-2-i
-implemented_by: []
+implemented_by:
+  - scripts/migrate_agent_abilities.py
+  - scripts/agent_ability_verdict.py
+  - scripts/template_compiler.py
 notes: |
   THE TWELVE ARE THE TEST OF THIS CRITERION. Twelve agents appear only in the
   newer field: research-agent, adr-author, how-to-author, explanation-author,

@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -83,8 +83,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300d_4_i_leftover_marker.py
+implemented_by:
+  - scripts/agent_retired_markers.py
+  - scripts/agent_grant_delivery.py
 notes: |
   THE PREMISE IS REACHABLE, NOT HYPOTHETICAL. Zero of 60 definitions carry the
   marker today, which is the defect. The state this criterion describes arises

@@ -44,6 +44,7 @@ import json
 import sys
 from pathlib import Path
 
+from agent_ability_gate import refuse_on_ability_findings
 from build_colors import (
     RESET,
     GREEN,
@@ -174,6 +175,11 @@ def _run_validation_guards(
             same reasoning as ``validate_all`` above.
     """
     if validate_all(config, package_root, args.validate_only, args.dry_run):
+        return 1
+
+    # AR-300c-3: report a registry copy that disagrees with the declarations
+    # (continues); refuse when a declared ability resolves to no installed skill.
+    if refuse_on_ability_findings(package_root, config, args.dry_run):
         return 1
 
     # Script reference guard: exit non-zero and halt before writing any output

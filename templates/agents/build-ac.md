@@ -13,7 +13,9 @@ description: |
   /build-feature manually. See ADR-006-flatten-supervisor-chain.md.
 model: sonnet
 name: build-ac
-tools: Bash, Read
+tools: Bash, Read, Agent
+spawn_allowlist:
+- ac-triage
 portable: true
 signoff: false
 domain: null

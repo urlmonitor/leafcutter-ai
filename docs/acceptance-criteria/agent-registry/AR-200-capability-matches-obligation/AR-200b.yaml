@@ -80,6 +80,7 @@ superseded_by: null
 covered_by:
   - AR-200b-1
   - AR-200b-2
+  - AR-200b-3
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "No new user-facing surface — a configuration contradiction stops occurring. The affected instructions already exist and are unchanged."

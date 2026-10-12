@@ -7,7 +7,13 @@ description: |
   and writes no auxiliary output inside the project tree.
   (internal — invoked by sql-coder or ticket-supervisor)
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 requires_verification: true
 pre_flight_reads:
 - required: true
