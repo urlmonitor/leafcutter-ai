@@ -2341,8 +2341,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
          * Case (a): the result named NO target (absent, empty, blank, not a string); also what
          * a deliberate targetless halt looks like. The ticket body is never read.
          */
-        if (normalizedTarget === "")
-          return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
+        if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
 
         /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
         const remedy = phaseResult.remedy; let brief = null;
@@ -2350,14 +2349,13 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           const decl = await agent(
             `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
             { agentType: "status-checker", schema: { "type": "object", "properties": { "status": { "type": "string" }, "disposition": { "type": "string" }, "agent": { "type": ["string", "null"] }, "skills": { "type": "array", "items": { "type": "string" } } } }, label: "remedy-declaration", phase: "Phase Dispatch" });
-          if (!decl || decl.status !== "ok" || decl.disposition !== "engage-specialist" || decl.agent !== normalizedTarget)
-            return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but the remedy declaration of '${remedy.hook_id}' could not be read as engage-specialist for that party (${JSON.stringify(decl)}). Stopping; nobody was engaged.`);
-          brief = { skills: decl.skills || [], demand: remedy.demand || [] };
+          if (!decl || decl.status !== "ok" || decl.disposition !== "engage-specialist" || decl.agent !== normalizedTarget) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but the remedy declaration of '${remedy.hook_id}' could not be read as engage-specialist for that party (${JSON.stringify(decl)}). Stopping; nobody was engaged.`);
+          /* BO-3800c-1-i: a demand with no usable file/quantity stops the run, reproduced as given; never defaulted or re-derived. */
+          const usable = Array.isArray(remedy.demand) && remedy.demand.length > 0 && remedy.demand.every((e) => e && typeof e.path === "string" && e.path.trim() !== "" && (e.function !== undefined ? typeof e.function === "string" && e.function.trim() !== "" && Number.isFinite(e.score) && Number.isFinite(e.ceiling) : Number.isFinite(e.lines_to_remove) && e.lines_to_remove > 0)); if (!usable) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}'; the refusal was read and carried no usable demand (demand was ${JSON.stringify(remedy.demand === undefined ? null : remedy.demand)}). Stopping; nobody was engaged and delivery was not attempted again.`);
+          brief = { skills: decl.skills || [], demand: remedy.demand };
         }
-
         /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
-        if (!phaseOrder.includes(normalizedTarget))
-          return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
+        if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
 
         /*
          * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
@@ -2371,14 +2369,11 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
               : deferredPhases.includes(normalizedTarget)
                 ? `names '${normalizedTarget}', which is deferred for this drive (pull-request is opened once per epic)`
                 : "";
-        if (unfit)
-          return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-feature.`);
-
+        if (unfit) return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-feature.`);
         /* Caps: one chain array, pushed BEFORE the check so the refused step is named too. */
         const step = `${phaseName}->${normalizedTarget}`;
         handoffChain.push(step);
-        if (handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR || handoffChain.length > MAX_HANDOFFS_PER_TICKET)
-          return refuse(`Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. Halting; '${normalizedTarget}' was not dispatched.`, "handoff_loop");
+        if (handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR || handoffChain.length > MAX_HANDOFFS_PER_TICKET) return refuse(`Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. Halting; '${normalizedTarget}' was not dispatched.`, "handoff_loop");
 
         /*
          * Accepted: the target runs through the normal loop (guard, gate, read-back,
@@ -2394,10 +2389,8 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             : Infinity,
         };
         queuePhaseFirst(pendingPhases, normalizedTarget);
-        log(
-          `Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
-          `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`
-        );
+        log(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
+          `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`);
         break;
       }
 
@@ -2414,7 +2407,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             phase: "Phase Dispatch",
           }
         );
-
         const classification = classifyResult && classifyResult.classification;
 
         if (classification === "mechanical") {
