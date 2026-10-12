@@ -35,6 +35,7 @@ import re
 from collections.abc import Callable, Mapping
 
 from scripts.ci._github_rest import GitHubClient, GitHubError
+from scripts.ci._hold_reads import timeout_seconds
 
 logger = logging.getLogger("post_merge_hold")
 
@@ -105,7 +106,7 @@ def _mint_token(api_url: str, repo: str, jwt: str) -> str:
     """Exchange the App JWT for an installation token (lookup, then ``access_tokens``)."""
     step = "look up the installation"
     try:
-        app = GitHubClient(api_url, jwt)
+        app = GitHubClient(api_url, jwt, timeout=timeout_seconds())
         installation = app.get(f"/repos/{repo}/installation")
         installation_id = installation.get("id") if isinstance(installation, dict) else None
         if not isinstance(installation_id, int) or isinstance(installation_id, bool):
@@ -127,7 +128,7 @@ def _mint_token(api_url: str, repo: str, jwt: str) -> str:
 def _create_check(api_url: str, token: str, repo: str, head_sha: str) -> tuple[GitHubClient, int]:
     """Create the check run in progress on the head; return the installation client and the run's id."""
     try:
-        installed = GitHubClient(api_url, token)
+        installed = GitHubClient(api_url, token, timeout=timeout_seconds())
         created = installed.post(f"/repos/{repo}/check-runs", {"name": CHECK_NAME, "head_sha": head_sha, "status": "in_progress"})
     except GitHubError as exc:
         message = f"The hold App could not create the check run ({_status_text(exc.status)}); nothing was published."

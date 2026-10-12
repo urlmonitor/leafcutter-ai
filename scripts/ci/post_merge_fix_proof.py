@@ -228,7 +228,8 @@ def _put_root_on_path() -> None:
 
 def _decide(client, repo: str, body: str | None) -> tuple[dict[str, str], str]:
     """Reads and decision of the ``prepare`` step: (outputs, one-line reason)."""
-    from scripts.ci._hold_exempt import match_declaration, open_notice_numbers  # noqa: PLC0415 -- after _put_root_on_path
+    from scripts.ci._github_rest import GitHubError  # noqa: PLC0415 -- after _put_root_on_path
+    from scripts.ci._hold_exempt import match_declaration, open_notice_numbers  # noqa: PLC0415
     from scripts.ci._notice_render import LABEL  # noqa: PLC0415
     from scripts.ci._run_history import KIND_SETTLED, VERDICT_DID_NOT_COMPLETE, VERDICT_GREEN, classify_run, select_verdict_run  # noqa: PLC0415
     from scripts.ci.post_merge_hold import load_tunables, read_jobs, read_runs  # noqa: PLC0415
@@ -239,7 +240,12 @@ def _decide(client, repo: str, body: str | None) -> tuple[dict[str, str], str]:
     declared = match_declaration(body, repo, numbers)
     if declared is None:
         return no_proof, "no fix of an open post-merge-red notice is declared; no proof"
-    selection = select_verdict_run(read_runs(client, repo, int(load_tunables()["run_history_page"])))
+    try:
+        runs = read_runs(client, repo, int(load_tunables()["run_history_page"]))
+    except GitHubError as exc:  # TQ-600a-13-ix: a failed or wrong-shape read is no basis for a proof
+        logger.warning("fix proof: the run history could not be read (%s); no proof", exc)
+        return no_proof, "the run history could not be read; no proof"
+    selection = select_verdict_run(runs)
     run = selection.run
     if selection.kind != KIND_SETTLED or run is None or not isinstance(run.get("id"), int):
         return no_proof, "the suite has no settled run to prove against; no proof"
