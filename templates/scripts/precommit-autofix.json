@@ -228,6 +228,17 @@
       "instruction": "Commit touches files outside declared scope. Unstage out-of-scope files or update ticket files_touched.",
       "agent": null,
       "skills": []
+    },
+    {
+      "hook_id": "check-lint-gate",
+      "category": "structural",
+      "model": "sonnet",
+      "subagent_type": "python-coder",
+      "description": "A staged file has a lint violation CI's required Lint (ruff) check would reject (file, line and rule are named). Fix the violation; on RESULT: could_not_check, follow the printed fix (e.g. install the pinned ruff) instead.",
+      "disposition": "engage-specialist",
+      "instruction": "A staged file has a lint violation CI's required Lint (ruff) check would reject (file, line and rule are named). Fix the violation; on RESULT: could_not_check, follow the printed fix (e.g. install the pinned ruff) instead.",
+      "agent": "python-coder",
+      "skills": []
     }
   ]
 }

@@ -1019,3 +1019,4 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+ENTROPY_HIGH:templates/scripts/commit_guardian/_lint_scope.py:*
