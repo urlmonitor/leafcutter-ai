@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -144,8 +144,11 @@ amended_by:
   date: '2026-10-09'
   changed: "it_requirements and test_spec: two places still read 'five' as the governing count after the six-account widening above. The whole-population it_requirement now says 'not just the six known instances (the five tables plus ticket-supervisor's fenced list)' (was 'the five known instances'), and the planted-table descriptor's must_catch now reads 'the assertion iterates only the six known templates (the five with tables plus ticket-supervisor)' (was 'the five known templates'). WHY: BrainCandy's 2026-10-09 decision made the governing count six; these two sentences were missed by the earlier amendment. Explicitly historical 'five' wording (the notes, which already say to read 'five' as the measured table population, and test_rationale's 'two of the five tables') is left as-is. criteria, title, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because this only aligns two sentences with a decision the approving user already made."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300a_5_i_single_account.py
+implemented_by:
+  - scripts/agent_ability_accounts.py
+  - scripts/agent_spawn_declaration.py
 notes: |
   SIX, NOT FIVE (BrainCandy decision, 2026-10-09). ticket-supervisor's
   hand-written fenced list under "### Spawn Allowlist (is_ticket_phase agents)"

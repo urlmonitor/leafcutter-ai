@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -94,8 +94,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-09'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300d_5_i_ticket_phase_macro.py
+implemented_by:
+  - scripts/agent_spawn_declaration.py
+  - scripts/template_compiler.py
 notes: |
   THIS IS THE CRITERION THAT DECIDES THE MACRO QUESTION. If the
   `__ticket_phase_agents__` macro were expanded into names during migration,

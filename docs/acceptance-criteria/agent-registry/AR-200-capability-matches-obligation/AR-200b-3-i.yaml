@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -96,8 +96,12 @@ amended_by:
   agent: approve_acs
   date: '2026-10-09'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/agents/test_ar_200b_3_i_macro_absent_empty.py
+  - unit_tests/agents/test_ar_200b_3_spawn_tool_grant.py
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
 notes: |
   THE MACRO CLAUSE IS THE NEW EDGE. An implementation that resolves the
   ticket-phase entry first and then asks "is the resolved list non-empty?" would

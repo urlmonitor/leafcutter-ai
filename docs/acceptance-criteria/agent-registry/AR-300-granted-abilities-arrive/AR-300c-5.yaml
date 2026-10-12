@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -133,7 +133,10 @@ covered_by:
   - AR-300c-5-ii
   - AR-300c-5-iii
   - AR-300c-5-iv
-implemented_by: []
+implemented_by:
+  - scripts/agent_spawn_declaration.py
+  - scripts/agent_declaration_shape.py
+  - scripts/agent_declared_sections.py
 notes: |
   USER DECISION CARRIED DOWN (BrainCandy, 2026-10-09, conditions_decisions.md
   item 9). The per-agent spawn allowlist is delivered in the AR-300 pull request

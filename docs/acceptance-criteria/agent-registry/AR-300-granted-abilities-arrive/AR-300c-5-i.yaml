@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -146,8 +146,10 @@ amended_by:
   agent: approve_acs
   date: '2026-10-09'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_5_i_migration.py
+implemented_by:
+  - scripts/migrate_agent_spawn_allowlist.py
 notes: |
   CONSEQUENCES THE USER MUST SEE BEFORE APPROVING. With the data measured on
   2026-10-09, the union rule:

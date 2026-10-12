@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -136,7 +136,9 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-200b-2-i
-implemented_by: []
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
 notes: |
   THIS LEAF STATES ITS OWN DERIVATION AND DOES NOT INHERIT AR-200b-1's.
 

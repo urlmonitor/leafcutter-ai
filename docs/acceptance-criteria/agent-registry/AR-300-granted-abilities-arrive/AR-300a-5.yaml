@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -127,7 +127,9 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-300a-5-i
-implemented_by: []
+implemented_by:
+  - scripts/agent_spawn_declaration.py
+  - scripts/template_compiler.py
 notes: |
   WHY THIS SITS UNDER AR-300a. AR-300a promises that "the abilities on a
   specialist's record are the abilities in its briefing". AR-300's altitude note

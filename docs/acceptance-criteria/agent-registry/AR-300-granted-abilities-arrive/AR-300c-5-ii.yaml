@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -134,8 +134,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-09'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_5_ii_derived_copy.py
+implemented_by:
+  - templates/scripts/commit_guardian/transform_agent_registry.py
+  - scripts/agent_ability_gate.py
 notes: |
   USER DECISIONS CARRIED DOWN (BrainCandy, 2026-10-09, items 5 and 9). The
   build REPORTS a disagreeing registry copy and does not refuse; the derived

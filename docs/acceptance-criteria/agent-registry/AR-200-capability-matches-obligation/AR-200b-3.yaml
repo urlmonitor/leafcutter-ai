@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -144,7 +144,11 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-200b-3-i
-implemented_by: []
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
+  - templates/agents/build-ac.md
+  - templates/agents/business-analyst.md
 notes: |
   THE SPAWN ANALOGUE OF AR-200b-2. AR-200b's criteria (as amended 2026-09-30 and
   re-approved 2026-10-01) already cover an obligation "when a specialist's own

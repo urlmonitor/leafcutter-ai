@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -159,8 +159,11 @@ amended_by:
   date: '2026-10-09'
   changed: "test_rationale, notes and the ADR-035 doc_link relevance: these still described conflict-resolver-deep as awaiting a user decision ('awaiting a user decision', 'Not decided here', 'the open item in this record's it_requirements'). Each now says the question was open and was decided by BrainCandy on 2026-10-09 (decision 13): conflict-resolver-deep is removed exactly like architect-review-deep -- registry entry retired, spawn permission and body instructions removed, conflict-resolver resolves structural conflicts itself -- and KI-AR-004 is widened to both missing Opus escalations. A new notes paragraph 'SECOND INSTANCE DECIDED' records this; the earlier paragraph is kept, reworded to past tense, so the history stays readable. WHY: decision 13 was already applied to it_requirements in the first amendment above, but these passages were not updated with it and contradicted it. criteria, title, it_requirements, test_spec, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because this only brings descriptive text in line with a decision the approving user already made."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_5_iii_unresolvable.py
+implemented_by:
+  - scripts/agent_spawn_declaration.py
+  - scripts/build_phases_collisions.py
 notes: |
   REPORT OR REFUSE -- DECIDED: REFUSE. By analogy with AR-300c-3-i, which refuses
   on an unresolvable declared skill id (user decision 5, BrainCandy 2026-10-09:

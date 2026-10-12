@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -109,7 +109,10 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-300d-5-i
-implemented_by: []
+implemented_by:
+  - scripts/template_compiler.py
+  - scripts/agent_spawn_declaration.py
+  - scripts/agent_declared_sections.py
 notes: |
   WHY ONE L2 COVERS ADD, REVOKE AND NEW-AGENT. AR-300d was at 4 of 5 L2s; the
   abilities side spends three L2s (d-1 new agent, d-2 added, d-3 revoked) plus
