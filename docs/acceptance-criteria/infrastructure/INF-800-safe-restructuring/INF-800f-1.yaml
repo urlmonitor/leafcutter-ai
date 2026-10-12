@@ -7,8 +7,8 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
-readiness: draft
+work_status: done
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -180,8 +180,13 @@ origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/evals/test_inf_800f_1_registration.py
+- unit_tests/evals/test_inf_800f_1.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-INF-800f-1.md
+- config/agent_registry.json
+- templates/agents/restructuring-specialist.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |

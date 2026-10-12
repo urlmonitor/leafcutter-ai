@@ -74,6 +74,7 @@ from build_deploy_manifest_helpers import (
     _manifest_build_orchestration_scripts,
     _manifest_agent_support_scripts,
     _manifest_template_standalone_scripts,
+    _guard_source_paths_template_standalone,
     _manifest_doc_compliance_scripts,
     _manifest_sync_platforms_scripts,
 )
@@ -774,18 +775,7 @@ def _guard_source_paths_ac_mode_detection(package_root: Path) -> set[str]:
     return source_paths
 
 
-def _guard_source_paths_template_standalone(package_root: Path) -> set[str]:
-    """Return SOURCE paths for template-standalone scripts (BP-100n-4 split).
-
-    Source is under templates/scripts/ (top-level .py).
-    """
-    source_paths: set[str] = set()
-    templates_scripts = package_root / "templates" / "scripts"
-    if templates_scripts.is_dir():
-        for f in templates_scripts.glob("*.py"):
-            if f.is_file():
-                source_paths.add(f"templates/scripts/{f.name}")
-    return source_paths
+# _guard_source_paths_template_standalone moved to build_deploy_manifest_helpers.py.
 
 
 def _guard_source_paths_release(package_root: Path) -> set[str]:
