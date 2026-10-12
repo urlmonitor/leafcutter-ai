@@ -125,7 +125,6 @@ class TestTq600a13viiiDeclaration(ExemptCase):
             "the proof runs": f"{base}/actions/workflows/post-merge-fix-proof.yml/runs",
             "the proof's jobs": f"{base}/actions/runs/205/jobs",
             "the notice list": f"{base}/issues",
-            "the verdict run's jobs": f"{base}/actions/runs/107/jobs",
         }
         for label, prefix in reads.items():
             with cases.case(label):
@@ -133,6 +132,16 @@ class TestTq600a13viiiDeclaration(ExemptCase):
                 self.stage()
                 self.svc.failing = [prefix]
                 self.expect_nothing_granted(self.drive_body(DECL), r"could not|cannot|unable|http 500")
+        with cases.case("the verdict run's jobs"):
+            # TQ-600a-13-ix (the later, approved amendment): a failed jobs read is did_not_complete / stage unknown and keeps the
+            # exemption route open, so with a passing proof the exemption IS permitted and the reason says the jobs could not be read.
+            self.svc.reset()
+            self.stage()
+            self.svc.failing = [f"{base}/actions/runs/107/jobs"]
+            ran = self.drive_body(DECL)
+            CHECK.assertEqual(0, ran.code, ran.out)
+            CHECK.assertRegex(ran.out, r"(?i)jobs[^.\n]*could not be read")
+            self.expect_one_record()  # the exemption was granted AND recorded on the notice
         with cases.case("control: every read works"):
             self.svc.reset()
             self.stage()

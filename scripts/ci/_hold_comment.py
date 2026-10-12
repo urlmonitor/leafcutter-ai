@@ -40,6 +40,7 @@ import re
 from datetime import datetime, timezone
 
 from scripts.ci._github_rest import GitHubClient, GitHubError
+from scripts.ci._hold_reads import cause_of
 from scripts.ci._notice_render import MAX_FAILING_SHOWN, code
 
 logger = logging.getLogger("post_merge_hold")
@@ -320,19 +321,20 @@ def find_own(comments: list[dict], pr_number: int) -> dict | None:
     return None
 
 
-def sync_comment(client: GitHubClient, repo: str, pr_number: int, verdict: dict, now: datetime, head_sha: str | None = None) -> None:
-    """Create, edit or leave alone the check's one comment.
+def sync_comment(client: GitHubClient, repo: str, pr_number: int, verdict: dict, now: datetime, head_sha: str | None = None) -> str | None:
+    """Create, edit or leave alone the check's one comment; return None, or the cause when it could not be kept in step.
 
-    A failed list or write (``GitHubError``) is logged and never raised; any other exception is a defect and propagates.
+    A failed list or write (``GitHubError``) is logged and never raised (TQ-600a-13-ix: the caller notes the returned
+    cause in the output); any other exception is a defect and propagates.
     """
     try:
         own = find_own(list_comments(client, repo, pr_number), pr_number)
     except GitHubError as exc:
         logger.warning("post-merge hold: comments of #%s unreadable, writing none: %s", pr_number, exc)
-        return
+        return cause_of(exc)
     previous = own.get("body") if own else None
     if verdict["state"] in LIFT_STATES and (own is None or is_lifted(previous)):
-        return
+        return None
     body = {"body": render_comment(verdict, now, previous, head_sha=head_sha)}
     try:
         if own is None:
@@ -341,3 +343,5 @@ def sync_comment(client: GitHubClient, repo: str, pr_number: int, verdict: dict,
             client.patch(f"/repos/{repo}/issues/comments/{own['id']}", body)
     except GitHubError as exc:
         logger.warning("post-merge hold: the comment write on #%s was refused: %s", pr_number, exc)
+        return cause_of(exc)
+    return None
