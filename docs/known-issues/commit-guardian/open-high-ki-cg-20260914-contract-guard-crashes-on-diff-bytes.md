@@ -12,7 +12,7 @@ related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
   - docs/known-issues/commit-guardian/open-low-ki-cg-20260927-subprocess-text-decode-uses-locale-codec-repo-wide.md
-  - docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
+  - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
   - tickets/00_inbox/TICKET-20261007-ContractShrinkingHookDecodesUtf8.md
 ---
 

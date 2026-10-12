@@ -11,7 +11,7 @@ components:
 related_docs:
   - docs/known-issues/commit-guardian.md
   - docs/known-issues/README.md
-  - docs/known-issues/commit-guardian/open-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
+  - docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20261010-folder-density-refuses-merges-of-main.md
   - docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md
 ---
 
