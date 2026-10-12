@@ -57,9 +57,12 @@ Usage:
     workspace -- found relative to the script's resolved location, not the
     caller's current directory, so every working directory (the project root,
     a nested directory, an isolated worktree) resolves to the SAME stream.
-    When the declaration is absent, unreadable, unparseable, lacks the key or
-    holds a relative value, the script warns on stderr naming the declaration,
-    writes NOTHING (no workspace-relative fallback) and still exits 0.
+    The stream is usable only when the declaration also records an absolute
+    ``operational_log_root`` with the stream directly under it (INF-500d-4-i).
+    When the declaration is absent, unreadable, unparseable, lacks either key,
+    holds a relative value or the stream is outside the root, the script warns
+    on stderr naming the declaration and ``operational_log_root``, writes
+    NOTHING (no workspace-relative fallback) and still exits 0.
 
 Exit codes:
     0 - always, including on write failure (telemetry is best-effort)
@@ -153,8 +156,11 @@ def _declared_stream(declaration: Path) -> tuple[Path | None, str]:
     """Return ``(stream, "")`` from *declaration*, or ``(None, why it is unusable)``.
 
     Standard library only (this script imports nothing from the package).
-    Mirrors ``scripts/knowledge/sink_resolution.py``: the value of
-    ``operational_telemetry_stream`` must be a non-empty absolute path.
+    An inline copy of ``scripts/knowledge/sink_resolution.read_usable_stream``,
+    the one usable-stream rule (INF-500d-4-i): the declaration must record an
+    absolute ``operational_log_root`` AND an absolute
+    ``operational_telemetry_stream`` sitting directly under it. Keep the two
+    in step.
     """
     try:
         data = json.loads(declaration.read_text(encoding="utf-8"))
@@ -162,12 +168,21 @@ def _declared_stream(declaration: Path) -> tuple[Path | None, str]:
         return None, "absent: no such file"
     except (OSError, ValueError) as exc:
         return None, f"unreadable or unparseable: {exc}"
-    declared = data.get("operational_telemetry_stream") if isinstance(data, dict) else None
-    if not isinstance(declared, str) or not declared:
-        return None, "missing: no 'operational_telemetry_stream' entry"
-    if not Path(declared).is_absolute():
-        return None, f"not absolute: 'operational_telemetry_stream' is {declared!r}"
-    return Path(declared), ""
+    if not isinstance(data, dict):
+        return None, "unparseable: the declaration is not a JSON object"
+    values: dict[str, str] = {}
+    for key in ("operational_log_root", "operational_telemetry_stream"):
+        value = data.get(key)
+        if not isinstance(value, str) or not value:
+            return None, f"missing: no '{key}' entry"
+        if not Path(value).is_absolute():
+            return None, f"not absolute: '{key}' is {value!r}"
+        values[key] = value
+    stream, root = values["operational_telemetry_stream"], values["operational_log_root"]
+    if Path(stream).parent != Path(root):
+        return None, (f"'operational_telemetry_stream' is {stream}, which is not "
+                      f"directly under operational_log_root {root}")
+    return Path(stream), ""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -223,6 +238,13 @@ if __name__ == "__main__":
 
 # DECISION HISTORY
 # ================================================================================
+# - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: _declared_stream now also
+#   requires an absolute operational_log_root with the stream directly under it,
+#   so a --no-log-root or legacy two-key declaration (streams recorded under the
+#   disposable worktree) warns and drops the event instead of writing there.
+#   The rule lives in scripts/knowledge/sink_resolution.read_usable_stream; this
+#   is a deliberate inline copy because the standard-library-only rule is KEPT
+#   (importing sink_resolution would need the deploy manifest to carry it).
 # - 2026-10-12 [python-coder/INF-500d-4-iv]: The default stream is now read from
 #   THIS script's own workspace declaration (Path(__file__).resolve().parents[3]
 #   / "config" / "knowledge_sink.json"), replacing _find_declaration's ancestor

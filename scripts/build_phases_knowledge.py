@@ -272,7 +272,8 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     ``--log-root`` value the worktree bootstrap inherits from the main install's
     recorded declaration, parked in ``config`` by ``build_log_root`` -- and
     defaults to ``<project_root>/debugging/logs``, so an ordinary build's two
-    historical values are unchanged. ``--no-log-root`` omits the two new keys.
+    historical values are unchanged. ``--no-log-root`` records NO location at
+    all (an empty declaration) and prints a NOTE saying writers will refuse.
     The values come from ``build_log_root.declaration_values``.
 
     A NOTE is always printed alongside the write: a build has no reliable way
@@ -326,6 +327,10 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   from build_log_root.declaration_values, adding operational_log_root and
     #   feedback_sink and honouring an inherited --log-root; the NOTE also
     #   names the operational log root. (#INF-500d-4-iii, ADR-069)
+    # - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: --no-log-root now records
+    #   an empty declaration (no worktree-local stream/sink survives to be trusted)
+    #   and the build NOTE says plainly that no durable root is declared and
+    #   writers refuse, instead of the misleading "SECOND sink" text.
     """
     import build_phases as _bp
     from build_log_root import declaration_values
@@ -335,9 +340,19 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     output_path = target_root / "config" / "knowledge_sink.json"
 
     if _bp._write(output_path, content, dry_run, force):
+        if not values:
+            print(
+                "  NOTE: config/knowledge_sink.json declares NO durable operational "
+                "log root (--no-log-root), so it records no sink, stream or root. "
+                "emit_event.py, harvest_learnings.py and the --print-location "
+                "queries will REFUSE to write until a rebuild passes --log-root "
+                "<abs-dir> or a plain build declares one -- see ADR-069 and "
+                "AC INF-500d-4-i."
+            )
+            return 1
         print(f"  config/knowledge_sink.json -> {values['knowledge_emission_sink']}")
         print(f"  config/knowledge_sink.json -> {values['operational_telemetry_stream']} (operational stream)")
-        print(f"  config/knowledge_sink.json -> operational log root: {values.get('operational_log_root', '(none declared)')}")
+        print(f"  config/knowledge_sink.json -> operational log root: {values['operational_log_root']}")
         print(
             "  NOTE: this build declares the knowledge-emission SINK for "
             "THIS working directory. A separate, isolated working directory "

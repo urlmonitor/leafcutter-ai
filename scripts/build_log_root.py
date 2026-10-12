@@ -73,15 +73,20 @@ def declaration_values(project_root: Path, config: dict[str, Any]) -> dict[str, 
     The two historical keys keep their ordinary-build values
     (``<project_root>/debugging/logs/<file>``). An inherited root replaces that
     directory for every file key. ``operational_log_root`` and ``feedback_sink``
-    are added after them, unless the input is ``False`` (``--no-log-root``).
+    are added after them. When the input is ``False`` (``--no-log-root``) NO
+    durable root is declared, so NO location is recorded: a stream under the
+    disposable project root would be a destination every writer then trusts
+    (ADR-069 section 4, AC INF-500d-4-i). The writers also refuse a stream with
+    no root (``sink_resolution.read_usable_stream``), which covers hand-written
+    declarations too.
     """
     given = config.get(CONFIG_KEY)
+    if given is False:
+        return {}
     root = Path(given) if given else project_root.joinpath(*_LOG_DIR_PARTS)
-    values = {
+    return {
         "knowledge_emission_sink": str(root / "knowledge_emissions.jsonl"),
         "operational_telemetry_stream": str(root / "agent_telemetry.jsonl"),
+        "operational_log_root": str(root),
+        "feedback_sink": str(root / "feedback.jsonl"),
     }
-    if given is not False:
-        values["operational_log_root"] = str(root)
-        values["feedback_sink"] = str(root / "feedback.jsonl")
-    return values
