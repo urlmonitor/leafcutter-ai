@@ -100,7 +100,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-2-v.md
 notes: |
   Owner ruling at the AC gate (2026-10-09), decision (2)(b): an old /flows?flow=<id>[&step=<step>]
   link whose flow id is unknown answers 308 to the canonical form and then shows the 404
