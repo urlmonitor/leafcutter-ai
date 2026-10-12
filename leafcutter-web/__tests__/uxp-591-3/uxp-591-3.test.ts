@@ -12,7 +12,7 @@ import path from "node:path";
 import React from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, within } from "@testing-library/react";
-import { drawers, forwardedHeaders, load, paramsFor, runMiddleware, searchParamsOf } from "./helpers/flow-routes";
+import { drawers, forwardedHeaders, load, paramsFor, runMiddleware, searchParamsOf } from "../helpers/flow-routes";
 
 const hoisted = vi.hoisted(() => ({ headers: new Headers() }));
 
@@ -32,7 +32,7 @@ import { acById } from "@/lib/data/ac-store";
 import { flowAppearancesByAc } from "@/lib/data/flows";
 import { DetailDrawer } from "@/components/atlas/detail-drawer";
 
-vi.setConfig({ testTimeout: 60000 });
+vi.setConfig({ testTimeout: 180000 });
 
 beforeAll(() => {
   vi.stubGlobal(

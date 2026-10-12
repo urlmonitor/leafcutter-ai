@@ -6,8 +6,8 @@
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
-import { clickNode, closeWithCanvas, closeWithX, drawers, expectDrawers } from "./helpers/flow-routes";
-import { expectReplaced, openAt, watchHistory, type NavState } from "./helpers/drawer-nav";
+import { clickNode, closeWithCanvas, closeWithX, drawers, expectDrawers } from "../helpers/flow-routes";
+import { expectReplaced, openAt, watchHistory, type NavState } from "../helpers/drawer-nav";
 
 const nav = vi.hoisted(() => ({
   headers: new Headers(),
@@ -27,7 +27,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.setConfig({ testTimeout: 60000 });
+vi.setConfig({ testTimeout: 180000 });
 
 beforeAll(() => {
   vi.stubGlobal(

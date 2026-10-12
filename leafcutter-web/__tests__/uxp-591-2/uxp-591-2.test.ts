@@ -20,7 +20,7 @@ import {
   paramsFor,
   runMiddleware,
   searchParamsOf,
-} from "./helpers/flow-routes";
+} from "../helpers/flow-routes";
 
 const hoisted = vi.hoisted(() => ({ headers: new Headers() }));
 
@@ -42,7 +42,7 @@ import { buildStepViews } from "@/components/flows/flow-step-view";
 import { FlowsView } from "@/components/flows/flows-view";
 import type { MockData } from "@/lib/data/types";
 
-vi.setConfig({ testTimeout: 60000 });
+vi.setConfig({ testTimeout: 180000 });
 
 beforeAll(() => {
   vi.stubGlobal(

@@ -88,8 +88,28 @@ export function buildStepViews(
 }
 
 /**
- * The graph node id whose drawer the address opened with (`?step=`), or null.
- * Provided by <FlowsView>, read once by the explorer for its initial selection.
+ * How the address and the explorer's drawer selection talk: `initialId` is the
+ * graph node id whose drawer the address opened with (`?step=`), read once;
+ * `onChange` hears every later open / switch / close. Provided by <FlowsView>.
  */
-export const InitialStepContext = React.createContext<string | null>(null);
-export const useInitialStepId = (): string | null => React.useContext(InitialStepContext);
+export interface StepAddress {
+  initialId: string | null;
+  onChange?: (nodeId: string | null) => void;
+}
+export const StepAddressContext = React.createContext<StepAddress>({ initialId: null });
+
+/** The drawer selection: seeded from the address, reporting each real change up. */
+export function useStepSelection() {
+  const { initialId, onChange } = React.useContext(StepAddressContext);
+  const [id, setId] = React.useState<string | null>(initialId);
+  const current = React.useRef(id);
+  const report = React.useRef(onChange);
+  report.current = onChange;
+  const select = React.useCallback((next: string | null) => {
+    if (next === current.current) return;
+    current.current = next;
+    setId(next);
+    report.current?.(next);
+  }, []);
+  return [id, select] as const;
+}

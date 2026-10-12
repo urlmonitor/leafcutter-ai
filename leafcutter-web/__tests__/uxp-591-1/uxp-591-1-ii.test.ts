@@ -23,7 +23,7 @@ import {
   searchParamsOf,
   load,
   squash,
-} from "./helpers/flow-routes";
+} from "../helpers/flow-routes";
 
 const hoisted = vi.hoisted(() => ({ headers: new Headers() }));
 

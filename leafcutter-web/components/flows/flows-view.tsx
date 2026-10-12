@@ -35,7 +35,8 @@ import {
   StepRollup,
   type FlowsViewNotice,
 } from "./flows-view-banners";
-import { InitialStepContext } from "./flow-step-view";
+import { StepAddressContext } from "./flow-step-view";
+import { replaceFlowAddress } from "./flow-history";
 import { stepNotFoundDetail } from "@/lib/flow-url";
 import { RealizationBadge } from "./realization-badge";
 import { Workflow } from "lucide-react";
@@ -166,15 +167,38 @@ export function FlowsView({
     [flowById],
   );
 
-  // The address's step only applies to the flow it was opened on. A step naming
-  // nothing opens that flow with a notice and no drawer (not a 404).
+  // The address's step seeds the drawer only on the first mount of the flow the
+  // address named. Any drill / flow change, or the first drawer change, spends
+  // it: a later remount (breadcrumb back) then starts with no drawer instead of
+  // re-opening a stale step. A step naming nothing opens that flow with a notice
+  // and no drawer (not a 404); a real drawer change clears the notice.
   const stepFlow = initialCrumbs[initialCrumbs.length - 1];
-  const stepKnown =
-    step !== null && flow?.id === stepFlow
-      ? [...flow.steps, ...flow.branches].some((x) => x.id === step)
-      : false;
+  const seedSpent = React.useRef(false);
+  const [stepTouched, setStepTouched] = React.useState(false);
+  if (flow?.id !== stepFlow || stepTouched) seedSpent.current = true;
+  const seeded = step !== null && !seedSpent.current;
+  const stepKnown = seeded && flow ? [...flow.steps, ...flow.branches].some((x) => x.id === step) : false;
   const initialStep = stepKnown ? `step:${step}` : null;
-  const stepNotice = step !== null && flow?.id === stepFlow && !stepKnown;
+  const stepNotice = seeded && !stepKnown;
+
+  // A drawer opened, switched or closed: replace the address in place (no Back entry).
+  const flowIdNow = flow?.id;
+  const onStepChange = React.useCallback(
+    (nodeId: string | null) => {
+      seedSpent.current = true;
+      setStepTouched(true);
+      if (!flowIdNow) return;
+      replaceFlowAddress(flowIdNow, nodeId ? nodeId.replace(/^step:/, "") : null, {
+        crumbs: path,
+        filters: { source, kind: effectiveKind, realization: effectiveRealization },
+      });
+    },
+    [flowIdNow, path, source, effectiveKind, effectiveRealization],
+  );
+  const stepAddress = React.useMemo(
+    () => ({ initialId: initialStep, onChange: onStepChange }),
+    [initialStep, onStepChange],
+  );
 
   const crumbs = path.map((id) => flowById.get(id)).filter((f): f is Flow => Boolean(f));
 
@@ -272,7 +296,7 @@ export function FlowsView({
             )}
           </div>
 
-          <InitialStepContext.Provider value={initialStep}>
+          <StepAddressContext.Provider value={stepAddress}>
             <FlowExplorer
               key={flow.id}
               flow={flow}
@@ -281,7 +305,7 @@ export function FlowsView({
               screenTitles={screenTitles}
               onDrill={drillTo}
             />
-          </InitialStepContext.Provider>
+          </StepAddressContext.Provider>
         </>
       ) : notice ? (
         <FlowNotice notice={notice} />

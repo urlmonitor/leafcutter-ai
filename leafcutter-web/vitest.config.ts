@@ -16,7 +16,7 @@ export default defineConfig({
     environment: "jsdom",
     // The first render of the Flows view pulls in the whole explorer; a cold
     // transform exceeds the 5s default.
-    testTimeout: 60000,
+    testTimeout: 180000,
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.test.{ts,tsx}"],

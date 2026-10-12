@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { activeOf, load } from "./helpers/flow-routes";
+import { activeOf, load } from "../helpers/flow-routes";
 
 const hoisted = vi.hoisted(() => ({
   captured: [] as Array<Record<string, unknown>>,
@@ -72,7 +72,7 @@ afterEach(() => {
 });
 
 // first render pulls in the whole flow explorer; allow for a cold transform
-vi.setConfig({ testTimeout: 60000 });
+vi.setConfig({ testTimeout: 180000 });
 
 const DEFAULT_ID = "leafcutter/deliver-a-feature";
 

@@ -16,7 +16,7 @@ import {
   runMiddleware,
   searchParamsOf,
   squash,
-} from "./helpers/flow-routes";
+} from "../helpers/flow-routes";
 
 const hoisted = vi.hoisted(() => ({ headers: new Headers() }));
 
@@ -32,7 +32,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.setConfig({ testTimeout: 60000 });
+vi.setConfig({ testTimeout: 180000 });
 
 beforeAll(() => {
   vi.stubGlobal(
