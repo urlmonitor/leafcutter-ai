@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-72f17b89c0bb4c5c",
+  "interaction_id": "int-93010fd2437c4e26",
+  "sha256": "6f35f15ce6e85cd255a106f8fe0cf054823c169b149bc6a8c41e9a8d25048e1f",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-72f17b89c0bb4c5c",
+    "interaction_id": "int-93010fd2437c4e26",
+    "expected_state_revision": 2,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-aura-proof",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The question asks what verification must establish for one named acceptance criterion. Its acceptance clauses and authored verification obligations are complementary required facts. It does not request linked test records, declared test references or execution results.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-10T06:21:20.658872Z"
+}

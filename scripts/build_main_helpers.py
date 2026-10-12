@@ -44,6 +44,7 @@ import json
 import sys
 from pathlib import Path
 
+from agent_ability_gate import refuse_on_ability_findings
 from build_colors import (
     RESET,
     GREEN,
@@ -180,6 +181,11 @@ def _run_validation_guards(
 
     if apply_log_root_input(args, config) is not None:
         return 1  # relative --log-root (INF-500d-4-iii): refused before any write
+
+    # AR-300c-3: report a registry copy that disagrees with the declarations
+    # (continues); refuse when a declared ability resolves to no installed skill.
+    if refuse_on_ability_findings(package_root, config, args.dry_run):
+        return 1
 
     # Script reference guard: exit non-zero and halt before writing any output
     # when templates reference scripts that will not be deployed (BP-900b-3).

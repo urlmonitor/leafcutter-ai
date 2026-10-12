@@ -1,0 +1,134 @@
+{
+  "recorded_at": "2026-10-10T09:49:10.204627+00:00",
+  "purpose": "Publication receipt for the unchanged closed four-case live evaluation; no new evaluation or rewritten outcome.",
+  "closed_run": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9",
+  "closure_sha256": "9ef9b76e112e06de71ac91e7a909ca6e6489e39cafcab4b5cd7ef12327a974ae",
+  "closure_files_verified": 163,
+  "published_run_files": 156,
+  "published_run_bytes": 2149319,
+  "code_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "runtime_fingerprint": "bb93a68bda69411d810a645e28211416434e95bc959f7e6a0f0a77195ebe7b82",
+  "committed_source_files_exact": 352,
+  "source_snapshots": [
+    {
+      "original_path": "integrations/retrieval_relationships.py",
+      "recorded_sha256": "b0a9b8019b6128aff9b68e8495c363e95708bdf1a25d7d992aea7b9873478697",
+      "archive_path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9-source/integrations/retrieval_relationships.py.txt",
+      "bytes": 2380,
+      "committed_blob_sha256": "6d74e90c6b9021520a8d1f284a6615eb7125bd8c3d4c3e29c8001eb7fdf28aa2",
+      "difference": "CRLF in tested worktree; LF in Git blob; normalized bytes are identical"
+    },
+    {
+      "original_path": "kernel/contracts/retrieval_needs.py",
+      "recorded_sha256": "fa8658d5d982124993a41de50709192553eb75a1daa97135463cc86a75492dc1",
+      "archive_path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9-source/kernel/contracts/retrieval_needs.py.txt",
+      "bytes": 8726,
+      "committed_blob_sha256": "996a26c001ad066cd8ae3f1dfd5df4263027280e2763ec9ec88de6dfd8e785d3",
+      "difference": "CRLF in tested worktree; LF in Git blob; normalized bytes are identical"
+    },
+    {
+      "original_path": "kernel/intent/roots.py",
+      "recorded_sha256": "d2710fa693b5175d7cc00333430d28296e005e594f8895b6c156ed9dd53637fb",
+      "archive_path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9-source/kernel/intent/roots.py.txt",
+      "bytes": 7615,
+      "committed_blob_sha256": "84accb382114c3b4c883d37560fda810a6ef3f307f6d1ec0fc33f809c28b0049",
+      "difference": "CRLF in tested worktree; LF in Git blob; normalized bytes are identical"
+    },
+    {
+      "original_path": "knowledge/answer_fields.py",
+      "recorded_sha256": "369691dbc7d3140514b0cc26eb5bf86ec5f5f7c66a5b0230759208e023bfb476",
+      "archive_path": "reports/retrieval-aura-2026-10-09/publication/precision-v2-44406d9-source/knowledge/answer_fields.py.txt",
+      "bytes": 5789,
+      "committed_blob_sha256": "da4119e83919805e0489e83af4bcb69206adaa071b80d871c4450ae02c83cdd3",
+      "difference": "CRLF in tested worktree; LF in Git blob; normalized bytes are identical"
+    }
+  ],
+  "snapshot_lookup": "Use snapshots only when original_path AND recorded_sha256 match the consuming freeze; remaining 352 sources match Git blobs at code_revision.",
+  "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "writer_code_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+  "generation_id": "72a3b693c251e51789966795c5ecd58acc83170b815ee90582a5000741a27887",
+  "interpretation_sufficient": {
+    "passed": 4,
+    "total": 4
+  },
+  "complete_correct_positive_answers": {
+    "passed": 2,
+    "total": 3
+  },
+  "stale_controls": {
+    "passed": 1,
+    "total": 1
+  },
+  "actual_jev_calls": 6,
+  "accepted_host_results": 4,
+  "no_retries": true,
+  "broader_retrieval_complete": false,
+  "remaining_issue": "A02 operation choice: selected probability 0.71 below unchanged minimum 0.80; no retrieval ran.",
+  "local_only_artifacts": [
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/checkpoints.sqlite",
+      "bytes": 2756608,
+      "sha256": "eff303e5cdf937b80975139e244d26580e30c21c528d24c370478f8ac210dea6",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A01/runtime/runs/run-72f17b89c0bb4c5c/run.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/checkpoints.sqlite",
+      "bytes": 2048000,
+      "sha256": "9fd53e2f329b44198aa7ef06daf42912143a9605a74f99e8345bb9d698a5fe3e",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A02/runtime/runs/run-5f1ecc1f585e413c/run.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/checkpoints.sqlite",
+      "bytes": 2686976,
+      "sha256": "a7818598dccba9c3eab353b41e1f6f226b48e9b2744443eefa3302288f900314",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A03/runtime/runs/run-351eabde9d54499e/run.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/checkpoints.sqlite",
+      "bytes": 2097152,
+      "sha256": "c99df09c9ebcd20a894f98c209694a3631eef7b38b1a6af351aa3349295e7db6",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/A04/runtime/runs/run-190a11ef041b4942/run.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "publication": "local_only",
+      "reason": "Replay database or runtime lock retained locally; exported packets, traces and envelopes provide the public evidence."
+    }
+  ],
+  "reconstruction_limit": "A clone can verify 155 published members of the 163-member closure plus the closure itself. Eight closure members remain local and are identified here; absence does not imply successful replay.",
+  "historical_receipts_modified": false,
+  "authorization_addendum": {
+    "human_response": "Approved",
+    "human_reply_timestamp": "2026-10-10T06:15:31.141Z",
+    "provenance": "Root directly verified the original-thread user-role response to the exact four-case TypeSafe/Aura request.",
+    "scope": "Completed four-case batch only; no new run authorized by this addendum.",
+    "closed_freeze_unchanged": true
+  }
+}

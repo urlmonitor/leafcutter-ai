@@ -146,6 +146,8 @@ class FakeIssueService:
             return self._create(body or {})
         if match and match.group(1) and int(match.group(1)) not in self.issues:
             return 404, {"message": "Not Found"}
+        if method == "GET" and match and match.group(1) and not match.group(2):  # one issue, with its labels (TQ-600a-13-xi: the client reads it before it writes)
+            return 200, self._render(self.issues[int(match.group(1))])
         if match and method == "POST" and match.group(2):
             self.comments.append({"number": int(match.group(1)), "body": (body or {}).get("body", "")})
             return 201, {"id": len(self.comments), "body": (body or {}).get("body", "")}

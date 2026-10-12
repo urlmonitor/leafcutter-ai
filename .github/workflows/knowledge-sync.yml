@@ -36,6 +36,47 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Report resolved backend configuration
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          from urllib.parse import urlsplit
+
+          # Secret VALUES are never printed. Presence, lengths and the non-secret
+          # database name and host are, because a run that cannot say which
+          # database it addressed cannot be diagnosed from its logs -- 61
+          # consecutive failures said only "backend unavailable".
+          def presence(name):
+              value = os.environ.get(name)
+              if value is None:
+                  return 'UNSET'
+              if not value.strip():
+                  return 'SET-BUT-EMPTY (counts as absent)'
+              return f'set ({len(value)} chars)'
+
+          uri = os.environ.get('LEAFCUTTER_NEO4J_URI', '')
+          host = urlsplit(uri).hostname or '(unparseable)'
+          database = os.environ.get('LEAFCUTTER_NEO4J_DATABASE', '')
+
+          print('--- knowledge-sync resolved configuration ---')
+          print(f'  database name     : {database or "(empty)"}')
+          print(f'    from            : vars.LEAFCUTTER_NEO4J_DATABASE, else the literal "neo4j"')
+          print(f'  host              : {host}')
+          print(f'  scheme            : {urlsplit(uri).scheme or "(none)"}')
+          print(f'  repository_id     : {os.environ.get("KNOWLEDGE_REPOSITORY_ID", "")}')
+          print(f'  source revision   : {os.environ.get("SOURCE_REVISION", "")}')
+          print('  secret presence (values never printed):')
+          for name in ('LEAFCUTTER_NEO4J_URI',
+                       'LEAFCUTTER_NEO4J_WRITER_USERNAME',
+                       'LEAFCUTTER_NEO4J_WRITER_PASSWORD'):
+              print(f'    {name:<34} {presence(name)}')
+          if database and host and not host.startswith(f'{database}.'):
+              print('  NOTE: the database name is not the leading label of the host.')
+              print('        Aura names a database after its instance, so these normally match.')
+              print('        A mismatch is the usual cause of Neo.ClientError.Database.DatabaseNotFound.')
+          print('---------------------------------------------')
+          PY
       - name: Validate configured writer and immutable canonical revision
         shell: bash
         run: |

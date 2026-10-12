@@ -39,6 +39,7 @@ class RecordingKnowledgePort:
         self.wrong_request = False
         self.empty = False
         self.capability_calls = 0
+        self.response_entity = (AC_ID, "AcceptanceCriterion", "docs/acceptance-criteria/EC-1100a-1-i.yaml", "/criteria")
 
     async def capabilities(self):
         self.capability_calls += 1
@@ -49,12 +50,14 @@ class RecordingKnowledgePort:
         self.calls.append(request)
         if self.failure is not None:
             raise self.failure
+        identifier, kind, path, locator = self.response_entity
         source = SourceReference(repository_id="foreign" if self.foreign else "fixture",
                                  source_sha=("b" * 40 if self.wrong_revision else SHA),
-                                 path="docs/acceptance-criteria/EC-1100a-1-i.yaml", locator="/criteria")
-        item = KnowledgeEvidence(entity=Entity(canonical_id=AC_ID, kind="AcceptanceCriterion",
+                                 path=path, locator=locator)
+        item = KnowledgeEvidence(entity=Entity(canonical_id=identifier, kind=kind,
                                  title="Independent graph record", source=source),
-                                 content=GRAPH_FACT, disclosure_level=request.disclosure_level)
+                                 content=GRAPH_FACT, disclosure_level=request.disclosure_level,
+                                 field_locators={"content": locator})
         return KnowledgeRetrievalResult(request_id="wrong" if self.wrong_request else request.request_id,
             retrieval_id=f"recorded-{len(self.calls)}", source_sha=SHA, generation_id="published-a",
             status=self.status, requested_mode=request.mode, executed_mode=request.mode,

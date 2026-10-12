@@ -1,0 +1,25 @@
+{
+  "case_id": "A01",
+  "run_id": "run-72f17b89c0bb4c5c",
+  "interaction_id": "int-93010fd2437c4e26",
+  "agent_id": "/root/retrieval_live_host_d",
+  "root_spawn_fork_turns": "none",
+  "dispatched_at": null,
+  "observed_dispatch_bounds": {
+    "before_request": "2026-10-10T06:18:05Z",
+    "after_acknowledgement": "2026-10-10T06:18:17Z"
+  },
+  "registered_at": "2026-10-10T06:18:44.858274+00:00",
+  "model_id": null,
+  "tokens": null,
+  "packet_sha256": "1a76dcb0d6307f6a1b13d540b8844b9073cd83b78b8c861bd2b3698371f5c6b9",
+  "inputs": [
+    {
+      "original_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\precision-v2-44406d9\\A01\\runtime\\runs\\run-72f17b89c0bb4c5c\\artifacts\\input-int-93010fd2437c4e26.json",
+      "archived_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\precision-v2-44406d9\\A01\\started\\host\\inputs\\0.json",
+      "sha256": "bd5f95d8685e64040a8a966f05b35d37c0d2a3792d20f9e0f274f7a3b3424e78"
+    }
+  ],
+  "provenance_source": "Actual fresh-agent identity and observed clock bounds reported directly by supervising root. Exact dispatch timestamp unknown.",
+  "blindness_policy": "Only actual current host packets/input refs. No gold, source oracle, prior responses or outcomes supplied."
+}

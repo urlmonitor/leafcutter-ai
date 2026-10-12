@@ -1030,6 +1030,15 @@ async function agent(prompt, opts = {}) {
     return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
   }
 
+  // --- scratch item (BO-4400f-1) --------------------------------------------
+  // Label "scratch-item": the shell step that creates the run's labelled
+  // scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+  // ABSENT entry answers {item: null} (the workflow's fail-open path: no
+  // scratch note), so every pre-existing scenario is unchanged.
+  if (label === "scratch-item") {
+    return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 

@@ -11,7 +11,18 @@ description: |
   "create a slash-command prompt".
 model: sonnet
 name: llm-expert
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- research-agent
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: add-agent-to-package
+  mode: conditional
+  condition: When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package.
+- skill_id: add-skill-to-package
+  mode: conditional
+  condition: When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package.
 portable: true
 signoff: true
 domain: null
@@ -142,11 +153,20 @@ before signing off.
    - Correct form: remove the stray tool reference from the body, or add the tool
      to the `tools:` allowlist so the two are consistent.
 
-4. **`spawn_allowlist` declared when spawning sub-agents** — any prompt that
-   invokes the `Agent` tool must include a `## Your Available Sub-Agents` or
-   `## Spawn Allowlist` section listing the agents it is permitted to spawn.
-   - Violation: prompt calls `Agent` tool but has no spawn allowlist section.
-   - Correct form: a table with each sub-agent's `id`, `role`, and `tier`.
+4. **`spawn_allowlist` declared in frontmatter, and agreeing with `Agent`** — the
+   one place a sub-agent is permitted is the frontmatter `spawn_allowlist:` key,
+   beside `tools:`. An agent that declares any sub-agent must list `Agent` in
+   `tools:`, and a prompt that invokes the `Agent` tool must declare
+   `spawn_allowlist:`. The build appends the generated "Your Available
+   Sub-Agents" section itself.
+   - Violation: prompt calls `Agent` tool but has no `spawn_allowlist:`
+     declaration, or declares sub-agents without `Agent` in `tools:`.
+   - Violation: the body hand-writes a sub-agent table or list, or places a
+     marker for one. Remove it; nothing beyond the declaration is needed.
+   - Correct form: `tools:` lists `Agent` and the frontmatter carries
+     `spawn_allowlist: [<agent-ids>]`; the body contains no sub-agent table.
+   - Do not edit the registry's `spawn_allowlist` / `skills_invoked`: they are
+     derived copies regenerated from the declarations.
 
 5. **Signoff protocol section present for `signoff: true` agents** — every agent
    template with `signoff: true` in frontmatter must include a `## Sign-off`
@@ -313,18 +333,6 @@ Once a human sets the correct `produces` value on a flagged agent:
 2. Remove the `"llm_ambiguity_comment"` field from the registry entry.
 3. Update the template frontmatter `produces:` to the resolved value.
 4. Re-run `pytest unit_tests/test_agent_produces_validation.py` — it MUST pass.
-
----
-
-## Skills
-
-The `llm-expert` agent may invoke these three skills:
-
-| Skill | When to invoke |
-|-------|---------------|
-| `add-agent-to-package` | When a new agent template is complete and must be promoted to the portable package: copies template, adds registry entry, runs `build.py --validate`. Load `.claude/skills/add-agent-to-package/SKILL.md` and execute step-by-step. |
-| `add-skill-to-package` | When a new skill body is complete and must be promoted to the portable package: copies SKILL.md, runs `build.py --validate`. Load `.claude/skills/add-skill-to-package/SKILL.md` and execute step-by-step. |
-| `signoff` | At the end of every ticket phase: updates frontmatter `agents:` status, `## Sign-offs` checkbox, and appends `## Comments` entry. Load `.claude/skills/signoff/SKILL.md` and follow the atomic recipe. |
 
 ---
 

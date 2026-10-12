@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "original_question": "Show only the authored test specification for KM-500c-2.",
+  "context": [],
+  "known_ids": [],
+  "source_scope": {
+    "repository_id": "leafcutter",
+    "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+    "source_ids": [
+      "knowledge.graph"
+    ],
+    "read_roots": [
+      "docs"
+    ]
+  },
+  "catalog": {
+    "entity_types": {
+      "ac": "Acceptance criterion or requirement",
+      "adr": "Architecture decision record",
+      "ticket": "Work ticket",
+      "component": "Registered component",
+      "flow": "Product Truth flow",
+      "decision": "Recorded decision",
+      "test": "Test source",
+      "document": "Repository document"
+    },
+    "target_ids": {
+      "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+    },
+    "required_fields": {
+      "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+      "kind": "The canonical entity type of each returned item.",
+      "title": "The source-backed human-readable name of each returned item.",
+      "source_sha": "The immutable source revision supporting each entity.",
+      "source_locator": "The exact source location supporting each entity.",
+      "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+      "level": "The canonical requirement hierarchy level.",
+      "test_required": "The explicit source test requirement, not evidence of execution.",
+      "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+      "status": "Canonical lifecycle status, such as active; not delivery completion.",
+      "criteria": "Exact source acceptance clauses defining required behavior; distinct from the authored verification specification.",
+      "req_status": "Requirement governance state.",
+      "readiness": "Planning approval readiness, not implementation proof.",
+      "covered_by": "Declared test references, not evidence of a test run.",
+      "implemented_by": "Declared implementation references, not a complete call graph.",
+      "depends_on": "Declared requirement dependencies, not inferred code impact.",
+      "content": "Bounded source text at the canonical locator; not a full-document promise",
+      "test_spec": "Authored verification obligations: test scenarios, expected assertions, test angles and wrong implementations the checks must catch; distinct from acceptance clauses, test references and execution results."
+    },
+    "document_types": {
+      "ac_yaml": "Canonical acceptance criterion definition, including acceptance clauses and any authored verification specification",
+      "adr": "Architecture decision document",
+      "ticket": "Ticket document",
+      "flow": "Product Truth JSON",
+      "decision": "Recorded decision YAML",
+      "code": "Implementation or test source",
+      "documentation": "Repository documentation",
+      "component": "Component definition"
+    },
+    "relationships": {
+      "parent_direct": "Immediate parent only",
+      "children_direct": "Immediate children only",
+      "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+      "declared_dependents": "Records directly declaring a dependency on the target",
+      "covered_by": "Tests declared to cover an acceptance criterion",
+      "implemented_by": "Declared implementation references",
+      "related_docs": "Declared document references",
+      "governing_adrs": "ADRs directly declaring membership in the target component",
+      "component_context": "The target component and its directly linked neighbors, bounded by requested result kind"
+    }
+  }
+}

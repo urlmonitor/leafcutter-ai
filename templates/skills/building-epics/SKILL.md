@@ -801,6 +801,17 @@ EPIC-AcPipelineDeployGaps). Re-sending "yes" via SendMessage will not resolve it
 that gated agents accept as sanctioned without an interactive user turn. See KI-2 from
 the EPIC-PrecommitSafetyNet retrospective and `feedback_no_gated_agent_for_interactive.md`.
 
+### §3.6 `Post-merge suite status` — an external hold, not your failure (canonical rule)
+
+**Applies to** any runbook that reads pull-request checks. Other runbooks point here; this is the only copy.
+
+1. **Recognise it by its exact name**, `Post-merge suite status`. It holds every PR while main's post-merge correctness lane is not green or has no fresh verdict. Its description is one of six held states, each ending "This is not caused by this pull request. To restore a verdict: …".
+2. **Report it as an external hold**: quote the check's description (the held state), the run link from the check, and the open `post-merge-red` notice link (read-only: `gh issue list --label post-merge-red --state open`; say "no open notice" if none). Then stop work on that check.
+3. **Never** edit your own diff to make it pass, push an empty or no-op commit, or re-run it in a loop (one re-check after the user says main was fixed is fine).
+4. **Never edit** the post-merge workflows, `scripts/ci/`, `scripts/ci/post_merge_tunables.json`, the ruleset, or the notice issues. The owner-only break-glass (TQ-600a-13-xvii) is not yours to use.
+5. **Fix declaration**: add `Fixes #<notice>` to the PR description only when your change touches a test in the notice's failing set, or code those tests exercise. Never add it as a way to pass.
+6. **Every other failing check** on the same PR (e.g. `Test suite (pytest)`) is handled exactly as before: it is your own failure unless shown otherwise. The hold never excuses it, and it never hides it.
+
 ---
 
 ## §4 Retry Caps (numeric)

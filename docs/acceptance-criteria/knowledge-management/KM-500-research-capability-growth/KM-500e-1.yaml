@@ -108,9 +108,11 @@ origin_agent: business-analyst
 created: '2026-10-01'
 created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500e.yaml
 amended_by:
+- '2026-10-09: Add child KM-500e-1-i for the user-authorized public needs-to-selector integration. Parent remains in_progress; existing broader criteria and historical evidence stay unchanged.'
 - '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator. Approval records authorization, not implementation or execution proof.'
 superseded_by: null
 covered_by:
+- KM-500e-1-i
 - tests/knowledge/test_query_answer_contract_acceptance_kernel.py
 - tests/knowledge/test_query_answer_contract_acceptance_research_assessment.py
 implemented_by:
@@ -219,15 +221,6 @@ product_truth:
     asof: '2026-10-02'
   - flow: leafcutter/retrieval-current-baseline
     node: request
-    node_kind: step
-    flow_kind: data
-    screen: null
-    mock_data: null
-    entities: []
-    source: real
-    asof: '2026-10-02'
-  - flow: leafcutter/retrieval-current-baseline
-    node: understand
     node_kind: step
     flow_kind: data
     screen: null

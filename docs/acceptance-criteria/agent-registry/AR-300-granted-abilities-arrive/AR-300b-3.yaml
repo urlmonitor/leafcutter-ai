@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -89,8 +89,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300b_3_per_agent.py
+implemented_by:
+  - scripts/agent_preparation_delivery.py
+  - scripts/build.py
 notes: |
   THE PARTIAL CASE IS THE ONE THE MEASUREMENT COULD NOT SHOW. Today both
   undelivered preparations fail for all 60 agents at once, so per-agent

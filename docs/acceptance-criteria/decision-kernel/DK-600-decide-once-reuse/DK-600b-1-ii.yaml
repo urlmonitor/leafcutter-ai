@@ -1,0 +1,146 @@
+id: DK-600b-1-ii
+title: "A free-text answer at approval is kept as a limitation, never turned into criteria"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the approval question for 4 proposed options and 5 proposed criteria,
+  When you answer in your own words, for example "also weigh how much CI time each option adds",
+    instead of approving, trimming, rewording or adding,
+  Then your answer is kept word for word as your input,
+  And it is noted among the decision's limitations,
+  And no criterion is created from your answer: the criteria are the 5 proposed ones and no other.
+depends_on:
+  - DK-600b-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-forming branch revise-proposals (from
+      approve-proposals), free-text clause. Add this AC id to each named node's implements
+      list.
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: tickets/00_inbox/TICKET-20261002-KernelInterpretFreeText.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Not built (todo on 2026-10-02). Would have an LLM interpret free-text answers; its
+      increment 2 covers the approval question and would amend this AC.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: describes
+    status: exists
+    relevance: 'Which mechanism answers each check: code, Jev, an LLM host or a human.'
+assigned_agent: python-coder
+estimated_complexity: XS
+it_requirements:
+  - 'A free-text answer is stored as the human''s input and a limitation; nothing parses it into criteria,
+    options or an approval (ADR-053: Jev and code may not invent criteria).'
+  - An answer to an earlier question is never applied to the current phase.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_free_text_is_recorded_but_never_becomes_criteria
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_free_text_is_recorded_but_never_becomes_criteria):
+      free text gives a ''free-text answer recorded'' limitation and no criterion'
+    covers:
+      - DK-600b-1-ii
+  - name: test_free_text_is_recorded_not_turned_into_criteria
+    target_dir: tests/kernel/interaction/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_free_text_is_recorded_not_turned_into_criteria):
+      through the service the criteria stay the proposed ones'
+    covers:
+      - DK-600b-1-ii
+  - name: test_the_free_text_answer_is_kept_as_given
+    target_dir: tests/kernel/capabilities/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'TO WRITE (in tests/kernel/capabilities/test_decision_criteria_proposals.py): cont.human_inputs
+      holds the answer text exactly (surrounding whitespace aside)'
+    covers:
+      - DK-600b-1-ii
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_and_tested
+    implementation_pointers:
+      - kernel/capabilities/decision/approvals.py#_apply_approval
+    test_pointers:
+      - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_free_text_is_recorded_but_never_becomes_criteria
+      - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_free_text_is_recorded_not_turned_into_criteria
+      - tests/kernel/interaction/test_criteria_approval.py::TestNoLeakAcrossQuestions::test_clarification_answer_does_not_become_a_criterion_or_an_approval
+    gaps:
+      - Text is stored stripped of surrounding whitespace; no test asserts the stored text equals
+        the answer.
+      - 'Not stated in the criteria: the proposals stay unapproved and the run ends partial (the same
+        approval question is not asked again at the same revision).'
+      - TICKET-20261002-KernelInterpretFreeText (todo) changes 'recorded only'; amend then.
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+superseded_by: null
+covered_by:
+  - tests/kernel/capabilities/test_decision_criteria_proposals.py::TestOptionsAndCriteriaProposals::test_free_text_is_recorded_but_never_becomes_criteria
+  - tests/kernel/interaction/test_criteria_approval.py::TestStructuredApproval::test_free_text_is_recorded_not_turned_into_criteria
+  - tests/kernel/interaction/test_criteria_approval.py::TestNoLeakAcrossQuestions::test_clarification_answer_does_not_become_a_criterion_or_an_approval
+implemented_by:
+  - kernel/capabilities/decision/approvals.py#_apply_approval
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-forming    branch  revise-proposals
+
+  DERIVATION. Branch revise-proposals, second half of its scenario: "free text is
+  recorded as a limitation rather than turned into criteria". Also a standing rule
+  of DK-600b.
+
+  PENDING CHANGE. TICKET-20261002-KernelInterpretFreeText (todo) would turn free
+  text into typed, verified effects; its increment 2 names approval subsets,
+  added options and edited criteria. When that ships, this AC needs amending,
+  not deleting: the "never turned into criteria" guarantee is ADR-053's
+  (Jev may not invent criteria), only the "recorded only" handling changes.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): built and tested. Side effect worth
+  knowing: after a words answer the proposals stay unapproved and the decision ends
+  partial, as test_free_text_is_recorded_but_never_becomes_criteria asserts.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: revise-proposals
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-02'

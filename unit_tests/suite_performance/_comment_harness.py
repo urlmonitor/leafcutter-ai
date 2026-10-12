@@ -117,6 +117,9 @@ class CommentService(AppService):
         self.comment_auth.append(auth)
         if method == "GET" and listed:
             return self._page(int(listed.group(1)), parse_qs(parsed.query), raw_path)
+        if method == "GET" and one:  # one comment: the client reads it before it edits it (TQ-600a-13-xi); a read, never a write
+            current = [c for comments in self.pr_comments.values() for c in comments if c["id"] == int(one.group(1))]
+            return (200, current[0], {}) if current else (404, {"message": "Not Found"}, {})
         record = {"kind": {"POST": "create", "PATCH": "edit", "DELETE": "delete"}.get(method, method), "path": parsed.path, "body": (body or {}).get("body")}
         if listed:
             record["pr"] = int(listed.group(1))

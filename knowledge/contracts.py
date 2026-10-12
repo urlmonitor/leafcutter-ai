@@ -199,6 +199,8 @@ class KnowledgeEvidence(Model):
     relationships: list[Relation] = Field(default_factory=list)
     field_availability: dict[str, str] = Field(default_factory=dict)
     field_locators: dict[str, str] = Field(default_factory=dict)
+    field_contents: dict[str, str] = Field(default_factory=dict)
+    """Additional requested source excerpts, keyed by field and cited through field_locators."""
     field_derivations: dict[str, str] = Field(default_factory=dict)
     related: list[dict[str, str]] = Field(default_factory=list)
 
@@ -282,3 +284,5 @@ def validate_required_value(value: object, required: str) -> None:
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-01 18:55 [python-coder]: Keep requested facts separate from execution success and preserve canonical field meaning. (#KM-500/KM-500e-2)
+
+# - 2026-10-09 17:00 [python-coder]: Retain exact requested source-field excerpts beside their immutable locators. (#KM-500/KM-500e-1-i)

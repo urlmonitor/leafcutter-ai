@@ -1,0 +1,254 @@
+id: DK-600d-4
+title: "A published record reaches main only through normal review, and then every later run can find it"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Scenario: Publish only writes under docs/decisions/ and makes no commit, push or merge
+    Given run run-2fbb4ef43b1345f6 staged the decision record dec-ef8ddcb79d668a67, and a git
+      checkout whose docs/decisions/ does not yet hold that record,
+    When a person runs python -m kernel decisions publish --run-id run-2fbb4ef43b1345f6 in that
+      checkout,
+    Then the only files created or changed in the checkout are
+      docs/decisions/dec-ef8ddcb79d668a67.yaml and the regenerated docs/decisions/index.json,
+    And publish makes no commit, no push and no merge: the branch head, the git staging area and
+      every remote branch are the same before and after.
+
+  Scenario: A record in the checkout's docs/decisions/ is found by a later run through the index
+    Given docs/decisions/dec-ef8ddcb79d668a67.yaml and a docs/decisions/index.json that lists it
+      are in the checkout,
+    When a later decision run in that checkout looks up precedent for the same question that
+      dec-ef8ddcb79d668a67 records,
+    Then the lookup reads docs/decisions/index.json and returns dec-ef8ddcb79d668a67 as a
+      precedent candidate.
+depends_on:
+  - DK-600d
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-publishing.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Derived from leafcutter/decision-publishing step review; step merge. Add this AC id to
+      each named node's implements list.
+  - path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Standing rules: only a human approval creates a record, nothing is written into the
+      repository during a run, precedent is evidence and never authority, corrections are
+      append-only.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Source of the concrete ids and values in the criteria (dec-... records, options,
+      criteria, applicability scores, run ids).
+  - path: tickets/00_inbox/TICKET-20261002-KernelGatedDirectPublish.md
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF, not built. Would add an automated publish-decision PR flow; not specified
+      here.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+    relationship: describes
+    status: exists
+    relevance: One YAML record per approved decision behind the ColonyMemory port; generated index;
+      precedent is evidence.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - '`python -m kernel decisions publish` is the only writer of docs/decisions/ (ADR-060): it runs
+    only when a person invokes it, validates everything before writing, writes atomically, and exits
+    0 ok, 3 refused (problems listed, nothing written), 5 environment error.'
+  - The kernel's decision store code makes no git call (no commit, push or merge); review and merge
+    are the repository's PR process and branch protection, outside the kernel.
+  - 'Done-marking evidence (KI-ACS-004, done_proof): implemented_by names an existing kernel/... file
+    plus symbol, and every covering test under tests/kernel/ carries a `# covers: <this AC id>` tag
+    and passes under pytest. No kernel test carries a DK covers tag yet, so tagging comes before any
+    done-marking.'
+test_spec:
+  - name: test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work): a published record is found by a later run''s lookup'
+    covers:
+    - DK-600d-4
+  - name: test_the_first_record_is_the_decision_that_chose_the_format
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format): dec-ef8ddcb79d668a67, merged with PR #978, is in the committed store'
+    covers:
+    - DK-600d-4
+  - name: test_the_committed_store_validates_and_its_index_is_current
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: 'EXISTS (tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current): the merged store and its index validate'
+    covers:
+    - DK-600d-4
+  - name: test_publish_changes_only_the_record_and_the_index_and_no_git_state
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state): in a real git checkout publish changes only docs/decisions/<id>.yaml and index.json; HEAD, the staging area and every ref are unchanged'
+    covers:
+    - DK-600d-4
+  - name: test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call): kernel/memory/ imports no subprocess or git module and makes no os.system or popen call'
+    covers:
+    - DK-600d-4
+  - name: test_a_published_record_is_found_by_a_later_lookup_through_the_index
+    target_dir: tests/kernel/memory/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: 'EXISTS (tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index): a store produced by publish is read through docs/decisions/index.json and the record is returned as a precedent candidate'
+    covers:
+    - DK-600d-4
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by:
+  - reason: it-po-technical-enrichment
+    by: it-po
+    date: '2026-10-02'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    build_status: built_partly_tested
+    implementation_pointers:
+      - kernel/memory/publish.py#publish
+      - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+    test_pointers:
+      - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+      - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format
+      - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current
+    gaps:
+      - '''Reviewed like any change'' is enforced by the PR process, not kernel code; no test can
+        assert it. ''Publish made no commit, push or merge'' is structural (kernel/memory/ imports
+        no subprocess or git) and untested. The lookup is tested in a temporary repository after publish,
+        not against the merged main store.'
+    pointer_note: Unverified candidates for implemented_by / covered_by, read from the worktree at
+      e89f0f74 (kernel/ and tests/kernel/ identical to origin/main). The evidence phase verifies each
+      and adds the `# covers:` tags before anything is marked done.
+    complexity_basis: remaining work only (evidence, covers tags, gap closure)
+  - reason: "amend: criteria cut to the clauses a test can prove, resolving the it-po gap that
+      'reviewed like any change' is enforced by the PR process and no test can assert it. Kept as
+      two scenarios: publish makes no commit, push or merge and only writes the record under
+      docs/decisions/ plus the regenerated index; once the record is in the checkout's
+      docs/decisions/, a later run's precedent lookup finds it through the index (a temporary
+      repository satisfies this, so the lookup no longer has to run against the merged main
+      store). Moved out of the criteria into notes as process context: 'it then goes through git
+      review like any change' (PR review and merge, e.g. PR #978). Concrete run id
+      run-2fbb4ef43b1345f6 taken from the mock data record for dec-ef8ddcb79d668a67. Title,
+      doc_links, it_requirements, test_spec, readiness, work_status, implemented_by and
+      covered_by unchanged."
+    date: '2026-10-06'
+    by: business-analyst
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+    pr: '#1004'
+  - reason: tests-written
+    by: python-coder
+    date: '2026-10-06'
+    ticket: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md
+    build_status: built_and_tested
+    test_pointers:
+    - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+    - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format
+    - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
+    - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index
+superseded_by: null
+covered_by:
+  - tests/kernel/memory/test_learning_loop_e2e.py::TestRunTwoReusesThePrecedent::test_the_same_goal_reuses_the_precedent_with_far_fewer_calls_and_no_host_work
+  - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_first_record_is_the_decision_that_chose_the_format
+  - tests/kernel/memory/test_committed_store.py::TestCommittedStore::test_the_committed_store_validates_and_its_index_is_current
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_publish_changes_only_the_record_and_the_index_and_no_git_state
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_kernel_memory_imports_no_subprocess_or_git_and_makes_no_shell_call
+  - tests/kernel/memory/test_publish_cli.py::TestPublishChangesOnlyTheStoreAndLeavesGitAlone::test_a_published_record_is_found_by_a_later_lookup_through_the_index
+implemented_by:
+  - kernel/memory/publish.py#publish
+  - kernel/memory/file_store.py#FileColonyMemory.find_decisions
+change_target: code
+risk_surface: internal
+notes: |
+  FLOW BACK-LINKS (add this AC id to each node's implements list):
+    leafcutter/decision-publishing step    review
+    leafcutter/decision-publishing step    merge
+
+  DERIVATION. Two publishing steps folded into one L2 under the five-L2 cap: review
+  and merge are the git half of publishing, both carried by git rather than the
+  kernel. Kernel-checkable parts: publish makes no commit, push or merge; a merged
+  record is found through the index. dec-ef8ddcb79d668a67 is the store's first
+  real record, merged with PR #978. Screen: decision-record-published.
+
+  STANDING RULE carried from DK-600d (ADR-060 section 1): git is canonical for
+  published decisions.
+
+  IT-PO BUILD STATUS (2026-10-02, unverified): kernel side built; the git side is
+  process, not code. Real evidence: dec-ef8ddcb79d668a67 is on main via PR #978 and
+  test_committed_store validates it.
+
+  TRUE STATUS (2026-10-02): work_status in_progress; the it-po verified build status is
+    built_partly_tested.
+    - 'Reviewed like any change' is enforced by the PR process, not kernel code; no test can
+      assert it. 'Publish made no commit, push or merge' is structural (kernel/memory/
+      imports no subprocess or git) and untested. The lookup is tested in a temporary
+      repository after publish, not against the merged main store.
+  Missing tests are listed in TICKET-20261002-DecisionKernelACTestGaps; once they pass, mark
+    done through scripts/ac_store/mark_ac_done.py.
+
+  PROCESS CONTEXT, NOT A CRITERION (BA amendment 2026-10-06): after publish, the new
+  record and the regenerated index are an ordinary uncommitted change in the checkout.
+  It then goes through git review like any change: a person commits it, opens a PR, and
+  it reaches main only when that PR is reviewed and merged under the repository's branch
+  protection (dec-ef8ddcb79d668a67 reached main this way with PR #978). The kernel takes
+  no part in that review and no kernel test can prove it, so it is recorded here and
+  not in the criteria. The flow steps review and merge stay back-linked to this AC for
+  its kernel-checkable parts: publish makes no git change, and a record in the
+  checkout's docs/decisions/ is found through the index.
+product_truth:
+  - flow: leafcutter/decision-publishing
+    node: merge
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/decision-publishing
+    node: review
+    node_kind: step
+    flow_kind: data
+    screen: decision-record-published
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-02'

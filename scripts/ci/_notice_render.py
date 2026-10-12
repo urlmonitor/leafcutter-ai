@@ -249,7 +249,8 @@ def _commit_lines(commit_range: CommitRange) -> list[str]:
 def render_description(state: dict, commit_range: CommitRange, lane: LaneSpec = CORRECTNESS, entrants: list[str] | None = None) -> str:
     """Return the notice description: the CURRENT state, ending in the state block.
 
-    ``entrants`` are ready-made bullet lines naming new lane entrants (see ``_notice_entrants``).
+    ``entrants`` are ready-made extra section lines (despite the name): bullet lines naming new lane entrants (see
+    ``_notice_entrants``) on a timing notice, or the repeated pass-on-retry ids (``_flaky_notice.repeated_lines``) on a correctness one.
     """
     since = "Not green since" if state["verdict"] == "did_not_complete" else "Red since"
     lines = [_headline(state, lane), "", f"Run: {state['run_url']}"]

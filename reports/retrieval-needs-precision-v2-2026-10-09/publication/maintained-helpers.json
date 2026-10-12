@@ -1,0 +1,9 @@
+{
+  "scope": "publication-time v2 helpers only; not a replacement for closed stage1b or Aura stage2 fingerprints",
+  "change": "Log only the exception class before the unchanged failure receipt; no retry, continuation or cleanup change.",
+  "files_sha256": {
+    "reports/retrieval-needs-precision-v2-2026-10-09/controller.py": "db4a23c4252e9c185fdb73c333d771f59ec3fa14f69a76643cda84a18145cff4",
+    "reports/retrieval-needs-precision-v2-2026-10-09/eval_support.py": "e16a38c4b33e8fa24bce214187183b3bee07ab9b5afdf3d1f4f2d0e8c5c317f4",
+    "reports/retrieval-needs-precision-v2-2026-10-09/score.py": "1a07a950bc77ea2dce69abbf7781903956e7b0b4a42df7aab018a728741bc890"
+  }
+}

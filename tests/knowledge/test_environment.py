@@ -214,3 +214,29 @@ def test_database_source_and_legacy_alias_precedence(monkeypatch, tmp_path):
     monkeypatch.setenv("LEAFCUTTER_NEO4J_DATABASE", "legacy-db")
     build_retriever(KnowledgeConfig(backend="neo4j"))
     assert received[-1][1]["database"] == "legacy-db"
+
+
+
+def test_writer_timeout_is_longer_without_changing_read_timeout_or_credentials(monkeypatch, tmp_path):
+    # covers: KM-400e-5
+    # angle: seam
+    # angle: discrimination
+    """Canonical publication has its own transaction budget; serving remains bounded."""
+    isolate(monkeypatch, tmp_path)
+    from knowledge.cli_sync import writer_backend
+
+    (tmp_path / ".env").write_text(
+        "NEO4J_URI=neo4j+s://example.databases.neo4j.io\n"
+        "NEO4J_USERNAME=reader\nNEO4J_PASSWORD=dummy111\nNEO4J_DATABASE=fixture-db\n"
+        "LEAFCUTTER_NEO4J_WRITER_USERNAME=writer\n"
+        "LEAFCUTTER_NEO4J_WRITER_PASSWORD=dummy222\n"
+    )
+    received = backend_capture(monkeypatch)
+    writer_backend()
+    build_retriever(KnowledgeConfig(backend="neo4j"))
+    assert received == [
+        (("neo4j+s://example.databases.neo4j.io", "writer", "dummy222"),
+         {"database": "fixture-db", "query_timeout": 30.0}),
+        (("neo4j+s://example.databases.neo4j.io", "reader", "dummy111"),
+         {"database": "fixture-db", "query_timeout": 3.0}),
+    ]

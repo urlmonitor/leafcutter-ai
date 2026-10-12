@@ -13,7 +13,11 @@ description: 'Conditional phase agent that starts a development server, issues H
   '
 model: sonnet
 name: live-surface-tester
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null

@@ -498,6 +498,21 @@
         "_comment": "TICKET-20260715-DocIndexAutoRegen: Regenerates docs/INDEX.md and git-adds it whenever a docs/*.md file (other than INDEX.md itself) is staged. Exits 0 always (fail-open). Ordered before check-doc-frontmatter and check-description-field so generator-emitted frontmatter survives validation."
       },
       {
+        "id": "transform-agent-registry",
+        "tier": "transform",
+        "name": "Transform agent registry (regenerate skills_used/skills_invoked/spawn_allowlist from template declarations)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py",
+        "language": "system",
+        "files": "^(templates/agents/.*\\.md|config/agent_registry\\.json)$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": false,
+        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability fields are a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_used/skills_invoked/spawn_allowlist (never spawned_by) and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
+      },
+      {
         "id": "check-doc-frontmatter",
         "tier": "judgment",
         "name": "Check Doc Frontmatter (YAML frontmatter validation for docs/*.md and tickets/)",
@@ -1176,7 +1191,7 @@
         "name": "Check Hook Parity (leafcutter)",
         "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_hook_parity.py",
         "language": "system",
-        "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/",
+        "files": "scripts/commit_guardian/|templates/scripts/commit_guardian/|templates/commit-guardian/|templates/scripts/precommit-autofix\\.json",
         "stages": [
           "pre-commit"
         ],
@@ -1184,7 +1199,7 @@
         "change_set_source": "handed_by_commit_path",
         "script": "check_hook_parity.py",
         "description": "Enforces parity of commit-guardian hook scripts and manifest entries across runtime, canonical template, legacy template, and deployed output dirs",
-        "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors."
+        "_comment": "EPIC-Phase1ReadyHardening/04: Blocks commits when hook scripts or manifest entries are missing from any of the three tracked source dirs. Fail-open on I/O errors in the parity legs. GE-132a-1 adds the remedy-declaration leg (a check needs a declaration before it is registered; the excused list only shrinks; a declaration for an unregistered check is refused), triggered by a change to templates/scripts/precommit-autofix.json too, and FAIL-CLOSED: unreadable input is could-not-check (exit 2), never a pass."
       },
       {
         "id": "check-hook-trigger-reachability",
@@ -1631,6 +1646,57 @@
       "check_*.py",
       "run_hook.py",
       "regenerate_*.py"
+    ],
+    "_undeclared_remedy_baseline_comment": "GE-132a-1: ids of pre-commit judgment gates that had no remedy declaration (a rules[] entry with a disposition in templates/scripts/precommit-autofix.json) when the rule landed. It may lose entries and never gain one: check_hook_parity.py compares it with the list in HEAD and every MERGE_HEAD parent. Seeded from the same population the check derives from this manifest; re-measure, never hand-extend.",
+    "undeclared_remedy_baseline": [
+      "check-ac-circular-deps",
+      "check-ac-governance",
+      "check-ac-parent-covered-by",
+      "check-ac-pattern-refs",
+      "check-ac-tree-limits",
+      "check-adr-coverage",
+      "check-adr-cross-reference",
+      "check-agent-diagrams",
+      "check-agent-spawn-consistency",
+      "check-agent-verification-consistency",
+      "check-architecture-scaffolds",
+      "check-components-integrity",
+      "check-debug-scripts",
+      "check-decision-number-uniqueness",
+      "check-description-field",
+      "check-diagram-naming",
+      "check-diff-coverage",
+      "check-doc-types-agents",
+      "check-done-proof",
+      "check-duplicate-code",
+      "check-eval-staleness",
+      "check-file-size-rule-parity",
+      "check-folder-density",
+      "check-hook-parity",
+      "check-hook-trigger-reachability",
+      "check-identifier-uniqueness",
+      "check-infra-docs",
+      "check-mermaid-complexity",
+      "check-mermaid-drift",
+      "check-mermaid-parent-link",
+      "check-negative-control-liveness",
+      "check-output-drift",
+      "check-paths-integrity",
+      "check-predone-scope",
+      "check-presence-only-assertions",
+      "check-product-truth-generate",
+      "check-product-truth-validate",
+      "check-proof-promise-claim",
+      "check-reachability",
+      "check-root-files",
+      "check-structural-change",
+      "check-surface-components-e2",
+      "check-surface-components-e3",
+      "check-test-ac-tags",
+      "check-test-fixture-bloat",
+      "check-ticket-ac-status-parity",
+      "check-ticket-test-requirements",
+      "check-workflow-meta"
     ]
   },
   "__drift_gate_exemption_registry_doc": [
@@ -1839,6 +1905,10 @@
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
     },
     {
+      "id": "transform-agent-registry",
+      "ground": "Targets this package's own development-source files (templates/agents/*.md and config/agent_registry.json), the class-2 case above: reachable when committing to the package's self-hosted checkout (git root == package root), but under the consumer deploy layout those paths exist only inside the vendored leafcutter-ai/ subtree or the gitignored .leafcutter/ mirror, never at a consumer's own tracked repo root (AR-300c-3)."
+    },
+    {
       "id": "check-architecture-scaffolds",
       "ground": "Targets templates/docs/architecture/, one of this package's own internal template trees. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?templates/docs/architecture/) is correct for both the self-hosted and the tracked-vendor layout."
     },
@@ -1868,7 +1938,7 @@
     },
     {
       "id": "check-hook-parity",
-      "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, and templates/commit-guardian/ — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
+      "ground": "Targets scripts/commit_guardian/, templates/scripts/commit_guardian/, templates/commit-guardian/, and templates/scripts/precommit-autofix.json (the remedy-declaration seed, GE-132a-1) — this package's own hook source/deploy trees. In a consumer install scripts/commit_guardian/ is a symlink into the gitignored .leafcutter/ deploy mirror (per the documented deploy layout), so no file under that prefix is ever directly tracked; only reachable in this package's own self-hosted checkout, where these ARE real, separately tracked directories."
     },
     {
       "id": "check-file-size-rule-parity",

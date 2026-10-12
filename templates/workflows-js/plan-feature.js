@@ -41,9 +41,7 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for structured agent() responses
-// ---------------------------------------------------------------------------
 
 /** Maximum retry count for a single authoring agent on edit-path. */
 const MAX_EDIT_RETRIES = 1;
@@ -114,9 +112,7 @@ function resolvePathOntoRoot(root, input) {
 }
 // BO-3900-PATH-HELPERS-END
 
-// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
-// ---------------------------------------------------------------------------
 
 function parseAgentJson(raw, ctx) {
   const stage = ctx.stage;
@@ -1524,13 +1520,11 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   }
 }
 
-// ---------------------------------------------------------------------------
 // §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
 // E2 workflow bodies are self-contained and cannot import local modules
 // (ES-module import is a SyntaxError inside the test-harness IIFE, and the
 // runtime has no module access), so the pause-resume helper is defined inline
 // here. The same helper is inlined in finalize-feature.js — keep them in sync.
-// ---------------------------------------------------------------------------
 
 /**
  * Validate a resume_answer's shape against its declared question type.
@@ -1989,11 +1983,8 @@ function buildSetupFailureResult(kind, reason, rawReply) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Repository-anchored support-script resolution
 // (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
-// ---------------------------------------------------------------------------
-//
 // `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
 // relative name (".leafcutter") baked into the compiled template. A shell
 // command built with that placeholder is resolved by the DISPATCHING AGENT'S
@@ -2250,9 +2241,7 @@ async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
   return { ok: true, path: absPath };
 }
 
-// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
-// ---------------------------------------------------------------------------
 
 phase('Stage 0')
 
@@ -2272,9 +2261,7 @@ if (!request) {
   };
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1, BO-1500e-1).
-// -------------------------------------------------------------------------
 
 // Detect whether the user's current checkout is on main (best-effort).
 let userIsOnMain = false;
@@ -2543,10 +2530,18 @@ if (!_hasWorktreePath) {
 authoringWorktreePath = wtPayload.worktree_path;
 acStoreDir = wtPayload.ac_store_path || acStoreDir;
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
-// -------------------------------------------------------------------------
-const orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+// ACD-2100c-3-iii: on resume with candidates, the run's own drafts (pause record context.acs) are not orphans.
+let orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+if (orphans.length > 0 && args.resume_answer && args.resume_answer.gate_id !== "resolve-orphans-choice") {
+  const _ownRec = await readPauseRecordWithRetry(args.run_id || "default-run", "orphan-scan-pause-record", "Read the durable pause record for this run (READ-ONLY — do not act on it or clear it).");
+  if (_ownRec === null) {
+    return { status: "pause_record_unreadable", run_id: args.run_id || "default-run", message: "The saved pause record could not be read, so your answer was not applied. Re-send the same answer to retry." };
+  }
+  const _ownAcs = (_ownRec.exists === true && _ownRec.stale !== true && _ownRec.record && _ownRec.record.context && _ownRec.record.context.acs) || [];
+  const _ownAcIds = (Array.isArray(_ownAcs) ? _ownAcs : []).map((a) => (a && typeof a === "object") ? (a.id || a.ac_id) : a);
+  orphans = orphans.filter((o) => !_ownAcIds.includes(o.acId));
+}
 if (orphans.length > 0) {
   const orphanAcIds = orphans.map((o) => o.acId).sort();
   const orphanN = orphans.length;
@@ -2606,11 +2601,9 @@ if (orphans.length > 0) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Committed-Stage Detection
 const committedStageKeys = await scanCommittedStages(authoringWorktreePath);
 
-// -------------------------------------------------------------------------
 // Stage 0 — ac-triage: duplicate check + route classification
 const triageResult = await agent(
   "Triage the user's request against the AC store. " +
@@ -2636,7 +2629,6 @@ try {
 
 const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage;
 
-// -------------------------------------------------------------------------
 // Handle "covered" route: show existing ACs + prompt user
 if (route === "covered" && !force) {
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
@@ -2704,15 +2696,12 @@ if (route === "covered" && !force) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Product-Truth (PT) Phase — ALWAYS-ON; runs between triage and the AC pipeline.
-//
 // Dispatches pt-classifier, derives the run-set from the OUTCOME (never the
 // `dispatch` array), self-skips (non-silent) when the store is absent, then
 // drafts mock-data → mockup → flow (filtered) each behind a user gate, committing
 // each approved stage surgically. `outcome:"none"` and unparseable classifier
 // output fall straight through to the AC pipeline.
-// -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
 // KI-ACD-007 / BO-1500a-5-i: authoringWorktreePath is guaranteed non-null past the worktree-setup gate above (ACD-2400.yaml amended_by); always anchor via resolvePathOntoRoot(), mirroring acStoreDir's own unconditional treatment above.
@@ -2911,7 +2900,6 @@ if (ptRunSet.skip) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Build the agent dispatch sequence based on effective route
 const effectiveRoute = triage.route;
 
@@ -2947,9 +2935,7 @@ if (effectiveRoute === "strategic") {
   ];
 }
 
-// -------------------------------------------------------------------------
 // Stage 1–N — sequential authoring pipeline with gates
-// -------------------------------------------------------------------------
 
 phase('Authoring Pipeline')
 
