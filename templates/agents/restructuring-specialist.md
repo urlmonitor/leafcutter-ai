@@ -9,7 +9,13 @@ description: 'Restructuring specialist. Brought in by a run, as a party separate
   new behaviour (that is the coder) and NOT for SQL or frontend files.'
 model: sonnet
 name: restructuring-specialist
-tools: Bash, Read, Edit, Write
+tools: Bash, Read, Edit, Write, Skill
+skills:
+- skill_id: signoff
+  mode: always
+- skill_id: complexity-reduction
+  mode: conditional
+  condition: When the brief carries a complexity demand (a function's score over its ceiling), load complexity-reduction; never for a file-size demand.
 portable: true
 signoff: true
 domain: null

@@ -498,6 +498,21 @@
         "_comment": "TICKET-20260715-DocIndexAutoRegen: Regenerates docs/INDEX.md and git-adds it whenever a docs/*.md file (other than INDEX.md itself) is staged. Exits 0 always (fail-open). Ordered before check-doc-frontmatter and check-description-field so generator-emitted frontmatter survives validation."
       },
       {
+        "id": "transform-agent-registry",
+        "tier": "transform",
+        "name": "Transform agent registry (regenerate skills_used/skills_invoked/spawn_allowlist from template declarations)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py",
+        "language": "system",
+        "files": "^(templates/agents/.*\\.md|config/agent_registry\\.json)$",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": false,
+        "_comment": "AR-300c-3 (user decision, BrainCandy 2026-10-09): the agent registry's ability fields are a derived copy of each template's frontmatter `skills:` declaration, and (AR-300c-5-ii) its spawn_allowlist a derived copy of the frontmatter `spawn_allowlist:` declaration. This transform regenerates ONLY skills_used/skills_invoked/spawn_allowlist (never spawned_by) and git-adds config/agent_registry.json when it changed; the build never writes the package source tree, it only reports a disagreeing copy. Exits 0 always (fail-open)."
+      },
+      {
         "id": "check-doc-frontmatter",
         "tier": "judgment",
         "name": "Check Doc Frontmatter (YAML frontmatter validation for docs/*.md and tickets/)",
@@ -1888,6 +1903,10 @@
     {
       "id": "check-paths-integrity",
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
+    },
+    {
+      "id": "transform-agent-registry",
+      "ground": "Targets this package's own development-source files (templates/agents/*.md and config/agent_registry.json), the class-2 case above: reachable when committing to the package's self-hosted checkout (git root == package root), but under the consumer deploy layout those paths exist only inside the vendored leafcutter-ai/ subtree or the gitignored .leafcutter/ mirror, never at a consumer's own tracked repo root (AR-300c-3)."
     },
     {
       "id": "check-architecture-scaffolds",

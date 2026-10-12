@@ -57,8 +57,12 @@ _OWN_FILES = {
 }
 
 
-def test_the_config_still_declares_every_agent() -> None:
-    """Guard: the assertions below are about these agents, so they must all be configured."""
+def test_the_config_still_declares_the_three_agents() -> None:
+    """Guard: the assertions below are about these agents, so they must all be configured.
+
+    The name predates the fourth agent (restructuring-specialist, INF-800f-1). It is kept so
+    the contract-shrinking guard and the test's history stay continuous; it checks every agent.
+    """
     assert sorted(_TRIGGERS) == _ALL_AGENTS
 
 

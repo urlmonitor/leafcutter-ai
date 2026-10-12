@@ -16,7 +16,10 @@ description: 'Conditional phase agent that reads the `## Agent Contracts` ->
 memory: true
 model: sonnet
 name: documentation-verifier
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
+skills:
+- skill_id: signoff
+  mode: always
 requires_verification: true
 portable: true
 signoff: true

@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -102,7 +102,9 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-300d-4-i
-implemented_by: []
+implemented_by:
+  - scripts/agent_retired_markers.py
+  - scripts/agent_grant_delivery.py
 notes: |
   A RULE THAT RESOLVES TO NOTHING PASSES FOREVER -- STATED HERE BECAUSE THIS IS
   THE CRITERION MOST EXPOSED TO IT. Its first clause is a universal over a

@@ -12,8 +12,9 @@ ARCHITECTURE: ``GitHubClient(api_url, token)`` offers ``get`` / ``post`` /
     ``Link``); ``same_origin_path`` turns a ``Link`` target into a request only when
     it stays on the API's origin, so the token never leaves it. Every failure that
     crosses the process boundary (HTTP status, connection, undecodable body) is raised as
-    ``GitHubError`` with the HTTP status (0 when none) so callers decide what a
-    failed call means; this module never swallows one. The token is never
+    ``GitHubError`` with the HTTP status (0 when none), a ``kind`` (``KINDS``: http,
+    timeout, connection, tls, not_json, shape, other) and the ``Retry-After`` text (TQ-600a-13-ix) so callers
+    decide what a failed call means; this module never swallows one. The token is never
     logged or put in an exception message. ``get_bytes`` (TQ-600a-13-xiii) is the
     one method that follows a redirect, exactly once and without the token.
 """
@@ -23,6 +24,7 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -47,11 +49,32 @@ _NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 class GitHubError(RuntimeError):
-    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received."""
+    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received.
 
-    def __init__(self, message: str, status: int = 0) -> None:
+    ``kind`` says what failed, one of ``KINDS``: ``http`` (a status came back), ``timeout``, ``connection`` (refused, reset,
+    protocol error), ``tls`` (certificate not verified; never worth a retry), ``not_json``, ``shape`` (parsed, but not the
+    shape the caller needs; raised by callers, not by this client) or ``other``. ``retry_after`` is the response's
+    ``Retry-After`` header text (None when absent), so a caller can classify the failure without parsing the message.
+    """
+
+    def __init__(self, message: str, status: int = 0, *, kind: str = "other", retry_after: str | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.kind = kind
+        self.retry_after = retry_after
+
+
+KINDS = frozenset({"http", "timeout", "connection", "tls", "not_json", "shape", "other"})
+
+
+def _transport_kind(exc: BaseException) -> str:
+    """``timeout``, ``tls`` (a certificate that did not verify) or ``connection`` for a failure below HTTP."""
+    reason = getattr(exc, "reason", None)
+    if isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError):
+        return "timeout"
+    if isinstance(exc, ssl.SSLCertVerificationError) or isinstance(reason, ssl.SSLCertVerificationError):
+        return "tls"
+    return "connection"
 
 
 class GitHubClient:
@@ -111,11 +134,11 @@ class GitHubClient:
         except urllib.error.HTTPError as exc:
             logger.warning("%s %s -> HTTP %s", method, path, exc.code)
             message = f"{method} {path} failed with HTTP {exc.code}"
-            raise GitHubError(message, exc.code) from exc
+            raise GitHubError(message, exc.code, kind="http", retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
         except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
             logger.warning("%s %s -> %s", method, path, exc)
             message = f"{method} {path} failed: {exc}"
-            raise GitHubError(message) from exc
+            raise GitHubError(message, kind=_transport_kind(exc)) from exc
         return self._decode(method, path, raw), headers
 
     @staticmethod
@@ -127,7 +150,7 @@ class GitHubClient:
             return json.loads(raw)
         except (ValueError, RecursionError) as exc:  # a hostile body nested past the interpreter's limit is not JSON we can read
             message = f"{method} {path} returned a body that is not JSON"
-            raise GitHubError(message) from exc
+            raise GitHubError(message, kind="not_json") from exc
 
     def get(self, path: str, query: dict | None = None):
         """GET ``path`` with an optional query mapping."""

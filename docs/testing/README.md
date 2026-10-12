@@ -3,7 +3,7 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-09-28
+last_updated: 2026-10-12
 components:
 - infrastructure
 related_docs:
@@ -170,6 +170,56 @@ Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and
 the holding correctness lane into the timing lane. That is a reviewed change: name the
 test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
 `-m manual` for the correctness lane).
+
+### `Post-merge suite status` hold messages
+
+The check prints one line. The headline is the text before the first `:`, `(`, `.` or `;`.
+Every held message also says "This is not caused by this pull request." and ends with
+"To restore a verdict: ...". Wording lives in `scripts/ci/_hold_wording.py`; thresholds in
+`scripts/ci/post_merge_tunables.json`.
+
+| State | Headline | When it occurs | How to restore a verdict |
+|---|---|---|---|
+| `pass` | `Post-merge suite is green` | The latest settled run concluded success and started within `staleness_hours`. | Nothing; the check passes. |
+| `red` | `Post-merge suite is not green` | The latest settled run's tests failed. | Fix the failing tests on main. A fix PR that declares the fix of the open `post-merge-red` notice and has a passing proof on its head is exempted. |
+| `did_not_complete` | `Post-merge suite run did not finish` | The run did not finish, or its jobs could not be read. | Re-run the post-merge suite on main until it completes. |
+| `stale` | `Post-merge verdict is stale` | The latest settled run started more than `staleness_hours` (30) ago, or no settled run is among the most recent `run_history_page` (30) runs. | Dispatch the post-merge correctness workflow on main. |
+| `disabled` | `Post-merge suite workflow is disabled and not active` | The workflow state is not `active` (`disabled_inactivity`, `disabled_manually`, `deleted`, `disabled_fork`); checked on every evaluation. | Re-enable the workflow (`gh workflow enable`). |
+| `never_run` | `Post-merge suite has never run on main` | No post-merge run has ever completed. | Wait for the first run to complete, or dispatch it. |
+| `could_not_read` | `Post-merge run history could not be read` | The workflow state or run history could not be read; one retry is made for 429, 5xx, timeout and connection errors. | Re-run this check once the read succeeds. |
+
+- The hold refuses to run (`could_not_read`, naming both keys) if `staleness_hours` is not greater than `heartbeat_max_hours` (12).
+- Age is measured from the run's `run_started_at`, so a re-run counts as fresh.
+
+### Break-glass: merging a repair when the hold itself is broken (owner only)
+
+**Agents: never do this. If the hold blocks you and no exemption applies, stop and report to the owner.**
+
+The owner (BrainCandy) removes only `Post-merge suite status` from ruleset 17810993, merges the repair, and restores it. The check is not required yet (TQ-600a-13-x), so this is the procedure for when it is.
+
+1. **Use it only when no exemption can help.** The hold errors on every PR; it never reports because `pull_request_target` runs are blocked; the hold App (ID 5249547) credential cannot be obtained or the App is uninstalled, so no check run is published; the correctness workflow cannot start; or a fix to the hold is itself held.
+2. **Read and record the ruleset.** Save the output.
+
+   ```bash
+   gh api repos/urlmonitor/leafcutter-ai/rulesets/17810993
+   ```
+
+3. **Remove only the `Post-merge suite status` context** from the required status checks, in the ruleset UI or with a `PUT` of the saved ruleset (with its read-only fields dropped) whose `required_status_checks` list lacks that one entry. This needs admin rights. **Never add a bypass actor:** every agent acts as the same admin account, so a bypass lets any agent merge past all required checks without a trace.
+
+   ```bash
+   gh api --method PUT repos/urlmonitor/leafcutter-ai/rulesets/17810993 --input /tmp/ruleset-minus-hold.json
+   ```
+
+4. **Merge the repairing PR.**
+5. **Restore the identical entry, sourced from the hold App (integration 5249547).** Never source it from GitHub Actions (15368) or "any source": either silently reopens the check-name spoof, because any Actions job could post a check under that name.
+6. **Read the ruleset back.** Confirm the six other contexts are untouched (`Lint (ruff)`, `Component vocab style (components.json)`, `Test suite (pytest)`, `Proof-of-done coverage check (BO-2500b)`, `Changelog entry present`, `AC store valid`), and that the hold is present and pinned to App 5249547.
+7. **Re-observe a held PR reported unmergeable**, as TQ-600a-13-x requires.
+8. **Log the use**: date, reason, repairing PR, and the time the requirement was restored. Put it on the open `post-merge-red` notice, or in the table below when none is open.
+
+The procedure is rehearsed once on the real repository within the first day after the check becomes required, by removing and restoring with no repair pending. Record the rehearsal in the table and in the notes of TQ-600a-13-xvii. Not yet rehearsed: the check is not required yet.
+
+| Date | Kind (use / rehearsal) | Reason | Repairing PR | Removed at | Restored at | Re-observed held PR |
+|---|---|---|---|---|---|---|
 
 ---
 

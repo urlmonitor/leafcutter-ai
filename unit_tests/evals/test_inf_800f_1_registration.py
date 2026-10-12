@@ -21,7 +21,7 @@ IMPLEMENTATION CONTRACT the coder must satisfy:
     ``templates/agents/restructuring-specialist.md``, skills_invoked listing
     ``signoff`` (always) and ``complexity-reduction`` (conditional).
   - templates/agents/restructuring-specialist.md has frontmatter name equal to the id,
-    tools Read/Edit/Write/Bash (no Agent), ``signoff: true`` and
+    tools Read/Edit/Write/Bash plus Skill (AR-300; no Agent), ``signoff: true`` and
     ``requires_verification: true``.
   - scripts/evals/agent_eval_config.json registers the agent in label mode so that
     ``python scripts/evals/run_agent_eval.py --agent restructuring-specialist
@@ -126,7 +126,8 @@ def test_inf800f1_template_is_its_own_verified_signing_off_non_spawning_file() -
     fm = _frontmatter(template)
     assert fm["name"] == _AGENT_ID
     tools = {t.strip() for t in str(fm["tools"]).split(",")}
-    assert tools == {"Read", "Edit", "Write", "Bash"}
+    # AR-300: a non-empty skill grant requires the Skill tool; Agent stays absent (it spawns nobody).
+    assert tools == {"Read", "Edit", "Write", "Bash", "Skill"}
     assert "Agent" not in tools
     assert fm["requires_verification"] is True
     assert fm["signoff"] is True

@@ -420,8 +420,6 @@ For authoring rules that apply to all gatekeepers, see [§5.3 Gatekeeper Escalat
 
 | Sonnet gatekeeper | Agent file | Opus target | Opus as | Escalation trigger |
 |---|---|---|---|---|
-| `architect-review` | `.claude/agents/architect-review.md` | `.claude/agents/architect-review-deep.md` | separate file | Blast radius exceeds small-case rubric: > 5 affected files, ≥ 3 components, cross-module boundary, or any always-large trigger fires (Alembic migration, hypertable change, public API change, ADR contract change). |
-| `conflict-resolver` | `.claude/agents/conflict-resolver.md` | `.claude/agents/conflict-resolver-deep.md` | separate file | Any conflict hunk is classified as structural: function-signature diff, same logic-block rewritten on both branches, file moved/renamed on one branch, incompatible abstractions at the same call site, or cross-cutting rename. |
 | `prod-deploy` | `.claude/agents/prod-deploy.md` | — (anonymous Opus) | inline spawn | Post-deploy smoke check output is ambiguous, or log content contains an unfamiliar error class that cannot be classified as "accept", "hold for inspection", or "rollback recommended" by Sonnet inline. |
 | `pr-reviewer` | `.claude/agents/pr-reviewer.md` | — (anonymous Opus) | inline spawn | Medium-confidence finding count exceeds 3; Opus is asked to promote or drop each medium finding. |
 

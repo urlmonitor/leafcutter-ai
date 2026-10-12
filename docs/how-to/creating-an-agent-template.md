@@ -3,10 +3,11 @@ title: How to create an agent template
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-05-28
+last_updated: 2026-10-09
 components:
 - build_pipeline
 related_docs:
+- docs/reference/agent-template-frontmatter.md
 - docs/agent-registry.md
 - docs/build-pipeline.md
 - docs/reference/skills-config-fields.md
@@ -53,10 +54,6 @@ Before creating any file, answer three questions:
    - `true` — domain-agnostic; belongs in the leafcutter portable package.
    - `false` — domain-specific; set `domain: "<your-domain>"` alongside.
 
-Keep the name short and verb-noun-ish for phase/utility agents, and noun-role-ish for
-supervisors. A name that reads naturally in a sentence like "spawn `<name>` to…" is
-usually right.
-
 ---
 
 ### Step 2: Create the template file
@@ -86,7 +83,7 @@ description: |
   One-paragraph description of what this agent does and when to use it.
   Use when: <concrete trigger conditions for when a user should invoke this agent>.
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write
 ---
 ```
 
@@ -95,17 +92,84 @@ tools: Bash, Read, Edit, Write, Agent
 | `name` | string | Must match the filename (without `.md`) and the `id` in `agent_registry.json`. |
 | `description` | string | Multi-line YAML literal. Displayed in the Claude Code agent picker. Include `Use when:` guidance so the LLM can auto-route correctly. |
 | `model` | string | `sonnet` for most agents. Use `opus` only for orchestrators that must reason over large contexts. |
-| `tools` | string | Comma-separated list of allowed tools. Common set: `Bash, Read, Edit, Write, Agent`. |
+| `tools` | string | Comma-separated list of allowed tools. Common set: `Bash, Read, Edit, Write`. Add `Skill` if you grant skills (Step 4) and `Agent` if you permit sub-agents (Step 5). |
 
-Optional runtime keys:
-
-| Key | Type | Notes |
-|---|---|---|
-| `memory` | list | Paths to persistent memory files the agent loads on each invocation. |
+Optional runtime keys: `memory` (list of persistent memory file paths loaded on each invocation).
 
 ---
 
-### Step 4: Write build-directive frontmatter keys
+### Step 4: Grant skills in the frontmatter (if the agent uses any)
+
+The template's own frontmatter is the ONLY place a skill is granted. Declare a
+`skills:` list beside `tools:`, and add `Skill` to `tools:`:
+
+```yaml
+tools: Bash, Read, Edit, Write, Skill
+skills:
+- skill_id: doc-enforcer
+  mode: always
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your sign-off.
+```
+
+`mode` is `always` or `conditional`; a `conditional` grant with no `condition`
+refuses the build. The build appends a `## Your Available Skills` table to the
+compiled prompt from this list, so nothing else is needed for the grant to arrive.
+
+Do NOT:
+
+- write a `{{my_skills_used}}` marker or a hand-written skills table in the body
+  (the build warns about a duplicate table and strips a retired marker with a warning);
+- hand-edit `skills_used` or `skills_invoked` in `config/agent_registry.json` —
+  they are a derived copy. The `transform-agent-registry` pre-commit hook
+  (shown as "Transform agent registry") regenerates them from `skills:`, and the
+  build reports a disagreeing copy while the declaration wins;
+- list a skill that is not installed (a missing skill id refuses the build) or
+  a non-empty `skills:` without `Skill` in `tools:` (also refuses).
+
+Skip this step if the agent loads no skills.
+
+---
+
+### Step 5: Permit sub-agents in the frontmatter (if the agent dispatches any)
+
+The template's own frontmatter is the ONLY place a sub-agent is permitted. Declare
+`spawn_allowlist:` beside `tools:`, and add `Agent` to `tools:`:
+
+```yaml
+tools: Bash, Read, Edit, Write, Agent
+spawn_allowlist:
+- research-agent
+- test-runner
+```
+
+The entry `__ticket_phase_agents__` stays one entry and expands on every build to
+every agent whose registry `is_ticket_phase` is `true` (that flag is still set in
+`config/agent_registry.json`; if no agent has it, the build refuses). The build appends a `## Your Available Sub-Agents`
+table from this list, so nothing else is needed for the permission to arrive.
+
+Do NOT:
+
+- write a hand-written "Available Sub-Agents" table or list, or a
+  `{{my_spawn_allowlist}}` marker, in the body (the build warns about a
+  contradicting list and strips a retired marker with a warning);
+- hand-edit `spawn_allowlist` in the registry — it is a derived copy that the
+  same pre-commit hook regenerates, and the build reports a disagreeing copy
+  while the declaration wins;
+- declare a sub-agent without `Agent` in `tools:`, or one with no packaged
+  `templates/agents/<id>.md` — both refuse the build (project-local agent
+  definitions are not supported yet, KI-AR-005).
+
+What you DO still edit by hand: each target agent's `spawned_by` in
+`config/agent_registry.json` must name your agent (Step 9), or the registry
+validator rejects the one-sided edge.
+
+Skip this step if the agent dispatches no sub-agents.
+
+---
+
+### Step 6: Write build-directive frontmatter keys
 
 These fields are consumed by `build.py` and are stripped from the compiled output:
 
@@ -134,7 +198,7 @@ requires_verification: true
 
 ---
 
-### Step 5: Write the agent body
+### Step 7: Write the agent body
 
 The body is everything after the closing `---` of the frontmatter. It becomes the
 compiled agent file that Claude Code reads. Recommended structure:
@@ -149,7 +213,7 @@ On every invocation, before doing any work, read:
 
 ## Tool Allowlist Reminder
 
-Your tools are: `Bash`, `Read`, `Edit`, `Write`, `Agent`.
+Your tools are: `Bash`, `Read`, `Edit`, `Write`.
 `Grep`, `Glob`, and MCP search tools are NOT available.
 
 ## Behaviour
@@ -176,12 +240,16 @@ Key rules for the body:
   will NOT do as clearly as what they will do.
 - Include the sign-off invocation if `signoff: true` in frontmatter. Add
   `## Sign-off` with the recipe from `.claude/skills/signoff/SKILL.md §2`.
+- Do not describe skills or sub-agents in the body: no skills table, no
+  "Available Sub-Agents" table, no `{{my_skills_used}}` or `{{my_spawn_allowlist}}`
+  marker. Steps 4 and 5 are the only place they are declared; the build appends
+  both sections.
 - Template placeholders use `{{key}}` syntax. The `config_keys` values are
   injected at build time from `skills_config.json`.
 
 ---
 
-### Step 6: Register the agent in `agent_registry.json`
+### Step 8: Register the agent in `agent_registry.json`
 
 Open `config/agent_registry.json` and add a new entry to the `"agents"` array.
 Every entry must satisfy the schema in `config/agent_registry.schema.json`.
@@ -201,9 +269,13 @@ Every entry must satisfy the schema in `config/agent_registry.schema.json`.
   "is_ticket_phase": true,
   "template_path": "templates/agents/my-agent.md",
   "model": "sonnet",
-  "skills_used": ["signoff"]
+  "skills_used": []
 }
 ```
+
+`spawn_allowlist` and `skills_used` (and `skills_invoked`) are derived from the
+template frontmatter (Steps 4 and 5): leave them empty here. The
+`transform-agent-registry` pre-commit hook fills them when you commit.
 
 **Additional fields for ticket-phase agents:**
 
@@ -212,14 +284,8 @@ Every entry must satisfy the schema in `config/agent_registry.schema.json`.
   "selection_criteria": {
     "description": "Assign when the ticket requires X.",
     "trigger_conditions": [
-      {
-        "type": "dsl",
-        "expression": "files_touched contains docs/*.md"
-      },
-      {
-        "type": "llm",
-        "expression": "ticket is a documentation-only change"
-      }
+      {"type": "dsl", "expression": "files_touched contains docs/*.md"},
+      {"type": "llm", "expression": "ticket is a documentation-only change"}
     ],
     "default_status": "not_needed"
   },
@@ -236,39 +302,39 @@ Every entry must satisfy the schema in `config/agent_registry.schema.json`.
 | `id` | string | Matches filename (without `.md`) and template `name:` key. Pattern: `^[a-z][a-z0-9-]*$`. |
 | `tier` | enum | `supervisor`, `phase`, or `utility`. |
 | `role` | string | Functional role: `orchestration`, `coding`, `review`, `commit`, `documentation`, `analysis`, `quality`. |
-| `spawn_allowlist` | array | Agent IDs this agent may spawn. Use `"__ticket_phase_agents__"` for orchestrators that spawn all phase agents. |
-| `spawned_by` | array | Agent IDs (or `"user"`) that legitimately invoke this agent. Keep consistent with callers' `spawn_allowlist`. |
+| `spawn_allowlist` | array | DERIVED from the template's `spawn_allowlist:` frontmatter (Step 5); do not hand-edit. |
+| `spawned_by` | array | Hand-authored. Agent IDs (or `"user"`) that invoke this agent; must match the callers' declared `spawn_allowlist:` (Step 9). |
 | `is_ticket_phase` | boolean | `true` if this agent appears in ticket `agents:` maps. |
 | `selection_criteria` | object or null | How `business-analyst` decides to assign this agent. Null for non-ticket-phase agents. |
 | `priority` | integer | Phase execution order. Lower runs first. See canonical ordering table in `ticket-supervisor`. Required for `is_ticket_phase: true` agents. |
 | `requires_ticket_section` | boolean | When `true`, every ticket that marks this agent `needed` must include a `### <agent-id>` subheading under `## Implementation Tasks`. |
-| `skills_used` | array | Skills this agent loads at runtime. Use `[]` when none. |
+| `skills_used` | array | DERIVED from the template's `skills:` frontmatter (Step 4); do not hand-edit. |
 | `owns_file_extensions` | array | File extensions (e.g. `[".py"]`) this agent is primary implementer for. Consumed by commit-guardian hooks. |
 
 ---
 
-### Step 7: Update `spawned_by` on parent agents
+### Step 9: Keep `spawned_by` consistent on both ends of every spawn edge
 
-For every agent that will invoke your new agent, add your agent's `id` to that
-parent's `spawn_allowlist` in `agent_registry.json`.
+`spawned_by` is hand-authored (the hook never touches it), and the registry
+validator rejects an edge recorded on one side only.
 
-For every entry in your new agent's `spawned_by` list, verify the corresponding
-parent's `spawn_allowlist` includes your agent's `id`.
+- **Your agent is spawned by others:** each caller must declare your `id` in its
+  own template's `spawn_allowlist:` frontmatter (Step 5; never in the registry
+  field), and your registry entry's `spawned_by` must list each caller.
+- **Your agent spawns others:** in `config/agent_registry.json`, add your `id`
+  to the `spawned_by` of every agent you declared in Step 5.
 
-Example: if `ticket-supervisor` spawns your agent, confirm:
+`ticket-supervisor` declares `__ticket_phase_agents__`, so any agent with
+`"is_ticket_phase": true` is covered without editing its template; a non-phase
+utility agent must be named explicitly in the caller's `spawn_allowlist:`.
 
-```json
-// ticket-supervisor entry
-"spawn_allowlist": ["__ticket_phase_agents__"]
-```
-
-Because `ticket-supervisor` uses the `"__ticket_phase_agents__"` wildcard, any
-agent with `"is_ticket_phase": true` is automatically included. For non-phase
-utility agents, you must add the `id` explicitly to the parent's `spawn_allowlist`.
+After the build, confirm the edge on the agent card (a build output, not
+hand-written): `docs/agents/cards/<id>.card.md` must list the caller under
+"Spawned By" and the diagram must show the edge.
 
 ---
 
-### Step 8: Write a reference doc
+### Step 10: Write a reference doc
 
 Create a reference doc at:
 
@@ -276,48 +342,14 @@ Create a reference doc at:
 docs/reference/<agent-name>.md
 ```
 
-Minimum frontmatter and structure:
-
-```markdown
----
-title: "<Agent Name> — Reference"
-type: reference
-status: active
-created: 2026-05-28
-last_updated: 2026-05-28
-components:
-  - build_pipeline
----
-
-# <Agent Name>
-
-One sentence: what this agent does and when it is used.
-
-## Inputs
-
-What the agent receives (ticket_path, structured payload, etc.).
-
-## Outputs
-
-What it returns (structured payload fields, files written, sign-off status).
-
-## Behaviour
-
-Summary of the agent's algorithm.
-
-## Constraints
-
-What the agent will not do.
-
-## See Also
-
-- `templates/agents/<name>.md` — source template
-- `config/agent_registry.json` — registry entry
-```
+Use frontmatter `type: reference`, `status: active`, `components: [build_pipeline]`,
+and these sections: one-sentence summary, `## Inputs`, `## Outputs`,
+`## Behaviour`, `## Constraints`, `## See Also` (link the source template and
+registry entry). Follow `docs/how-to/documentation/write-reference.md`.
 
 ---
 
-### Step 9: Create a workflow template (if applicable)
+### Step 11: Create a workflow template (if applicable)
 
 If the agent is exposed to users as a slash command (e.g. `/my-agent`), create a
 workflow template at:
@@ -326,35 +358,17 @@ workflow template at:
 templates/workflows/<name>.md
 ```
 
-Minimum structure:
-
-```markdown
----
-description: "Invoke the <name> agent for <one-line purpose>."
----
-
-# /<name> — <Short Title>
-
-This workflow is the slash-command surface for the `<name>` agent.
-
-<One paragraph describing what running /name does.>
-
-{% if platform == 'claude' %}
-Forward `$ARGUMENTS` verbatim to the `<name>` agent.
-{% elif platform == 'antigravity' %}
-Invoke the `<name>` agent by running its script via the terminal tool:
-```bash
-python .agents/agents/<name>/scripts/run.py --args="$ARGUMENTS"
-```
-{% endif %}
-```
+Model it on an existing file in `templates/workflows/`: a `description:`
+frontmatter line, a `# /<name>` heading, one paragraph on what the command does,
+and a `{% if platform == 'claude' %}` block that forwards `$ARGUMENTS` verbatim to
+the `<name>` agent (with an `{% elif platform == 'antigravity' %}` variant).
 
 Skip this step for purely internal agents (tier: `utility`, or phase agents that
 are only ever spawned by `ticket-supervisor`).
 
 ---
 
-### Step 10: Run `build.py` and verify no errors
+### Step 12: Run `build.py` and verify no errors
 
 From the leafcutter-ai directory, run:
 
@@ -362,19 +376,10 @@ From the leafcutter-ai directory, run:
 python scripts/build.py --target-dir . --validate
 ```
 
-Expected output (no errors):
-
-```
-[BUILD] Loading config from skills_config.json ... ok
-[BUILD] Validating agent registry ...
-[BUILD] Registry OK: N agents, N valid.
-[BUILD] Building agents ... N written, N up-to-date.
-...
-[BUILD] Done.
-```
-
-If the registry validation fails, the error message names the offending field.
-Fix it in `agent_registry.json` and re-run.
+Expected: `Registry OK: N agents, N valid.` and `[BUILD] Done.` with no errors.
+A declared skill or sub-agent that does not exist, or a missing `Skill`/`Agent`
+tool, refuses the build here. If registry validation fails, the error names the
+offending field; fix it and re-run.
 
 If `--validate` reports placeholder-detection warnings about `{{key}}` tokens
 left in compiled output, add the missing key to `skills_config.json` or remove
@@ -382,7 +387,7 @@ the placeholder from the template.
 
 ---
 
-### Step 11: Verify the compiled agent file
+### Step 13: Verify the compiled agent file
 
 After a successful build, confirm:
 
@@ -396,44 +401,31 @@ Open the file and verify:
 2. Build-directive keys (`portable`, `signoff`, `domain`, `config_keys`, etc.) are
    **absent** from the compiled output — the build pipeline strips them.
 3. Any `{{key}}` placeholders have been replaced with values from `skills_config.json`.
+4. If you declared skills or sub-agents, the file ends with a
+   `## Your Available Skills` and/or `## Your Available Sub-Agents` section.
 
-Quick check command:
+Quick check for unresolved placeholders (no output means none):
 
 ```bash
-python -c "
-import re
-content = open('.claude/agents/<name>.md').read()
-placeholders = re.findall(r'\{\{[^}]+\}\}', content)
-if placeholders:
-    print('Unresolved placeholders:', placeholders)
-else:
-    print('OK — no unresolved placeholders')
-"
+grep -n "{{" .claude/agents/<name>.md
 ```
 
 ---
 
-### Step 12: Commit and push following the standard ticket workflow
+### Step 14: Commit and push following the standard ticket workflow
 
 Stage the new files explicitly (never `git add .` or `git add -A`):
 
 ```bash
-git add templates/agents/<name>.md
-git add config/agent_registry.json
-git add docs/reference/<name>.md
-# if you created a workflow template:
-git add templates/workflows/<name>.md
+git add templates/agents/<name>.md config/agent_registry.json docs/reference/<name>.md
 ```
 
-Commit:
+Add `templates/workflows/<name>.md` too if you created one. Commit through the
+`commit` agent (direct `git commit` is blocked), then push and open a PR via
+`/commit-push-pr` or the `pull-request` agent. The pre-commit hooks validate:
 
-```bash
-git commit -m "feat: add <name> agent template and registry entry"
-```
-
-Push and open a PR via the standard workflow (`/commit-push-pr` or the `pull-request`
-agent). The pre-commit hooks will validate:
-
+- `transform-agent-registry` — regenerates the derived registry fields from your
+  frontmatter and re-stages `config/agent_registry.json`; review that diff.
 - `check_ticket_signoff_parity.py` — ticket sign-off parity.
 - `check_referential_integrity.py` — no dangling references in `agent_registry.json`.
 
@@ -475,8 +467,9 @@ from `skills_config.json`. Either add the key to `skills_config.json` or remove 
 **3. `spawn_allowlist` / `spawned_by` inconsistency warning**
 
 The `registry_validator.py` reports that agent A's `spawn_allowlist` names agent B,
-but B's `spawned_by` does not include A (or vice versa). Fix both sides to be
-consistent: add A to B's `spawned_by`, or add B to A's `spawn_allowlist`.
+but B's `spawned_by` does not include A (or vice versa). Add A to B's `spawned_by`
+in the registry, or add B to A's frontmatter `spawn_allowlist:` (never to the
+registry field: the hook regenerates it from the frontmatter).
 
 **4. `requires_ticket_section: true` but the ticket is missing the `### <agent-id>` section**
 
@@ -492,7 +485,9 @@ need a dedicated task section.
 | Mistake | Symptom | Fix |
 |---|---|---|
 | Wrong tier — set `phase` for an orchestration agent | Agent appears in ticket `agents:` maps when it should not | Change `tier` to `supervisor` and `is_ticket_phase` to `false` |
-| Missing `spawned_by` update on the parent agent | `registry_validator` warns about inconsistent spawn relationships | Add your new agent's `id` to the parent's `spawn_allowlist` in `agent_registry.json` |
+| Spawn edge recorded on one side only | `registry_validator` rejects the one-sided edge | Declare the target in the caller's frontmatter `spawn_allowlist:` and list the caller in the target's registry `spawned_by` (Step 9) |
+| Skills or sub-agents added by editing the registry or the body | The next commit's hook overwrites the registry edit; the build warns or reports, and the declaration wins | Declare them in frontmatter only (Steps 4 and 5) |
+| `skills:` without `Skill`, or `spawn_allowlist:` without `Agent`, in `tools:` | Build refuses | Add the tool to `tools:` |
 | Bad `config_keys` format — used a list instead of an object | `build.py` fails with a `TypeError` during template injection | Change `config_keys` from a list to an object: `{key: {required: bool, description: str}}` |
 | Forgot `inject_registry` for supervisor agents that need the full agent list | Supervisor cannot read the registry at runtime | Not a standalone frontmatter key — the registry is available at `config/agent_registry.json`; confirm the agent reads it via `Read` or `Bash` in its body |
 | `name:` in frontmatter doesn't match the filename | `build.py` writes the file correctly but the Claude Code agent picker shows the wrong name | Ensure `name: <agent-name>` matches `templates/agents/<agent-name>.md` and `"id": "<agent-name>"` in the registry |

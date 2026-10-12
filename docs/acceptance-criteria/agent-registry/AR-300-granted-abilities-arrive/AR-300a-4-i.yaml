@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -97,8 +97,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300a_4_i_inplace_report.py
+implemented_by:
+  - scripts/agent_inplace_abilities.py
+  - scripts/agent_ability_accounts.py
 notes: |
   THE CONTROL CLAUSE IS LOAD-BEARING, NOT DEFENSIVE. AR-200b-1 records the same
   hazard one component over: a detector that matched the bare English word

@@ -1037,7 +1037,10 @@ gh pr create --title "<title>" --body-file "/tmp/quick-fix-pr-body-<AC-ID>.md"
 
 Capture the PR URL from the output as `PR_URL`.
 
-Leave merging out of scope — that stays the user's call.
+Leave merging out of scope — that stays the user's call. If you inspect the PR's
+checks and `Post-merge suite status` is failing, it is an external hold: report it
+per `building-epics` §3.6 (no no-op commit, no re-run loop, no fix declaration
+unless that section allows one). Other failing checks are handled as before.
 
 ### Step 7.5 — Confirm close
 

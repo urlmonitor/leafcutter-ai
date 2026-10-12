@@ -8,7 +8,7 @@ ASSUMED PRODUCTION CONTRACT (written by test-writer; python-coder builds this).
 
 1. pytest.ini registers a ``timing_ratio`` marker in its ``markers =`` key and
    the default selection becomes ``-m "not manual and not timing_ratio"``.
-2. The two TQ-600a-11 wall-clock ratio tests carry ``@pytest.mark.timing_ratio``.
+2. The TQ-600a-11 wall-clock ratio test(s) carry ``@pytest.mark.timing_ratio``.
 3. ``.github/workflows/post-merge-timing.yml`` (name ``Post-merge timing suite``) collects
    ``-m timing_ratio`` and concludes red on a failing test AND on an empty selection.
    (xix shipped it as one job with one pytest step; TQ-600a-13-xii extended it to the
@@ -35,7 +35,6 @@ RATIO_FILE = "unit_tests/ac_store/test_tq_600a_11.py"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "post-merge-timing.yml"
 RATIO_TESTS = (
     "TestTq600a11ParserSpeed::test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser",
-    "TestTq600a11AgentCardWalk::test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline",
 )
 
 

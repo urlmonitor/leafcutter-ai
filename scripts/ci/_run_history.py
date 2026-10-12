@@ -95,6 +95,28 @@ def classify_run(run: dict, jobs: list[dict] | None) -> str:
     return VERDICT_DID_NOT_COMPLETE
 
 
+def verdict_changed(runs: list[dict], triggering_run_id: int) -> bool | None:
+    """Say whether the triggering run's verdict differs from the previous settled run's (TQ-600a-13-xv).
+
+    None when the triggering run is unknown or not settled (superseded, unfinished, not a main run), or when
+    there is no previous settled run: nothing is then re-evaluated. Otherwise True exactly when one of the two is
+    green (conclusion ``success``) and the other is not; red, did-not-complete, timed out and cancelled are all
+    "held", so held followed by held is False. Uses ``_skip_reason``, the one settled-run rule.
+    """
+    trigger = next((r for r in runs if r.get("id") == triggering_run_id), None)
+    if trigger is None:
+        return None
+    main_numbers = [r.get("run_number", 0) for r in runs if tested_main(r)]
+    if _skip_reason(trigger, main_numbers) is not None:
+        return None
+    number = trigger.get("run_number", 0)
+    older = sorted((r for r in runs if r.get("run_number", 0) < number), key=lambda r: r.get("run_number", 0), reverse=True)
+    previous = next((r for r in older if _skip_reason(r, main_numbers) is None), None)
+    if previous is None:
+        return None
+    return (trigger.get("conclusion") == "success") != (previous.get("conclusion") == "success")
+
+
 def _skip_reason(run: dict, main_numbers: list[int]) -> str | None:
     """Return why this run carries no verdict, or None when it is settled."""
     if not tested_main(run):

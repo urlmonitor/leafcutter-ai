@@ -493,6 +493,65 @@ declares_side_effect: false
 origin_agent: BrainCandy
 created: 2026-10-09
 amended_by:
+- reason: cards-ceiling-derivation-superseded-growth-rate-it-was-sized-on-is-gone
+  by: business-analyst
+  at: '2026-10-09'
+  note: 'ADDITIVE ONLY. criteria, readiness (approved), req_status, work_status,
+    priority, it_requirements, test_spec, test_rationale and declares_side_effect are
+    ALL UNTOUCHED. This amendment adds one notes block and this entry. THE 10,000
+    FIGURE IS NOT CHANGED HERE — it_requirements is the IT PO''s field and this author
+    does not write it. What is recorded is that its derivation no longer holds, which
+    this record''s own it_requirements already anticipate: "All three values are to be
+    re-derived, not copied, if the populations have moved materially by implementation
+    time. The reasoning above is the deliverable; the numbers are its output."
+
+
+    THE DERIVATION THAT IS SUPERSEDED, QUOTED SO THE SUPERSESSION IS CHECKABLE.
+    it_requirements item (a) sets docs/agents/cards/ at report_above_lines: 10000 and
+    states the basis: "the measurement that sets the shape is the rate, not the
+    maximum: one ORDINARY regeneration moved that same document from 2,525 to 2,809, a
+    +284-line jump (+11.2%) carrying only unrelated records'' assignment lines. 10,000
+    is 3.56x the present maximum and roughly 25 further regenerations at that observed
+    ordinary rate". EVERY INPUT TO THAT SENTENCE IS GONE. The +284 lines were assignment
+    entries; agent cards become static and no longer carry any. The present maximum of
+    2,809 becomes 162. The sanity check — "a single card at 10,000 lines would be about
+    87% of the entire present directory (11,526 lines across 64 documents)" — is
+    computed against a directory that shrinks by 3,787 lines to roughly 7,739. So the
+    figure now stands at about 62x the present maximum rather than 3.56x, and the
+    growth rate that justified the headroom is zero for the dominant term.
+
+
+    WHAT IS STILL TRUE, SO THE SUPERSESSION IS NOT MISREAD AS A DEMOLITION. The
+    PROPERTY the number exists to deliver is untouched and is restated verbatim by this
+    record''s own it_requirements: "crossed only when something is wrong with the source
+    the location''s ground identifies, never by ordinary regeneration." A ceiling of
+    10,000 still satisfies that property — it is simply no longer derived, and a bound
+    that cannot be explained is a bound nobody will defend when someone proposes raising
+    it. The two sibling ceilings, docs/roadmap.md at 1500 and docs/INDEX.md at 2000, are
+    untouched by the static-cards change and their derivations stand as written; the
+    deliberate asymmetry between them, which this record calls "the measured
+    demonstration that per-location is right rather than global", is unaffected.
+
+
+    THE NEW MEASURED BASIS, HANDED TO ENRICHMENT RATHER THAN APPLIED HERE. Measured
+    2026-10-09 with the static-cards change: the AC-assignment section is 3,787 of
+    11,526 card lines (33%) across 17 of 64 cards; the largest card falls from 2,809 to
+    162; zero cards stand above the 300-line authored limit, where three did. The growth
+    model changes KIND, not just rate: a card''s length becomes a function of its own
+    agent''s template and registry entry alone, so it moves only when that agent is
+    edited, and it no longer moves at all in response to unrelated work elsewhere in the
+    project. That is the property the old derivation was buying headroom against. The IT
+    PO should re-derive (a) against the new maximum and the new coupling, and should
+    expect a substantially lower number; this author states no replacement value because
+    the numbers are not this author''s to set.
+
+
+    THE CARDS ENTRY ITSELF STAYS — see GE-127g''s notes block "DOES THE CARDS ENTRY COME
+    OUT?" for the argument. This record''s own last arm is why the question had to be
+    settled before this one could be: an entry may be set aside only together with a
+    ceiling, so if the cards entry had been removed, this ceiling would have had no
+    entry to attach to and item (a) would have had to be deleted rather than
+    re-derived. It was not removed, so it is re-derived.'
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
@@ -751,6 +810,65 @@ notes: |
       implementation of this shape can still make correctly. Recorded because it is the
       natural way to express "now we do care about this document" and because it quietly
       converts a report into a refusal through GE-127g-1's own judged path.
+
+  ==========================================================================
+  THE CARDS CEILING'S DERIVATION IS SUPERSEDED (2026-10-09). THE FIGURE IS NOT.
+  ==========================================================================
+  Read this before using any number in it_requirements item (a), and before reading the
+  measured block above, which is now a statement about the tree as it stood at
+  authoring time.
+
+  Agent cards became static on the day this record was approved: the trailing per-agent
+  AC-assignment section is removed from every card. The 10,000-line ceiling for
+  docs/agents/cards/ was derived from the RATE at which that section grew — "+284 lines
+  from an unremarkable regeneration", called out above as "the measurement that sets
+  the shape of the ceiling decision". That rate is now zero. The present maximum the
+  figure was scaled against falls from 2,809 to 162, and the directory total from
+  11,526 to roughly 7,739, so the sanity check that a 10,000-line card would be "about
+  87% of the entire present directory" no longer computes either.
+
+  WHAT THAT DOES AND DOES NOT INVALIDATE.
+    - IT DOES NOT invalidate the record. Every criteria arm is about the MECHANISM —
+      that a ceiling exists per entry, is reported and never refused, is read from the
+      declaration at run time, and that an entry without one is rejected. Not one arm
+      names a value, and this record's own test_rationale insists "NO FIGURE IS PINNED
+      ANYWHERE". The arms are unaffected.
+    - IT DOES NOT invalidate the other two ceilings. docs/roadmap.md at 1,500 and
+      docs/INDEX.md at 2,000 are driven by docs/roadmap.json and by the count of
+      indexed documents respectively; neither is touched by the cards change. The
+      deliberate asymmetry between them stands, and so does the argument it supports.
+    - IT DOES invalidate the DERIVATION of item (a), and that matters for a reason
+      this project has written down about itself: BP-1500a's notes record a figure that
+      "looks measured, cites a tool, carries a date, and is none of those things", kept
+      as an instructive error. A 10,000 whose stated basis is a growth rate that no
+      longer exists is that same shape. The number may well survive re-derivation; what
+      must not survive is the sentence explaining it.
+
+  THE GROWTH MODEL CHANGES IN KIND, NOT ONLY IN RATE, AND THIS IS THE INPUT THE
+  RE-DERIVATION ACTUALLY NEEDS. Before: a card grew when ANY unrelated work anywhere in
+  the acceptance-criteria store added or retitled a record naming that agent — which is
+  open-ended coupling, the same shape as docs/INDEX.md's, and it is why the cards got
+  the highest ceiling of the three. After: a card is a function of its own agent's
+  template and registry entry alone. It moves when that agent is edited and at no other
+  time. Open-ended coupling is exactly what the asymmetry paragraph above uses to
+  justify a HIGHER ceiling, so the cards lose the property that earned them the largest
+  number. A re-derivation should expect to land substantially lower, and should size
+  against the new maximum (162) and against what a single legitimately large agent
+  template could produce — not against the old directory total.
+
+  NO REPLACEMENT VALUE IS STATED HERE, DELIBERATELY. The ceiling values are the IT PO's,
+  per this record's own closing paragraph and per GE-127c's precedent of stating the
+  principle and leaving the enumeration to enrichment. What this block supplies is the
+  re-derivation's inputs and the reason it is needed, which is the deliverable this
+  record says the numbers are merely the output of.
+
+  AND THE PRIOR QUESTION, SETTLED ELSEWHERE SO IT IS NOT RE-OPENED HERE: the cards entry
+  STAYS in the declared set-aside list. The argument is in GE-127g's notes under "DOES
+  THE CARDS ENTRY COME OUT?" and turns on membership being a property of the KIND of
+  document rather than of its current size. It had to be settled before this record
+  could be reconciled at all, because this record's last arm makes a ceiling meaningless
+  without an entry to attach it to: had the entry been removed, item (a) would be
+  deleted rather than re-derived.
 
   NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
   test_rationale and declares_side_effect. Those are the IT PO's, as are the numeric

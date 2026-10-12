@@ -434,6 +434,11 @@ and files_touched. Example:>
 
 Fill in BRANCH with the actual branch name from Step 2 (e.g. `feature/standardizebuildcompletionoutput`).
 
+If the PR's checks are failing, a failing `Post-merge suite status` is an external
+hold: report it per `building-epics` §3.6 and do not edit, re-run or commit to
+clear it. Every other failing check is handled as before (a check failing after
+the PR opens goes through the `building-epics` §3.1/§4 ladder via the supervisor).
+
 Review the PR in GitHub (or skip review for trivial changes), then run the finalize
 command above — it will:
 1. Gate on your confirmation before merging.

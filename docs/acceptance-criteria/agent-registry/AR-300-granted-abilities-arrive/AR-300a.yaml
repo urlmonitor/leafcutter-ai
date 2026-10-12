@@ -8,7 +8,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,6 +44,7 @@ covered_by:
   - AR-300a-2
   - AR-300a-3
   - AR-300a-4
+  - AR-300a-5
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "No new user-facing surface -- specialists begin receiving a declaration they were always granted; nothing changes in how anyone invokes anything."
