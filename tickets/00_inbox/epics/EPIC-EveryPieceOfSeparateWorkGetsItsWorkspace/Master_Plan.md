@@ -90,6 +90,7 @@ re-verified, never applied wholesale.
 | 13 | [13_TICKET-20260928-BO-4300-docs-and-diagrams.md](./13_TICKET-20260928-BO-4300-docs-and-diagrams.md) | How-tos, answer reference, component/sequence/state diagrams | a-3, a-4, a-5, c-5, d-5, e-5 | 11, 12 | `[ ]` |
 | 14 | [14_TICKET-20260928-BO-4300-retire-former-ways.md](./14_TICKET-20260928-BO-4300-retire-former-ways.md) | Retire the old scripts, repo-wide census, rewrite every written recipe | f-2-ia, f-2-ib, f-2 | 01, 11, 12, 13 | `[ ]` |
 | 15 | [15_TICKET-20261010-BO-4300c-6-canary-robustness.md](./15_TICKET-20261010-BO-4300c-6-canary-robustness.md) | Stage canaries never read a git failure as a pass and never block ordinary work (added 2026-10-10, decision dec-0ed3e2e3a1cd8340) | c-6 | 05 | `[ ]` |
+| 16 | [16_TICKET-20261012-workflow-meta-skips-shared-modules.md](./16_TICKET-20261012-workflow-meta-skips-shared-modules.md) | check-workflow-meta checks only top-level workflows, not _shared/ modules (found at ticket 10's commit, 2026-10-12) | -- | -- | `[x]` |
 
 AC ids above omit the `BO-4300` prefix. 58 ACs across tickets 02-14 plus BO-4300a-1 in ticket 01 = 59; BO-4300c-6 (ticket 15, added 2026-10-10) = 60.
 
