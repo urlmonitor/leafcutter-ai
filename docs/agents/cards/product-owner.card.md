@@ -93,6 +93,8 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `signoff` | always | — |
+| `knowledge-query` | conditional | Use when you need to search a keyword across agents, skills, docs and ADRs for component context. |
+| `ac-tree-split` | conditional | When an L0 or L1 exceeds its child limit, load ac-tree-split for split patterns A and C. |
 ---
 
 ## Configuration
