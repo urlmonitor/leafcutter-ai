@@ -45,6 +45,7 @@ _PREFIX = f"/repos/{REPO}"
 _RUNS = re.compile(r"/actions/workflows/([^/]+)/runs")
 _RERUN = re.compile(r"/actions/runs/(\d+)/rerun")
 _JOBS = re.compile(r"/actions/runs/(\d+)/jobs")
+_ONE_RUN = re.compile(r"/actions/runs/(\d+)")
 SHAS = {name: char * 40 for name, char in zip("ABCDEFGH", "abcdef01", strict=True)}
 OPEN_PRS = {"A": 11, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16}  # the six that count; G (other base) and H (closed) do not
 
@@ -133,6 +134,10 @@ class ReevalService:
             return 200, self._runs([r for runs in self.workflows.values() for r in runs], query), {}
         if method == "GET" and _JOBS.fullmatch(rest):
             return 200, {"total_count": 0, "jobs": []}, {}
+        one_run = _ONE_RUN.fullmatch(rest) if method == "GET" else None
+        if one_run:  # one run with its workflow `path` (TQ-600a-13-xi: the client reads it before it re-runs it)
+            found = [r for runs in self.workflows.values() for r in runs if r["id"] == int(one_run.group(1))]
+            return (200, found[0], {}) if found else (404, {"message": "Not Found"}, {})
         rerun_match = _RERUN.fullmatch(rest) if method == "POST" else None
         if rerun_match:
             return self._rerun(int(rerun_match.group(1)))
@@ -192,6 +197,7 @@ def hold_run(number, sha, *, status="completed", event="pull_request_target", ag
     run["id"] = 1000 + number
     run["html_url"] = f"{SERVER}/{REPO}/actions/runs/{run['id']}"
     run["path"] = f".github/workflows/{HOLD_FILE}"
+    run["head_repository"] = {"full_name": REPO}  # as the API serves it; the client reads it before a re-run (TQ-600a-13-xi)
     run["created_at"] = run["run_started_at"] = _stamp(datetime.now(timezone.utc) - timedelta(days=age_days))
     return run
 

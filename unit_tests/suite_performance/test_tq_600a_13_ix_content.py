@@ -33,7 +33,8 @@ class ContentAndWriteFailures(FaultCase):
 
     def _pull_request_verdict(self):
         """``evaluate_pull_request`` through the real client: what the check publishes (it must return, never raise)."""
-        client = import_production("scripts.ci._github_rest").GitHubClient(self.svc.url, "fake-token", timeout=TIMEOUT)
+        rest = import_production("scripts.ci._github_rest")
+        client = rest.GitHubClient(self.svc.url, "fake-token", timeout=TIMEOUT, policy=rest.WritePolicy(repo=REPO, notice_comments=True, pr_comment=PR))  # the hold's own grant (post_merge_hold.main)
         return import_production(HOLD_MODULE).evaluate_pull_request(client, REPO, PR, now=NOW, head_sha=HEAD)
 
     def _notice_read_refused(self):

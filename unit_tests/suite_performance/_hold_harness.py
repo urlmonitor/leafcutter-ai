@@ -133,7 +133,8 @@ class HoldTestCase(EndingTestCase):
         hold = import_production(HOLD_MODULE)
         found = getattr(hold, "evaluate", None)
         CHECK.assertTrue(callable(found), f"{HOLD_MODULE}.evaluate is not implemented yet")
-        client = import_production("scripts.ci._github_rest").GitHubClient(self.svc.url, "fake-token")
+        rest = import_production("scripts.ci._github_rest")
+        client = rest.GitHubClient(self.svc.url, "fake-token", policy=rest.WritePolicy(repo=REPO, notice_comments=True))  # the hold's grant (the exemption record); no PR here
         return found(client, REPO, now=now)
 
     def serve(self, runs, jobs=None):
