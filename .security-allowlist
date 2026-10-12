@@ -715,6 +715,14 @@ GENERIC_SECRET:unit_tests/suite_performance/_flaky_harness.py:*
 # Duplicated to the workspace-root copy per the dual-update rule.
 ENTROPY_HIGH:reports/feedback-snapshots/feedback-corpus-2026-10-09.jsonl:*
 
+# Knowledge-emission snapshot, 2026-10-12 (47 records, INF-400c-4 reopened in #1114).
+# Same false positive as the feedback snapshots: long one-line JSON records of dense
+# prose read as high entropy (11 lines flagged). Swept before this entry was added for
+# sk-*, ghp_/github_pat_, AKIA*, PEM headers, password=, secret_key, api_key, bearer,
+# authorization, xox[baprs]-, AIza*, JWTs and user:pass@host URIs (0 hits). Glob, not
+# per-line. Duplicated to the workspace-root copy per the dual-update rule.
+ENTROPY_HIGH:reports/knowledge-snapshots/knowledge-emissions-2026-10-12.jsonl:*
+
 # Closed Aura evaluation: exact immutable lines, reviewed 2026-10-09.
 # 58 existing artifact-path/SHA256 keys and 22 optional_unresolved related-doc paths.
 # Only ENTROPY_HIGH is suppressed; credential-pattern rules remain active.
