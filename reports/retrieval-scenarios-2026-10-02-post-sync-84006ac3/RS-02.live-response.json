@@ -1,0 +1,501 @@
+{
+  "scenario_id": "RS-02",
+  "request": {
+    "schema_version": "1.0",
+    "goal": "How many ACs concern test writing? Exclude parent requirements.",
+    "caller": {
+      "schema_version": "1.0",
+      "id": "scenario-evaluator",
+      "kind": "host"
+    },
+    "scope": {
+      "schema_version": "1.0",
+      "workspace_id": "leafcutter",
+      "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+      "revision": {
+        "schema_version": "1.0",
+        "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+        "dirty": false,
+        "tree_fingerprint": null
+      },
+      "component_ids": [],
+      "read_roots": [
+        "docs"
+      ],
+      "source_ids": [],
+      "technologies": []
+    },
+    "requested_output_schema": "leafcutter.evidence_bundle.v1",
+    "input_payload_schema": "leafcutter.research_request.v1",
+    "input_payload": {
+      "question": "How many ACs concern test writing? Exclude parent requirements."
+    },
+    "initial_evidence": [],
+    "constraints": [],
+    "permissions": [
+      "read_repo"
+    ]
+  },
+  "entry_point": "KernelService.start_run via actual build_environment",
+  "actors": {
+    "Jev": "real TypeSafe; configured jev-latest; resolved jev-1.13.0",
+    "host": "not substituted; waits retained",
+    "human": "not substituted; waits retained",
+    "tracer": "local RecordingTracer; no remote export"
+  },
+  "actual_response": {
+    "schema_version": "1.0",
+    "run_id": "run-ed29ec379cf64818",
+    "root_task_id": "task-7a0904097a974e36",
+    "state_revision": 2,
+    "status": "waiting_human",
+    "output": null,
+    "report_ref": null,
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": {
+      "schema_version": "1.0",
+      "id": "int-524d3f72a87b412c",
+      "created_at": "2026-10-02T13:24:10.125321Z",
+      "updated_at": "2026-10-02T13:24:10.125321Z",
+      "created_seq": 0,
+      "work_item_id": "work-62e341d91e4046f9",
+      "decision_id": null,
+      "subject_ids": [],
+      "question": "I am not sure how to handle this request: \"How many ACs concern test writing? Exclude parent requirements.\". Which of these fits best? You can also say it in your own words.",
+      "relevant_evidence_ids": [],
+      "choices": [
+        {
+          "schema_version": "1.0",
+          "id": "research",
+          "label": "Gathers inspectable evidence for a question: selects needed evidence categories, retrieves from available sources, an...",
+          "consequences": ""
+        }
+      ],
+      "free_text_allowed": true,
+      "structured_allowed": false,
+      "why_research_cannot_settle": "I could not tell which of my abilities fits your request.",
+      "required_actor_kind": "human",
+      "state_revision": 2
+    },
+    "limitations": [],
+    "gaps": [],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 1,
+      "host_operations": 0,
+      "input_tokens": 552,
+      "output_tokens": 60,
+      "cost_usd_known": 2.3184e-05,
+      "cost_unknown_calls": 0,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 552,
+          "output_tokens": 60,
+          "duration_ms": 335,
+          "cost_usd": 2.3184e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "1c623f4f1261631e09694754a3390e8b",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "seconds": 0.508,
+  "trace": [
+    {
+      "index": 0,
+      "kind": "segment",
+      "name": "leafcutter.run.start",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "pending",
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {},
+      "closed": false
+    },
+    {
+      "index": 1,
+      "kind": "span",
+      "name": "kernel.intake",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": null,
+        "task_id": null,
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 2,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 3,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 4,
+      "kind": "generation",
+      "name": "jev.kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 3,
+      "data": {
+        "model": "jev-1.13.0",
+        "input": {
+          "questions": [
+            {
+              "id": "route.work-fb3b02cfb4824344",
+              "kind": "choice",
+              "template_id": "kernel.route",
+              "template_version": "1"
+            }
+          ],
+          "state_chars": 346,
+          "input_fingerprint": "3fe22b733e5b64891eae1155702b284660973f8f6a65448ac8eac14c57b13385"
+        },
+        "output": {
+          "answers": {
+            "route.work-fb3b02cfb4824344": {
+              "schema_version": "1.0",
+              "kind": "choice",
+              "question_id": "route.work-fb3b02cfb4824344",
+              "choice": "research",
+              "probabilities": {
+                "__NONE__": 0.05,
+                "__NEEDS_CONTEXT__": 0.28,
+                "research": 0.67
+              },
+              "confidence": 0.5
+            }
+          }
+        },
+        "usage": {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 552,
+          "output_tokens": 60,
+          "duration_ms": 335,
+          "cost_usd": 2.3184e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        },
+        "metadata": {
+          "purpose": "kernel.route",
+          "adapter_version": "typesafe-classifier/0.0.1a3",
+          "latency_ms": 335,
+          "question_count": 1,
+          "status": "ok",
+          "template_ids": [
+            "kernel.route@1"
+          ],
+          "request_id": "req_01a0fcc95cac7b96953ac52818a8e2b8",
+          "calls": 1,
+          "input_fingerprint": "3fe22b733e5b64891eae1155702b284660973f8f6a65448ac8eac14c57b13385",
+          "chunk_index": 0,
+          "chunk_count": 1,
+          "attempts": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 5,
+      "kind": "event",
+      "name": "routing.assessed",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": "work-fb3b02cfb4824344",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": 3,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "outcome": "insufficient_context",
+          "selected": null,
+          "reason_codes": [
+            "low_confidence"
+          ]
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 6,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 7,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 8,
+      "kind": "span",
+      "name": "kernel.route",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 9,
+      "kind": "event",
+      "name": "interaction.opened",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": "work-62e341d91e4046f9",
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": "int-524d3f72a87b412c",
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "level": "DEFAULT",
+        "payload": {
+          "kind": "human",
+          "state_revision": 1
+        }
+      },
+      "closed": false
+    },
+    {
+      "index": 10,
+      "kind": "span",
+      "name": "kernel.integrate",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    },
+    {
+      "index": 11,
+      "kind": "span",
+      "name": "kernel.schedule",
+      "corr": {
+        "schema_version": "1.0",
+        "run_id": "run-ed29ec379cf64818",
+        "root_task_id": "task-7a0904097a974e36",
+        "task_id": "task-7a0904097a974e36",
+        "work_item_id": null,
+        "request_id": null,
+        "invocation_id": null,
+        "decision_id": null,
+        "capability_id": null,
+        "interaction_id": null,
+        "parent_work_item_id": null,
+        "causation_seq": null
+      },
+      "parent": null,
+      "data": {
+        "span_kind": "node",
+        "input": null,
+        "metadata": {}
+      },
+      "closed": true
+    }
+  ],
+  "independent_verdict": {
+    "target_progress": "fail",
+    "safety_boundary": "correct wait",
+    "answer_correctness": "not assessable: no answer",
+    "review": "docs/analysis/2026-10-02-retrieval-scenario-results-post-sync.md"
+  },
+  "provider_calls": 1,
+  "retrieval_reached": false,
+  "retrieved_source_sha": null,
+  "configured_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "checkpoint": {
+    "path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-retrieval-scenarios-post-sync-84006ac3\\runs/checkpoints.sqlite",
+    "run_id": "run-ed29ec379cf64818",
+    "retained_locally": true
+  },
+  "interpretation": "Initial routing chose research below the configured confidence threshold; the kernel requested an ability choice. No retrieval, returned answer or evidence was reached."
+}

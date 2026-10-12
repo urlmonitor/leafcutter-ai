@@ -1,0 +1,71 @@
+{
+  "kind": "Skill",
+  "status": "implemented_and_verified",
+  "review_contract": "reports/native-fields/review-Skill.json",
+  "files": [
+    "knowledge/native_types/skill.py",
+    "tests/knowledge/test_native_skill.py",
+    "reports/native-fields/code-Skill.json"
+  ],
+  "entry_point": "knowledge.native_types.skill.extract(root: Path) -> list[NativeRecord]",
+  "behavior": {
+    "admission": "One record per registry entry, including internal and deprecated skills; missing registry yields no records. Present malformed envelopes, entries, identities, duplicate identities and referenced unavailable templates raise explicit errors.",
+    "metadata": "Exact raw registry entry, including all eleven current schema fields, unknown extensions, nested values, null, empty collections, ordered arrays and absence distinctions. No defaults inserted.",
+    "derived": [
+      "template_frontmatter",
+      "template_body",
+      "template_source_path",
+      "template_source_hash"
+    ],
+    "provenance": "Registry source_path and /skills/index locator; template path normalized under snapshot root and SHA-256 computed from raw template bytes.",
+    "separate_authority": "Template frontmatter and registry mappings remain independent, including different names, descriptions, portable/internal flags and workflow references. Optional display description fallback does not manufacture registry metadata.",
+    "legacy_compatibility": "All 42 current skills retained. allowed-tools remains string or list as authored; build-single-ticket and ac-tree-split retain its absence, and ac-tree-split keeps tools, trigger and visibility verbatim.",
+    "boundaries": "Relative paths are confined after resolution, rejecting absolute, Windows-drive, UNC and escaping traversal paths. Only registry and declared templates are read. Source instructions, workflows, dependencies and configuration references are never executed or resolved."
+  },
+  "verification": {
+    "command": "AC_ENFORCE_STRICT=1 PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/knowledge/test_native_skill.py -q -p no:cacheprovider --tb=short --disable-warnings",
+    "red": {
+      "result": "22 failed",
+      "reason": "Captured before implementation; knowledge.native_types.skill was missing.",
+      "duration_seconds": 0.67
+    },
+    "green_after_mutations_and_formatting": {
+      "result": "22 passed",
+      "duration_seconds": 0.47,
+      "collection_errors": 0
+    },
+    "real_records": 42,
+    "ruff_check": "passed",
+    "ruff_format": "applied to focused test file; reader already formatted",
+    "mutation_method": "Replaced the imported production module's extract callable in process, executed the named existing test, required AssertionError, and restored the original callable. No on-disk production changes from mutation probes.",
+    "mutation_results": [
+      {
+        "test": "test_skill_absent_registry_does_not_admit_unregistered_templates",
+        "alteration": "Fabricated a Skill from an unregistered template with no registry.",
+        "result": "caught AssertionError"
+      },
+      {
+        "test": "test_skill_missing_null_and_empty_optional_fields_remain_distinct",
+        "alteration": "Inserted default internal=false into raw metadata.",
+        "result": "caught AssertionError"
+      },
+      {
+        "test": "test_skill_template_description_fallback_does_not_create_registry_field",
+        "alteration": "Copied presentation description into absent registry description.",
+        "result": "caught AssertionError"
+      },
+      {
+        "test": "test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter",
+        "alteration": "Invented allowed-tools=[] for legacy templates that omit the field.",
+        "result": "caught AssertionError"
+      },
+      {
+        "test": "test_skill_preserves_all_registry_fields_and_independent_template_fields",
+        "alteration": "Discarded the authored nested extension mapping.",
+        "result": "caught AssertionError"
+      }
+    ]
+  },
+  "integration_boundary": "Shared generic Neo4j projection must expose metadata and every derived leaf/shape. This scoped task verified the complete extracted records; shared publication and Aura verification belong to the coordinating task.",
+  "committed": false
+}

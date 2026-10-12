@@ -55,6 +55,11 @@ ARCHITECTURE: Two public phase functions, re-exported from build_phases.py so
     (package_root in, a set[str] out; no dependency on build_phases's private
     state), so unlike the two phase functions above they need no deferred
     import to avoid a circular-import at module load time.
+
+    ``WORKFLOW_TOOL_SCRIPTS`` is the single ordered list of workflow-tool
+    scripts. ``_manifest_workflow_tool_scripts`` reads it here, and
+    ``build_workflow_tools`` (build_phases_workflows.py) imports it at call
+    time and copies exactly those files.
 """
 
 from __future__ import annotations
@@ -139,6 +144,15 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   ``Path(__file__)``-rooted reference to the JSON file -- see build.py's
     #   own DECISION HISTORY for that half of the fix).
     #   (#TICKETLESS reason=fast-lane-pr-review-fix-INF-400c-5-H1)
+    # - 2026-09-23 [python-coder/INF-700a-2]: Added harvest_status.py (the
+    #   --status / last-run-marker sibling module) to deploy_scripts, per the
+    #   documented repeat defect of a new scripts/knowledge/*.py module being
+    #   silently absent from a deployed install when this list (and its
+    #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
+    # - 2026-10-08 [python-coder/INF-700a-5]: Added completion_routing.py and
+    #   its three siblings (_state, _git, _cli), the durability step the wired
+    #   completion workflows now call; they were in no deploy list, so nothing
+    #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
     """
     import build_phases as _bp
 
@@ -151,6 +165,11 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -491,8 +510,14 @@ def check_knowledge_routing_wiring_guard(output_root: Path) -> int:
         return 0
 
     try:
-        guardrail_config = yaml.safe_load(
-            guardrail_config_path.read_text(encoding="utf-8")
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here returns 1, aborting
+        # the build -- a guardrail decision point (criterion 4). Single
+        # config file read once per build -- no speed case for the fast
+        # loader here.
+        guardrail_config = yaml.load(
+            guardrail_config_path.read_text(encoding="utf-8"),
+            Loader=yaml.SafeLoader,
         ) or {}
     except (OSError, yaml.YAMLError) as exc:
         print(
@@ -577,19 +602,49 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "sink_resolution.py",
         "capture_write.py",
         "harvest_cli.py",
+        "harvest_status.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
     return result
 
 
+# The ONE ordered list of workflow-tool scripts: build_workflow_tools()
+# (build_phases_workflows.py) copies exactly these, in this order, and
+# _manifest_workflow_tool_scripts() below reports exactly these, so the deploy
+# and the manifest cannot drift apart. A sibling module that knowledge_query.py
+# loads by file path (_load_sibling_module("X")) MUST be listed here, or every
+# consumer install's knowledge_query.py fails with FileNotFoundError;
+# unit_tests/build_guards/test_workflow_tool_sibling_modules_deployed.py fails
+# when one is missing.
+WORKFLOW_TOOL_SCRIPTS: tuple[str, ...] = (
+    "add_component.py",
+    "knowledge_query.py",
+    "knowledge_frontmatter_reader.py",
+    "frontmatter_path_resolver.py",
+    "knowledge_file_nodes.py",
+    "knowledge_surface_check.py",
+    "knowledge_rendering.py",
+    "knowledge_edges.py",
+    "set_ticket_status.py",
+    "ticket_prioritizer.py",
+    "port_registry.py",
+    "live_surface_startup.py",
+    "generate_doc_index.py",
+)
+
+
 def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     """Return ``scripts/<name>`` entries for workflow-tool scripts deployed by build_workflow_tools.
 
     Scans the package source for the workflow-tool scripts and returns
-    manifest entries for those that exist.  Must be kept in parity with the
-    ``deploy_scripts`` list inside ``build_workflow_tools()`` in
-    ``build_phases.py`` — a mismatch trips the manifest/deploy parity guard.
+    manifest entries for those that exist. Reads the same
+    ``WORKFLOW_TOOL_SCRIPTS`` tuple that ``build_workflow_tools()``
+    (``build_phases_workflows.py``) deploys from, so the two cannot disagree.
 
     Args:
         package_root: Absolute path to the leafcutter package root.
@@ -643,22 +698,18 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
     #   corrected that before dispatch, since this function moved here (not
     #   build_phases_workflows.py) by the GE-127b-1 fix above. Placement has
     #   no import-order dependency on any other entry in this tuple.
+    # - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+    #   The inline tuple became the module-level WORKFLOW_TOOL_SCRIPTS, which
+    #   build_workflow_tools() now also reads instead of keeping its own
+    #   deploy_scripts copy. Added knowledge_rendering.py after
+    #   knowledge_surface_check.py: knowledge_query.py loads it at import
+    #   time via _load_sibling_module() since c2ddb6f12, but neither hand
+    #   list named it, so every consumer's deployed knowledge_query.py
+    #   crashed with FileNotFoundError (KM-KGS-100a-3-xi regressed).
     """
     result: set[str] = set()
     scripts_src = package_root / "scripts"
-    for fname in (
-        "add_component.py",
-        "knowledge_query.py",
-        "knowledge_frontmatter_reader.py",
-        "frontmatter_path_resolver.py",
-        "knowledge_file_nodes.py",
-        "knowledge_surface_check.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ):
+    for fname in WORKFLOW_TOOL_SCRIPTS:
         if (scripts_src / fname).is_file():
             result.add(f"scripts/{fname}")
     return result
@@ -691,4 +742,8 @@ def _manifest_workflow_tool_scripts(package_root: Path) -> set[str]:
 #   ``_get_source_deployable_scripts`` and (for the knowledge script names
 #   only, via ``build_knowledge_scripts``'s own deploy_scripts list, unrelated
 #   to this move) ``_get_source_paths_for_guard``. (#INF-400c-5)
+# - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]: Added
+#   WORKFLOW_TOOL_SCRIPTS, the one list both the workflow-tool manifest and
+#   build_workflow_tools() read, with knowledge_rendering.py added. It was
+#   missing from both hand lists, so deployed knowledge_query.py crashed.
 # ===========================================================================

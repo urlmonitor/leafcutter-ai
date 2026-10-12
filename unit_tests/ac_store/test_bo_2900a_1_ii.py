@@ -74,6 +74,20 @@ import yaml  # noqa: E402
 
 from done_proof import verify_done_eligible  # noqa: E402
 
+# BO-2900a-1's rule was SUSPENDED to report-only on 2026-09-30 (see
+# scripts/ac_store/_done_proof_entry_point_gate.py DECISION HISTORY): it announces its
+# findings and returns the verdict unchanged, so nothing it judges is refused. Every
+# assertion below that expects a REFUSAL therefore fails, and a-1 is `work_status: todo`
+# for exactly that reason. The three tests are marked expected-failure rather than
+# rewritten, so the record of what a-1 demands survives the suspension.
+#
+# SELF-CLEANING, do not soften: `expectedFailure` reports an unexpected PASS as a
+# failure, so re-arming the rule turns this file red until the markers come off. CI runs
+# AC_ENFORCE_STRICT=1 (.github/workflows/ci.yml), so the AC-enforcement plugin does NOT
+# mask these on the strength of a-1 being todo -- these markers are what keep the
+# required pytest gate both honest and green.
+_SUSPENDED_RULE = "BO-2900a-1 rule suspended to report-only; see a-1-ii / a-1-iii"
+
 
 # ---------------------------------------------------------------------------
 # Test 4 -- reachability: the REAL deployed CLI entry point, via subprocess
@@ -150,6 +164,7 @@ class TestBo2900a1ReachableFromEntryPoint(unittest.TestCase):
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    @unittest.expectedFailure  # _SUSPENDED_RULE
     def test_bo_2900a_1_reachable_from_entry_point(self) -> None:
         # covers: BO-2900a-1
         # angle: reachability
@@ -283,6 +298,7 @@ class TestCrossFileDirectImportProofIsRefusedWhenUnitHasAnEntryPoint(unittest.Te
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    @unittest.expectedFailure  # _SUSPENDED_RULE
     def test_cross_file_direct_import_proof_is_refused_when_unit_has_an_entry_point(
         self,
     ) -> None:
@@ -435,6 +451,7 @@ class TestA1RefusalSurvivesTheA3GateWhenTheTwoDefinitionsDiverge(unittest.TestCa
     def tearDown(self) -> None:
         self._tmp.cleanup()
 
+    @unittest.expectedFailure  # _SUSPENDED_RULE
     def test_a1_refusal_survives_the_a3_gate_when_the_two_definitions_diverge(
         self,
     ) -> None:

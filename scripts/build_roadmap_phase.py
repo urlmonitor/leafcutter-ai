@@ -133,7 +133,7 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
             "This file provides guidance to Claude Code when working in this repository.\n\n"
             + block + "\n"
         )
-        claude_md.write_text(minimal_content, encoding="utf-8")
+        claude_md.write_text(minimal_content, encoding="utf-8", newline="\n")
         print("  roadmap-phase: created CLAUDE.md with roadmap sentinel block")
         return 1
 
@@ -152,7 +152,7 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
         if dry_run:
             print("  roadmap-phase: [DRY-RUN] would rewrite roadmap sentinel block in CLAUDE.md")
             return 1
-        claude_md.write_text(new_content, encoding="utf-8")
+        claude_md.write_text(new_content, encoding="utf-8", newline="\n")
         print("  roadmap-phase: updated roadmap sentinel block in CLAUDE.md")
         return 1
 
@@ -189,7 +189,7 @@ def wire_roadmap_phase_claude_md(target_root: Path, dry_run: bool, docs_root: st
     if dry_run:
         print("  roadmap-phase: [DRY-RUN] would inject roadmap sentinel block into CLAUDE.md")
         return 1
-    claude_md.write_text(new_content, encoding="utf-8")
+    claude_md.write_text(new_content, encoding="utf-8", newline="\n")
     print("  roadmap-phase: injected roadmap sentinel block into CLAUDE.md")
     return 1
 

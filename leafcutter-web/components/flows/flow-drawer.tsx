@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Slide-in detail drawer for a single flow step (or branch). Shows the plain-
- * language `human` line, the step's acceptance scenario(s), the entities it
+ * Slide-in detail drawer for a single flow step (or branch). Shows the one-
+ * sentence `description`, who runs it (actor kind + agent), the structured
+ * contract detail from io_contracts, the step's acceptance scenario(s), the entities it
  * reads/writes with their actual mock RECORDS, and its acceptance criteria as
  * chips coloured by each AC's LIVE work-status (clickable through to /atlas).
  */
@@ -18,7 +19,6 @@ import {
   ShieldCheck,
   Database,
   GitBranch,
-  Bot,
   LogIn,
   LogOut,
   Maximize2,
@@ -28,35 +28,17 @@ import { Badge } from "@/components/ui/kit";
 import { cn, humanize } from "@/lib/utils";
 import { WORK_STATUS_TONE, WORK_STATUS_PLAIN } from "@/lib/status";
 import { RealizationBadge } from "./realization-badge";
+import { FlowContracts } from "./flow-contracts";
+import { parseIoContracts } from "@/lib/data/flow-contracts";
+import { StepRunner } from "./step-runner";
+import type { StepView } from "./flow-step-view";
+export type { StepView } from "./flow-step-view";
 import type {
   AcRef,
-  FlowRealization,
-  FlowScenario,
   MockData,
   MockEntity,
-  WorkStatus,
 } from "@/lib/data/types";
 
-export interface StepView {
-  id: string;
-  label: string;
-  human: string;
-  screen: string | null;
-  screenTitle?: string | null;    // resolved mockup title for the screen slug
-  realization?: FlowRealization;  // does the parent flow's system exist yet
-  variant: "step" | "branch";
-  condition?: string;
-  status: WorkStatus;
-  agent?: string | null;
-  produces?: string[];
-  consumes?: string[];
-  reads: string[];
-  writes: string[];
-  acs: AcRef[];
-  scenarios: FlowScenario[];
-  expandsTo?: string | null;      // child flow id this step drills into
-  expandsToName?: string | null;  // resolved child flow name (null if unresolved)
-}
 
 function Section({
   icon,
@@ -220,6 +202,7 @@ export function FlowDrawer({
   const st = step
     ? WORK_STATUS_TONE[step.status] ?? WORK_STATUS_TONE.unknown
     : WORK_STATUS_TONE.unknown;
+  const contracts = parseIoContracts(step?.ioContracts, step?.contractDefinitions);
 
   return (
     <AnimatePresence>
@@ -288,9 +271,9 @@ export function FlowDrawer({
                 </button>
               )}
 
-              {step.human && (
-                <p className="text-sm leading-relaxed text-foreground/90">
-                  {step.human}
+              {step.description && (
+                <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
+                  {step.description}
                 </p>
               )}
 
@@ -322,15 +305,11 @@ export function FlowDrawer({
                 </Section>
               )}
 
-              {step.agent && (
-                <Section icon={<Bot className="h-3 w-3" />} title="Runs (agent / script)">
-                  <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2 py-1 font-mono text-[11px] text-primary">
-                    {step.agent}
-                  </span>
-                </Section>
-              )}
+              <StepRunner agent={step.agent} actorKind={step.actorKind} />
 
-              {step.consumes && step.consumes.length > 0 && (
+              {contracts && <FlowContracts contracts={contracts} definitions={step.contractDefinitions ?? {}} />}
+
+              {!contracts && step.consumes && step.consumes.length > 0 && (
                 <Section icon={<LogIn className="h-3 w-3" />} title="Consumes (handoff in)">
                   <div className="flex flex-wrap gap-1.5">
                     {step.consumes.map((c) => (
@@ -345,7 +324,7 @@ export function FlowDrawer({
                 </Section>
               )}
 
-              {step.produces && step.produces.length > 0 && (
+              {!contracts && step.produces && step.produces.length > 0 && (
                 <Section icon={<LogOut className="h-3 w-3" />} title="Produces (handoff out)">
                   <div className="flex flex-wrap gap-1.5">
                     {step.produces.map((p) => (

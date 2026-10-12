@@ -58,7 +58,8 @@ def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
             ["git", *args],
             cwd=str(cwd),
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=_GIT_TIMEOUT_SECONDS,
             check=False,
         )
@@ -75,6 +76,16 @@ def _git_output(args: list[str], cwd: Path) -> str | None:
     if proc.returncode != 0:
         return None
     return proc.stdout.strip() or None
+
+
+def _anchor_dir(path: Path) -> Path:
+    """Resolve *path* to a directory usable as a git cwd.
+
+    An existing file (e.g. a ticket ``.md``) maps to its parent directory,
+    since git cannot run with a file as cwd. Directories and non-existent
+    paths are returned unchanged.
+    """
+    return path.parent if path.is_file() else path
 
 
 def repo_facts(path: Path, reference: Path) -> dict:
@@ -128,7 +139,7 @@ def repo_facts(path: Path, reference: Path) -> dict:
     facts["branch"] = branch if branch and branch != "HEAD" else None
 
     ref_common = _git_output(
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"], reference
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"], _anchor_dir(reference)
     )
     if common_dir is not None and ref_common is not None:
         facts["same_repository"] = Path(common_dir).resolve() == Path(ref_common).resolve()
@@ -159,7 +170,7 @@ def worktree_base(start: Path) -> dict:
         *start* is not inside a git repository at all.
     """
     common_dir = _git_output(
-        ["rev-parse", "--path-format=absolute", "--git-common-dir"], start
+        ["rev-parse", "--path-format=absolute", "--git-common-dir"], _anchor_dir(start)
     )
     if common_dir is None:
         return {"main_checkout": None, "worktree_base": None, "layout": None}
@@ -194,6 +205,7 @@ def branch_standing(branch: str, repo: Path) -> dict:
         fetch failed) — never coerced to 0 (BO-4000b: an unfetchable origin
         is "unverifiable", not "0 behind").
     """
+    repo = _anchor_dir(repo)
     exists = _git_output(["branch", "--list", branch], repo) is not None
 
     fetch_ok = False
@@ -223,8 +235,53 @@ def branch_standing(branch: str, repo: Path) -> dict:
     }
 
 
+def worktree_dirty(repo: Path) -> dict:
+    """Staged, unstaged and untracked paths of the worktree at *repo* (BO-100e-4).
+
+    Runs ``git status --porcelain -uall -z`` (read-only: it never changes the
+    index). ``-z`` leaves names unquoted, so spaces and non-ASCII come back
+    verbatim; ``-uall`` expands untracked directories to files. A rename or
+    copy entry names its NEW path. A file staged and then edited again is in
+    both ``staged`` and ``unstaged``.
+
+    Args:
+        repo: A path inside the worktree to inspect.
+
+    Returns:
+        ``{ readable, staged, unstaged, untracked }``; ``readable`` is False
+        (lists empty) when git could not report the state, e.g. *repo* is not
+        a checkout. Never coerced to a clean-looking answer.
+    """
+    result: dict = {"readable": False, "staged": [], "unstaged": [], "untracked": []}
+    try:
+        proc = _run_git(["status", "--porcelain", "-uall", "-z"], _anchor_dir(repo))
+    except OSError:
+        return result
+    if proc.returncode != 0:
+        return result
+    entries = proc.stdout.split("\x00")
+    index = 0
+    while index < len(entries):
+        entry = entries[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        code, path = entry[:2], entry[3:]
+        if code[0] in "RC":
+            index += 1  # the old name follows as its own NUL-separated field
+        if code == "??":
+            result["untracked"].append(path)
+            continue
+        if code[0] not in " !":
+            result["staged"].append(path)
+        if code[1] not in " !":
+            result["unstaged"].append(path)
+    result["readable"] = True
+    return result
+
+
 def _build_parser() -> argparse.ArgumentParser:
-    """Build the ``facts`` / ``base`` / ``branch-standing`` subcommand parser."""
+    """Build the ``facts`` / ``base`` / ``branch-standing`` / ``dirty`` subcommand parser."""
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -238,6 +295,9 @@ def _build_parser() -> argparse.ArgumentParser:
     standing_p = sub.add_parser("branch-standing", help="Branch standing vs origin/main.")
     standing_p.add_argument("branch")
     standing_p.add_argument("--repo", default=".")
+
+    dirty_p = sub.add_parser("dirty", help="Staged/unstaged/untracked paths of a worktree.")
+    dirty_p.add_argument("repo", nargs="?", default=".")
 
     return parser
 
@@ -255,6 +315,8 @@ def main(argv: list[str] | None = None) -> int:
         result = repo_facts(Path(args.path), Path(args.reference))
     elif args.command == "base":
         result = worktree_base(Path(args.start))
+    elif args.command == "dirty":
+        result = worktree_dirty(Path(args.repo))
     else:
         result = branch_standing(args.branch, Path(args.repo))
     sys.stdout.write(json.dumps(result))
@@ -275,3 +337,7 @@ if __name__ == "__main__":
 #   build-feature.js's worktree step, so BO-4000's reuse/open/refuse decision
 #   is made from real git facts rather than an agent's judgement or the
 #   resolver's own word. (#BO-4000)
+# - 2026-10-07 [python-coder]: Added the `dirty` subcommand (staged / unstaged /
+#   untracked, `-z` parsing, rename new-path) so build-feature.js's epic loop
+#   can read the worktree once before continuing past a halted ticket; an
+#   unreadable state answers readable:false, never clean. (#BO-100e-4)

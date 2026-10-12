@@ -88,7 +88,7 @@ Consult it for project-specific terms when reading code or docs.
 - **To populate from scratch**: run `/glossary-bootstrap` (once after initial install
   or after a major codebase merge).
 - **Ongoing additions**: the `check-glossary-coverage` pre-commit hook detects novel
-  terms in staged files and dispatches the `glossary-triage` agent automatically.
+  terms in staged files and reports them (it cannot dispatch agents); triage via `glossary-triage` + `glossary_bootstrap.py --apply-decisions`.
 - **Do NOT hand-edit to add entries** — always use the triage flow so the blacklist
   stays consistent. Manual edits are only for correcting existing entries.
 
@@ -145,6 +145,7 @@ Current outcome: Stable MVP that installs into any project and helps the user bu
 | Agent Knowledge Plane | [docs/architecture/agent_knowledge_plane.md](docs/architecture/agent_knowledge_plane.md) | All 11 channels through which agents receive context at invocation time (pre-execution knowledge injection). |
 | Agent Knowledge System | [docs/architecture/agent_knowledge_system.md](docs/architecture/agent_knowledge_system.md) | How agents classify, route, and persist learnings after task completion (post-execution knowledge capture). |
 | Agent Delivery Workflows | [docs/architecture/agent_delivery_workflows.md](docs/architecture/agent_delivery_workflows.md) | Supervisor dispatch topology, ticket batching, and blocker adjudication flows. |
+| Persona discovery before feature planning | [ADR-064](docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md) | Required consumer-role interviews and traceable usage evidence before new or materially changed agent-facing AC design; distinguishes accepted policy from pending Jev enforcement. |
 | Knowledge Query | [templates/skills/knowledge-query/SKILL.md](templates/skills/knowledge-query/SKILL.md) | Cross-surface knowledge graph query skill. Invokes `scripts/knowledge_query.py` to search nodes across all paths.json surfaces (agents, tickets, docs, skills, ADRs, hooks) with keyword filter, surface filter, JSON export, and edge list output. |
 | Knowledge Graph Visualization | [scripts/visualise_knowledge_graph.py](scripts/visualise_knowledge_graph.py) | Generates a self-contained D3.js force-directed HTML graph from all knowledge surfaces. Run `python scripts/visualise_knowledge_graph.py --no-open` to write to `/tmp/leafcutter_knowledge_graph.html`; omit `--no-open` to open in the default browser. |
 

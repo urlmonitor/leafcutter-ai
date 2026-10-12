@@ -1,0 +1,587 @@
+{
+  "recorded_at": "2026-10-02T18:20:58.554579+00:00",
+  "code_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "source_sha": "887c66d3896ba7727ce41b743887210a3883c6ce",
+  "source_archive_sha256": "333e4b0ba0fc3cf1502bb553b1c6bb16f798bbb56a515ad88606f360adb93885",
+  "archive_file_count": 10498,
+  "all_archived_file_hashes_unchanged": true,
+  "default_source_policy": [
+    {
+      "id": "repo.principles",
+      "kind": "repo_text",
+      "categories": [
+        "internal_principles",
+        "authoritative_guidance"
+      ],
+      "roots": [
+        "CLAUDE.md",
+        "docs/conventions",
+        "docs/vision.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.decisions",
+      "kind": "repo_text",
+      "categories": [
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/architecture/adrs"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "knowledge.decisions",
+      "kind": "knowledge_map",
+      "categories": [
+        "prior_decisions"
+      ],
+      "roots": [],
+      "surfaces": [
+        "adrs"
+      ],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.patterns",
+      "kind": "repo_text",
+      "categories": [
+        "existing_patterns"
+      ],
+      "roots": [
+        "kernel",
+        "scripts",
+        "docs/architecture"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.docs",
+      "kind": "repo_text",
+      "categories": [
+        "internal_principles",
+        "task_context",
+        "existing_patterns",
+        "authoritative_guidance"
+      ],
+      "roots": [
+        "README.md",
+        "docs/how-to",
+        "docs/explanation",
+        "docs/reference",
+        "docs/testing",
+        "docs/workflows",
+        "docs/known-issues",
+        "docs/INDEX.md",
+        "docs/glossary.md",
+        "docs/ticket-lifecycle.md",
+        "docs/build-pipeline.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.analysis",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/analysis"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.components",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/architecture/components"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.acceptance_criteria",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/acceptance-criteria"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.roadmap",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/roadmap.json",
+        "docs/roadmap.md",
+        "docs/vision.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.registries",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/components.json",
+        "docs/build-dataflow.json"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": 1000000
+    },
+    {
+      "id": "repo.tickets",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions"
+      ],
+      "roots": [
+        "tickets"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.config",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "config"
+      ],
+      "surfaces": [],
+      "deny_globs": [
+        "config/*.env",
+        "config/*secret*",
+        "config/*credential*",
+        "config/*token*",
+        "config/*password*",
+        "config/*id_rsa*",
+        "config/*.p12",
+        "config/*.pfx"
+      ],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.tests",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "internal_principles"
+      ],
+      "roots": [
+        "tests/README.md",
+        "unit_tests/README.md",
+        "pytest.ini"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "knowledge.components",
+      "kind": "knowledge_map",
+      "categories": [
+        "existing_patterns",
+        "task_context"
+      ],
+      "roots": [],
+      "surfaces": [
+        "components",
+        "skills",
+        "agents"
+      ],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "host.research",
+      "kind": "host_research",
+      "categories": [
+        "authoritative_guidance",
+        "external_practices"
+      ],
+      "roots": [],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    }
+  ],
+  "default_knowledge_backend": "none",
+  "scope_read_roots": [
+    "docs"
+  ],
+  "source_policy_is_default": true,
+  "other_config_overrides": {
+    "paths": {
+      "run_root": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-default-source-887c66d3-9eqle_um\\runs",
+      "registry": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-default-source-887c66d3-9eqle_um\\source\\config\\capability_registry.json"
+    },
+    "limits": {
+      "max_jev_calls": 8,
+      "max_active_seconds": 120,
+      "max_retries": 0,
+      "max_concurrent_native": 1
+    },
+    "jev": {
+      "max_state_chars": 30000,
+      "max_questions_per_call": 20,
+      "timeout_seconds": 30
+    },
+    "langfuse": {
+      "enabled": false
+    },
+    "data_policy": {
+      "send_repo_excerpts_to_jev": true,
+      "telemetry_excerpts": "none"
+    }
+  },
+  "cases": [
+    {
+      "scenario_id": "RS-02",
+      "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+      "status": "waiting_host",
+      "output": null,
+      "seconds": 10.008,
+      "stop_operation": "synthesize_evidence",
+      "actual_provider_calls": 5,
+      "usage": {
+        "schema_version": "1.0",
+        "jev_calls": 5,
+        "host_operations": 1,
+        "input_tokens": 35759,
+        "output_tokens": 1407,
+        "cost_usd_known": 0.0015018780000000001,
+        "cost_unknown_calls": 0,
+        "usage": [
+          {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 35759,
+            "output_tokens": 1407,
+            "duration_ms": 1538,
+            "cost_usd": 0.0015018780000000001,
+            "cost_provenance": "estimated",
+            "calls": 5
+          }
+        ]
+      },
+      "generation_names": [
+        "jev.research.plan_needs",
+        "jev.retrieval.rerank",
+        "jev.retrieval.rerank",
+        "jev.retrieval.rerank",
+        "jev.research.assess"
+      ],
+      "native_retrieval_entered": true,
+      "graph_query_executed": false,
+      "host_packet_created": true,
+      "host_llm_executed": false,
+      "resumes_performed": 0,
+      "host_input_copy": "RS-02.host-input.json",
+      "host_input_sha256": "70d9042037c1ea3cf8453637cd2d63e063726f23ef2638f5433686b164f19d8b",
+      "evidence": [
+        {
+          "evidence_id": "ev-5f6d658690f54a33",
+          "source_id": "repo.acceptance_criteria",
+          "locator": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-8-ii.yaml#L67-L91 (test_spec)",
+          "source_file_sha256": "ccc445a2cc9210fc0d6082326a4ff95e55985875bf616c726200b44cb7da3505",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-9714b511f0ffa504",
+          "source_id": "repo.registries",
+          "locator": "docs/build-dataflow.json#L4886-L4952 (nodes)",
+          "source_file_sha256": "232906f83e0345477f17de78ce4be41af7906b31ee4cee791f091c212064a960",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-a7f71ba427dd2e31",
+          "source_id": "repo.acceptance_criteria",
+          "locator": "docs/acceptance-criteria/ac-store/ACS-100-structured-requirements/ACS-100i-2-i.yaml#L37-L38 (covered_by)",
+          "source_file_sha256": "32f4d24a36573192aaf483a86904e89507319176ff6311f90b0567832412ecc6",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-ba56e4669c6cbca5",
+          "source_id": "repo.registries",
+          "locator": "docs/build-dataflow.json#L4834-L4858 (nodes)",
+          "source_file_sha256": "232906f83e0345477f17de78ce4be41af7906b31ee4cee791f091c212064a960",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-e9d645a4a16c60dd",
+          "source_id": "repo.registries",
+          "locator": "docs/build-dataflow.json#L4615-L4639 (nodes)",
+          "source_file_sha256": "232906f83e0345477f17de78ce4be41af7906b31ee4cee791f091c212064a960",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-ef73bfd5ed1df816",
+          "source_id": "repo.analysis",
+          "locator": "docs/analysis/2026-10-01-repository-query-catalog.md#L44-L64 (§Original role questions)",
+          "source_file_sha256": "f0134027c444592343126e11a8f6c2cc4f98fda15dd11bd31f2d326c02f99c93",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": true
+        }
+      ],
+      "context_enrichment": [
+        {
+          "status": "partial",
+          "sources_consulted": [
+            "repo.docs",
+            "repo.components",
+            "repo.config",
+            "repo.decisions",
+            "repo.principles",
+            "repo.patterns"
+          ],
+          "files_scanned": 180,
+          "evidence_count": 6,
+          "truncated": true,
+          "limitations": [
+            "repo.docs: 25 lower-ranked section(s) cut at the source cap of 45 candidates (30 files scanned, max_candidates=60); 0 matching file(s) had no section offered and 16 more lost sections to a sibling; strongest cut section scored 5.6 (8 hit(s), docs/how-to/ac-driven-build-loop.md#L163-L174 (§2. Authoring and Approving ACs > Step 2: Review the produced ACs))",
+            "repo.docs: root not searched: README.md: outside the scope's read roots",
+            "repo.docs: context file budget reached",
+            "repo.components: context file budget reached",
+            "repo.config: root not searched: config: outside the scope's read roots",
+            "repo.config: no readable roots",
+            "repo.decisions: 49 lower-ranked section(s) cut at the source cap of 60 candidates (40 files scanned, max_candidates=60); 0 matching file(s) had no section offered and 29 more lost sections to a sibling; strongest cut section scored 4.6 (1 hit(s), docs/architecture/adrs/ADR-011-learning-emission-sink.md#L199-L208 (§Alternatives > Alternative B — Single unified knowledge_captured field in …))",
+            "repo.decisions: context file budget reached",
+            "repo.principles: root not searched: CLAUDE.md: outside the scope's read roots",
+            "repo.patterns: 130 lower-ranked section(s) cut at the source cap of 60 candidates (77 files scanned, max_candidates=60); 12 matching file(s) had no section offered and 55 more lost sections to a sibling; strongest cut section scored 11.3 (3 hit(s), docs/architecture/adrs/ADR-007-contract-driven-acs.md#L180-L199 (§References))",
+            "repo.patterns: root not searched: kernel: outside the scope's read roots",
+            "repo.patterns: root not searched: scripts: outside the scope's read roots",
+            "repo.patterns: context file budget reached",
+            "context evidence truncated to configured budget"
+          ]
+        }
+      ],
+      "process_exit": 0
+    },
+    {
+      "scenario_id": "RS-03",
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "status": "waiting_host",
+      "output": null,
+      "seconds": 3.568,
+      "stop_operation": "synthesize_evidence",
+      "actual_provider_calls": 5,
+      "usage": {
+        "schema_version": "1.0",
+        "jev_calls": 5,
+        "host_operations": 1,
+        "input_tokens": 39941,
+        "output_tokens": 1430,
+        "cost_usd_known": 0.0016775219999999999,
+        "cost_unknown_calls": 0,
+        "usage": [
+          {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 39941,
+            "output_tokens": 1430,
+            "duration_ms": 1498,
+            "cost_usd": 0.0016775219999999999,
+            "cost_provenance": "estimated",
+            "calls": 5
+          }
+        ]
+      },
+      "generation_names": [
+        "jev.research.plan_needs",
+        "jev.retrieval.rerank",
+        "jev.retrieval.rerank",
+        "jev.retrieval.rerank",
+        "jev.research.assess"
+      ],
+      "native_retrieval_entered": true,
+      "graph_query_executed": false,
+      "host_packet_created": true,
+      "host_llm_executed": false,
+      "resumes_performed": 0,
+      "host_input_copy": "RS-03.host-input.json",
+      "host_input_sha256": "62dcdba04ef69370af9797c0abdbda454718f5b44f4b88e929f1b2c3698468c2",
+      "evidence": [
+        {
+          "evidence_id": "ev-0b056f0fe61f5a3e",
+          "source_id": "repo.docs",
+          "locator": "docs/known-issues/testing-quality/open-high-ki-tq-010.md#L136-L155 (§KI-TQ-010 — Nothing in the build pipeline asks whether a pa…)",
+          "source_file_sha256": "ba76f9ef9f77a169f8804e5b108889a430c67885d53fdd187aaefedbff8de6b1",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-23360ff25c24288f",
+          "source_id": "repo.docs",
+          "locator": "docs/reference/fixture-policy.md#L23-L34 (§Rules Overview)",
+          "source_file_sha256": "d19a560e16783c824fcdf912c9fd8d0ff6bc61e4454fc5efba4c7895e9ee8b81",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-3d1568baf85cb6ea",
+          "source_id": "repo.docs",
+          "locator": "docs/how-to/fast-lane-build.md#L334-L376 (§3. The Six Steps of the Loop > Step 5 — verify_green_and_coverage (deterministic gate))",
+          "source_file_sha256": "e19c76110d8980891794a587286df5f40e12b2355fcc4013de048632cb8b773a",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-4604e6fe5413d3c6",
+          "source_id": "repo.analysis",
+          "locator": "docs/analysis/2026-10-01-repository-query-evaluation-cases.json#L787-L811 (pairs)",
+          "source_file_sha256": "32f44adc8b53a8195cd14552bf681564fc52f23f8578d842da6317bb5434e035",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": true
+        },
+        {
+          "evidence_id": "ev-9c866c21647782e5",
+          "source_id": "repo.analysis",
+          "locator": "docs/analysis/2026-10-02-retrieval-active-source-oracle.json#L51-L76 (km_500c_2)",
+          "source_file_sha256": "31aa3f0deffa58ffb2a1b69b0521a6e0bb0a0881678ea18a46aec5a234f37bd9",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": true
+        },
+        {
+          "evidence_id": "ev-ce5e131d21b75003",
+          "source_id": "repo.analysis",
+          "locator": "docs/analysis/2026-10-01-repository-query-evaluation-runnable.json#L576-L600 (cases)",
+          "source_file_sha256": "c2abcaffe7086775c40bf0a45c55333508e66dc7e9a75f8cd9d42147faa4f377",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": true
+        },
+        {
+          "evidence_id": "ev-ddb0de21172051d4",
+          "source_id": "repo.docs",
+          "locator": "docs/explanation/traceability-guardrails.md#L99-L120 (§What is live today > AC ↔ Tests — enforced, and it has a CI backstop)",
+          "source_file_sha256": "3910849eac64ee5896f2885225f271fa94febbfc78fa62035d396f352470e49f",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": false
+        },
+        {
+          "evidence_id": "ev-ef73bfd5ed1df816",
+          "source_id": "repo.analysis",
+          "locator": "docs/analysis/2026-10-01-repository-query-catalog.md#L44-L64 (§Original role questions)",
+          "source_file_sha256": "f0134027c444592343126e11a8f6c2cc4f98fda15dd11bd31f2d326c02f99c93",
+          "source_commit": "887c66d3896ba7727ce41b743887210a3883c6ce",
+          "excerpt_available_in_saved_packet": false,
+          "is_existing_evaluation_material": true
+        }
+      ],
+      "context_enrichment": [
+        {
+          "status": "partial",
+          "sources_consulted": [
+            "repo.docs",
+            "repo.components",
+            "repo.config",
+            "repo.decisions",
+            "repo.principles",
+            "repo.patterns"
+          ],
+          "files_scanned": 180,
+          "evidence_count": 6,
+          "truncated": true,
+          "limitations": [
+            "repo.docs: 12 lower-ranked section(s) cut at the source cap of 45 candidates (30 files scanned, max_candidates=60); 0 matching file(s) had no section offered and 9 more lost sections to a sibling; strongest cut section scored 2.3 (2 hit(s), docs/how-to/creating-an-agent-template.md#L184-L238 (§Steps > Step 6: Register the agent in `agent_registry.json`))",
+            "repo.docs: root not searched: README.md: outside the scope's read roots",
+            "repo.docs: context file budget reached",
+            "repo.components: context file budget reached",
+            "repo.config: root not searched: config: outside the scope's read roots",
+            "repo.config: no readable roots",
+            "repo.decisions: 51 lower-ranked section(s) cut at the source cap of 60 candidates (40 files scanned, max_candidates=60); 0 matching file(s) had no section offered and 29 more lost sections to a sibling; strongest cut section scored 2.1 (3 hit(s), docs/architecture/adrs/ADR-020-live-surface-tester.md#L110-L128 (§Decision > Decision 3 — Project-Level Toggle))",
+            "repo.decisions: context file budget reached",
+            "repo.principles: root not searched: CLAUDE.md: outside the scope's read roots",
+            "repo.patterns: 134 lower-ranked section(s) cut at the source cap of 60 candidates (77 files scanned, max_candidates=60); 12 matching file(s) had no section offered and 58 more lost sections to a sibling; strongest cut section scored 6.3 (6 hit(s), docs/architecture/adrs/ADR-028-test-fixture-convention.md#L70-L97 (§Decision > load_fixture() helper (canonical implementation)))",
+            "repo.patterns: root not searched: kernel: outside the scope's read roots",
+            "repo.patterns: root not searched: scripts: outside the scope's read roots",
+            "repo.patterns: context file budget reached",
+            "context evidence truncated to configured budget"
+          ]
+        }
+      ],
+      "process_exit": 0
+    }
+  ],
+  "provider_calls_this_lane": 10,
+  "provider_calls_prior_graph_lane": 8,
+  "provider_calls_aggregate": 18,
+  "aggregate_authorized_maximum": 24,
+  "live_runs_total_across_lanes": 4,
+  "distinct_live_scenarios": 2,
+  "other_full_target_scenarios_not_run": 27,
+  "final_answers": 0,
+  "whole_target_passes": 0,
+  "limitations": [
+    "Default source policy does not configure Neo4j; native results do not establish graph behavior.",
+    "Same typed research questions and docs-only read scope; not an untyped/all-permission default UI test.",
+    "Wait at real host synthesis handoff is a legitimate integration boundary; no host model was executed or fabricated.",
+    "Existing committed evaluation/catalog/oracle material is part of repo.analysis and appeared in citations; no new analyst or retest artifacts were present in the immutable source.",
+    "No exact count has complete-population proof in these native packets; no canonical KM-500c-2 YAML citation in the RS03 packet.",
+    "Our safety override telemetry_excerpts=none produced omitted excerpts in the persisted host packet; this does not prove the unchanged default telemetry setting omits them.",
+    "RecordingTracer saves state fingerprints rather than complete outbound model payloads.",
+    "No graph writes, publication, query activation, embeddings or remote Langfuse."
+  ],
+  "prior35_receipts_unchanged": true
+}

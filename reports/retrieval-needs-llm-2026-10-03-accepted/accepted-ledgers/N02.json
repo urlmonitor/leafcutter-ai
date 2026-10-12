@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-271cfa3bcfd64928",
+  "interaction_id": "int-3f6ea15614a64877",
+  "sha256": "59bd33aa8ac549a7dc6e9c2b3a0dfcc955ca651947565ec71be9e6ad6b9bbc08",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-271cfa3bcfd64928",
+    "interaction_id": "int-3f6ea15614a64877",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "codex:root:needs_llm_host",
+      "kind": "host"
+    },
+    "relayed_by": "isolated-evaluation-controller",
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+      "source_scope": {
+        "allow_retrieval": false,
+        "read_roots": [
+          "docs",
+          "kernel",
+          "knowledge",
+          "integrations"
+        ],
+        "repository": "leafcutter",
+        "source_revision": "planning-probe-only"
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [],
+        "required_fields": [
+          "criteria",
+          "parent"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [
+          "TQ-500"
+        ],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "exhaustive_count",
+      "hierarchy_scope": "exclude_parents",
+      "scope_resolution": "discovery_needed",
+      "unresolved": [],
+      "rationale": "The count requires discovering the complete population whose criteria concern test writing and using the hierarchy's parent identities to exclude every requirement that is a parent. The supplied TQ-500 observation is only a candidate family and cannot bound this topic. A missing exhaustive list of IDs is a discovery need, not a missing user preference.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-03T09:45:54.683264Z"
+}

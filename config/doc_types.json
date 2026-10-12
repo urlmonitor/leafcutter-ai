@@ -42,6 +42,7 @@
       "default_path": "{paths.docs.retrospectives}<EPIC-Name>.md"
     },
     "how-to": {
+      "alias_of": "how_to",
       "description": "Legacy alias for how_to. Use how_to in new docs.",
       "writer_agent": "how-to-author",
       "default_path": "{paths.docs.how_to}<topic>/<verb-noun>.md",

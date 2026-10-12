@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="23" skipped="0" tests="23" time="0.608" timestamp="2026-10-02T08:53:49.179846+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_all_fields_unknown_extensions_and_shape_are_preserved" time="0.012"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:54: in test_mockup_all_fields_unknown_extensions_and_shape_are_preserved
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_manifest_and_render_remain_separate_exact_supporting_sources" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:75: in test_mockup_manifest_and_render_remain_separate_exact_supporting_sources
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_real_canonical_population_includes_unregistered_and_null_renders" time="0.001"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:92: in test_mockup_real_canonical_population_includes_unregistered_and_null_renders
+    records = _extract(root)
+              ^^^^^^^^^^^^^^
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:115: in test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured
+    assert _extract(tmp_path) == []
+           ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_safe_missing_render_is_reported_without_losing_record" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:130: in test_mockup_safe_missing_render_is_reported_without_losing_record
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_malformed_records_fail_explicitly[{]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:142: in test_mockup_malformed_records_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_malformed_records_fail_explicitly[[]]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:142: in test_mockup_malformed_records_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_malformed_records_fail_explicitly[{}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:142: in test_mockup_malformed_records_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_malformed_records_fail_explicitly[{&quot;id&quot;:&quot;plant/cart&quot;,&quot;title&quot;:null}]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:142: in test_mockup_malformed_records_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_malformed_records_fail_explicitly[{&quot;id&quot;:&quot;other/cart&quot;,&quot;title&quot;:&quot;T&quot;,&quot;summary&quot;:&quot;S&quot;,&quot;renders&quot;:null}]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:142: in test_mockup_malformed_records_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_duplicate_records_and_manifest_ids_fail_explicitly" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:150: in test_mockup_duplicate_records_and_manifest_ids_fail_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[../../../../../../outside.html]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[C:/outside.html]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[C:\\outside.html]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[/outside.html]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[//server/share/a.html]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[https://example.com/a.html]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_render_paths_cannot_escape_or_fetch_urls[file:outside.html]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:164: in test_mockup_render_paths_cannot_escape_or_fetch_urls
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_manifest_path_and_identity_conflicts_fail[entry0]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:173: in test_mockup_manifest_path_and_identity_conflicts_fail
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_manifest_path_and_identity_conflicts_fail[entry1]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:173: in test_mockup_manifest_path_and_identity_conflicts_fail
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_manifest_path_and_identity_conflicts_fail[entry2]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:173: in test_mockup_manifest_path_and_identity_conflicts_fail
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_manifest_path_and_identity_conflicts_fail[entry3]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:173: in test_mockup_manifest_path_and_identity_conflicts_fail
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase><testcase classname="tests.knowledge.test_native_mockup" name="test_mockup_resolved_escape_is_rejected_before_read" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.mockup'">tests\knowledge\test_native_mockup.py:186: in test_mockup_resolved_escape_is_rejected_before_read
+    _extract(tmp_path)
+tests\knowledge\test_native_mockup.py:14: in _extract
+    return importlib.import_module("knowledge.native_types.mockup").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.mockup'</failure></testcase></testsuite></testsuites>

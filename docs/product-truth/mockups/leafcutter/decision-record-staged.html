@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leafcutter decision lifecycle - Record staged</title>
+  <!--
+    MOCKUP - screen: decision-record-staged
+    Populated from docs/product-truth/mock-data/leafcutter/decisions.mock.json (entity Decision; record dec-7cdc61ea41a206e0).
+    Styled from the Atlas design system via docs/ui-context.md pointers (globals.css, tailwind.config.ts, layout.tsx).
+    Self-contained, no external assets. Items tagged "illustrative" are not in the mock data.
+  -->
+  <style>
+    /* Tokens read live from leafcutter-web/app/globals.css (:root); fonts from app/layout.tsx (IBM Plex Sans / Mono). */
+    :root {
+      --background: 158 16% 7%; --foreground: 150 6% 98%;
+      --card: 158 12% 13%; --primary: 150 64% 56%; --primary-foreground: 160 40% 6%;
+      --secondary: 156 12% 19%; --muted: 156 12% 18%; --muted-foreground: 155 7% 80%;
+      --accent: 168 55% 46%; --destructive: 356 78% 64%; --warning: 38 94% 60%;
+      --success: 150 62% 52%; --info: 205 82% 64%;
+      --border: 155 10% 30%; --input: 155 10% 32%; --ring: 150 64% 56%;
+      --radius: 0.75rem;
+      --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; border-color: hsl(var(--border)); }
+    body { margin: 0; font-family: var(--font-sans); background-color: hsl(var(--background)); color: hsl(var(--foreground));
+      -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
+      background-image: radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%), radial-gradient(900px 700px at -10% 110%, hsl(168 60% 46% / 0.05), transparent 55%);
+      background-attachment: fixed; }
+    ::selection { background: hsl(var(--primary) / 0.28); }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
+    .panel { border-radius: calc(var(--radius) + 0.25rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.95); padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 1px 0 0 hsl(150 40% 90% / 0.04) inset, 0 20px 40px -24px hsl(0 0% 0% / 0.6); }
+    .panel.pick { border-color: hsl(var(--primary) / 0.6); }
+    .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: hsl(var(--muted-foreground)); margin-bottom: 6px; }
+    h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+    h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    p { margin: 4px 0; }
+    .sub { font-size: 14px; color: hsl(var(--muted-foreground)); max-width: 46rem; }
+    .small { font-size: 12px; color: hsl(var(--muted-foreground)); }
+    .mono { font-family: var(--font-mono); font-size: 12.5px; }
+    code.mono { background: hsl(var(--muted) / 0.6); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 4px); padding: 1px 6px; word-break: break-all; }
+    pre.mono { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / 0.4); color: hsl(var(--muted-foreground)); padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .badge.success { color: hsl(var(--success)); background: hsl(var(--success) / 0.1); border-color: hsl(var(--success) / 0.3); }
+    .badge.warning { color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); border-color: hsl(var(--warning) / 0.3); }
+    .badge.destructive { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive) / 0.3); }
+    .badge.info { color: hsl(var(--info)); background: hsl(var(--info) / 0.1); border-color: hsl(var(--info) / 0.3); }
+    .badge.plain::before { display: none; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .between { justify-content: space-between; align-items: flex-start; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    ul.list { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.list li { border-top: 1px solid hsl(var(--border) / 0.6); padding: 10px 0; }
+    ul.list li:first-child { border-top: 0; }
+    .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input)); background: hsl(var(--secondary)); color: hsl(var(--foreground)); padding: 8px 14px; cursor: pointer; }
+    .btn.primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
+    .btn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .note { border-left: 3px solid hsl(var(--warning)); background: hsl(var(--warning) / 0.08); border-radius: 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0; padding: 10px 14px; font-size: 14px; }
+    .note.info { border-left-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+    .note.ok { border-left-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+    dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0 0; font-size: 14px; }
+    dl.kv dt { color: hsl(var(--muted-foreground)); } dl.kv dd { margin: 0; word-break: break-word; }
+    .opt { display: flex; gap: 12px; align-items: flex-start; }
+    .rank { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 1px solid hsl(var(--border)); display: grid; place-items: center; font-weight: 600; background: hsl(var(--muted) / 0.5); }
+    .pick .rank { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+    .bar { height: 6px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+    .bar > i { display: block; height: 100%; background: hsl(var(--primary)); }
+    .crit { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed hsl(var(--border) / 0.7); }
+    .crit .ev { grid-column: 1 / -1; }
+    .choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px; margin-bottom: 10px; background: hsl(var(--background) / 0.4); }
+    .choice .dot { flex: none; width: 16px; height: 16px; border-radius: 999px; border: 2px solid hsl(var(--input)); margin-top: 3px; }
+    .choice.sel .dot { border-color: hsl(var(--primary)); background: radial-gradient(hsl(var(--primary)) 40%, transparent 45%); }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: hsl(var(--muted-foreground)); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid hsl(var(--border)); }
+    td { padding: 8px; border-bottom: 1px solid hsl(var(--border) / 0.5); vertical-align: top; }
+    .ill { font-size: 11px; color: hsl(var(--warning)); border: 1px solid hsl(var(--warning) / 0.4); border-radius: 999px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Record staged</span><span class="badge warning">mock mode</span></div>
+<div class="panel"><div class="eyebrow">Record staged</div><h1>The decision is recorded in the run</h1><p class="sub">The run finished after human:user confirmed reuse of dec-ef8ddcb79d668a67.</p><div class="row"><span class="badge success">completed</span><span class="badge warning">not published</span></div></div><div class="panel"><h2>Result</h2><dl class="kv">
+<dt>Status</dt><dd>completed</dd><dt>Decision</dt><dd><strong>Kernel-contract YAML per decision</strong> <span class="mono">(dec-7cdc61ea41a206e0)</span><div class="small">precedent_reuse, option opt.added.1</div></dd>
+<dt>Approved by</dt><dd>human:user, 2026-10-01T18:16:49Z</dd><dt>Run</dt><dd class="mono">run-0fdfb09bbcd34231</dd></dl>
+<div class="note ok" style="margin-top:14px"><strong>decision record staged:</strong> <span class="mono">&lt;run_root&gt;/runs/run-0fdfb09bbcd34231/staged/decisions/dec-7cdc61ea41a206e0.yaml</span></div></div><div class="panel"><h2>Publish it</h2><p class="sub">This command runs as printed from any shell or directory. It writes the record into <span class="mono">&lt;repo_root&gt;/docs/decisions</span>, the kernel checkout's decisions folder, on a branch for review:</p><pre class="mono">&lt;python&gt; &lt;repo_root&gt;/scripts/run_kernel.py decisions publish --run-id run-0fdfb09bbcd34231</pre>
+<div class="note"><strong>Publishing writes into the repository and is yours to run.</strong> The kernel never publishes on its own; until you do, the record exists only in the run.</div></div>
+</main>
+</body>
+</html>

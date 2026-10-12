@@ -1,0 +1,9 @@
+{
+  "options": [
+    {
+      "id": "opt-a",
+      "title": "A",
+      "proposal_status": "supplied"
+    }
+  ]
+}

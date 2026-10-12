@@ -9,7 +9,7 @@ BUSINESS CONTEXT: The agent registry is the single source of truth for which
     at build time is safer than discovering them at runtime.
 ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     to four private checkers (_check_template_paths, _check_orphan_templates,
-    _check_spawn_bidirectionality, _check_self_loops). Each returns a list of
+    check_spawn_bidirectionality, _check_self_loops). Each returns a list of
     error strings. Callers decide whether errors are fatal or advisory.
     check_skills_invoked_xref(package_root) cross-references each agent's
     skills_invoked registry array against skill references found in its
@@ -17,14 +17,18 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
     cross-reference check — they document inline capabilities and have no
     corresponding skill directory or template body reference by design (M-1).
-    step_kinds validation (check_step_kinds) and the requires_verification
-    flag check (validate_verification_flags) live in the sibling modules
-    step_kinds_validator.py and registry_verification_flags.py respectively —
-    both imported here and wired into validate_agent_registry() — because
-    this module is already over the project's file-size ratchet limit and
-    must not grow; validate_verification_flags was moved out (a pure move,
-    no behaviour change) to make room for the new check without the file
-    growing (BO-2400a-1-iii).
+    The tool-grant checks (validate_tool_grants: Skill, AR-200b-2; Agent, AR-200b-3) live
+    in skill_tool_grant_validator.py and are wired into validate_agent_registry().
+    step_kinds validation (check_step_kinds), the requires_verification flag
+    check (validate_verification_flags), and spawn_allowlist/spawned_by
+    bidirectional consistency (check_spawn_bidirectionality, AC INF-600k-1's
+    recognized-external-caller classification) live in the sibling modules
+    step_kinds_validator.py, registry_verification_flags.py, and
+    spawn_bidirectionality_validator.py respectively — all imported here and
+    wired into validate_agent_registry() — because this module is already
+    over the project's file-size ratchet limit and must not grow; each was
+    moved out (a pure move, no behaviour change) to make room without the
+    file growing (BO-2400a-1-iii, AC INF-600k-1).
 """
 
 from __future__ import annotations
@@ -35,16 +39,9 @@ from pathlib import Path
 from typing import Any
 
 from registry_verification_flags import validate_verification_flags
+from skill_tool_grant_validator import validate_tool_grants
+from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
-
-_SPECIAL_TOKEN = "__ticket_phase_agents__"
-# External (non-agent) callers permitted in an agent's spawned_by list. These are
-# not themselves registry agents, so they are exempt from the unknown-agent and
-# bidirectional-allowlist checks. "user" is a human invoker; "finalize-feature.js"
-# is the finalization workflow that spawns these agents at depth 0 (the legacy
-# finalize-feature *agent* was removed in ADR-006 — see EPIC-FinalizeFeatureHardening
-# ticket 03 — leaving the .js workflow as the sole, non-agent, spawner).
-_EXTERNAL_CALLERS = {"user", "finalize-feature.js", "fast-lane-ship.js"}
 
 # ---------------------------------------------------------------------------
 # Skill reference detection patterns (AC INF-600g-3)
@@ -114,7 +111,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     errors.extend(load_errors)
     if load_errors:
         return errors  # Can't proceed without a parseable registry
-
     portable_agents = [a for a in agents if a.get("portable", True)]
     domain_agents = [a for a in agents if not a.get("portable", True)]
     registry_ids = {a["id"] for a in agents}
@@ -125,14 +121,14 @@ def validate_agent_registry(package_root: Path) -> list[str]:
 
     spawn_map = {a["id"]: a.get("spawn_allowlist", []) for a in agents}
     spawned_by_map = {a["id"]: a.get("spawned_by", []) for a in agents}
-
-    errors.extend(_check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids))
+    errors.extend(check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids, package_root))
     errors.extend(_check_self_loops(spawn_map))
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir))
     errors.extend(validate_produces_field(agents, template_dir))
-    _warn_redundant_phase_agents(agents)
+    errors.extend(validate_tool_grants(template_dir))  # Skill and Agent pairs (AR-200b-2, AR-200b-3)
+    warn_redundant_phase_agents(agents)
 
     # Cross-reference skills_invoked against template body references (AC INF-600g-3).
     # Warnings are advisory — not returned as errors — because the extraction patterns
@@ -245,103 +241,6 @@ def _check_orphan_templates(
     return errors
 
 
-def _check_spawn_bidirectionality(
-    spawn_map: dict[str, list[str]],
-    spawned_by_map: dict[str, list[str]],
-    registry_ids: set[str],
-) -> list[str]:
-    """Check spawn_allowlist / spawned_by bidirectional consistency.
-
-    For each (parent, child) pair in spawn_map, child.spawned_by must include
-    parent (and vice versa). Excludes the special token and external callers.
-
-    Args:
-        spawn_map: Mapping of agent_id → spawn_allowlist entries.
-        spawned_by_map: Mapping of agent_id → spawned_by entries.
-        registry_ids: Set of valid agent IDs.
-
-    Returns:
-        List of error strings for inconsistent or missing entries.
-    """
-    errors = []
-    errors.extend(_check_allowlist_has_matching_spawned_by(
-        spawn_map, spawned_by_map, registry_ids
-    ))
-    errors.extend(_check_spawned_by_has_matching_allowlist(
-        spawned_by_map, spawn_map, registry_ids
-    ))
-    return errors
-
-
-def _check_allowlist_has_matching_spawned_by(
-    spawn_map: dict[str, list[str]],
-    spawned_by_map: dict[str, list[str]],
-    registry_ids: set[str],
-) -> list[str]:
-    """For each (parent → child) in spawn_map, verify child.spawned_by includes parent.
-
-    Args:
-        spawn_map: Mapping of agent_id → spawn_allowlist entries.
-        spawned_by_map: Mapping of agent_id → spawned_by entries.
-        registry_ids: Set of valid agent IDs.
-
-    Returns:
-        List of error strings for missing or unknown entries.
-    """
-    errors = []
-    for agent_id, allowlist in spawn_map.items():
-        for child_id in allowlist:
-            if child_id == _SPECIAL_TOKEN:
-                continue
-            if child_id not in registry_ids:
-                errors.append(
-                    f"Agent '{agent_id}' spawn_allowlist references unknown "
-                    f"agent '{child_id}'."
-                )
-                continue
-            child_spawned_by = spawned_by_map.get(child_id, [])
-            if agent_id not in child_spawned_by and agent_id not in _EXTERNAL_CALLERS:
-                errors.append(
-                    f"asymmetric spawn: {agent_id}.spawn_allowlist includes {child_id}, "
-                    f"but {child_id}.spawned_by does not include {agent_id}"
-                )
-    return errors
-
-
-def _check_spawned_by_has_matching_allowlist(
-    spawned_by_map: dict[str, list[str]],
-    spawn_map: dict[str, list[str]],
-    registry_ids: set[str],
-) -> list[str]:
-    """For each (child, parent) in spawned_by_map, verify parent.spawn_allowlist includes child.
-
-    Args:
-        spawned_by_map: Mapping of agent_id → spawned_by entries.
-        spawn_map: Mapping of agent_id → spawn_allowlist entries.
-        registry_ids: Set of valid agent IDs.
-
-    Returns:
-        List of error strings for missing or unknown entries.
-    """
-    errors = []
-    for agent_id, spawners in spawned_by_map.items():
-        for parent_id in spawners:
-            if parent_id in _EXTERNAL_CALLERS:
-                continue
-            if parent_id not in registry_ids:
-                errors.append(
-                    f"Agent '{agent_id}' spawned_by references unknown agent '{parent_id}'."
-                )
-                continue
-            parent_allowlist = spawn_map.get(parent_id, [])
-            if agent_id not in parent_allowlist and _SPECIAL_TOKEN not in parent_allowlist:
-                errors.append(
-                    f"asymmetric spawn: {agent_id}.spawned_by includes {parent_id}, "
-                    f"but {parent_id}.spawn_allowlist does not include {agent_id}"
-                )
-    return errors
-
-
 def _check_skills_used(
     portable_agents: list[dict[str, Any]], package_root: Path
 ) -> list[str]:
@@ -405,36 +304,6 @@ def _check_agent_categories(
                 f"Valid categories: {sorted(valid_categories)}."
             )
     return errors
-
-
-def _warn_redundant_phase_agents(agents: list[dict[str, Any]]) -> None:
-    """Warn when spawn_allowlist contains __ticket_phase_agents__ alongside
-    individually-listed agents that already have is_ticket_phase: true.
-
-    The warning is printed to stdout rather than returned as an error because
-    the registry is still structurally valid — the redundancy is informational.
-    Callers should not treat this as a build-blocking condition.
-
-    Args:
-        agents: List of agent dicts from the registry.
-    """
-    phase_agent_ids: set[str] = {
-        a["id"] for a in agents if a.get("is_ticket_phase") is True
-    }
-    for agent in agents:
-        allowlist: list[str] = agent.get("spawn_allowlist") or []
-        if _SPECIAL_TOKEN not in allowlist:
-            continue
-        agent_id = agent["id"]
-        for child_id in allowlist:
-            if child_id == _SPECIAL_TOKEN:
-                continue
-            if child_id in phase_agent_ids:
-                print(
-                    f"[WARNING] {agent_id}.spawn_allowlist: {child_id} is redundantly listed "
-                    f"because it is already included in {_SPECIAL_TOKEN} "
-                    f"(is_ticket_phase: true)"
-                )
 
 
 def _check_self_loops(spawn_map: dict[str, list[str]]) -> list[str]:
@@ -1015,4 +884,22 @@ if __name__ == "__main__":
 #   further: the extraction made room for the step_kinds wiring without net
 #   growth, instead of gaming the ratchet with joined import/call lines (the
 #   earlier draft of this change did that and was corrected on review).
+# - 2026-09-28 15:00 [python-coder]: AC INF-600k-1. Moved
+#   _check_spawn_bidirectionality() and its two helpers to the new sibling
+#   spawn_bidirectionality_validator.py (public entry point renamed
+#   check_spawn_bidirectionality(), pure move) to make room for a
+#   pr-reviewer BLOCKING fix: the literal _EXTERNAL_CALLERS set is now
+#   is_recognized_external_caller(), loaded from the TRACKED
+#   templates/scripts/commit_guardian/ source via the new sibling
+#   commit_guardian_module_loader.py -- an earlier draft did a sys.path
+#   insert of the GITIGNORED scripts/commit_guardian/ build output, which
+#   broke on a fresh clone (ModuleNotFoundError, silently swallowed by
+#   check_agent_registry.py's `except ImportError`).
+#   (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-09-30 15:20 [python-coder/INF-600k-1 merge with origin/main]: Merged PR #967
+#   (BO-2400a-1-v), which had added "fast-lane-ship.js" as a third literal to
+#   _EXTERNAL_CALLERS here. The shared is_recognized_external_caller() rule wins:
+#   no literal caller set remains, and fast-lane-ship.js is accepted because
+#   templates/workflows-js/fast-lane-ship.js exists. #967's other changes are
+#   kept unchanged. (#TICKETLESS reason=inf-600k-1-workflow-callers)
 # ====================================================================

@@ -1,0 +1,183 @@
+id: TQ-600a-13-xiii
+components:
+  - testing_quality
+title: "A correctness test that passes only on retry is tracked on a non-holding notice, and one that does so repeatedly makes the run red"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fresh-machine retry of TQ-600a-13-ii, under which a correctness-lane test that
+    fails and then passes leaves the run green and is named as passed-on-retry,
+  And the reason that is not enough for this population: the shared-layout guards catch a
+    corruption that presents nondeterministically, so a pass on retry may be the defect
+    itself, and a green run that records it only in a log loses the signal,
+  When a completed correctness-lane run on main has one or more passed-on-retry tests,
+  Then each is named, with that run's link, on the open `post-merge-flaky` notice
+    (created if none is open), whose description lists every test that passed on retry in
+    any of the last five settled correctness runs together with how many of those five it
+    did so in,
+  And that notice never affects the verdict of `Post-merge suite status`,
+  And a correctness-lane test that passed on retry in two or more of the last five settled
+    correctness runs on main — the current run included — makes the current run red,
+    named in the run's result as a repeated pass-on-retry, exactly as a test that failed
+    both executions is,
+  And the count is taken from the recorded results of earlier runs, not from the notice,
+    so a notice that was never written, edited by hand or closed does not change it,
+  And a run with no passed-on-retry test writes nothing to the `post-merge-flaky` notice,
+    and the notice is closed when none of the last five settled runs had one,
+  And a correctness-lane test whose red was not reproduced at the same commit — a red run
+    followed by a green run with the same head commit — is named on the same notice as a
+    candidate for the timing lane (TQ-600a-13-xii),
+  And timing-lane tests never escalate by this rule,
+  And each case is demonstrated by applying sequences of run results — with passed-on-
+    retry tests in zero, one and two of five runs — to the run's verdict and to the notice
+    double, and observing the verdicts and the writes.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-ii
+  - TQ-600a-13-iii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Produces the passed-on-retry list per run.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-i.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Records why the shared-layout tests are the warning system for a nondeterministic
+      corruption.
+declared_files:
+  - path: scripts/ci/post_merge_suite.py
+    state: to_be_created
+  - path: scripts/ci/post_merge_notice.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    WHERE THE HISTORY COMES FROM. The correctness workflow's verdict job reads the
+    `post-merge-verdict` artifacts of the previous four settled runs on main (`actions:
+    read`; a bounded, fixed number of reads) and counts each test's passed-on-retry
+    occurrences. Reading the run history rather than the notice keeps the escalation
+    inside decision A: the verdict never depends on an issue. A missing or unreadable
+    earlier artifact counts as zero occurrences for that run, and the verdict file says
+    how many earlier runs were actually read, so a short history is visible rather than
+    mistaken for a clean one.
+  - >-
+    THE THRESHOLD — ACCEPTED BY THE OWNER AS A TUNABLE DEFAULT (2026-10-08): two in the
+    last five settled runs, current included, read from `flaky_red_threshold` and
+    `flaky_window_runs` in scripts/ci/post_merge_tunables.json (TQ-600a-13-x), never a
+    literal. At about ten merges a day five runs is about half a day. "Settled" is
+    scripts/ci/_run_history.py's rule, so superseded cancellations never fill the window.
+  - >-
+    THE READS ARE BOUNDED AND FROM MAIN'S OWN RUNS. One run-history page (already read by
+    the verdict job's selection) plus, per earlier settled run (at most window-1 = 4), one
+    artifact list and one artifact download — at most 9 requests, `actions: read`. The
+    window is computed in the verdict job and written into the verdict file
+    (`pass_on_retry_window`, `window_runs_read`, TQ-600a-13-ii), so the notice job writes
+    the flaky notice without re-reading history.
+  - >-
+    THE NOTICE is the follow-up workflow's notice job with a third label
+    (`post-merge-flaky`), non-holding, description rewritten each run, closed when the
+    window is clean. NOT-REPRODUCED REDS (red at commit X followed by green at X) are
+    detected by the same run-history function as TQ-600a-13-x's demotion counter and the
+    failing ids named come from the red run's verdict artifact (one extra read on that
+    path only).
+  - >-
+    THE TESTS COST UNDER 0.3 s. In-process verdict computation over served earlier
+    artifacts and notice writes against the shared fake server.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-13-ii
+    contract: >-
+      The `repeated_pass_on_retry` list in the verdict file, non-empty only when the
+      threshold is met, which makes `verdict` red.
+expects_from:
+  - ac_id: TQ-600a-13-ii
+    contract: >-
+      Per-run `passed_on_retry` lists in the `post-merge-verdict` artifact, the verdict
+      job's `actions: read` scope, scripts/ci/_run_history.py and the tunables file.
+  - ac_id: TQ-600a-13-iii
+    contract: >-
+      The notice job and applier, extended to the `post-merge-flaky` label.
+test_spec:
+  - name: test_tq600a_13_xiii_repeated_pass_on_retry_is_red
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_suite.py's verdict computation, in-process, against the recording fake server serving earlier runs' verdict artifacts"
+    description: >-
+      Test B passed on retry in one of five: green, B on the flaky notice with count 1.
+      In two of five: red, B in `repeated_pass_on_retry`.
+  - name: test_tq600a_13_xiii_the_count_ignores_the_notice
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "scripts/ci/post_merge_suite.py and post_merge_notice.py against the fake server"
+    must_catch:
+      - "the count is read from the flaky notice, so a closed or never-written notice resets it"
+      - "a timing-lane test escalates"
+      - "an unreadable earlier artifact is treated as a clean run without saying so"
+      - "the flaky notice changes the hold verdict"
+    description: >-
+      Serve two earlier passed-on-retry occurrences with no flaky notice at all: red.
+      Serve one unreadable earlier artifact: the verdict states four runs read. A
+      timing-lane verdict with two passed-on-retry occurrences: green. A superseded
+      cancellation inside the window is skipped, not counted as a run.
+  - name: test_tq600a_13_xiii_the_flaky_notice_lifecycle_and_not_reproduced_reds
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "scripts/ci/post_merge_notice.py's applier, in-process, against the recording fake server"
+    must_catch:
+      - "a run with no passed-on-retry test writes to the flaky notice"
+      - "the flaky notice stays open after a clean window"
+      - "a red followed by green at the same commit is not named as a timing-lane candidate"
+    description: >-
+      A verdict with one passed-on-retry id: notice created with the id, the run link and
+      its window count. A clean verdict inside a dirty window: no write. A clean window:
+      notice closed. A red at X then green at X: the failing ids named as candidates.
+test_rationale: |
+  The escalation rule is what turns "pass on retry may be the defect" from a sentence
+  into a gate. Its count must come from run history, or decision A's independence from
+  issue state is lost through the back door. Milliseconds; under 0.3 s.
+origin_agent: business-analyst
+created: 2026-10-08
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-08'
+superseded_by: null
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_xiii.py
+- unit_tests/suite_performance/test_tq_600a_13_xiii_count.py
+- unit_tests/suite_performance/test_tq_600a_13_xiii_notice.py
+- unit_tests/suite_performance/test_tq_600a_13_xiii_redirect.py
+- unit_tests/suite_performance/test_tq_600a_13_xiii_review.py
+- unit_tests/suite_performance/test_tq_600a_13_xiii_download.py
+implemented_by:
+- scripts/ci/post_merge_suite.py
+- scripts/ci/post_merge_notice.py
+- scripts/ci/post_merge_previous_run.py
+- scripts/ci/_github_rest.py
+- scripts/ci/_flaky_window.py
+- scripts/ci/_flaky_notice.py
+- scripts/ci/_notice_render.py
+- .github/workflows/post-merge-suite.yml
+- .github/workflows/post-merge-followup.yml
+change_target: pipeline
+risk_surface: internal
+notes: |
+  ADDED 2026-10-08 for user decision D (track pass-on-retry in a non-holding notice;
+  repeated pass-on-retry is red). The threshold (2 of 5) was accepted by the owner on
+  2026-10-08 as a tunable default; see it_requirements.

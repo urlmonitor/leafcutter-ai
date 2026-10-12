@@ -4,7 +4,7 @@ description: "For a project that has just installed the tooling and holds an emp
 type: how-to
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-10-09
 components:
   - ux_prototyping
   - documentation_system
@@ -119,8 +119,8 @@ that name is reserved for the separate example product; see Step 7) and
     {
       "id": "request-reset",
       "label": "Request a reset link",
-      "human": "The customer enters their email on the sign-in screen and asks for a reset link.",
-      "order": 1,
+      "description": "The customer enters their email on the sign-in screen and asks for a reset link.",
+      "actor_kind": "human", "order": 1,
       "screen": "request-reset",
       "reads": ["Customer"]
     }

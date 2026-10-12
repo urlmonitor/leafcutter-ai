@@ -1,0 +1,403 @@
+schema_version: '1.0'
+kind: decision
+id: dec-acdfd972fcaca478
+repository_id: leafcutter-ai
+title: Publish directly when the important gates are met and the decision is not risky, through ...
+description: Decide when the Leafcutter decision kernel may publish an approved decision record into ...
+decision_type: design
+question: 'Decide when the Leafcutter decision kernel may publish an approved decision record into docs/decisions by itself
+  and when it must ask the user first, recorded as a policy decision file. Today publishing is an explicit human-run command
+  (ADR-060) and every record is human-approved. Options: always ask the user before publishing; publish directly unless the
+  decision supersedes or corrects an existing record or changes an accepted ADR or policy, and ask otherwise; or another option
+  grounded in the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.added.1
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide when the Leafcutter decision kernel may publish an approved decision record into docs/decisions by itself
+    and when it must ask the user first, recorded as a policy decision file. Today publishing is an explicit human-run command
+    (ADR-060) and every record is human-approved. Options: always ask the user before publishing; publish directly unless
+    the decision supersedes or corrects an existing record or changes an accepted ADR or policy, and ask otherwise; or another
+    option grounded in the repository.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.always_ask] always ask the user before publishing
+    (required mean 0.59, 1/3 passed); 2. [opt.consent_in_final_question] Ask for publish consent inside the decision''s final
+    human question, so approving and publishing are one answer (required mean 0.72, 0/3 passed); 3. [opt.direct_unless_risky]
+    publish directly unless the decision supersedes or corrects an existing record or changes an accepted ADR or policy, and
+    ask otherwise (required mean 0.42, 0/3 passed); 4. [opt.added.1] Publish directly when the important gates are met and
+    the decision is not risky, through a new PR flow copied from finalize-feature (required mean 0.36, 0/3 passed). human:user
+    chose option [opt.added.1] Publish directly when the important gates are met and the decision is not risky, through a
+    new PR flow copied from finalize-feature (kernel rank 4 of 4).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.36
+  selected_rank: 4
+  ranking:
+    - option_id: opt.always_ask
+      rank: 1
+      required_passed: 1
+      required_total: 3
+      required_mean: 0.5867
+      scores:
+        crit.fewer_interruptions: 0.14
+        crit.git_review_kept: 0.72
+        crit.person_authorises: 0.9
+        crit.risky_cases_ask: 0.94
+        crit.small_slice: 0.68
+    - option_id: opt.consent_in_final_question
+      rank: 2
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.72
+      scores:
+        crit.fewer_interruptions: 0.68
+        crit.git_review_kept: 0.73
+        crit.person_authorises: 0.75
+        crit.risky_cases_ask: 0.42
+        crit.small_slice: 0.55
+    - option_id: opt.direct_unless_risky
+      rank: 3
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.4233
+      scores:
+        crit.fewer_interruptions: 0.65
+        crit.git_review_kept: 0.42
+        crit.person_authorises: 0.2
+        crit.risky_cases_ask: 0.72
+        crit.small_slice: 0.29
+    - option_id: opt.added.1
+      rank: 4
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.36
+      scores:
+        crit.fewer_interruptions: 0.48
+        crit.git_review_kept: 0.46
+        crit.person_authorises: 0.14
+        crit.risky_cases_ask: 0.18
+        crit.small_slice: 0.3
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.always_ask
+    title: always ask the user before publishing
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-7387eb768abbf18f
+      - ev-077a66b69255a593
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.direct_unless_risky
+    title: publish directly unless the decision supersedes or corrects an existing record or changes an accepted ADR or policy,
+      and ask otherwise
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-7387eb768abbf18f
+      - ev-daf4c484f7077bf1
+      - ev-5e30cba917bb4d5c
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.consent_in_final_question
+    title: Ask for publish consent inside the decision's final human question, so approving and publishing are one answer
+    description: 'Keep ADR-060''s rule that a person authorises every record: the ranked-choice (or reuse) question also offers
+      ''choose and publish''; with that answer the host runs publish after the run and opens the PR for git review; without
+      it the record stays staged. No separate publish prompt.'
+    assumptions: []
+    evidence_ids:
+      - ev-7387eb768abbf18f
+      - ev-077a66b69255a593
+      - ev-870e8099a38e8907
+    proposed_by: host.generate_options
+    approved_by: human:user
+  - id: opt.added.1
+    title: Publish directly when the important gates are met and the decision is not risky, through a new PR flow copied from
+      finalize-feature
+    description: 'The user''s answer: publish directly if the important criteria are met (tests run, worktree removed, etc.)
+      and it is not risky. In a good way we start building a new flow to make a PR, copying the existing finalize-feature
+      flow.'
+    assumptions: []
+    evidence_ids:
+      - ev-3c12daec2686fd31
+      - ev-34c6c9e19c9036e7
+      - ev-8ef86be74b2b64d2
+      - ev-97e6d718eb2fc13b
+      - ev-57bebce4913e2e40
+      - ev-5ae1718f92dade79
+    proposed_by: human:user
+    approved_by: human:user
+criteria:
+  - id: crit.person_authorises
+    question: Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule
+      the person approved in an ADR, and never by a record or a precedent?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-7387eb768abbf18f
+      - ev-f295472d29d1246c
+      - ev-5e30cba917bb4d5c
+      - ev-2a1c5346fab0f00c
+      - ev-daf4c484f7077bf1
+  - id: crit.fewer_interruptions
+    question: Does it reduce the extra questions or manual steps the user faces per decision?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-789a77bd5f8ec2c0
+      - ev-4a562e6c9323ecab
+      - ev-f295472d29d1246c
+      - ev-97e6d718eb2fc13b
+  - id: crit.git_review_kept
+    question: Does every published record still go through git review in a pull request?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-789a77bd5f8ec2c0
+      - ev-daf4c484f7077bf1
+      - ev-7387eb768abbf18f
+      - ev-34c6c9e19c9036e7
+      - ev-5e30cba917bb4d5c
+  - id: crit.risky_cases_ask
+    question: Do decisions that supersede or correct a record, or that change an ADR or a policy, always ask the user?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-7387eb768abbf18f
+      - ev-5e30cba917bb4d5c
+      - ev-2a1c5346fab0f00c
+      - ev-077a66b69255a593
+      - ev-daf4c484f7077bf1
+  - id: crit.small_slice
+    question: Can it be built and verified as one ticket?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-5e30cba917bb4d5c
+      - ev-2a1c5346fab0f00c
+      - ev-077a66b69255a593
+      - ev-789a77bd5f8ec2c0
+evidence:
+  - id: ev-5e30cba917bb4d5c
+    locator: tickets/00_inbox/TICKET-20261001-KernelDecisionStore.md#L40-L52 (§Binding user decisions)
+    category: task_context
+    content_hash: 028cbd546952eb92a277a51e2a5d86a39420bcdde1878953e10de234ae4ea697
+    verification: source_verified
+    relevance: 0.95
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-2a1c5346fab0f00c
+    locator: docs/architecture/components/decision-kernel.md#L105-L117 (§Decisions)
+    category: task_context
+    content_hash: 41be9c8f3538315109e84f05b92b34104f0a84b20977689b05aed74d6d3c6d23
+    verification: source_verified
+    relevance: 0.93
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-d0721d1440d55f70
+    locator: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md#L264-L268 (§As built (decision store))
+    category: task_context
+    content_hash: c4fbf5e4f42ae1b505907a96aad586fff0439c4707a74af76bfae5f259f683f0
+    verification: source_verified
+    relevance: 0.93
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-077a66b69255a593
+    locator: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md#L212-L216 (§As built (decision store))
+    category: task_context
+    content_hash: b6482b4f041bc78bb8c3285f6c716c5f15214075136065dd277230c5931e994c
+    verification: source_verified
+    relevance: 0.92
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-a297882a8da2c395
+    locator: docs/components.json#L130-L153 (components > decision_kernel)
+    category: task_context
+    content_hash: 75dab6fd4b51a05841b0b2f99b1d025d3a3583d9c5c3eb0d9cf0188c7a64328e
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-4a562e6c9323ecab
+    locator: docs/how-to/run-the-decision-kernel-from-codex.md#L85-L96 (§Steps > Step 4 — Answer the kernel's questions)
+    category: task_context
+    content_hash: ac2ad1e206a8e93a8da7594a58e32d2bd3bf36b3663fe69079224a35a58026cb
+    verification: source_verified
+    relevance: 0.83
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-7387eb768abbf18f
+    locator: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md#L70-L77 (§Decision > 3. Records cannot
+      self-authorize)
+    category: prior_decisions
+    content_hash: 825c22ec3293b72c7f51a8966cd8ea648b56fa6adcb87dbb1dd441bd1debaf4e
+    verification: source_verified
+    relevance: 0.96
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-daf4c484f7077bf1
+    locator: kernel/memory/publish.py#L1-L48 (module level)
+    category: existing_patterns
+    content_hash: b88d07525d9050a3af7d3c4de2e63e0af44169ad5ac5bc878e6306aee8a85785
+    verification: source_verified
+    relevance: 0.9
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-024399fb4934c121
+    locator: kernel/memory/staging.py#L1-L39 (module level)
+    category: existing_patterns
+    content_hash: c666f8c24f41e639327414fcffd30c8220e8cfb4252c2633c313728691c206d8
+    verification: source_verified
+    relevance: 0.88
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-870e8099a38e8907
+    locator: kernel/capabilities/decision/executor.py#L113-L141 (def _stage)
+    category: existing_patterns
+    content_hash: 40d34bc7284d2a0dd9bed338f85cdd697de21a7b8e0a06d7828598989a1a58a9
+    verification: source_verified
+    relevance: 0.85
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-18a5b9e23f10db73
+    locator: kernel/memory/file_store.py#L1-L37 (module level)
+    category: existing_patterns
+    content_hash: 36d6a3f845b8cc1949c1cb8ed4d66c962635d00ddda17db033bdd0782cad62b1
+    verification: source_verified
+    relevance: 0.81
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-789a77bd5f8ec2c0
+    locator: tickets/00_inbox/TICKET-20261002-DecisionLifecycleProductTruth.md#L32-L42 (§Context)
+    category: prior_decisions
+    content_hash: fd8c7065b4b987b9e7eb18d352f3af7e969dda3f041336e9559ecefec5f94295
+    verification: source_verified
+    relevance: 0.89
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-f295472d29d1246c
+    locator: kernel/memory/builder.py#L1-L44 (module level)
+    category: existing_patterns
+    content_hash: c08cf4ff56c76a08de9a7f265fab033c66113dad603599b6a2a018df9235ca56
+    verification: source_verified
+    relevance: 0.86
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-3c12daec2686fd31
+    locator: docs/how-to/finalize-feature.md#L13-L28 (§How to use /finalize-feature)
+    category: existing_patterns
+    content_hash: 8abbef901b8b8f0a59f6b7d1730c0fe581d4fe6bfb2816cb76c4414f9d45d073
+    verification: source_verified
+    relevance: 0.83
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-34c6c9e19c9036e7
+    locator: 'docs/architecture/adrs/ADR-006-flatten-supervisor-chain.md#L866-L889 (§Addendum: `finalize-feature` agent removed
+      — JS workflow is… > Decision)'
+    category: existing_patterns
+    content_hash: ca24ff0d580f0f13c5a0c59f1aa7cffc4bbfa62185a288b38275cf3d04110600
+    verification: source_verified
+    relevance: 0.61
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-8ef86be74b2b64d2
+    locator: docs/known-issues/build-orchestration/open-high-ki-bo-20260909-worktrees-go-stale-within-minutes.md#L16-L37 (§KI-BO-20260909-worktrees-go-stale-within-minutes
+      — a branch…)
+    category: existing_patterns
+    content_hash: 20e9dc2429f95a0f9eacefd232fda5390998a0aac6ed170a89cb4b2b31e58f97
+    verification: source_verified
+    relevance: 0.6
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-97e6d718eb2fc13b
+    locator: docs/analysis/2026-09-25-worktree-failure-modes.md#L20-L50 (§4. Failure modes, with evidence)
+    category: existing_patterns
+    content_hash: dc47a85b176f695d76373c922fd213d87937d42c13ec44d7358d9f17153b082d
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-57bebce4913e2e40
+    locator: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260921-fastlane-worktree-agent-acts-on-leaked-conversation.md#L17-L40
+      (§KI-BO-20260921-fastlane-worktree-agent-acts-on-leaked-conve…)
+    category: existing_patterns
+    content_hash: 976111ba3bf7bd60c27fcf652aaad7fe5e1efd64c844c0135c68419dcda4dd15
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-5ae1718f92dade79
+    locator: docs/architecture/diagrams/gates-sequence.md#L85-L92 (§The three gates)
+    category: existing_patterns
+    content_hash: 529bb5db50709946bee7c41ec1d3d03abf5b459ae60afc1cf2bd6a5dcb50343c
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+precedents_considered:
+  - id: dec-d53e1c52cd47c832
+    applicability: 0.19
+    action: not_applicable
+    note: judged not to apply to this question; human:user approved [opt.kernel_entry_point] on 2026-10-02
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T13:04:50Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T13:04:50Z'
+  run_id: run-8a31d2cf1ea84f42
+  root_task_id: task-d7808e2f86e04165
+  langfuse_trace_id: 8115d905671c341f780b4d618b8d1787
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 29347eabdbb0
+    criteria: b5a53ecc9288
+    templates: decision.assess@1
+corrections: []

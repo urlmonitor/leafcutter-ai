@@ -186,6 +186,23 @@ def _parse_yaml_minimal(content: str) -> dict | None:
 def _parse_yaml_dict(content: str, source_label: Path) -> dict | None:
     """Parse a YAML string into a dict, preferring PyYAML with a minimal fallback.
 
+    Deliberately ``yaml.safe_load``, NOT the shared fast accessor
+    (``yaml_safe_loader.get_safe_yaml_loader``) used elsewhere in this
+    package. This module's whole contract, stated repeatedly in its own
+    module docstring, is that the regex fast path in ``_read_yaml_id``
+    "matches what yaml.safe_load would produce" -- so the full parse it
+    falls back to must be literally that function, not a loader that
+    disagrees with it. CSafeLoader accepts at least one input class the
+    pure-Python loader rejects (a tab in a value: ``yaml.safe_load``
+    raises ScannerError, CSafeLoader returns the string), which broke the
+    equivalence ``test_ge_122a_1_fast_path_equivalence`` exists to enforce.
+
+    The speed argument does not apply here either: ``_read_yaml_id``'s
+    regex fast path already handles the common shapes, and this function
+    is only reached when that path DECLINES. Making the rare correctness
+    fallback marginally faster at the cost of it disagreeing with its own
+    reference implementation is the wrong trade.
+
     Args:
         content: Raw YAML text read from source_label.
         source_label: Path used in warning messages on parse failure.
@@ -332,7 +349,7 @@ def _is_document_separator_line(raw_line: str, *, is_last_line: bool) -> bool:
       - ``...`` (document-end): the grammatical sibling of ``---``, but NOT
         symmetric in when it forces a decline. A lone ``...`` terminating
         the LAST line of an otherwise single, well-formed document is legal
-        YAML (``yaml.safe_load("id: GE-1\\n...\\n")`` cleanly returns
+        YAML (parsing ``"id: GE-1\\n...\\n"`` cleanly returns
         ``{'id': 'GE-1'}``, no raise) -- declining there would be a
         needless fallback on ordinary, correctly-parsing content. A ``...``
         that is NOT the last line, however, means at least one more line of

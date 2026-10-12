@@ -1,0 +1,97 @@
+{
+  "review_version": 1,
+  "kind": "SourceFile",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "Existing explicitly referenced file entities. This reader enriches a supplied immutable reference; it does not enumerate repository files, parse their bodies or create another file identity.",
+  "authorities": [
+    {"path": "knowledge/contracts.py#SourceReference", "role": "Strict five-field immutable repository source locator and content identity."},
+    {"path": "knowledge/contracts.py#Entity", "role": "Strict canonical entity envelope with open properties mapping."},
+    {"path": "scripts/knowledge_query.py#NodeRecord", "role": "Producer identity, surface, title, description, path and missing-reference flag."},
+    {"path": "scripts/knowledge_file_nodes.py", "symbols": ["_strip_anchor", "_normalize_separators", "_split_absolute", "_collapse_relative_segments", "_resolve_single", "_make_files_node"], "role": "Canonical path identity, index-first resolution, one node per unresolved referenced path and original present/missing observation."},
+    {"path": "knowledge/projection/canonical_loader.py#_entity", "role": "Existing conversion to SourceFile/Test, pinned source hash, source locator and reference properties."},
+    {"path": "knowledge/adapters/git_source.py", "symbols": ["safe_path", "immutable_checkout", "GitSourceResolver.read"], "role": "Immutable snapshot source boundary and exact-revision disclosure; current worktree is not source authority."}
+  ],
+  "record_identity": {
+    "input": "One existing Entity with kind exactly SourceFile.",
+    "native_id": "The exact existing entity.canonical_id. For producer files-surface nodes this is the canonical repository-relative POSIX path, but do not replace canonical_id with source.path if an already-valid entity differs.",
+    "source_path": "The exact existing entity.source.path.",
+    "locator": "The exact existing entity.source.locator, including an empty string.",
+    "title": "The exact existing entity.title, even when empty or different from the file basename.",
+    "description": "The exact existing entity.summary, even when empty.",
+    "metadata": "A deep copy of the complete Entity field shape: canonical_id, kind, title, summary, source (all five SourceReference fields), and properties (all original property names and values). Keep provenance and properties nested to avoid colliding future property names with canonical envelope names.",
+    "derived": "Empty. Do not manufacture file extension, language, ownership, timestamps, sizes, content, status or existence facts.",
+    "repeat_enrichment": "Exclude only the three exact adapter-injected keys _native_projection, _native_identity and _native_source_path from the nested properties copy. Preserve all other original keys, including keys starting _native_ that are not these three. Never mutate the supplied Entity.",
+    "identity_rules": [
+      "The graph producer strips #symbol or ::test suffixes before path identity; the stripped anchor belongs to the relationship, not a second file node or a fabricated node property.",
+      "Producer canonicalization changes separators and collapses relative segments before creating a file reference. This reader receives the final identity and must not normalize it again or case-fold it.",
+      "Index-first resolution can point a referenced path at an existing AC or Component node. Do not create a SourceFile record for those entities; enrich only entities whose kind is SourceFile.",
+      "A future canonical Document or Ticket for the same path has a different record identity and does not replace the established SourceFile reference.",
+      "Test is a distinct reference specialization and must be handled by its own reviewed reader. Do not classify by file suffix or parse test functions here."
+    ]
+  },
+  "fields": [
+    {"path": "/canonical_id", "type": "string", "required": true, "constraints": "Non-empty; preserve original retrieval identity exactly."},
+    {"path": "/kind", "type": "string", "required": true, "constraints": "Exactly SourceFile for this reader; reject other kinds explicitly."},
+    {"path": "/title", "type": "string", "required": true, "constraints": "Existing display title; empty is valid."},
+    {"path": "/summary", "type": "string", "required": true, "contract_default": "", "constraints": "Preserve the already-materialized Entity value without parsing file contents."},
+    {"path": "/source", "type": "object", "required": true, "constraints": "Complete SourceReference object, without recomputation or replacement."},
+    {"path": "/source/repository_id", "type": "string", "required": true, "constraints": "Non-empty trusted repository namespace."},
+    {"path": "/source/source_sha", "type": "string", "required": true, "constraints": "Exactly 40 lowercase hexadecimal characters under the current SourceReference schema."},
+    {"path": "/source/path", "type": "string", "required": true, "constraints": "Non-empty repository-relative POSIX path; no absolute path, parent traversal, backslash or colon. Reject invalid references, do not repair them."},
+    {"path": "/source/locator", "type": "string", "required": true, "contract_default": "", "constraints": "Preserve the exact source locator. Ordinary file nodes currently use an empty locator."},
+    {"path": "/source/content_hash", "type": "string", "required": true, "contract_default": "", "constraints": "Preserve exactly; an empty hash is an allowed older/partial SourceReference value, not a request to read the current filesystem."},
+    {"path": "/properties", "type": "object", "required": true, "contract_default": {}, "constraints": "Open mapping. Preserve all existing original fields and nested values, apart from the exact three projection-internal exclusions specified above."},
+    {"path": "/properties/surface", "type": "string", "required": false, "producer_value": "files", "constraints": "Present in canonical_loader output; preserve absence in older manually constructed Entity payloads rather than defaulting."},
+    {"path": "/properties/missing", "type": "boolean", "required": false, "producer_value": "The negation of path.exists() at original source projection time.", "constraints": "Explicit true, explicit false and absent are distinct metadata states. Do not recheck against a later or dirty checkout."},
+    {"path": "/properties/canonical", "type": "boolean", "required": false, "producer_value": false, "constraints": "False for files-surface references. This marks record authority, not whether the referenced file exists."},
+    {"path": "/properties/registry_identity", "type": "boolean", "required": false, "producer_value": false, "constraints": "False for ordinary file references. Preserve exact original value and presence rather than computing it from path."}
+  ],
+  "missing_and_hash_semantics": [
+    "The original files node uses path.exists(), while canonical_loader hashes path.read_bytes() only when path.is_file(); otherwise it hashes b''. Therefore missing files currently have the SHA-256 of empty bytes rather than an absent hash.",
+    "An existing empty regular file also has the SHA-256 of empty bytes. A hash alone cannot distinguish it from a missing reference; retain the explicit missing flag.",
+    "A referenced directory may have missing=false but the empty-byte hash because the original producer uses exists() and the loader uses is_file(). Do not silently reinterpret it as missing or read its contents.",
+    "A reference that was missing in its pinned generation must remain present as a graph reference node even if a file appears later in the active worktree.",
+    "A reference that was present must retain its pinned hash and missing=false even if the supplied root now lacks that file. This reader has no authority to replace historical evidence.",
+    "Hash verification/recomputation belongs to the canonical source loader or a separately governed pinned-source audit. The from_entity reader needs no filesystem access and must not parse file bodies."
+  ],
+  "null_empty_absent_semantics": [
+    "Entity and SourceReference are already materialized contracts; retain their declared fields including empty summary, locator and content_hash strings and empty properties object.",
+    "Do not infer authored absence for model-defaulted envelope fields. SourceFile is a reference contract, not frontmatter with an authoring history.",
+    "Inside properties, absent keys, explicit null, empty string, empty array and empty object remain distinct. Unknown future scalar, list and object properties must survive.",
+    "Keep list ordering and nested-object association. Metadata projection uses escaped JSON Pointer leaves and shape metadata for nulls and empty containers.",
+    "Deep-copy nested properties so caller mutation after enrichment cannot alter the source entity or the generated NativeRecord."
+  ],
+  "native_property_exposure": {
+    "reference_fields": "Expose the complete metadata field tree, including /source/repository_id, /source/source_sha, /source/path, /source/locator, /source/content_hash and /properties/missing.",
+    "ordinary_flags": "The coordinator's display_properties currently already copies simple original Entity.properties to ordinary Neo4j properties, so surface, missing, canonical and registry_identity remain directly filterable. This reader's nested metadata supplies a lossless independently reconstructable reference contract.",
+    "collisions": "Do not merge properties into the reference envelope: a future properties.title or properties.source must remain distinct from Entity.title or Entity.source.",
+    "relationships": "Do not derive new component ownership, file-to-file edges or anchors. Preserve the snapshot's existing relationships unchanged."
+  },
+  "coder_contract": {
+    "module": "knowledge/native_types/source_file.py",
+    "signature": "from_entity(root: pathlib.Path, entity: Entity) -> NativeRecord",
+    "shared_type": "knowledge.native_types.common.NativeRecord",
+    "algorithm": [
+      "Require an Entity with kind SourceFile and validate its reference shape/path without opening referenced files. root is part of the common integration signature, not authority to refresh pinned facts.",
+      "Deep-copy the complete reference envelope using Python-mode values. Strip only the three exact adapter-injected properties used for prior enrichment.",
+      "Return NativeRecord(kind='SourceFile', native_id=entity.canonical_id, source_path=entity.source.path, locator=entity.source.locator, title=entity.title, description=entity.summary, metadata=reference_copy, derived={}).",
+      "Do not add extract(root), repository traversal, source-body parsing or filesystem existence/hash observation.",
+      "Do not rewrite the supplied Entity or change its source, identity, flag values or relationships. Let the coordinator apply the presentation metadata to the same entity."
+    ],
+    "acceptance_checks": [
+      "Present reference preserves all six Entity fields and all five source fields, including a custom title/summary and locator.",
+      "Missing reference remains a returned SourceFile with missing=true and its exact original empty-byte hash, even when the referenced file now exists under root.",
+      "Present reference remains missing=false with the old hash even when root does not contain its file; no filesystem read is attempted.",
+      "An empty original content_hash stays empty; the reader does not fill it.",
+      "Absent missing/canonical flags remain absent; explicit false, null and empty structures survive unmodified.",
+      "Future properties with nested lists, nulls and envelope-colliding names survive deep-copy and native-properties encode/decode round-trip.",
+      "Canonical ID distinct from source.path and empty title/summary are preserved rather than replaced with basename defaults.",
+      "Test, Component, Document and other entity kinds are rejected explicitly.",
+      "Invalid out-of-root or platform-specific source paths fail explicitly without filesystem access.",
+      "Repeat enrichment strips the exact projection-internal keys only, avoiding recursive growth while retaining an unrelated future _native_ prefixed source property.",
+      "Mutating nested metadata cannot mutate the original entity; changing original nested properties cannot retroactively mutate the record."
+    ]
+  },
+  "count_basis": "No new source enumeration performed. SourceFile count is exactly the number of supplied existing SourceFile entities in the caller's immutable snapshot."
+}

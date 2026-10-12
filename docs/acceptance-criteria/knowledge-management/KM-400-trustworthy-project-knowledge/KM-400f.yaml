@@ -1,0 +1,96 @@
+id: KM-400f
+title: "Keep project knowledge inside limits you set, not limits you discover"
+component: knowledge-management
+components: [knowledge_management]
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+criteria: |
+  Keep only what you said to keep, and be told before there is no room left.
+
+  Project knowledge retains the versions the project declared it should retain, lets go of the superseded ones as part of normal use, and refuses an update it cannot fit instead of filling up and locking itself. How much room is left, what is being kept and why it is being kept are all visible while there is still time to act.
+parent: KM-400
+depends_on: [KM-400]
+doc_links:
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: context
+    status: exists
+    relevance: Reuse canonical identities and declared relationship semantics; do not create competing models.
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: The projected knowledge is a rebuildable artifact; bounding and reclaiming it is maintenance of that artifact, not a new product.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b.yaml
+    relationship: context
+    status: exists
+    relevance: Preservation and pinning are the superior constraint; a bound never reclaims a version that evidence in use still points at.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the distinction between an outage or a refusal and an empty result; a full or unreachable store is never reported as an absence of knowledge.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that reported figures state coverage and method; an undeterminable limit is reported as unknown, never as a fit.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The declared bound, the headroom thresholds and the reclamation controls must be documented as operator-visible behaviour.
+documentation_triggers: [how-to, reference-doc]
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-09'
+amended_by: []
+superseded_by: null
+covered_by:
+  - KM-400f-1
+  - KM-400f-2
+  - KM-400f-3
+  - KM-400f-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09 by product-owner at the user's instruction, as the permanent fix
+  for a structural problem the business-analyst had worked around. Five new children had
+  been added for a measured incident, pushing KM-400b to a child_limit_override of 7 and
+  KM-400e to 8. KM-400 held five L1s against a cap of seven, so the headroom for a
+  dedicated L1 existed and the user chose it over the waivers. KM-400b-6, KM-400b-7,
+  KM-400e-6 and KM-400e-7 were re-parented here as KM-400f-1 through KM-400f-4 — renamed,
+  because parentage in this store is derived from the id string. KM-400b's override was
+  removed outright; KM-400e's was reduced from 8 to 6, because KM-400e-8 deliberately
+  stayed where it was (see its own amendment).
+
+  The incident this L1 exists for: the projection published an immutable generation on
+  every merge to the canonical branch and reclaimed none of them. 32 generations reached
+  189,950 nodes and 304,498 relationships, crossed the hosted store's ceiling, and the
+  instance latched read-only. Every write then failed — including the reclamation that
+  would have recovered the space, which is the catch-22 that made recovery impossible —
+  so the instance was destroyed and recreated and all history was lost.
+
+  This is a specification gap before it is a code gap, which is why it warrants an L1 of
+  its own rather than two more children somewhere. Every existing requirement in this
+  family pushes toward preservation — KM-400a-3-i preserves retained generations,
+  KM-400b-3 pins a generation while it is retained, KM-400b keeps evidence already in
+  use stable — and not one criterion anywhere required anything to be given back.
+  Unbounded accumulation was therefore the specified behaviour, and no amount of careful
+  implementation of the existing store would have avoided the incident.
+
+  Settled design decision, not to be reopened: immutable generations are KEPT. This L1
+  bounds how many are kept and requires the surplus to be reclaimed; it does not replace
+  generations with in-place updating, and KM-400b-3's pinning guarantee stays superior
+  to the bound — an unexpired continuation protects its generation regardless of count
+  or age.
+
+  Scope boundary: this L1 is about staying inside declared storage limits. Honest
+  configuration of the backend — an unset required setting failing loudly instead of
+  being guessed — is KM-400e-8 and remains under KM-400e, which already owns continuing
+  honestly when the capability cannot be used. Stretching this L1's wording to absorb it
+  would have bought a cap-free diff at the cost of a title that no longer described its
+  children.

@@ -1,0 +1,365 @@
+id: GE-118g
+title: "The decision-numbering tools act on the repository they belong to, not on whichever directory they were started in"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A tool that exists to answer a question about this repository answers it about
+  this repository, from anywhere you can start it.
+
+  Today the two tools the project's own numbering procedure tells an author to
+  run both take their subject from the directory the process happened to start
+  in. One of them cannot read the repository's staged changes at all from there
+  and says so; the other silently takes a different tree as its subject and
+  reports an answer about that. Either way the published procedure cannot be
+  followed from where work actually starts, so the number an author ends up
+  with is chosen by hand instead — which is the situation the procedure was
+  written to end.
+
+  After this, the directory a numbering tool is started from stops being an
+  input to its answer. Where the repository cannot be established at all, the
+  tool says which situation it is in rather than producing an answer computed
+  from somewhere else.
+depends_on:
+  - GE-118
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-022.md
+    relationship: context
+    status: exists
+    relevance: >-
+      THE FILED EVIDENCE FOR BOTH CHILDREN. Its 2026-10-09 second-occurrence note
+      carries the reproduction of each defect and the exact observed output. Read it
+      rather than re-deriving; do not restate its severity grading or raise its
+      confidence labels. Note what it also records and what this L1 therefore does NOT
+      claim: the collision script is registered in no hook manifest, and on main it
+      fails open by returning an empty set on any git error. Neither of those is this
+      L1's subject.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260914-ac-hooks-resolve-root-from-cwd.md
+    relationship: context
+    status: exists
+    relevance: >-
+      THE SAME DEFECT FAMILY ACROSS SIX AC GATES, AND THE REASON A DOCUMENTATION FIX IS
+      NOT ACCEPTABLE HERE. It records that 31 hooks already route through the shared
+      resolver while six AC gates default to the invoking directory, and it states
+      plainly that "always run from the repo root" already exists as an instruction and
+      has not prevented three recurrences. No criterion in this subtree may be
+      discharged by adding or correcting such an instruction.
+  - path: docs/known-issues/knowledge-management/open-high-ki-km-20261008-harvest-state-default-is-cwd-relative.md
+    relationship: context
+    status: exists
+    relevance: >-
+      A third member of the same cwd-default family, in another component. Cited so the
+      shape is visible as a recurring class rather than two isolated bugs; its fix is
+      not this subtree's work.
+  - path: docs/conventions/adr-numbering.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE PUBLISHED PROCEDURE THAT CANNOT CURRENTLY BE FOLLOWED. Section 3 Step 2
+      prescribes the collision guard as the pre-flight; section 6 and
+      docs/how-to/documentation/write-adr.md section 10 make the unclaimed-number audit
+      the required way to pick a number. Both are prescribed as bare commands with no
+      directory or scan-root argument.
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      THE ESTABLISHED RESOLVER AND THE PRECEDENT. check_build_drift, check_output_drift
+      and check_agent_registry already resolve their repository through it. Reuse rather
+      than invent. Note the one recorded counter-case: GE-118c deliberately did not use
+      it, because that record's subject was a package-bundled file tied to the script's
+      own installed location rather than to the repository under examination. The
+      opposite is true here — the repository under examination IS the subject — so the
+      reasoning that ruled it out there argues for it here.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Two passages bind this subtree. "Gate / Workflow ACs — Verify Behaviorally, Not by
+      Grep" forbids satisfying any criterion here by a test that greps a script for a
+      cwd argument or a resolver import; every criterion is written as an invocation from
+      a named directory with an asserted observable result. "Before acting on a guard
+      tool's FAILURE" is the passage that names this exact experience from the other side
+      — a tool reporting a verdict it has no basis for because it was run from the wrong
+      place.
+delivers_to: null
+expects_from: null
+estimated_complexity: L
+it_requirements:
+  - "Repository resolution must be ONE ordered, declared sequence of candidate anchors
+    shared by both tools, in which an explicitly named repository outranks every other
+    anchor and the invoking process's working directory is never consulted once an
+    earlier anchor has resolved."
+  - "The sequence must terminate in a distinguishable unresolvable outcome rather than
+    in any default — no last-resort substitution of the working directory, of the
+    program's own installed location, or of a fixed number of levels above it."
+  - "Where the invoking directory is not inside a work tree, the next anchor consulted
+    must be a DECLARED one (the install's own configuration naming its project root),
+    never a filesystem search that can return more than one candidate; where two or
+    more candidates would be in play the tool refuses and names them rather than
+    choosing."
+  - "The existing shared resolver's find_project_root() must not have its contract
+    changed in place: 43 modules under templates/scripts/commit_guardian/ call it today
+    (measured 2026-10-09) and it currently cannot report failure at all — it falls
+    through a working-directory git read, then a __file__ ancestor walk keyed on .git
+    OR CLAUDE.md, then to 'two levels up'. The failable behaviour must be added as a
+    new entry point alongside it, so no third gate changes verdict as a side effect."
+  - "Any new helper module must be deployed by the same change. A module placed in
+    templates/scripts/commit_guardian/ deploys automatically — build_commit_guardian()
+    in scripts/build_phases_lifecycle.py rglobs that whole directory — but a module
+    placed anywhere else (scripts/, scripts/ac_store/, templates/scripts/) needs an
+    explicit entry in its phase's deploy map in the SAME change, or the deployed hook
+    raises ModuleNotFoundError at hook runtime while the source-tree unit tests stay
+    green. This repository has shipped exactly that failure once (done_proof.py)."
+  - "Each tool must report which anchor produced the repository it answered about, so a
+    verdict can be attributed to its anchor rather than inferred from the directory the
+    author happened to be in."
+  - "SINGLE SOURCE OF TRUTH FOR THE RESOLUTION ORDER — ONE MODULE, TWO IMPORTERS, NO
+    SECOND IMPLEMENTATION. The ordered anchor sequence above must exist as executable code
+    in exactly ONE file: a module under templates/scripts/commit_guardian/, which is
+    git-TRACKED. Both tools must execute that same file. The deployed hook
+    (check_adr_collision.py) imports it as a sibling, exactly as it imports its other
+    helpers today. scripts/adr_refs.py imports it through this project's existing tracked
+    loader — scripts/commit_guardian_module_loader.py,
+    load_commit_guardian_module('<resolver-module-stem>') — which resolves
+    <scripts/>/../templates/scripts/commit_guardian/<name>.py FIRST and falls back to the
+    deployed <scripts/>/commit_guardian/<name>.py only when the tracked source is absent,
+    raising ImportError naming both paths tried when neither resolves. No second
+    implementation of the order is permitted on either side of the build boundary."
+  - "WHY THAT PLACE IS GENUINELY REACHABLE FROM BOTH SIDES, SO IT IS NOT THE MISTAKE IT
+    AVOIDS. The loader sits at scripts/commit_guardian_module_loader.py at the same
+    position relative to its siblings in BOTH the package repo and a consumer install, so
+    the two relative paths it tries are identical in both layouts. It is git-TRACKED
+    (verified by git ls-files, 2026-10-09) and it already has two tracked callers solving
+    this exact problem — scripts/registry_validator.py and
+    scripts/spawn_bidirectionality_validator.py — plus a regression test at
+    unit_tests/test_inf_600k_1_regressions.py. Its own module docstring records that it
+    exists BECAUSE of a BLOCKING review finding of precisely the failure a naive import
+    would reproduce here: a sys.path insert of the gitignored scripts/commit_guardian/
+    build output raised ModuleNotFoundError on a fresh clone and was silently swallowed by
+    a broad except ImportError. Use this loader. Do not add a sys.path insert, do not
+    import the untracked deployed copy directly, and do not invent a new sharing
+    mechanism."
+  - "AFTER THE ABOVE, EXACTLY TWO DIVERGENCE AXES REMAIN, AND EACH IS NAMED RATHER THAN
+    ASSUMED CLOSED. (1) SOURCE VERSUS DEPLOYED: in a consumer install the hook executes the
+    DEPLOYED copy while a tracked caller prefers the templates source, so the two can
+    differ in the window between editing templates/ and running build.py. That axis is
+    already gated by check-build-drift and check-output-drift and needs no new mechanism
+    here — but the implementation must not add a third copy those gates do not cover.
+    (2) TWO CALL SITES: both tools can execute one resolver and still disagree, because
+    each has its own argument surface and its own point of use — one tool can resolve the
+    context correctly and then not pass it to its reads, which is the GE-118g-1 defect
+    one level up. A shared module does NOT close this axis; this record's cross-tool
+    agreement test is what closes it."
+  - "A DECISION-HISTORY NOTE IS NOT AN ACCEPTABLE DISCHARGE of any parity obligation in
+    this subtree. GE-118c is the recorded instance: a configuration file asserting in its
+    own comment that it was the single source of truth while nothing read it. Prose about
+    agreement goes stale silently and reports nothing when it does; the agreement must be
+    asserted by something that runs."
+  - "Must handle errors gracefully per the project error handling policy, and must not
+    present an unperformed read as a clean result."
+test_spec:
+  - name: test_both_numbering_tools_agree_on_the_resolved_repository_across_declared_cases
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    surface_invoked: templates/scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      THE PARITY TEST WITH TEETH, and the only entry in the subtree that can go red on a
+      disagreement between the two tools. A table of declared resolution cases, each a
+      (working directory, explicit-root argument) pair, covering: inside a plain checkout;
+      inside linked worktree A while sibling B exists; a non-repository directory with a
+      declared anchor; a non-repository directory with nothing beneath it; an explicit root
+      naming a non-repository; and an explicit root naming one checkout while the working
+      directory is a different one. For each case run BOTH tools as subprocesses and assert
+      they AGREE — same resolved repository (read from the anchor-reporting line this
+      record requires), same reported anchor, same refuse-or-proceed decision. The
+      assertion is AGREEMENT, not a per-tool expected value: the expected values are the
+      siblings' subject and are asserted there, so this entry stays green when a sibling's
+      expectation changes and red only when the two tools part company. No build.py spawn
+      and no layout fixture, so no marker.
+    must_catch:
+      - "give each tool its own implementation of the resolution order"
+      - "share the resolver module but have one tool resolve the context and then not pass it to its reads"
+      - "let the two tools differ in which anchor outranks which"
+    covers:
+      - GE-118g
+      - GE-118g-2
+      - GE-118g-3
+  - name: test_removing_the_shared_resolver_module_breaks_both_tools_loudly
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      THE SINGLE-SOURCING PROOF, which makes 'one module, two importers' falsifiable rather
+      than asserted. In a throwaway copy of the package layout, rename the one shared
+      resolver module away and run both tools over a case that requires resolution. Assert
+      BOTH fail loudly and that the failure names the paths tried. A tool carrying its own
+      second implementation keeps working when the shared module is gone — which is exactly
+      what this entry detects — and a tool that swallows the ImportError degrades silently,
+      the failure mode commit_guardian_module_loader.py's own docstring records as the
+      reason it was written. No marker, and deliberately so: the point is a layout with a
+      module REMOVED, which a shared reference layout cannot provide.
+    must_catch:
+      - "keep a private fallback implementation of the resolution order in either tool"
+      - "catch the ImportError and continue with a working-directory default"
+  - name: test_deployed_hook_and_tracked_caller_resolve_the_same_repository
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      The source-versus-deployed axis, asserted once rather than assumed closed. Run the
+      hook from the real DEPLOYED layout and the audit from the tracked source over the
+      same declared case, and assert both name the same resolved repository. Proves the
+      deployed copy of the shared resolver is the one actually in effect for the hook and
+      that it agrees with the tracked copy the loader hands the audit. Requests the
+      session-scoped shared_reference_layout fixture and declares
+      @pytest.mark.shared_layout_reader — it only reads the layout, so it must not spawn
+      its own build.py (one build costs 59.8s).
+    must_catch:
+      - "add a resolver copy that neither check-build-drift nor check-output-drift covers"
+      - "resolve correctly from the source tree while the deployed copy keeps the old behaviour"
+test_rationale: >-
+  This L1 carries a test contract, which it did not in the first enrichment pass, and the
+  change is deliberate. The earlier reasoning — that the composite's promise is held
+  entirely by its children — was right about BEHAVIOUR and wrong about STRUCTURE. Two
+  properties of this subtree are cross-cutting rather than delegable, and no child can
+  detect either: that the two tools share ONE implementation of the resolution order, and
+  that they AGREE case by case. A child record can only ever assert its own tool's
+  outcome, so two tools can each pass every one of their own arms while disagreeing with
+  each other — and the first enrichment pass actively mandated a second implementation,
+  which would have made that disagreement a matter of time rather than of chance.
+  The first entry is the parity obligation and is specified as an assertion of AGREEMENT
+  rather than of expected values, which is what keeps it independent of the siblings: if
+  it asserted per-tool outcomes it would duplicate their arms and would have to be edited
+  whenever one changed, and an obligation that must be edited to stay green is the kind
+  that gets softened. The second entry is the single-sourcing proof, and it is the one
+  that would have caught the mistake this pass corrects: a private second implementation
+  is invisible to every behavioural test until the shared module is taken away. The third
+  closes the remaining source-versus-deployed axis once, since the hook executes the
+  deployed copy in production while a tracked caller prefers the templates source.
+  Explicitly NOT specified here: any test that greps two source files for matching text,
+  or that asserts a decision-history note exists. CLAUDE.md's behavioural rule outranks
+  any test_spec that blessed those forms, and GE-118c is the recorded instance of prose
+  standing in for a mechanism — a config file asserting in its own comment that it was the
+  single source of truth while nothing read it. Markers: only the third entry requests
+  shared_reference_layout and therefore carries @pytest.mark.shared_layout_reader; the
+  first two neither request the fixture nor build anything and sit outside the
+  marker-routing mechanism entirely. The one property that remains genuinely delegated is
+  the precedence rule itself — that an explicit instruction outranks the working directory
+  — which is stated and tested once as GE-118g-3's fourth arm, by deliberate design
+  recorded in that record's notes.
+declares_side_effect: false
+documentation_triggers: []
+documentation_rationale: >-
+  No new documentation is required and none may be substituted for the behaviour. The
+  published procedure in docs/conventions/adr-numbering.md (section 3 Step 2, section 6)
+  and docs/how-to/documentation/write-adr.md (section 10) are already correct AS WRITTEN
+  for a tool that resolves its own repository — they prescribe the bare command with no
+  directory argument, which is precisely what must start working. Closing this subtree
+  makes the existing text true rather than creating a need for new text. The prior-art
+  known-issue for this defect family records that "always run from the repo root" already
+  exists as an instruction and has not prevented three recurrences, so a documentation
+  arm here would be the known-ineffective fix wearing an acceptance criterion.
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - GE-118g-1
+  - GE-118g-2
+  - GE-118g-3
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS L1 EXISTS RATHER THAN A CHILD OF AN EXISTING ONE. GE-118's six existing
+  children are each about ONE named hook and ONE named dependency: GE-118a the
+  check-secrets scanner directory, GE-118b the drift hooks' build manifest, GE-118c the
+  declared document-type file, GE-118d/e/f the two accepted shapes of a path-bearing
+  frontmatter entry. Filing a cwd-resolution defect in the decision-numbering tools under
+  any of them would file it under a record about a different hook's helper. That
+  mis-filing has a cost this project has already paid once: BP-600f sat in the wrong
+  component for six weeks.
+
+  WHY GE-118 IS THE RIGHT L0 AND NOT MERELY THE NEAREST. Its L0 criterion is about a hook
+  resolving what it needs from the layout that actually holds it rather than from a
+  hardcoded or assumed location. GE-118a-1, GE-118b and GE-118c are each an instance of
+  the same shape — a resolution anchored on something the invoker controls instead of on
+  something the project declares. The two children here add the one anchor the register
+  does not yet hold: the invoking process's working directory. That is the same shape and
+  not a new one, and the shared resolver GE-118b and GE-118c argued about by name is the
+  same module the fix here routes through.
+
+  WHY NOT GE-126. GE-126 ("You can verify for yourself that a check actually inspected
+  your work") is about truthfulness, and both tools here are already truthful in their
+  own terms. The collision guard says "could not read the decision-number sequence" —
+  which is exactly what happened. The audit reports what it found in the tree it
+  examined. Neither lies; both are pointed at the wrong thing. A criterion about honesty
+  would be satisfied by the code as it stands today, which is the test that this is the
+  wrong home. This paragraph is the record of that check, so the next author does not
+  repeat it.
+
+  MEASURED IN THIS WORKTREE ON 2026-10-09, WITH METHOD, AND NOT TO BE UPGRADED.
+    - The directory this workspace's agent sessions start in is NOT a git work tree:
+      `git -C /home/henzeh/projects/leafcutter rev-parse --show-toplevel` exits 128 with
+      "not a git repository".
+    - That same directory DOES contain a deployed `scripts/commit_guardian/`, so the
+      procedure's bare relative command finds a script to run and only then fails to read
+      git state. This is what makes the first defect reachable rather than theoretical:
+      the command does not fail to start, it starts and answers wrongly.
+    - It does NOT contain `scripts/adr_refs.py`, so section 6's bare relative command
+      fails to start from there. The audit defect is reached by the absolute-path
+      invocation that this project's own MANDATORY shell convention requires ("Use
+      absolute paths for the script AND its arguments") — which leaves the scan root at
+      its cwd default on every compliant invocation.
+    - That directory holds 77 sibling worktrees under `worktrees/`. The prior filed note
+      says "~100"; 77 is what is there today and the two must not be conflated.
+
+  WHAT IS DELIBERATELY OUT OF SCOPE, AND THE CRITERIA ARE WRITTEN TO HOLD EITHER WAY.
+    - REGISTERING THE COLLISION GUARD AS A COMMIT-TIME HOOK. It is registered nowhere
+      today (verified 2026-10-09). KI-CG-20260909-dormant-gate-registration-census
+      records that registering dormant gates carries real blast radius. Every criterion
+      in this subtree is expressed as a DIRECT invocation — the form the published
+      procedure prescribes — so it is satisfiable whether or not the gate is ever
+      registered, and registering it later neither satisfies nor invalidates any clause.
+    - THE FAIL-OPEN EMPTY-SET RETURN on a failed read, recorded in KI-CG-022. Real, and
+      not this subtree's subject. A context-resolution fix will make today's symptom
+      disappear while leaving that path in place; that is worth knowing and is not worth
+      conflating.
+    - HOW LONG EITHER TOOL TAKES. The audit was reported as hung from the wrong directory
+      and is not hung — measured at 5.0s with the repository named explicitly. The defect
+      is which tree it walks, not how fast it walks one. No criterion here states a
+      duration and none may be added.
+
+  L2 CUT. GE-118g-1 is the staged-change read (the tool cannot see the repository's own
+  staged files). GE-118g-2 is the scan root (the tool sees a different tree and reports
+  about it). They are separate because they are different mechanisms with different
+  failure signatures — one refuses visibly, one answers wrongly and quietly — and a fix
+  to either leaves the other untouched. GE-118g-3 is the no-repository case, which
+  belongs to neither child because it applies to both.
+
+  NOT AUTHORED HERE, BY DESIGN: assigned_agent beyond a single nominated owner per leaf,
+  estimated_complexity, it_requirements, test_spec, test_rationale and
+  declares_side_effect. Those are the IT PO's.

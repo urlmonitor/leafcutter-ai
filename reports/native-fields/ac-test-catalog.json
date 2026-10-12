@@ -1,0 +1,1891 @@
+{
+  "purpose": "Verified existing test-function catalog for BA/IT PO traceability; descriptions are function-name summaries, not a fresh test execution or requirements approval.",
+  "evidence": "reports/native-fields/native-final-strict.xml",
+  "types": [
+    {
+      "kind": "AcceptanceCriterion",
+      "ac_id": "KM-400a-1-i",
+      "implementation": "knowledge/native_types/acceptance_criterion.py",
+      "test_file": "tests/knowledge/test_native_acceptance_criterion.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_all_schema_fields_survive_validated_source_extraction",
+          "name": "test_all_schema_fields_survive_validated_source_extraction",
+          "description": "all schema fields survive validated source extraction.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_absent_defaults_and_yaml_date_strings_remain_authored",
+          "name": "test_absent_defaults_and_yaml_date_strings_remain_authored",
+          "description": "absent defaults and yaml date strings remain authored.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_configured_surface_is_used_and_non_records_are_excluded",
+          "name": "test_configured_surface_is_used_and_non_records_are_excluded",
+          "description": "configured surface is used and non records are excluded.",
+          "angle": "reachability",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_invalid_source_is_rejected_by_existing_validator",
+          "name": "test_invalid_source_is_rejected_by_existing_validator",
+          "description": "invalid source is rejected by existing validator.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_duplicate_ids_are_not_collapsed",
+          "name": "test_duplicate_ids_are_not_collapsed",
+          "description": "duplicate ids are not collapsed.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_source_cannot_escape_supplied_snapshot",
+          "name": "test_source_cannot_escape_supplied_snapshot",
+          "description": "source cannot escape supplied snapshot.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_acceptance_criterion.py::test_metadata_does_not_alias_another_extraction",
+          "name": "test_metadata_does_not_alias_another_extraction",
+          "description": "metadata does not alias another extraction.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "ADR",
+      "ac_id": "KM-400a-1-ii",
+      "implementation": "knowledge/native_types/adr.py",
+      "test_file": "tests/knowledge/test_native_adr.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_preserves_all_frontmatter_types_without_defaults",
+          "name": "test_native_adr_preserves_all_frontmatter_types_without_defaults",
+          "description": "native adr preserves all frontmatter types without defaults.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_legacy_missing_frontmatter_remains_a_record",
+          "name": "test_native_adr_legacy_missing_frontmatter_remains_a_record",
+          "description": "native adr legacy missing frontmatter remains a record.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_distinguishes_document_status_and_guide_disagreements",
+          "name": "test_native_adr_distinguishes_document_status_and_guide_disagreements",
+          "description": "native adr distinguishes document status and guide disagreements.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows",
+          "name": "test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows",
+          "description": "native adr only reads first direct status table and keeps unknown rows.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_respects_configured_surface_and_existing_id_override",
+          "name": "test_native_adr_respects_configured_surface_and_existing_id_override",
+          "description": "native adr respects configured surface and existing id override.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_adr.py::test_native_adr_real_sources_retain_complete_fields_and_legacy_body",
+          "name": "test_native_adr_real_sources_retain_complete_fields_and_legacy_body",
+          "description": "native adr real sources retain complete fields and legacy body.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Component",
+      "ac_id": "KM-400a-1-iii",
+      "implementation": "knowledge/native_types/component.py",
+      "test_file": "tests/knowledge/test_native_component.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_preserves_every_field_and_registry_identity",
+          "name": "test_component_preserves_every_field_and_registry_identity",
+          "description": "component preserves every field and registry identity.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_real_registry_fields_match_exact_entries",
+          "name": "test_component_real_registry_fields_match_exact_entries",
+          "description": "component real registry fields match exact entries.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_absent_registry_ignores_architecture_documents",
+          "name": "test_component_absent_registry_ignores_architecture_documents",
+          "description": "component absent registry ignores architecture documents.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_malformed_registry_fails_explicitly",
+          "name": "test_component_malformed_registry_fails_explicitly",
+          "description": "component malformed registry fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_identity_conflict_fails_without_rewriting",
+          "name": "test_component_identity_conflict_fails_without_rewriting",
+          "description": "component identity conflict fails without rewriting.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_reference_cannot_escape_snapshot",
+          "name": "test_component_reference_cannot_escape_snapshot",
+          "description": "component reference cannot escape snapshot.",
+          "angle": "boundary",
+          "observed_cases": 6,
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_component.py::test_component_nonstring_presentation_fields_remain_authored",
+          "name": "test_component_nonstring_presentation_fields_remain_authored",
+          "description": "component nonstring presentation fields remain authored.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Agent",
+      "ac_id": "KM-400a-1-iv",
+      "implementation": "knowledge/native_types/agent.py",
+      "test_file": "tests/knowledge/test_native_agent.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_preserves_all_registry_fields_and_separate_template_meanings",
+          "name": "test_agent_preserves_all_registry_fields_and_separate_template_meanings",
+          "description": "agent preserves all registry fields and separate template meanings.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_real_registry_preserves_all_entries_and_registered_templates",
+          "name": "test_agent_real_registry_preserves_all_entries_and_registered_templates",
+          "description": "agent real registry preserves all entries and registered templates.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_absent_registry_does_not_discover_unregistered_templates",
+          "name": "test_agent_absent_registry_does_not_discover_unregistered_templates",
+          "description": "agent absent registry does not discover unregistered templates.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_invalid_registry_envelope_or_identity_fails",
+          "name": "test_agent_invalid_registry_envelope_or_identity_fails",
+          "description": "agent invalid registry envelope or identity fails.",
+          "angle": "failure",
+          "observed_cases": 7,
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_template_reference_cannot_escape_snapshot",
+          "name": "test_agent_template_reference_cannot_escape_snapshot",
+          "description": "agent template reference cannot escape snapshot.",
+          "angle": "boundary",
+          "observed_cases": 8,
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_missing_template_fails_explicitly",
+          "name": "test_agent_missing_template_fails_explicitly",
+          "description": "agent missing template fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_agent.py::test_agent_missing_and_null_template_fields_remain_distinct",
+          "name": "test_agent_missing_and_null_template_fields_remain_distinct",
+          "description": "agent missing and null template fields remain distinct.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Skill",
+      "ac_id": "KM-400a-1-v",
+      "implementation": "knowledge/native_types/skill.py",
+      "test_file": "tests/knowledge/test_native_skill.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_preserves_all_registry_fields_and_independent_template_fields",
+          "name": "test_skill_preserves_all_registry_fields_and_independent_template_fields",
+          "description": "skill preserves all registry fields and independent template fields.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter",
+          "name": "test_skill_real_registry_retains_all_42_skills_and_legacy_frontmatter",
+          "description": "skill real registry retains all 42 skills and legacy frontmatter.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_absent_registry_does_not_admit_unregistered_templates",
+          "name": "test_skill_absent_registry_does_not_admit_unregistered_templates",
+          "description": "skill absent registry does not admit unregistered templates.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_malformed_registry_or_identity_fails",
+          "name": "test_skill_malformed_registry_or_identity_fails",
+          "description": "skill malformed registry or identity fails.",
+          "angle": "failure",
+          "observed_cases": 7,
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_template_path_cannot_escape_snapshot",
+          "name": "test_skill_template_path_cannot_escape_snapshot",
+          "description": "skill template path cannot escape snapshot.",
+          "angle": "boundary",
+          "observed_cases": 8,
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_missing_referenced_template_fails_explicitly",
+          "name": "test_skill_missing_referenced_template_fails_explicitly",
+          "description": "skill missing referenced template fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_missing_null_and_empty_optional_fields_remain_distinct",
+          "name": "test_skill_missing_null_and_empty_optional_fields_remain_distinct",
+          "description": "skill missing null and empty optional fields remain distinct.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_template_description_fallback_does_not_create_registry_field",
+          "name": "test_skill_template_description_fallback_does_not_create_registry_field",
+          "description": "skill template description fallback does not create registry field.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_skill.py::test_skill_unclosed_template_frontmatter_fails",
+          "name": "test_skill_unclosed_template_frontmatter_fails",
+          "description": "skill unclosed template frontmatter fails.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Ticket",
+      "ac_id": "KM-400a-1-vi",
+      "implementation": "knowledge/native_types/ticket.py",
+      "test_file": "tests/knowledge/test_native_ticket.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_preserves_full_metadata_nested_shapes_dates_and_body",
+          "name": "test_ticket_preserves_full_metadata_nested_shapes_dates_and_body",
+          "description": "ticket preserves full metadata nested shapes dates and body.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_distinct_paths_and_epic_subtype_provenance",
+          "name": "test_ticket_distinct_paths_and_epic_subtype_provenance",
+          "description": "ticket distinct paths and epic subtype provenance.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_excludes_readme_generic_notes_and_missing_frontmatter",
+          "name": "test_ticket_excludes_readme_generic_notes_and_missing_frontmatter",
+          "description": "ticket excludes readme generic notes and missing frontmatter.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_never_defaults_missing_fields_or_normalizes_historical_values",
+          "name": "test_ticket_never_defaults_missing_fields_or_normalizes_historical_values",
+          "description": "ticket never defaults missing fields or normalizes historical values.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_invalid_frontmatter_is_explicit_failure",
+          "name": "test_ticket_invalid_frontmatter_is_explicit_failure",
+          "description": "ticket invalid frontmatter is explicit failure.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_absent_store_returns_no_records",
+          "name": "test_ticket_absent_store_returns_no_records",
+          "description": "ticket absent store returns no records.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_ticket.py::test_ticket_real_store_preserves_every_frontmatter_field",
+          "name": "test_ticket_real_store_preserves_every_frontmatter_field",
+          "description": "ticket real store preserves every frontmatter field.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Document",
+      "ac_id": "KM-400a-1-vii",
+      "implementation": "knowledge/native_types/document.py",
+      "test_file": "tests/knowledge/test_native_document.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_preserves_complete_frontmatter_and_body",
+          "name": "test_document_preserves_complete_frontmatter_and_body",
+          "description": "document preserves complete frontmatter and body.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_legacy_memory_identity_and_safe_display_fallback",
+          "name": "test_document_legacy_memory_identity_and_safe_display_fallback",
+          "description": "document legacy memory identity and safe display fallback.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_excludes_owned_views_without_dropping_authored_guides",
+          "name": "test_document_excludes_owned_views_without_dropping_authored_guides",
+          "description": "document excludes owned views without dropping authored guides.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_configured_surfaces_and_product_manifest_views",
+          "name": "test_document_configured_surfaces_and_product_manifest_views",
+          "description": "document configured surfaces and product manifest views.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_malformed_frontmatter_fails_explicitly",
+          "name": "test_document_malformed_frontmatter_fails_explicitly",
+          "description": "document malformed frontmatter fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_refuses_invalid_or_escaping_surface",
+          "name": "test_document_refuses_invalid_or_escaping_surface",
+          "description": "document refuses invalid or escaping surface.",
+          "angle": "boundary",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_missing_roots_is_empty",
+          "name": "test_document_missing_roots_is_empty",
+          "description": "document missing roots is empty.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_document.py::test_document_real_corpus_full_metadata_fidelity",
+          "name": "test_document_real_corpus_full_metadata_fidelity",
+          "description": "document real corpus full metadata fidelity.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "RoadmapPhase",
+      "ac_id": "KM-400a-1-viii",
+      "implementation": "knowledge/native_types/roadmap_phase.py",
+      "test_file": "tests/knowledge/test_native_roadmap_phase.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_phase_fields_context_order_and_future_fields_are_lossless",
+          "name": "test_phase_fields_context_order_and_future_fields_are_lossless",
+          "description": "phase fields context order and future fields are lossless.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_optional_fields_remain_absent_and_empty_lists_remain_present",
+          "name": "test_optional_fields_remain_absent_and_empty_lists_remain_present",
+          "description": "optional fields remain absent and empty lists remain present.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_configured_source_and_nonempty_description",
+          "name": "test_configured_source_and_nonempty_description",
+          "description": "configured source and nonempty description.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_absent_optional_source_returns_no_records",
+          "name": "test_absent_optional_source_returns_no_records",
+          "description": "absent optional source returns no records.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_malformed_source_fails",
+          "name": "test_malformed_source_fails",
+          "description": "malformed source fails.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_invalid_phase_shape_fails",
+          "name": "test_invalid_phase_shape_fails",
+          "description": "invalid phase shape fails.",
+          "angle": "failure",
+          "observed_cases": 9,
+          "passed": 9,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_duplicate_ids_fail",
+          "name": "test_duplicate_ids_fail",
+          "description": "duplicate ids fail.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_invalid_root_context_fails",
+          "name": "test_invalid_root_context_fails",
+          "description": "invalid root context fails.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_configured_path_escape_fails_even_when_target_absent",
+          "name": "test_configured_path_escape_fails_even_when_target_absent",
+          "description": "configured path escape fails even when target absent.",
+          "angle": "boundary",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_roadmap_phase.py::test_real_roadmap_all_fields_and_context_match_source",
+          "name": "test_real_roadmap_all_fields_and_context_match_source",
+          "description": "real roadmap all fields and context match source.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "GlossaryTerm",
+      "ac_id": "KM-400a-1-ix",
+      "implementation": "knowledge/native_types/glossary_term.py",
+      "test_file": "tests/knowledge/test_native_glossary_term.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_preserves_fields_and_exact_markdown",
+          "name": "test_native_glossary_preserves_fields_and_exact_markdown",
+          "description": "native glossary preserves fields and exact markdown.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_ignores_comments_and_fences_without_truncation",
+          "name": "test_native_glossary_ignores_comments_and_fences_without_truncation",
+          "description": "native glossary ignores comments and fences without truncation.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_fence_info_does_not_open_html_comment",
+          "name": "test_native_glossary_fence_info_does_not_open_html_comment",
+          "description": "native glossary fence info does not open html comment.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_true_section_boundaries_and_empty_definition",
+          "name": "test_native_glossary_true_section_boundaries_and_empty_definition",
+          "description": "native glossary true section boundaries and empty definition.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_identities_survive_insertion_and_reordering",
+          "name": "test_native_glossary_identities_survive_insertion_and_reordering",
+          "description": "native glossary identities survive insertion and reordering.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail",
+          "name": "test_native_glossary_duplicate_normalized_terms_fail",
+          "description": "native glossary duplicate normalized terms fail.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_custom_path_and_absent_surface_default",
+          "name": "test_native_glossary_custom_path_and_absent_surface_default",
+          "description": "native glossary custom path and absent surface default.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails",
+          "name": "test_native_glossary_invalid_configuration_fails",
+          "description": "native glossary invalid configuration fails.",
+          "angle": "failure",
+          "observed_cases": 8,
+          "passed": 8,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_symlink_outside_snapshot_fails",
+          "name": "test_native_glossary_symlink_outside_snapshot_fails",
+          "description": "native glossary symlink outside snapshot fails.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 0,
+          "skipped": 1,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails",
+          "name": "test_native_glossary_malformed_frontmatter_fails",
+          "description": "native glossary malformed frontmatter fails.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_missing_and_empty_store_emit_no_placeholder",
+          "name": "test_native_glossary_missing_and_empty_store_emit_no_placeholder",
+          "description": "native glossary missing and empty store emit no placeholder.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_glossary_term.py::test_native_glossary_real_corpus_matches_all_authored_sections",
+          "name": "test_native_glossary_real_corpus_matches_all_authored_sections",
+          "description": "native glossary real corpus matches all authored sections.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Flow",
+      "ac_id": "KM-400a-1-x",
+      "implementation": "knowledge/native_types/flow.py",
+      "test_file": "tests/knowledge/test_native_flow.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_all_nested_fields_preserved_and_manifest_separate",
+          "name": "test_flow_all_nested_fields_preserved_and_manifest_separate",
+          "description": "flow all nested fields preserved and manifest separate.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_unregistered_sources_and_empty_shapes_stay_visible",
+          "name": "test_flow_unregistered_sources_and_empty_shapes_stay_visible",
+          "description": "flow unregistered sources and empty shapes stay visible.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_real_corpus_deep_equality_and_no_rewrites",
+          "name": "test_flow_real_corpus_deep_equality_and_no_rewrites",
+          "description": "flow real corpus deep equality and no rewrites.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_missing_store_is_empty",
+          "name": "test_flow_missing_store_is_empty",
+          "description": "flow missing store is empty.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_malformed_manifest_fails",
+          "name": "test_flow_malformed_manifest_fails",
+          "description": "flow malformed manifest fails.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_unsafe_or_noncanonical_declared_path_fails",
+          "name": "test_flow_unsafe_or_noncanonical_declared_path_fails",
+          "description": "flow unsafe or noncanonical declared path fails.",
+          "angle": "boundary",
+          "observed_cases": 9,
+          "passed": 9,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_invalid_registration_or_identity_fails",
+          "name": "test_flow_invalid_registration_or_identity_fails",
+          "description": "flow invalid registration or identity fails.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_invalid_source_fails",
+          "name": "test_flow_invalid_source_fails",
+          "description": "flow invalid source fails.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_required_source_shapes_fail_explicitly",
+          "name": "test_flow_required_source_shapes_fail_explicitly",
+          "description": "flow required source shapes fail explicitly.",
+          "angle": "failure",
+          "observed_cases": 7,
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_flow.py::test_flow_no_manifest_and_normalized_registration_spelling",
+          "name": "test_flow_no_manifest_and_normalized_registration_spelling",
+          "description": "flow no manifest and normalized registration spelling.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Mockup",
+      "ac_id": "KM-400a-1-xi",
+      "implementation": "knowledge/native_types/mockup.py",
+      "test_file": "tests/knowledge/test_native_mockup.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_all_fields_unknown_extensions_and_shape_are_preserved",
+          "name": "test_mockup_all_fields_unknown_extensions_and_shape_are_preserved",
+          "description": "mockup all fields unknown extensions and shape are preserved.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_manifest_and_render_remain_separate_exact_supporting_sources",
+          "name": "test_mockup_manifest_and_render_remain_separate_exact_supporting_sources",
+          "description": "mockup manifest and render remain separate exact supporting sources.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_real_canonical_population_includes_unregistered_and_null_renders",
+          "name": "test_mockup_real_canonical_population_includes_unregistered_and_null_renders",
+          "description": "mockup real canonical population includes unregistered and null renders.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured",
+          "name": "test_mockup_missing_store_and_absent_optional_fields_are_not_manufactured",
+          "description": "mockup missing store and absent optional fields are not manufactured.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_safe_missing_render_is_reported_without_losing_record",
+          "name": "test_mockup_safe_missing_render_is_reported_without_losing_record",
+          "description": "mockup safe missing render is reported without losing record.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_malformed_records_fail_explicitly",
+          "name": "test_mockup_malformed_records_fail_explicitly",
+          "description": "mockup malformed records fail explicitly.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_duplicate_records_and_manifest_ids_fail_explicitly",
+          "name": "test_mockup_duplicate_records_and_manifest_ids_fail_explicitly",
+          "description": "mockup duplicate records and manifest ids fail explicitly.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_render_paths_cannot_escape_or_fetch_urls",
+          "name": "test_mockup_render_paths_cannot_escape_or_fetch_urls",
+          "description": "mockup render paths cannot escape or fetch urls.",
+          "angle": "boundary",
+          "observed_cases": 7,
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_manifest_path_and_identity_conflicts_fail",
+          "name": "test_mockup_manifest_path_and_identity_conflicts_fail",
+          "description": "mockup manifest path and identity conflicts fail.",
+          "angle": "boundary",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mockup.py::test_mockup_resolved_escape_is_rejected_before_read",
+          "name": "test_mockup_resolved_escape_is_rejected_before_read",
+          "description": "mockup resolved escape is rejected before read.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "MockData",
+      "ac_id": "KM-400a-1-xii",
+      "implementation": "knowledge/native_types/mock_data.py",
+      "test_file": "tests/knowledge/test_native_mock_data.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_all_native_fields_and_nested_sample_values_are_preserved",
+          "name": "test_mock_data_all_native_fields_and_nested_sample_values_are_preserved",
+          "description": "mock data all native fields and nested sample values are preserved.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered",
+          "name": "test_mock_data_manifest_is_separate_and_unregistered_files_are_discovered",
+          "description": "mock data manifest is separate and unregistered files are discovered.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset",
+          "name": "test_mock_data_real_corpus_preserves_all_records_and_unregistered_dataset",
+          "description": "mock data real corpus preserves all records and unregistered dataset.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_missing_store_and_absent_values_are_not_defaulted",
+          "name": "test_mock_data_missing_store_and_absent_values_are_not_defaulted",
+          "description": "mock data missing store and absent values are not defaulted.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_bad_source_fails_with_path",
+          "name": "test_mock_data_bad_source_fails_with_path",
+          "description": "mock data bad source fails with path.",
+          "angle": "failure",
+          "observed_cases": 6,
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_duplicate_native_ids_are_rejected",
+          "name": "test_mock_data_duplicate_native_ids_are_rejected",
+          "description": "mock data duplicate native ids are rejected.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_escape_is_rejected",
+          "name": "test_mock_data_manifest_escape_is_rejected",
+          "description": "mock data manifest escape is rejected.",
+          "angle": "boundary",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_manifest_duplicate_and_mismatched_source_fail",
+          "name": "test_mock_data_manifest_duplicate_and_mismatched_source_fail",
+          "description": "mock data manifest duplicate and mismatched source fail.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_resolved_symlink_escape_fails_before_read",
+          "name": "test_mock_data_resolved_symlink_escape_fails_before_read",
+          "description": "mock data resolved symlink escape fails before read.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_mock_data.py::test_mock_data_unreadable_source_is_explicit",
+          "name": "test_mock_data_unreadable_source_is_explicit",
+          "description": "mock data unreadable source is explicit.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "ChangelogEntry",
+      "ac_id": "KM-400a-1-xiii",
+      "implementation": "knowledge/native_types/changelog_entry.py",
+      "test_file": "tests/knowledge/test_native_changelog_entry.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_preserves_every_field_body_and_authored_types",
+          "name": "test_changelog_preserves_every_field_body_and_authored_types",
+          "description": "changelog preserves every field body and authored types.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_legacy_identity_absence_and_presentation_fallbacks",
+          "name": "test_changelog_legacy_identity_absence_and_presentation_fallbacks",
+          "description": "changelog legacy identity absence and presentation fallbacks.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_configured_store_and_guidance_exclusions",
+          "name": "test_changelog_configured_store_and_guidance_exclusions",
+          "description": "changelog configured store and guidance exclusions.",
+          "angle": "seam",
+          "observed_cases": 2,
+          "passed": 2,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_absent_stores_and_overlapping_configuration",
+          "name": "test_changelog_absent_stores_and_overlapping_configuration",
+          "description": "changelog absent stores and overlapping configuration.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_unsafe_or_invalid_store",
+          "name": "test_changelog_rejects_unsafe_or_invalid_store",
+          "description": "changelog rejects unsafe or invalid store.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_only_failing_literal_description",
+          "name": "test_changelog_recovers_only_failing_literal_description",
+          "description": "changelog recovers only failing literal description.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_recovers_failing_literal_list_but_retains_valid_maps",
+          "name": "test_changelog_recovers_failing_literal_list_but_retains_valid_maps",
+          "description": "changelog recovers failing literal list but retains valid maps.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_recovery_payload_is_independent_of_checkout_path",
+          "name": "test_changelog_recovery_payload_is_independent_of_checkout_path",
+          "description": "changelog recovery payload is independent of checkout path.",
+          "angle": "seam",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_rejects_ambiguous_or_unrelated_malformations",
+          "name": "test_changelog_rejects_ambiguous_or_unrelated_malformations",
+          "description": "changelog rejects ambiguous or unrelated malformations.",
+          "angle": "failure",
+          "observed_cases": 7,
+          "passed": 7,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_changelog_entry.py::test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries",
+          "name": "test_changelog_real_corpus_accounts_for_all_fields_and_three_recoveries",
+          "description": "changelog real corpus accounts for all fields and three recoveries.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Capability",
+      "ac_id": "KM-400a-1-xiv",
+      "implementation": "knowledge/native_types/capability.py",
+      "test_file": "tests/knowledge/test_native_capability.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_all_fields_and_nested_extensions_round_trip",
+          "name": "test_capability_all_fields_and_nested_extensions_round_trip",
+          "description": "capability all fields and nested extensions round trip.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_real_registry_exact_fields_and_no_defaults",
+          "name": "test_capability_real_registry_exact_fields_and_no_defaults",
+          "description": "capability real registry exact fields and no defaults.",
+          "angle": "real_artifact",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_legacy_admission_does_not_read_references",
+          "name": "test_capability_legacy_admission_does_not_read_references",
+          "description": "capability legacy admission does not read references.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_source_order_and_changed_values_are_visible",
+          "name": "test_capability_source_order_and_changed_values_are_visible",
+          "description": "capability source order and changed values are visible.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_absent_and_empty_registry_do_not_invent_records",
+          "name": "test_capability_absent_and_empty_registry_do_not_invent_records",
+          "description": "capability absent and empty registry do not invent records.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_malformed_envelope_fails_explicitly",
+          "name": "test_capability_malformed_envelope_fails_explicitly",
+          "description": "capability malformed envelope fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_invalid_registry_identity_fails",
+          "name": "test_capability_invalid_registry_identity_fails",
+          "description": "capability invalid registry identity fails.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_malformed_entry_fails_explicitly",
+          "name": "test_capability_malformed_entry_fails_explicitly",
+          "description": "capability malformed entry fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 15,
+          "passed": 15,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_duplicate_ids_fail_without_source_changes",
+          "name": "test_capability_duplicate_ids_fail_without_source_changes",
+          "description": "capability duplicate ids fail without source changes.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_resolved_source_cannot_escape_snapshot",
+          "name": "test_capability_resolved_source_cannot_escape_snapshot",
+          "description": "capability resolved source cannot escape snapshot.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_capability.py::test_capability_metadata_and_context_are_independent_copies",
+          "name": "test_capability_metadata_and_context_are_independent_copies",
+          "description": "capability metadata and context are independent copies.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Decision",
+      "ac_id": "KM-400a-1-xv",
+      "implementation": "knowledge/native_types/decision.py",
+      "test_file": "tests/knowledge/test_native_decision.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_complete_source_is_lossless_and_schema_pinned",
+          "name": "test_decision_complete_source_is_lossless_and_schema_pinned",
+          "description": "decision complete source is lossless and schema pinned.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_minimal_retains_omission_null_and_empty",
+          "name": "test_decision_minimal_retains_omission_null_and_empty",
+          "description": "decision minimal retains omission null and empty.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_absent_or_empty_store_needs_no_schema_or_kernel",
+          "name": "test_decision_absent_or_empty_store_needs_no_schema_or_kernel",
+          "description": "decision absent or empty store needs no schema or kernel.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_invalid_authored_fields_rejected_without_mutating",
+          "name": "test_decision_invalid_authored_fields_rejected_without_mutating",
+          "description": "decision invalid authored fields rejected without mutating.",
+          "angle": "failure",
+          "observed_cases": 31,
+          "passed": 31,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_duplicate_local_ids_rejected",
+          "name": "test_decision_duplicate_local_ids_rejected",
+          "description": "decision duplicate local ids rejected.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_missing_approval_or_classification_rejected",
+          "name": "test_decision_missing_approval_or_classification_rejected",
+          "description": "decision missing approval or classification rejected.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_filename_must_match_canonical_identity",
+          "name": "test_decision_filename_must_match_canonical_identity",
+          "description": "decision filename must match canonical identity.",
+          "angle": "failure",
+          "observed_cases": 2,
+          "passed": 2,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected",
+          "name": "test_decision_unknown_filter_value_rejected",
+          "description": "decision unknown filter value rejected.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_unresolved_store_links_rejected",
+          "name": "test_decision_unresolved_store_links_rejected",
+          "description": "decision unresolved store links rejected.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_supersession_requires_reciprocal_source_and_preserves_original",
+          "name": "test_decision_supersession_requires_reciprocal_source_and_preserves_original",
+          "description": "decision supersession requires reciprocal source and preserves original.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_plain_yaml_and_size_bound_enforced",
+          "name": "test_decision_plain_yaml_and_size_bound_enforced",
+          "description": "decision plain yaml and size bound enforced.",
+          "angle": "failure",
+          "observed_cases": 6,
+          "passed": 6,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_changed_source_schema_cannot_weaken_trusted_validator",
+          "name": "test_decision_changed_source_schema_cannot_weaken_trusted_validator",
+          "description": "decision changed source schema cannot weaken trusted validator.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_malformed_source_fails_explicitly",
+          "name": "test_decision_malformed_source_fails_explicitly",
+          "description": "decision malformed source fails explicitly.",
+          "angle": "failure",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_decision.py::test_decision_source_resolution_cannot_escape_snapshot",
+          "name": "test_decision_source_resolution_cannot_escape_snapshot",
+          "description": "decision source resolution cannot escape snapshot.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "SourceFile",
+      "ac_id": "KM-400a-1-xvi",
+      "implementation": "knowledge/native_types/source_file.py",
+      "test_file": "tests/knowledge/test_native_source_file.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_complete_contract_and_nested_future_fields",
+          "name": "test_source_file_complete_contract_and_nested_future_fields",
+          "description": "source file complete contract and nested future fields.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_never_refreshes_pinned_existence_or_hash",
+          "name": "test_source_file_never_refreshes_pinned_existence_or_hash",
+          "description": "source file never refreshes pinned existence or hash.",
+          "angle": "boundary",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_absence_empty_and_false_are_distinct",
+          "name": "test_source_file_absence_empty_and_false_are_distinct",
+          "description": "source file absence empty and false are distinct.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_repeat_enrichment_removes_only_exact_internal_keys",
+          "name": "test_source_file_repeat_enrichment_removes_only_exact_internal_keys",
+          "description": "source file repeat enrichment removes only exact internal keys.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_nested_values_are_independent_copies",
+          "name": "test_source_file_nested_values_are_independent_copies",
+          "description": "source file nested values are independent copies.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_rejects_other_entity_kinds",
+          "name": "test_source_file_rejects_other_entity_kinds",
+          "description": "source file rejects other entity kinds.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_revalidates_invalid_source_path",
+          "name": "test_source_file_revalidates_invalid_source_path",
+          "description": "source file revalidates invalid source path.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_source_file.py::test_source_file_rejects_non_entity_and_invalid_reference",
+          "name": "test_source_file_rejects_non_entity_and_invalid_reference",
+          "description": "source file rejects non entity and invalid reference.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    },
+    {
+      "kind": "Test",
+      "ac_id": "KM-400a-1-xvii",
+      "implementation": "knowledge/native_types/test.py",
+      "test_file": "tests/knowledge/test_native_test.py",
+      "tests": [
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_exposes_complete_contract_and_future_fields",
+          "name": "test_test_reference_exposes_complete_contract_and_future_fields",
+          "description": "test reference exposes complete contract and future fields.",
+          "angle": "criterion",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_never_observes_current_filesystem",
+          "name": "test_test_reference_never_observes_current_filesystem",
+          "description": "test reference never observes current filesystem.",
+          "angle": "boundary",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_absent_empty_null_and_false_remain_distinct",
+          "name": "test_test_reference_absent_empty_null_and_false_remain_distinct",
+          "description": "test reference absent empty null and false remain distinct.",
+          "angle": "boundary",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_removes_only_exact_adapter_keys",
+          "name": "test_test_reference_removes_only_exact_adapter_keys",
+          "description": "test reference removes only exact adapter keys.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_copies_nested_data_in_both_directions",
+          "name": "test_test_reference_copies_nested_data_in_both_directions",
+          "description": "test reference copies nested data in both directions.",
+          "angle": "boundary",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification",
+          "name": "test_test_reference_rejects_other_kinds_without_path_reclassification",
+          "description": "test reference rejects other kinds without path reclassification.",
+          "angle": "failure",
+          "observed_cases": 4,
+          "passed": 4,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair",
+          "name": "test_test_reference_revalidates_source_paths_without_repair",
+          "description": "test reference revalidates source paths without repair.",
+          "angle": "failure",
+          "observed_cases": 5,
+          "passed": 5,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_rejects_non_entity_and_invalid_pinned_source",
+          "name": "test_test_reference_rejects_non_entity_and_invalid_pinned_source",
+          "description": "test reference rejects non entity and invalid pinned source.",
+          "angle": "failure",
+          "observed_cases": 1,
+          "passed": 1,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        },
+        {
+          "anchor": "tests/knowledge/test_native_test.py::test_test_reference_preserves_existing_classification_without_invention",
+          "name": "test_test_reference_preserves_existing_classification_without_invention",
+          "description": "test reference preserves existing classification without invention.",
+          "angle": "boundary",
+          "observed_cases": 3,
+          "passed": 3,
+          "skipped": 0,
+          "failed": 0,
+          "has_assertions_or_exception_checks": true
+        }
+      ]
+    }
+  ],
+  "shared_links": [
+    {
+      "anchor": "tests/knowledge/test_native_metadata_integration.py::test_authored_and_derived_fields_survive_payload_and_physical_projection",
+      "ac_ids": [
+        "KM-400a-1-i"
+      ],
+      "basis": "AcceptanceCriterion fixture validates typed authored and derived properties through Entity payload and physical projection."
+    },
+    {
+      "anchor": "tests/knowledge/test_native_metadata_integration.py::test_distinct_native_types_keep_colliding_names_and_explicit_memberships",
+      "ac_ids": [
+        "KM-400a-1-iv",
+        "KM-400a-1-v"
+      ],
+      "basis": "Agent and Skill native records prove cross-kind identity separation and direct declared membership."
+    },
+    {
+      "anchor": "tests/knowledge/test_native_metadata_integration.py::test_native_record_flag_cannot_bypass_decision_approval",
+      "ac_ids": [
+        "KM-400a-1-xv"
+      ],
+      "basis": "Decision fixture with proposed approval fails snapshot validation."
+    },
+    {
+      "anchor": "tests/knowledge/test_native_metadata_integration.py::test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved",
+      "ac_ids": [
+        "KM-400a-1-vii"
+      ],
+      "basis": "Document fixture retains declared component filtering and reports unresolved membership."
+    },
+    {
+      "anchor": "tests/knowledge/test_native_metadata_integration.py::test_reference_readers_reach_projection_without_refreshing_historical_evidence",
+      "ac_ids": [
+        "KM-400a-1-xvi",
+        "KM-400a-1-xvii"
+      ],
+      "basis": "Both SourceFile and Test fixtures reach native property mapping without refreshing pinned source evidence."
+    }
+  ],
+  "shared_database_evidence": {
+    "anchor": "tests/knowledge_live/native_metadata_checks.py::test_native_metadata_is_typed_queryable_and_round_trips_in_neo4j",
+    "existing_ac": "KM-400a-3-i",
+    "scope": "Shared property publication mechanism tested with an AcceptanceCriterion fixture; not 17 separate live reader tests."
+  }
+}

@@ -36,7 +36,7 @@
     "models",
     "scripts"
   ],
-  "test_output_dir": "%TEMP%/leafcutter-tests/",
+  "test_output_dir": "",
   "worktree_base_path": "../",
   "settings_module": "settings",
   "changelog_folder": "changelogs/",
@@ -62,7 +62,10 @@
   "worktree_cleanup": {
     "kill_residual_processes": true,
     "log_globs": ["*.log", "precommit-autofix*.log", ".sql_test_results.json"],
-    "protected_paths": []
+    "protected_paths": [],
+    "scratch_root": "",
+    "scratch_max_age_hours": 24,
+    "durable_paths": ["debugging/logs", "test-logs"]
   },
 
   "hooks": {

@@ -1,0 +1,225 @@
+id: DK-400a-1
+title: "A bundled request that routing turns away is offered as a split, not ended as a capability gap"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the reusable-criteria goal of mock record
+    dcp-reusable-criteria-by-hand ("For the kernel we often use similar decision basis and we
+    should also reuse them. ... That way we only need LLMs to generate further categories if jev
+    thinks some are missing to make better decision"),
+  And that goal holds four separate questions: the storage format, the Neo4j projection, the
+    clustering method and the mining source,
+  And routing finds no single capability for it (no match, reason jev_none),
+  When routing runs on the run's root,
+  Then a split is started for the goal instead of the run ending blocked,
+  And the split keeps the goal exactly as submitted as its subject, with subject kind goal,
+    found at routing, work-item depth 0 and trigger jev_none,
+  And the run waits for the host to propose the parts (run status waiting_host).
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: Flow v5 node(s) split-detect, with their acceptance scenarios.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: Decomposition fields subject_text, subject_kind, found_at, work_item_depth, trigger; records dcp-reusable-criteria-by-hand
+      and dcp-reusable-criteria-proposed.
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
+    relationship: describes
+    status: exists
+    relevance: Contracts, the payload schema catalog, the capability registry entry shape and the kernel configuration.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: 'Split record, checkpointed in run state before the run returns and exposed in the envelope, one per
+    split work item: {id: string ''dcp-'' + 16 hex derived from the owning work item id; run_id: string; work_item_id:
+    string; subject_kind: ''goal'' | ''research_request'' | ''decision_question''; subject_text: string (the subject
+    as submitted with whitespace runs collapsed to one space, nothing else changed); found_at: ''routing'' | ''mid_run'';
+    work_item_depth: integer (0 iff found_at routing); trigger: ''jev_none'' | ''ambiguous'' | ''bundled_accepted''
+    | null (null iff mid_run); kept_routing: {capability_id: string, capability_version: string, routing_assessment_id:
+    string} | null (non-null iff trigger bundled_accepted or found_at mid_run); state: null while waiting for the
+    host''s proposal; parts: []; dropped: []; not_covered: []; gate_answer: null; gate_by: null; gate_at: null;
+    gate_note: null; whole_decision_id: null; capability_gap_recorded: false; report_lines: []}. Run status waiting_host
+    with pending operation decompose_goal whose payload is leafcutter.goal_decomposition_request.v1. Consumed by
+    DK-400c-1 (proposal), DK-400a-1-ii and DK-400d-3-i (deferred gap accounting), DK-400a-2 and DK-400b-2 (same
+    record, other triggers).'
+expects_from: null
+it_requirements:
+  - 'Detection follows the ADR-053 order. Deterministic gates run first and skip the check entirely when any fails:
+    split.enabled is true; host operations are enabled and the host-operation budget can fund one decomposition;
+    the item is routed semantically (request kind capability, not a fixed, continued or retried binding, not a deterministic
+    no_match with no eligible candidate, not a part of an approved split); its payload is not a caller-supplied
+    leafcutter.decision_request.v1; the run''s remaining part allowance (split.max_parts_per_run) is at least 2;
+    the resolved answer kind is decision or evidence, or unresolved (ideas, change and out_of_domain roots are never
+    split).'
+  - 'The ''one question or several?'' judgment is one literal Jev noul per checked item (versioned template id kernel.split.bundled)
+    that rides the item''s first existing Jev batch: the intent batch for a root without an explicit output contract,
+    otherwise the routing batch. It adds no Jev provider request: a checked run makes exactly as many provider calls
+    as the same run with split.enabled false, unless the added question pushes a batch past jev.max_questions_per_call.'
+  - A subject counts as bundled only at or above split.bundle_threshold (default 0.8, biased against false positives).
+    Below it the item goes on exactly as today; the probability and threshold are recorded in the routing assessment,
+    a run event and the trace, so an uncertain answer is visible but never starts a split (ADR-053 section 6).
+  - For a bundled root whose routing ended no_match because Jev chose none (jev_none), the split replaces today's
+    gap recording and host fallback rebinding; the gap decision is deferred until the split's outcome is known (DK-400a-1-ii,
+    DK-400d-3-i). Split detection takes precedence over the no_match fallback for a bundled subject.
+  - The split record is checkpointed before the run returns waiting_host; its id is derived from the owning work
+    item, so a re-executed node or a resumed run never creates a second split for the same item.
+  - The item's split_checked flag (DK-400c-3) is set in the same route pass, so a re-executed node or a resumed
+    run never asks the bundle question twice.
+  - subject_text equals the submitted goal with only whitespace runs collapsed, using one shared normalisation helper
+    that the quote check (DK-400c-2) also uses.
+  - 'subject_kind is derived deterministically: research_request when the item''s requested or classified output
+    is leafcutter.evidence_bundle.v1, decision_question for a mid-run item whose request asks a decision question,
+    goal otherwise.'
+  - Every new tunable lives in config/kernel_config.default.json under a split section (split.enabled, split.bundle_threshold,
+    split.max_parts, split.max_parts_per_run and the per-part budget keys of DK-400e-1), with config/kernel_config.schema.json
+    regenerated from the config model and kept equal by the existing config test; no threshold or bound is hard-coded
+    in node code, and every value used is recorded in the trace.
+  - 'Shipped default of split.enabled: on, as approved at the final gate. While DK-400 is built in three dependency-checked
+    epics (dec-9925ebf1895222f4: E1 = DK-400a + DK-400c except c-5; E2 = DK-400b + DK-400d except d-5, plus c-5;
+    E3 = DK-400e + DK-400f + d-5), E1 and E2 ship split.enabled: false in config/kernel_config.default.json and
+    as the config model''s default, so main stays usable for daily kernel runs between merges. DK-400e-1 (E3) returns
+    both to on. Every split test enables splitting explicitly through a config override and never relies on the
+    shipped default.'
+  - 'split.enabled false (the off switch) restores today''s behaviour exactly on the same inputs: no bundle question
+    in any Jev batch, no split record, today''s gap, fallback, clarification and report.'
+  - The split lifecycle emits run events and tracer events (split.started and the later split.* events) carrying
+    the split id, trigger and subject kind; subject text in telemetry obeys the data_policy redaction rules.
+  - 'Handle failures per the project error handling policy: catch specific exceptions, log at WARNING with the run,
+    work item and split ids involved, and never swallow a failure silently; a rejected submission leaves run state
+    unchanged.'
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_turned_away_bundled_goal_starts_split_and_waits_for_host
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: Through RunService with scripted Jev (route __NONE__, bundle 0.9) the reusable-criteria goal ends
+      waiting_host on decompose_goal, records no gap, and holds a split record with the goal as subject_text, subject_kind
+      goal, found_at routing, depth 0 and trigger jev_none.
+  - name: test_bundle_check_adds_no_jev_provider_call
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'The bundle question rides the root''s routing batch: the scripted provider records the same number
+      of provider calls for the same root with split.enabled true and false.'
+  - name: test_split_disabled_restores_todays_turned_away_outcome
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With split.enabled false the same goal ends blocked with today's unsupported gap, and no recorded
+      Jev batch holds a bundle question.
+  - name: test_bundle_threshold_boundary_from_config
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Bundle probability just below split.bundle_threshold records today's gap; at the threshold a split
+      starts; the threshold is read from config.
+  - name: test_split_record_is_idempotent_across_restart
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Restarting the process at waiting_host (sqlite checkpointer) and reading the run again yields one
+      split record with the same id.
+  - name: test_kernel_config_schema_includes_split_section
+    target_dir: tests/kernel/config/
+    framework: pytest
+    type: unit
+    angle: real_artifact
+    description: The config schema regenerated from the model includes the split section and its keys and equals
+      the committed config/kernel_config.schema.json; it does not pin split.enabled, whose shipped value is false
+      in E1 and E2 and is pinned on by DK-400e-1.
+test_rationale: 'Detection must be proven through the real route node and the real Jev batch: a direct call to a
+  detector function could pass while routing never asks the question, and the no-extra-call claim only holds if
+  the provider call count of a whole run is compared.'
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): shipped default on, but false in E1 and E2 until DK-400e-1
+      flips it; split tests enable splitting explicitly; the config-schema test no longer pins split.enabled.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      split_checked flag cross-reference (Open Question 1); ADR-067 doc_link set to exists.'
+superseded_by: null
+covered_by:
+  - DK-400a-1-i
+  - DK-400a-1-ii
+implemented_by: []
+notes: |
+  Flow node split-detect, the turned-away case. The real case is the run of 2026-10-02
+  (run-40d2159630bb48bd), which ended blocked with an unsupported gap and was then split by hand
+  outside the kernel.
+  Left to the IT PO on purpose (DK-400a CARRY TO L2): how the kernel tells one question from
+  several. Candidates are a cheap check before any proposal, in ADR-053 order (deterministic
+  code, then Jev), or the proposal itself with the fewer-than-two rule (DK-400c-3).
+  The ambiguous trigger is DK-400a-1-i; honest gap counts are DK-400a-1-ii.
+  IT PO (2026-10-05): settled how one question is told from several (BA open point 1): deterministic
+  gates first, then one literal Jev noul riding the item's existing intent or routing batch (no
+  extra provider call), threshold split.bundle_threshold 0.8, then the host's proposal with the
+  fewer-than-two backstop (DK-400c-3); a person approves. No keyword heuristics. Off switch
+  split.enabled restores today's behaviour.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -1,0 +1,213 @@
+"""Offline plan/source helpers for a new, isolated real-Aura public proof."""
+from __future__ import annotations
+
+import dataclasses
+import hashlib
+import json
+import re
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+BASE = Path(__file__).resolve().parent
+BUDGET = {"runs": 4, "jev_calls_per_run": 12, "jev_calls_total": 48,
+          "host_results_per_run": 3, "host_results_total": 12,
+          "max_retries": 0, "graph_writes": 0, "catalog_writes": 0, "telemetry_exports": 0}
+CASES = (
+    {"id": "A01", "target": "KM-500c-2", "catalog": False, "negative": False},
+    {"id": "A02", "target": "KM-500c-2", "catalog": True, "negative": False},
+    {"id": "A03", "target": "KM-500c-1", "catalog": False, "negative": False},
+    {"id": "A04", "target": "KM-500c-2", "catalog": False, "negative": True},
+)
+for _case in CASES:
+    _case["question"] = f"For {_case['target']}, what must tests demonstrate?"
+
+
+def plain(value):
+    """Serialize actual kernel records without manufacturing usage."""
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    if dataclasses.is_dataclass(value):
+        return dataclasses.asdict(value)
+    raise TypeError(type(value).__name__)
+
+
+def read(path: Path):
+    """Read an explicit JSON artifact."""
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save(path: Path, value, *, replace: bool = False):
+    """Preserve attempt receipts; only named current pointers may be replaced."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w" if replace else "x", encoding="utf-8") as stream:
+        stream.write(json.dumps(value, indent=2, ensure_ascii=False, default=plain) + "\n")
+
+
+def sha256(path: Path) -> str:
+    """Hash actual file bytes."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def utc_now() -> str:
+    """Return a timestamp for observed evidence."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def git(*arguments: str) -> bytes:
+    """Read local Git objects without fetching, checking out or modifying them."""
+    try:
+        return subprocess.check_output(["git", "-C", str(ROOT), *arguments], stderr=subprocess.PIPE)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("Git source read failed; no fallback or retry was attempted") from exc
+
+
+def exact_sha(value: str | None) -> str:
+    """Reject aliases, missing revisions and implicit current-head selection."""
+    if not value or not re.fullmatch(r"[0-9a-f]{40}", value):
+        raise ValueError("An explicit lowercase 40-character commit SHA is required")
+    return value
+
+
+def run_directory(name: str) -> Path:
+    """Keep this evaluation's output inside its own new report directory."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", name):
+        raise ValueError("Run name must be a short lowercase identifier")
+    return BASE / "runs" / name
+
+
+def source_oracles(revision: str) -> dict:
+    """Read independently authored criteria/specs only after publication verification."""
+    import yaml
+
+    exact_sha(revision)
+    git("cat-file", "-e", revision + "^{commit}")
+    paths = git("ls-tree", "-r", "--name-only", revision, "docs/acceptance-criteria").decode().splitlines()
+    result = {}
+    for identifier in ("KM-500c-1", "KM-500c-2"):
+        matches = [path for path in paths if Path(path).stem == identifier and path.endswith(".yaml")]
+        if len(matches) != 1:
+            raise ValueError("Canonical source identity must resolve uniquely: " + identifier)
+        raw = git("show", revision + ":" + matches[0])
+        document = yaml.safe_load(raw)
+        if document.get("id") != identifier or not isinstance(document.get("criteria"), str):
+            raise ValueError("Canonical source lacks the expected identity/criteria")
+        required = ["criteria"] + (["test_spec"] if "test_spec" in document else [])
+        result[identifier] = {"source_sha": revision, "path": matches[0],
+            "file_sha256": hashlib.sha256(raw).hexdigest(), "criteria": document["criteria"],
+            "test_spec_authored": "test_spec" in document, "test_spec": document.get("test_spec"),
+            "expected_interpretation_fields": required}
+    if result["KM-500c-1"]["criteria"] == result["KM-500c-2"]["criteria"]:
+        raise ValueError("Changed-ID control does not discriminate source content")
+    return result
+
+
+def runtime_fingerprint() -> dict:
+    """Pin executable working bytes independently from the published data revision."""
+    names = git("ls-files", "--cached", "--others", "--exclude-standard",
+                "kernel", "integrations", "knowledge", "config").decode().splitlines()
+    files = {name: sha256(ROOT / name) for name in sorted(set(names))
+             if name.endswith((".py", ".json")) and (ROOT / name).is_file()}
+    files.update({str(path.relative_to(ROOT)).replace("\\", "/"): sha256(path)
+                  for path in sorted(BASE.glob("*.py"))})
+    aggregate = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
+    return {"code_revision": git("rev-parse", "HEAD").decode().strip(),
+            "aggregate_sha256": aggregate, "files_sha256": files}
+
+
+def case_config(case: dict, output: Path, database: str | None = None) -> dict:
+    """Use production defaults, fixed proof bounds and read-only question permissions."""
+    body = read(ROOT / "config/kernel_config.default.json")
+    body.pop("$schema", None)
+    body["paths"]["run_root"] = str(output / case["id"] / "runtime")
+    body["knowledge"].update(backend="neo4j", repository_id="leafcutter", repository_root=str(ROOT),
+        database=database, query_catalog_root=str(output / case["id"] / "catalog") if case["catalog"] else None)
+    body["knowledge"]["embeddings_enabled"] = False
+    body["sources"] = [{"id": "knowledge.graph", "kind": "graph_query", "categories": ["task_context"]}]
+    body["entity_context"]["enabled"] = False
+    body["context_enrichment"]["enabled"] = False
+    body["langfuse"]["enabled"] = False
+    body["memory"]["backend"] = "null"
+    body["limits"].update(max_jev_calls=BUDGET["jev_calls_per_run"],
+        max_host_operations=BUDGET["host_results_per_run"], max_retries=0, max_active_seconds=150)
+    body["jev"]["timeout_seconds"] = 30
+    return body
+
+
+def task_input(case: dict, revision: str) -> dict:
+    """Supply only the public question and trusted scope, never an operation or oracle."""
+    return {"goal": case["question"], "caller": {"id": "aura-proof", "kind": "host"},
+        "scope": {"workspace_id": "aura-proof", "repository_root": str(ROOT), "read_roots": ["docs"],
+                  "source_ids": ["knowledge.graph"], "revision": {"commit": revision}},
+        "permissions": ["read_repo"], "input_payload_schema": "leafcutter.research_request.v1",
+        "requested_output_schema": "leafcutter.evidence_bundle.v1",
+        "input_payload": {"question": case["question"], "evidence_needs_only": True,
+            "evidence_needs": [{"id": "need.question", "category": "task_context", "priority": "required",
+                                "question": case["question"]}]}}
+
+
+def host_count(envelope: dict) -> int:
+    """Count actually accepted host-result usage separately from dispatch reservations."""
+    return sum(item.get("calls", 0) for item in envelope["usage_summary"]["usage"]
+               if item["provider"] == "host")
+
+
+def totals(output: Path) -> dict:
+    """Count the latest durable public envelope once for each frozen case."""
+    envelopes = [read(path) for path in output.glob("A*/current.json")]
+    incomplete = [case["id"] for case in CASES
+        if list((output / case["id"]).glob("*/failure.json"))
+        or ((output / case["id"] / "started" / "attempt.json").exists()
+            and not (output / case["id"] / "current.json").exists())]
+    return {"actual_jev_calls": sum(item["usage_summary"]["jev_calls"] for item in envelopes),
+            "accepted_host_results": sum(host_count(item) for item in envelopes),
+            "usage_incomplete_cases": incomplete}
+
+
+def verify_limits(output: Path):
+    """Stop at the frozen ceiling rather than resetting budgets or rerunning a case."""
+    usage = totals(output)
+    if usage["actual_jev_calls"] > BUDGET["jev_calls_total"] or usage["accepted_host_results"] > BUDGET["host_results_total"]:
+        raise ValueError("Actual recorded usage exceeded the frozen ceiling")
+
+
+class ActiveGenerationDrift(ValueError):
+    """The currently published source no longer matches the frozen evaluation generation."""
+
+
+async def readiness(environment, source_sha: str, generation_id: str) -> dict:
+    """Read the real ready manifest without publishing, setting up or warming the graph."""
+    service = environment.knowledge_retriever
+    if type(service).__module__ != "knowledge.service":
+        raise ValueError("Production KnowledgeService is required")
+    backend = service.backend
+    if type(backend).__module__ != "knowledge.adapters.neo4j_backend":
+        raise ValueError("Production Neo4jBackend is required; no local storage substitution")
+    if type(service.source_resolver).__module__ != "knowledge.adapters.git_source":
+        raise ValueError("Production immutable GitSourceResolver is required")
+    active = await backend.active("leafcutter")
+    if active is None or active.source_sha != source_sha or active.generation_id != generation_id:
+        raise ActiveGenerationDrift("Active source or generation changed; this evaluation is inconclusive")
+    selected = await backend.get_revision("leafcutter", source_sha)
+    if selected is None or selected.generation_id != generation_id:
+        raise ValueError("The exact requested ready publication is unavailable or changed")
+    if selected.source_sha != source_sha or selected.repository_id != "leafcutter":
+        raise ValueError("Ready manifest does not match the explicit source/repository binding")
+    return {"observed_at": utc_now(), "repository_id": "leafcutter", "database": backend.database,
+        "active": active.model_dump(mode="json"), "selected": selected.model_dump(mode="json"),
+        "mechanisms": await backend.capabilities(), "semantic_ready": selected.semantic_ready,
+        "serving_query_timeout": backend.query_timeout, "writes": 0}
+
+
+def verify_frozen(output: Path, case_id: str):
+    """Refuse source/config changes across durable public continuations."""
+    if read(output / "working-source-freeze.json") != runtime_fingerprint():
+        raise ValueError("Runtime or harness changed after preparation; do not silently replay")
+    manifest = read(output / "plan.json")
+    if manifest["limits"] != BUDGET or manifest["cases"] != list(CASES):
+        raise ValueError("Frozen scenario/budget plan changed")
+    for name in ("config.json", "request.json"):
+        if sha256(output / case_id / name) != manifest["case_hashes"][case_id][name]:
+            raise ValueError("Case configuration or public request changed")
+

@@ -1,0 +1,84 @@
+id: BO-4400d-2-i
+title: "A sweep that cannot remove one item finishes the rest and reports the partial result"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given three expired scratch items, the second of which contains one file that is
+    read-only to the current user,
+  When the sweep runs for real,
+  Then the first and third items are removed,
+  And the report states two items removed and one failed, names the failed item's
+    location and the reason, and does not count the failed item's bytes as freed,
+  And the sweep's outcome is distinguishable from a fully successful sweep in its
+    final status.
+depends_on: [BO-4400d-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400b-1-ii.yaml
+    relationship: related
+    status: exists
+    relevance: The same partial-result rule for a single clearing.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400d-2
+  contract: "Sweep report."
+package_surface: false
+it_requirements:
+  - >-
+    Each removal is independent; a failure is caught with a specific exception type, logged at
+    WARNING, recorded in failed {kind, location, reason, bytes}, and the sweep continues.
+  - >-
+    The final status is "partial" with a distinct non-zero exit code whenever failed is non-empty;
+    "ok" and exit 0 only when nothing failed.
+  - >-
+    TEST FIXTURE NOTE: the unremovable item is made by a non-writable containing directory (a
+    read-only file alone is deletable on POSIX); skipped with an explicit reason when running as
+    root.
+test_required: true
+test_spec:
+  - name: test_sweep_continues_past_unremovable_item
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The first and third expired items are removed although the second cannot be."
+    must_catch:
+      - "sweep stops at the first failure"
+  - name: test_partial_report_names_failure_and_excludes_its_bytes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The report states two removed and one failed, names the failed location and reason, and total_bytes excludes the failed item."
+    must_catch:
+      - "failure swallowed and three reported removed"
+  - name: test_partial_sweep_status_differs_from_full_success
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Status is partial with a non-zero exit code distinct from the fully successful run's."
+test_rationale: >-
+  Both wrong versions look fine on a clean fixture; a real unremovable middle item is the minimal
+  case that separates them.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Named wrong versions: stop at the first failure (third item survives); swallow the failure
+  and report three removed (bytes overstated). Each is caught by a separate clause.

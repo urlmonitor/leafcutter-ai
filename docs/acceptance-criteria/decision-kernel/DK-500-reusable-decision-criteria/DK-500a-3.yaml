@@ -1,0 +1,73 @@
+id: DK-500a-3
+title: 'How-to: build and curate the criteria library, from mining to merge'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the criteria mining (DK-500a-1), approval and staging in a kernel run (DK-500c-1), publish (DK-500c-2) and merge, split and retire (DK-500c-3) exist,
+  When a person who has never built the library follows the how-to guide,
+  Then the guide takes them, in this order, through running the mining, reviewing candidates and grouping suggestions in a kernel run, accepting, changing or rejecting each one, publishing the staged records and reviewing the change, and merging, splitting or retiring a published category,
+  And each step names the action the person takes and the result they check before the next step,
+  And the guide states that the mining never approves anything, that only published categories are offered to decisions, and that published decision records are never edited,
+  And the guide lists what the person sees when the run history could not be read during mining.
+depends_on:
+- DK-500a
+- DK-500a-1
+- DK-500c-1
+- DK-500c-2
+- DK-500c-3
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- One guide under docs/how-to/ with the project how-to frontmatter (title, description, type how-to, status, components [decision_kernel], related_docs) so check_doc_frontmatter passes; link it from docs/how-to/file-and-reuse-decisions-with-the-kernel.md and from docs/architecture/components/decision-kernel.md.
+- 'Use the command names as built. IT PO defaults: python -m kernel criteria mine, python -m kernel criteria review, python -m kernel decisions publish --run-id R (which also publishes criterion categories), python -m kernel criteria validate and criteria index. Check each against --help before the guide is published.'
+- 'Describe grouping as dec-a070edfb6465bced decided it: exact matches by code, one Jev choice per wording, merges only at p >= 0.8, code-made one-member candidates, no LLM, no broader-link suggestions.'
+- Every step names the observable result to check (a JSON field, a file path or an exit code).
+- Write it only after DK-500a-1, DK-500c-1, DK-500c-2 and DK-500c-3 are implemented. The guide documents behaviour and closes no behavioural AC.
+test_required: false
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/how-to/file-and-reuse-decisions-with-the-kernel.md
+  relationship: related
+  status: exists
+  relevance: The stage-then-publish path decision records follow; category records follow it by analogy.
+- path: docs/how-to/run-the-decision-kernel.md
+  relationship: related
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Documentation AC. It answers the how-to trigger of DK-500a AND the how-to trigger of DK-500c in one guide: DK-500c also carries state-diagram and reference-doc triggers plus three behavioural L2s, and the 5-children cap leaves it no slot for a separate how-to. One guide also avoids two drifting copies of the same journey.
+  The command names (mining, publish) are not decided yet (open question); the guide is written once they are. Its deliverable is the document only; no behavioural AC in this tree may be closed by pointing at it.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

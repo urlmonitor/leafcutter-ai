@@ -20,13 +20,31 @@ BUSINESS CONTEXT:
   by running the real binary against the real on-disk test files.
 
 ARCHITECTURE:
-  Skipped automatically when leafcutter-web/node_modules/.bin/vitest is absent
-  (e.g. a Python-only checkout), so a missing JS toolchain never false-fails the
-  Python suite. CI installs node_modules for the done-proof job, so these run there.
+  These tests follow the rule for runtime-dependent proof tests, which is shared
+  with test_done_proof_composite_js.py and recorded in
+  TICKET-20261006-CiShardsInstallWebToolchain:
+
+  - A MISSING RUNTIME FAILS the test. It does not skip. If node is not on PATH,
+    or leafcutter-web/node_modules/.bin/vitest is absent, each test fails with
+    "Required runtime proof cannot run: ..." and names the install command. A
+    skip is not proof (docs/how-to/prove-ac-done.md, "Skipped test"). Keying the
+    skip on "is the toolchain installed?" is how the CI shards ran these tests
+    as silent skips. CI installs the toolchain in both the test-shard and
+    done-proof jobs.
+  - THE ONLY ESCAPE IS A PLATFORM ON WHICH THE SEAM CANNOT RUN: Windows.
+    run_vitest_and_parse launches node_modules/.bin/vitest directly, and that
+    file is npm's POSIX "#!/bin/sh" shim on every platform. CreateProcess
+    rejects it with [WinError 193], so the production seam itself cannot start
+    there, whatever is installed (verified 2026-10-06). Unlike the composite
+    test, these tests cannot swap in `node vitest.mjs`, because the
+    binary-path resolution is the very thing they prove. The skip is therefore
+    keyed on the platform, never on the toolchain, and the proof runs on Linux
+    CI.
 """
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import unittest
 from pathlib import Path
@@ -41,13 +59,34 @@ _WEB_DIR = _REPO_ROOT / "leafcutter-web"
 _VITEST_BIN = _WEB_DIR / "node_modules" / ".bin" / "vitest"
 _REAL_TEST_FILE = _WEB_DIR / "lib" / "data" / "__tests__" / "graph.decisions.test.ts"
 
-_HAVE_VITEST = _VITEST_BIN.exists() and _REAL_TEST_FILE.exists()
-_SKIP_REASON = f"vitest toolchain not installed at {_VITEST_BIN}"
+_WINDOWS_SKIP_REASON = (
+    "Platform cannot run this seam: run_vitest_and_parse launches "
+    "node_modules/.bin/vitest, npm's POSIX shell shim, which Windows rejects "
+    "with [WinError 193]. Not a missing-toolchain skip; this proof runs on "
+    "Linux CI (test-shard)."
+)
 
 
-@unittest.skipUnless(_HAVE_VITEST, _SKIP_REASON)
+@unittest.skipIf(os.name == "nt", _WINDOWS_SKIP_REASON)
 class TestRunVitestRealInvocation(unittest.TestCase):
     """The vitest seam works against the real binary and real test files."""
+
+    def setUp(self) -> None:
+        """Fail, never skip, when the runtime this proof needs is missing."""
+        self.assertIsNotNone(
+            shutil.which("node"),
+            "Required runtime proof cannot run: install Node.js and expose node on PATH",
+        )
+        self.assertTrue(
+            _VITEST_BIN.is_file(),
+            "Required runtime proof cannot run: install web dependencies with "
+            f"npm ci --prefix leafcutter-web (missing {_VITEST_BIN})",
+        )
+        self.assertTrue(
+            _REAL_TEST_FILE.is_file(),
+            f"Required runtime proof cannot run: the real vitest suite {_REAL_TEST_FILE} "
+            "this proof executes is missing",
+        )
 
     def test_absolute_paths_return_passed(self) -> None:
         # covers: BO-2500e-2

@@ -1,0 +1,79 @@
+id: DK-600e
+title: "Past decisions come back to you when the same question returns"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: in_progress
+readiness: draft
+priority: medium
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Earlier decisions resurface as evidence, and you choose to reuse or rethink.
+
+  When a new question comes up, earlier published decisions that might apply are
+  found, judged for whether they really fit, and cited as evidence; when one is a
+  close match you are asked whether to reuse it or decide anew. An earlier
+  decision informs the new one but never settles it on its own: reusing it is
+  your fresh approval, and deciding differently marks the old one as replaced
+  while keeping it on record.
+depends_on:
+  - DK-600
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-retrieval.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: >-
+      Only the forming sub-flow's precedent step. It expands into the retrieval
+      sub-flow and is the entry point for this L1.
+  - path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Precedent is evidence, never authority. Auto-reusing a high-scoring
+      precedent is an explicitly rejected alternative.
+delivers_to: null
+expects_from: null
+documentation_triggers:
+  - sequence-diagram
+origin_agent: BrainCandy
+created: 2026-10-02
+created_by_ticket: tickets/00_inbox/TICKET-20261002-DecisionLifecycleACs.md
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-600e-1
+  - DK-600e-2
+  - DK-600e-3
+  - DK-600e-4
+  - DK-600e-5
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  DERIVED FROM leafcutter/decision-retrieval (all 8 scenarios):
+    steps    lookup, judge, cite, offer-reuse, reuse
+    branches not-applicable, evidence-only, decide-anew
+  Also leafcutter/decision-forming step precedent (1 scenario) and the journey
+  step decision-lifecycle/reuse.
+
+  STANDING RULES TO CARRY INTO L2. Only published records are found. A record
+  that was only staged is never precedent; that is DK-600d's keep-staged branch
+  seen from this side. The thresholds and limits (applies at 0.5 or more, reuse
+  is offered at 0.8 or more, at most 3 candidates judged) come from the kernel
+  configuration. L2s should name them as configured values, not as fixed
+  numbers. The reuse question is asked only when the decision has no options of
+  its own and the precedent is not superseded. Reuse stages a new record that
+  cites the precedent. It never edits the old one.
+
+  The reuse step expands back into the staging sub-flow, so a reused decision is
+  captured exactly as DK-600c describes. Do not restate staging here.
+
+  TRUE STATUS (2026-10-02): work_status in_progress, derived from the direct children by the
+    rule above: done only when every direct child is done; todo only when none has started;
+    otherwise in_progress.

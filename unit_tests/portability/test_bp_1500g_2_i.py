@@ -47,6 +47,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
@@ -79,8 +81,36 @@ def _pick_contested_name() -> str:
     return sorted(shipped)[0]
 
 
+@pytest.fixture(scope="module")
+def _shared_collision_build(tmp_path_factory):
+    """Produce the ONE real build the four-way collision-group tests below
+    share (TQ-600a-9: "the four collision tests start two builds not
+    eight"). Each of the four consumers below ONLY READS this result --
+    none mutates `target_root` or `colliding` afterward -- so one real,
+    directed `build.py` run safely serves all four assertions (survival,
+    reported-message wording, declared-winner accuracy, and
+    cross-platform-winner accuracy) instead of each test repeating its own
+    `fresh_scratch_adopter` + `plant_colliding_capability` + `run_build`
+    sequence. `_pick_contested_name()` is deterministic
+    (`sorted(shipped)[0]`), so sharing introduces no per-test variability
+    in which capability name is exercised.
+
+    Two real `build.py` subprocesses occur here: one inside
+    `fresh_scratch_adopter` (the scratch adopter's own initial build,
+    asserted 0 by that helper) and one explicit `run_build` call below --
+    matching the AC's own declared count of 2, shared across all four
+    consumers instead of 2-per-consumer (8 total).
+    """
+    root = tmp_path_factory.mktemp("bp1500g2i_collision_group")
+    target_root = fresh_scratch_adopter(root)
+    contested_name = _pick_contested_name()
+    colliding = plant_colliding_capability(target_root, contested_name)
+    result = run_build(target_root)
+    return target_root, contested_name, colliding, result
+
+
 def test_bp_1500g_2_i_the_adopter_version_of_a_contested_name_is_present_and_unchanged_after_the_run(
-    tmp_path: Path,
+    _shared_collision_build,
 ) -> None:
     # covers: BP-1500g-2-i
     # angle: criterion
@@ -88,12 +118,11 @@ def test_bp_1500g_2_i_the_adopter_version_of_a_contested_name_is_present_and_unc
     not emptied, not moved, and not removed. Asserted as four distinct
     checks because a repair that relocates the loser aside (moving it to a
     sibling path) would satisfy a bare ``exists()`` check while still
-    failing this clause."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    contested_name = _pick_contested_name()
-    colliding = plant_colliding_capability(target_root, contested_name)
+    failing this clause.
 
-    result = run_build(target_root)
+    Reads the ONE shared collision-group build (TQ-600a-9) -- see
+    `_shared_collision_build`'s own docstring."""
+    target_root, contested_name, colliding, result = _shared_collision_build
 
     # Not removed: still present at the ORIGINAL discoverable path.
     assert colliding["skill_md"].exists(), (
@@ -159,7 +188,7 @@ def test_bp_1500g_2_i_the_run_does_not_report_success_as_though_there_were_no_co
 
 
 def test_bp_1500g_2_i_the_run_names_the_contested_name_and_states_which_version_the_project_will_run(
-    tmp_path: Path,
+    _shared_collision_build,
 ) -> None:
     # covers: BP-1500g-2-i
     # angle: criterion
@@ -169,12 +198,11 @@ def test_bp_1500g_2_i_the_run_names_the_contested_name_and_states_which_version_
     collision/conflict wording, not merely the name (every build already
     prints every skill's own relative path as part of ordinary per-file
     deploy logging, so naming the contested name alone is not sufficient
-    evidence of a REPORTED collision)."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    contested_name = _pick_contested_name()
-    plant_colliding_capability(target_root, contested_name)
+    evidence of a REPORTED collision).
 
-    result = run_build(target_root)
+    Reads the ONE shared collision-group build (TQ-600a-9) -- see
+    `_shared_collision_build`'s own docstring."""
+    _target_root, contested_name, _colliding, result = _shared_collision_build
 
     combined = result.stdout + result.stderr
     assert contested_name in combined, (
@@ -189,7 +217,7 @@ def test_bp_1500g_2_i_the_run_names_the_contested_name_and_states_which_version_
 
 
 def test_bp_1500g_2_i_the_stated_winner_is_the_one_the_project_actually_resolves_afterwards(
-    tmp_path: Path,
+    _shared_collision_build,
 ) -> None:
     # covers: BP-1500g-2-i
     # angle: seam
@@ -202,12 +230,11 @@ def test_bp_1500g_2_i_the_stated_winner_is_the_one_the_project_actually_resolves
     `parse_stated_collision_winner`), then resolves the contested name
     through the REAL consuming tool's discovery path in the finished
     project, and requires them to agree -- piping a real producer's output
-    into a real consumer, per this file's own seam-angle contract."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    contested_name = _pick_contested_name()
-    colliding = plant_colliding_capability(target_root, contested_name)
+    into a real consumer, per this file's own seam-angle contract.
 
-    result = run_build(target_root)
+    Reads the ONE shared collision-group build (TQ-600a-9) -- see
+    `_shared_collision_build`'s own docstring."""
+    target_root, contested_name, colliding, result = _shared_collision_build
 
     combined = result.stdout + result.stderr
     declared_winner = parse_stated_collision_winner(combined, contested_name)
@@ -283,7 +310,7 @@ def test_bp_1500g_2_i_exactly_one_collision_line_is_emitted_per_contested_capabi
 
 
 def test_bp_1500g_2_i_the_stated_winner_holds_on_every_active_platform_surface_not_only_claude(
-    tmp_path: Path,
+    _shared_collision_build,
 ) -> None:
     # covers: BP-1500g-2-i
     # angle: seam
@@ -312,12 +339,11 @@ def test_bp_1500g_2_i_the_stated_winner_holds_on_every_active_platform_surface_n
     `real_discoverable_capability_dirs` (``build_skills()``'s own declared
     defaults plus ``build_helpers.shim_map``'s own canonical-path table) --
     never a hardcoded pair of paths, so this test keeps working if a
-    platform is added."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    contested_name = _pick_contested_name()
-    colliding = plant_colliding_capability(target_root, contested_name)
+    platform is added.
 
-    result = run_build(target_root)
+    Reads the ONE shared collision-group build (TQ-600a-9) -- see
+    `_shared_collision_build`'s own docstring."""
+    target_root, contested_name, colliding, result = _shared_collision_build
     combined = result.stdout + result.stderr
 
     assert_declared_winner_holds_on_every_active_surface(

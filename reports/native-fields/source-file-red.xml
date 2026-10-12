@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="17" skipped="0" tests="17" time="0.369" timestamp="2026-10-02T09:19:24.373373+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_complete_contract_and_nested_future_fields" time="0.008"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:46: in test_source_file_complete_contract_and_nested_future_fields
+    record = _read(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_never_refreshes_pinned_existence_or_hash[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:71: in test_source_file_never_refreshes_pinned_existence_or_hash
+    reader = importlib.import_module("knowledge.native_types.source_file")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_never_refreshes_pinned_existence_or_hash[False-older-hash]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:71: in test_source_file_never_refreshes_pinned_existence_or_hash
+    reader = importlib.import_module("knowledge.native_types.source_file")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_never_refreshes_pinned_existence_or_hash[True-]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:71: in test_source_file_never_refreshes_pinned_existence_or_hash
+    reader = importlib.import_module("knowledge.native_types.source_file")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_absence_empty_and_false_are_distinct" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:92: in test_source_file_absence_empty_and_false_are_distinct
+    record = _read(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_repeat_enrichment_removes_only_exact_internal_keys" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:111: in test_source_file_repeat_enrichment_removes_only_exact_internal_keys
+    record = _read(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_nested_values_are_independent_copies" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:124: in test_source_file_nested_values_are_independent_copies
+    record = _read(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_rejects_other_entity_kinds[Test]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:137: in test_source_file_rejects_other_entity_kinds
+    _read(tmp_path, _entity(kind=kind))
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_rejects_other_entity_kinds[Component]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:137: in test_source_file_rejects_other_entity_kinds
+    _read(tmp_path, _entity(kind=kind))
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_rejects_other_entity_kinds[Document]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:137: in test_source_file_rejects_other_entity_kinds
+    _read(tmp_path, _entity(kind=kind))
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_rejects_other_entity_kinds[AcceptanceCriterion]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:137: in test_source_file_rejects_other_entity_kinds
+    _read(tmp_path, _entity(kind=kind))
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_revalidates_invalid_source_path[../outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:148: in test_source_file_revalidates_invalid_source_path
+    _read(tmp_path, entity)
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_revalidates_invalid_source_path[src/../../outside.py]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:148: in test_source_file_revalidates_invalid_source_path
+    _read(tmp_path, entity)
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_revalidates_invalid_source_path[/outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:148: in test_source_file_revalidates_invalid_source_path
+    _read(tmp_path, entity)
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_revalidates_invalid_source_path[C:/outside.py]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:148: in test_source_file_revalidates_invalid_source_path
+    _read(tmp_path, entity)
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_revalidates_invalid_source_path[src\\file.py]" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:148: in test_source_file_revalidates_invalid_source_path
+    _read(tmp_path, entity)
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase><testcase classname="tests.knowledge.test_native_source_file" name="test_source_file_rejects_non_entity_and_invalid_reference" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.source_file'">tests\knowledge\test_native_source_file.py:156: in test_source_file_rejects_non_entity_and_invalid_reference
+    _read(tmp_path, _entity().model_dump(mode="python"))
+tests\knowledge\test_native_source_file.py:14: in _read
+    return importlib.import_module("knowledge.native_types.source_file").from_entity(root, entity)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.source_file'</failure></testcase></testsuite></testsuites>

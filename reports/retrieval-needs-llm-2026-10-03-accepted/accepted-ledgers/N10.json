@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-83eba873e4ae424b",
+  "interaction_id": "int-37a1da87200a4860",
+  "sha256": "2e3224c3fd0bd57a49916b0c6e49ef43db1e706a93e2250ee0dd4265af7084b5",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-83eba873e4ae424b",
+    "interaction_id": "int-37a1da87200a4860",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "codex:root:needs_llm_host",
+      "kind": "host"
+    },
+    "relayed_by": "isolated-evaluation-controller",
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "What was each employee's payroll amount last month?",
+      "source_scope": {
+        "allow_retrieval": false,
+        "read_roots": [
+          "docs",
+          "kernel",
+          "knowledge",
+          "integrations"
+        ],
+        "repository": "leafcutter",
+        "source_revision": "planning-probe-only"
+      },
+      "selections": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "exhaustive_set",
+      "hierarchy_scope": "not_applicable",
+      "scope_resolution": "unknown",
+      "unresolved": [
+        "needs_outside_catalog: Employee identities, payroll amounts and payroll-period records have no supported labels in the supplied catalog or identified source in the supplied scope."
+      ],
+      "rationale": "The question requests the prior month's payroll amount for every employee. The offered entities and documents describe software requirements, code, contracts and test or publication reports; none faithfully represents payroll data. Preserve the exhaustive per-employee intent while leaving unsupported selections empty and requiring resolution.",
+      "engine": "host_llm",
+      "status": "needs_resolution",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-03T09:45:55.399015Z"
+}

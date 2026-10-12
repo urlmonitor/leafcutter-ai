@@ -1,0 +1,76 @@
+{
+  "schema_version": "retrieval-immutable-source-oracle/1",
+  "status": "independent_source_expectation_not_a_retrieval_result",
+  "authored_at": "2026-10-02",
+  "source": {
+    "kind": "immutable_git_archive",
+    "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+    "path_scope": "docs/acceptance-criteria",
+    "id_bearing_yaml_records_inspected": 4528,
+    "derivation": "Read git archive at the commit; inspect top-level id, level, work_status, covered_by and depends_on in every AC YAML. Traverse canonical covered_by IDs from TQ-500f; deduplicate IDs; count only reachable L2/L3 descendants. Scan all inspected ACs for direct depends_on membership. Read KM-500c-2 from the same archive. Expected facts were not obtained from Neo4j or a retrieval response."
+  },
+  "tq_500f": {
+    "root_id": "TQ-500f",
+    "population": "all reachable canonical L2/L3 covered_by AC IDs, excluding only the root",
+    "exact_total": 15,
+    "work_status_counts": {
+      "done": 5,
+      "todo": 10
+    },
+    "terminal_leaf_only_total": 11,
+    "records": [
+      {"id": "TQ-500f-1", "level": "L2", "work_status": "done", "sha256": "7d0479fc40c2a16cc2f3a1758163fe587bd5665135cd5c2ecb8a354e43da546e"},
+      {"id": "TQ-500f-1-i", "level": "L3", "work_status": "done", "sha256": "9bf022807769361d8629224c848c371d6b8a8660b91939554b23bc9afde2fb37"},
+      {"id": "TQ-500f-2", "level": "L2", "work_status": "todo", "sha256": "c29fe38077176f0dccdd8d5ebc9c30a21658b81182c81cdc10312e4ec5da0f94"},
+      {"id": "TQ-500f-2-i", "level": "L3", "work_status": "done", "sha256": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"},
+      {"id": "TQ-500f-2-ii", "level": "L3", "work_status": "todo", "sha256": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"},
+      {"id": "TQ-500f-3", "level": "L2", "work_status": "todo", "sha256": "7fd54dd1212e05d91c2e6dc07d45e5039a73b01c1d022eb98d5f4edac7880a57"},
+      {"id": "TQ-500f-3-i", "level": "L3", "work_status": "done", "sha256": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"},
+      {"id": "TQ-500f-3-ii", "level": "L3", "work_status": "done", "sha256": "011f72dcda2fc9fba449e5a8d2aa2875fac5cf0833b5184eab6caf0e8c92a2d5"},
+      {"id": "TQ-500f-3-iii", "level": "L3", "work_status": "todo", "sha256": "6a08f63d69b52350f2b2a536fdf9049611c0caf4dc8714676675dd1743eac9bf"},
+      {"id": "TQ-500f-3-iv", "level": "L3", "work_status": "todo", "sha256": "6434fbe21e66f0a539b1e6a2764448faaa6a923672b2195f66105ad98a44b03b"},
+      {"id": "TQ-500f-4", "level": "L2", "work_status": "todo", "sha256": "3618fe0b5fd3eafc1f239696cd623460944651ade6f047e75e989ac204b1af73"},
+      {"id": "TQ-500f-4-i", "level": "L3", "work_status": "todo", "sha256": "ac7c0bd5dc6f646e5a9901988df3ca9e8e927b95b78ec3245bd3644082a632a2"},
+      {"id": "TQ-500f-4-ii", "level": "L3", "work_status": "todo", "sha256": "ad6209a1f1bfd76d7bda22171718d8f31920969c9b0072dbb0af2d8ce755b904"},
+      {"id": "TQ-500f-5", "level": "L2", "work_status": "todo", "sha256": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"},
+      {"id": "TQ-500f-6", "level": "L2", "work_status": "todo", "sha256": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"}
+    ],
+    "direct_incoming_depends_on_tq_500f_2": [
+      "TQ-500f-2-i",
+      "TQ-500f-2-ii",
+      "TQ-500f-3-i",
+      "TQ-500f-5",
+      "TQ-500f-6"
+    ],
+    "limits": [
+      "The 15 records are this declared family at this Git commit, not all repository requirements about test writing.",
+      "The five dependencies are direct declared depends_on references, not transitive or code impact.",
+      "A retrieval result with missing work_status or incomplete enumeration cannot inherit these oracle values as actual output."
+    ]
+  },
+  "km_500c_2": {
+    "id": "KM-500c-2",
+    "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+    "raw_yaml_sha256": "cb60eb902205c4ec5fbb884ad5dac7540944eb04ea3cf7ec4702e561a6d48d43",
+    "level": "L2",
+    "work_status": "done",
+    "criteria_locator": "/criteria",
+    "criteria_obligations": [
+      "cite the actual source revision and retrieved items and state which required needs remain unsatisfied",
+      "keep successful build, query execution and answer assessment as separate recorded outcomes",
+      "distinguish zero matches, contradictory evidence and insufficient evidence with their limitations",
+      "use existing research policy for bounded synthesis or follow-up"
+    ],
+    "declared_covered_by_count": 7,
+    "declared_covered_by": [
+      "tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog",
+      "tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct",
+      "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded",
+      "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial",
+      "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result",
+      "tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls",
+      "tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof"
+    ],
+    "limit": "Declared test references and work_status do not prove an executed run; a run receipt needs its own tested SHA, actor and environment."
+  }
+}

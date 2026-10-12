@@ -169,7 +169,7 @@ def _flow(flow_id: str, summary: str) -> dict:
         "version": 1,
         "entities": [],
         "steps": [
-            {"id": "only-step", "label": "only-step", "human": "the actor does the one thing", "order": 1}
+            {"id": "only-step", "label": "only-step", "description": "the actor does the one thing", "actor_kind": "human", "order": 1}
         ],
         "branches": [],
     }
@@ -460,6 +460,7 @@ def _build_minimal_cli_store(tmp: Path) -> Path:
     # Re-introduce the separately hand-typed description the normalization run
     # just derived away — see FIXTURE ORDER above.
     normalized = _read_json(pt_root / "index.json")
+    assert isinstance(normalized, dict)
     for artifact in normalized["artifacts"]:
         if artifact["id"] == flow["id"]:
             artifact["summary"] = _STALE_HAND_TYPED_SUMMARY_A

@@ -1,7 +1,7 @@
 """
 MODULE: leafcutter_inventory.py
 GOAL: Extract and display agent, skill, and command inventories from registry
-    JSON files and deployed command directories for the /leafcutter command.
+    JSON files and deployed command directories for the /leafcutter-help command.
 BUSINESS CONTEXT: Provides a dynamic, always-current view of the leafcutter
     package surface area without hardcoding lists that rot as the package grows.
 ARCHITECTURE: Pure stdlib (json, pathlib, argparse, sys). Reads

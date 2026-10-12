@@ -40,13 +40,8 @@ const ENV_KEYS = [
 ] as const;
 type EnvKey = (typeof ENV_KEYS)[number];
 
-let savedEnv: Partial<Record<EnvKey, string | undefined>> = {};
-
 afterEach(() => {
-  for (const k of ENV_KEYS) {
-    if (savedEnv[k] === undefined) delete process.env[k];
-    else process.env[k] = savedEnv[k];
-  }
+  vi.unstubAllEnvs();
   vi.resetModules();
   vi.restoreAllMocks();
 });
@@ -61,11 +56,8 @@ async function resolveMockActive(
   env: Partial<Record<EnvKey, string>>,
   forwardedHeader: string | null
 ): Promise<boolean> {
-  savedEnv = {};
   for (const k of ENV_KEYS) {
-    savedEnv[k] = process.env[k];
-    if (env[k] !== undefined) process.env[k] = env[k];
-    else delete process.env[k];
+    vi.stubEnv(k, env[k]);
   }
 
   vi.resetModules();

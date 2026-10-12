@@ -61,7 +61,13 @@ WORKTREE_PATH = "/tmp/fastlane-harness-wt"
 #   - any "release-on-*" label is a RECOVERY dispatch fired only after some
 #     other step already failed — it is not itself one of "the lane's steps"
 #     an operator points at.
-EXCLUDED_LABELS = frozenset({"knowledge-routing-step"})
+#   - "scratch-item": fail-open by design (BO-4400f-1) — a decline gives
+#     `item` null and the lane falls back; it is not a lane step.
+#   - "knowledge-routing-observe": read-only and fail-open (INF-700a-5) — it
+#     must "never block, retry, or fail the build"; it is not a lane step.
+EXCLUDED_LABELS = frozenset(
+    {"knowledge-routing-step", "scratch-item", "knowledge-routing-observe"}
+)
 
 
 def _is_excluded(label: str) -> bool:

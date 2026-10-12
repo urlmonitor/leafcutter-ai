@@ -559,7 +559,7 @@ def _save_clean_ledger(ledger_path: Path, ledger: dict[str, set[str]]) -> None:
         ledger_path.parent.mkdir(parents=True, exist_ok=True)
         serialisable = {k: sorted(v) for k, v in ledger.items()}
         ledger_path.write_text(
-            json.dumps(serialisable, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            json.dumps(serialisable, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
         )
     except OSError as exc:
         _clean_ledger_log.warning("Could not write clean-mode ledger %s: %s", ledger_path, exc)

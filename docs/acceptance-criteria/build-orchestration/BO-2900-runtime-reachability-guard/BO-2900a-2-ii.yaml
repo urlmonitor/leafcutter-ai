@@ -1,0 +1,166 @@
+id: BO-2900a-2-ii
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A run the observation could not watch is reported as unwatched, never as unreached and never as reached"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a proof-of-done test whose run the observation cannot watch, in any of
+    these ways:
+      the proof launches a program the observation has no way to watch,
+      the program the proof launched installs an observation of its own part-way
+        through and displaces the one watching it,
+      the program the proof launched is started in a way that prevents the
+        observation being carried into it at all,
+  When the proof is evaluated for whether it reached the code through the way in,
+  Then the answer is that the run could not be watched — an answer distinct from
+    both "it reached the code through the way in" and "it did not",
+    And a criterion whose only proof is unwatched receives no verdict from the
+      reachability rule: it is neither refused nor credited on that basis,
+    And the unwatched case is announced, naming the proof and what made the run
+      unwatchable, so proofs the observation cannot see stay countable instead of
+      passing silently,
+    And a run in which the observation was displaced part-way through is reported
+      as unwatched rather than as a run in which nothing was reached,
+    And an observation that was installed and recorded nothing at all is reported
+      as unwatched rather than as every proof having reached nothing.
+depends_on:
+  - BO-2900a-2
+  - BO-2900a-2-i
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-3-scoping-recommendation.md
+    relationship: describes
+    status: exists
+    relevance: "Names both ship blockers this AC governs — displacement of the observation by a launched program, which must be detected and downgraded rather than read as a refusal — and the genuine coverage ceiling: programs that are not of the same kind, and programs started in a way that keeps the observation out. Both degrade to unwatched rather than to a false refusal."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not.md
+    relationship: describes
+    status: exists
+    relevance: "Section 5 measures today's version of this: 49 criteria and 274 of 803 observations reported with the same finality as a genuine refusal, with no action their author can take. It also warns against conflating these with a narrower, already-fixed defect."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires every refusal to give an action the reader can carry out on the code. An unwatched run has no such action, which is precisely why it must not be expressed as a refusal; this AC is the condition under which BO-2900e-1's four causes stay honest."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "The corpus exercise that ends the report-only state. Its 'either a correct verdict or no verdict' condition is satisfied for unwatchable shapes by this AC and by nothing else."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THREE DISTINGUISHABLE STATES, NOT TWO BOOLEANS. Carry observation: 'watched'|'unwatched' separately from reached_through: 'reached'|'not_reached'|'undecidable'. When observation is 'unwatched', reached_through MUST be 'undecidable'. The existing fail-closed dict (scripts/ac_store/done_proof.py, the observation_ok False mapping around line 588) sets reached_through False alongside observation_ok False — that co-occurrence IS the defect this AC removes, because it hands a plausible negative to a caller that reads only the verdict."
+  - "NO CONSUMER MAY DERIVE unwatched FROM not_reached, AND NO CODE PATH MAY MAP unwatched ONTO EITHER VERDICT. The refusal path must require the literal 'not_reached', never falsiness of a boolean. Keep observation_ok available as a derived alias (observation == 'watched') only so existing call sites do not silently change meaning — and forbid any new consumer from deriving a verdict from it."
+  - "DISPLACEMENT MUST BE DETECTED ON PURPOSE, IN AN ATEXIT HANDLER, PER PROCESS. At process exit compare the currently-installed callback against the function the observer installed (sys.getprofile(), or sys.monitoring's registered callback on 3.12+). A mismatch means a launched program installed its own tracer and evicted the observer: that process is unwatched with cause observer_displaced, and every record whose ancestry chain passes through it becomes undecidable. This is a named ship blocker — eviction leaves a WELL-FORMED record that is silent about the code under proof and is otherwise indistinguishable from an honest not_reached."
+  - "THE CAUSE VOCABULARY IS CLOSED AND ENUMERATED: non_python_child, isolated_interpreter (a child started with -S, -E or -I), observer_displaced, recorded_nothing, propagation_failed, and unknown. Each is a distinct value, each resolves to unwatched, none resolves to a refusal. An unrecognised condition takes cause 'unknown' and is unwatched — never watched. Adding a cause that resolves to not_reached violates this AC."
+  - "RECORDED-NOTHING IS PER PROCESS. The observer must confirm it observed at least one frame in each process it claims to have watched; a process that installed the observer and recorded zero frames is unwatched with cause recorded_nothing. BO-2900a-2's self-validation constraint already requires this for one process and is restated only because a tree makes it a per-process property — an observer that recorded nothing anywhere makes every proof look like a direct import and blocks the whole store."
+  - "EVERY UNWATCHED RECORD IS ANNOUNCED, THROUGH THE SAME COUNTABLE FINDING CHANNEL BO-2900a-1-ii DEFINES, naming the proof nodeid and the cause. Silence on an unwatchable proof is the phantom-done vector this AC exists to close: it is a failure of this AC even when the verdict itself is correct, because a pure-spawn proof that nothing judged is today marked done with no reachability evidence at all."
+  - "NO UNWATCHED ANNOUNCEMENT MAY NAME A CLEARING ACTION. BO-2900e-1 requires every refusal to give an action the reader can carry out on the code; an unwatched run has none, which is exactly why it must not be phrased as a refusal. The announcement states what could not be watched and why, and asks for nothing. 49 criteria hold the wrong version of this message today."
+  - "A CRITERION WHOSE EVERY LINKED PROOF IS UNWATCHED CONTRIBUTES NOTHING TO ELIGIBILITY. The verdict must equal, in every key, the verdict the same evaluation returns with the reachability rule not invoked. This is an equality property to be asserted by comparison — not a flag to be inspected."
+  - "THE COVERAGE CEILING IS ACCEPTED, NOT ENGINEERED AROUND. Non-Python children and interpreters started with -S/-E/-I are genuinely unobservable and must not be made observable by rewriting the child's command line, injecting arguments, or refusing to run it. Count them and name them."
+delivers_to:
+  agent: python-coder
+  contract: "A third answer — the run was not watched — carried separately from reached and not-reached, together with what made it unwatchable. Concretely: observation: 'watched'|'unwatched' plus unwatchable_cause: 'non_python_child'|'isolated_interpreter'|'observer_displaced'|'recorded_nothing'|'propagation_failed'|'unknown'|null, with reached_through forced to 'undecidable' whenever observation is 'unwatched'. Consumed by BO-2900a-1's rule as a no-verdict input, and by BO-2900a-1-iii's corpus exercise as an acceptable outcome for a shape the observation cannot cover."
+expects_from:
+  ac_id: BO-2900a-2-i
+  contract: "The process-tree observation whose blind spots this AC classifies: the per-nodeid processes list of {pid, ppid, program_file, spawned_under_entry_point} and the reached_code set. Every way that observation can fail to span a run — a child it cannot enter, a child that evicts it, a child it could not be carried into — is a case that resolves here, into an unwatchable_cause, and not into a reachability answer."
+test_spec:
+  - name: test_a_displaced_observer_is_reported_unwatched_and_never_unreached
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "scripts/ac_store/done_proof.py::_run_pytest_and_parse"
+    description: "Produces the blind spot for real: a fixture proof spawns a child that installs its own sys.setprofile part-way through and exits 0 without reaching the code. Asserts observation unwatched, cause observer_displaced, reached_through undecidable — and in the SAME test asserts a genuinely unreached proof (observer intact, child never touches the code) is watched and not_reached, because the only thing separating the two is that the mechanism noticed it was blind."
+    must_catch:
+      - "a mechanism that reports not_reached for a displaced observer"
+      - "a mechanism that reports unwatched for every child, unable to tell displacement from an honest miss"
+      - "a test that presets an unwatched flag, which proves the branch and not the detection"
+  - name: test_a_non_python_child_and_an_isolated_interpreter_are_unwatched_with_distinct_causes
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Two real proofs: one spawning a non-Python program, one spawning the unit with python -S. Asserts both are unwatched, that their causes are distinct and drawn from the closed vocabulary, and that neither yields reached or not_reached."
+    must_catch:
+      - "collapsing both ceiling cases into one undifferentiated cause"
+      - "an isolated interpreter reported as not_reached because no frames arrived"
+  - name: test_an_observer_that_recorded_no_frames_reports_unwatched_not_unreached
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With the observer unable to install in the runner process, asserts observation unwatched with cause recorded_nothing and reached_through undecidable — rather than every proof in the run reading as not_reached, which would block the whole store."
+    must_catch:
+      - "an inert observer reported as a store-wide set of honest misses"
+      - "an observer that reports watched because it installed successfully but observed nothing"
+  - name: test_a_criterion_whose_only_proof_is_unwatched_gets_the_eligibility_it_would_get_with_the_rule_absent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Drives the real verify_done_eligible twice over the same fixture — once with the reachability rule wired, once with it not invoked — and asserts the two verdicts are equal in every key. Separately asserts the announcement count for that run is non-zero, so an implementation that never reached the rule (which would also produce equal verdicts) fails."
+    must_catch:
+      - "an unwatched record that refuses the criterion"
+      - "an unwatched record that credits the criterion"
+      - "a rule that is never reached at all, making the equality assertion pass vacuously"
+  - name: test_every_unwatched_record_is_announced_with_its_own_cause
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Over a fixture set producing each enumerated cause at least once, asserts the set of announced causes equals the set of causes the records carry, and that the announcement count equals the unwatched-record count. No cause may be produced and left unannounced, and no announcement may name a clearing action."
+    must_catch:
+      - "a cause that is recorded internally and never announced, so the population stays uncountable"
+      - "an announcement phrased as a refusal with an action for the author to take"
+test_rationale: "A test that hands the rule a pre-set unwatched flag proves the branch and not the detection, and detection is the hard half. Displacement in particular leaves a well-formed record that is silent about the code under proof and reads exactly like an honest not_reached, so the first test PRODUCES the eviction for real — a child that installs its own tracer — and asserts it alongside a genuinely unreached proof in the same run, because the verdicts are only distinguishable if the mechanism noticed it was blind. The absence guarantee in this AC is that no verdict is contributed, and test four states explicitly how correctly-silent is separated from never-ran: it asserts verdict equality against a not-invoked baseline AND a non-zero announcement count, so an implementation that never reached the rule fails the pair even though it would satisfy the equality alone. This repository has three recorded cases of a defence that examined nothing and reported clean; the announcement-count assertion is the guard against becoming the fourth."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE PARENT ALREADY REQUIRES A LOUD UNAVAILABLE STATE; THIS AC IS WHERE THAT
+  STATE MEETS A PROCESS TREE. BO-2900a-2's self-validation constraint covers one
+  case — the observation recorded nothing at all — and reasons about a single
+  process. A tree of programs adds three more ways to be blind, and the dangerous
+  one is not "nothing was recorded" but "something was recorded and it is
+  incomplete": a launched program that displaces the observation leaves a record
+  that is well-formed, silent about the code under proof, and indistinguishable
+  from an honest not-reached unless displacement is detected on purpose.
+
+  UNWATCHED IS NOT A REFUSAL, AND THAT IS THE WHOLE POINT. A refusal an author
+  cannot clear is forbidden by BO-2900e-1's "one action that clears it", and it
+  is what 49 criteria hold today: told their proof could not be re-run, with
+  nothing to do about it. The correct handling is no verdict — the rule declines
+  to decide and says so.
+
+  UNWATCHED IS ALSO NOT A PASS. The opposite error is what makes a purely launched
+  proof sail through today: nothing is observed, nothing is judged, and the
+  criterion is marked done with no reachability evidence at all. The announcement
+  clause is the difference between declining to decide and quietly deciding yes.
+
+  THE COVERAGE CEILING IS REAL AND ACCEPTED. Some programs genuinely cannot be
+  watched. This AC does not ask for them to be; it asks that they be counted and
+  named rather than being converted into either verdict.
+
+  BOUNDARY. What the observation must span is BO-2900a-2-i. What question it is
+  asked is BO-2900a-2-iii. How long the rule stays in report-only is
+  BO-2900a-1-ii and BO-2900a-1-iii. This AC covers only the third answer and its
+  two prohibitions.
+
+  VERIFICATION MUST PRODUCE THE BLIND SPOT FOR REAL. A test that hands the rule a
+  pre-set "unwatched" flag proves the branch and not the detection, and the
+  detection is the hard half — especially displacement, which produces a
+  plausible-looking record. Each case belongs in one exercise alongside a
+  genuinely unreached proof, because the only thing that separates them is that
+  the mechanism noticed it was blind.

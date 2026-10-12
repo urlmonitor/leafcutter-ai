@@ -1,0 +1,233 @@
+{
+  "date": "2026-10-02",
+  "behavioral_criteria": 24,
+  "parent_records": 5,
+  "linked_test_methods": 32,
+  "coverage_links": 47,
+  "all_selectors_resolved": true,
+  "all_test_tags_updated": true,
+  "test_semantics_unchanged_by_tag_update": true,
+  "parent_backlinks_valid": true,
+  "verification": {
+    "focused_tests_passed": 32,
+    "focused_subtests_passed": 36
+  },
+  "readiness": "draft",
+  "criteria": [
+    {
+      "id": "DK-200a-1-i",
+      "title": "An explicit answer contract keeps its route and still receives initial context",
+      "tests": [
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_explicit_contract_still_gets_enriched_without_intent_classification"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-1",
+      "title": "Initial context reaches intent before the first clarification decision",
+      "tests": [
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_repository_context_reaches_intent_before_any_human_question"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-2",
+      "title": "Resuming a run reuses the context already gathered for that run",
+      "tests": [
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_resume_reuses_checkpointed_context_instead_of_reading_changed_files",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-3-i",
+      "title": "Recent conversation resolves a pronoun despite older conversation filling the allowance",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_recent_referent_survives_older_conversation_filling_character_budget",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_recent_referent_survives_older_conversation_filling_query_budget",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_conversation_changes_actual_retrieval_for_the_same_pronoun_goal"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-3-ii",
+      "title": "A shortened excerpt remains verifiable against its retained text",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_excerpt_cut_at_whitespace_hashes_the_retained_text"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-3",
+      "title": "Grounding preserves the request and distinguishes supplied claims from sourced excerpts",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_repository_context_reaches_intent_before_any_human_question"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200a-4",
+      "title": "Later research and handoffs retain the meaning supplied by initial context",
+      "tests": [
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_conversation_referent_reaches_downstream_research_and_retrieval",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_native_decision_judgments_receive_the_saved_context",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-1",
+      "title": "Initial gathering stays inside permitted read-only repository scope",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-2-i",
+      "title": "An exhausted time allowance prevents further discovery and reports the limitation",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_expired_budget_prevents_search_and_reports_what_was_not_examined"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-2",
+      "title": "Configured discovery and text allowances bound initial context",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_file_count_and_payload_bounds_are_enforced_and_reported",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_source_budget_changes_the_number_of_consulted_sources",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_supplied_context_budget_preserves_goal_and_marks_truncation"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-3-i",
+      "title": "Redaction expansion cannot exceed caller field or total text allowances",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_redaction_expansion_stays_within_each_caller_field_limit",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_supplied_context_budget_preserves_goal_and_marks_truncation"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-3",
+      "title": "Known secrets are removed from retained caller context and excerpts",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_known_secrets_are_redacted_in_caller_context_and_excerpts"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-4-i",
+      "title": "A request with no room for context remains valid without a context marker",
+      "tests": [
+        "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_no_room_omits_context_without_altering_or_oversizing_the_request"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-4-ii",
+      "title": "Repository excerpts forbidden by data policy stay out of external judgments",
+      "tests": [
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_data_policy_withholds_repository_context_from_intent",
+        "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_data_policy_removes_evidence_from_projection_but_not_checkpoint"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200b-4",
+      "title": "Optional context fits the receiving judgment's remaining payload allowance",
+      "tests": [
+        "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_near_limit_request_fits_with_plain_or_json_escaped_context",
+        "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_downstream_batch_uses_configured_remaining_allowance",
+        "tests/kernel/enrichment/test_projection.py::TestContextProjection::test_intent_batch_preserves_goal_while_projecting_context_with_its_budget"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-1-i",
+      "title": "Disabled gathering does not claim repository examination",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_disabled_step_does_not_claim_to_have_examined_the_repository"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-1-ii",
+      "title": "An unreadable source is distinguished from a successfully searched empty source",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_failed_source_is_reported_as_unavailable_not_as_a_successful_empty_search"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-1",
+      "title": "A completed search with no matching evidence remains an honest empty outcome",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_unrelated_words_do_not_select_arbitrary_repository_text"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-2-i",
+      "title": "Retrieved commands do not become permission or human approval",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_goal_and_claims_labels_reject_repository_instruction_promotion",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-2-ii",
+      "title": "Missing user preferences remain unresolved after factual enrichment",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200c-2",
+      "title": "Integration descriptions remain evidence without proving live operation",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context",
+        "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_native_decision_judgments_receive_the_saved_context"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200d-1",
+      "title": "A labelled evaluation measures the initial context step independently",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_live_probe_requires_opt_in_and_fails_on_a_wrong_enriched_label"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200d-2-i",
+      "title": "An empty case selection cannot be reported as a passing evaluation",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_empty_case_selection_fails_instead_of_reporting_green"
+      ],
+      "status": "done"
+    },
+    {
+      "id": "DK-200d-2",
+      "title": "A violated enrichment label makes the isolated evaluation fail",
+      "tests": [
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_disabling_the_real_deny_policy_causes_the_secret_case_to_fail",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_every_absence_label_rejects_an_injected_output_leak",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_goal_and_claims_labels_reject_repository_instruction_promotion",
+        "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_cli_exits_nonzero_for_a_failed_case"
+      ],
+      "status": "done"
+    }
+  ]
+}

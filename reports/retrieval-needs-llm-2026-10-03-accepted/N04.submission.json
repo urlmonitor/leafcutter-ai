@@ -1,0 +1,59 @@
+{
+  "run_id": "run-cf7dcd7269414194",
+  "interaction_id": "int-6c643fb1aa8b4225",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:root:needs_llm_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Where does work_status travel from AC YAML into returned evidence?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "source_file",
+        "schema"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "mapping",
+        "content",
+        "provenance"
+      ],
+      "document_types": [
+        "source_code",
+        "schema"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "This asks for the complete field flow from the AC YAML boundary to returned evidence: the relevant implementation and contract content, each producer/consumer handoff or transformation, and locations identifying where those steps occur. It asks about the work_status field's passage, not any criterion's progress value. Discover the participating code and contracts; no IDs or hierarchy edges are specified.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

@@ -24,6 +24,12 @@
 # Run check_ac_schema.py (installed by build.py) to validate this file.
 
 components:
+  - id: decision-kernel
+    prefix: DK
+    description: "ACs for the decision kernel: grounded intake, bounded context enrichment, intent routing, and resumable research and decision runs"
+    owner: decision_kernel
+    directory_patterns:
+      - "kernel/**/*.py"
   - id: finalize
     prefix: FIN
     description: "ACs for the finalize-feature workflow"

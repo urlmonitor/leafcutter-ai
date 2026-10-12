@@ -1,0 +1,77 @@
+{
+  "mode": "process-only mutations; no production files edited",
+  "results": [
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[payload]",
+      "mutation": "Bypass the retained ready-generation validator.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[count]",
+      "mutation": "Bypass the retained ready-generation validator.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[active_stage]",
+      "mutation": "Allow an active pointer outside validated ready generations.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[current_stage]",
+      "mutation": "Permit an inactive stage to carry current=true.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[foreign_stage]",
+      "mutation": "Bypass staging manifest scope and staged-record provenance validation.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_recovery_rejects_invalid_ready_data_and_unsafe_stages[unknown_status]",
+      "mutation": "Accept an unknown staging status.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_resume_requires_the_exact_same_snapshot_and_partial_contents[digest]",
+      "mutation": "Bypass exact staging-plan comparison.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_resume_requires_the_exact_same_snapshot_and_partial_contents[source_sha]",
+      "mutation": "Bypass exact staging-plan comparison.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_resume_requires_the_exact_same_snapshot_and_partial_contents[mapper_version]",
+      "mutation": "Bypass exact staging-plan comparison.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_resume_requires_the_exact_same_snapshot_and_partial_contents[node_count]",
+      "mutation": "Bypass exact staging-plan comparison.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_resume_requires_the_exact_same_snapshot_and_partial_contents[node_payload]",
+      "mutation": "Permit changed canonical payload in the intended partial stage.",
+      "result": "RED",
+      "failure": "DID NOT RAISE ValueError"
+    },
+    {
+      "test": "test_unrelated_failed_stage_does_not_become_the_resume_target",
+      "mutation": "Report unrelated stage as intended retry target.",
+      "result": "RED",
+      "failure": "False assertion fails."
+    }
+  ]
+}

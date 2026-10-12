@@ -1,0 +1,31 @@
+{
+  "id": "retrieve.repository",
+  "name": "Repository retrieval",
+  "description": "Finds evidence excerpts in allowlisted repository files.",
+  "version": "1.0.0",
+  "request_kinds": [
+    "evidence"
+  ],
+  "operations": [
+    "retrieve"
+  ],
+  "accepts_schemas": [
+    "leafcutter.retrieval_request.v1"
+  ],
+  "produces_schemas": [
+    "leafcutter.evidence_bundle.v1"
+  ],
+  "execution_mode": "native",
+  "binding": "retrieve.repository",
+  "side_effect_class": "read_only",
+  "permissions_required": [
+    "read_repo"
+  ],
+  "routing": "fixed",
+  "admission": {
+    "kind": "native_registration",
+    "decision_ref": "TICKET-20260930-KernelBootstrapV0",
+    "admitted_on": "2026-09-30",
+    "admitted_by": "BrainCandy"
+  }
+}

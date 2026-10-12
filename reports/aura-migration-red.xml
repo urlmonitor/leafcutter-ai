@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.243" timestamp="2026-10-02T06:57:57.583730+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_legacy_migration_is_idempotent_and_preserves_evidence" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.adapters.neo4j_domain_migration'">tests\knowledge_live\domain_migration_checks.py:71: in test_legacy_migration_is_idempotent_and_preserves_evidence
+    asyncio.run(scenario())
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\domain_migration_checks.py:49: in scenario
+    from knowledge.adapters.neo4j_domain_migration import inspect, migrate
+E   ModuleNotFoundError: No module named 'knowledge.adapters.neo4j_domain_migration'</failure></testcase><testcase classname="tests.knowledge_live.domain_migration_checks" name="test_corrupt_legacy_data_is_rejected_before_mutation" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.adapters.neo4j_domain_migration'">tests\knowledge_live\domain_migration_checks.py:90: in test_corrupt_legacy_data_is_rejected_before_mutation
+    asyncio.run(scenario())
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\knowledge_live\domain_migration_checks.py:78: in scenario
+    from knowledge.adapters.neo4j_domain_migration import inspect
+E   ModuleNotFoundError: No module named 'knowledge.adapters.neo4j_domain_migration'</failure></testcase></testsuite></testsuites>

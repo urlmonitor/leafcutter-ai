@@ -1,0 +1,7 @@
+{
+  "need": {
+    "id": "need-1",
+    "category": "vendor_docs",
+    "question": "Which store does the cache use?"
+  }
+}

@@ -1,0 +1,247 @@
+id: KM-400a-1-ix
+title: Glossary term metadata retains its complete definition without inheriting file-level fields
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given a glossary contains authored term headings for create-ticket.js and ticket creation pipeline
+  And their definitions include multiline prose, links, lists, nested headings and fenced examples
+  When GlossaryTerm metadata is exposed from the selected source revision
+  Then each real term exposes its case-preserving term text and complete exact Markdown definition
+  And term identity uses the established lowercase trimmed name while preserving punctuation and internal spaces
+  And identities and source locations remain stable when unrelated terms are inserted or reordered
+  And an empty authored definition remains empty without a generated summary
+  And glossary-file frontmatter is available separately as file context rather than as authored status, components or dates on each term
+  And definitions do not acquire synonym, canonical-link or triage fields absent from the canonical glossary
+
+  Given the glossary includes apparent term headings inside comments, code fences or indented examples
+  When term boundaries are recognized
+  Then those examples neither create terms nor truncate the definition of a real term
+  And a real level-one, level-two or level-three heading ends the preceding definition while a nested lower-level heading remains part of it
+  And two real headings with the same lowercase trimmed name fail explicitly rather than losing a definition
+  And an empty or absent optional glossary produces no placeholder term
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/glossary.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-GlossaryTerm.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-GlossaryTerm.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/glossary.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-GlossaryTerm.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-GlossaryTerm.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/glossary-linux-symlink-verified.xml
+  relationship: verifies
+  status: exists
+  relevance: The unchanged actual-symlink escape test passed on Linux, resolving the earlier Windows privilege skip.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_preserves_fields_and_exact_markdown
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_ignores_comments_and_fences_without_truncation
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_fence_info_does_not_open_html_comment
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_true_section_boundaries_and_empty_definition
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_identities_survive_insertion_and_reordering
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_duplicate_normalized_terms_fail
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_custom_path_and_absent_surface_default
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_invalid_configuration_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_symlink_outside_snapshot_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_malformed_frontmatter_fails
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_missing_and_empty_store_emit_no_placeholder
+- tests/knowledge/test_native_glossary_term.py::test_native_glossary_real_corpus_matches_all_authored_sections
+implemented_by:
+  - knowledge/native_types/glossary_term.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of KM-400a-3-i. The canonical glossary
+  persists term and definition, not a universal structured triage schema. Existing
+  corpus, boundary and mutation evidence supports this contract. The reader receipt
+  separately reports one real-symlink test skipped because Windows lacked the required
+  privilege; this reviewed specification makes no claim that the skipped case passed.
+  IT PO review and criterion-specific test links are recorded.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+  The unchanged symlink escape test subsequently passed in the local Linux environment.
+  All linked behaviors now have passing evidence; the original Windows skip remains recorded.
+estimated_complexity: M
+it_requirements:
+- Term identity must remain compatible with the canonical lowercase-trimmed heading convention while original term
+  text and Markdown are retained for inspection.
+- Heading recognition must respect Markdown comments, fences and indentation; glossary exposure must not execute
+  triage or manufacture term-level metadata from file context.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_native_glossary_preserves_fields_and_exact_markdown
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Native glossary preserves fields and exact markdown.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_ignores_comments_and_fences_without_truncation
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native glossary ignores comments and fences without truncation.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_fence_info_does_not_open_html_comment
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native glossary fence info does not open html comment.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_true_section_boundaries_and_empty_definition
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native glossary true section boundaries and empty definition.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_identities_survive_insertion_and_reordering
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native glossary identities survive insertion and reordering.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_duplicate_normalized_terms_fail
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Native glossary duplicate normalized terms fail.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_custom_path_and_absent_surface_default
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: seam
+  description: Native glossary custom path and absent surface default.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_invalid_configuration_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Native glossary invalid configuration fails.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_symlink_outside_snapshot_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Native glossary symlink outside snapshot fails. The prior recorded run skipped this case; a passing
+    execution requires supported symlink privileges.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_malformed_frontmatter_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Native glossary malformed frontmatter fails.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_missing_and_empty_store_emit_no_placeholder
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Native glossary missing and empty store emit no placeholder.
+  covers:
+  - KM-400a-1-ix
+- name: test_native_glossary_real_corpus_matches_all_authored_sections
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Native glossary real corpus matches all authored sections.
+  covers:
+  - KM-400a-1-ix
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes. The actual outside-snapshot symlink test was previously skipped on Windows for missing
+  privilege; that outcome stays visible.

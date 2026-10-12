@@ -1,0 +1,70 @@
+{
+  "kind": "Document",
+  "review": "reports/native-fields/review-Document.json",
+  "implementation": "knowledge/native_types/document.py",
+  "tests": "tests/knowledge/test_native_document.py",
+  "red": {
+    "receipt": "reports/native-fields/document-red.xml",
+    "failed": 12,
+    "reason": "reader absent"
+  },
+  "green": {
+    "receipt": "reports/native-fields/document-green.xml",
+    "passed": 12
+  },
+  "mutation_proofs": [
+    {
+      "test": "test_document_excludes_owned_views_without_dropping_authored_guides",
+      "alteration": "Include specialized files as duplicate Documents",
+      "result": "RED",
+      "failure": "AssertionError"
+    },
+    {
+      "test": "test_document_configured_surfaces_and_product_manifest_views",
+      "alteration": "Include manifest-owned generated flow Markdown",
+      "result": "RED",
+      "failure": "AssertionError"
+    },
+    {
+      "test": "test_document_legacy_memory_identity_and_safe_display_fallback",
+      "alteration": "Invent missing memory description",
+      "result": "RED",
+      "failure": "AssertionError"
+    },
+    {
+      "test": "test_document_preserves_complete_frontmatter_and_body",
+      "alteration": "Overwrite authored document status with prose issue status",
+      "result": "RED",
+      "failure": "AssertionError"
+    },
+    {
+      "test": "test_document_malformed_frontmatter_fails_explicitly",
+      "alteration": "Silently accept malformed frontmatter",
+      "result": "RED",
+      "failure": "Failed"
+    },
+    {
+      "test": "test_document_refuses_invalid_or_escaping_surface",
+      "alteration": "Disable snapshot path boundary",
+      "result": "RED",
+      "failure": "Failed"
+    }
+  ],
+  "corpus": {
+    "records": 715,
+    "without_frontmatter": 41,
+    "families": {
+      "component_document": 34,
+      "document": 273,
+      "known_issue": 385,
+      "memory": 23
+    },
+    "all_frontmatter_fields_and_bodies_equal_source": true
+  },
+  "notes": [
+    "No source frontmatter defaulting, normalization or status inference. Derived body and document_family remain separate.",
+    "Configured surfaces are resolved inside immutable root. Memory discovery is nonrecursive.",
+    "Manifest-backed .flow.json companions are generated views. No other generated product-truth Markdown exists in the reviewed corpus.",
+    "Reader does not validate modern authoring-required fields on legacy prose documents. Invalid YAML and nonmapping frontmatter fail explicitly."
+  ]
+}

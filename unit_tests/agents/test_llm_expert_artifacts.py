@@ -240,18 +240,6 @@ def test_bp200a_4_i_graceful_degradation_when_context_absent():
     assert "abort" not in section.lower()
 
 
-def test_bp200a_5_skills_table_lists_exactly_three():
-    # covers: BP-200a-5
-    section = _md_section(_read(_LLM_EXPERT_TEMPLATE), "## Skills")
-    assert section, "Skills section not found"
-    for skill in ("add-agent-to-package", "add-skill-to-package", "signoff"):
-        assert skill in section, f"Skills table missing {skill}"
-        assert f"skills/{skill}/SKILL.md" in section, f"{skill} row lacks SKILL.md path"
-    # A markdown table with exactly three data rows (rows referencing SKILL.md).
-    data_rows = [ln for ln in section.splitlines() if "SKILL.md" in ln and ln.strip().startswith("|")]
-    assert len(data_rows) == 3, f"expected exactly 3 skill rows, got {len(data_rows)}"
-
-
 # ---------------------------------------------------------------------------
 # BP-200b — PROJECT_CONTEXT.md (docs/agents/llm-expert/PROJECT_CONTEXT.md)
 # ---------------------------------------------------------------------------

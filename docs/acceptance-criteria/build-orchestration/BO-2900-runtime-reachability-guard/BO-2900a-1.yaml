@@ -8,7 +8,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: reviewed
 priority: medium
 roadmap_phase: phase_1
@@ -104,6 +104,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BO-2900a-1-i
+  - BO-2900a-1-ii
+  - BO-2900a-1-iii
+  - BO-2900a-1-iv
 implemented_by:
 - tickets/00_inbox/epics/EPIC-AProofThatReachedTheCodeByDirectImport/01_TICKET-20260925-BO-2900a-1.md
 - scripts/ac_store/done_proof.py
@@ -154,6 +157,19 @@ notes: |
     proof that goes through the way in, one that imports directly) and compare the two
     verdicts. A test that reads the gate's source for the new condition passes on a
     gate that never applies it — the exact failure this tree exists to prevent.
+
+  2026-09-30 (BA). work_status returned done -> todo, and three L3 children added
+  (BO-2900a-1-ii report-only suspension, -iii the re-arm corpus, -iv the named
+  unit). This criterion's own Then clause is "the criterion is rejected as not
+  eligible"; the rule was suspended to report-only on 2026-09-30 and now rejects
+  nothing, so the criterion is not satisfied by the tree. Measured, not inferred:
+  unit_tests/ac_store/test_bo_2900a_1.py and test_bo_2900a_1_ii.py were run
+  against this worktree and 4 of their 6 cases fail, every one of them on an
+  assertion that the verdict is ineligible. The three new children describe the
+  state the criterion is held in and the conditions for returning it to force;
+  none of them is built. work_status and covered_by are open fields, so this
+  change carries no amended_by entry — criteria, title, req_status and
+  depends_on are untouched.
 
   2026-08-13 (IT PO enrichment). Enforcement surface for the BO-2900a family is the
   DONE-PROOF PATH, not a new hook: these are per-criterion eligibility rules, and

@@ -305,6 +305,85 @@ H-1 fix, commit `2a377f91`, 2026-07-08.)
 
 ---
 
+## KI-8: A phase handoff continues the ticket — do not re-run after it
+
+**Old behaviour.** The drivers dispatched the handoff target inline, then always halted
+`cross_agent` with "re-run /build-feature". That inline dispatch skipped the test guard and
+the red-baseline gate, and an epic stopped at the halted ticket.
+
+**Now (BO-3000a).** A handoff from phase H to target T runs T through the normal phase loop,
+then re-queues H if the record still lists it as `needed` or `failed`. The ticket finishes
+in the same run, so a halt is not the normal outcome of a handoff and re-running is not the
+default remedy. Refused with a named reason, dispatching nobody: a self-handoff, a target not
+on the ticket (`not_needed` is honoured), a deferred target such as `pull-request`.
+
+**Reading a halt.**
+- `cross_agent` with `handoff_target` set: T left no new sign-off entry after the handoff
+  (an older passing entry does not count). Open the ticket, check T's `## Comments`, fix the
+  record, then re-run.
+- `handoff_loop`: the same (from→to) pair repeated, or a fourth handoff hit the per-ticket
+  cap of three. The halt names the chain; the phases are bouncing work between them. Fix
+  the cause in the ticket, not by re-running.
+- A handoff to a coder while `test-writer` is still pending can halt at the test guard when
+  the ticket has no test requirements. That is fail-closed and expected.
+
+---
+
+## KI-9: A halted ticket no longer ends the epic run — read what was withheld
+
+**Old behaviour.** The first halted ticket ended the whole run. Every later batch and look
+went unbuilt, even work that had nothing to do with the halt.
+
+**Now (BO-100e-4, `build-feature.js`).** The run continues past a halt and builds every
+independent later ticket. After a batch that holds a halt or an incomplete ticket, the
+driver reads the worktree's dirty files once (`worktree_repo_facts.py dirty`). The final
+return is always `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"`,
+with `halted_at_batch` set to the first halt. `build-epic.js` (legacy) still halts all.
+
+**Reading the return.**
+- `halted_tickets` — the tickets that halted; `completed_batches` also lists successes after
+  the first halt.
+- `unbuilt` — withheld tickets. `withheld_by` names the halted ticket a dependant waits on.
+  `withheld_by_shared_files` names the paths a later ticket shares with files the halt left
+  modified. Siblings in the same batch are never withheld for overlap.
+- A read-back without `files_touched` means no overlap can be detected for that ticket. That
+  is not a failure; the ticket is simply not withheld for shared files.
+- The leftover set is replaced at each dirty read, not accumulated, so an old leftover stops
+  withholding once a later read no longer shows it.
+
+**Staged leftovers stop the run.** If the halted ticket left **staged** changes, the run
+stops and the return carries `staged_leftovers` with the paths. The commit agent commits
+whatever is staged, so continuing would sweep them into the next ticket's commit. Commit or
+unstage them (`git restore --staged <path>`), then re-run `/build-feature`. If the message
+says the worktree state **could not be read**, the run also stopped (fail closed): check
+the worktree path and `git status`, then re-run.
+
+**Do not re-drive by hand.** A ticket with a verdict in this run, halted or withheld, is not
+driven again in a later look of the same run (the planner re-offers it every look; the
+driver dedupes). A withheld ticket is also not re-evaluated, which is safe because the
+leftovers that withheld it persist. Fix the cause and re-run to build it.
+
+---
+
+## KI-10: Done tickets are modified but unstaged after a run — leave them alone
+
+**What you will see.** After a run, ticket files show as modified but **unstaged** with
+`status: done`. The completion write runs `set_ticket_status.py --status done --no-stage`.
+
+**Why this is expected.** Staging them made KI-9's staged-leftovers stop fire at the next
+halt, and swept the done ticket into the next ticket's commit, where `check-predone-scope`
+blocked it. So the write is deliberately left unstaged.
+
+**What to do.** Nothing. Do not stage or commit them by hand on an epic branch. They are
+committed by `finalize-feature` step 3.5 (the pre-merge closure on the feature branch): it
+resets the worktree to the feature branch's HEAD (aborting any test merge first), re-sets
+`status: done` on each open ticket, closes the source ACs and commits that closure on the
+branch before the merge, so the statuses reach main through the merge. The reset discards
+anything unstaged in the worktree in both cases, so nothing else should be left there before
+finalize. (Decision Kernel run `run-f6524c703be24639`.)
+
+---
+
 ## References
 
 - `.claude/commands/build-feature.md` — executable workflow; Step A step 6

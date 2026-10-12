@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="9.317" timestamp="2026-10-02T04:39:57.413620+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_query_answer_contract_acceptance_mixed_reserve.TestMixedSourceResearchReserve" name="test_affordable_mixed_sources_keep_both_groups_and_answer_obligations" time="3.404" /><testcase classname="tests.knowledge.test_query_answer_contract_acceptance_mixed_reserve.TestMixedSourceResearchReserve" name="test_graph_and_native_children_leave_the_requested_reserve" time="3.978"><failure message="AssertionError: {'remaining': 3, 'reserve': 5, 'purposes': ['kernel.route', 'retrieval.rerank', 'knowledge.query_readiness', 'knowledge.query_target', 'knowledge.query_select'], 'child_sources': [['knowledge.graph'], ['repo.answers']], ...}&#10;assert (8 - 5) &gt;= 5&#10; +  where 5 = UsageSummary(schema_version='1.0', jev_calls=5, host_operations=0, input_tokens=None, output_tokens=None, cost_usd_kno...ted', input_tokens=None, output_tokens=None, duration_ms=None, cost_usd=None, cost_provenance='unavailable', calls=5)]).jev_calls&#10; +    where UsageSummary(schema_version='1.0', jev_calls=5, host_operations=0, input_tokens=None, output_tokens=None, cost_usd_kno...ted', input_tokens=None, output_tokens=None, duration_ms=None, cost_usd=None, cost_provenance='unavailable', calls=5)]) = RunEnvelope(schema_version='1.0', run_id='run-6fe7723ead1e41af', root_task_id='task-16affacdf7424a42', state_revision=...url='https://trace.example/9e0eccbb0c60e6e03e5068ffdd12d283', observability=&lt;ObservabilityStatus.OK: 'ok'&gt;), errors=[]).usage_summary">self = &lt;tests.knowledge.test_query_answer_contract_acceptance_mixed_reserve.TestMixedSourceResearchReserve testMethod=test_graph_and_native_children_leave_the_requested_reserve&gt;
+
+    def test_graph_and_native_children_leave_the_requested_reserve(self):
+        # covers: KM-500e-1
+        # angle: seam
+        # angle: discrimination
+&gt;       self._asyncioRunner.run(self.check_tight_budget(), context=contextvars.copy_context())
+
+tests\knowledge\test_query_answer_contract_acceptance_mixed_reserve.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;tests.knowledge.test_query_answer_contract_acceptance_mixed_reserve.TestMixedSourceResearchReserve testMethod=test_graph_and_native_children_leave_the_requested_reserve&gt;
+
+    async def check_tight_budget(self):
+        limit, reserve = 8, 5
+        result, children = await self.run_mixed(limit, reserve)
+        assert result.usage_summary.jev_calls == self.jev.call_count
+&gt;       assert limit - result.usage_summary.jev_calls &gt;= reserve, {
+            "remaining": limit - result.usage_summary.jev_calls,
+            "reserve": reserve,
+            "purposes": [b.purpose for b in self.jev.batches],
+            "child_sources": [r.payload["source_ids"] for r in children],
+            "status": result.status.value,
+        }
+E       AssertionError: {'remaining': 3, 'reserve': 5, 'purposes': ['kernel.route', 'retrieval.rerank', 'knowledge.query_readiness', 'knowledge.query_target', 'knowledge.query_select'], 'child_sources': [['knowledge.graph'], ['repo.answers']], ...}
+E       assert (8 - 5) &gt;= 5
+E        +  where 5 = UsageSummary(schema_version='1.0', jev_calls=5, host_operations=0, input_tokens=None, output_tokens=None, cost_usd_kno...ted', input_tokens=None, output_tokens=None, duration_ms=None, cost_usd=None, cost_provenance='unavailable', calls=5)]).jev_calls
+E        +    where UsageSummary(schema_version='1.0', jev_calls=5, host_operations=0, input_tokens=None, output_tokens=None, cost_usd_kno...ted', input_tokens=None, output_tokens=None, duration_ms=None, cost_usd=None, cost_provenance='unavailable', calls=5)]) = RunEnvelope(schema_version='1.0', run_id='run-6fe7723ead1e41af', root_task_id='task-16affacdf7424a42', state_revision=...url='https://trace.example/9e0eccbb0c60e6e03e5068ffdd12d283', observability=&lt;ObservabilityStatus.OK: 'ok'&gt;), errors=[]).usage_summary
+
+tests\knowledge\test_query_answer_contract_acceptance_mixed_reserve.py:46: AssertionError</failure></testcase></testsuite></testsuites>

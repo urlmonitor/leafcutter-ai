@@ -14,7 +14,7 @@ BUSINESS CONTEXT: Template compilation resolves six placeholder types at
     (ADR-024) — reach assemble_context_bundle the only way it reaches Python:
     a single ``python3 <script> <subcommand> --args`` Bash dispatch.
 ARCHITECTURE: Public functions: build_per_agent_spawn_table (Type 1),
-    build_per_agent_skills_table (Type 2), build_registry_block (Type 3),
+    build_registry_block (Type 3),
     build_doc_type_reference_table (Type 4), build_project_paths_table (Type 5),
     build_agent_priority_table (Type 6), build_doc_types_dispatch_table (Type 7),
     build_signoff_block (sign-off appender), assemble_context_bundle (LLM
@@ -68,7 +68,7 @@ def _load_registry(registry_path: Path) -> list[dict[str, Any]] | None:
 
 
 def build_per_agent_spawn_table(agent_id: str, agents: list[dict[str, Any]]) -> str:
-    """Render the per-agent sub-agent table for the ``{{my_spawn_allowlist}}`` placeholder.
+    """Render the per-agent sub-agent table (called by ``agent_spawn_declaration``; the ``{{my_spawn_allowlist}}`` placeholder is retired).
 
     Looks up the agent by ``id``, expands the ``__ticket_phase_agents__`` macro
     to all agents where ``is_ticket_phase: true``, and renders a markdown table
@@ -152,68 +152,11 @@ def _parse_frontmatter_description(text: str) -> str:
     fm_text = text[3:end].strip()
     try:
         import yaml  # noqa: PLC0415
+
         fm = yaml.safe_load(fm_text) or {}
         return fm.get("description", "") or ""
     except Exception:  # noqa: BLE001
         return ""
-
-
-def build_per_agent_skills_table(
-    agent_id: str,
-    agents: list[dict[str, Any]],
-    skills_root: Path | None = None,
-) -> str:
-    """Render the per-agent skills table for the ``{{my_skills_used}}`` placeholder.
-
-    Reads ``skills_used`` from the agent's registry entry, then reads each
-    skill's SKILL.md frontmatter ``description:`` field for the table text.
-    Missing or absent ``skills_used`` returns empty string (section suppressed).
-
-    Args:
-        agent_id: The ``id`` field of the agent whose skills table to build.
-        agents: The full list of agent dicts from agent_registry.json.
-        skills_root: Optional path to the ``templates/skills/`` directory.
-            When provided, each skill's SKILL.md is read for its description.
-            When None, descriptions are rendered as empty strings.
-
-    Returns:
-        Markdown string with a ## heading + table, or empty string when the
-        agent has no skills.
-
-    Raises:
-        ValueError: When ``agent_id`` is not found in ``agents``.
-    """
-    agent_map = {a["id"]: a for a in agents}
-    if agent_id not in agent_map:
-        raise ValueError(
-            f"Agent '{agent_id}' not found in registry — cannot build skills table."
-        )
-
-    skills_used: list[str] = agent_map[agent_id].get("skills_used") or []
-    if not skills_used:
-        return ""
-
-    lines = [
-        "## Your Available Skills",
-        "",
-        "| Skill | Description |",
-        "|---|---|",
-    ]
-    for skill_id in skills_used:
-        description = ""
-        if skills_root is not None:
-            skill_md = skills_root / skill_id / "SKILL.md"
-            if skill_md.exists():
-                skill_text = skill_md.read_text(encoding="utf-8")
-                raw_desc = _parse_frontmatter_description(skill_text)
-                description = " ".join(raw_desc.strip().split())
-            else:
-                _log.warning(
-                    "Skill '%s' listed in skills_used for '%s' has no SKILL.md at %s",
-                    skill_id, agent_id, skill_md,
-                )
-        lines.append(f"| {skill_id} | {description} |")
-    return "\n".join(lines)
 
 
 def build_registry_block(registry_path: Path) -> str:

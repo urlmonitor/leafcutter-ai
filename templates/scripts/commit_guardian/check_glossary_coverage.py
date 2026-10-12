@@ -296,15 +296,13 @@ def check_glossary_coverage(
     Args:
         repo_root: Repository root path.
         dispatch_fn: Optional callable(term, occurrences, glossary_terms,
-            blacklist_terms) -> dict. Defaults to _dispatch_triage_standalone.
-            Override for Claude-agent-context invocations.
+            blacklist_terms) -> dict. When None (hook mode) the check is
+            report-only: novel terms are printed and no glossary file is
+            written or staged. Inject for Claude-agent-context invocations.
 
     Returns:
         Always 0 (fail-open contract).
     """
-    if dispatch_fn is None:
-        dispatch_fn = _dispatch_triage_standalone
-
     try:
         return _run_check(repo_root, dispatch_fn)
     except Exception as exc:  # noqa: BLE001
@@ -423,12 +421,32 @@ def _triage_novel_terms(
     return glossary_modified, blacklist_modified
 
 
-def _run_check(repo_root: Path, dispatch_fn: "Callable[..., Any]") -> int:
+def _report_novel_terms(novel: dict[str, list[list[str]]]) -> None:
+    """Print novel terms with a pointer to the triage flow; write nothing.
+
+    Args:
+        novel: Dict mapping term -> list of context_window lists.
+    """
+    print(
+        "check-glossary-coverage: hook mode cannot dispatch glossary-triage; "
+        "no glossary files were modified. Novel terms:",
+        file=sys.stderr,
+    )
+    for term in sorted(novel):
+        print(f"  - {term}", file=sys.stderr)
+    print(
+        "Triage them with the glossary-triage agents, then run "
+        "glossary_bootstrap.py --apply-decisions.",
+        file=sys.stderr,
+    )
+
+
+def _run_check(repo_root: Path, dispatch_fn: "Callable[..., Any] | None") -> int:
     """Internal implementation — not fail-open. Called by check_glossary_coverage.
 
     Args:
         repo_root: Repository root path.
-        dispatch_fn: Triage dispatch callable.
+        dispatch_fn: Triage dispatch callable, or None for report-only hook mode.
 
     Returns:
         0 always (per fail-open contract, the outer wrapper catches exceptions).
@@ -467,6 +485,10 @@ def _run_check(repo_root: Path, dispatch_fn: "Callable[..., Any]") -> int:
         f"check-glossary-coverage: {len(novel)} novel jargon candidate(s) detected.",
         file=sys.stderr,
     )
+
+    if dispatch_fn is None:
+        _report_novel_terms(novel)
+        return 0
 
     # Steps 4+5: triage and apply decisions
     glossary_modified, blacklist_modified = _triage_novel_terms(
@@ -514,6 +536,7 @@ if __name__ == "__main__":
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-02 15:00 [python-coder/GlossaryHookStubBlacklistsNewTerms]: Hook mode (no dispatch_fn) is now report-only; stub no longer blacklists. (#TICKET-20261002-GlossaryHookStubBlacklistsNewTerms)
 # - 2026-06-03 09:00 [python-coder/EPIC-TemplateDocViolations/06]: Fixed missing HH:MM and tail-tag on 2026-05-22 DECISION HISTORY entry. (#EPIC-TemplateDocViolations/06)
 # - 2026-05-22 09:00 [AI]: Added noqa: default-path-smoke to bypass pre-commit hook (uses triage stub). (#TICKETLESS reason=noqa-triage-stub-bypass)
 # - 2026-05-18 19:10 [python-coder/EPIC-GlossaryAutomation/ticket-04]: Created module. (#EPIC-GlossaryAutomation/04)

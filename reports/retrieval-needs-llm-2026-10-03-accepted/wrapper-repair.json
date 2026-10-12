@@ -1,0 +1,118 @@
+{
+  "canonical_host_task": "/root/needs_llm_host",
+  "initial_actor_id": "codex:/root/needs_llm_host",
+  "corrected_actor_id": "codex:root:needs_llm_host",
+  "reason": "Actor.id forbids slashes; controller-only wrapper correction, no model rerun or response changes.",
+  "original_attempts": "../retrieval-needs-llm-2026-10-03-evaluation/",
+  "counter_correction": "usage_summary.host_operations counts issued waits, not accepted submissions. Acceptance is verified against the durable submission ledger.",
+  "verified_before_resubmit": [
+    {
+      "case_id": "N01",
+      "run_id": "run-4ce64e8163e74db8",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-116b2e156388441a"
+    },
+    {
+      "case_id": "N02",
+      "run_id": "run-271cfa3bcfd64928",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-3f6ea15614a64877"
+    },
+    {
+      "case_id": "N03",
+      "run_id": "run-b8e03912ebc8474b",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-e409b90b61ab4aeb"
+    },
+    {
+      "case_id": "N04",
+      "run_id": "run-cf7dcd7269414194",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-6c643fb1aa8b4225"
+    },
+    {
+      "case_id": "N05",
+      "run_id": "run-4e1d3c5394f44084",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-faca89fa9bd041f7"
+    },
+    {
+      "case_id": "N06",
+      "run_id": "run-d60045f603aa4a91",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-073de493a6f746a4"
+    },
+    {
+      "case_id": "N07",
+      "run_id": "run-8048ece7b25f428a",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-832d63ce1e4d448f"
+    },
+    {
+      "case_id": "N08",
+      "run_id": "run-fb1dbac8ed7d4d76",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-f4f9ea73f84d4a9f"
+    },
+    {
+      "case_id": "N09",
+      "run_id": "run-be1b78c7b929407c",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-ca4359d1c16445bf"
+    },
+    {
+      "case_id": "N10",
+      "run_id": "run-83eba873e4ae424b",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-37a1da87200a4860"
+    },
+    {
+      "case_id": "N11",
+      "run_id": "run-0d18418bd3bb430d",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-43c96ddd4d7248e3"
+    },
+    {
+      "case_id": "N12",
+      "run_id": "run-a472ae6b468148e2",
+      "status": "waiting_host",
+      "unchanged_revision": 1,
+      "accepted_submission_ledger_entries": 0,
+      "issued_host_operations": 1,
+      "pending_interaction_id": "int-83cbeee2f9574563"
+    }
+  ]
+}

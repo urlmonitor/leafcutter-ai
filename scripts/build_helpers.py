@@ -1327,7 +1327,7 @@ def write_build_manifest(
 
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",
     )
     _success(
         f"build manifest ({len(template_hashes)} template "
@@ -1561,11 +1561,6 @@ def install_shims(
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     return results
-
-
-# _relative_symlink_target, _create_shim, _create_file_shim moved to
-# build_ownership.py (headroom pass, ADR-041 review -- see that module's
-# decision history). Imported below, unchanged in behaviour.
 
 
 # ====================================================================

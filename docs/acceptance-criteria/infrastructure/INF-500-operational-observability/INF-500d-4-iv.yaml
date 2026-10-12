@@ -1,0 +1,155 @@
+id: INF-500d-4-iv
+components:
+  - infrastructure
+  - feedback_collector
+  - agent_telemetry
+title: "Every log a drive writes lands in the enduring location, not in the workspace that is about to be deleted"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a drive is running inside a temporary per-drive workspace that will be
+    deleted when the drive finishes,
+  When an agent in that drive files a report and the write succeeds,
+  And the temporary workspace is subsequently removed,
+  Then the report is still readable afterwards from the durable location that
+    outlives the workspace,
+  And the record identifier cited in the drive's ticket resolves to that stored
+    record.
+
+  Given the operational log directory also holds the agent-telemetry log and the
+    knowledge-emission log, which are written by the same drives with the same
+    workspace-relative lifetime and are destroyed the same way,
+  When the durable location is adopted for the report sink,
+  Then the same durable location is adopted for every log in that directory, so the
+    directory is not split across a disposable root and an enduring one.
+depends_on:
+  - INF-500d-4-iii
+doc_links:
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/agent-telemetry.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4-iii.yaml
+    relationship: related
+    status: exists
+    relevance: "Recorded done, but the declaration lookup it shipped in emit_event.py never matches the deployed layout (verified 2026-10-09). Fixed here; the owner should be told."
+assigned_agent: python-coder
+estimated_complexity: L
+declared_files:
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: templates/skills/agent-telemetry/scripts/emit_event.py
+    state: existing
+  - path: templates/hooks/inline_work_guard.py
+    state: existing
+  - path: templates/workflows-js/plan-feature.js
+    state: existing
+  - path: unit_tests/feedback/test_inf_500d_4_iv_durable_writers.py
+    state: to_be_created
+  - path: unit_tests/workflows/test_inf_500d_4_iv_pt_telemetry_sink.py
+    state: to_be_created
+it_requirements:
+  - "EACH WRITER'S DEFAULT IS THE DECLARED VALUE, READ FROM ITS OWN WORKSPACE'S DEPLOYED DECLARATION. submit_feedback.py with no --jsonl uses feedback_sink. emit_event.py with no --log uses operational_telemetry_stream. inline_work_guard.py uses <operational_log_root>/inline_work_guard.jsonl. Reading the declaration file from the workspace's own deployed config is rule (a), and the value it holds is rule (c). No writer may compute a root independently, invoke git, or reach into another install."
+  - "REACH THE DECLARATION IN THE REAL DEPLOYED LAYOUT, FROM ANY CURRENT DIRECTORY. It lives at <output_root>/config/knowledge_sink.json. The writers deploy to <output_root>/scripts/feedback/, <output_root>/skills/agent-telemetry/scripts/ (reached through the .claude/skills symlink) and <output_root>/hooks/. emit_event.py's current ancestor search for <dir>/config/knowledge_sink.json never matches that layout — from the project root and from a worktree it returns the bare relative debugging/logs/agent_telemetry.jsonl (verified 2026-10-09) — and must be fixed. Prove it against the deployed copy, not the source tree."
+  - "REMOVE THE KI-FC-001 ROOT CAUSE. submit_feedback.py's sink must no longer derive from the _find_project_root upward walk for .claude/. Configuration-root resolution (_find_config_root, rule (a), INF-100c-1-i) is unchanged and must stay unchanged."
+  - "plan-feature.js emitPtTelemetry currently prefixes the authoring worktree path onto debugging/logs/agent_telemetry.jsonl, so the product-truth telemetry it dispatches is written into the disposable worktree. It must append to the declared operational_telemetry_stream, obtained through INF-500d-4-iii's location query in the dispatched instruction, never a path the workflow composes itself. It stays best-effort and non-blocking as it is today."
+  - "NO SILENT FALLBACK WHEN THE DECLARATION IS MISSING. submit_feedback.py takes INF-500d-4-i's refusal. emit_event.py stays non-fatal by design (BP-400a-1-i: exit 0, callers append || true), so it must print a stderr warning naming the missing declaration and drop the event rather than write to the CWD-relative default. inline_work_guard.py must not block any tool call because of this (hooks fail open on logging) and must likewise warn rather than write workspace-relative."
+  - "INF-500d-4-ii's '[submit_feedback] sink: <path>' stderr line must be preserved unchanged in form. It now names the declared path."
+  - "emit_event.py is deliberately self-contained (standard library only, no package imports) to avoid the deployed-dependency failure class. Keep that by reading the declaration with the standard library, or retire it explicitly in its DECISION HISTORY and add the shared reader to the deploy manifest of every deployed copy. Do not break it silently."
+  - "Concurrent appends from simultaneous drives into the shared files must lose, truncate or interleave no record. submit_feedback.py's existing exclusive lock must be kept, and emit_event.py and inline_work_guard.py must write each record as one atomic append."
+  - "emit_hook_finding.py reaches the sink through submit_feedback.py and must inherit the change with no edit of its own. If it needs an edit, add it to declared_files and state why."
+  - "File-size ratchet: submit_feedback.py is 637 lines, over the 400-line limit. Extract rather than grow, and never SKIP check-file-size."
+  - "Deployed/template parity (ADR-001): edit the templates and verify the deployed copies through the build round-trip."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_report_filed_in_a_worktree_survives_the_worktree_removal
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the deployed-layout copy of submit_feedback.py inside a temp worktree, run as a subprocess"
+    description: "In a temp worktree whose deployed declaration names a log root R outside it, file a report and capture the id from stdout. Delete the worktree, then read R/feedback.jsonl and assert a record with exactly that id is present. Read only after deletion."
+    must_catch:
+      - "a sink derived from the __file__ walk for .claude/"
+      - "a sink derived from the current working directory"
+  - name: test_two_worktrees_append_to_one_sink_without_displacing_each_other
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Two temp worktrees whose declarations both name R append N reports each, concurrently. Assert R/feedback.jsonl holds 2N parseable lines containing every printed id."
+  - name: test_every_drive_written_log_resolves_under_the_one_declared_root
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "From a temp worktree's current directory, run submit_feedback.py with no --jsonl, emit_event.py with no --log, and the inline_work_guard hook from its deployed position. Assert feedback.jsonl, agent_telemetry.jsonl and inline_work_guard.jsonl appear under R and nothing appears under the worktree."
+  - name: test_emit_event_finds_the_declaration_in_the_real_deployed_layout
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    surface_invoked: "the deployed emit_event.py in the shared reference layout"
+    description: "Using the shared_reference_layout fixture (reader), run the deployed emit_event.py with no --log from the project root and from a nested subdirectory. Assert the event lands at the declared absolute operational_telemetry_stream both times."
+    must_catch:
+      - "the shipped defect: searching ancestors for <dir>/config/knowledge_sink.json, which never matches <project>/.leafcutter/config/"
+  - name: test_emit_event_without_a_declaration_warns_and_writes_nothing
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "With no declaration anywhere, emit_event.py exits 0, prints a stderr warning naming the missing declaration, and creates no agent_telemetry.jsonl relative to its current directory."
+  - name: test_plan_feature_pt_telemetry_targets_the_declared_stream
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: behavioral
+    angle: seam
+    surface_invoked: "plan-feature.js emitPtTelemetry driven through unit_tests/_workflow_engine_harness.py"
+    description: "Drive emitPtTelemetry with an authoringWorktreePath. Assert the dispatched instruction obtains the path from the location query and contains no path composed from authoringWorktreePath plus debugging/logs/agent_telemetry.jsonl."
+    must_catch:
+      - "the current worktree-prefixed append path"
+test_rationale: "The behaviour is where a file lands relative to a directory that is then deleted, so every durability test runs the deployed script as a subprocess from inside a temp worktree, deletes the worktree, and only then reads. The emit_event test runs the deployed copy against the shared reference layout because the defect it pins exists only in the deployed layout: the source-tree tests for INF-400c-4-iii pass while the deployed lookup never matches. The plan-feature test goes through the workflow harness rather than grepping the JS, per CLAUDE.md's rule that gate and workflow behaviour is verified behaviourally."
+delivers_to:
+  agent: llm-expert
+  contract: "Writers whose default resolves to the declared absolute sink, so a prompt surface that omits --jsonl or --log lands in the enduring location. INF-500d-4-vi removes the workspace-relative overrides once this is in place."
+expects_from:
+  ac_id: INF-500d-4-iii
+  contract: "<output_root>/config/knowledge_sink.json with operational_log_root, feedback_sink, operational_telemetry_stream and knowledge_emission_sink as absolute paths, inherited from the main install in per-drive worktrees; plus the side-effect-free location query used by plan-feature.js."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved; criteria and work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-09
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/03_TICKET-20261009-INF-500d-4-iv.md
+change_target:
+  - code
+  - infrastructure
+risk_surface: contract_boundary
+notes: |
+  Split out of INF-500d-4 by the IT PO, 2026-10-09. The criteria are INF-500d-4's
+  first scenario and the first two clauses of its fourth, copied verbatim. This
+  record owns the WRITE side at run time; INF-500d-4-iii owns what the build
+  declares and INF-500d-4-v owns the readers.
+
+  inline_work_guard.jsonl is included because the fourth scenario says 'every log
+  in that directory', and the hook writes there. If BrainCandy wants the scenario
+  read as only the three logs it names, drop that file from declared_files and the
+  third test.

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="19.370" timestamp="2026-10-02T09:28:58.012968+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[tests/support.json]" time="0.009"><failure message="AssertionError: assert {'outcome': 'passed'} == {}&#10;  &#10;  Left contains 1 more item:&#10;  {'outcome': 'passed'}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    assert record.derived == {}
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[unit_tests/shared]" time="0.002"><failure message="AssertionError: assert {'outcome': 'passed'} == {}&#10;  &#10;  Left contains 1 more item:&#10;  {'outcome': 'passed'}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    ???
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_preserves_existing_classification_without_invention[historic/custom/location]" time="0.003"><failure message="AssertionError: assert {'outcome': 'passed'} == {}&#10;  &#10;  Left contains 1 more item:&#10;  {'outcome': 'passed'}&#10;  Use -v to get more diff">tests\knowledge\test_native_test.py:219: in test_test_reference_preserves_existing_classification_without_invention
+    ???
+E   AssertionError: assert {'outcome': 'passed'} == {}
+E     
+E     Left contains 1 more item:
+E     {'outcome': 'passed'}
+E     Use -v to get more diff</failure></testcase></testsuite></testsuites>

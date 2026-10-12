@@ -105,8 +105,8 @@ def consumer_source(
     writes the handed-back root path to RESULT_DIR.
 
     also_assert_exists=True additionally asserts the root is a real,
-    existing directory containing scripts/build.py -- the "result consumed
-    in control flow" shape the reachability angle requires.
+    existing directory containing .build_manifest.json -- the "result
+    consumed in control flow" shape the reachability angle requires.
     """
     lines = ["import os", "from pathlib import Path"]
     if marker:
@@ -114,7 +114,7 @@ def consumer_source(
     lines.append(f"def test_{test_name}(shared_reference_layout):")
     if also_assert_exists:
         lines.append("    root = Path(shared_reference_layout)")
-        lines.append('    assert (root / "scripts" / "build.py").exists()')
+        lines.append('    assert (root / ".build_manifest.json").exists()')
     lines.append(f'    out = Path(os.environ["RESULT_DIR"]) / "{out_name}"')
     lines.append("    out.write_text(str(shared_reference_layout))")
     return "\n".join(lines) + "\n"

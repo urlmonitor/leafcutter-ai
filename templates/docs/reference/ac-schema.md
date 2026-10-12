@@ -3,7 +3,7 @@ title: "Reference: AC Traceability Store Schema"
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-06-04
+last_updated: 2026-10-07
 components:
   - build_pipeline
 related_docs:
@@ -40,6 +40,26 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Common values: `business-analyst`, `debug`, `human`, `ticket-wiring`. |
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline to select mandatory guardrail agents. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs predating the computed-gates pipeline. |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure (ADR-017). Combined with `change_target` to select guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
+| `test_spec` | list or null | no | Source-of-truth test contract for this AC; the generated ticket's `## Test Requirements` section is derived from it. Null/absent means "no contract authored yet" and the generator falls back to one descriptor per Gherkin `Then` clause plus a mandatory reachability descriptor; an empty list is not permitted. See [`test_spec` item fields](#test_spec-item-fields). |
+| `test_required` | boolean or null | no | Whether `test-writer` must produce failing tests. `false` means intentionally no tests; null/absent means the contract is not yet authored. |
+| `test_rationale` | string or null | no | Prose justification for the shape of `test_spec`. Must be a string, never a list. |
+
+### `test_spec` item fields
+
+Each entry in `test_spec` is an object. Unknown keys are rejected
+(`additionalProperties: false`), so a typo fails the `check-ac-schema` hook.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | **yes** | Test function or class name. Should read as an assertion. |
+| `target_dir` | string | **yes** | Repo-relative directory the test file lives in. |
+| `description` | string | no | One sentence: what this test asserts. |
+| `covers` | list of strings | no | AC IDs this test covers. Defaults to `[this AC's id]`. |
+| `framework` | enum | no | `unittest`, `pytest`, `vitest`, or `playwright`. |
+| `type` | enum | no | Test level: `unit`, `integration`, `e2e`, `behavioral`, or `component`. |
+| `angle` | enum | no | Which proof-of-done question this test answers, from the set-cover taxonomy in `docs/testing/test-angles.md` in the leafcutter source repository: eight values — five core angles `criterion`, `reachability`, `seam`, `real_artifact`, `deployed`, plus three conditional ones, `boundary`, `failure` and `discrimination`. `discrimination` fires for bug-fix or gate ACs, or when the entry carries `must_catch`: the test must go red under at least one named plausible wrong version of the code, not only when the code is absent; it never takes one of the four slots by default and may share a test with `criterion`. `generate_ticket_from_ac.py` passes an authored value straight through onto the ticket's `## Test Requirements` entry. Note the criteria-derived fallback (no `test_spec` authored) tags its own descriptors `criterion` and appends one mandatory `reachability` descriptor; an authored `test_spec` is taken as-is and gets no generator-added entries. A red that is only an `ImportError`/`AttributeError` (or other import/name/attribute lookup error raised before any code under test ran) does not count for an entry that declares `discrimination` or `must_catch` — see `must_catch` below. Omit when the angle has not been classified. |
+| `must_catch` | list of strings | no | The wrong versions this entry's test must go red under, in the author's own words (for example `"revert the fix"`, `"drop the second gate condition"`, `"new column is NULL"`). Optional; when present it must be a **non-empty** list and every item must contain at least one non-whitespace character — an empty list or a blank-only item is rejected, and the `check-ac-schema` error names the entry, the field and the rule that failed. Expected on bug-fix and gate ACs (a gate or fix whose wrong versions are not named cannot be checked). `generate_ticket_from_ac.py` copies it **verbatim** (same strings, same order, no trimming, case change or dedupe) onto the generated ticket's `## Test Requirements` entry; the criteria-derived fallback route never adds it. Declaring `must_catch` (or `angle: discrimination`) makes the fast lane's red-baseline reader (`fast_lane.py verify_red_baseline --ac-root <ac_store_root>`) refuse that entry's test as red evidence when its only red is an `ImportError`/`AttributeError`-style absence red: the test moves to the result's `refused` list and the gate fails closed with reason `declared_test_refused_absence_only_red`. Without `--ac-root` the reader does not apply this rule. The same property is mirrored in `config/test_requirements.schema.json`; widen one and you must widen both. |
+| `requires_db` | boolean | no | Whether the test needs a live database (drives slow-test marking). |
 
 ### Full example
 

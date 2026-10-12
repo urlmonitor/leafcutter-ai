@@ -1,0 +1,241 @@
+{
+  "evaluation": "paired_live_intent_after_context_enrichment",
+  "intent_template_revision": "2",
+  "comparison": "Same current intent prompt; baseline omits enrichment only.",
+  "interpretation": "One observation per arm and case; unchanged outcomes do not prove enrichment helped. This small probe does not establish statistical or causal improvement.",
+  "rows": [
+    {
+      "id": "original_capability_question",
+      "goal": "Can you use leafcutter now? I mean run the kernel and know about it?",
+      "expected_enriched_intent": "evidence",
+      "baseline": {
+        "outcome": "evidence",
+        "confidence": 0.99,
+        "probabilities": {
+          "decision": 0.0,
+          "ideas": 0.0,
+          "__NEEDS_CONTEXT__": 0.01,
+          "evidence": 0.99,
+          "out_of_domain": 0.0,
+          "change": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "enriched": {
+        "outcome": "evidence",
+        "confidence": 1.0,
+        "probabilities": {
+          "evidence": 1.0,
+          "out_of_domain": 0.0,
+          "ideas": 0.0,
+          "change": 0.0,
+          "__NEEDS_CONTEXT__": 0.0,
+          "decision": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "changed": false,
+      "context_status": "gathered",
+      "context_files_scanned": 2,
+      "context_sources": [
+        "README.md#L1-L3 (§Leafcutter)"
+      ],
+      "passed": true
+    },
+    {
+      "id": "conversation_requests_ideas",
+      "goal": "Same for Zephyr, please.",
+      "expected_enriched_intent": "ideas",
+      "baseline": {
+        "outcome": "insufficient_context",
+        "confidence": 0.86,
+        "probabilities": {
+          "ideas": 0.0,
+          "change": 0.11,
+          "out_of_domain": 0.0,
+          "__NEEDS_CONTEXT__": 0.88,
+          "decision": 0.0,
+          "evidence": 0.01
+        },
+        "reason_codes": [
+          "jev_needs_context"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "enriched": {
+        "outcome": "ideas",
+        "confidence": 0.66,
+        "probabilities": {
+          "decision": 0.0,
+          "change": 0.03,
+          "evidence": 0.04,
+          "__NEEDS_CONTEXT__": 0.21,
+          "ideas": 0.72,
+          "out_of_domain": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "changed": true,
+      "context_status": "gathered",
+      "context_files_scanned": 2,
+      "context_sources": [
+        "docs/reference/zephyr.md#L1-L3 (§Zephyr export manifest)"
+      ],
+      "passed": true
+    },
+    {
+      "id": "project_acronym",
+      "goal": "What does ZTC do here?",
+      "expected_enriched_intent": "evidence",
+      "baseline": {
+        "outcome": "evidence",
+        "confidence": 0.71,
+        "probabilities": {
+          "__NEEDS_CONTEXT__": 0.24,
+          "out_of_domain": 0.0,
+          "change": 0.0,
+          "evidence": 0.76,
+          "decision": 0.0,
+          "ideas": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "enriched": {
+        "outcome": "evidence",
+        "confidence": 1.0,
+        "probabilities": {
+          "decision": 0.0,
+          "ideas": 0.0,
+          "evidence": 1.0,
+          "__NEEDS_CONTEXT__": 0.0,
+          "out_of_domain": 0.0,
+          "change": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "changed": false,
+      "context_status": "gathered",
+      "context_files_scanned": 1,
+      "context_sources": [
+        "docs/glossary.md#L1-L3 (§Project glossary)"
+      ],
+      "passed": true
+    },
+    {
+      "id": "clear_choice_request_with_unknown_preference",
+      "goal": "Should I choose memory or disk for the cache, based on my personal preference?",
+      "expected_enriched_intent": "decision",
+      "baseline": {
+        "outcome": "decision",
+        "confidence": 0.83,
+        "probabilities": {
+          "evidence": 0.0,
+          "change": 0.0,
+          "ideas": 0.0,
+          "decision": 0.86,
+          "__NEEDS_CONTEXT__": 0.13,
+          "out_of_domain": 0.01
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "enriched": {
+        "outcome": "decision",
+        "confidence": 0.88,
+        "probabilities": {
+          "decision": 0.91,
+          "out_of_domain": 0.0,
+          "evidence": 0.0,
+          "__NEEDS_CONTEXT__": 0.09,
+          "change": 0.0,
+          "ideas": 0.0
+        },
+        "reason_codes": [
+          "jev_selected"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "changed": false,
+      "context_status": "gathered",
+      "context_files_scanned": 1,
+      "context_sources": [
+        "docs/cache.md#L1-L3 (§Cache choices)"
+      ],
+      "passed": true
+    },
+    {
+      "id": "genuinely_ambiguous_reference",
+      "goal": "That.",
+      "expected_enriched_intent": "insufficient_context",
+      "baseline": {
+        "outcome": "insufficient_context",
+        "confidence": 0.98,
+        "probabilities": {
+          "out_of_domain": 0.02,
+          "evidence": 0.0,
+          "__NEEDS_CONTEXT__": 0.98,
+          "change": 0.0,
+          "ideas": 0.0,
+          "decision": 0.0
+        },
+        "reason_codes": [
+          "jev_needs_context"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "enriched": {
+        "outcome": "insufficient_context",
+        "confidence": 1.0,
+        "probabilities": {
+          "ideas": 0.0,
+          "decision": 0.0,
+          "change": 0.0,
+          "__NEEDS_CONTEXT__": 1.0,
+          "evidence": 0.0,
+          "out_of_domain": 0.0
+        },
+        "reason_codes": [
+          "jev_needs_context"
+        ],
+        "model_id": "jev-1.13.0",
+        "jev_calls": 1
+      },
+      "changed": false,
+      "context_status": "no_evidence",
+      "context_files_scanned": 0,
+      "context_sources": [],
+      "passed": true
+    }
+  ],
+  "total": 5,
+  "passed": 5,
+  "assessment_attempts": 10,
+  "jev_calls": 10,
+  "max_assessments": 10
+}

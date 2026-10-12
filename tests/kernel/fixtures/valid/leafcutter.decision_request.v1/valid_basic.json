@@ -1,0 +1,21 @@
+{
+  "question": "Where should the cache live?",
+  "options": [
+    {
+      "id": "opt-mem",
+      "title": "In memory"
+    },
+    {
+      "id": "opt-db",
+      "title": "Database"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "crit-fast",
+      "question": "Is lookup latency low?",
+      "priority": "required"
+    }
+  ],
+  "approval_required": false
+}

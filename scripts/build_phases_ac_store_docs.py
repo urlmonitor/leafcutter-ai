@@ -99,7 +99,7 @@ def build_ac_store_docs(target_root: Path, config: dict[str, Any],
             content = inject_config(
                 template_path.read_text(encoding="utf-8"), config
             )
-            dest_path.write_text(content, encoding="utf-8")
+            dest_path.write_text(content, encoding="utf-8", newline="\n")
             print(f"  docs/{display_name}")
             written += 1
 

@@ -1,0 +1,204 @@
+# Post-merge suite -- the correctness lane (TQ-600a-13-ii, TQ-600a-13-i).
+#
+# Runs the tests the default (per-PR) run does not collect: the `manual` tests
+# (every `_MANUAL`-suffixed test), minus the `timing_ratio` lane, which has its own
+# workflow (post-merge-timing.yml) and never holds a merge. Without this
+# cadence the exclusion would silently delete the only quick warning that the
+# shared-layout routing has started handing mutators the shared root.
+#
+# Three jobs, one conclusion:
+#   run     executes the lane once, uploads the per-test report and the list of
+#           first-run failures. It exits ZERO whenever it produced a report:
+#           test failures are data, not a job failure.
+#   retry   starts on a FRESH runner, receives ONLY the failure list, checks out
+#           and builds for itself, and re-executes exactly those ids once under
+#           the SAME `-m` selection. Skipped when there were no failures.
+#   verdict reads both reports and the run/retry results, writes
+#           post-merge-verdict.json (artifact `post-merge-verdict`), and fails at
+#           exactly one of the steps named `Verdict: red` / `Verdict: did not
+#           complete` on a non-green run. It runs on EVERY ending, cancellation
+#           included (the job and each of its steps are `if: always()`).
+#           The run's conclusion IS this job's exit status.
+# All decision logic lives in scripts/ci/post_merge_suite.py; these steps only
+# prepare the environment and invoke it. Nothing here writes to the repository,
+# issues or pull requests, and no run: step carries a dollar-brace expression
+# (context arrives through env: and the runner's standard variables).
+#
+# Coalescing: at most one run in progress and one waiting; a newer waiting run
+# replaces an older one (which ends `cancelled` and carries no verdict, see
+# scripts/ci/_run_history.py); a run in progress is never cancelled.
+#
+# Timeouts are bounded at about three times the measured cost of the lane
+# (43 tests, ~1,004 s measured by TQ-600a-13 / PR #1050) so a hang ends as
+# did-not-complete in bounded time instead of occupying the single slot.
+
+name: Post-merge suite
+
+"on":
+  push:
+    branches: [main]
+  schedule:
+    # Heartbeat: every 12 hours, deliberately off the hour (see heartbeat_max_hours
+    # in scripts/ci/post_merge_tunables.json) and off the timing lane's minute.
+    - cron: "17 3,15 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: post-merge-suite
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    outputs:
+      failures: ${{ steps.lane.outputs.failure_count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: several tests read repository history via `git -C`.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build
+        run: python scripts/build.py --target-dir .
+
+      - name: Run the correctness lane
+        id: lane
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python scripts/ci/post_merge_suite.py run --report first-run-report.json --failures first-run-failures.txt -- python -m pytest -m "manual and not timing_ratio" tests/ unit_tests/ -p no:cacheprovider --durations=20
+
+      - name: Upload the first-run report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-run-report
+          path: first-run-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload the first-run failure list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-run-failures
+          path: first-run-failures.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
+  retry:
+    needs: run
+    if: needs.run.outputs.failures != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build
+        run: python scripts/build.py --target-dir .
+
+      - name: Download the failure list
+        uses: actions/download-artifact@v4
+        with:
+          name: first-run-failures
+          path: first-run-failures
+
+      - name: Re-execute the first-run failures once
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python scripts/ci/post_merge_suite.py retry --failures first-run-failures/first-run-failures.txt --report retry-report.json -- python -m pytest -m "manual and not timing_ratio" -p no:cacheprovider
+
+      - name: Upload the retry report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retry-report
+          path: retry-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  verdict:
+    needs: [run, retry]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # Read-only: the verdict counts each test's passed-on-retry runs from the earlier
+      # runs' verdict artifacts (TQ-600a-13-xiii), at most 9 requests, never the issues API.
+      actions: read
+    # EVERY step below is status-agnostic (`if: always()`): a step with no `if:` implies
+    # `success()` and is skipped once the run is cancelled, which would leave a cancelled
+    # run with no verdict artifact. The step conditions below that read `steps.classify`
+    # still only fire when the classify step produced a verdict.
+    steps:
+      - uses: actions/checkout@v4
+        if: always()
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        if: always()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download the reports
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # The dependency results are what tell a failed setup, a failed retry and a cancellation
+      # apart from a run that simply had no failures (TQ-600a-13-v). They arrive through env:.
+      - name: Classify the run
+        id: classify
+        if: always()
+        env:
+          RUN_RESULT: ${{ needs.run.result }}
+          RETRY_RESULT: ${{ needs.retry.result }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/ci/post_merge_suite.py verdict --artifacts artifacts --output post-merge-verdict.json --api-url "$GITHUB_API_URL" --repo "$GITHUB_REPOSITORY" --run-id "$GITHUB_RUN_ID"
+
+      - name: Upload the verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-verdict
+          path: post-merge-verdict.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: "Verdict: red"
+        if: always() && steps.classify.outputs.verdict == 'red'
+        run: python scripts/ci/post_merge_suite.py exit-status --verdict-file post-merge-verdict.json
+
+      - name: "Verdict: did not complete"
+        if: always() && steps.classify.outputs.verdict == 'did_not_complete'
+        run: python scripts/ci/post_merge_suite.py exit-status --verdict-file post-merge-verdict.json

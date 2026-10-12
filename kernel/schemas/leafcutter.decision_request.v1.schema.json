@@ -1,0 +1,348 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Approval state of a decision, criterion or constraint.",
+      "enum": [
+        "not_required",
+        "proposed",
+        "approved",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "Criterion": {
+      "additionalProperties": false,
+      "description": "A question an option must satisfy; required criteria gate resolution.",
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/ApprovalStatus",
+          "default": "not_required",
+          "description": "Where the criterion stands in the human approval track; a generated criterion must enter it."
+        },
+        "approved_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human who approved the criterion; required once it is approved.",
+          "title": "Approved By"
+        },
+        "decision_basis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional note on the principle or source behind the criterion; carried for readers, not interpreted by the kernel.",
+          "title": "Decision Basis"
+        },
+        "id": {
+          "description": "Stable id that assessments and rankings use to refer to this criterion.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/CriterionKind",
+          "default": "evidence_answerable",
+          "description": "Whether evidence can settle this criterion; Jev classifies it once (kind_source \"jev\")."
+        },
+        "kind_source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Who set `kind`: None means not classified yet (the decision asks Jev once).",
+          "title": "Kind Source"
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority",
+          "default": "required",
+          "description": "Whether the criterion blocks resolution (required) or only adds weight to the ranking (supporting)."
+        },
+        "proposal_status": {
+          "$ref": "#/$defs/ProposalStatus",
+          "default": "supplied",
+          "description": "Whether the caller supplied the criterion or a generator proposed it, which decides if approval is needed."
+        },
+        "proposed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Actor that proposed the criterion, for accountability.",
+          "title": "Proposed By"
+        },
+        "question": {
+          "description": "The question an option must satisfy, answered from evidence or by judgement.",
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional note on what the criterion applies to when narrower than the decision; carried for readers, not interpreted by the kernel.",
+          "title": "Scope"
+        },
+        "weight_rule": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional note on how the criterion is weighed against others; carried for readers, not interpreted by the kernel.",
+          "title": "Weight Rule"
+        }
+      },
+      "required": [
+        "id",
+        "question"
+      ],
+      "title": "Criterion",
+      "type": "object"
+    },
+    "CriterionKind": {
+      "description": "What can settle a criterion: facts about the world, or a judgement of the designs.",
+      "enum": [
+        "evidence_answerable",
+        "design_judgement"
+      ],
+      "title": "CriterionKind",
+      "type": "string"
+    },
+    "Option": {
+      "additionalProperties": false,
+      "description": "A candidate answer to a decision question.",
+      "properties": {
+        "approval_status": {
+          "$ref": "#/$defs/ApprovalStatus",
+          "default": "not_required",
+          "description": "Where the option stands in the human approval track; a generated option must enter it."
+        },
+        "approved_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human who approved the option; required once it is approved.",
+          "title": "Approved By"
+        },
+        "assumptions": {
+          "description": "Premises that must hold for this option to be right, kept verbatim so a reader can challenge them.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "description": {
+          "default": "",
+          "description": "What choosing this option means in practice, so it can be judged against the criteria.",
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "description": "Stable id that criterion assessments and the final selection use to refer to this option.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "named_in_goal": {
+          "default": false,
+          "description": "A host's claim that the caller's goal names this option; the kernel verifies the wording.",
+          "title": "Named In Goal",
+          "type": "boolean"
+        },
+        "proposal_status": {
+          "$ref": "#/$defs/ProposalStatus",
+          "default": "supplied",
+          "description": "Whether the caller supplied the option or a generator proposed it, which decides if approval is needed."
+        },
+        "proposed_by": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Actor that proposed the option, for accountability.",
+          "title": "Proposed By"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_refs": {
+          "description": "Evidence ids or references this option rests on; grounding checks that generated options cite real evidence.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "title": {
+          "description": "Short name shown to people choosing between options.",
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "Option",
+      "type": "object"
+    },
+    "Priority": {
+      "description": "Required (blocking) versus supporting work.",
+      "enum": [
+        "required",
+        "supporting"
+      ],
+      "title": "Priority",
+      "type": "string"
+    },
+    "ProposalStatus": {
+      "description": "Whether an option was supplied, proposed by a generator, or approved.",
+      "enum": [
+        "supplied",
+        "proposed",
+        "approved"
+      ],
+      "title": "ProposalStatus",
+      "type": "string"
+    }
+  },
+  "$id": "leafcutter.decision_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.decision_request.v1.",
+  "properties": {
+    "approval_required": {
+      "default": false,
+      "description": "Whether a human must approve the selected option before the decision counts as resolved.",
+      "title": "Approval Required",
+      "type": "boolean"
+    },
+    "constraint_ids": {
+      "description": "Ids of evidence items that state constraints the chosen option must respect.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Constraint Ids",
+      "type": "array"
+    },
+    "criteria": {
+      "description": "What an option must satisfy; give them here or set criteria_missing.",
+      "items": {
+        "$ref": "#/$defs/Criterion"
+      },
+      "title": "Criteria",
+      "type": "array"
+    },
+    "criteria_missing": {
+      "default": false,
+      "description": "Set when the caller supplies no criteria, so the kernel proposes some for approval; it contradicts a non-empty criteria list.",
+      "title": "Criteria Missing",
+      "type": "boolean"
+    },
+    "decision_scope": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Free-text note on what the decision covers; recorded with the request and not interpreted by the kernel.",
+      "title": "Decision Scope"
+    },
+    "evidence_ids": {
+      "description": "Evidence the caller already holds, so research does not fetch it again.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "options": {
+      "description": "Candidate answers the caller already has; empty when the kernel should find them.",
+      "items": {
+        "$ref": "#/$defs/Option"
+      },
+      "title": "Options",
+      "type": "array"
+    },
+    "question": {
+      "description": "The decision question the kernel must answer.",
+      "minLength": 1,
+      "title": "Question",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "question"
+  ],
+  "title": "DecisionRequestPayload",
+  "type": "object"
+}

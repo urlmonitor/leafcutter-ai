@@ -59,13 +59,13 @@ from build_phases import (
     AGENT_SUPPORT_SCRIPT_FILES,
     build_template_standalone_scripts,
     build_product_truth,
-    detect_deploy_collisions,
-    _compute_phase_mappings,
     check_command_reachability,
     AC_STORE_DEPLOY_MAP,
     set_local_change_baseline,
     announce_if_local_change_replaced,
 )
+from agent_preparation_delivery import refuse_if_agents_compiled
+from build_phases_collisions import _check_deploy_collision_guard
 from build_phases_knowledge import _manifest_knowledge_scripts, _manifest_workflow_tool_scripts
 from build_deploy_manifest_helpers import (
     _manifest_ac_store_scripts,
@@ -74,6 +74,7 @@ from build_deploy_manifest_helpers import (
     _manifest_build_orchestration_scripts,
     _manifest_agent_support_scripts,
     _manifest_template_standalone_scripts,
+    _guard_source_paths_template_standalone,
     _manifest_doc_compliance_scripts,
     _manifest_sync_platforms_scripts,
 )
@@ -235,7 +236,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
             pass  # Binary or unreadable file — fall through to write.
         announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
     return True
 
 
@@ -378,12 +379,6 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 # _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
 # (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
-
-
-# _manifest_commit_guardian_scripts moved to build_deploy_manifest_helpers.py.
-
-
-# _manifest_feedback_scripts moved to build_deploy_manifest_helpers.py.
 
 
 # _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
@@ -712,28 +707,19 @@ def _guard_source_paths_workflow_tools(package_root: Path) -> set[str]:
 def _guard_source_paths_knowledge(package_root: Path) -> set[str]:
     """Return SOURCE paths for knowledge scripts (BP-100n-4 split).
 
-    Source namespace equals deploy namespace. Must stay in lockstep with
-    _manifest_knowledge_scripts (AC INF-400c-5, H-1 fix) —
-    test_guard_source_paths_match_deployable_set asserts the two sets are 1:1.
-    harvest_result.py / sink_resolution.py / capture_write.py / harvest_cli.py
-    were added alongside the GE-127b-1 file-size fix that split
-    harvest_learnings.py into these sibling modules — mirrors the same four
-    additions in _manifest_knowledge_scripts (build_phases_knowledge.py).
+    Source namespace equals deploy namespace. Delegates to
+    _manifest_knowledge_scripts (build_phases_knowledge.py), already
+    imported above, instead of re-listing the identical script-name tuple a
+    second time here -- this file is already over its GE-127b-1
+    check-file-size ratchet limit with zero growth budget (see the identical
+    reasoning on _guard_source_paths_workflow_tools just above), so a new
+    scripts/knowledge/*.py module (e.g. INF-700a-2's harvest_status.py) is
+    registered once, in _manifest_knowledge_scripts's own tuple, and read
+    from here rather than needing a second edit in this file too.
+    test_guard_source_paths_match_deployable_set still asserts the two sets
+    are 1:1 -- trivially true now that this IS that set.
     """
-    source_paths: set[str] = set()
-    knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in (
-        "harvest_learnings.py",
-        "emit_knowledge.py",
-        "entry_kind_vocabulary.py",
-        "harvest_result.py",
-        "sink_resolution.py",
-        "capture_write.py",
-        "harvest_cli.py",
-    ):
-        if (knowledge_src / fname).is_file():
-            source_paths.add(f"scripts/knowledge/{fname}")
-    return source_paths
+    return _manifest_knowledge_scripts(package_root)
 
 
 def _guard_source_paths_build_orchestration(package_root: Path) -> set[str]:
@@ -789,18 +775,7 @@ def _guard_source_paths_ac_mode_detection(package_root: Path) -> set[str]:
     return source_paths
 
 
-def _guard_source_paths_template_standalone(package_root: Path) -> set[str]:
-    """Return SOURCE paths for template-standalone scripts (BP-100n-4 split).
-
-    Source is under templates/scripts/ (top-level .py).
-    """
-    source_paths: set[str] = set()
-    templates_scripts = package_root / "templates" / "scripts"
-    if templates_scripts.is_dir():
-        for f in templates_scripts.glob("*.py"):
-            if f.is_file():
-                source_paths.add(f"templates/scripts/{f.name}")
-    return source_paths
+# _guard_source_paths_template_standalone moved to build_deploy_manifest_helpers.py.
 
 
 def _guard_source_paths_release(package_root: Path) -> set[str]:
@@ -1329,48 +1304,6 @@ def _compute_version_str(package_root: Path) -> str:
     return _bump_version(baseline, bump)
 
 
-def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
-    """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
-
-    Enumerates (source_template, resolved_target) pairs for all file-based
-    artifact phases via ``_compute_phase_mappings``, then calls
-    ``detect_deploy_collisions`` to find any target path claimed by two or
-    more distinct source templates.  Runs in both real and dry-run modes
-    because the collision is a build-graph error, not a write-time concern.
-
-    Detection is path-keyed and content-agnostic (BP-100m-1-i): byte-identical
-    source templates still collide.  Cross-platform fan-out (same source →
-    different target paths) is never flagged (BP-100m-2-i).  All colliding
-    sources and the shared target are named in the error output (BP-100m-2).
-
-    Args:
-        output_root: Absolute path to the consolidated output directory
-            (e.g. ``<target>/.leafcutter``).
-        config: Build configuration dict used to resolve active platforms.
-
-    Returns:
-        0 if no collisions detected (build may proceed).
-        1 if one or more collisions found (build must abort).
-    """
-    phase_mappings = _compute_phase_mappings(output_root, config)
-    collisions = detect_deploy_collisions(phase_mappings)
-    if not collisions:
-        return 0
-
-    print(
-        "[COLLISION GUARD] Build aborted: deploy-path collision(s) detected.",
-        file=sys.stderr,
-    )
-    for c in collisions:
-        sources_str = "\n  ".join(str(s) for s in c["sources"])
-        print(
-            f"[COLLISION GUARD]  target:  {c['target']}\n"
-            f"[COLLISION GUARD]  sources:\n  {sources_str}",
-            file=sys.stderr,
-        )
-    return 1
-
-
 def _check_command_reachability_guard(output_root: Path, config: dict) -> int:
     """Post-deploy guard: abort the build when a command handoff target does not resolve (BP-900g-1).
 
@@ -1731,7 +1664,7 @@ def _write_migrated_skills_config(
         return
 
     try:
-        resolved.write_text(new_raw, encoding="utf-8")
+        resolved.write_text(new_raw, encoding="utf-8", newline="\n")
     except OSError as exc:
         _warn(f"Could not write {resolved}: {exc} — migration skipped.")
         return
@@ -1936,6 +1869,9 @@ def main(argv: list[str] | None = None) -> int:
     deploy_failure_exit = _raise_deploy_failures_if_any()
     if deploy_failure_exit is not None:
         return deploy_failure_exit
+
+    if refuse_if_agents_compiled(target_root, config, args.dry_run):
+        return 1
 
     reachability_exit = _check_command_reachability_if_live(
         output_root, config, args.dry_run, _check_command_reachability_guard
@@ -2225,6 +2161,12 @@ if __name__ == "__main__":
 #   _manifest_workflow_tool_scripts instead of re-listing its script tuple,
 #   funding knowledge_frontmatter_reader.py's addition with zero net growth
 #   on this over-limit file. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
+# - 2026-09-23 [python-coder/INF-700a-2]: Applied the identical
+#   KM-KGS-100a-3-xi delegation pattern to _guard_source_paths_knowledge (now
+#   just `return _manifest_knowledge_scripts(package_root)`), funding
+#   harvest_status.py's registration (INF-700a-2's --status/marker sibling
+#   module) with net negative growth on this over-limit file instead of a
+#   second, duplicated tuple edit.
 # - 2026-09-28 12:00 [python-coder/quick-fix]: build_doc_index scans the repo holding docs_root
 #   (was target_root: self-host builds wrote a "No docs found." stub) and refuses to
 #   replace a populated map with an empty one (KI-BP-016). Zero net growth.

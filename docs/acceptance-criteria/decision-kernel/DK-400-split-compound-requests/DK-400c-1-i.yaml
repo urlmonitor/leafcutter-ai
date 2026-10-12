@@ -1,0 +1,155 @@
+id: DK-400c-1-i
+title: "A proposal of more than five parts offers five and lists the rest as not covered, never dropping them silently"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a bundled goal for which the host proposes seven parts, p1 to p7, each quoting its
+    words from the goal and none waiting for a later part,
+  When the proposal is turned into the split,
+  Then the split gate offers p1 to p5 for approval,
+  And it lists p6 and p7 read-only as not covered by this split, each with its text and quote,
+  And it tells the person that the request holds more than five parts and that p6 and p7 will not
+    be answered by this split but can be asked again as a request of their own,
+  And p6 and p7 can be neither ticked nor run.
+depends_on:
+  - DK-400c-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: Flow v5 node(s) split-too-many-parts, with their acceptance scenarios.
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: parts holds 2 to 5 entries; dropped[] is reserved for proposals whose quote is not in the subject.
+  - path: docs/product-truth/mockups/leafcutter/decision-split-approve.mockup.json
+    relationship: specified-by
+    status: exists
+    relevance: Screen decision-split-approve (v2).
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-1
+  contract: 'The converted proposal before the cut: parts in proposed order with their depends_on, after the quote
+    check.'
+it_requirements:
+  - 'The offered parts are the first split.max_parts parts of the run order (dependency order, ties broken by proposed
+    order: the same ordering function the scheduler uses in DK-400e-1), so the offered set is always dependency-closed.
+    The others become not_covered entries in proposed order, each with its id, text and quote, reason ''beyond the
+    five-part cap'' and no depends_on.'
+  - Offered parts are shown in proposed order. not_covered entries are read-only; the semantic check of leafcutter.split_answer.v1
+    (ADR-067 §4.4), which reads the offered part ids from the pending gate, refuses any review, edit or tick that
+    names them.
+  - The gate wording (template text) tells the person that the request holds more than five parts and that the not-covered
+    ones can be asked again as a request of their own.
+  - 'The run''s remaining part allowance (split.max_parts_per_run) caps the offer the same way; fewer than two parts
+    left within the allowance means no split (the DK-400c-3 path). Not-covered reasons (ADR-067 Open Question 2,
+    settled by the IT PO): DK-400c-1-i is right that the per-run allowance cuts parts into not_covered; the mock
+    v6 invariant is too narrow and goes to the mock-data author. Each split''s not_covered entries share one reason
+    naming the limit that bound the offer: ''beyond the five-part cap'' when split.max_parts bound it, ''beyond
+    the run''s part allowance'' when the run''s remaining allowance (below split.max_parts) bound it. The gate wording
+    names that limit and says the not-covered ones can be asked again as a request of their own.'
+  - split.max_parts is bounded to 2..5 by the config schema, so the product invariant of 2 to 5 parts cannot be
+    configured away.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_seven_parts_offer_five_and_list_two_not_covered
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Seven quoted, independent proposals yield p1 to p5 offered and p6 and p7 listed read-only as not
+      covered with text, quote and the more-than-five notice.
+  - name: test_cut_keeps_offered_set_dependency_closed
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: When p3 waits for p6 the offered five are p1, p2, p4, p5 and p6, p3 and p7 are not covered, and
+      no offered part depends on a not-covered one.
+  - name: test_answer_naming_not_covered_part_refused
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: A gate answer that ticks or edits p6 is refused and the gate stays open.
+  - name: test_part_allowance_caps_the_offer
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With three parts already offered in the run and split.max_parts_per_run 5, a second split of four
+      proposals offers two parts and lists two as not covered with the reason 'beyond the run's part allowance'.
+test_rationale: Which five are offered is a deterministic rule, so it is pinned by a unit test of the cut with a
+  crossing dependency, while the criterion test checks the gate a person actually sees.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      not_covered reason by binding limit (Open Question 2); refusals named as leafcutter.split_answer.v1''s semantic
+      check; ADR-067 doc_link set to exists.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision (DK-400 Q2): more than five means asking the person to narrow the request, or
+  offering five parts and listing the rest read-only as not covered; never a silent drop. This AC
+  takes the second option as the default and tells the person how to ask for the rest, so both
+  readings are served. The user kept this default on 2026-10-05 (answer to BA open question Q2).
+  For the IT PO: which five are offered when a dependency crosses the cut (for example p3 waits
+  for p6). The example deliberately has no such dependency.
+  Mock data v5 records these parts in not_covered[] (quotes that ARE in the subject, reason
+  "beyond the five-part cap"; sample dcp-decision-records-seven-parts), separate from dropped[].
+  Flow v5 branch split-too-many-parts.
+  IT PO (2026-10-05): settled the five-part cut when a dependency crosses it: the first five parts
+  of the run order (dependency order, proposed order breaking ties) are offered, so no offered part
+  ever waits for a not-covered one.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-too-many-parts
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

@@ -35,12 +35,23 @@ criteria: |
   Then it says that it had nothing to examine, rather than reporting that it examined
     something and found it clean,
 
-  And given, for each of the five, an input that check exists to refuse, under the
-    settings that arm it,
+  And given, for each of the five that has any way of refusing at all, an input that check
+    exists to refuse, under the settings that arm it,
   When that input is put through the commit path the check is now registered on,
   Then the check refuses it and names what it objected to — so what has been switched on
-    is a check that can still say no, and not five entries that are certain never to
-    object,
+    is a check that can still say no, and not entries that are certain never to object,
+  And given a check among the five through which no path ends in a refusal, whatever it
+    is given and however it is set,
+  When the entry that switches it on is read, by a person or by the tools that check
+    that list,
+  Then the entry itself declares that this check cannot refuse, and gives the reason in
+    terms of what the check is rather than of what this repository happens to hold — so
+    the exemption is stated where the check is switched on and is never left to be
+    inferred from silence,
+  And a check that has any way of refusing — including one that ships unarmed, and one
+    that has nothing to examine in this repository — cannot be excused from this arm by
+    such a declaration: a check declared unable to refuse that can in fact be made to
+    refuse fails this arm exactly as a check that never refuses would,
 
   And after this change the record of advertised checks that nothing runs is smaller by
     exactly these five, and names none of them.
@@ -192,6 +203,22 @@ it_requirements:
       ("hooks_manifest.hooks", "list_ids") AND ("", "mapping_keys"). Arming
       test_fixture_bloat is a separate change that needs its own package_surface
       declaration.
+      CORRECTED 2026-10-08 (IT PO), AGAINST THE LANDED MANIFEST: the five are NOT
+      uniform. Four (check-folder-density, check-test-fixture-bloat,
+      check-sql-complexity, check-debug-scripts) are tier judgment, stages
+      ["pre-commit"], and entered through run_hook.py. check-ac-done-on-merge is
+      tier transform, stages ["post-merge"], invoked DIRECTLY (its entry names
+      hooks/check_ac_done_on_merge.py with no run_hook.py wrapper), and carries
+      negative_control {not_applicable: true, reason}. transform is correct: the
+      script mutates AC files after a merge and never judges (main() returns 0
+      unconditionally; the __main__ guard maps OSError/ValueError to exit 0), and
+      transform is the fixing role in run_hook.py's tier vocabulary
+      (_TRANSFORM_TIER). The 2026-09-14 version of this fragment required
+      tier: {const: judgment} for all five, so GE-120h-3-i, which judges these
+      entries against this fragment, would have flagged a correct registration as
+      a violation. The per-id split below (allOf/if/then/else) states the true
+      shape. negative_control is the one property added to the measured set, and
+      it is carried by exactly two entries in the manifest today, this being one.
     type: object
     required:
       - id
@@ -214,19 +241,34 @@ it_requirements:
           - check-ac-done-on-merge
       tier:
         type: string
-        const: judgment
+        enum:
+          - judgment
+          - transform
+        description: >-
+          judgment for the four pre-commit gates; transform for
+          check-ac-done-on-merge. Pinned per id by the allOf below.
       name:
         type: string
         minLength: 1
       entry:
         type: string
         description: >-
-          Invoked through the deployed run_hook.py wrapper, as 58 of the 62 existing
-          entries are. For check-ac-done-on-merge the script path carries the hooks/
-          segment, because the script lives at
-          templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py;
+          The four pre-commit gates are invoked through the deployed run_hook.py
+          wrapper. check-ac-done-on-merge is NOT: its entry invokes
+          {{config.output_root}}/scripts/commit_guardian/hooks/check_ac_done_on_merge.py
+          directly. Its script path carries the hooks/ segment because the script
+          lives at templates/scripts/commit_guardian/hooks/check_ac_done_on_merge.py;
           build_commit_guardian() walks the guardian directory with rglob, so the
           subdirectory is deployed.
+      negative_control:
+        type: object
+        description: >-
+          GE-120f's declaration, shaped per config/verification_flow.schema.json
+          $defs/negative_control. Required on check-ac-done-on-merge in its
+          not_applicable form, with a reason stating the structural ground. The
+          not_applicable form is forbidden on the four that can refuse (amended arm
+          4): one that ships unarmed, or that has nothing to examine here, is not
+          excused by a declaration.
       language:
         type: string
         const: system
@@ -255,6 +297,48 @@ it_requirements:
     not:
       required:
         - files
+    allOf:
+      - if:
+          required:
+            - id
+          properties:
+            id:
+              const: check-ac-done-on-merge
+        then:
+          required:
+            - negative_control
+          properties:
+            tier:
+              const: transform
+            stages:
+              const:
+                - post-merge
+            entry:
+              not:
+                pattern: "run_hook\\.py"
+            negative_control:
+              required:
+                - not_applicable
+                - reason
+              properties:
+                not_applicable:
+                  const: true
+                reason:
+                  type: string
+                  minLength: 1
+        else:
+          properties:
+            tier:
+              const: judgment
+            stages:
+              const:
+                - pre-commit
+            entry:
+              pattern: "run_hook\\.py"
+            negative_control:
+              not:
+                required:
+                  - not_applicable
   reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
   n_location_rule: >-
     5 — one new member appended to the single hooks_manifest.hooks array, one per
@@ -278,65 +362,160 @@ it_requirements:
     - "REDUCE THE INVENTORY BASELINE BY EXACTLY THESE FIVE, IN THE SAME CHANGE. unit_tests/commit_guardian/test_hook_registration_inventory.py's UNREGISTERED_BASELINE names all five; its staleness assertion fails if they are registered and the baseline is not reduced. Remove those five lines and their comments. Do not add anything to that frozenset, and do not re-derive the remaining nine — read the baseline rather than this AC for the set, since it has moved three times in one day."
     - "ADR-001 TEMPLATE/DEPLOYED PARITY. templates/scripts/commit_guardian/commit_guardian.json is the canonical source; build_commit_guardian() deploys it to scripts/commit_guardian/ and config/commit_guardian/, and build_precommit regenerates .pre-commit-config.yaml from it. Edit the template only, then run build.py and confirm all deployed copies and the generated config carry the five entries. NOTE: this worktree currently has no deployed copies at all — build.py has not been run here — so any verification performed before build.py proves nothing about the deployed path."
     - "check-ac-done-on-merge ONLY RUNS IF THE post-merge HOOK TYPE IS INSTALLED, AND NO ENTRY USES THAT STAGE TODAY. Measured 2026-09-14, the manifest's stages are pre-commit (60), commit-msg (1), manual (1) — post-merge would be the first. build_precommit emits the stage into .pre-commit-config.yaml but installs nothing; install_pre_commit_shims.py reads the declared stages from that file and writes the missing shim, and setup_ticket_worktree.py calls it for new worktrees. An existing checkout needs it re-run. Registering a post-merge entry without the shim reproduces exactly the defect this L0 is named after: a check listed as live that nothing invokes. Evidence for this check must be a real merge in a checkout where the shim is installed."
-    - "check-ac-done-on-merge READS `git diff HEAD~1 HEAD`, NOT THE STAGED SET AND NOT argv. Do not describe or test it as a staged-set consumer. It also returns 0 unconditionally and its __main__ guard swallows OSError/ValueError into exit 0, so it cannot block; the fourth criterion arm's refusal demonstration must account for that rather than be quietly dropped."
-    - "THE FOURTH ARM IS THE ANTI-THEATRE CLAUSE — DO NOT SATISFY IT BY OBSERVING FIVE GREEN RESULTS. For each of the five, drive an input that check exists to refuse through the registered commit path, under settings that arm it, and show the refusal naming what it objected to. Three of the five have nothing to bite on in this repository and one is unarmed by default, so this needs deliberate fixtures. How a known-bad input is declared, stored and enforced is GE-120f's; do not respecify it here."
+    - "check-ac-done-on-merge READS `git diff HEAD~1 HEAD`, NOT THE STAGED SET AND NOT argv. Do not describe or test it as a staged-set consumer. It also returns 0 unconditionally and its __main__ guard swallows OSError/ValueError into exit 0, so it cannot block. It is tier transform, stages post-merge, and invoked directly rather than through run_hook.py. Under amended arm 4 it is the one check that cannot refuse, so its hooks_manifest entry MUST carry negative_control {not_applicable: true, reason} whose reason states that structural ground. It must not be left to be inferred from silence."
+    - "THE FOURTH ARM IS THE ANTI-THEATRE CLAUSE, AND IT IS FOUR REFUSALS PLUS ONE DECLARATION. DO NOT SATISFY IT BY OBSERVING GREEN RESULTS. (a) For each of the four that can refuse (check-folder-density, check-sql-complexity, check-debug-scripts, and check-test-fixture-bloat under settings that arm it), drive an input that check exists to refuse through the registered entry (run_hook.py <check script> against a real staged git repo) and show a non-zero exit naming what it objected to. Three of those four have nothing to bite on in this repository and one is unarmed by default, so this needs deliberate fixtures. Arming check-test-fixture-bloat must happen in a private deployed copy, never by adding the test_fixture_bloat key to the tracked template. (b) For check-ac-done-on-merge, which no input or setting can drive to a refusal, the entry that registers it must declare negative_control.not_applicable with a structural reason. A not_applicable declaration on any of the other four fails the arm, because each of them can be made to refuse. How a known-bad input or exemption is declared, stored and enforced is GE-120f's; do not respecify it here."
     - "IF BP-1600a-2 LANDS FIRST, FIND THE FIVE PRESENT AND ASSERT THEM — DO NOT ADD THEM TWICE. Deliberately not a depends_on edge in either direction; whichever is scheduled second adapts."
 test_spec:
   - name: test_ge120h3_all_five_run_on_an_ordinary_commit
     target_dir: unit_tests/commit_guardian/
-    framework: unittest
+    framework: pytest
     type: behavioral
     angle: deployed
-    surface_invoked: "git commit (deployed .pre-commit-config.yaml via run_hook.py)"
-    description: "A real commit in a built checkout invokes each of the five at the stage its subject belongs to, evidenced from the hook run rather than from the manifest text."
+    surface_invoked: "git commit and git merge --no-ff in a scratch repo with pre-commit installed for pre-commit and post-merge; the five stanzas are copied from the build-generated .pre-commit-config.yaml of the shared deployed layout"
+    description: "In test_ge_120h_3_registration.py (arm 1): a real git commit shows each of the four pre-commit checks' status line as Passed and does not run check-ac-done-on-merge; a real merge then shows check-ac-done-on-merge's status line. The scratch config carries only the five stanzas, not the full hook family."
   - name: test_ge120h3_previously_acceptable_content_still_commits
     target_dir: unit_tests/commit_guardian/
-    framework: unittest
+    framework: pytest
     type: behavioral
     angle: criterion
-    description: "A commit whose staged content the repository accepted before registration still completes — none of the five refuses work that was acceptable the day before."
+    surface_invoked: "git commit in a scratch repo with the five generated stanzas installed"
+    description: "In test_ge_120h_3_registration.py (arm 1): ordinary content (prose, a small .py, a trivial .sql) commits with rc 0, HEAD exists, and no hook reports Failed."
   - name: test_ge120h3_preexisting_over_density_directories_do_not_refuse
     target_dir: unit_tests/commit_guardian/
-    framework: unittest
-    type: behavioral
-    angle: real_artifact
-    description: "With directories already over max_files_per_folder, a commit that does not worsen them completes and the pre-existing state is reported, not raised as a violation."
-  - name: test_ge120h3_check_with_no_instance_says_it_examined_nothing
-    target_dir: unit_tests/commit_guardian/
-    framework: unittest
-    type: behavioral
+    framework: pytest
+    type: integration
     angle: criterion
-    description: "A registered check whose subject this repository holds no instance of reports having nothing to examine, in GE-120a's vocabulary, rather than reporting a clean examination."
-  - name: test_ge120h3_each_of_the_five_can_still_refuse_through_the_registered_path
-    target_dir: unit_tests/commit_guardian/
-    framework: unittest
-    type: behavioral
-    angle: failure
-    description: "For each of the five, an input it exists to refuse, put through the registered commit path under settings that arm it, is refused and the objection is named."
-  - name: test_ge120h3_inventory_baseline_is_smaller_by_exactly_these_five
-    target_dir: unit_tests/commit_guardian/
-    framework: unittest
-    type: unit
-    angle: seam
-    description: "UNREGISTERED_BASELINE no longer names any of the five and the existing staleness assertion passes — the record moved with the registration rather than beside it."
-  - name: test_ge120h3_registration_leaves_precommit_generation_and_hook_parity_intact
+    surface_invoked: "python templates/scripts/commit_guardian/run_hook.py templates/scripts/commit_guardian/check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_registration.py (arm 2): a folder already at 20 committed files, with one more staged, exits 0 and is reported PRE-EXISTING by name, never FOLDER TOO DENSE. Synthetic folder, source-tree script; it does not exercise this repository's own over-limit directories."
+  - name: test_ge120h3_check_sql_complexity_reports_nothing_to_inspect_when_no_sql_staged
     target_dir: unit_tests/commit_guardian/
     framework: unittest
     type: integration
+    angle: criterion
+    surface_invoked: "run_hook.py check_sql_complexity.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3.py (arm 3): with no .sql staged the check exits 0 and prints GE-120a-1's 'RESULT: nothing_to_inspect' rather than staying silent."
+  - name: test_ge120h3_check_debug_scripts_reports_nothing_to_inspect_when_none_staged
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_hook.py check_debug_scripts.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3.py (arm 3): with nothing staged under debugging/scripts/ the check exits 0 and prints 'RESULT: nothing_to_inspect'."
+  - name: test_ge_120h_3_reachable_from_entry_point
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "python templates/scripts/commit_guardian/run_hook.py templates/scripts/commit_guardian/check_debug_scripts.py"
+    description: "In test_ge_120h_3.py: the registered wrapper refuses an untagged debug script with a non-zero exit naming the file, so the result is consumed in control flow and is not just a function return value."
+  - name: test_ge120h3_check_folder_density_refuses_a_newly_dense_folder
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_refusals.py (arm 4, refusal 1 of 4): a folder at 15 committed files pushed to 16 by this commit's staging exits non-zero with FOLDER TOO DENSE and is not reported PRE-EXISTING."
+  - name: test_ge120h3_check_sql_complexity_refuses_an_overcomplex_sql_file
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_sql_complexity.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_refusals.py (arm 4, refusal 2 of 4): a staged .sql whose score exceeds sql_complexity.max_score exits non-zero and names complex.sql."
+  - name: test_ge120h3_check_debug_scripts_refuses_an_untagged_debug_script
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_debug_scripts.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_refusals.py (arm 4, refusal 3 of 4): an untagged file under debugging/scripts/ exits non-zero and names untagged.py."
+  - name: test_ge120h3_check_test_fixture_bloat_refuses_when_armed_via_private_config
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "deployed scripts/commit_guardian/run_hook.py deployed check_test_fixture_bloat.py, in a private shared_layout_mutator copy"
+    description: "In test_ge_120h_3_refusals.py (arm 4, refusal 4 of 4): with test_fixture_bloat armed only in a private deployed copy (never the tracked template), a bloated staged test_*.py exits non-zero and names test_bloat_fixture.py."
+  - name: test_ge120h3_check_ac_done_on_merge_declares_negative_control_not_applicable
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "In test_ge_120h_3_refusals.py (arm 4, the one declared exemption): the check-ac-done-on-merge hooks_manifest entry carries negative_control {not_applicable: true, reason}, and the reason names the structural ground (an unconditional or never-non-zero exit, and not a gate). This test reads the manifest only. The fact that the script cannot refuse is verified by reading the script, not by this test."
+  - name: test_no_unregistered_hook_scripts_beyond_baseline
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
     angle: seam
-    description: "After the five entries are added, build_precommit produces a valid .pre-commit-config.yaml and check_manifest_parity reports zero violations."
+    description: "Existing test in test_hook_registration_inventory.py (arm 5): UNREGISTERED_BASELINE names none of the five and the staleness assertion passes, so the record moved with the registration. The test carries no '# covers: GE-120h-3' tag. The name test_ge120h3_inventory_baseline_is_smaller_by_exactly_these_five was never written and is replaced by this entry."
+  - name: test_ge120h3_registration_leaves_precommit_generation_and_hook_parity_intact
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In test_ge_120h_3_registration.py (regression guard, not a criterion arm): the build-generated .pre-commit-config.yaml names all five with the right stages, always_run and no files key, passes pre-commit validate-config, and check_hook_parity.py reports zero violations. No check_manifest_parity script exists; the earlier wording named one."
+  - name: test_ge120h3_rename_within_at_limit_folder_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "run_hook.py check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_snapshots.py (review finding H-1): renaming a file inside a folder at 15 keeps the folder at 15 and is accepted, so the rename source is not counted."
+  - name: test_ge120h3_delete_plus_add_net_zero_is_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "run_hook.py check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_snapshots.py (H-1): deleting one file and adding one in a folder at 15 nets to 15 and is accepted."
+  - name: test_ge120h3_rename_out_of_over_limit_folder_into_at_limit_folder_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "run_hook.py check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_snapshots.py (H-1): moving a file from a folder already over the limit into one at the limit refuses the destination and does not refuse the source. This catches a fix that credits only the source or only the destination."
+    must_catch:
+      - "AFTER snapshot credits rename sources but not destinations"
+      - "pre-existing over-limit source folder reported as a violation"
+  - name: test_ge120h3_one_new_file_into_at_limit_folder_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_folder_density.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_snapshots.py (H-1 control): 15 committed plus 1 newly staged file is still refused, so the snapshot fix was not over-corrected."
+  - name: test_ge120h3_root_commit_survives_a_localised_git_message
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_folder_density.py under a PATH-shadowing git wrapper emitting German ls-tree stderr"
+    description: "In test_ge_120h_3_snapshots.py (review finding M-1): in a repository with no commits under a non-English git message, the check treats BEFORE as empty, prints no traceback and exits 0. The localised message is simulated because no German git catalogue is installed."
+  - name: test_ge120h3_non_utf8_sql_file_is_not_reported_as_nothing_to_inspect
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: failure
+    surface_invoked: "run_hook.py check_sql_complexity.py (subprocess, real scratch git repo)"
+    description: "In test_ge_120h_3_snapshots.py (review finding M-2, arm 3 integrity): a staged non-UTF-8 .sql is named and is not reported as nothing_to_inspect, because an unreadable subject is not an absent one."
 test_rationale: >-
-  Every arm is about a check RUNNING during a commit, so every test drives the
-  deployed commit path. A test that asserts five entries appear in
+  Every arm is about a check RUNNING during a commit, so no test reads the manifest
+  as text to prove a check runs. A test that asserts five entries appear in
   hooks_manifest.hooks is green on a registration that is unreachable, misstaged,
   filtered to nothing, or pointing at a script the deployed tree does not carry —
-  and this repository has shipped all four of those. The refusal test is the one
-  that cannot be faked: three of the five are vacuous here and one is unarmed by
-  default, so five green results would satisfy a naive reading while changing
-  nothing about whether the package's promise is true. The parity test is a
-  regression guard, not a criterion clause — hooks_manifest.hooks feeds
-  build_precommit and check_hook_parity, and a corrupted .pre-commit-config.yaml
-  would disable the entire hook family while these five looked registered.
+  and this repository has shipped all four of those. Evidence strength differs by
+  entry, and the type field says which is which. behavioral means a real git commit
+  or merge through installed pre-commit shims (arm 1). integration means a
+  real subprocess of the registered run_hook.py entry against a real scratch git
+  repo (arms 2, 3, 4 and the review-finding snapshots). That is the wrapper the
+  registered entries invoke, but it is not a full commit. unit is reserved for the
+  two manifest or baseline reads: the arm-4 exemption declaration and the arm-5
+  inventory. Arm 4 is four refusals plus one declaration, because
+  check-ac-done-on-merge structurally cannot refuse. The refusals are the entries
+  that cannot be faked: three of the four are vacuous here and one is unarmed by
+  default, so green results alone would satisfy a naive reading while changing
+  nothing. The parity test is a regression guard, not a criterion clause.
 declares_side_effect: false
 delivers_to:
   agent: python-coder
@@ -344,19 +523,24 @@ delivers_to:
     The five new members of hooks_manifest.hooks in
     templates/scripts/commit_guardian/commit_guardian.json — ids check-folder-density,
     check-test-fixture-bloat, check-sql-complexity, check-debug-scripts,
-    check-ac-done-on-merge — each with tier: judgment, language: system,
-    always_run: true, pass_filenames: false, change_set_source:
-    handed_by_commit_path and NO files key; stages ["pre-commit"] for the first four
-    and ["post-merge"] for check-ac-done-on-merge. Consumed by GE-120h-3-i, which
+    check-ac-done-on-merge — each with language: system, always_run: true,
+    pass_filenames: false, change_set_source: handed_by_commit_path and NO files
+    key. The first four: tier: judgment, stages ["pre-commit"], entry through
+    run_hook.py. check-ac-done-on-merge: tier: transform, stages ["post-merge"],
+    entry invoking hooks/check_ac_done_on_merge.py directly (no run_hook.py), and
+    negative_control {not_applicable: true, reason: <structural ground>}. Consumed by GE-120h-3-i, which
     judges their shape, and by GE-120h-4, whose per-check statements must match them.
 expects_from: null
 origin_agent: business-analyst
 created: 2026-09-14
-amended_by: []
+amended_by:
+  - reason: "Criteria arm 4 amended by user decision (BrainCandy, 2026-10-08)"
+    detail: "Arm 4 (the anti-theatre clause) now applies to each of the five THAT HAS ANY WAY OF REFUSING. A check through which no path ends in a refusal, whatever it is given and however it is set, must instead carry an explicit, justified declaration on the entry that registers it, stating that it cannot refuse and why, on structural grounds. The amendment keeps the clause's teeth: a check that can be made to refuse — including one unarmed by default or one with nothing to examine here — cannot be excused by that declaration, and a false declaration fails the arm. Reason: check-ac-done-on-merge structurally cannot refuse (main() returns 0 unconditionally; the __main__ guard maps OSError/ValueError to exit 0; post-merge, tier transform), so arm 4 as written was unsatisfiable for it. Arms 1, 2, 3 and 5 and the coverage note are byte-identical. Authored by business-analyst on the user's explicit approval; work_status, readiness and all technical fields untouched."
 superseded_by: null
 covered_by:
   - GE-120h-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20260930-GE-120h-3.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
@@ -488,3 +672,69 @@ notes: |
   That container is watched by _package_surface_registry.WATCHED_REGISTRIES through
   ("hooks_manifest.hooks", "list_ids"), so it is a package surface by the gate's own
   definition and the declaration is true.
+
+  ---- CRITERIA AMENDMENT, 2026-10-08 (approved by BrainCandy) ----
+
+  ARM 4 NOW APPLIES TO EACH OF THE FIVE THAT CAN REFUSE, AND DEMANDS A DECLARED EXEMPTION
+  FOR ANY THAT CANNOT. Why: check-ac-done-on-merge structurally cannot refuse anything —
+  main() returns 0 unconditionally and its __main__ guard maps OSError/ValueError to exit
+  0; it is a post-merge, tier-transform AC-closer, not a gate. Arm 4 as first written was
+  therefore unsatisfiable for it (confirmed independently by architect-review,
+  ac-validator and a direct reading). Approved by BrainCandy on 2026-10-08.
+
+  The exemption is declared, not silent: in this codebase it is a
+  negative_control: {not_applicable: true, reason: ...} on the check's hooks_manifest
+  entry, whose reason states the structural ground. It is valid ONLY when the check has
+  no code path that produces a refusal under any input or setting. It is NOT available to
+  check-test-fixture-bloat (unarmed by default, but armable) nor to check-sql-complexity
+  or check-debug-scripts (nothing to examine here, but they refuse given an instance) —
+  for those, a refusal through the registered commit path must still be shown. Shape and
+  enforcement of the declaration remain GE-120f's.
+
+  work_status MUST REMAIN DRIVEN BY EVIDENCE. This amendment changes what arm 4 asks; it
+  satisfies nothing. Arm 4 stays open until the four refusals are demonstrated and the
+  one declaration is present and true. The technical follow-through (test_spec entry
+  test_ge120h3_each_of_the_five_can_still_refuse_through_the_registered_path, and the
+  it_requirements constraints that still read "for each of the five") is IT-PO's and is
+  deliberately not edited here.
+
+  ---- IT PO FOLLOW-THROUGH, 2026-10-08 ----
+
+  ARMS 3 AND 4 WERE DELIVERED IN TICKET-20260930-GE-120h-3. This supersedes, but does
+  not erase, the "PARTIAL PROGRESS — THREE OF FIVE ARMS LANDED" section above. That
+  section was true of 5d0792d13 / PR #808 and stops being true when this ticket's PR
+  lands. The record stays work_status: todo until that PR merges and the work is
+  validated. This note records the delivery. It does not claim that the work is done.
+    - Arm 3: check_sql_complexity.py and check_debug_scripts.py now emit GE-120a-1's
+      OUTCOME_NOTHING_TO_INSPECT on a genuine zero-subject commit. An unreadable .sql
+      is named and reported could_not_check, never nothing_to_inspect.
+    - Arm 4, delivered as FOUR REFUSALS PLUS ONE DECLARED EXEMPTION, as the amended
+      criteria now require. check-folder-density, check-sql-complexity,
+      check-debug-scripts and check-test-fixture-bloat (armed only in a private
+      deployed copy) are each shown refusing through run_hook.py.
+      check-ac-done-on-merge carries negative_control {not_applicable: true, reason}
+      on its hooks_manifest entry.
+    - Arms 1 and 2 gained the asserted tests they lacked, backfilled in
+      test_ge_120h_3_registration.py. Arm 5 is still evidenced by the existing
+      inventory staleness test.
+
+  DEFECTS FOUND ON THE WAY. Neither was known when this record was enriched.
+    - check-folder-density COULD NEVER REFUSE. Its before-snapshot came from
+      `git ls-files`, which reflects the index, so it already contained the files this
+      commit staged. A folder pushed over the limit by this commit was classified
+      PRE-EXISTING and allowed through. The fix reads BEFORE from
+      `git ls-tree -r HEAD`. _classify_folders is untouched, so arm 2's ratchet is
+      intact.
+    - pr-reviewer caught a RENAME/DELETE REGRESSION in this ticket's own diff (H-1).
+      Once the fix was in, AFTER was computed as the HEAD tree plus the staged-new paths, so
+      a rename inside an at-limit folder, or a delete plus an add, read as 16 and was
+      refused. AFTER is now the index read independently. The same review found that
+      root-commit detection depended on matching English git stderr (M-1) and that an
+      unreadable .sql was swallowed and reported as nothing_to_inspect (M-2). All
+      three are covered in test_ge_120h_3_snapshots.py.
+
+  ENRICHMENT CORRECTED IN THE SAME PASS. The 2026-09-14 fragment's
+  tier: {const: judgment} for all five was wrong for check-ac-done-on-merge, which is
+  correctly tier: transform, post-merge and invoked directly. The enrichment note's
+  line "tier: judgment ... all five are validators" is superseded by the fragment's
+  per-id allOf. test_spec now names the tests that exist on disk.

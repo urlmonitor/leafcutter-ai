@@ -491,17 +491,11 @@ def _assemble_gate_machinery_source() -> str:
     call, in dependency order.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    pieces = [
-        _extract_function(source, "parseAgentJson"),
-        _extract_function(source, "validateAnswerShape"),
-        _extract_function(source, "applyAnswerByType"),
-        _extract_const_array(source, "AGENT_REFUSAL_MARKERS"),
-        _extract_function(source, "isAgentRefusal"),
-        _extract_function(source, "_buildRepoRootResolutionSnippet"),
-        _extract_function(source, "buildPauseStoreCommand"),
-        _extract_function(source, "pauseAtGate"),
-        _extract_function(source, "resolveGate"),
-    ]
+    head = ("parseAgentJson", "validateAnswerShape", "applyAnswerByType")
+    tail = ("isAgentRefusal", "_buildRepoRootResolutionSnippet", "buildPauseStoreCommand",
+            "readPauseRecordWithRetry", "pauseAtGate", "resolveGate")
+    fn = lambda names: [_extract_function(source, n) for n in names]  # noqa: E731
+    pieces = fn(head) + [_extract_const_array(source, "AGENT_REFUSAL_MARKERS")] + fn(tail)
     return "\n\n".join(pieces)
 
 

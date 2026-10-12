@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Customer illustrative mock-record design",
+  "description": "Transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json entities.Customer.fields. All listed fields are present in the complete mock-record design. No production API, processor/auth request or runtime validation is implied; the canonical dataset remains unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string"
+    },
+    "name": {
+      "type": "string",
+      "description": "string"
+    },
+    "email": {
+      "type": "string",
+      "description": "string"
+    },
+    "orders": {
+      "type": "integer",
+      "description": "integer — lifetime placed-order count (Order records with status != 'pending')"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "email",
+    "orders"
+  ]
+}

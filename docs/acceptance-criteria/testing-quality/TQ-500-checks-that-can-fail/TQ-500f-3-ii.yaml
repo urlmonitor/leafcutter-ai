@@ -7,7 +7,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -34,8 +34,50 @@ criteria: |
       (for example no newly added test tagged as covering the requirement),
     And K3 records "red-baseline reader not applicable: no source requirement"
       and continues to the coder; it is never recorded as verified,
-    And for the same tests and run outcomes, the /build-feature verdict and the
-      fast-lane verdict are identical.
+    And whenever the reader runs, for the same tests and run outcomes, the
+      /build-feature verdict and the fast-lane verdict are identical,
+    And both lanes start the reader with the same command form.
+
+  Given a fourth ticket K4, with a source requirement, whose newly added
+    covering tests already pass before the coder runs, because an earlier ticket
+    delivered the behaviour they test,
+  When K4 reaches the step between the test writer and the coder,
+  Then the reader's verdict is the one the fast lane gives for the same tests,
+    And the drive stops K4 before the coder with the halt reason
+      "green_at_baseline",
+    And the halt lists every newly added covering test that was green,
+    And the halt says to set the coder phase to not needed, with a comment
+      naming the commit that delivered the behaviour,
+    And the drive never sets the coder phase to not needed itself, and never
+      lets K4 reach the coder on the ground that its tests are already green.
+
+  Given K2's reader verdict is a pass,
+  When the gate between the test writer and the coder completes,
+  Then the reader writes one record of its own verdict into K2's ticket
+    frontmatter, holding: that it passed, when it was recorded, the commit the
+    ticket's worktree was at, the source requirement ids it ran for, and each
+    test it found red (file and test name),
+    And the test writer never writes that record,
+    And if the record cannot be written, the pass still stands and the drive's
+      recorded outcome states that no record was written and why.
+
+  Given K2's drive stopped after its coder had started (for example a handoff,
+    a blocker, a retry cap or a crash), so its coder phase is still needed and
+    the coder's uncommitted code now makes its newly added tests pass,
+  When K2 is resumed and reaches the step before the coder again,
+  Then the drive reuses the reader's recorded pass, without running the tests
+    again, only when all of these hold:
+      the record exists,
+      it was made for the same source requirement ids K2 carries now,
+      every test it recorded as red is still among K2's newly added tests tagged
+        as covering that requirement (tests added since may be present too),
+    And a reused pass is reported as reused, naming when it was recorded and the
+      commit it was recorded at,
+    And in every other case (no record, different source requirement ids, or a
+      recorded red test that was renamed or removed) the reader runs exactly as
+      it did on the first drive, and its verdict decides,
+    And the test writer's red-baseline claim in its sign-off never stands in for
+      the reader's record: with no record, the reader runs.
 depends_on:
   - TQ-500f-3
   - TQ-500f-3-i
@@ -56,7 +98,7 @@ doc_links:
     status: exists
     relevance: "Today's heavy-lane evidence: the red_baseline block in the test writer's own sign-off comment."
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
 delivers_to: null
 expects_from:
   ac_id: TQ-500f-3-i
@@ -79,13 +121,72 @@ it_requirements:
     not applicable: no source requirement'' in the drive''s recorded outcome and continue to
     the coder. They are never recorded as verified, and red_baseline_verified from the writer
     is not promoted to verified.'
-  - 'Resume safety: a resumed ticket whose test-writer phase is already signed_off re-runs the
-    reader before the coder rather than trusting the earlier sign-off.'
+  - "Resume safety (amended 2026-10-06, F2): a resumed ticket reuses the reader's own recorded
+    pass, without running the tests, only when all of these hold: the red_baseline_gate record
+    exists and parses, its source_ac equals the source_ac the ticket carries now, and every
+    recorded red (file, function) is still among the newly added covers-tagged tests. That last
+    check is a subset check, because a later test-writer handoff may add tests. Making this
+    decision must not run pytest. In every other case (no record, an unreadable or malformed
+    record, a different source_ac, a recorded red test renamed or removed) the reader runs
+    exactly as on the first drive, and its verdict decides. A test-writer red_baseline_verified
+    or sign-off claim never stands in for the record."
   - 'Respect the E2 leaf invariant and ADR-006: no workflow() call from inside the workflow.
     Run the gate with a depth-1 executor agent, the same pattern fast-lane-ship.js uses.'
   - Edit only the templates/workflows-js/ sources. Deployed mirrors regenerate through build.py.
   - 'Out of scope, recorded as a gap: /build-epic dispatches ticket-supervisor (building-epics
     skill, prompt text), which this AC does not wire. That needs its own llm-expert AC.'
+  - 'Record format: one ticket-frontmatter key, red_baseline_gate. Its value is a single-line
+    flow mapping {"passed": true, "recorded_at": <ISO-8601 UTC timestamp>, "head": <the
+    worktree HEAD sha>, "source_ac": [<the AC ids the reader ran for>], "red": [{"file":
+    <repo-relative test path>, "function": <test name>}, ...]}. It is written only when the
+    reader verdict is gate_passed true, and only by the heavy-lane gate: never by the test
+    writer, never by the driver JS. After the write, the ticket must still pass the real
+    ticket_frontmatter_guard and check-doc-frontmatter, with no change to, or exemption from,
+    either gate. Document the key in templates/skills/ticket-authoring/SKILL.md in the same
+    ticket.'
+  - "Anchored atomic write: the record write inserts or replaces only the red_baseline_gate line
+    inside the ticket's frontmatter block and leaves every other byte of the file unchanged.
+    It is atomic, so an interrupted write leaves either the old file or the new one, never a
+    partial ticket. It follows the same anchored-write rule mark_ac_done already meets
+    (ACS-200f-3). A later write for the same ticket replaces the line instead of adding a
+    second one."
+  - "Unrecorded and reused passes are reported: if the record cannot be written (no --ticket, a
+    missing or unreadable ticket, a write error) the pass still stands, the verdict carries
+    recorded: false and a record_error naming the cause, and the drive's recorded outcome
+    states that no record was written and why. A reused pass carries reused: true with the
+    record's recorded_at and head, and the drive's outcome reports it as reused."
+  - "--ticket <path>: the heavy-lane gate subcommand accepts the ticket path, and fast_lane.py
+    passes it through. build-feature.js passes the worktree ticket path and build-ticket.js
+    passes its ticket path. Both append it to the existing gate command line without adding
+    lines to either twin."
+  - "Interpreter: every red-baseline gate invocation in both lanes (build-feature.js,
+    build-ticket.js and fast-lane-ship.js) starts with the same interpreter token, python,
+    which every hook in templates/settings.json already uses. Do not use python3: on a Windows
+    venv it resolves to a different interpreter, and every test errors. The verdict always
+    carries interpreter, the reader's own sys.executable. Before running any test, the shared
+    reader checks that pytest is importable by that interpreter. If it is not, the reader
+    returns gate_passed false with reason test_interpreter_unusable, never a red-outcome
+    reason, and the heavy-lane halt message prints the interpreter. set_ticket_status.py
+    invocations are out of scope, because that script uses only the standard library. A
+    configurable python_command key belongs in a separate ticket. Record in the changelog that
+    a Linux host with no python on PATH now fails the gate, just as it already fails the hooks."
+  - "Lane parity: the record and reuse logic lives only in the heavy-lane gate wrapper, never in
+    the shared reader (verify_red_baseline), so whenever the reader runs, the two lanes give
+    an identical verdict. The only keys allowed to differ are the wrapper-only keys (recorded,
+    record_error, reused and the reuse provenance), which the seam test excludes from its
+    comparison. The interpreter check and its reason live in the shared reader, so both lanes
+    get them."
+  - "green_at_baseline (F3, option A): the reader's verdict is unchanged and identical to the
+    fast lane's for the same tests. The heavy-lane drive halts before the coder with
+    classification green_at_baseline. The halt lists every newly added covering test that was
+    green and says to set the coder phase not_needed with a comment naming the ticket or
+    commit that delivered the behaviour. The drive never sets the coder phase itself
+    (TKT-600b-4), and never lets the ticket reach the coder because its tests are green."
+  - "Size ratchet: build-feature.js and build-ticket.js are over the 1000-line .js limit, and
+    the check-file-size growth ratchet (GE-127b-1) refuses any commit that makes either longer.
+    Lines starting with // count toward the limit. The JS changes here (the --ticket argument,
+    the interpreter token, the halt text) must leave each file net-zero or shorter. The
+    decision logic belongs in the Python gate."
 test_spec:
   - name: test_build_feature_runs_red_baseline_reader_between_test_writer_and_coder
     target_dir: unit_tests/workflows/
@@ -129,15 +230,109 @@ test_spec:
     description: 'K3 (no source_ac): no verify_red_baseline execution is dispatched, the drive
       records ''red-baseline reader not applicable: no source requirement'', the coder is dispatched,
       and no recorded field marks the red baseline verified.'
+  - name: test_gate_pass_writes_a_record_the_real_ticket_guards_accept
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Against the real git fixture (_tq500f3i_fixtures.py), a K2 pass writes exactly one red_baseline_gate line holding passed, recorded_at, head (the fixture HEAD sha), source_ac and red [{file, function}]. Every other byte of the ticket is unchanged, and the real ticket_frontmatter_guard.validate and check_doc_frontmatter accept the written ticket."
+  - name: test_resume_reuses_the_recorded_pass_without_running_pytest
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "After the pass is recorded, the fixture's production code changes so the new tests pass, standing in for the coder's uncommitted work. Re-running the gate returns gate_passed true and reused: true with the record's recorded_at and head, and pytest is never invoked."
+  - name: test_renamed_recorded_red_test_makes_the_reader_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "With a valid record, a recorded red test is renamed after coding. The gate does not reuse the record, the reader runs, and its verdict (all new tests green at baseline) decides, so the gate fails."
+  - name: test_different_source_ac_makes_the_reader_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A record made for a different source_ac than the one the ticket now carries is not reused. The reader runs and its verdict decides."
+  - name: test_tests_added_after_the_record_do_not_block_reuse
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A later test writer adds another covers-tagged test while every recorded red test is still present. The record is still reused, because the check is a subset check, not equality."
+  - name: test_writer_red_claim_without_a_record_makes_the_reader_run
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A ticket whose test-writer sign-off claims red_baseline_verified but which has no red_baseline_gate record runs the reader. The claim is never treated as a record, so K1's guarantee holds."
+  - name: test_missing_ticket_passes_with_recorded_false
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A K2 pass with --ticket naming a file that does not exist still passes, with recorded: false and a record_error naming the cause."
+  - name: test_unimportable_pytest_yields_test_interpreter_unusable
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "With pytest made unimportable for the reader's interpreter (find_spec patched), the reader returns gate_passed false with reason test_interpreter_unusable and runs no test."
+  - name: test_real_verdict_carries_the_interpreter
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "A verdict from a real subprocess run of the gate carries interpreter, equal to the interpreter that ran it."
+  - name: test_green_at_baseline_halts_before_the_coder_and_lists_the_green_tests
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "K4: the gate executor returns the reader's all-green verdict. Both twins (TWIN_DRIVERS) stop K4 before any coder dispatch with classification green_at_baseline. The halt lists every newly added covering test that was green and says to set the coder phase not_needed with a comment naming the delivering commit. The drive does not change the ticket's agents map."
+  - name: test_reused_pass_dispatches_the_coder_and_reports_reuse
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "When the gate executor returns gate_passed true with reused: true, both twins dispatch the coder, and the drive's recorded outcome reports the pass as reused, naming recorded_at and head. A pass with recorded: false is reported with its record_error."
+  - name: test_both_twins_gate_command_carries_the_ticket_path
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The gate command recorded from build-feature.js and the one recorded from build-ticket.js each carry --ticket with that drive's ticket path."
+  - name: test_all_lanes_start_the_gate_with_the_same_interpreter_token
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "The gate commands recorded from both heavy-lane twins and from fast-lane-ship.js all start with the same interpreter token, python."
+  - name: test_interpreter_unusable_halt_names_the_interpreter
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "When the gate executor returns reason test_interpreter_unusable, both twins halt before the coder, and the halt message prints the interpreter from the verdict."
 test_rationale: 'A workflow gate is only proven by driving the workflow and asserting that
   its verdict is consumed in control flow (coder dispatched or not). A grep of the workflow
   source for the script name is forbidden by CLAUDE.md. The seam test executes the recorded
   commands for real, so ''same reader, same inputs'' is proven rather than asserted. The twin
   test uses the deployed angle''s slot: build-ticket.js is the second production surface the
-  same change ships to.'
+  same change ships to. The record and reuse cases run the gate subcommand for real against
+  the real git fixture and then run the real ticket guards over the written ticket, because a
+  record the guards reject would break every later edit of that ticket. The interpreter cases
+  compare the recorded commands of all three lane drivers, because one shared command form is
+  the parity promise.'
 origin_agent: business-analyst
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - date: 2026-10-06
+    agent: business-analyst
+    reason: "user decision 2026-10-06, flags F2 and F3 (build-tooling fix design, sections 2 and 8; delivered by tickets T3 and T1). F2: the gate result lived only in one drive's memory, so any resume after the coder had run re-ran the reader against the coder's uncommitted code, which now passes, and the ticket halted as all-green and could not move. The amendment narrows 'a resumed ticket re-runs the reader': on a pass the reader records its own verdict in the ticket frontmatter (time, worktree commit, source requirement ids, the red tests), and a resume reuses that record without running the tests again only when the source requirement ids match and every recorded red test is still among the newly added covers-tagged tests. In every other case the reader runs as before. The test writer never writes the record, and its sign-off claim never substitutes, so K1's guarantee holds. F3, option A: tickets whose tests are green before coding still halt, as 'green_at_baseline'. The halt lists the green tests and says to set the coder phase not needed with a comment naming the implementing commit. There is no automatic pass, so the recorded decision that every fast-lane halt reason applies unchanged stands. Lane parity is kept and made explicit: the verdicts are identical whenever the reader runs, and both lanes use the same command form (T1 moves both lanes to one interpreter token). work_status moved done -> todo because the amended behaviour is not built. readiness stays approved because the user approved the amendment. The it_requirements entry 'Resume safety: ... re-runs the reader before the coder rather than trusting the earlier sign-off' now conflicts with the reuse rule, and test_spec has no case for record, reuse or green_at_baseline. Both are left for the IT PO, who works on them next."
+  - date: 2026-10-06
+    agent: it-po
+    reason: "it-po-build-tooling-fix: user decisions 2026-10-06, flags F2 and F3 (build-tooling fix design, sections 2, 3 and 8; tickets T1 and T3). Criteria untouched. it_requirements: the 'Resume safety ... re-runs the reader' entry conflicted with the reuse rule and now states it: reuse only with the same source_ac and every recorded red test still among the newly added covers-tagged tests; otherwise the reader runs; the test writer's claim never substitutes. Entries were added for the record format (frontmatter key red_baseline_gate with passed, recorded_at, head, source_ac and red [{file, function}]), the anchored atomic write, unrecorded and reused pass reporting, --ticket, the interpreter (python in both lanes, the verdict carries interpreter, test_interpreter_unusable when pytest is not importable), lane parity, green_at_baseline (option A) and the size ratchet. test_spec: fourteen cases added, nine on the gate subcommand against the real git fixture and five on the twin drivers. test_rationale and notes (IT-PO PASS 3) extended. estimated_complexity M -> L, because the amended scope spans the gate module, the CLI, three lane drivers and a skill. assigned_agent, work_status, readiness, covered_by and implemented_by untouched."
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -193,3 +388,20 @@ notes: |
   IT-PO PASS 2 (2026-09-25): K3 case added (failure angle). The it_requirement for tickets
   without source_ac now states the decided outcome. Added must_catch: "run the reader for K3 and halt on
   no_new_covering_tests" / "record K3 as verified" -> the K3 test goes red.
+
+  IT-PO PASS 3 (2026-10-06; user decisions F2 and F3; build-tooling fix design sections 2,
+  3 and 8; tickets T1 and T3). The resume it_requirement now states the record-and-reuse
+  rule. Entries were added for the record format, the anchored atomic write, unrecorded and
+  reused pass reporting, --ticket, the interpreter, lane parity, green_at_baseline and the
+  size ratchet. Fourteen test_spec cases were added.
+  SEQUENCING: T1 (interpreter) lands before T3 (record and reuse), because both edit the
+  same gate command line and module. T2 (BO-3000a) sits between them in the JS lane.
+  EXISTING TESTS TO RE-CHECK, NOT DELETE:
+  - unit_tests/workflows/test_tq500f3ii_h3_resume_gate.py. Its name says it pins the resume
+    path, which now reuses a valid record; a resume with no record must still run the reader.
+  - The seam test's wrapper_only_keys gains the new wrapper keys.
+  - Its _run helper must replace a leading python3? token, not only python3.
+  OPEN FOR THE TICKET, NOT DECIDED HERE:
+  - The gate executor is status-checker, which has permits_shell: false (KI-BO-20260927).
+  - architect-review may want an ADR for a durable field the gate writes into the ticket
+    record.

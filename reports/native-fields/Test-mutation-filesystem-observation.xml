@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="4" time="21.505" timestamp="2026-10-02T09:28:34.476668+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[True-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-True]" time="0.008"><failure message="AssertionError: Test enrichment must not observe current files">tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[False-historical-present-hash-False]" time="0.004"><failure message="AssertionError: Test enrichment must not observe current files">tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[True--True]" time="0.004"><failure message="AssertionError: Test enrichment must not observe current files">tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files</failure></testcase><testcase classname="tests.knowledge.test_native_test" name="test_test_reference_never_observes_current_filesystem[False-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855-False]" time="0.003"><failure message="AssertionError: Test enrichment must not observe current files">tests\knowledge\test_native_test.py:108: in test_test_reference_never_observes_current_filesystem
+    record = reader.from_entity(tmp_path, entity)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge\native_types\test.py:33: in from_entity
+    metadata = deepcopy(entity.model_dump(mode="python"))
+    ^^^^^^^^^^^^^
+tests\knowledge\test_native_test.py:100: in forbidden
+    raise AssertionError("Test enrichment must not observe current files")
+E   AssertionError: Test enrichment must not observe current files</failure></testcase></testsuite></testsuites>

@@ -41,9 +41,7 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for structured agent() responses
-// ---------------------------------------------------------------------------
 
 /** Maximum retry count for a single authoring agent on edit-path. */
 const MAX_EDIT_RETRIES = 1;
@@ -114,9 +112,7 @@ function resolvePathOntoRoot(root, input) {
 }
 // BO-3900-PATH-HELPERS-END
 
-// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
-// ---------------------------------------------------------------------------
 
 function parseAgentJson(raw, ctx) {
   const stage = ctx.stage;
@@ -135,9 +131,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -152,16 +146,13 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
@@ -1516,13 +1507,11 @@ async function runFlowReconciliation(flowRef, flowBacklinks, component, runId, p
   }
 }
 
-// ---------------------------------------------------------------------------
 // §R — Inline pause-resume helpers (ADR-024 BO-2300 RESUME half).
 // E2 workflow bodies are self-contained and cannot import local modules
 // (ES-module import is a SyntaxError inside the test-harness IIFE, and the
 // runtime has no module access), so the pause-resume helper is defined inline
 // here. The same helper is inlined in finalize-feature.js — keep them in sync.
-// ---------------------------------------------------------------------------
 
 /**
  * Validate a resume_answer's shape against its declared question type.
@@ -1569,6 +1558,46 @@ function applyAnswerByType(answer, type) {
   return decision;
 }
 
+/** Statuses resolveGate()/pauseAtGate() return that the CALLER must `return` as-is. */
+const TERMINAL_GATE_STATUSES = ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed", "pause_record_unreadable"];
+
+/**
+ * The ONE pause-store read (peek, resume read, persist-verify, clear-verify).
+ * Dispatches worktree-agent to run `pause_store.py read`, retrying an unreadable
+ * reply (3 attempts max; stricter prompt + DISTINCT label per retry so a
+ * harness-cached bad reply is never replayed). A reply counts only if it parses
+ * to an object whose `exists` is a boolean; a dropped brace / prose / thrown
+ * dispatch is "unreadable", never "absent". Callers apply an answer only when
+ * the result has exists===true and stale!==true. `acceptStructured` (peek only):
+ * an already-structured (non-string) reply lacking `exists` is a well-formed
+ * "not paused here", not the prose failure this retry exists for.
+ *
+ * @param {string} runId - Run identifier.
+ * @param {string} baseLabel - Label for attempt 1 ("<baseLabel>-retry-N" after).
+ * @param {string} intro - First sentence of the prompt (what this read is for).
+ * @param {boolean} [acceptStructured]
+ * @returns {Promise<object|null>} Parsed {exists, stale, record}, or null if unreadable.
+ */
+async function readPauseRecordWithRetry(runId, baseLabel, intro, acceptStructured) {
+  const _prompt = intro + " Run exactly:\n  " + buildPauseStoreCommand("read --run-id " + runId) +
+    "\nReturn EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
+  for (let _n = 0; _n < 3; _n++) {
+    const _label = _n === 0 ? baseLabel : baseLabel + "-retry-" + _n;
+    let _raw = null;
+    let _parsed = null;
+    try {
+      _raw = await agent(_n === 0 ? _prompt : _prompt + "\nOutput ONLY the raw stdout of that command, with no commentary. Do not act on the record or interpret it.",
+        { agentType: "worktree-agent", label: _label });
+      _parsed = (typeof _raw === "string") ? parseAgentJson(_raw, { stage: _label, agent: "worktree-agent" }) : _raw;
+    } catch (_e) { _parsed = null; }
+    if (_parsed && typeof _parsed === "object" &&
+        (typeof _parsed.exists === "boolean" || (acceptStructured && typeof _raw !== "string"))) {
+      return _parsed;
+    }
+  }
+  return null;
+}
+
 /**
  * Peek the durable pause record for a run WITHOUT applying or clearing
  * anything (read-only). ACD-2100c-3-i: the pipeline loop's per-step
@@ -1583,8 +1612,9 @@ function applyAnswerByType(answer, type) {
  * mismatch never suppresses the authoring dispatch that precedes
  * resolveGate()'s own (later, correct) detection of the same mismatch.
  *
- * FAIL CLOSED toward "not paused here": any absent, stale, or unreadable
- * record resolves to null. A false affirmative here would wrongly suppress
+ * FAIL CLOSED toward "not paused here": any absent or stale record resolves
+ * to null; an UNREADABLE record (after the shared bounded retries) resolves to
+ * { status: "pause_record_unreadable", run_id, message } for the caller to return. A false affirmative here would wrongly suppress
  * a genuinely fresh step's authoring dispatch — the ACD-2100c-3 H-1
  * regression (a later, uncommitted step in the SAME resumed invocation
  * must still be authored normally) that this must not reintroduce.
@@ -1594,26 +1624,14 @@ function applyAnswerByType(answer, type) {
  *   at right now, or null when there is nothing (valid) to resume.
  */
 async function peekPausedGateId(runId) {
-  // BO-2300a-1-ii: LOCAL, not module-level `workspaceSetupAgentId` -- see
-  // this file's DECISION HISTORY for why (test_acd_2100c_1.py extraction).
-  const _shellPermittedAgentId = "worktree-agent";
-  const _peekPrompt =
-    "Read the durable pause record for this run (READ-ONLY — do not act on " +
-    "it or clear it). Run exactly:\n" +
-    "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
-    "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
-  const _rawPeek = await agent(_peekPrompt, { agentType: _shellPermittedAgentId, label: "peek-pause-record" });
-  let _peekParsed;
-  try {
-    _peekParsed = (typeof _rawPeek === "string")
-      ? parseAgentJson(_rawPeek, { stage: "peek-pause-record", agent: _shellPermittedAgentId })
-      : _rawPeek;
-  } catch (_peekErr) {
-    _peekParsed = null;
+  const _peekParsed = await readPauseRecordWithRetry(runId, "peek-pause-record",
+    "Read the durable pause record for this run (READ-ONLY — do not act on it or clear it).", true);
+  // Unreadable is NOT "not paused here": surface a terminal status so the caller
+  // does not re-dispatch the author over approved drafts.
+  if (_peekParsed === null) {
+    return { status: "pause_record_unreadable", run_id: runId, message: "The saved pause record could not be read, so your answer was not applied and nothing was re-authored. Re-send the same answer to retry." };
   }
-  if (!_peekParsed || _peekParsed.exists !== true || _peekParsed.stale === true) {
-    return null;
-  }
+  if (_peekParsed.exists !== true || _peekParsed.stale === true) { return null; }
   const _peekedRecord = _peekParsed.record;
   return (_peekedRecord && typeof _peekedRecord.gate_id === "string") ? _peekedRecord.gate_id : null;
 }
@@ -1680,22 +1698,14 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       };
     }
     // Shape valid and person-attributed: consult the durable record via agent dispatch (body has no fs access per ADR-024).
-    // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
-    // explicit --store-dir in the SAME dispatched command, never the raw
-    // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()).
-    const _readPrompt =
-      "Read the durable pause record for this run. Run exactly:\n" +
-      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
-      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.";
-    const _rawRec = await agent(_readPrompt, { agentType: _shellPermittedAgentId, label: "read-pause-record" });
-    let recCheck;
-    try {
-      recCheck = (typeof _rawRec === "string")
-        ? parseAgentJson(_rawRec, { stage: "read-pause-record", agent: _shellPermittedAgentId })
-        : _rawRec;
-    } catch (_e) { recCheck = null; }
+    const recCheck = await readPauseRecordWithRetry(runId, "read-pause-record",
+      "Read the durable pause record for this run.");
+    // An unreadable reply is NOT an absent record: never apply, never claim absence.
+    if (recCheck === null) {
+      return { status: "pause_record_unreadable", run_id: runId, gate_id: gateId, message: "The saved pause record could not be read after 3 attempts, so your answer was not applied. It is not known to be absent; re-send the same answer to retry." };
+    }
     // FAIL CLOSED: apply ONLY when exists===true AND stale is not true.
-    if (!recCheck || recCheck.exists !== true) {
+    if (recCheck.exists !== true) {
       return { status: "nothing_to_resume", run_id: runId, gate_id: gateId };
     }
     if (recCheck.stale === true) {
@@ -1733,14 +1743,6 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
         "Return EXACTLY the command's JSON stdout.";
       const _clearRaw = await agent(_clearPrompt, { agentType: _shellPermittedAgentId, label: "clear-pause-record" });
 
-      // VERIFY THE CLEAR — do not take the dispatch result on trust. Mirrors
-      // pauseAtGate()'s "VERIFY THE PERSIST" block above: a prior version of
-      // this function discarded the dispatch result and unconditionally
-      // proceeded as though AC-4's requirement ("no record of it waiting
-      // remains on disk") were met. If the dispatch fails, or
-      // pause_store.py clear exits 1 on an OSError during unlink, or the
-      // LLM-mediated layer returns something unparseable, that must be
-      // surfaced, never silently swallowed.
       let _clearParsed = null;
       try {
         _clearParsed = (typeof _clearRaw === "string")
@@ -1752,23 +1754,9 @@ async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId)
       let _clearVerified = !!(_clearParsed && _clearParsed.ok === true);
 
       if (_clearVerified) {
-        // Read back through the same command resolveGate()'s resume-check
-        // read uses above, so the verify can never disagree with where the
-        // clear actually landed.
-        try {
-          const _clearVerifyRaw = await agent(
-            "Confirm the pause record was cleared. Run exactly:\n" +
-            "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
-            "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
-            { agentType: _shellPermittedAgentId, label: "clear-pause-record-verify" }
-          );
-          const _clearVerifyParsed = (typeof _clearVerifyRaw === "string")
-            ? parseAgentJson(_clearVerifyRaw, { stage: "clear-pause-record-verify", agent: _shellPermittedAgentId })
-            : _clearVerifyRaw;
-          _clearVerified = !!(_clearVerifyParsed && _clearVerifyParsed.exists === false);
-        } catch (_clearVerifyErr) {
-          _clearVerified = false;
-        }
+        const _clearVerifyParsed = await readPauseRecordWithRetry(runId, "clear-pause-record-verify",
+          "Confirm the pause record was cleared.");
+        _clearVerified = !!(_clearVerifyParsed && _clearVerifyParsed.exists === false);
       }
 
       if (!_clearVerified) {
@@ -1847,11 +1835,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     question: question, context: context,
     status: "paused_awaiting_input",
   };
-  // Repository-anchored (ACD-2100a-4): resolves the script AND passes an
-  // explicit --store-dir in the SAME dispatched command, never the raw
-  // `{{config.output_root}}`-relative placeholder (see buildPauseStoreCommand()),
-  // so a write issued from inside a linked git worktree lands in the
-  // project's own store rather than nowhere reachable / under the worktree.
+  // Repository-anchored (ACD-2100a-4): see buildPauseStoreCommand().
   const _persistPrompt =
     "Interactive gate '" + gateId + "' has no reachable human answerer. " +
     "Persist this pending-question record so the run can be resumed later. Run exactly:\n" +
@@ -1859,34 +1843,12 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
     "That writes to the repository's own paused_runs store. Return the command's JSON stdout.";
   await agent(_persistPrompt, { agentType: _shellPermittedAgentId, label: "pause-persist" });
 
-  // VERIFY THE PERSIST — do not take the write on trust.
-  // Previously this function discarded the dispatch result and unconditionally
-  // reported "paused_awaiting_input". When the write silently did not happen the
-  // run looked resumable but was not: resolveGate fails CLOSED on read
-  // (exists !== true -> nothing_to_resume), so EVERY later answer — approve, edit
-  // or cancel — bailed out, with nothing to indicate why.
-  //
-  // Verification is a read-back through the same command resolveGate uses, so it
-  // proves the record is retrievable rather than merely that a command exited.
-  let _persistVerified = false;
-  try {
-    // Repository-anchored (ACD-2100a-4): same buildPauseStoreCommand() the
-    // write above and resolveGate()'s resume-check read use, so the
-    // read-back verify can never disagree with where the write actually
-    // landed.
-    const _verifyRaw = await agent(
-      "Confirm a pause record was persisted. Run exactly:\n" +
-      "  " + buildPauseStoreCommand("read --run-id " + runId) + "\n" +
-      "Return EXACTLY its stdout JSON of the form {\"exists\":<bool>,\"stale\":<bool>,\"record\":<obj|null>}.",
-      { agentType: _shellPermittedAgentId, label: "pause-persist-verify" }
-    );
-    const _verified = (typeof _verifyRaw === "string")
-      ? parseAgentJson(_verifyRaw, { stage: "pause-persist-verify", agent: _shellPermittedAgentId })
-      : _verifyRaw;
-    _persistVerified = !!(_verified && _verified.exists === true);
-  } catch (_verifyErr) {
-    _persistVerified = false;
-  }
+  // VERIFY THE PERSIST (never trust the write): read back via the shared retrying
+  // read, so a brace-dropped reply cannot fail a record that IS on disk (2026-10-09)
+  // and an unreadable reply (null) is never "verified".
+  const _verified = await readPauseRecordWithRetry(runId, "pause-persist-verify",
+    "Confirm a pause record was persisted.");
+  const _persistVerified = !!(_verified && _verified.exists === true);
 
   if (!_persistVerified) {
     // Fail loudly rather than advertising a resumable pause that does not exist.
@@ -2008,11 +1970,8 @@ function buildSetupFailureResult(kind, reason, rawReply) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Repository-anchored support-script resolution
 // (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
-// ---------------------------------------------------------------------------
-//
 // `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
 // relative name (".leafcutter") baked into the compiled template. A shell
 // command built with that placeholder is resolved by the DISPATCHING AGENT'S
@@ -2279,9 +2238,7 @@ async function resolveRepoAnchoredScriptPath(relPath, agentType, label) {
   return { ok: true, path: absPath };
 }
 
-// ---------------------------------------------------------------------------
 // E2 top-level body — executed directly by the E2 engine
-// ---------------------------------------------------------------------------
 
 phase('Stage 0')
 
@@ -2301,9 +2258,7 @@ if (!request) {
   };
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1, BO-1500e-1).
-// -------------------------------------------------------------------------
 
 // Detect whether the user's current checkout is on main (best-effort).
 let userIsOnMain = false;
@@ -2545,9 +2500,7 @@ if (wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
 
 let wtPayload = null;
 try {
-  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) {
-    wtPayload = JSON.parse(wtParsed.output.trim());
-  }
+  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) wtPayload = JSON.parse(wtParsed.output.trim().split(/\r?\n/).filter((l) => l.trim()).pop().trim());
 } catch (_parseErr) {
   // Unparseable payload — handled by the no-worktree-path check below.
   wtPayload = null;
@@ -2574,10 +2527,18 @@ if (!_hasWorktreePath) {
 authoringWorktreePath = wtPayload.worktree_path;
 acStoreDir = wtPayload.ac_store_path || acStoreDir;
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
-// -------------------------------------------------------------------------
-const orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+// ACD-2100c-3-iii: on resume with candidates, the run's own drafts (pause record context.acs) are not orphans.
+let orphans = await scanOrphanedAcDrafts(acStoreDir, authoringWorktreePath);
+if (orphans.length > 0 && args.resume_answer && args.resume_answer.gate_id !== "resolve-orphans-choice") {
+  const _ownRec = await readPauseRecordWithRetry(args.run_id || "default-run", "orphan-scan-pause-record", "Read the durable pause record for this run (READ-ONLY — do not act on it or clear it).");
+  if (_ownRec === null) {
+    return { status: "pause_record_unreadable", run_id: args.run_id || "default-run", message: "The saved pause record could not be read, so your answer was not applied. Re-send the same answer to retry." };
+  }
+  const _ownAcs = (_ownRec.exists === true && _ownRec.stale !== true && _ownRec.record && _ownRec.record.context && _ownRec.record.context.acs) || [];
+  const _ownAcIds = (Array.isArray(_ownAcs) ? _ownAcs : []).map((a) => (a && typeof a === "object") ? (a.id || a.ac_id) : a);
+  orphans = orphans.filter((o) => !_ownAcIds.includes(o.acId));
+}
 if (orphans.length > 0) {
   const orphanAcIds = orphans.map((o) => o.acId).sort();
   const orphanN = orphans.length;
@@ -2619,8 +2580,7 @@ if (orphans.length > 0) {
     },
     args.run_id || "default-run"
   );
-  if (_orphanGateResult && _orphanGateResult.status &&
-      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_orphanGateResult.status)) {
+  if (_orphanGateResult && TERMINAL_GATE_STATUSES.includes(_orphanGateResult.status)) {
     return _orphanGateResult;
   }
   // Fail CLOSED, not destructively — see the covered-route gate below. A
@@ -2638,14 +2598,10 @@ if (orphans.length > 0) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Pre-Stage-0 — Committed-Stage Detection
-// -------------------------------------------------------------------------
 const committedStageKeys = await scanCommittedStages(authoringWorktreePath);
 
-// -------------------------------------------------------------------------
 // Stage 0 — ac-triage: duplicate check + route classification
-// -------------------------------------------------------------------------
 const triageResult = await agent(
   "Triage the user's request against the AC store. " +
   "Return a JSON object with keys: route, existing_acs, parent_l1_id, rationale. " +
@@ -2670,9 +2626,7 @@ try {
 
 const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage;
 
-// -------------------------------------------------------------------------
 // Handle "covered" route: show existing ACs + prompt user
-// -------------------------------------------------------------------------
 if (route === "covered" && !force) {
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
   const _covGateResult = await resolveGate(
@@ -2701,8 +2655,7 @@ if (route === "covered" && !force) {
     { type: "single_choice", options: ["cancel", "amend", "force"] },
     args.run_id || "default-run"
   );
-  if (_covGateResult && _covGateResult.status &&
-      ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_covGateResult.status)) {
+  if (_covGateResult && TERMINAL_GATE_STATUSES.includes(_covGateResult.status)) {
     return _covGateResult;
   }
   // Fail CLOSED, not destructively. A null result here means the gate could not
@@ -2740,15 +2693,12 @@ if (route === "covered" && !force) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Product-Truth (PT) Phase — ALWAYS-ON; runs between triage and the AC pipeline.
-//
 // Dispatches pt-classifier, derives the run-set from the OUTCOME (never the
 // `dispatch` array), self-skips (non-silent) when the store is absent, then
 // drafts mock-data → mockup → flow (filtered) each behind a user gate, committing
 // each approved stage surgically. `outcome:"none"` and unparseable classifier
 // output fall straight through to the AC pipeline.
-// -------------------------------------------------------------------------
 phase('Product-Truth Phase')
 
 // KI-ACD-007 / BO-1500a-5-i: authoringWorktreePath is guaranteed non-null past the worktree-setup gate above (ACD-2400.yaml amended_by); always anchor via resolvePathOntoRoot(), mirroring acStoreDir's own unconditional treatment above.
@@ -2873,13 +2823,9 @@ if (ptRunSet.skip) {
           { type: "single_choice", options: ["approve", "edit", "cancel"] },
           args.run_id || "default-run"
         );
-        if (_ptGateResult && _ptGateResult.status &&
-            ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_ptGateResult.status)) {
+        if (_ptGateResult && TERMINAL_GATE_STATUSES.includes(_ptGateResult.status)) {
           return _ptGateResult;
         }
-        // Fail CLOSED, not destructively — see the covered-route gate above.
-        // A null reply is a gate failure, not the user asking to cancel, and
-        // cancelling here throws away the drafted product-truth work.
         if (!_ptGateResult) {
           return {
             status: "undetermined",
@@ -2951,9 +2897,7 @@ if (ptRunSet.skip) {
   }
 }
 
-// -------------------------------------------------------------------------
 // Build the agent dispatch sequence based on effective route
-// -------------------------------------------------------------------------
 const effectiveRoute = triage.route;
 
 // flow_backlinks reported by the business-analyst (for the reconciliation step).
@@ -2988,9 +2932,7 @@ if (effectiveRoute === "strategic") {
   ];
 }
 
-// -------------------------------------------------------------------------
 // Stage 1–N — sequential authoring pipeline with gates
-// -------------------------------------------------------------------------
 
 phase('Authoring Pipeline')
 
@@ -3131,6 +3073,7 @@ for (const step of pipeline) {
   let isPausedAtThisStep = false;
   if (args && args.resume_answer) {
     const _actualPausedGateId = await peekPausedGateId(args.run_id || "default-run");
+    if (_actualPausedGateId && typeof _actualPausedGateId === "object") { return _actualPausedGateId; }
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
   const skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
@@ -3236,15 +3179,9 @@ for (const step of pipeline) {
         { type: "single_choice", options: ["approve", "edit", "cancel"] },
         args.run_id || "default-run"
       );
-      if (_midGateResult && _midGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_midGateResult.status)) {
+      if (_midGateResult && TERMINAL_GATE_STATUSES.includes(_midGateResult.status)) {
         return _midGateResult;
       }
-      // Fail CLOSED, not destructively — see the covered-route gate above.
-      // This is the most costly of the three: cancelling here discards ACs that
-      // have already been authored. A null reply means the gate could not be
-      // answered (KI-ACD-005), which is not the user asking to throw that work
-      // away, so it must never be routed into the cancel branch.
       if (!_midGateResult) {
         return {
           status: "undetermined",
@@ -3377,8 +3314,7 @@ for (const step of pipeline) {
         args.run_id || "default-run"
       );
       // Non-proceed outcomes: exit immediately.
-      if (_finalGateResult && _finalGateResult.status &&
-          ["paused_awaiting_input", "nothing_to_resume", "unresumable_stale", "pause_persist_failed"].includes(_finalGateResult.status)) {
+      if (_finalGateResult && TERMINAL_GATE_STATUSES.includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
       // ACD-2100c-2: resolveGate() never returns a falsy value TODAY -- every

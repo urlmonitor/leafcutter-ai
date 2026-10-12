@@ -1,0 +1,74 @@
+{
+  "status": "completed_waiting_human",
+  "provider": "TypeSafe",
+  "model": "jev-latest",
+  "host": "api.typesafe.ai",
+  "scenarios": [
+    "RS-02",
+    "RS-03"
+  ],
+  "maximum_calls_per_case": 12,
+  "maximum_calls_total": 24,
+  "maximum_active_seconds_per_case": 120,
+  "maximum_state_chars_per_call": 30000,
+  "maximum_questions_per_call": 20,
+  "transport_timeout_seconds": 30,
+  "provider_token_limit": null,
+  "limits_note": "No hard provider token cap exposed by this classifier configuration. Host/human waits are retained without fabricated responses.",
+  "excluded": [
+    "credentials and env-file contents",
+    "remote Langfuse export",
+    "embeddings",
+    "query activation",
+    "graph writes"
+  ],
+  "active_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "active_generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+  "consent": {
+    "source": "New explicit user evaluation rerun request conveyed by coordinator",
+    "user_reply": "then run the eval as well",
+    "scope": "Same original RS-02 and RS-03 starts on updated code, max12 calls each/24 total; no graph writes, activation, embeddings or Langfuse",
+    "recorded_at": "2026-10-02T13:23:35.313189+00:00"
+  },
+  "completed_at": "2026-10-02T13:30:03.648887+00:00",
+  "actual_calls_total": 2,
+  "actual_calls_by_case": {
+    "RS-02": 1,
+    "RS-03": 1
+  },
+  "actual_input_tokens": 1104,
+  "actual_output_tokens": 119,
+  "actual_cost_usd_estimated": 4.6368e-05,
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "retrieval_reached": false,
+  "resumes_performed": 0,
+  "stage_of_stop": "kernel.route -> low_confidence -> waiting_human",
+  "human_prompts": {
+    "RS-02": "I am not sure how to handle this request: \"How many ACs concern test writing? Exclude parent requirements.\". Which of these fits best? You can also say it in your own words.",
+    "RS-03": "I am not sure how to handle this request: \"For KM-500c-2, what must tests demonstrate?\". Which of these fits best? You can also say it in your own words."
+  },
+  "permitted_transmission_categories": [
+    "original questions",
+    "offered capability/query contracts",
+    "scoped IDs and source identity",
+    "bounded retrieved repository excerpts and assessment context"
+  ],
+  "actual_transmission_categories": [
+    "Original task goals and questions for RS-02 and RS-03",
+    "Initial request kind, payload schema name and payload key names",
+    "Empty component-ID and prior-clarification lists",
+    "Eligible research capability ID and description, routing instructions, and none/needs-context choice descriptions"
+  ],
+  "actual_retrieved_excerpt_count": 0,
+  "actual_transmission_basis": {
+    "trace_evidence": "Each saved real trace contains only one generation, jev.kernel.route, followed by low_confidence and waiting_human.",
+    "category_derivation": "kernel/scheduler/routing.py:_request_state and build_batch describe the routing state and choice contract. Categories are derived from that current producer and the saved tasks; the tracer retains a fingerprint rather than full outbound state.",
+    "not_transmitted_in_these_calls": [
+      "Retrieved repository excerpts",
+      "Query-result evidence or evidence-adequacy assessment context",
+      "Query-catalog options, query input/output fields or published source SHA"
+    ]
+  }
+}

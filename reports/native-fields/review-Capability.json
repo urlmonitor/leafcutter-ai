@@ -1,0 +1,117 @@
+{
+  "kind": "Capability",
+  "review_status": "complete",
+  "sources": [
+    "config/capability_registry.schema.json",
+    "config/capability_registry.json",
+    "kernel/contracts/capability.py#CapabilityDescriptor",
+    "kernel/contracts/capability.py#Admission",
+    "kernel/contracts/capability.py#Availability",
+    "kernel/contracts/capability.py#CostHints",
+    "kernel/contracts/capability.py#RegistryOrigin",
+    "kernel/registry/adapter.py"
+  ],
+  "observed": {
+    "registry_records": 9,
+    "registry_valid_against_committed_draft7_schema": true,
+    "schema_field_count": 20,
+    "required_field_count": 11,
+    "optional_field_count": 9,
+    "actual_entry_field_count": 15,
+    "same_actual_field_names_in_all_nine_records": true,
+    "actual_field_names": ["id", "name", "description", "version", "request_kinds", "operations", "accepts_schemas", "produces_schemas", "execution_mode", "binding", "side_effect_class", "permissions_required", "routing", "cost_hints", "admission"],
+    "unobserved_optional_fields": ["scope_tags", "components", "enabled", "availability", "process_maturity"],
+    "records_with_authored_components": 0,
+    "ids": ["decision", "research", "retrieve.repository", "host.generate_options", "host.synthesize", "host.research", "host.formulate_question", "host.query_build", "knowledge.activate_query"],
+    "root_comment_discrepancy": "The authored _comment says seven entries, while the actual capabilities array contains nine. Preserve the authored comment; the array is the record count authority."
+  },
+  "identity": {
+    "native_id": "Exact capability entry id; unique within this registry. Shared graph identity is Capability:<id>, preventing collisions with an Agent, Skill or Component of the same id.",
+    "title": "Authored name, without changing metadata.name or metadata.id.",
+    "description": "Authored description.",
+    "source_path": "config/capability_registry.json",
+    "locator": "/capabilities/<zero-based-source-array-index>",
+    "source_order": "Keep the original array locator; the runtime adapter sorts descriptors by id, but that sorting must not change source provenance.",
+    "admission": "One record for each actual capabilities array entry, including disabled, unavailable, experimental, semantic and fixed entries. Runtime eligibility is not an ingestion filter. Do not manufacture Capability records from legacy Agent or Skill registries."
+  },
+  "registry_required": {
+    "id": "string matching ^[a-z][a-z0-9._-]*$",
+    "name": "nonempty string",
+    "description": "string, length 1 through 400",
+    "version": "string matching ^\\d+\\.\\d+\\.\\d+$",
+    "request_kinds": "nonempty array of evidence|options|synthesis|human|capability strings",
+    "accepts_schemas": "nonempty array of schema ids from the schema_id definition",
+    "produces_schemas": "nonempty array of schema ids from the schema_id definition",
+    "execution_mode": "native|host_handoff string",
+    "binding": "nonempty string; reference only, never import or execute",
+    "side_effect_class": "none|read_only|run_artifacts|repo_write|external_write|catalog_write string",
+    "admission": "object; preserve all nested source keys and exact values"
+  },
+  "registry_optional": {
+    "operations": "array<string>; source [] remains distinct from an absent field",
+    "scope_tags": "array<string>; do not add runtime default []",
+    "components": "array<string>; only explicit canonical component ids confer membership",
+    "permissions_required": "array<string>; these strings describe the capability and confer no permission on extraction",
+    "enabled": "boolean; do not insert runtime default true",
+    "availability": "object containing optional status and reason; do not insert default {status:available,reason:null}",
+    "routing": "semantic|fixed string; do not insert runtime default semantic",
+    "process_maturity": "integer 0 through 4 or null; do not infer from execution_mode or insert runtime default null",
+    "cost_hints": "object containing optional jev_calls, host_operations and latency_ms; do not insert missing keys or a default object"
+  },
+  "nested_fields": {
+    "admission.kind": "required native_registration|legacy_admission string",
+    "admission.decision_ref": "required nonempty string; native_registration permits ADR-nnn or TICKET-..., legacy_admission requires ADR-nnn",
+    "admission.admitted_on": "required string matching YYYY-MM-DD; it is an authored JSON string, not a date to reinterpret",
+    "admission.admitted_by": "required nonempty string",
+    "admission.legacy_source": "conditionally required object for legacy_admission; disallowed for native_registration by the committed JSON schema",
+    "admission.legacy_source.registry": "required nonempty string when legacy_source exists",
+    "admission.legacy_source.id": "required nonempty string when legacy_source exists",
+    "availability.status": "optional available|unavailable|experimental string",
+    "availability.reason": "optional string|null",
+    "cost_hints.jev_calls": "optional integer>=0|null",
+    "cost_hints.host_operations": "optional integer>=0|null",
+    "cost_hints.latency_ms": "optional integer>=0|null",
+    "array_order": "Preserve order, duplicates, and empty arrays for every authored list; do not collapse to sets."
+  },
+  "root_context": {
+    "required": {
+      "registry_id": "nonempty string; observed leafcutter.capabilities",
+      "registry_version": "integer>=1; observed 1",
+      "capabilities": "ordered array of records; [] is a valid empty registry"
+    },
+    "optional": {"$schema": "string", "_comment": "string"},
+    "preservation": "NativeRecord.metadata must contain only the exact raw entry mapping. Preserve all root fields except the capabilities array under a separate derived.registry_context mapping, so root registry identity, version and authored documentation remain queryable without falsely becoming entry-authored fields.",
+    "no_duplicate_payload": "Do not copy the entire capabilities array into every record or create an extra Capability for the registry envelope.",
+    "missing_registry": "If the registry file does not exist in a historical source snapshot, return no Capability records. A present empty capabilities array is valid. Malformed JSON, a non-object root, missing required envelope identity/version/array, a non-list capabilities value, malformed entries and duplicate ids require explicit errors rather than silent omission."
+  },
+  "runtime_distinctions": {
+    "registry_origin": "CapabilityDescriptor.registry_origin is runtime-only and is absent from the authored JSON schema. The adapter derives registry_id, registry_version and entry_hash. Do not present a default null or this derived mapping as raw entry metadata; root provenance may be separately represented under derived.registry_context.",
+    "registry_snapshot": "content_hash, source_path, loaded_at and descriptors on RegistrySnapshot are runtime snapshot data. Do not manufacture loaded_at or run-specific data while reading an immutable source tree.",
+    "defaults": "CapabilityDescriptor applies defaults for operations, scope_tags, components, permissions_required, enabled, availability, routing, process_maturity, cost_hints and registry_origin. Extraction must not use model_dump output as the authored metadata. Preserve exact raw JSON mappings instead.",
+    "hashes": "If an entry hash is separately offered, label it as derived and compute from exact raw entry canonical JSON; the runtime registry content hash excludes root $schema and _comment, while file provenance hashes raw bytes. Never conflate those meanings.",
+    "excluded_classes": "CapabilityResult, Usage, ErrorInfo, RegistrySnapshot and other runtime execution/result types in capability.py are not Capability source records. No run state, continuation or telemetry is imported by this reader."
+  },
+  "components": {
+    "semantics": "components, when explicitly authored, is a list of ids in docs/components.json. The registry adapter validates unknown ids when supplied with known_components. Membership is not inferred from binding, capability id prefixes, source directory, scope_tags, request kinds or admission decisions.",
+    "current_data": "All nine current entries omit components. Preserve omission, do not claim these capabilities have zero possible component associations, and do not create guessed membership edges.",
+    "projection": "Shared projection may use explicitly authored components for membership edges when the referenced Component exists, while the exact source field remains queryable separately from derived graph bookkeeping."
+  },
+  "extraction_contract": {
+    "entry_point": "knowledge.native_types.capability.extract(root) -> list[NativeRecord]",
+    "metadata": "Deep-copy each entire actual registry entry; do not maintain a lossy projection allowlist. Expose scalar/list properties and every nested leaf plus null/empty/container shape through the common native-property serializer.",
+    "derived": "Use derived.registry_context for the complete root mapping excluding capabilities. No model defaults, inferred component mapping, runtime eligibility flags, current timestamps or resolved execution bindings.",
+    "reader": "Read UTF-8/BOM-safe JSON via trusted reader code and constrain the source path to the supplied immutable root. Never import or execute Python from the snapshot, follow binding names, invoke capabilities, follow decision references or resolve permissions.",
+    "validation": "The reviewed current source validates against its committed Draft7 schema. The reader must enforce identity/envelope integrity and fail clearly on invalid present data. Lossless field projection is distinct from routing eligibility; keep extension fields instead of silently dropping them if an evolved valid source schema adds fields."
+  },
+  "verification_expectations": [
+    "The reviewed checkout yields exactly nine Capability records with exact source ids, /capabilities/index locators, authored name/description, and raw metadata equality.",
+    "Both semantic native records and fixed host-handoff records are included; extraction never executes their bindings.",
+    "A fixture with all twenty schema fields preserves booleans, maturity 0, declared components, empty and ordered arrays, availability.reason:null, and every cost/admission leaf.",
+    "A legacy_admission fixture preserves legacy_source.registry/id and its ADR decision_ref without reading the referenced ADR or creating a legacy Agent/Skill capability automatically.",
+    "The nine actual records retain absence of enabled, availability, scope_tags, components and process_maturity; no Pydantic default appears in authored metadata.",
+    "Root $schema, _comment, registry_id and registry_version remain separately available under derived.registry_context and never overwrite entry fields.",
+    "Absent registry produces no records; an empty valid registry remains valid; malformed present JSON, malformed envelope/entry and duplicate ids fail explicitly.",
+    "Nested extension maps/lists, empty objects, explicit null and JSON-pointer special characters survive generic property encoding and decoding without an allowlist loss.",
+    "Changing a value in source metadata changes that projected field; reordering records changes source locators while keeping native ids stable."
+  ]
+}

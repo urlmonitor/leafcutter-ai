@@ -1,0 +1,35 @@
+FFFFF                                                                    [100%]
+================================== FAILURES ===================================
+_ test_test_reference_revalidates_source_paths_without_repair[../outside.py] __
+tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_revalidates_source_paths_without_repair[tests/../../outside.py] _
+tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+__ test_test_reference_revalidates_source_paths_without_repair[/outside.py] ___
+tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_revalidates_source_paths_without_repair[C:/outside.py] __
+tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_revalidates_source_paths_without_repair[tests\\case.py] _
+tests\knowledge\test_native_test.py:213: in test_test_reference_revalidates_source_paths_without_repair
+    with pytest.raises(ValueError, match="repository-relative"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair[../outside.py]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair[tests/../../outside.py]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair[/outside.py]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair[C:/outside.py]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_revalidates_source_paths_without_repair[tests\\case.py]
+5 failed in 0.29s

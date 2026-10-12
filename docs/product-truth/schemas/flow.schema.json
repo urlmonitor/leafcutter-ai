@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Flow artifact",
-  "description": "A reviewable user journey. Machine-readable for agents AND human-readable via summary/human fields. business-analyst derives L2/L3 Gherkin ACs from steps + branches; each step links back to those ACs via `implements`, and impl_status is derived from the ACs' work_status.",
+  "description": "A reviewable user journey. Machine-readable for agents AND human-readable via the summary and each step's description. business-analyst derives L2/L3 Gherkin ACs from steps + branches; each step links back to those ACs via `implements`, and impl_status is derived from the ACs' work_status.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -136,7 +136,8 @@
         "required": [
           "id",
           "label",
-          "human",
+          "description",
+          "actor_kind",
           "order"
         ],
         "properties": {
@@ -147,9 +148,10 @@
             "type": "string",
             "description": "Short title (tab-label)."
           },
-          "human": {
+          "description": {
             "type": "string",
-            "description": "HUMAN: one-line 'what the user is doing/seeing' on this step."
+            "minLength": 1,
+            "description": "One plain sentence (at most 200 characters) saying WHAT happens in this step and who or what does it, in words a product person understands. NEVER code paths or file names, symbol/function/field names, build or implementation status, design notes, ticket/AC/ADR ids, or contract dumps: handoff detail belongs in io_contracts, the runner in agent/actor_kind, build status in realization and the linked ACs. Checked by the validator's description gate (product_truth_descriptions.py)."
           },
           "order": {
             "type": "integer"
@@ -160,21 +162,31 @@
           },
           "agent": {
             "type": "string",
-            "description": "The actor that runs this step — an agent id (config/agent_registry.json) or a script/workflow name. The subject of the handoff."
+            "description": "The named actor that runs this step — an agent id (config/agent_registry.json) or a script/workflow name. The subject of the handoff. Its mechanism is actor_kind."
+          },
+          "actor_kind": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human"
+            ],
+            "description": "Which of the four mechanisms (ADR-053) runs this step: deterministic = scripts, hooks, workflows and other code; jev = Jev; llm = an LLM agent (an agent template, Claude Code, a host model); human = a person. Record the mechanism that does the work described, not who approves it later."
           },
           "produces": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Named data artifacts/fields this step hands DOWNSTREAM (the output side of the agent→agent handoff contract), e.g. 'Ticket.test_requirements', 'red_baseline'."
+            "description": "Generated compatibility labels from io_contracts when structured metadata is present; do not hand-author these copies. Atlas renders the structured contract fields directly. Labels are not a cross-step dataflow binding or proof that an upstream/downstream mapping exists."
           },
           "consumes": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Named data artifacts/fields this step requires from UPSTREAM (the input side of the handoff contract). A consumes value with no matching upstream produces is a broken handoff."
+            "description": "Generated compatibility labels from io_contracts when structured metadata is present; do not hand-author these copies. Atlas renders the structured contract fields directly. Labels are not a cross-step dataflow binding or proof that an upstream/downstream mapping exists."
           },
           "reads": {
             "type": "array",
@@ -224,6 +236,9 @@
           "impl_asof": {
             "type": "string",
             "description": "Date impl_status was last recomputed."
+          },
+          "io_contracts": {
+            "$ref": "#/definitions/io_contracts"
           }
         }
       }
@@ -253,8 +268,10 @@
           "label": {
             "type": "string"
           },
-          "human": {
-            "type": "string"
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One plain sentence (at most 200 characters) saying WHAT happens on this branch and who or what does it, in words a product person understands. NEVER code paths or file names, symbol/function/field names, build or implementation status, design notes, ticket/AC/ADR ids, or contract dumps: handoff detail belongs in io_contracts, the runner in agent/actor_kind, build status in realization and the linked ACs. Checked by the validator's description gate (product_truth_descriptions.py)."
           },
           "screen": {
             "type": "string"
@@ -263,19 +280,29 @@
             "type": "string",
             "description": "The actor that runs this branch — an agent id or a script/workflow name."
           },
+          "actor_kind": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human"
+            ],
+            "description": "Which of the four mechanisms (ADR-053) runs this branch: deterministic = scripts, hooks, workflows and other code; jev = Jev; llm = an LLM agent (an agent template, Claude Code, a host model); human = a person. Record the mechanism that does the work described, not who approves it later."
+          },
           "produces": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Named data artifacts/fields this branch hands downstream (output side of the handoff contract)."
+            "description": "Generated compatibility labels from io_contracts when structured metadata is present; do not hand-author these copies. Atlas renders the structured contract fields directly. Labels are not a cross-step dataflow binding or proof that an upstream/downstream mapping exists."
           },
           "consumes": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Named data artifacts/fields this branch requires from upstream (input side of the handoff contract)."
+            "description": "Generated compatibility labels from io_contracts when structured metadata is present; do not hand-author these copies. Atlas renders the structured contract fields directly. Labels are not a cross-step dataflow binding or proof that an upstream/downstream mapping exists."
           },
           "reads": {
             "type": "array",
@@ -314,6 +341,9 @@
               "exit"
             ],
             "description": "What kind of outcome this branch is: another valid route to the goal (alternative), a failure recovered from or reported (failure), or an end to the journey before its goal (exit). Being introduced (UXP-700e-3-i): OPTIONAL, and a branch without one is reported as a field to fill, not as a violation."
+          },
+          "io_contracts": {
+            "$ref": "#/definitions/io_contracts"
           }
         }
       }
@@ -411,7 +441,8 @@
         "confirmed_against": {
           "type": "string",
           "minLength": 1,
-          "description": "Stable string identity of the confirmation this journey was last checked at (ADR-043 SS2/SS3). Copied verbatim from the confirmation record -- never re-derived or synthesised."
+          "description": "Stable string identity of the confirmation this journey was last checked at (ADR-043 SS2/SS3). Copied verbatim from the confirmation record -- never re-derived or synthesised.",
+          "pattern": "\\S"
         },
         "changed": {
           "type": "array",
@@ -439,7 +470,8 @@
         "against": {
           "type": "string",
           "minLength": 1,
-          "description": "Explicit, caller-supplied string identity of the confirmation event (e.g. a commit SHA or an explicit confirmation id) -- NEVER a hash or fingerprint synthesised by the checker (ADR-043 SS3). Copied verbatim into behind.confirmed_against when a described thing has since moved."
+          "description": "Explicit, caller-supplied string identity of the confirmation event (e.g. a commit SHA or an explicit confirmation id) -- NEVER a hash or fingerprint synthesised by the checker (ADR-043 SS3). Copied verbatim into behind.confirmed_against when a described thing has since moved.",
+          "pattern": "\\S"
         },
         "state": {
           "type": "object",
@@ -449,6 +481,392 @@
           "description": "One content signature per described thing (today: AC id) as of `against`, keyed by that thing's id. Compared against its CURRENT signature (_ac_content_signature) to decide behind vs. current."
         }
       }
+    },
+    "contract_definitions": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/contract_definition"
+      }
+    }
+  },
+  "definitions": {
+    "contract_definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "authority": {
+          "enum": [
+            "runtime",
+            "source_reviewed",
+            "illustrative_design"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "required": [],
+      "anyOf": [
+        {
+          "required": [
+            "model"
+          ]
+        },
+        {
+          "required": [
+            "schema"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "authority"
+            ],
+            "properties": {
+              "authority": {
+                "enum": [
+                  "source_reviewed",
+                  "illustrative_design"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "note"
+            ]
+          }
+        }
+      ]
+    },
+    "io_contracts": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "not_applicable": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "not_applicable"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "consumes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "pattern": "^(/.*)?$"
+                        },
+                        "types": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "enum": [
+                              "object",
+                              "array",
+                              "string",
+                              "integer",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "default": {},
+                        "applies": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "types",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "contract",
+                  "fields"
+                ]
+              }
+            },
+            "produces": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "pattern": "^(/.*)?$"
+                        },
+                        "types": {
+                          "type": "array",
+                          "minItems": 1,
+                          "uniqueItems": true,
+                          "items": {
+                            "enum": [
+                              "object",
+                              "array",
+                              "string",
+                              "integer",
+                              "number",
+                              "boolean",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": {
+                          "type": "boolean"
+                        },
+                        "default": {},
+                        "applies": {
+                          "type": "string",
+                          "minLength": 1,
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "types",
+                        "required"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "contract",
+                  "fields"
+                ]
+              }
+            },
+            "examples": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "contract": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "mode": {
+                    "enum": [
+                      "full",
+                      "projection"
+                    ]
+                  },
+                  "origin": {
+                    "enum": [
+                      "observed",
+                      "illustrative",
+                      "reconstructed"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "pattern": "\\S"
+                      },
+                      "pointer": {
+                        "type": "string",
+                        "pattern": "^(/.*)?$"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "pointer"
+                    ]
+                  },
+                  "value": {}
+                },
+                "required": [
+                  "contract",
+                  "mode",
+                  "origin",
+                  "label",
+                  "value"
+                ],
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "origin": {
+                          "const": "observed"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "source"
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "missing_bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "direction",
+                  "reason",
+                  "source"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "direction": {
+                    "enum": [
+                      "consumes",
+                      "produces",
+                      "both"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                }
+              }
+            }
+          },
+          "required": [
+            "consumes",
+            "produces",
+            "examples"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "missing_bindings"
+          ],
+          "properties": {
+            "missing_bindings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "direction",
+                  "reason",
+                  "source"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "direction": {
+                    "enum": [
+                      "consumes",
+                      "produces",
+                      "both"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "\\S"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

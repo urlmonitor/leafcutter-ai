@@ -1,0 +1,74 @@
+id: UXP-300-4
+title: When the validator cannot load a dependency, its refusal names the module that actually failed
+component: ux-prototyping
+components:
+- ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the product-truth validator is run in an environment where jsonschema imports successfully
+    but a module the contract checks depend on (for example `referencing`) cannot be imported,
+  When the validator starts,
+  Then it refuses to run and exits non-zero, exactly as it does when a dependency is missing,
+  And its refusal message names the module that actually failed to import,
+  And the message does not say that jsonschema is missing,
+  And when that failing module is `referencing` while jsonschema is importable, the message states
+    the installed jsonschema version and that it is too old to provide `referencing`,
+  And when jsonschema itself cannot be imported, the refusal still says that jsonschema is missing.
+depends_on:
+- UXP-300
+doc_links:
+- path: docs/product-truth/scripts/validate_product_truth.py
+  relationship: modifies
+  status: exists
+- path: docs/product-truth/scripts/product_truth_contracts.py
+  relationship: describes
+  status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: '2026-10-08'
+amended_by: []
+superseded_by: null
+covered_by:
+- unit_tests/product_truth/test_uxp_300_4.py
+implemented_by:
+- docs/product-truth/scripts/validate_product_truth.py
+- docs/product-truth/scripts/product_truth_dependencies.py
+- scripts/build_phases_product_truth_smoke.py
+change_target: code
+risk_surface: internal
+test_spec:
+- name: test_missing_referencing_is_named_not_reported_as_missing_jsonschema
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: failure
+  description: With jsonschema importable but `referencing` made unimportable in a fresh subprocess, the
+    validator exits non-zero, names `referencing` and the installed jsonschema version, and does not
+    claim jsonschema is missing.
+- name: test_missing_jsonschema_is_still_reported_as_missing_jsonschema
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: boundary
+  description: With jsonschema itself made unimportable in a fresh subprocess, the validator still exits
+    non-zero with the existing jsonschema-missing refusal.
+test_rationale: The defect is a misattributed import failure, so both tests run the real validator as a
+  subprocess and make the unimportable module fail on purpose, rather than relying on how the host
+  machine happens to be set up. The host that exposed the bug has since been repaired, so a test that
+  depended on the environment would pass vacuously.
+test_required: true
+declares_side_effect: false
+notes: Filed by /quick-fix on 2026-10-08. A shared try/except ImportError wrapped both `import jsonschema`
+  and `from product_truth_contracts import ...`, so a failure inside product_truth_contracts (which imports
+  `referencing` directly) set jsonschema to None and was reported as "jsonschema is not installed". On a
+  host with Debian's python3-jsonschema 4.10.3, which predates `referencing`, this sent the operator to
+  reinstall a package that was already present.

@@ -1,0 +1,35 @@
+{
+  "id": "legacy.tester",
+  "name": "Repository retrieval",
+  "description": "Finds evidence excerpts in allowlisted repository files.",
+  "version": "1.0.0",
+  "request_kinds": [
+    "evidence"
+  ],
+  "operations": [
+    "retrieve"
+  ],
+  "accepts_schemas": [
+    "leafcutter.retrieval_request.v1"
+  ],
+  "produces_schemas": [
+    "leafcutter.evidence_bundle.v1"
+  ],
+  "execution_mode": "native",
+  "binding": "legacy.tester",
+  "side_effect_class": "read_only",
+  "permissions_required": [
+    "read_repo"
+  ],
+  "routing": "semantic",
+  "admission": {
+    "kind": "legacy_admission",
+    "decision_ref": "ADR-999",
+    "admitted_on": "2026-09-30",
+    "admitted_by": "BrainCandy",
+    "legacy_source": {
+      "registry": "agent_registry",
+      "id": "test-writer"
+    }
+  }
+}

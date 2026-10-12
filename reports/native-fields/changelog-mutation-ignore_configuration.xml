@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="20.574" timestamp="2026-10-02T09:13:40.042194+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_configured_store_and_guidance_exclusions[]" time="0.024"><failure message="AssertionError: assert ['changelogs/...og/legacy.md'] == ['docs/change...-filename.md']&#10;  &#10;  At index 0 diff: 'changelogs/stale.md' != 'docs/changelog/legacy.md'&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3065/test_changelog_configured_stor0')
+config_prefix = ''
+
+    @pytest.mark.parametrize("config_prefix", ["", "leafcutter/"])
+    def test_changelog_configured_store_and_guidance_exclusions(tmp_path, config_prefix):
+        # covers: KM-400a-3-i
+        # angle: seam
+        config = tmp_path / (config_prefix + "templates/scripts/commit_guardian/commit_guardian.json")
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": "history"}), encoding="utf-8")
+        for name in [
+            "history/README.md",
+            "history/index.md",
+            "history/nested/generated.md",
+            "changelogs/stale.md",
+            "CHANGELOG.md",
+        ]:
+            _write(tmp_path, name, "title: Excluded\n")
+        _write(tmp_path, "history/old-filename.md", "title: Included\n")
+        _write(tmp_path, "docs/changelog/legacy.md", "title: Legacy\n")
+&gt;       assert [r.source_path for r in _extract(tmp_path)] == [
+            "docs/changelog/legacy.md",
+            "history/old-filename.md",
+        ]
+E       AssertionError: assert ['changelogs/...og/legacy.md'] == ['docs/change...-filename.md']
+E         
+E         At index 0 diff: 'changelogs/stale.md' != 'docs/changelog/legacy.md'
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:108: AssertionError</failure></testcase><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_configured_store_and_guidance_exclusions[leafcutter/]" time="0.013"><failure message="AssertionError: assert ['changelogs/...og/legacy.md'] == ['docs/change...-filename.md']&#10;  &#10;  At index 0 diff: 'changelogs/stale.md' != 'docs/changelog/legacy.md'&#10;  Use -v to get more diff">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3065/test_changelog_configured_stor1')
+config_prefix = 'leafcutter/'
+
+    @pytest.mark.parametrize("config_prefix", ["", "leafcutter/"])
+    def test_changelog_configured_store_and_guidance_exclusions(tmp_path, config_prefix):
+        # covers: KM-400a-3-i
+        # angle: seam
+        config = tmp_path / (config_prefix + "templates/scripts/commit_guardian/commit_guardian.json")
+        config.parent.mkdir(parents=True)
+        config.write_text(json.dumps({"changelogs_dir": "history"}), encoding="utf-8")
+        for name in [
+            "history/README.md",
+            "history/index.md",
+            "history/nested/generated.md",
+            "changelogs/stale.md",
+            "CHANGELOG.md",
+        ]:
+            _write(tmp_path, name, "title: Excluded\n")
+        _write(tmp_path, "history/old-filename.md", "title: Included\n")
+        _write(tmp_path, "docs/changelog/legacy.md", "title: Legacy\n")
+&gt;       assert [r.source_path for r in _extract(tmp_path)] == [
+            "docs/changelog/legacy.md",
+            "history/old-filename.md",
+        ]
+E       AssertionError: assert ['changelogs/...og/legacy.md'] == ['docs/change...-filename.md']
+E         
+E         At index 0 diff: 'changelogs/stale.md' != 'docs/changelog/legacy.md'
+E         Use -v to get more diff
+
+tests\knowledge\test_native_changelog_entry.py:108: AssertionError</failure></testcase></testsuite></testsuites>

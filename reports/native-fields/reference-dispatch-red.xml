@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="20.995" timestamp="2026-10-02T09:28:48.293531+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_metadata_integration" name="test_reference_readers_reach_projection_without_refreshing_historical_evidence" time="0.010"><failure message="AssertionError: assert {'missing': T... 'empty': []}} == {'canonical_i...summary', ...}&#10;  &#10;  Left contains 2 more items:&#10;  {'future': {'empty': [], 'nullable': None}, 'missing': True}&#10;  Right contains 6 more items:&#10;  {'canonical_id': 'test',&#10;   'kind': 'Test',&#10;   'properties': {'future': {'empty': [], 'nullable': None}, 'missing': True},...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3081/test_reference_readers_reach_p0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002752A3A6B10&gt;
+
+    def test_reference_readers_reach_projection_without_refreshing_historical_evidence(tmp_path, monkeypatch):
+        # covers: KM-400a-3-i
+        # angle: reachability
+        monkeypatch.setattr(native_metadata, "collect", lambda *a, **kw: [])
+        nodes = [_entity("file", "SourceFile"), _entity("test", "Test")]
+        for node in nodes:
+            node.properties.update(missing=True, future={"nullable": None, "empty": []})
+        snapshot = ProjectionSnapshot(repository_id="repo", source_sha="a" * 40, generation_id="one", nodes=nodes)
+        result = native_metadata.enrich(snapshot, tmp_path)
+        for original, node in zip(nodes, result.nodes):
+            props = display_properties(node, [])
+&gt;           assert decode(props) == original.model_dump(mode="python")
+E           AssertionError: assert {'missing': T... 'empty': []}} == {'canonical_i...summary', ...}
+E             
+E             Left contains 2 more items:
+E             {'future': {'empty': [], 'nullable': None}, 'missing': True}
+E             Right contains 6 more items:
+E             {'canonical_id': 'test',
+E              'kind': 'Test',
+E              'properties': {'future': {'empty': [], 'nullable': None}, 'missing': True},...
+E             
+E             ...Full output truncated (8 lines hidden), use '-vv' to show
+
+tests\knowledge\test_native_metadata_integration.py:150: AssertionError</failure></testcase></testsuite></testsuites>

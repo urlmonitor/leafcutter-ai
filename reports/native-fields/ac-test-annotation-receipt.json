@@ -1,0 +1,115 @@
+{
+  "files": [
+    {
+      "path": "tests/knowledge/test_native_acceptance_criterion.py",
+      "test_functions": 7,
+      "executable_ast_unchanged": true,
+      "sha256": "0fc6ab8457e503170985e1a238480916ffc1569feb882873380920ad0bfc9d6a"
+    },
+    {
+      "path": "tests/knowledge/test_native_adr.py",
+      "test_functions": 6,
+      "executable_ast_unchanged": true,
+      "sha256": "3324331b6b4a54657a8fcde767dbf150bf9b3380b5b235c3281187c3942ae7e8"
+    },
+    {
+      "path": "tests/knowledge/test_native_component.py",
+      "test_functions": 7,
+      "executable_ast_unchanged": true,
+      "sha256": "df54286f084ada00c237189f042e3007dbb8e5813674fcfda67d398e8cbbdcb3"
+    },
+    {
+      "path": "tests/knowledge/test_native_agent.py",
+      "test_functions": 7,
+      "executable_ast_unchanged": true,
+      "sha256": "dc6cbb3791e4c915b174b85e70656a35c751fd3c0c274dc6fb26e84c76006608"
+    },
+    {
+      "path": "tests/knowledge/test_native_skill.py",
+      "test_functions": 9,
+      "executable_ast_unchanged": true,
+      "sha256": "ffc7b7eb8723d5236eee617cf21610b13e8c3303fc0104ca95fade951a8756b0"
+    },
+    {
+      "path": "tests/knowledge/test_native_ticket.py",
+      "test_functions": 7,
+      "executable_ast_unchanged": true,
+      "sha256": "f70de1a78239e7e36523b6578f0532d70701739be4a48ab1576ab480d588a792"
+    },
+    {
+      "path": "tests/knowledge/test_native_document.py",
+      "test_functions": 8,
+      "executable_ast_unchanged": true,
+      "sha256": "3df8d8fadebb6fe0c1eaec9c79adeb5a5212258644e7c0fc4e69749e52767ae7"
+    },
+    {
+      "path": "tests/knowledge/test_native_roadmap_phase.py",
+      "test_functions": 10,
+      "executable_ast_unchanged": true,
+      "sha256": "b33f5219c05c2f635df0b0eb498a0e842bd36e5f4100929631a2db7fd86d222d"
+    },
+    {
+      "path": "tests/knowledge/test_native_glossary_term.py",
+      "test_functions": 12,
+      "executable_ast_unchanged": true,
+      "sha256": "b3d302168ffcbb3eb3217dbd0895ae082b9154c4d1c3b007adf2c83d8b72b3de"
+    },
+    {
+      "path": "tests/knowledge/test_native_flow.py",
+      "test_functions": 10,
+      "executable_ast_unchanged": true,
+      "sha256": "85d8e59586552a5b19db025964215102105f4991ba8b7abb9e9c1853db73f3e8"
+    },
+    {
+      "path": "tests/knowledge/test_native_mockup.py",
+      "test_functions": 10,
+      "executable_ast_unchanged": true,
+      "sha256": "b2f3560576ecea6c9676bb48536dc3b14d98f502fa250e7aad70e07b96651414"
+    },
+    {
+      "path": "tests/knowledge/test_native_mock_data.py",
+      "test_functions": 10,
+      "executable_ast_unchanged": true,
+      "sha256": "b0e810641a8adcf0974ce3eea41b489a9a3c0afaf23a0c3fa15f9b27f088915c"
+    },
+    {
+      "path": "tests/knowledge/test_native_changelog_entry.py",
+      "test_functions": 10,
+      "executable_ast_unchanged": true,
+      "sha256": "afaae28df20f50847f83f7b536e478e8ef64add081698211244afe258e7f47b5"
+    },
+    {
+      "path": "tests/knowledge/test_native_capability.py",
+      "test_functions": 11,
+      "executable_ast_unchanged": true,
+      "sha256": "6c8a1b537c768f00f906836f41385a4eb5a04c3097596bd7511be819230608c9"
+    },
+    {
+      "path": "tests/knowledge/test_native_decision.py",
+      "test_functions": 14,
+      "executable_ast_unchanged": true,
+      "sha256": "973ffd1463d08c2ebf497cebb17e3c0d2478f8b5319b8f3493f983288d4f14bf"
+    },
+    {
+      "path": "tests/knowledge/test_native_source_file.py",
+      "test_functions": 8,
+      "executable_ast_unchanged": true,
+      "sha256": "1e0272dd58e2eb02c8b0224dd34671d556a97c518699d8bb4f1d76202b6c6890"
+    },
+    {
+      "path": "tests/knowledge/test_native_test.py",
+      "test_functions": 9,
+      "executable_ast_unchanged": true,
+      "sha256": "6c1b6b76d44d73e05db2d8a5c150a5278bce3206d02d8950e326ad4adcf252fa"
+    },
+    {
+      "path": "tests/knowledge/test_native_metadata_integration.py",
+      "test_functions": 5,
+      "executable_ast_unchanged": true,
+      "sha256": "e56dfee0ba07d1c14fedf54ddcb8c9489aabd8b6bc9301d1766bf5e3d25129d1"
+    }
+  ],
+  "test_function_links": 160,
+  "old_umbrella_links_preserved": true,
+  "proof_kinds_match_it_po": true
+}

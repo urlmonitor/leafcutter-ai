@@ -11,7 +11,7 @@ components:
   - build_orchestration
 related_docs:
   - docs/known-issues/commit-guardian.md
-  - docs/known-issues/build-orchestration/open-blocker-ki-bo-20260831-1930.md
+  - docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260831-1930.md
   - docs/known-issues/build-orchestration/open-low-ki-bo-20260831-1932.md
   - docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
 ---

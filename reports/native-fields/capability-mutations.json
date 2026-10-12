@@ -1,0 +1,335 @@
+{
+  "method": "Process-local mutations of the imported reader; each original test rerun green after restoration. No source files mutated.",
+  "module": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph\\knowledge\\native_types\\capability.py",
+  "proofs": [
+    {
+      "test": "test_capability_all_fields_and_nested_extensions_round_trip",
+      "input": [],
+      "alteration": "drop the future nested extension field",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_all_fields_and_nested_extensions_round_trip",
+      "input": [],
+      "alteration": "replace root registry context with entry metadata",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_all_fields_and_nested_extensions_round_trip",
+      "input": [],
+      "alteration": "filter disabled authored capabilities as a runtime adapter might",
+      "mutant": "caught",
+      "failure_type": "ValueError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_real_registry_exact_fields_and_no_defaults",
+      "input": [],
+      "alteration": "insert runtime enabled=True into authored metadata",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_legacy_admission_does_not_read_references",
+      "input": [],
+      "alteration": "inject inferred components into legacy source",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_source_order_and_changed_values_are_visible",
+      "input": [],
+      "alteration": "sort records by identity instead of preserving source order",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_absent_and_empty_registry_do_not_invent_records",
+      "input": [],
+      "alteration": "manufacture a Capability record from a legacy agent",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_envelope_fails_explicitly",
+      "input": [
+        "{"
+      ],
+      "alteration": "silently discard malformed registry as empty",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_envelope_fails_explicitly",
+      "input": [
+        "[]"
+      ],
+      "alteration": "silently discard malformed registry as empty",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_envelope_fails_explicitly",
+      "input": [
+        "{}"
+      ],
+      "alteration": "silently discard malformed registry as empty",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_envelope_fails_explicitly",
+      "input": [
+        "{\"registry_id\":\"x\",\"registry_version\":1,\"capabilities\":{}}"
+      ],
+      "alteration": "silently discard malformed registry as empty",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_invalid_registry_identity_fails",
+      "input": [
+        "registry_id",
+        ""
+      ],
+      "alteration": "silently discard invalid registry identity",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_invalid_registry_identity_fails",
+      "input": [
+        "registry_version",
+        0
+      ],
+      "alteration": "silently discard invalid registry identity",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_invalid_registry_identity_fails",
+      "input": [
+        "registry_version",
+        true
+      ],
+      "alteration": "silently discard invalid registry identity",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "id",
+        "Bad Id"
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "id",
+        null
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "name",
+        ""
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "version",
+        "1"
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "request_kinds",
+        []
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "accepts_schemas",
+        [
+          "unknown"
+        ]
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "execution_mode",
+        "unknown"
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "binding",
+        ""
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "enabled",
+        1
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "process_maturity",
+        true
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "process_maturity",
+        5
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "cost_hints",
+        {
+          "jev_calls": -1
+        }
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "availability",
+        {
+          "status": "unknown"
+        }
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "admission",
+        {}
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_malformed_entry_fails_explicitly",
+      "input": [
+        "admission",
+        {
+          "kind": "legacy_admission",
+          "decision_ref": "ADR-999",
+          "admitted_by": "human",
+          "admitted_on": "2026-10-02"
+        }
+      ],
+      "alteration": "silently discard malformed present entry",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_duplicate_ids_fail_without_source_changes",
+      "input": [],
+      "alteration": "silently discard conflicting identities",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_resolved_source_cannot_escape_snapshot",
+      "input": [],
+      "alteration": "disable resolved source containment",
+      "mutant": "caught",
+      "failure_type": "Failed",
+      "restored": "green"
+    },
+    {
+      "test": "test_capability_metadata_and_context_are_independent_copies",
+      "input": [],
+      "alteration": "retain mutable aliases to authored metadata and registry context",
+      "mutant": "caught",
+      "failure_type": "AssertionError",
+      "restored": "green"
+    }
+  ]
+}

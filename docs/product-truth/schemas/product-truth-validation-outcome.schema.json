@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "product-truth-validation-outcome.schema.json",
+  "title": "Product Truth validation stdout outcome",
+  "description": "Source-reviewed top-level contract of docs/product-truth/scripts/product_truth_outcome.py::_print_outcome_contract. Additive fields and nested source-defined diagnostic objects remain permitted. This documentation schema is not runtime enforcement or automatic source-code parity. Early dependency/tighten failures do not emit this shape.",
+  "type": "object",
+  "required": [
+    "outcome",
+    "examined",
+    "unreadable",
+    "empty_types",
+    "resolved_pointers",
+    "unresolvable_pointers",
+    "examined_by_check",
+    "resolved_labels",
+    "bounds",
+    "type_population",
+    "example_only_types"
+  ],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "checked-and-sound",
+        "nothing-examined",
+        "degraded",
+        "failed"
+      ]
+    },
+    "examined": {
+      "type": "integer"
+    },
+    "unreadable": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "empty_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "resolved_pointers": {
+      "type": "integer"
+    },
+    "unresolvable_pointers": {
+      "type": "integer"
+    },
+    "examined_by_check": {
+      "type": "object"
+    },
+    "resolved_labels": {
+      "type": "integer"
+    },
+    "bounds": {
+      "type": "object"
+    },
+    "type_population": {
+      "type": "object"
+    },
+    "example_only_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

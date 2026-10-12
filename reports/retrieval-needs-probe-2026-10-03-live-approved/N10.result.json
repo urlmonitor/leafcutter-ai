@@ -1,0 +1,454 @@
+{
+  "case_id": "N10",
+  "question": "What was each employee's payroll amount last month?",
+  "origin": [
+    "RS-23",
+    "enriched-unsupported-need"
+  ],
+  "human_gold": "The offered repository catalog has no employees or compensation field. Preserve unmet payroll meaning and disclose unsupported need. Empty or unrelated selected fields cannot be presented as a resolved retrieval plan.",
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "What was each employee's payroll amount last month?",
+    "source_scope": {
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only",
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "allow_retrieval": false
+    },
+    "selections": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [
+        "content"
+      ],
+      "document_types": [],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [
+        "report"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria",
+        "test_spec",
+        "work_status",
+        "status",
+        "level",
+        "parent",
+        "covered_by",
+        "provenance",
+        "mapping",
+        "compatibility"
+      ],
+      "document_types": [],
+      "relationships": []
+    },
+    "rejected": {
+      "entity_types": [
+        "ac",
+        "source_file",
+        "test",
+        "adr",
+        "schema",
+        "component"
+      ],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [
+        "ac_yaml",
+        "source_code",
+        "test_source",
+        "adr",
+        "schema",
+        "execution_report"
+      ],
+      "relationships": [
+        "parent_direct",
+        "children_direct",
+        "all_descendants",
+        "incoming_dependencies_direct",
+        "linked_tests"
+      ]
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "discovery_needed",
+    "unresolved": [
+      "entity_types",
+      "document_types",
+      "needs_outside_catalog"
+    ],
+    "status": "needs_resolution",
+    "response": {
+      "schema_version": "1.0",
+      "model_id": "jev-1.13.0",
+      "request_id": "req_01a100c495807c0dbe1264902e750b58",
+      "answers": {
+        "entity_types.ac": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.ac",
+          "probability": 0.12,
+          "confidence": null
+        },
+        "entity_types.source_file": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.source_file",
+          "probability": 0.23,
+          "confidence": null
+        },
+        "entity_types.test": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.test",
+          "probability": 0.07,
+          "confidence": null
+        },
+        "entity_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.adr",
+          "probability": 0.07,
+          "confidence": null
+        },
+        "entity_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.schema",
+          "probability": 0.26,
+          "confidence": null
+        },
+        "entity_types.report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.report",
+          "probability": 0.38,
+          "confidence": null
+        },
+        "entity_types.component": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "entity_types.component",
+          "probability": 0.12,
+          "confidence": null
+        },
+        "required_fields.criteria": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.criteria",
+          "probability": 0.68,
+          "confidence": null
+        },
+        "required_fields.test_spec": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.test_spec",
+          "probability": 0.65,
+          "confidence": null
+        },
+        "required_fields.work_status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.work_status",
+          "probability": 0.57,
+          "confidence": null
+        },
+        "required_fields.status": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.status",
+          "probability": 0.52,
+          "confidence": null
+        },
+        "required_fields.level": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.level",
+          "probability": 0.59,
+          "confidence": null
+        },
+        "required_fields.parent": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.parent",
+          "probability": 0.48,
+          "confidence": null
+        },
+        "required_fields.covered_by": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.covered_by",
+          "probability": 0.59,
+          "confidence": null
+        },
+        "required_fields.content": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.content",
+          "probability": 0.74,
+          "confidence": null
+        },
+        "required_fields.provenance": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.provenance",
+          "probability": 0.6,
+          "confidence": null
+        },
+        "required_fields.mapping": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.mapping",
+          "probability": 0.35,
+          "confidence": null
+        },
+        "required_fields.compatibility": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "required_fields.compatibility",
+          "probability": 0.43,
+          "confidence": null
+        },
+        "document_types.ac_yaml": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.ac_yaml",
+          "probability": 0.1,
+          "confidence": null
+        },
+        "document_types.source_code": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.source_code",
+          "probability": 0.22,
+          "confidence": null
+        },
+        "document_types.test_source": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.test_source",
+          "probability": 0.1,
+          "confidence": null
+        },
+        "document_types.adr": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.adr",
+          "probability": 0.07,
+          "confidence": null
+        },
+        "document_types.schema": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.schema",
+          "probability": 0.21,
+          "confidence": null
+        },
+        "document_types.execution_report": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "document_types.execution_report",
+          "probability": 0.14,
+          "confidence": null
+        },
+        "relationships.parent_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.parent_direct",
+          "probability": 0.2,
+          "confidence": null
+        },
+        "relationships.children_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.children_direct",
+          "probability": 0.25,
+          "confidence": null
+        },
+        "relationships.all_descendants": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.all_descendants",
+          "probability": 0.22,
+          "confidence": null
+        },
+        "relationships.incoming_dependencies_direct": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.incoming_dependencies_direct",
+          "probability": 0.15,
+          "confidence": null
+        },
+        "relationships.linked_tests": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "relationships.linked_tests",
+          "probability": 0.3,
+          "confidence": null
+        },
+        "detail_mode": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "detail_mode",
+          "choice": "fields",
+          "probabilities": {
+            "fields": 0.94,
+            "bounded_context": 0.0,
+            "full_document": 0.0,
+            "unknown": 0.06
+          },
+          "confidence": 0.92
+        },
+        "completeness": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "completeness",
+          "choice": "exhaustive_set",
+          "probabilities": {
+            "single_entity": 0.0,
+            "exhaustive_count": 0.0,
+            "selected_entities": 0.01,
+            "examples": 0.0,
+            "unknown": 0.02,
+            "exhaustive_set": 0.97
+          },
+          "confidence": 0.96
+        },
+        "hierarchy_scope": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "hierarchy_scope",
+          "choice": "not_applicable",
+          "probabilities": {
+            "exclude_parents": 0.0,
+            "include_root": 0.02,
+            "not_applicable": 0.97,
+            "unknown": 0.01,
+            "exclude_root": 0.0
+          },
+          "confidence": 0.96
+        },
+        "scope_resolution": {
+          "schema_version": "1.0",
+          "kind": "choice",
+          "question_id": "scope_resolution",
+          "choice": "discovery_needed",
+          "probabilities": {
+            "discovery_needed": 0.76,
+            "sufficient": 0.14,
+            "unknown": 0.02,
+            "user_choice_missing": 0.08
+          },
+          "confidence": 0.68
+        },
+        "needs_outside_catalog": {
+          "schema_version": "1.0",
+          "kind": "noul",
+          "question_id": "needs_outside_catalog",
+          "probability": 0.82,
+          "confidence": null
+        }
+      },
+      "usage": {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 2703,
+        "output_tokens": 802,
+        "duration_ms": 302,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      "latency_ms": 302,
+      "input_fingerprint": "03f632cd9d6d8d5e24c91ac1fbb1f1c66db7e11ee5248d460aea28016e20eeab",
+      "adapter_version": "http-direct/1"
+    },
+    "provider_calls": 1,
+    "max_relation_depth": 3,
+    "limitations": [
+      "Needs interpretation only: no retrieval, availability check, final answer or fulfillment claim.",
+      "Supplied context/known IDs are unverified candidates, not authority or permissions.",
+      "The execution depth bound does not narrow semantic all-descendant requirements."
+    ]
+  },
+  "error": null,
+  "grade": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "one_actual_http_request",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "original_question_unchanged",
+        "passed": true,
+        "actual": "What was each employee's payroll amount last month?",
+        "expected": "What was each employee's payroll amount last month?"
+      },
+      {
+        "name": "exclude.entity_types",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "ac",
+            "source_file",
+            "test",
+            "adr",
+            "schema",
+            "report",
+            "component"
+          ]
+        }
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [
+          "content"
+        ],
+        "expected": {
+          "forbidden": [
+            "criteria",
+            "work_status",
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "needs_resolution",
+        "expected": [
+          "needs_resolution"
+        ]
+      },
+      {
+        "name": "unsupported_need_disclosed",
+        "passed": true,
+        "actual": 0.82,
+        "expected": ">=0.7 and unresolved"
+      },
+      {
+        "name": "no_unoffered_id",
+        "passed": true,
+        "actual": [],
+        "expected": "literal or independently supplied observed candidate"
+      }
+    ]
+  },
+  "physical_http_calls": 1,
+  "wire_questions": 34,
+  "elapsed_seconds": 0.538
+}

@@ -303,6 +303,9 @@ class TestBP600WorkflowFullRunTopology:
             "isolation-check",
             "guard-checks",
             "ac-creation",
+            # BO-4400f-1: the shell step that creates this run's labelled scratch
+            # item, before the first dispatch that starts processes.
+            "scratch-item",
             "test-writer",
             "red-verify/strict",
             "baseline-dirty-snapshot",
@@ -319,6 +322,10 @@ class TestBP600WorkflowFullRunTopology:
             # the wrong anchor.
             "knowledge-routing-step",
             "commit",
+            # INF-700a-5: one read-only observation of what the fix commit
+            # actually carried, right after it; its answer is the reported
+            # knowledge_routing.
+            "knowledge-routing-observe",
             "changelog-author",
             "commit/changelog",
             "push-and-pr",

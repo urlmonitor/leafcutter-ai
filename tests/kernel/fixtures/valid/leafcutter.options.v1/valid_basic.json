@@ -1,0 +1,27 @@
+{
+  "options": [
+    {
+      "id": "opt-a",
+      "title": "Option opt-a",
+      "proposal_status": "proposed",
+      "approval_status": "proposed"
+    },
+    {
+      "id": "opt-b",
+      "title": "Option opt-b",
+      "proposal_status": "proposed",
+      "approval_status": "proposed"
+    }
+  ],
+  "proposed_criteria": [
+    {
+      "id": "crit-a",
+      "question": "Is it simple to operate?",
+      "proposal_status": "proposed",
+      "approval_status": "proposed"
+    }
+  ],
+  "unresolved_feasibility": [
+    "Disk quota unknown"
+  ]
+}

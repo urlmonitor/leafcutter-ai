@@ -1,0 +1,13 @@
+{
+  "model": "jev-test-2026-09",
+  "answers": {
+    "q.noul": {"type": "noul", "noul": 0.83},
+    "q.choice": {"type": "choice", "choice": "alpha",
+                 "probabilities": {"alpha": 0.7, "beta": 0.2, "__NONE__": 0.1},
+                 "confidence": 0.61},
+    "q.score": {"type": "score", "score": 1.4,
+                "legend": {"0": "low", "1": "mid", "2": "high"},
+                "probabilities": {"0": 0.1, "1": 0.4, "2": 0.5}, "confidence": 0.44}
+  },
+  "usage": {"input_tokens": 1000, "output_tokens": 12}
+}

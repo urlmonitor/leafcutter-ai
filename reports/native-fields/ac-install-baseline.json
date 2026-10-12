@@ -1,0 +1,169 @@
+{
+  "source": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\aura-domain-graph",
+  "destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+  "files": [
+    {
+      "path": "tests/knowledge/test_native_acceptance_criterion.py",
+      "source_before_sha256": "5e75a6daf1e96fab3abf6fc2fbba7777d5613a25fa9622cef2a65d32defc1e57",
+      "before_sha256": "5e75a6daf1e96fab3abf6fc2fbba7777d5613a25fa9622cef2a65d32defc1e57"
+    },
+    {
+      "path": "tests/knowledge/test_native_adr.py",
+      "source_before_sha256": "78e4562d018b7f341d82ad48239cbd883efb29f1912bde9e1f01a31c9c7a3db5",
+      "before_sha256": "78e4562d018b7f341d82ad48239cbd883efb29f1912bde9e1f01a31c9c7a3db5"
+    },
+    {
+      "path": "tests/knowledge/test_native_component.py",
+      "source_before_sha256": "ce6ac9e60b74113889ac079b89164ac34b5f91c3834f27cae35ee781fd312956",
+      "before_sha256": "ce6ac9e60b74113889ac079b89164ac34b5f91c3834f27cae35ee781fd312956"
+    },
+    {
+      "path": "tests/knowledge/test_native_agent.py",
+      "source_before_sha256": "e60ce22c6e5f698137e816cff1f50e037c3dc820eb8e14f30fa2021ee5753bb7",
+      "before_sha256": "e60ce22c6e5f698137e816cff1f50e037c3dc820eb8e14f30fa2021ee5753bb7"
+    },
+    {
+      "path": "tests/knowledge/test_native_skill.py",
+      "source_before_sha256": "2f5cdaef11f4414609e492b38dfc636eba1421f7352497e603658d7e1c995799",
+      "before_sha256": "2f5cdaef11f4414609e492b38dfc636eba1421f7352497e603658d7e1c995799"
+    },
+    {
+      "path": "tests/knowledge/test_native_ticket.py",
+      "source_before_sha256": "08e7b4286b536341c841fa9e55bd6b2050b8a60936885937f221501e1907552f",
+      "before_sha256": "08e7b4286b536341c841fa9e55bd6b2050b8a60936885937f221501e1907552f"
+    },
+    {
+      "path": "tests/knowledge/test_native_document.py",
+      "source_before_sha256": "51431ff925a0bc64dbe28232f5991bb830ce86ec06cc98944546ceff832abd1b",
+      "before_sha256": "51431ff925a0bc64dbe28232f5991bb830ce86ec06cc98944546ceff832abd1b"
+    },
+    {
+      "path": "tests/knowledge/test_native_roadmap_phase.py",
+      "source_before_sha256": "a4944651705caca098ddc150ae481a80a6cf2c2fc55e2862240ea3355ad0077e",
+      "before_sha256": "a4944651705caca098ddc150ae481a80a6cf2c2fc55e2862240ea3355ad0077e"
+    },
+    {
+      "path": "tests/knowledge/test_native_glossary_term.py",
+      "source_before_sha256": "5a4f33d39cd02087c5d70648bf8ae2ffb7bd8baf9062b67f2acfc5c78768a7f9",
+      "before_sha256": "5a4f33d39cd02087c5d70648bf8ae2ffb7bd8baf9062b67f2acfc5c78768a7f9"
+    },
+    {
+      "path": "tests/knowledge/test_native_flow.py",
+      "source_before_sha256": "5f05a831e8e4a5ae9ba34eebae7f285ea7cbbfe03229570b0f211e2ab6d16924",
+      "before_sha256": "5f05a831e8e4a5ae9ba34eebae7f285ea7cbbfe03229570b0f211e2ab6d16924"
+    },
+    {
+      "path": "tests/knowledge/test_native_mockup.py",
+      "source_before_sha256": "ce88851a7f01e58718ec2c33885bf55765fc6900a34bf7f2213a5f62f0cd8493",
+      "before_sha256": "ce88851a7f01e58718ec2c33885bf55765fc6900a34bf7f2213a5f62f0cd8493"
+    },
+    {
+      "path": "tests/knowledge/test_native_mock_data.py",
+      "source_before_sha256": "c9ee9186d1d397c8d18974b405c219c1caceb798ac169d754d9f4b001affa1f3",
+      "before_sha256": "c9ee9186d1d397c8d18974b405c219c1caceb798ac169d754d9f4b001affa1f3"
+    },
+    {
+      "path": "tests/knowledge/test_native_changelog_entry.py",
+      "source_before_sha256": "8021bfd7f7ce9d9c43210eaaf02c176f1d1b0894464748858c23be958ff1412a",
+      "before_sha256": "8021bfd7f7ce9d9c43210eaaf02c176f1d1b0894464748858c23be958ff1412a"
+    },
+    {
+      "path": "tests/knowledge/test_native_capability.py",
+      "source_before_sha256": "974403fc5721558e6db422ab393c2e42f277ba9a7bbbe826983cfa6ecb99bf37",
+      "before_sha256": "974403fc5721558e6db422ab393c2e42f277ba9a7bbbe826983cfa6ecb99bf37"
+    },
+    {
+      "path": "tests/knowledge/test_native_decision.py",
+      "source_before_sha256": "8346345a9976500eaf2f4d9c28314bfb06e58aa2bdabec3e1a821aaf2c486694",
+      "before_sha256": "8346345a9976500eaf2f4d9c28314bfb06e58aa2bdabec3e1a821aaf2c486694"
+    },
+    {
+      "path": "tests/knowledge/test_native_source_file.py",
+      "source_before_sha256": "a086e59087d8246b218c92eab6002e41203bea6c961d1d6cb5ef16405b442375",
+      "before_sha256": "a086e59087d8246b218c92eab6002e41203bea6c961d1d6cb5ef16405b442375"
+    },
+    {
+      "path": "tests/knowledge/test_native_test.py",
+      "source_before_sha256": "de72b98e29886ff3b9768956d3d61bc863ab1958e0a452b3e5e503b8baafa784",
+      "before_sha256": "de72b98e29886ff3b9768956d3d61bc863ab1958e0a452b3e5e503b8baafa784"
+    },
+    {
+      "path": "tests/knowledge/test_native_metadata_integration.py",
+      "source_before_sha256": "df11ebef8393a55392f3e16808c5bc159dee7200ceb93c9b91a1a8341d9d1882",
+      "before_sha256": "df11ebef8393a55392f3e16808c5bc159dee7200ceb93c9b91a1a8341d9d1882"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1.yaml",
+      "source_before_sha256": "d7cb2d1b8d76bc44851d4b80645816551813c7034b0a29f2a38c24ce1093473c",
+      "before_sha256": "9f493250e755eecdff30c91237367c609aa629905e0898db4f91ecf99f9b8a7c"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-i.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iv.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-v.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vi.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-viii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-x.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xi.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiii.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiv.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xv.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvi.yaml",
+      "before_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvii.yaml",
+      "before_sha256": null
+    }
+  ]
+}

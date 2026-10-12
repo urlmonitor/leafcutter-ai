@@ -117,6 +117,20 @@ def set_local_change_baseline(target_root: Path, output_root: Path) -> None:
         _previous_output_mappings = previous_mappings
 
 
+def get_previous_output_mappings() -> dict[str, Any]:
+    """Return a copy of the previous install's output_mappings baseline.
+
+    The same record ``set_local_change_baseline`` captured before any phase
+    wrote a file. ``build_retired_outputs`` reads it to attribute an installed
+    file whose template the package no longer ships.
+
+    Returns:
+        A shallow copy of the baseline. Empty when no baseline was set or no
+        readable previous manifest existed (a first install).
+    """
+    return dict(_previous_output_mappings)
+
+
 def _hash_for_local_change_check(path: Path) -> str | None:
     """Hash pre-write file content identically to check_output_drift.py.
 
@@ -286,4 +300,9 @@ def announce_if_local_change_replaced(target: Path) -> None:
 #   to the same name the package ships, reached through the still-intact
 #   ``.claude/skills`` symlink) that must be reported and preserved, not
 #   silently replaced like every other generated-file family. (#BP-1500g-2-i)
+# - 2026-09-30 [BrainCandy/TICKET-20260930-RetireRenamedCommandOutputs]:
+#   Added get_previous_output_mappings(), a read-only copy of the baseline,
+#   so build_retired_outputs attributes a retired command file from this same
+#   previous-install record instead of reading the manifest a second time.
+#   (#TICKET-20260930-RetireRenamedCommandOutputs)
 # ===========================================================================

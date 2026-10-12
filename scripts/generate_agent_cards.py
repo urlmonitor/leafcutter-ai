@@ -11,7 +11,10 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     card markdown string for one agent. Section-rendering helpers (one per
     card section) encapsulate the rendering logic for each block. A top-level
     `build_agent_cards()` function drives the full-tree pass for `build.py`.
-    YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
+    Cards are fully static: nothing is read from the AC store (the walk that
+    fed an "AC Assignments" section was removed 2026-10-09). Frontmatter is
+    parsed with the pure-Python `yaml.SafeLoader` (one small block per agent
+    template, dozens of files). All file I/O is
     wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
     knowledge_channel sources that resolve to real files into relative Markdown
     links from the card output path. doc_links entries that reference files not
@@ -31,18 +34,14 @@ from typing import Any
 
 import yaml
 
+from agent_card_source_resolver import _is_git_ignored, _resolve_source_to_path  # noqa: E402, F401
+
 _log = logging.getLogger(__name__)
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
 _REGISTRY_PATH = _PACKAGE_ROOT / "config" / "agent_registry.json"
 
-# File extensions and path patterns considered "file-like" sources in
-# knowledge_channels.  A source string matching any of these is a candidate
-# for hyperlink conversion when the file exists on disk.
-_FILE_EXTENSIONS = frozenset(
-    {".md", ".py", ".yaml", ".yml", ".json", ".sh", ".toml", ".txt"}
-)
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +89,13 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
         return {}
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.safe_load(fm_text)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here degrades to {} for
+        # this one agent template, the same KI-BP-019 "silent degrade"
+        # shape documented in template_compiler.py (already reverted). One
+        # small frontmatter block per agent template (dozens of files, not
+        # thousands) -- no speed case for the fast loader at this volume.
+        parsed = yaml.load(fm_text, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in frontmatter: %s", exc)
         return {}
@@ -184,88 +189,6 @@ def make_relative_link(
     # Normalise path separators to POSIX forward-slashes for Markdown.
     rel_posix = Path(rel).as_posix()
     return f"[{label}]({rel_posix})"
-
-
-def _resolve_source_to_path(
-    source: str,
-    package_root: Path,
-) -> Path | None:
-    """Attempt to resolve a knowledge-channel source string to a real file.
-
-    Tries the following strategies in order and returns the first match:
-
-    1. Treat *source* as a path relative to *package_root*.
-    2. When the source token has a directory-hinting prefix word (e.g.
-       ``"signoff SKILL.md"``), look for a file at
-       ``<any-dir-containing-prefix-word>/<filename>`` within the package tree.
-    3. Walk the package tree looking for any file whose name matches the
-       filename component of *source* (shallow search — only 4 levels deep).
-
-    Args:
-        source: Raw source string from a knowledge_channels entry, e.g.
-            ``"Root CLAUDE.md"`` or ``"signoff SKILL.md"``.
-        package_root: Absolute path to the package root (repo root).
-
-    Returns:
-        Resolved :class:`~pathlib.Path` if found on disk, else ``None``.
-    """
-    # Strategy 1: direct relative path.
-    candidate = package_root / source
-    if candidate.exists():
-        return candidate
-
-    # Extract filename token (last word that carries a known extension).
-    tokens = source.split()
-    filename: str | None = None
-    filename_idx: int = -1
-    for i, token in reversed(list(enumerate(tokens))):
-        if Path(token).suffix in _FILE_EXTENSIONS:
-            filename = token
-            filename_idx = i
-            break
-
-    if filename is None:
-        return None
-
-    # Strategy 2: directory-hint match.  When there is a word before the
-    # filename token, treat that word as a hint for the parent directory name.
-    if filename_idx > 0:
-        hint = tokens[filename_idx - 1].lower()
-        for root_dir, _dirs, files in os.walk(package_root):
-            root_path = Path(root_dir)
-            try:
-                rel_depth = len(root_path.relative_to(package_root).parts)
-            except ValueError:
-                continue
-            if rel_depth > 5:
-                _dirs.clear()
-                continue
-            # Parent directory name must contain the hint word.
-            if hint in root_path.name.lower() and filename in files:
-                return root_path / filename
-
-    # Strategy 3: filename-only match (up to 4 levels deep).
-    # Collect ALL matches; resolve only when exactly one unique path is found.
-    # An ambiguous match (multiple locations share the same basename) returns None
-    # so that the caller's missing-doc / plain-text fallback applies rather than
-    # producing a non-deterministic hyperlink.
-    matches: list[Path] = []
-    for root_dir, _dirs, files in os.walk(package_root):
-        root_path = Path(root_dir)
-        try:
-            rel_depth = len(root_path.relative_to(package_root).parts)
-        except ValueError:
-            continue
-        if rel_depth > 4:
-            _dirs.clear()  # prune deeper subtrees
-            continue
-        if filename in files:
-            matches.append(root_path / filename)
-
-    unique_matches = sorted(set(matches))
-    if len(unique_matches) == 1:
-        return unique_matches[0]
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -628,153 +551,6 @@ def render_behavioral_patterns(template_frontmatter: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_ac_assignments(agent_id: str, ac_list: list[dict[str, Any]]) -> str:
-    """Render the '## AC Assignments' card section for a specific agent.
-
-    Groups the provided AC dicts (each with at minimum ``id`` and ``title``)
-    under a ``### {agent_id}`` heading.  Returns an empty string when
-    *ac_list* is empty so callers can omit the section entirely.
-
-    Args:
-        agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
-        ac_list: List of AC dicts, each containing at minimum ``id`` and
-            ``title`` keys.  Only ACs that belong to *agent_id* (i.e. whose
-            ``assigned_agent`` field equals *agent_id*) should be supplied by
-            the caller — this function does not filter.
-
-    Returns:
-        Markdown string for the AC Assignments section, or empty string when
-        *ac_list* is empty.
-    """
-    if not ac_list:
-        return ""
-
-    lines: list[str] = ["## AC Assignments", "", f"### {agent_id}", ""]
-    for ac in ac_list:
-        ac_id = ac.get("id", "—")
-        title = ac.get("title", "—")
-        lines.append(f"- {ac_id}: {title}")
-    lines.append("")
-    return "\n".join(lines)
-
-
-def _scan_ac_assignments(
-    agent_id: str,
-    docs_root: Path,
-) -> list[dict[str, Any]]:
-    """Scan the AC store for YAML files assigned to *agent_id*.
-
-    Walks ``docs_root/docs/acceptance-criteria/`` recursively and loads
-    every ``.yaml`` / ``.yml`` file.  Returns dicts with ``id`` and
-    ``title`` for files whose ``assigned_agent`` field matches *agent_id*
-    and whose ``status`` field is ``"active"``.
-
-    Args:
-        agent_id: Canonical agent identifier to match against
-            ``assigned_agent`` in each AC YAML file.
-        docs_root: Absolute path to the package root (repo root).  The AC
-            store is expected at ``docs_root/docs/acceptance-criteria/``.
-
-    Returns:
-        List of ``{"id": ..., "title": ..., "assigned_agent": ...}`` dicts
-        for each matching active AC, sorted by AC ``id``.  Empty list when
-        the AC store directory does not exist or no matching ACs are found.
-    """
-    ac_dir = docs_root / "docs" / "acceptance-criteria"
-    if not ac_dir.exists():
-        return []
-
-    results: list[dict[str, Any]] = []
-    for dirpath, _dirs, filenames in os.walk(ac_dir):
-        for filename in filenames:
-            if not (filename.endswith(".yaml") or filename.endswith(".yml")):
-                continue
-            filepath = Path(dirpath) / filename
-            try:
-                text = filepath.read_text(encoding="utf-8")
-            except OSError as exc:
-                _log.warning("Cannot read AC file %s: %s", filepath, exc)
-                continue
-            try:
-                data = yaml.safe_load(text)
-            except yaml.YAMLError as exc:
-                _log.warning("YAML parse error in %s: %s", filepath, exc)
-                continue
-            if not isinstance(data, dict):
-                continue
-            if data.get("assigned_agent") != agent_id:
-                continue
-            if data.get("status") != "active":
-                continue
-            results.append({
-                "id": data.get("id", Path(filename).stem),
-                "title": data.get("title", ""),
-                "assigned_agent": agent_id,
-            })
-
-    results.sort(key=lambda d: d.get("id", ""))
-    return results
-
-
-def _scan_all_ac_assignments(
-    docs_root: Path,
-) -> dict[str, list[dict[str, Any]]]:
-    """Scan the AC store ONCE and group active ACs by ``assigned_agent``.
-
-    Walks ``docs_root/docs/acceptance-criteria/`` a single time, parses each
-    ``.yaml`` / ``.yml`` file once, and returns a mapping of ``assigned_agent``
-    -> list of ``{"id", "title", "assigned_agent"}`` dicts (each group sorted
-    by AC ``id``).  This is the batch equivalent of calling
-    :func:`_scan_ac_assignments` for every agent, but it avoids re-walking and
-    re-parsing the entire store once per agent — an O(agents × ac_files) cost
-    that pegged the CPU for >12 minutes on a large store.
-
-    Args:
-        docs_root: Absolute path to the package root (repo root).  The AC
-            store is expected at ``docs_root/docs/acceptance-criteria/``.
-
-    Returns:
-        Mapping of agent id to its list of matching active AC dicts.  Empty
-        mapping when the AC store directory does not exist.
-    """
-    ac_dir = docs_root / "docs" / "acceptance-criteria"
-    grouped: dict[str, list[dict[str, Any]]] = {}
-    if not ac_dir.exists():
-        return grouped
-
-    for dirpath, _dirs, filenames in os.walk(ac_dir):
-        for filename in filenames:
-            if not (filename.endswith(".yaml") or filename.endswith(".yml")):
-                continue
-            filepath = Path(dirpath) / filename
-            try:
-                text = filepath.read_text(encoding="utf-8")
-            except OSError as exc:
-                _log.warning("Cannot read AC file %s: %s", filepath, exc)
-                continue
-            try:
-                data = yaml.safe_load(text)
-            except yaml.YAMLError as exc:
-                _log.warning("YAML parse error in %s: %s", filepath, exc)
-                continue
-            if not isinstance(data, dict):
-                continue
-            assigned_agent = data.get("assigned_agent")
-            if not assigned_agent:
-                continue
-            if data.get("status") != "active":
-                continue
-            grouped.setdefault(assigned_agent, []).append({
-                "id": data.get("id", Path(filename).stem),
-                "title": data.get("title", ""),
-                "assigned_agent": assigned_agent,
-            })
-
-    for entries in grouped.values():
-        entries.sort(key=lambda d: d.get("id", ""))
-    return grouped
-
-
 def render_references(
     registry_entry: dict[str, Any],
     card_path: Path | None = None,
@@ -878,7 +654,6 @@ def generate_card(
     registry_entry: dict[str, Any],
     card_path: Path | None = None,
     package_root: Path | None = None,
-    ac_assignments: list[dict[str, Any]] | None = None,
 ) -> str:
     """Generate a complete .card.md string for one agent.
 
@@ -892,9 +667,8 @@ def generate_card(
     knowledge_channel source strings that resolve to real files on disk are
     also rendered as hyperlinks in the Knowledge Flow table.
 
-    When *ac_assignments* is a non-empty list, a "## AC Assignments" section
-    is appended after all other sections, grouping the listed ACs under the
-    agent's own heading (INF-600b-2).
+    Cards are static: no AC-store data is rendered into them (see DECISION
+    HISTORY, 2026-10-09).
 
     Args:
         agent_id: Canonical agent identifier (e.g. ``"python-coder"``).
@@ -907,10 +681,6 @@ def generate_card(
         package_root: Absolute path to the package root (repo root).  Used to
             resolve file paths when generating hyperlinks.  ``None`` disables
             link generation.
-        ac_assignments: Optional list of AC dicts (each with at minimum ``id``
-            and ``title``) for ACs assigned to this agent in the AC store.
-            When non-empty, a "## AC Assignments" section is appended to the
-            card.  ``None`` or ``[]`` omits the section.
 
     Returns:
         Complete card markdown string, starting with YAML frontmatter.
@@ -1023,11 +793,6 @@ def generate_card(
     if references_section:
         sections += ["---\n\n", references_section]
 
-    # Append the AC Assignments section when assignments are available (INF-600b-2).
-    ac_section = render_ac_assignments(agent_id, ac_assignments or [])
-    if ac_section:
-        sections += ["---\n\n", ac_section]
-
     return card_fm + title_block + summary_table + "".join(sections)
 
 
@@ -1078,15 +843,6 @@ def build_agent_cards(
     cards_dir = target_root / "docs" / "agents" / "cards"
     written = 0
 
-    # Scan the AC store ONCE and group by assigned_agent, rather than
-    # re-walking + re-parsing every AC YAML file per agent.  A per-agent scan
-    # is O(agents × ac_files); on a large store (thousands of AC files ×
-    # dozens of agents) that pegged the CPU for >12 minutes.  Skipped entirely
-    # in dry-run mode, where card content is never materialised.
-    ac_assignments_by_agent = (
-        {} if dry_run else _scan_all_ac_assignments(target_root)
-    )
-
     for template_file in sorted(agents_template_dir.glob("*.md")):
         if template_file.name.startswith("_"):
             continue  # Skip helper templates
@@ -1113,8 +869,6 @@ def build_agent_cards(
 
         card_path = cards_dir / f"{agent_id}.card.md"
 
-        ac_assignments = ac_assignments_by_agent.get(agent_id, [])
-
         try:
             card_content = generate_card(
                 agent_id,
@@ -1122,7 +876,6 @@ def build_agent_cards(
                 registry_entry,
                 card_path=card_path,
                 package_root=target_root,
-                ac_assignments=ac_assignments,
             )
         except Exception as exc:  # noqa: BLE001
             _log.warning("Card generation failed for %s: %s", agent_id, exc)
@@ -1139,7 +892,7 @@ def build_agent_cards(
 
         try:
             cards_dir.mkdir(parents=True, exist_ok=True)
-            card_path.write_text(card_content, encoding="utf-8")
+            card_path.write_text(card_content, encoding="utf-8", newline="\n")
             print(f"  docs/agents/cards/{agent_id}.card.md")
             written += 1
         except OSError as exc:
@@ -1251,4 +1004,16 @@ def build_agent_cards(
 #   (test_generated_frontmatter_survives_hook_transform_unchanged) asserts
 #   generate_card()'s output round-trips unchanged through the hook's own
 #   transform_content().
+#
+# - 2026-10-09 [python-coder/agent-cards-static]:
+#   Removed the dynamic "## AC Assignments" section and the AC-store walk
+#   that fed it (render_ac_assignments, _scan_ac_assignments,
+#   _scan_all_ac_assignments, the generate_card() `ac_assignments`
+#   parameter, and the now-unused yaml_safe_loader import). The AC store is
+#   the source of truth; caching it in generated markdown made every build
+#   rewrite cards (the section changed whenever any AC changed), producing
+#   an uncommittable, permanently dirty tree and an unactionable doc-length
+#   refusal. Consumers group by `assigned_agent` at read time. The section
+#   was 33% of all card lines yet present in only 17 of 64 cards. The
+#   earlier entries above that describe the walk are historical.
 # ====================================================================

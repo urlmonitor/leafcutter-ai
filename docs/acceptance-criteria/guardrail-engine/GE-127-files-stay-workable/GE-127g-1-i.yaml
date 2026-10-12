@@ -1,0 +1,265 @@
+id: GE-127g-1-i
+title: "A set-aside document is set aside on both arms of the standard — it may cross its limit and it may grow once already over"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the directory the agent-card generator writes into is a declared
+    set-aside location,
+  And one generated document in it stood at 2,525 lines as last committed,
+    already far above the 300-line limit,
+  And a regeneration leaves that same document at 2,809 lines, so the change
+    leaves a document that was already over the limit longer than it was,
+  When the author performs an ordinary commit,
+  Then the commit completes.
+
+  And given a second generated document in that directory that stood at 268
+    lines as last committed, under the limit,
+  And a regeneration leaves that same document at 340 lines, so the change takes
+    it across the limit for the first time,
+  When the author performs an ordinary commit,
+  Then the commit completes.
+
+  And given a hand-authored document outside every declared set-aside location
+    that stood at 340 lines as last committed and that the same commit leaves at
+    355,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the document it names is that
+    hand-authored one and not either generated one — so both arms are set aside
+    for the declared class and neither arm is set aside for anything else.
+depends_on:
+  - GE-127g-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE CROSSING ARM THIS RECORD EXEMPTS FROM. Defines the refusal at the moment a file
+      goes past its permitted length. The first arm above is its complement for a
+      declared set-aside document. Nothing here weakens it for anything else.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE GROWTH ARM THIS RECORD EXEMPTS FROM, AND THE REASON THIS RECORD EXISTS AT ALL.
+      It is the keystone ratchet: already over the line may not get further over it. The
+      doc-length gate's own configuration comment states it ratchets exactly as that
+      record and GE-127a-1 specify. An exclusion that short-circuits only the crossing
+      check leaves the three documents already above the limit unable to be regenerated,
+      which is the reported symptom unfixed.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Both arms run through here, which is exactly why they can be fixed separately by
+      accident: the exclusion test is consulted at a point in the flow, and a change that
+      places it before one comparison and not the other produces a half fix that passes
+      any test using an under-limit document.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Behavioural verification is binding. Each arm is an ordinary commit whose staged
+      content differs from the committed content by a stated number of lines, and the
+      verdict is read out of the commit. A test that asserts the exclusion test is
+      consulted, without exercising a document that is already over its limit, cannot
+      tell the two arms apart.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-1
+    contract: >-
+      The declared set of set-aside locations and the single membership test built on it.
+      This record adds no second declaration and no second membership test; it constrains
+      where in the standard's two comparisons the one membership test must take effect.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The single membership test must be consulted at a point that PRECEDES both
+    comparisons, not inside either. In _doc_length_ratchet.py both comparisons live in
+    one function, classify_dimension(): the `previous > limit` branch is the growth
+    ratchet and the `else` branch is the crossing refusal. A membership test placed
+    inside that function, or inside analyze_file's per-dimension handling, can reach one
+    branch and not the other — which is the half fix. The coverage filter (is_checked,
+    consulted at check_doc_length.main() line 407 and as resolve_doc_ratchet()'s
+    HEAD-covered predicate at line 272) is the point that precedes both."
+  - "Both consultation sites of is_checked must receive the same answer for the same
+    document. A set-aside document must be absent from the staged coverage filter AND
+    from the HEAD-covered set, because resolve_doc_ratchet() computes the previous value
+    for the second population — a document excluded from one and not the other has its
+    current length compared against a previous value resolved under a different rule."
+  - "No document outside the declared locations may have either comparison weakened.
+    This record's exemption is about WHERE the one membership test takes effect, never
+    about what the standard is."
+  - "No new module is required: _doc_length_ratchet.py measures 147 lines against its
+    400-line limit (measured 2026-10-09 with check_file_size's own measurement rule), so
+    the change fits in place. If a helper is extracted anyway it must live in
+    templates/scripts/commit_guardian/, which deploys wholesale; anywhere else needs a
+    deploy-map entry in the same change."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_set_aside_document_already_over_the_limit_may_grow
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1, the live arm. In a real git repo, commit a document inside the declared
+      set-aside location at a length far above the limit, then stage it longer than it
+      was committed. Invoke the gate against that index and assert a clean verdict. The
+      GROWTH comparison is the only one that applies to this document — it has already
+      crossed — so this entry is what proves the growth arm is set aside. No build.py
+      spawn and no layout fixture, so no marker.
+    must_catch:
+      - "consult the set-aside membership test only before the crossing comparison, leaving the growth comparison to run on every document"
+      - "place the membership test inside classify_dimension's else branch only"
+  - name: test_set_aside_document_may_cross_the_limit_for_the_first_time
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Arm 2, prospective but independently mutable. Commit a document inside the declared
+      location UNDER the limit, then stage it above the limit. Assert a clean verdict.
+      The CROSSING comparison is the only one that applies here, so this entry is what
+      proves the crossing arm is set aside. No marker.
+    must_catch:
+      - "consult the set-aside membership test only before the growth comparison, leaving the crossing comparison to run on every document"
+      - "place the membership test inside classify_dimension's previous-over-limit branch only"
+  - name: test_hand_authored_document_outside_every_declared_location_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3, the negative control, staged in the SAME commit as the two generated
+      documents above. Commit a hand-authored document outside every declared location
+      above the limit and stage it longer. Assert the gate refuses AND that the document
+      it names is that hand-authored one and neither generated one. Naming matters: a
+      refusal alone does not distinguish a correct exemption from a wide one. No marker.
+    must_catch:
+      - "set both comparisons aside for every document under docs/"
+      - "report a refusal without naming which document caused it"
+  - name: test_set_aside_document_absent_from_both_the_staged_and_head_covered_populations
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: >-
+      Enrichment's own entry, for the second it_requirement. Drive a run in which a
+      set-aside document exists at HEAD and is staged, and assert the previous-value
+      resolution did not include it — observed through the run's own behaviour, by
+      staging it SHORTER than committed and confirming no INDETERMINATE and no
+      previous-value-derived finding is produced for it. The two is_checked consultation
+      sites must agree; this is the only entry that can tell them apart. No marker.
+    must_catch:
+      - "exclude the document from the staged coverage filter but not from the HEAD-covered-set predicate"
+test_rationale: >-
+  Each arm is an ordinary commit whose staged content differs from the committed content
+  by a stated direction of change, with the verdict read out of the gate's own outcome.
+  The record's notes are right that a test asserting the exclusion test 'is consulted',
+  without exercising a document that is ALREADY over its limit, cannot tell the two arms
+  apart — which is why arms 1 and 2 are separate entries driven by documents chosen for
+  opposite comparisons rather than by one regenerated directory.
+  ONE CORRECTION THE TEST AUTHOR MUST CARRY, AND THE CRITERIA ARE NOT AFFECTED BY IT.
+  The record's named mutations (1) and (2) have their must-go-red arms transposed.
+  classify_dimension() routes a document whose previous value already exceeds the limit
+  into the GROWTH branch and a document whose previous value is under it into the
+  CROSSING branch. So mutation (1), which exempts only the crossing comparison, leaves
+  the growth comparison live and reddens the FIRST arm (2,525 to 2,809) — not the second;
+  and mutation (2), which exempts only the growth comparison, reddens the SECOND arm
+  (268 to 340) — not the first. The must_catch strings above carry the corrected mapping.
+  The notes' substantive point is untouched and is correct: each arm has its own
+  independent half-fix mutation, neither is decorative, and mutation (1) is the one most
+  likely to ship by accident. Nothing in the criteria changes, and the criteria have not
+  been edited.
+  Markers: no entry requests shared_reference_layout and none spawns build.py, so all
+  four sit outside the marker-routing mechanism; the deployed-layout proof is paid once by
+  GE-127g-1's deployed entry and is not re-paid here. Pinned for the test author: do NOT
+  hardcode 2,525 / 2,809 / 268 / 340 / 355 — the record's notes state these are the
+  measured shape, not fixed facts, and the population moves whenever an agent or an
+  assignment is added. Construct the lengths in the fixture and assert on the fixture's
+  own figures.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS ITS OWN RECORD RATHER THAN A CLAUSE OF ITS PARENT. Every arm of GE-127g-1
+  uses the directory exactly as a regeneration leaves it, which exercises whichever
+  comparison the gate happens to reach first. This record is the only place the two
+  comparisons are driven separately, with a document chosen for each. Its named mutation
+  reddens this record alone and leaves every parent arm green, which is the asymmetry that
+  earns a separate file.
+
+  WHY THE OBSERVED SYMPTOM LANDS ON THE GROWTH ARM AND NOT THE CROSSING ARM, AND WHY THE
+  FIRST ARM'S NUMBERS ARE REAL RATHER THAN ILLUSTRATIVE. Three of the 65 generated
+  documents were already above the limit as last committed — 2,525, 635 and 340 — and this
+  worktree was found with all three ALREADY rewritten longer by a regeneration that ran
+  during provisioning, to 2,809, 639 and 355, before any record in this subtree existed and
+  carrying only unrelated records' assignment lines. For those three, no commit can satisfy
+  a crossing check because they have already crossed; the only comparison that applies is
+  the ratchet, and the only way a regeneration passes it is to leave them no longer than it
+  found them — which a regeneration sweeping in unrelated accumulated work cannot do. So a
+  fix that only exempts the crossing check leaves the reported halt in place for exactly the
+  three documents that caused the report. The first arm's 2,525 and 2,809 are that
+  observation, not an invented example.
+
+  THE SECOND ARM IS PROSPECTIVE AND IS STATED ANYWAY. No generated card crossed the limit in
+  the observed regeneration; the nearest went 268 to 276, and the generated roadmap mirror
+  stands at 286 against the same 300. The arm exists because the crossing refusal is a
+  separate comparison with a separate exemption point, and because both of those documents
+  will cross on a later regeneration. A record that covered only the live arm would have to
+  be reopened then.
+
+  NOTE ON THE NUMBERS FOR WHOEVER WRITES THE TESTS: 2,525 / 268 / 340 are the lengths as
+  last committed and 2,809 / 276 / 355 the lengths after that regeneration, both measured in
+  this worktree on 2026-10-09 as raw line counts with no exclusions. Do not pin any of them
+  as a constant — the population and its lengths move every time an agent or an assignment is
+  added, which is GE-127g-1's second arm. What must be preserved is the SHAPE: already over
+  and growing, under and crossing, each driven separately.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE HALF FIX. MUTATION: consult the set-aside membership test only before the
+      crossing comparison, leaving the growth comparison to run on every document.
+      MUST GO RED: the second arm only.
+      MUST STAY GREEN: the first and third arms, every arm of GE-127g-1, and every arm of
+      GE-127g-3. This is the mutation most likely to ship by accident and the one no other
+      record in this subtree catches.
+
+  (2) THE MIRROR HALF FIX. MUTATION: consult the membership test only before the growth
+      comparison.
+      MUST GO RED: the first arm only.
+      MUST STAY GREEN: the second and third arms and the parent's arms. Stated so the
+      implementer sees that each arm has its own independent mutation and neither is
+      decorative.
+
+  (3) THE OVER-WIDE EXEMPTION. MUTATION: set both comparisons aside for every document
+      under docs/.
+      MUST GO RED: the third arm, and every arm of GE-127g-3.
+      MUST STAY GREEN: the first and second arms. The third arm is this record's negative
+      control and the reason it names which document must be reported rather than only
+      that the commit is refused.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

@@ -10,12 +10,19 @@ BUSINESS CONTEXT: The pytest_ac_enforcement plugin masks failing tests whose
     reflects real suite health.
 ARCHITECTURE: Two test classes: (1) TestCiJobConfiguredStrict — a structural
     check that parses .github/workflows/ci.yml and asserts AC_ENFORCE_STRICT="1"
-    is present on the test job's "Run test suite" step; (2) TestStrictModeGate
+    is present on the "Run test suite shard" step; (2) TestStrictModeGate
     — a behavioral probe that runs a subprocess pytest with AC_ENFORCE_STRICT=1
     against a deliberately-failing test whose covering AC is not done, asserting
     the process exits non-zero (the failure is NOT masked).  Together these lock
     in the gate-integrity requirement: the CI config is structurally correct AND
     the plugin behaves correctly under that configuration.
+
+    THE GATE IS NOW TWO JOBS. Since the suite was re-enabled as an 8-way shard
+    matrix (ci/shard-pytest-suite), the pytest step carrying AC_ENFORCE_STRICT=1
+    lives on ``test-shard`` (the matrix job that actually runs pytest), not on
+    ``test`` (the aggregator, which runs no pytest step and sets no env — see
+    unit_tests/build_guards/test_ci_test_gate.py for the aggregator-side
+    assertions). TestCiJobConfiguredStrict below checks ``test-shard``.
 """
 
 from __future__ import annotations
@@ -120,13 +127,18 @@ class TestCiJobConfiguredStrict(unittest.TestCase):
     """Structural check: the CI test job must have AC_ENFORCE_STRICT=1 configured."""
 
     def test_gate_runs_ac_enforce_strict(self) -> None:
-        """Assert .github/workflows/ci.yml sets AC_ENFORCE_STRICT=1 on the test job.
+        """Assert .github/workflows/ci.yml sets AC_ENFORCE_STRICT=1 on the pytest step.
 
         Parses the workflow YAML and locates the step whose ``name`` contains
-        "Run test suite" under the ``test`` job, then checks that its ``env``
-        block sets ``AC_ENFORCE_STRICT`` to the string ``"1"``.  This assertion
-        will fail if the env var is removed or renamed, catching a silent
-        regression of the gate-integrity protection.
+        "Run test suite" under the ``test-shard`` job — the matrix job that
+        actually invokes pytest since the suite was re-enabled as an 8-way
+        shard matrix (ci/shard-pytest-suite); the ``test`` job is now only an
+        aggregator over it and runs no pytest step and sets no env (see
+        test_ci_test_gate.py for the aggregator-side assertions). Checks that
+        the shard step's ``env`` block sets ``AC_ENFORCE_STRICT`` to the string
+        ``"1"``.  This assertion will fail if the env var is removed or
+        renamed, catching a silent regression of the gate-integrity
+        protection.
         """
         self.assertTrue(
             _CI_WORKFLOW.is_file(),
@@ -137,11 +149,11 @@ class TestCiJobConfiguredStrict(unittest.TestCase):
 
         jobs = ci_data.get("jobs", {})
         self.assertIn(
-            "test",
+            "test-shard",
             jobs,
-            msg="No 'test' job found in ci.yml — gate job missing.",
+            msg="No 'test-shard' job found in ci.yml — shard matrix job missing.",
         )
-        test_job = jobs["test"]
+        test_job = jobs["test-shard"]
         steps = test_job.get("steps", [])
 
         # Find the step that runs pytest.
@@ -154,7 +166,7 @@ class TestCiJobConfiguredStrict(unittest.TestCase):
 
         self.assertIsNotNone(
             run_step,
-            msg="Could not locate the 'Run test suite' step in the CI test job.",
+            msg="Could not locate the 'Run test suite' step in the CI test-shard job.",
         )
         env_block = run_step.get("env", {})
         ac_strict_value = str(env_block.get("AC_ENFORCE_STRICT", ""))
@@ -162,10 +174,29 @@ class TestCiJobConfiguredStrict(unittest.TestCase):
             ac_strict_value,
             "1",
             msg=(
-                "CI test job 'Run test suite' step does not have AC_ENFORCE_STRICT=1. "
-                f"Current value: {ac_strict_value!r}. "
+                "CI test-shard job 'Run test suite shard' step does not have "
+                f"AC_ENFORCE_STRICT=1. Current value: {ac_strict_value!r}. "
                 "Without this flag, a failing test whose covering AC is not 'done' "
                 "is silently masked as xfail, defeating the blocking gate."
+            ),
+        )
+
+        # STRENGTHENING (relevant to this file's own subject): the matrix
+        # split means this env block is shared by EVERY shard instance (the
+        # matrix only varies `group`, not `env`) — but that sharing is a fact
+        # about this one job definition, not a fact a test should assume. If
+        # a future edit moved AC_ENFORCE_STRICT onto a conditional branch keyed
+        # by `matrix.group`, some shards would mask real failures while this
+        # test (which only inspects the first matching step) kept passing.
+        # Guard against that: the step's env block must not be gated behind an
+        # `if:` on matrix.group.
+        self.assertNotIn(
+            "matrix.group",
+            str(run_step.get("if", "")),
+            msg=(
+                "The pytest step is conditional on matrix.group — "
+                "AC_ENFORCE_STRICT could then be applied to only some shards, "
+                "letting the others silently mask failures."
             ),
         )
 
@@ -252,3 +283,13 @@ if __name__ == "__main__":
 # - 2026-07-15 12:00 [python-coder]: Created module to verify the CI test job sets
 #   AC_ENFORCE_STRICT=1 so that xfail-masking cannot hide genuine failures from the
 #   blocking gate (BP-1200b gate-integrity requirement). (#EPIC-RedTestClusterRepair/09)
+# - 2026-10-05 [ci/shard-pytest-suite] (classification: test_drift): The 'test' job
+#   was split into an 8-way shard matrix ('test-shard', which runs the pytest step
+#   and its AC_ENFORCE_STRICT=1 env) plus a thin aggregator ('test', which carries
+#   only the stable check name and sets no env). TestCiJobConfiguredStrict was
+#   reading jobs["test"], so it went red the moment the split landed — the AC
+#   (gate-integrity: no xfail-masking on the blocking CI run) is unchanged and
+#   still true, only the job owning the env var moved. Repointed the lookup at
+#   'test-shard' and added a guard against the env being gated behind
+#   `matrix.group`, a new way the split could let some shards mask failures while
+#   others don't. test-writer, per CLAUDE.md's "Gate / Workflow ACs" convention.

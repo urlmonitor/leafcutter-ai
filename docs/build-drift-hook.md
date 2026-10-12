@@ -3,7 +3,7 @@ title: Build-Drift Pre-Commit Hooks (Direction A + Direction B)
 type: how-to
 status: active
 created: 2026-05-13
-last_updated: 2026-08-31
+last_updated: 2026-10-08
 components:
 - commit_guardian
 - infrastructure
@@ -124,7 +124,7 @@ the same blind spot reappears.
 
 ## 2B. Direction B: Output Drift Detection
 
-> See [2b_direction_b_output_drift_detection.md](2b_direction_b_output_drift_detection.md) for full details.
+> See [2b_direction_b_output_drift_detection.md](2b_direction_b_output_drift_detection.md) for full details, including registry exemptions (`DIRECT-DRIFT: EXEMPT` vs `UNCOMPARABLE: EXEMPT`), which apply to this gate only.
 
 ---
 

@@ -1,0 +1,94 @@
+id: INF-400c-4-vi
+components:
+  - infrastructure
+  - knowledge_system
+  - build_pipeline
+title: "The harvester's state file and run marker default to the directory of the resolved sink, never to the working directory a run happens to start in"
+component: infrastructure
+level: L3
+status: active
+req_status: active
+work_status: done
+priority: high
+readiness: reviewed
+created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
+criteria: |
+  Given the sink is an absolute path fixed by the build and read from one
+    declaration, and the harvester's two bookkeeping files -- the processed-
+    event state file and the last-run marker -- are written by every run that
+    routes an event or completes,
+  When the harvester is run without --state, from a working directory that is
+    not the sink's directory, and an event routes,
+  Then the state file is written in the directory of the resolved sink, and the
+    marker beside it,
+  And nothing is created under the working directory the run started in,
+  And an explicit --state still wins, taking the default marker with it,
+  And --status still creates nothing and exits 0,
+  And no directory-qualified literal naming the state file or the marker
+    remains in any deployed knowledge script, so the build's closure guard (AC
+    BP-900g-8), which treats such a literal as an undeployed dependency once the
+    named file exists under the package root, has nothing to match and a stray
+    file cannot abort every later build.
+depends_on: [INF-400c-4]
+doc_links:
+  - path: docs/known-issues/knowledge-management/open-high-ki-km-20261008-harvest-state-default-is-cwd-relative.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+declares_side_effect: true
+it_requirements:
+  - "The default is derived from the RESOLVED sink after it is resolved, never from a path literal and never from the working directory. A default that is a bare name joined onto the working directory reproduces the defect."
+  - "The literal for the state file must stay a bare name with no directory part; the closure guard reads directory-qualified literals, docstrings included."
+  - "Must handle errors gracefully per the project error handling policy."
+delivers_to:
+  agent: python-coder
+  contract: "harvest_cli.apply_state_defaults(args, sink_path) fills an omitted --state and --marker from the resolved sink"
+expects_from:
+  ac_id: INF-400c-4-v
+  contract: "The build-time absolute sink declaration the state file is anchored beside"
+origin_agent: BrainCandy
+created: 2026-10-08
+superseded_by: null
+covered_by: []
+implemented_by: []
+test_spec:
+  - name: test_default_state_and_marker_land_beside_the_resolved_sink_not_in_cwd
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "the deployed harvester run as a subprocess from a working directory that is not the sink's directory, without --state"
+    description: "Route one event with no --state from a scratch working directory; assert the state file and marker are in the declared sink's directory and that the working directory is still empty."
+  - name: test_explicit_state_still_wins_over_the_sink_anchored_default
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Pass --state explicitly; assert it is written there with the default marker beside it, and that no state file appears beside the sink."
+  - name: test_status_creates_nothing_and_exits_zero_without_state
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Run --status with no --state against a sink that does not exist; assert exit 0, last_run never-run, and nothing created under the working directory or the sink's directory."
+  - name: test_no_directory_qualified_state_or_marker_literal_remains_in_knowledge_scripts
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "Parse every scripts/knowledge/*.py and assert no string constant, docstrings included, contains a directory-qualified harvest_state.json or harvest_last_run.json."
+test_rationale: |
+  The first descriptor runs the real deployed harvester in a subprocess from a
+  directory other than the sink's, because the defect is a function of where a
+  process starts: an in-process call cannot tell a cwd-relative default from an
+  anchored one. The last descriptor pins the closure-guard half without spawning
+  build.py, which is the stated reason the stray file only breaks builds.
+notes: |
+  Raised by KI-KM-20261008-harvest-state-default-is-cwd-relative. INF-400c-4-iii
+  and INF-700a-5 / INF-700a-5-iii each noted the state file as a third undeclared
+  relative path and left its declaration home open; anchoring it beside the
+  resolved sink settles that home without a second declaration, so the sink and
+  its watermark cannot drift apart.
+change_target: code
+risk_surface: contract_boundary

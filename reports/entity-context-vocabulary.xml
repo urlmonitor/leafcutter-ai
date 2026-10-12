@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="4" tests="20" time="9.584" timestamp="2026-10-03T15:16:33.758133+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_inf_400c_5" name="test_a_single_declared_vocabulary_config_exists_and_is_non_empty" time="0.004" /><testcase classname="tests.knowledge.test_inf_400c_5" name="test_every_real_classifier_target_surface_value_is_a_vocabulary_member" time="0.001" /><testcase classname="tests.knowledge.test_inf_400c_5" name="test_every_vocabulary_member_has_a_harvester_routing_rule" time="0.001" /><testcase classname="tests.knowledge.test_inf_400c_5" name="test_emit_knowledge_cli_writes_a_valid_event_for_a_vocabulary_member" time="0.340" /><testcase classname="tests.knowledge.test_inf_400c_5" name="test_emit_knowledge_cli_rejects_out_of_vocabulary_entry_kind_and_writes_nothing" time="0.135" /><testcase classname="tests.knowledge.test_inf_400c_5_i" name="test_underscore_and_hyphen_variants_normalise_to_the_same_value" time="0.001" /><testcase classname="tests.knowledge.test_inf_400c_5_i" name="test_normalisation_is_case_insensitive_on_a_second_example" time="0.001" /><testcase classname="tests.knowledge.test_inf_400c_5_i" name="test_normalisation_never_invents_a_member_that_is_still_out_of_vocabulary" time="0.121" /><testcase classname="tests.knowledge.test_inf_400c_5_i" name="test_canonical_spelling_written_to_the_sink_is_hyphenated_lower_case" time="0.133" /><testcase classname="tests.knowledge.test_inf_400c_5_iii" name="test_rejection_message_names_the_rejected_value" time="0.123" /><testcase classname="tests.knowledge.test_inf_400c_5_iii" name="test_rejection_message_lists_canonical_members_as_candidates" time="0.120" /><testcase classname="tests.knowledge.test_inf_400c_5_iii" name="test_no_partial_or_placeholder_record_is_appended_to_the_sink" time="0.140" /><testcase classname="tests.knowledge.test_inf_400c_5_iii" name="test_helper_exits_without_error_so_the_agent_completes" time="0.123" /><testcase classname="tests.knowledge.test_inf_400c_5_iii" name="test_a_rejection_is_counted_distinctly_from_a_run_that_emitted_nothing" time="0.312" /><testcase classname="tests.knowledge.test_inf_400c_5_i_h2_harvester_normalises_variant_on_read" name="test_harvester_routes_a_variant_spelled_legacy_entry_kind_written_directly_to_the_sink" time="0.016" /><testcase classname="tests.knowledge.test_inf_400c_5_h1_deployed_layout" name="test_build_deploys_all_three_h1_knowledge_artefacts_and_emit_knowledge_runs" time="7.415"><failure message="shutil.Error: [('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\pytest-of-Hendrik', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\pytest-of-Hendrik', &quot;[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\pytest-of-Hendrik'&quot;), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpayv5rhmf', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpayv5rhmf', &quot;[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpayv5rhmf'&quot;), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpn140w0es', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpn140w0es', &quot;[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpn140w0es'&quot;), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpwzwteiva', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpwzwteiva', &quot;[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpwzwteiva'&quot;)]">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/entity-vocabulary-20261003-1540/test_build_deploys_all_three_h0')
+
+    def test_build_deploys_all_three_h1_knowledge_artefacts_and_emit_knowledge_runs(
+        tmp_path: Path,
+    ) -&gt; None:
+        # covers: INF-400c-5
+        # angle: reachability (H-1 fast-lane pr-review fix)
+        """A real ``build.py --target-dir &lt;tmp&gt;`` run must deploy
+        ``scripts/knowledge/emit_knowledge.py``,
+        ``scripts/knowledge/entry_kind_vocabulary.py``, AND
+        ``config/entry_kind_vocabulary.json`` -- not merely list them in a
+        manifest a grep could pass on a manifest never consulted. Then the
+        DEPLOYED ``emit_knowledge.py`` (invoked from its deployed location, not
+        the source tree) must actually run and accept a valid ``entry_kind``,
+        proving its sibling-module import and its vocabulary-config read both
+        resolve correctly against the deployed layout.
+    
+        Pre-H-1-fix, this test is RED three ways: the two deploy assertions on
+        ``deployed_emit`` / ``deployed_vocab_module`` fail outright (files never
+        copied), and even if only the manifest were partially fixed, the
+        subprocess invocation would fail (missing sibling import, or an empty
+        vocabulary rejecting the ``"adr"`` entry_kind).
+        """
+        copy_root = tmp_path / "pkg_copy"
+&gt;       _copy_package_tree(copy_root)
+
+tests\knowledge\test_inf_400c_5_h1_deployed_layout.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_inf_400c_5_h1_deployed_layout.py:63: in _copy_package_tree
+    shutil.copytree(_REPO_ROOT, dest, ignore=_COPY_IGNORE, symlinks=True)
+C:\Python314\Lib\shutil.py:654: in copytree
+    return _copytree(entries=entries, src=src, dst=dst, symlinks=symlinks,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+entries = [&lt;DirEntry '.agents'&gt;, &lt;DirEntry '.claude'&gt;, &lt;DirEntry '.git'&gt;, &lt;DirEntry '.gitattributes'&gt;, &lt;DirEntry '.github'&gt;, &lt;DirEntry '.gitignore'&gt;, ...]
+src = WindowsPath('C:/Users/Hendrik/Code/leafcutter/worktrees/kernel-entity-context')
+dst = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/entity-vocabulary-20261003-1540/test_build_deploys_all_three_h0/pkg_copy')
+symlinks = True
+ignore = &lt;function ignore_patterns.&lt;locals&gt;._ignore_patterns at 0x000001B5A6669640&gt;
+copy_function = &lt;function copy2 at 0x000001B5A11C80F0&gt;
+ignore_dangling_symlinks = False, dirs_exist_ok = False
+
+    def _copytree(entries, src, dst, symlinks, ignore, copy_function,
+                  ignore_dangling_symlinks, dirs_exist_ok=False):
+        if ignore is not None:
+            ignored_names = ignore(os.fspath(src), [x.name for x in entries])
+        else:
+            ignored_names = ()
+    
+        os.makedirs(dst, exist_ok=dirs_exist_ok)
+        errors = []
+        use_srcentry = copy_function is copy2 or copy_function is copy
+    
+        for srcentry in entries:
+            if srcentry.name in ignored_names:
+                continue
+            srcname = os.path.join(src, srcentry.name)
+            dstname = os.path.join(dst, srcentry.name)
+            srcobj = srcentry if use_srcentry else srcname
+            try:
+                is_symlink = srcentry.is_symlink()
+                if is_symlink and os.name == 'nt':
+                    # Special check for directory junctions, which appear as
+                    # symlinks but we want to recurse.
+                    lstat = srcentry.stat(follow_symlinks=False)
+                    if lstat.st_reparse_tag == stat.IO_REPARSE_TAG_MOUNT_POINT:
+                        is_symlink = False
+                if is_symlink:
+                    linkto = os.readlink(srcname)
+                    if symlinks:
+                        # We can't just leave it to `copy_function` because legacy
+                        # code with a custom `copy_function` may rely on copytree
+                        # doing the right thing.
+                        os.symlink(linkto, dstname)
+                        copystat(srcobj, dstname, follow_symlinks=not symlinks)
+                    else:
+                        # ignore dangling symlink if the flag is on
+                        if not os.path.exists(linkto) and ignore_dangling_symlinks:
+                            continue
+                        # otherwise let the copy occur. copy2 will raise an error
+                        if srcentry.is_dir():
+                            copytree(srcobj, dstname, symlinks, ignore,
+                                     copy_function, ignore_dangling_symlinks,
+                                     dirs_exist_ok)
+                        else:
+                            copy_function(srcobj, dstname)
+                elif srcentry.is_dir():
+                    copytree(srcobj, dstname, symlinks, ignore, copy_function,
+                             ignore_dangling_symlinks, dirs_exist_ok)
+                else:
+                    # Will raise a SpecialFileError for unsupported file types
+                    copy_function(srcobj, dstname)
+            # catch the Error from the recursive copytree so that we can
+            # continue with other files
+            except Error as err:
+                errors.extend(err.args[0])
+            except OSError as why:
+                errors.append((srcname, dstname, str(why)))
+        try:
+            copystat(src, dst)
+        except OSError as why:
+            # Copying file access times may fail on Windows
+            if getattr(why, 'winerror', None) is None:
+                errors.append((src, dst, str(why)))
+        if errors:
+&gt;           raise Error(errors)
+E           shutil.Error: [('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\pytest-of-Hendrik', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\pytest-of-Hendrik', "[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\pytest-of-Hendrik'"), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpayv5rhmf', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpayv5rhmf', "[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpayv5rhmf'"), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpn140w0es', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpn140w0es', "[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpn140w0es'"), ('C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\kernel-entity-context\\tmpwzwteiva', 'C:\\Users\\Hendrik\\AppData\\Local\\Temp\\entity-vocabulary-20261003-1540\\test_build_deploys_all_three_h0\\pkg_copy\\tmpwzwteiva', "[WinError 5] Zugriff verweigert: 'C:\\\\Users\\\\Hendrik\\\\Code\\\\leafcutter\\\\worktrees\\\\kernel-entity-context\\\\tmpwzwteiva'")]
+
+C:\Python314\Lib\shutil.py:608: Error</failure></testcase><testcase classname="unit_tests.commit_guardian.test_ge_118c_doc_types_deployed_resolution.TestGe118cDeployedValidatorResolvesRealDocTypesFile" name="test_ge_118c_deployed_validator_resolves_the_real_doc_types_file" time="0.001"><skipped type="pytest.skip" message="Deployed module not found: C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\.leafcutter\scripts\commit_guardian\doc_type_validators.py">C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\unit_tests\commit_guardian\test_ge_118c_doc_types_deployed_resolution.py:376: Deployed module not found: C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\.leafcutter\scripts\commit_guardian\doc_type_validators.py</skipped></testcase><testcase classname="unit_tests.commit_guardian.test_ge_118c_doc_types_deployed_resolution.TestGe118cDeployedGuardAcceptsCardAndHowTo" name="test_ge_118c_deployed_guard_accepts_a_card_and_a_how_to_document" time="0.096"><skipped type="pytest.skip" message="Deployed run_hook.py / check_doc_frontmatter.py not found">C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\unit_tests\commit_guardian\test_ge_118c_doc_types_deployed_resolution.py:455: Deployed run_hook.py / check_doc_frontmatter.py not found</skipped></testcase><testcase classname="unit_tests.commit_guardian.test_ge_118c_doc_types_deployed_resolution.TestGe118cDeployedGuardRejectsUndeclaredType" name="test_ge_118c_deployed_guard_still_rejects_an_undeclared_type" time="0.042"><skipped type="pytest.skip" message="Deployed run_hook.py / check_doc_frontmatter.py not found">C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\unit_tests\commit_guardian\test_ge_118c_doc_types_deployed_resolution.py:525: Deployed run_hook.py / check_doc_frontmatter.py not found</skipped></testcase><testcase classname="unit_tests.commit_guardian.test_ge_118c_doc_types_deployed_resolution.TestGe118cUnreadableDeclaringFileFailsObservably" name="test_ge_118c_unreadable_declaring_file_fails_observably" time="0.001"><skipped type="pytest.skip" message="Deployed module not found: C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\.leafcutter\scripts\commit_guardian\doc_type_validators.py">C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\unit_tests\commit_guardian\test_ge_118c_doc_types_deployed_resolution.py:574: Deployed module not found: C:\Users\Hendrik\Code\leafcutter\worktrees\kernel-entity-context\.leafcutter\scripts\commit_guardian\doc_type_validators.py</skipped></testcase></testsuite></testsuites>

@@ -1,0 +1,126 @@
+id: UXP-591-5-v
+title: "A filter change while 'Flow not found' shows clears the notice, re-picks a flow and replaces the address in place"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L3
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given a new tab opened /flows/leafcutter/flow-render-pipline?step=resolve, so the tab has one
+    history entry and shows the 'Flow not found' notice with no flow drawn, an empty breadcrumb
+    and the filters Real, User, All,
+  When the person sets the Kind filter to 'Architecture',
+  Then the 'Flow not found' notice disappears,
+  And "Product-truth in the leafcutter architecture", the only flow the selector lists under
+    Real, Architecture, All, is drawn with a breadcrumb of only that flow and no drawer,
+  And the address bar becomes /flows/leafcutter/product-truth-architecture with no ?step=: the
+    unknown flow's ?step=resolve is not carried over,
+  And the tab still has one history entry, because the current entry was replaced rather than a
+    new one added,
+  And when several flows match the new filters, the first one the selector lists is picked:
+    setting the Source filter to 'Mock' from the same 'Flow not found' state draws
+    "Checkout & pay (inside the buy-a-plant checkout step)" at /flows/fern-and-fig/checkout-and-pay,
+  And after the person then picks "Customer buys a plant" in the flow selector and presses Back,
+    the Atlas shows /flows/fern-and-fig/checkout-and-pay with that flow drawn, never
+    /flows/leafcutter/flow-render-pipline and never the 'Flow not found' notice.
+depends_on:
+  - UXP-591-5
+  - UXP-591-5-iii
+  - UXP-591-1-ii
+  - UXP-521
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: M
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - The not-found state's filter controls are live and use the UXP-591-5-iii re-pick function (first flow
+    the selector lists under the new filters).
+  - 'The change is one replace to flowHref(repicked) with no ?step= (the unknown flow''s ?step= is dropped)
+    and entry state {crumbs: [repicked], filters: new}; never a push.'
+  - The 404 view turns into a drawn flow client-side, in the same history entry. If the not-found UI is
+    the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx, the entry state written
+    by the replace wins over that boundary's server-rendered not-found props whenever the entry is shown
+    again, so Back after a later push draws fern-and-fig/checkout-and-pay, never the notice.
+  - A reload of the replaced entry renders the re-picked flow through the catch-all route with a 200.
+delivers_to: null
+expects_from:
+  - ac_id: UXP-591-1-ii
+    contract: Not-found mode of the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx
+      with the full flow catalogue in the selector and filters real/user/all.
+  - ac_id: UXP-591-5-iii
+    contract: 'Re-pick function returning the first Flow id the selector lists under the new filters,
+      applied with replaceEntry(flowHref(id), {crumbs: [id], filters}).'
+test_spec:
+  - name: setting Kind to Architecture on the 'Flow not found' state draws product-truth-architecture
+      and replaces the address with /flows/leafcutter/product-truth-architecture at one history entry
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the unknown flow's ?step=resolve is carried to the new address
+      - the filter change pushes an entry
+      - the 'Flow not found' notice stays
+  - name: setting Source to Mock on the 'Flow not found' state picks fern-and-fig/checkout-and-pay as
+      the first listed flow
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+  - name: after picking Customer buys a plant and pressing Back the entry shows checkout-and-pay and never
+      the 'Flow not found' notice
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: seam
+    must_catch:
+      - Back re-renders the not-found boundary's server props instead of the stored entry state
+test_rationale: The risk is the not-found boundary reasserting itself after the replace; the Back test
+  is the one that catches it.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Owner ruling at the AC gate (2026-10-09), decision (2)(c): a Source, Kind or Realization change
+  while the 'Flow not found' notice shows removes the notice, selects the first flow the selector
+  lists under the new filters and replaces the current history entry with that flow's canonical
+  URL. The flow leafcutter/explore-flows-in-atlas v5 does not yet model this behaviour (its
+  'filterRepicksFlow' branch records it as not modelled), and the leafcutter/atlas-flows v3
+  dataset's filter rule still assumes the previous state shows a graph; so no flow node maps to
+  this AC and it carries no flow back-link. The selector order used in the Mock example is the
+  dataset's (stored flows in Flow.id order), as in UXP-591-5-iii. Owner ruling 3 still holds: the
+  filter change adds no history entry. UXP-591-5-ii's Back-onto-an-unknown-id clause concerns a
+  'Flow not found' entry nobody changed a filter on; once a filter change replaces that entry, it
+  returns as the re-picked flow.

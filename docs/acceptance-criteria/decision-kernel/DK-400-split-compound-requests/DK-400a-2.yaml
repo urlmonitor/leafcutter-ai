@@ -1,0 +1,145 @@
+id: DK-400a-2
+title: "A bundled request that routing would accept as one decision is offered as a split first"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a run whose root goal is the decision-records goal of mock record
+    dcp-decision-records-bundled ("Decide how Leafcutter should file decision records as JSON or
+    YAML files under docs/ so later kernel runs can find and reuse them as precedent: which fields
+    a record needs, which classification filters it carries ..., the folder layout and file
+    naming, and how human approval and later corrections are recorded."),
+  And that goal bundles five separate decisions: fields, classification filters, folder layout,
+    file naming, and approval and corrections,
+  And routing gives the goal to the decision capability as one decision,
+  When routing runs on the run's root,
+  Then a split is offered for the goal with trigger bundled_accepted, found at routing and
+    work-item depth 0, keeping the goal exactly as submitted,
+  And no options and no criteria are formed for the goal as a whole before the person answers
+    the split gate,
+  And the routing result (the decision capability) is kept with the split, so that a rejected
+    split can go ahead as that one decision.
+depends_on:
+  - DK-400a
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-detect, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Decomposition.trigger bundled_accepted; record dcp-decision-records-bundled."
+  - path: docs/analysis/2026-10-01-kernel-trace-review-decision-records-run.md
+    relationship: related
+    status: exists
+    relevance: "Finding 5: five sub-decisions answered as one pick-one-of-N."
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Host proposes (generative), Jev only judges, a person approves; cheapest mechanism first."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: 'Split record (DK-400a-1 shape) with trigger ''bundled_accepted'' and kept_routing {capability_id: ''decision''
+    | ''research'', capability_version: string, routing_assessment_id: string} non-null; consumed by DK-400d-3-ii
+    (kept-whole resume) and DK-400c-3 (too few parts goes ahead as that capability).'
+expects_from: null
+it_requirements:
+  - bundled_accepted is caught at routing on the root work item (depth 0), in the same route pass that selected
+    the capability, not inside the decision or research capability; the selected capability is not invoked for the
+    root while the split is open.
+  - The routing result that selected the capability (its RoutingAssessment id, or the intent-bound binding, with
+    capability id and version) is kept on the split record as kept_routing and is the only source a kept-whole rejection
+    or a too-few-parts outcome resumes from; it is not re-routed and no second routing Jev call is made on resume.
+  - 'No options request, criteria proposal, precedent search or assessment runs for the whole goal before the gate
+    answer: no host.generate_options packet and no decision Jev batch exists for the root.'
+  - A bundled root resolved to research (evidence answer kind) is caught the same way with subject_kind research_request.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_bundled_accepted_goal_offered_as_split_before_any_option_work
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: 'Routing selects decision for the decision-records goal with bundle 0.9: the run waits on decompose_goal
+      with trigger bundled_accepted and kept_routing naming decision, and no options, criteria or assess work exists
+      for the root.'
+  - name: test_bundled_accepted_kept_routing_survives_restart
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: After a process restart at the split gate the split record still names the same capability id,
+      version and routing assessment id.
+  - name: test_ideas_root_is_never_split
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: A root classified as ideas with bundle 0.9 starts no split and is bound to host.generate_options
+      as today.
+test_rationale: 'Where the case is caught matters as much as that it is caught: the tests assert the absence of
+  any decision work for the root, which only a run through the real scheduler can show.'
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Flow node split-detect, the accepted-as-one case (user decision 2026-10-05, DK-400 Q1).
+  The real case is the run of 2026-10-01 (run-5d246775f5e54f11), where the person had to add a
+  composite option because five decisions were squeezed into one choice.
+  Left to the IT PO: where this is caught, at routing or at the start of the decision
+  capability on the root work item. Both must reach the same split gate (DK-400d). The check now
+  runs on every routed request, so its cost and false-positive rate matter. DK-400a-3 and
+  DK-400a-3-i pin the false-positive side.
+  IT PO (2026-10-05): settled where bundled_accepted is caught (BA open point 2): at routing, in the
+  route pass that selected the capability on the root work item, never inside the decision
+  capability; the routing result is kept on the split record for a kept-whole rejection.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

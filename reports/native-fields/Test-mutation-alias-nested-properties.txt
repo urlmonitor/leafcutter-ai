@@ -1,0 +1,14 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_test.py::test_test_reference_copies_nested_data_in_both_directions covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________ test_test_reference_copies_nested_data_in_both_directions __________
+tests\knowledge\test_native_test.py:186: in test_test_reference_copies_nested_data_in_both_directions
+    assert entity.properties["nested"][0]["items"] == [1, 2]
+E   assert [1, 2, 3] == [1, 2]
+E     
+E     Left contains one more item: 3
+E     Use -v to get more diff
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_copies_nested_data_in_both_directions
+1 failed in 27.45s

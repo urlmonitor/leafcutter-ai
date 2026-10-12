@@ -1,0 +1,70 @@
+id: DK-200d-1
+title: "A labelled evaluation measures the initial context step independently"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a versioned evaluation corpus includes the original Leafcutter availability question,
+  And cases cover conversation references, irrelevant evidence, unknown facts, user preferences and hostile source content,
+  When the isolated context evaluation runs,
+  Then each case exercises the production gathering step without intent, downstream research or final-answer grading,
+  And each result reports the case's required facts, source provenance, request fidelity, permission boundaries, text bounds and unknowns against its labels,
+  And the report includes case-level outcomes and the aggregate result.
+depends_on: [DK-200d]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestEvaluationFalsifiability::test_live_probe_requires_opt_in_and_fails_on_a_wrong_enriched_label"
+implemented_by:
+  - "tests/kernel/enrichment/eval_runner.py"
+  - "tests/kernel/fixtures/eval/context_enrichment.json"
+  - "tests/kernel/enrichment/live_eval.py"
+assigned_agent: test-writer
+estimated_complexity: M
+it_requirements:
+  - "Isolated evaluation must invoke the production enrichment boundary against versioned, independently labelled cases without invoking intent or downstream research."
+  - "Case-level assertions must compare actual context with labelled facts, provenance, forbidden material and bounds rather than grade a final answer."
+  - "The report must retain each case outcome alongside aggregate totals; external live-model probes must remain separate evidence."
+  - "The separate live-model probe must require explicit opt-in and report an unsuccessful outcome for any wrong expected enriched label."
+delivers_to:
+  agent: test-writer
+  contract: "Evaluation report: {step:string, rows:{id:string, category:string, status:string, evidence_count:integer, files_scanned:integer, sources:string[], failures:string[], passed:boolean}[], total:integer, passed:integer, jev_calls:integer}. A successful isolated report has total>0, passed=total and jev_calls=0. Fixture source: tests/kernel/fixtures/eval/context_enrichment.json; executable entry: python -m tests.kernel.enrichment.eval_runner."
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_each_labelled_case_meets_the_context_contract
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "The production enrichment evaluator runs all labelled cases, requires a non-empty corpus and reports no unmet fact, provenance, scope, fidelity, redaction or boundary expectation."
+  - name: test_live_probe_requires_opt_in_and_fails_on_a_wrong_enriched_label
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "The separate live probe refuses to run without explicit opt-in and reports failure for a wrong enriched intent label and success only when every expected label passes."
+test_rationale: "Independent case labels and actual fixture files make the enrichment-only result separate from intent selection or final-answer grading."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

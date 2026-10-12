@@ -1,0 +1,89 @@
+id: DK-300e-2
+title: "Independent recognition labels and paired intent outcomes produce separate reports"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a versioned labelled corpus covering every supported entity family, ordinary prose, long goals, repetition, ambiguous symbols, absent and malformed IDs, denied sources, stale indexes, small budgets and hostile definitions,
+  When the production recognition path is evaluated independently of intent and final answers,
+  Then each case checks exact identities, original mention spans, aliases, resolution states, provenance, permission boundaries, configured bounds and actual lookup counts,
+  And the report gives expected and observed results plus precision, recall and coverage by entity family,
+  And a separate paired intent comparison uses the same caller context for the current baseline and entity-context cases and records labels, clarification behavior and actual model-call counts,
+  And a classifier-consumption check demonstrates that the live kernel path uses the retained entity context,
+  And historical DK-200 tests and earlier enrichment scores are identified as historical evidence rather than proof of the new recognition contract.
+depends_on: [DK-300e]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: test-writer
+delivers_to: {"agent":"python-coder","contract":"Executable recognition evaluation report: {corpus_version:string,case_count:int,passed:boolean,cases:list[{id,expected,observed,violations}],by_family:dict[family,{precision:number,recall:number,coverage:number}],paired_intent:{baseline,entity_context,caller_context_equal:boolean,model_call_counts}}. Empty cases are invalid; each named negative control must fail. Tests and harness reside in tests/kernel/entity_context/ and the repository's evaluation surface."}
+expects_from: {"ac_id":"DK-300d-1","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'DK-300e-2-i'
+  - 'tests/kernel/entity_context/test_evaluation.py::test_labelled_recognition_corpus_reports_family_metrics_and_exact_cases'
+  - 'tests/kernel/entity_context/test_evaluation.py::test_paired_intent_report_keeps_context_constant_and_calls_honest'
+  - 'tests/kernel/entity_context/test_evaluation.py::test_historical_enrichment_results_are_not_entity_contract_evidence'
+implemented_by:
+  - "tests/kernel/entity_context/eval_runner.py"
+  - "tests/kernel/entity_context/intent_eval.py"
+  - "tests/fixtures/entity_evaluation/corpus.json"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Corpus labels are versioned independent expected results; evaluation calls production recognize_entities on real native source fixtures rather than reproducing implementation logic."
+  - "Report exact per-case expected/observed identities/spans/states/provenance/bounds/calls plus family-level precision, recall and coverage; unsupported or omitted families remain visible."
+  - "Paired baseline versus entity-context intent comparisons use identical caller inputs and explicitly controlled recording providers, with model-call counts and clarification outcomes reported separately from recognition quality."
+  - "The test-writer owns executable evaluation fixtures/harness and establishes the red baseline; live Anthropic or any generative model calls are forbidden for this work."
+test_required: true
+test_spec:
+  - name: "test_labelled_recognition_corpus_reports_family_metrics_and_exact_cases"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "real_artifact"
+    description: "tests/kernel/entity_context/test_evaluation.py::test_labelled_recognition_corpus_reports_family_metrics_and_exact_cases: Run a nonempty versioned corpus spanning all6 families and stated adversarial cases; assert expected/observed detail and precision/recall/coverage by family."
+  - name: "test_paired_intent_report_keeps_context_constant_and_calls_honest"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_evaluation.py::test_paired_intent_report_keeps_context_constant_and_calls_honest: Evaluate baseline and entity paths against identical caller context with controlled provider, report intent/clarification/call outcomes separately and prove the actual service consumes cards."
+  - name: "test_historical_enrichment_results_are_not_entity_contract_evidence"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_evaluation.py::test_historical_enrichment_results_are_not_entity_contract_evidence: Assert evaluation identifies legacy DK-200 results separately from current recognition labels and cannot use an old aggregate score as a new pass."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

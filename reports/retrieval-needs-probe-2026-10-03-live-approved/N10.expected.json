@@ -1,0 +1,25 @@
+{
+  "expected": {
+    "exclude": {
+      "entity_types": [
+        "ac",
+        "source_file",
+        "test",
+        "adr",
+        "schema",
+        "report",
+        "component"
+      ],
+      "required_fields": [
+        "criteria",
+        "work_status",
+        "status"
+      ]
+    },
+    "status": [
+      "needs_resolution"
+    ],
+    "needs_outside_catalog": true
+  },
+  "human_gold": "The offered repository catalog has no employees or compensation field. Preserve unmet payroll meaning and disclose unsupported need. Empty or unrelated selected fields cannot be presented as a resolved retrieval plan."
+}

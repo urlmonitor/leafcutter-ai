@@ -79,7 +79,17 @@ def extract_frontmatter(content: str) -> tuple[dict[str, Any] | None, str]:
     body = content[end_idx + 3:].strip()
 
     try:
-        parsed = yaml.safe_load(raw_yaml)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): backs the required check-doc-frontmatter
+        # gate over every docs/**/*.md and tickets/**/*.md file -- the
+        # widest blast radius found in this audit. Same block-becomes-pass
+        # shape as the already-fixed validate_ac_schema.py/validate_ac.py:
+        # a parse failure here means "treat this file as having no
+        # frontmatter", which downstream required-field checks turn into a
+        # BLOCK -- a more permissive parser can erase that block. One small
+        # frontmatter block per staged file -- no speed case for the fast
+        # loader here.
+        parsed = yaml.load(raw_yaml, Loader=yaml.SafeLoader)
     except yaml.YAMLError:
         return None, content
 
@@ -273,7 +283,8 @@ def validate_paths(fm: dict[str, Any], project_root_path: Path) -> list[str]:
             resolved = resolve_frontmatter_path_entry(entry, field)
             if isinstance(resolved, PathEntryRefusal):
                 errors.append(
-                    f"Unsupported entry in '{field}': accepted shapes are "
+                    f"Unsupported entry in '{field}': {resolved.entry!r} "
+                    f"({resolved.reason}); accepted shapes are "
                     f"{', '.join(resolved.accepted_shapes)}"
                 )
                 continue

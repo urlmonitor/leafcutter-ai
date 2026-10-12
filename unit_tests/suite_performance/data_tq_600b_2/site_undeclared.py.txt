@@ -1,0 +1,9 @@
+"""Same fixed-path site as site_declared_exempt.py.txt, WITHOUT a declaration."""
+import os
+import tempfile
+
+
+def test_needs_a_fixed_location():
+    path = os.path.join(tempfile.gettempdir(), "leaf_fixed_site_x.txt")
+    with open(path, "w") as handle:
+        handle.write("scratch")

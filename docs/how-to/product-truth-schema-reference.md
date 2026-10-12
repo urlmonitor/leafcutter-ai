@@ -4,10 +4,11 @@ description: "Field-by-field reference for the four product-truth schemas — Fl
 type: how-to
 status: active
 created: 2026-07-14
-last_updated: 2026-09-17
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
+  - docs/product-truth/JSON-CONTRACTS.md
   - docs/how-to/authoring-product-truth-artifacts.md
   - docs/architecture/components/ux-prototyping.md
   - docs/architecture/adrs/ADR-023-product-truth-flow-first-upstream-layer.md
@@ -49,7 +50,7 @@ For the authoring workflow (including the mandatory add-vs-create protocol), see
 ## Flow — `flow.schema.json`
 
 A reviewable user journey; machine-readable for agents and human-readable via
-`summary`/`human`.
+`summary` and each step's `description`.
 
 **Required:** `id`, `component`, `name`, `summary`, `kind`, `source`, `status`,
 `readiness`, `version`, `entities`, `steps`.
@@ -78,18 +79,20 @@ A reviewable user journey; machine-readable for agents and human-readable via
 
 ### Step (`steps[]`)
 
-**Required:** `id`, `label`, `human`, `order`.
+**Required:** `id`, `label`, `description`, `actor_kind`, `order`.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | string | Unique within the flow's step+branch id namespace. |
 | `label` | string | Short tab-label title. |
-| `human` | string | HUMAN: one-line "what the user is doing/seeing". |
+| `description` | string | ONE plain sentence (at most 200 characters) of WHAT happens in the step and who does it. Never implementation detail; see [What goes where](#what-goes-where-in-a-step). Named `human` until 2026-10-09. |
 | `order` | integer | Ordering. |
 | `screen` | string | Mockup `screen` id this step renders, if any. |
-| `agent` | string | The actor running the step — an agent id (`config/agent_registry.json`) or a script/workflow name. |
-| `produces` | string[] | Named artifacts/fields handed DOWNSTREAM (output side of the handoff contract), e.g. `Ticket.test_requirements`. |
-| `consumes` | string[] | Named artifacts/fields required from UPSTREAM. A `consumes` with no matching upstream `produces` is a broken handoff. |
+| `agent` | string | The named actor running the step — an agent id (`config/agent_registry.json`) or a script/workflow name. |
+| `actor_kind` | enum | Which of the four mechanisms ([ADR-053](../architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md)) runs it: `deterministic` (scripts, hooks, workflows, other code) \| `jev` \| `llm` (an agent template, Claude Code, a host model) \| `human` (a person). Record who does the work described, not who approves it later. |
+| `io_contracts` | object | Authored checked bindings/examples, genuine non-JSON reason, or explicit proposed binding gaps; see the [worked example](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs). |
+| `produces` | string[] | **DERIVED** field labels from `io_contracts`; never hand-author free-form output badges. |
+| `consumes` | string[] | **DERIVED** field labels from `io_contracts`. The gate does not infer cross-step dataflow; record real mappings in `io_contracts`, never in the description. |
 | `reads` / `writes` | string[] | Entities the step touches. |
 | `implements` | string[] | **AUTHORED** link: AC ids derived from this step's `acceptance_scenarios`. Source of truth for flow↔AC linkage. |
 | `expands_to` | string[] (a single string is still read) | Ids of the child flows this step drills into (C4-style). Being reshaped from one id to a list: a single id is read as a list of one, and the generator writes it back as a list, so the older shape disappears as journeys are regenerated (UXP-700e-3-i). When set, `impl_status` derives from the child flows' combined rollup (all done → done, none started → not_started, otherwise in_progress), taking precedence over `implements`. |
@@ -99,13 +102,34 @@ A reviewable user journey; machine-readable for agents and human-readable via
 ### Branch (`branches[]`)
 
 **Required:** `id`, `from`, `condition`, `label`. Shares the step id namespace and
-carries the same `human`, `screen`, `agent`, `produces`, `consumes`, `reads`,
-`writes`, `implements`, `impl_status`, `impl_asof` fields, plus `from` (the step
-id it branches from) and `condition`.
+carries the same `description` (optional; held to the same rules when present),
+`screen`, `agent`, `actor_kind` (optional), `produces`, `consumes`, `reads`, `writes`,
+`implements`, `impl_status`, `impl_asof` fields, plus `from` and `condition`.
 
 | Field | Type | Notes |
 |---|---|---|
 | `outcome_kind` | enum `alternative` \| `failure` \| `exit` | What the branch leads to: another valid route to the goal, a failure that is recovered from or reported, or an end to the journey before its goal. Being introduced (UXP-700e-3-i): optional, and a branch without one is reported by the validator as a `[to-be-filled]` warning, never as an error. |
+
+### What goes where in a step
+
+A step says WHAT happens. Every HOW has its own home, so the description stays one
+sentence and does not go stale when the code moves (kernel decision `dec-7b1dcfd47f85cf0a`).
+
+| Put it in | What belongs there |
+|---|---|
+| `label` | A short title. |
+| `description` | One plain sentence of what happens and who does it, in product words. |
+| `agent` + `actor_kind` | Who runs the step, and whether that is code, Jev, an AI agent or a person. |
+| `io_contracts` | Every input and output, field by field, with examples, authority and proposed gaps ([JSON contracts](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs)). Atlas renders it. |
+| `acceptance_scenarios` + `implements` | What must be true, and the ACs that pin it. |
+| flow `realization` + linked ACs' `work_status` | Whether it is built. |
+| code, docstrings, ADRs, tickets | How it is built: paths, symbols, design notes, rationale. |
+
+**Never in a description:** code paths or file names; symbol, function or field
+names (snake_case, camelCase, dotted names, call parentheses, backticks); build or
+implementation status ("implemented", "not built", "stub", "TODO"); design notes;
+ticket, AC, ADR or record ids; contract dumps, JSON, commands or flags; a second
+sentence. The validator's [description gates](../reference/product-truth-size-bounds.md#step-description-gates) block the length and every code-shaped item.
 
 ### `acceptance_scenarios[]`
 
@@ -134,15 +158,12 @@ are required whenever the object is present.
 
 Written and removed by `validate_product_truth.py`'s `_sync_behind_marks` —
 **MUST NOT be hand-edited**. A CURRENT verdict deletes the key outright (never
-nulls it); a BEHIND verdict overwrites the object in place. A journey the
-checker did not examine this run is never read from or written to, so it keeps
-whatever mark (or absence of one) it already had. Serialisation is
-byte-for-byte `json.dumps(flow, indent=2, ensure_ascii=False) + "\n"`, matching
-`generate_product_truth.write_flows`, so this second writer cannot itself
-trigger drift. The Atlas (`frontend-coder`, tracked at
-[UXP-591](../acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml))
-is the intended reader: it can show a journey is behind, and what it was last
-confirmed against, straight from this field — without re-running the checker.
+nulls it); a BEHIND verdict overwrites the object in place; a journey not examined
+this run keeps whatever it had. Serialisation is byte-for-byte
+`json.dumps(flow, indent=2, ensure_ascii=False) + "\n"`, matching
+`generate_product_truth.write_flows`, so this second writer cannot trigger drift.
+The Atlas ([UXP-591](../acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml))
+reads this field to show a journey is behind without re-running the checker.
 
 ---
 
@@ -229,38 +250,8 @@ The `outcome` must be consistent with `expected{}` — the validator
 
 ## Validator run outcome — `validate_product_truth.py` (not the classifier `outcome` above)
 
-`validate_product_truth.py` prints one JSON object as its **last** stdout line
-(independent of logging), reporting on the run itself rather than on any single
-artifact. This is a different vocabulary from the per-example classifier
-`outcome` field documented above — the two are deliberately distinct enums so
-that reading a value on one axis can never be mistaken for the other.
-
-```json
-{"outcome": "checked-and-sound", "examined": 14, "unreadable": []}
-```
-
-| Field | Type | Notes |
-|---|---|---|
-| `outcome` | enum | `checked-and-sound` (every journey read and no problems found) \| `nothing-examined` (zero journeys were read) \| `degraded` (at least one journey exists but could not be read — see `unreadable`) \| `failed` (a real validation failure was found). |
-| `examined` | int | Count of journeys the run actually read. |
-| `unreadable` | string[] | Store-relative path of each journey file that could not be parsed (empty when nothing was unreadable). |
-| `resolved_labels` | int | How many journey labels (one component each, plus tags) resolved against `docs/acceptance-criteria/index.yaml` and the tag shape (UXP-700e-3). `0` for a record with no labels. |
-| `bounds` | object | One entry per declared size bound (`product_truth_bounds.BOUNDS`), keyed by bound name: `measured` (artifacts measured against it), `exceeded`, `holdouts` (artifacts still on a shape version older than the bound's), and `enforcement` — `warning-period` while any holdout remains, `blocking` once none does. Derived from the artifacts on every run; no date or flag changes it (UXP-700e-1, UXP-700e-1-ii). |
-
-`--tighten BOUND` asks the validator to hold a bound as blocking. While any
-artifact is still on an older shape version, the request is refused: the run
-exits `1` and a `REFUSED:` line names the holdouts. Once none remains, the run
-proceeds, and any artifact over the bound fails it.
-
-The exit code is `0` for every outcome except `failed` — one malformed journey
-file degrades the run and is named in `unreadable`, but does not stop it
-(the project's fail-open convention; see
-[Traceability guardrails, Hole 7](../explanation/traceability-guardrails.md#the-holes)
-and
-[GE-120](../acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml)).
-The per-file read that can produce `degraded` lives once in
-`generate_product_truth.py::load_flows()`, shared by the generator and this
-validator, so both callers skip-and-continue on the same file the same way.
+The validator's last stdout line is a JSON run report, distinct from the classifier
+example outcome. See its [complete field and exit-code reference](../product-truth/JSON-CONTRACTS.md#validator-run-outcome).
 
 ---
 
@@ -299,6 +290,12 @@ import this module verbatim rather than re-deriving the predicate — see the
 module's own DECISION HISTORY block for the rationale.
 
 ---
+
+## Checked JSON handoffs
+
+Every step and branch needs `io_contracts`. The [JSON contract standard](../product-truth/JSON-CONTRACTS.md#checked-json-handoffs)
+has the field definitions, worked example, authority and validation boundaries,
+proposed-gap rules and author review checklist.
 
 ## See Also
 

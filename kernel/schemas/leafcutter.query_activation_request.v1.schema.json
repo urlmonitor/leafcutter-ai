@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.query_activation_request.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Candidate bound to the trusted repository and immutable source.",
+  "properties": {
+    "candidate": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "The recipe to verify and activate.",
+      "title": "Candidate",
+      "type": "object"
+    },
+    "component_ids": {
+      "description": "Components the recipe is allowed to read.",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Component Ids",
+      "type": "array"
+    },
+    "expected_active_digest": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Digest of the active query this recipe replaces; required when replacing, so a concurrent change is detected.",
+      "title": "Expected Active Digest"
+    },
+    "repository_id": {
+      "description": "Repository the recipe is bound to.",
+      "minLength": 1,
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_sha": {
+      "description": "Immutable commit the recipe is verified against.",
+      "pattern": "^[a-f0-9]{40}$",
+      "title": "Source Sha",
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate",
+    "repository_id",
+    "source_sha"
+  ],
+  "title": "QueryActivationRequest",
+  "type": "object"
+}

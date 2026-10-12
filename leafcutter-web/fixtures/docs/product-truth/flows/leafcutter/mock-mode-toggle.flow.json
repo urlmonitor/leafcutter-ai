@@ -18,7 +18,8 @@
     {
       "id": "set-env",
       "label": "Set LEAFCUTTER_MOCK=1",
-      "human": "The reviewer starts the dev server with LEAFCUTTER_MOCK=1 NEXT_PUBLIC_LEAFCUTTER_MOCK=1.",
+      "description": "The reviewer starts the Atlas development server with mock mode switched on.",
+      "actor_kind": "human",
       "order": 1,
       "implements": ["UXP-553"],
       "impl_status": "done",
@@ -27,7 +28,8 @@
     {
       "id": "observe-badge",
       "label": "Observe mock-mode badge",
-      "human": "The reviewer opens the Atlas and sees the amber 'Mock mode' badge in the sidebar chrome.",
+      "description": "The reviewer opens the Atlas and sees the amber 'Mock mode' badge in the sidebar.",
+      "actor_kind": "human",
       "order": 2,
       "implements": ["UXP-552"],
       "impl_status": "done",
@@ -36,7 +38,8 @@
     {
       "id": "verify-fixtures",
       "label": "Verify all views render from fixtures",
-      "human": "The reviewer opens /roadmap, /flows, /atlas, etc. and sees curated fixture data, not the live repo.",
+      "description": "The reviewer opens the roadmap, flows and atlas pages and sees curated sample data instead of the live repository.",
+      "actor_kind": "human",
       "order": 3,
       "implements": ["UXP-550", "UXP-551"],
       "impl_status": "done",

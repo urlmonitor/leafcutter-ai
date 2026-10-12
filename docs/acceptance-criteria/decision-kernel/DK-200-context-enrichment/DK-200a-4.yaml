@@ -1,0 +1,82 @@
+id: DK-200a-4
+title: "Later research and handoffs retain the meaning supplied by initial context"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a request has saved repository meanings and a conversation can identify a canonical reference,
+  When the run proceeds from intent into research, a native judgment or a host handoff,
+  Then the receiving work retains compact meanings and caller claims with their trust limits,
+  And research can use the resolved conversation reference to retrieve task-specific evidence after intent,
+  And that evidence is separate from interpretation meanings,
+  And the original request remains unchanged.
+depends_on: [DK-200a]
+covered_by:
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_conversation_referent_reaches_downstream_research_and_retrieval"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_native_decision_judgments_receive_the_saved_context"
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_host_artifact_and_host_resume_retain_the_saved_context"
+implemented_by:
+  - "kernel/capabilities/base.py"
+  - "kernel/scheduler/nodes_route.py"
+  - "kernel/scheduler/nodes_execute.py"
+  - "kernel/capabilities/decision/jev_support.py"
+  - "kernel/capabilities/research/planning.py"
+  - "kernel/interaction/packets.py"
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "Native research, native decision judgments and host input artifacts consume saved EntityContext; meaning cards contain no body evidence, and routed retrieval creates separate task evidence."
+  - "Downstream query hints must retain relevant supplied references without replacing the original request."
+  - "Every receiving context representation distinguishes supplied claims, interpretation meanings, task evidence, registry information and authority limits."
+delivers_to: null
+expects_from:
+  ac_id: DK-300d-1
+  contract: "EntityContext version 1.0 checkpoint under state.entity_context; kind=entity_context; original_goal remains verbatim; caller_context and registered_capabilities are separate; entities contain compact typed meanings, canonical references and provenance, never body evidence; unresolved references, coverage, budgets and limitations describe the pass; status=recognized|no_matches|partial|unavailable|disabled. Human and host resume reuse the saved snapshot without recognition or index rebuilding. Historical EnrichedContext checkpoints retain their old channel and semantics."
+test_required: true
+test_spec:
+  - name: test_conversation_referent_reaches_downstream_research_and_retrieval
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "A pronoun request with conversation reference pkg.alpha.run retrieves its actual function-body evidence after intent, while initial meaning cards exclude that body and the original goal remains unchanged."
+  - name: test_native_decision_judgments_receive_the_saved_context
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "A real native decision flow produces decision.assess batches containing saved entity meanings for the supplied Zephyr referent without an evidence field in the meaning channel."
+  - name: test_host_artifact_and_host_resume_retain_the_saved_context
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The actual bounded host input artifact carries saved meanings separately from caller claims and input evidence, with meaning/approval trust limits; host resume preserves the initial checkpoint."
+test_rationale: "Each consumer boundary is exercised through a service run and actual batch or artifact; helper-only forwarding tests would miss an omitted call site."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+  - reason: "2026-10-04 DK-300 migration under the user-approved entity-context redesign: retain the fresh-run ordering, explicit-route, snapshot and downstream-handoff invariants, but replace obsolete lexical EnrichedContext/body-evidence expectations with versioned EntityContext. Historical reports and direct gather_context compatibility remain unchanged; these revised criteria are verified by current behavioral tests, not historical scores."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+  Fresh-run wiring now follows DK-300d-1 and DK-300d-3/-3-i. The earlier
+  lexical contract remains recorded in Git and the historical evaluation reports.

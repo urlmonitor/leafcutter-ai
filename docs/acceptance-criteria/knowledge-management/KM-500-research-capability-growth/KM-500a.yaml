@@ -1,0 +1,80 @@
+id: KM-500a
+title: Clarify what you need and choose a suitable way to find it
+component: knowledge-management
+components:
+- knowledge_management
+level: L1
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: in_progress
+criteria: 'Make the question clear before choosing how to answer it.
+
+
+  Research identifies missing required information and asks focused questions before proceeding. It chooses among
+  described, available research abilities using their accepted inputs and the questions they can answer, and recognizes
+  when no suitable ability exists.
+
+  '
+parent: KM-500
+depends_on:
+- KM-500
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse completed retrieval contracts, pinned provenance, optionality and honest outcomes.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Preserve registered bounded execution and standalone ownership; never execute unchecked model-authored
+    queries.
+documentation_triggers:
+- how-to
+- sequence-diagram
+- reference-doc
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: '2026-10-01'
+amended_by:
+- '2026-10-01 PO coverage audit: reconcile aggregate implementation state and pending operational verification without
+  changing completed child behavior.'
+superseded_by: null
+covered_by:
+- KM-500a-1
+- KM-500a-2
+- KM-500a-3
+- KM-500a-4
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'User-approved follow-on to KM-400: Jev research readiness and clarification,
+
+  selection by registered query descriptions, typed inputs and supported questions,
+
+  proven missing-capability development, verified reusable admission and resumption
+
+  of the original research. Approval authorizes implementation, not a done claim.
+
+  Existing Decision, Evidence, capability-gap and continuation ownership remain
+
+  authoritative. KM-400 rejection of unknown executable operations is preserved.
+
+  A successful build is not an answered research question. Empty results, provider
+
+  outages, denied access and ambiguous requests remain distinct from a buildable gap.
+
+  No roadmap changes, unrestricted dynamic query execution or autonomous canonical
+
+  knowledge rewriting are introduced by this outcome.
+
+
+  Coverage audit: existing bounded behavior is supported by the acceptance report; real-provider judgment quality
+  and real coding-agent authorship were not exercised by scripted proofs. Pending added criteria record those obligations
+  separately. A parent status is an aggregate, not proof of real-provider or deployment readiness.
+
+  '

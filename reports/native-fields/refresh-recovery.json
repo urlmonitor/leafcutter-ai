@@ -1,0 +1,35 @@
+{
+  "finding": "native-review-3",
+  "status": "fixed and verified",
+  "changed_files": [
+    "knowledge/native_refresh.py",
+    "tests/knowledge/test_native_refresh_recovery.py",
+    "tests/knowledge_live/native_refresh_recovery_checks.py"
+  ],
+  "behavior": [
+    "The original strict migration inspector continues to validate every ready generation, including the current generation, without modification.",
+    "Inactive building, failed and validated generations are separately inspected and included in the private backup.",
+    "Staged manifests retain repository identity checks; existing partial records retain the normal identity, provenance and endpoint checks; incomplete active generations and staging records marked current are rejected.",
+    "Only the exact intended snapshot's key, source SHA, mapper version, counts, digest and existing partial canonical payloads can be resumed.",
+    "The ordinary publisher rebuilds remaining rows, verifies physical metadata, validates full counts and atomically publishes through its existing compare-and-swap guard.",
+    "Retained ready payloads and unrelated staging payloads/endpoints are compared after publication."
+  ],
+  "verification": {
+    "focused_tests": {"passed": 15, "failed": 0, "receipt": "reports/native-fields/refresh-recovery-green.xml"},
+    "combined_with_real_database": {"passed": 16, "failed": 0, "receipt": "reports/native-fields/refresh-recovery-complete-green.xml"},
+    "live_scenario": "The real writer commits the first 250-node batch of a 251-node snapshot, then receives an injected BackendUnavailable. The old generation remains active. Native refresh backs up the partial failed stage, resumes publication, verifies all 251 nodes current, and confirms old payload bytes remain unchanged.",
+    "live_failure_capability": "Restoring the old strict inspect entry point makes the same real-database test fail with generation identity or readiness mismatch; receipt reports/native-fields/refresh-recovery-live-mutation.xml.",
+    "negative_control_mutations": {"red": 12, "survived": 0, "receipt": "reports/native-fields/refresh-recovery-mutations.json"},
+    "mutation_scope": "Process-only changes; production files were not changed by mutation probes.",
+    "database": "Disposable local Neo4j instance on 127.0.0.1:18088; no Aura access."
+  },
+  "other_review_findings": {
+    "native-review-1": "Parent fix independently verified: oversized integer remains a driver-packable string in physical properties and decode restores the original integer.",
+    "native-review-2": "Parent fix independently verified: scoped Document components=['finalize'] remains available through ordinary components and authored /components, with an explicit unresolved membership diagnostic."
+  },
+  "limitations": [
+    "The recovery path deliberately refuses mismatched or corrupted staged canonical evidence rather than guessing a repair.",
+    "A retry requires a fresh private backup path because backup creation uses exclusive file creation.",
+    "The integration-review.json report records pre-fix findings; this report records their verified resolution."
+  ]
+}

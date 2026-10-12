@@ -1,0 +1,67 @@
+{
+  "status": "completed_waiting_human",
+  "provider": "TypeSafe",
+  "model": "jev-latest",
+  "host": "api.typesafe.ai",
+  "scenarios": [
+    "RS-02",
+    "RS-03"
+  ],
+  "maximum_calls_per_case": 12,
+  "maximum_calls_total": 24,
+  "maximum_active_seconds_per_case": 120,
+  "maximum_state_chars_per_call": 30000,
+  "maximum_questions_per_call": 20,
+  "transport_timeout_seconds": 30,
+  "provider_token_limit": null,
+  "limits_note": "No hard provider token cap exposed by this classifier configuration. Host/human waits are retained without fabricated responses.",
+  "excluded": [
+    "credentials and env-file contents",
+    "remote Langfuse export",
+    "embeddings",
+    "query activation",
+    "graph writes"
+  ],
+  "active_source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+  "active_generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+  "consent": {
+    "source": "New explicit user evaluation rerun request conveyed by coordinator",
+    "user_reply": "Then retest (fresh scoped repeat conveyed by coordinator)",
+    "scope": "Fresh original RS-02 and RS-03 starts on merged code887c66d3; max12 calls each/24 total, max120active seconds/case; no graph writes, activation, embeddings or Langfuse",
+    "recorded_at": "2026-10-02T17:51:17.468510+00:00"
+  },
+  "stage_of_stop": "knowledge.answer_contract -> answer_scope clarification -> waiting_human",
+  "human_prompts": {
+    "RS-02": "Please supply the missing population choices: population, population. For inclusion choose root_excluded (exclude only the selected root), terminal_leaves (exclude every parent), or include_root. Reply with JSON containing scope and, if requested, required_fields. Population may be returned_entities, ac_descendants or declared_dependents; a whole-project enumeration is unsupported and must be scoped explicitly. Original question: Facts about the task itself that the requester supplied or that the workspace shows. Question: How many ACs concern test writing? Exclude parent requirements.",
+    "RS-03": "Please supply the missing population choices: population, population. For inclusion choose root_excluded (exclude only the selected root), terminal_leaves (exclude every parent), or include_root. Reply with JSON containing scope and, if requested, required_fields. Population may be returned_entities, ac_descendants or declared_dependents; a whole-project enumeration is unsupported and must be scoped explicitly. Original question: The project's own stated rules, conventions and principles. Question: For KM-500c-2, what must tests demonstrate?"
+  },
+  "permitted_transmission_categories": [
+    "original questions",
+    "offered capability/query contracts",
+    "scoped IDs and source identity",
+    "bounded retrieved repository excerpts and assessment context"
+  ],
+  "completed_at": "2026-10-02T18:02:38.309367+00:00",
+  "actual_calls_total": 8,
+  "actual_calls_by_case": {
+    "RS-02": 3,
+    "RS-03": 5
+  },
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "retrieval_capability_entered": true,
+  "graph_query_executed": false,
+  "retrieval_reached": false,
+  "resumes_performed": 0,
+  "actual_retrieved_excerpt_count": 0,
+  "actual_transmission_categories": [
+    "Original questions and the research need descriptions selected from configured categories.",
+    "Offered answer-contract field names, population/inclusion/root choices and bounded classification instructions.",
+    "Configured source/contract readiness metadata; no retrieved repository excerpts or graph-query results."
+  ],
+  "actual_transmission_basis": "Derived from saved generation question IDs/outputs and the pinned producer code. RecordingTracer stores outbound-state fingerprints, not full outbound payloads.",
+  "actual_input_tokens": 10197,
+  "actual_output_tokens": 1782,
+  "actual_cost_usd_estimated": 0.00042827399999999997
+}

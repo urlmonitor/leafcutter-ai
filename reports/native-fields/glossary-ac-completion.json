@@ -1,0 +1,49 @@
+{
+  "status": "complete",
+  "ac_id": "KM-400a-1-ix",
+  "work_status": "done",
+  "readiness": "reviewed",
+  "reason": "Implemented reader was complete; Windows could not create a symlink. The exact unchanged skipped test passed in existing leafcutter-worker Linux environment.",
+  "verification": {
+    "report": "reports/native-fields/glossary-linux-symlink-verified.xml",
+    "passed": 1,
+    "skipped": 0,
+    "failures": 0,
+    "test_source_sha256": "b3d302168ffcbb3eb3217dbd0895ae082b9154c4d1c3b007adf2c83d8b72b3de",
+    "runner": "WSL leafcutter-worker Python3.12 using existing pure-Python pytest dependencies; auto-loaded plugins disabled; collection confined to this exact test; assertions and source unchanged.",
+    "initial_collection_attempt": "glossary-linux-symlink.xml recorded a runner root-directory collection error; corrected runner scope in the verified result."
+  },
+  "previous_type_status": {
+    "kind": "GlossaryTerm",
+    "ac_id": "KM-400a-1-ix",
+    "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+    "readiness": "reviewed",
+    "work_status": "in_progress",
+    "test_links": 12,
+    "linked_cases_passed": 22,
+    "skipped_tests": [
+      "test_native_glossary_symlink_outside_snapshot_fails"
+    ],
+    "criteria_raw_sha256": "d09b70fc5ab25cfcf1b0e5ad4e606eadb0e8c3ae16e97cd7a709847676e753a5"
+  },
+  "all_17_implementation_contracts_done": true,
+  "source_and_active_files_identical": true,
+  "git_metadata_unchanged": true,
+  "backup": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\glossary-ac-completion-b2e95d686d",
+  "schema_validation": "OK: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml is valid.",
+  "prior_install_receipt": "reports/native-fields/ac-install-receipt.json",
+  "files": [
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+      "sha256": "f6b91fdf6b0db2a0ad54115cb7d135c858d54af8745b7a21d02567eb6ef52377"
+    },
+    {
+      "path": "reports/native-fields/ac-traceability.json",
+      "sha256": "6d4d1ab647782d277de16d4d0d559f525d9e27309370ce88b32b8db5abedaf41"
+    },
+    {
+      "path": "reports/native-fields/glossary-linux-symlink-verified.xml",
+      "sha256": "a97a4a67871e773788eb1fb6414ecbbf104568a665b86dbd677063fa7e5e28ec"
+    }
+  ]
+}

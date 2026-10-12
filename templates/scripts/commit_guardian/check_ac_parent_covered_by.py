@@ -240,11 +240,46 @@ def _get_staged_ac_paths() -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def _load_yaml_minimal_fallback(content: str) -> dict | None:
+    """Minimal line-based YAML fallback: top-level scalars only.
+
+    Lists (e.g. ``covered_by: [ACS-100a, ACS-100b]``) are parsed as raw
+    strings, not real lists -- this is the documented DEGRADED mode, used
+    only when PyYAML itself cannot be imported at all.
+
+    Args:
+        content: Raw YAML string.
+
+    Returns:
+        Dict of top-level key/value strings, or None when nothing parsed.
+    """
+    result: dict = {}
+    for raw_line in content.splitlines():
+        line = raw_line.rstrip()
+        if not line or line.startswith("#") or line[0:1] in (" ", "\t"):
+            continue
+        if ":" in line:
+            key, _, value = line.partition(":")
+            result[key.strip()] = value.strip()
+    return result or None
+
+
 def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     """Parse a YAML string, returning a dict or None on failure.
 
-    Tries PyYAML first; falls back to a minimal line-oriented parser for
-    simple top-level scalar/list fields when PyYAML is unavailable.
+    Reverted to plain ``yaml.SafeLoader`` (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07). This function previously routed through the shared
+    ``yaml_safe_loader`` fast-accessor sibling when reachable, with a
+    documented fallback to ``yaml.SafeLoader`` for a minimal hook-only
+    deployment where the accessor is absent. That accessor path is removed
+    entirely now: this hook backs a required AC-store gate
+    (``check-ac-parent-covered-by``), and CSafeLoader's permissiveness on
+    separator-position tabs lets a malformed ``covered_by``/parent file parse
+    "successfully" instead of raising -- the exact shape that let real
+    parent/covered_by violations go undetected elsewhere in this audit. Only
+    the genuine PyYAML-absent case still degrades, to
+    :func:`_load_yaml_minimal_fallback`, which cannot parse list-valued
+    fields correctly but is the best available without PyYAML.
 
     Args:
         content: Raw YAML string.
@@ -255,30 +290,24 @@ def _load_yaml_safe(content: str, source_label: str) -> dict | None:
     """
     try:
         import yaml  # type: ignore[import]
+    except ImportError as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: PyYAML not importable ({exc}); "
+            f"using the minimal line-based fallback parser for {source_label} "
+            f"-- list-valued fields will not be read correctly",
+            file=sys.stderr,
+        )
+        return _load_yaml_minimal_fallback(content)
 
-        try:
-            data = yaml.safe_load(content)
-            return data if isinstance(data, dict) else None
-        except yaml.YAMLError as exc:
-            print(
-                f"{_HOOK_PREFIX} WARNING: YAML parse error in {source_label}: {exc}",
-                file=sys.stderr,
-            )
-            return None
-    except ImportError:
-        pass  # PyYAML absent — use minimal fallback
-
-    # Minimal line-based fallback: handles top-level scalars only.
-    # Lists (e.g. covered_by: [ACS-100a, ACS-100b]) are parsed as raw strings.
-    result: dict = {}
-    for raw_line in content.splitlines():
-        line = raw_line.rstrip()
-        if not line or line.startswith("#") or line[0:1] in (" ", "\t"):
-            continue
-        if ":" in line:
-            key, _, value = line.partition(":")
-            result[key.strip()] = value.strip()
-    return result or None
+    try:
+        data = yaml.load(content, Loader=yaml.SafeLoader)
+        return data if isinstance(data, dict) else None
+    except yaml.YAMLError as exc:
+        print(
+            f"{_HOOK_PREFIX} WARNING: YAML parse error in {source_label}: {exc}",
+            file=sys.stderr,
+        )
+        return None
 
 
 def _load_file_yaml(file_path: str) -> dict | None:

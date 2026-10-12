@@ -40,7 +40,10 @@ def _is_done_ticket(ticket_path: Path, ticket_text: str) -> bool:
         if end != -1:
             fm_text = ticket_text[3:end]
             try:
-                fm = yaml.safe_load(fm_text)
+                # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+                # no measured benefit (criterion 1); advisory backfill
+                # tooling, not CI-wired.
+                fm = yaml.load(fm_text, Loader=yaml.SafeLoader)
                 if isinstance(fm, dict) and fm.get("status") == "done":
                     return True
             except yaml.YAMLError:
@@ -54,7 +57,9 @@ def _extract_ticket_frontmatter(ticket_text: str) -> dict[str, Any]:
         end = ticket_text.find("\n---", 3)
         if end != -1:
             try:
-                fm = yaml.safe_load(ticket_text[3:end])
+                # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+                # same reasoning as _is_done_ticket above.
+                fm = yaml.load(ticket_text[3:end], Loader=yaml.SafeLoader)
                 return fm if isinstance(fm, dict) else {}
             except yaml.YAMLError:
                 pass

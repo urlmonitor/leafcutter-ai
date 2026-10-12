@@ -98,3 +98,82 @@ the glossary-automation system (`check_glossary_coverage.py` / `glossary-triage`
 | pytest_shared_reference_layout | Python module path and pytest `-p` registration string (scripts.suite_performance.pytest_shared_reference_layout), not a standalone domain concept — the concept it names is covered by the `shared_reference_layout` glossary entry | 2026-09-21 |
 | test_tq_600a_1_i | Test module filename referenced in documentation example (unit_tests/suite_performance/test_tq_600a_1_i.py), not a domain concept — same category as test_bp_100k_4_ii precedent | 2026-09-28 |
 | EXECUTION_LOG_ENV_VAR | Environment-variable constant name in scripts/suite_performance/_shared_layout_coordination.py, not a standalone domain concept — the concept it supports is covered by the `emit_execution_signal` glossary entry | 2026-09-28 |
+| blocking_decisions_resolved | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| changes_within_authorized_scope | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| implementation_context_relevant | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| implement_contract_v1 | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| required_tests_pass | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| repair_or_escalate | Illustrative check/template name from ADR-052's example capability config, which is explicitly labelled as not a kernel API; the concept is covered by the `capability` entry | 2026-09-30 |
+| parallel_execution_policy | Hypothetical example name from ADR-054's promotion example, not an existing artifact; the concept is covered by the `promotion rule` entry | 2026-09-30 |
+| parallel_execution_review_graph | Hypothetical example name from ADR-054's promotion example, not an existing artifact; the concept is covered by the `promotion rule` entry | 2026-09-30 |
+| node_vs_subgraph | Illustrative decision type used in examples in ADR-053 and ADR-056, not a kernel identifier; the concept is covered by the `decision specification` and `confidence calibration` entries | 2026-09-30 |
+| phase_colony_1_collect | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_colony_2_analyze | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_colony_3_suggest | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_colony_4_influence | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_colony_5_evolve | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_kernel_1_founding | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_kernel_2_knowledge | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_kernel_3_workflows | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_kernel_4_trails | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| phase_kernel_5_specialists | Roadmap phase id in docs/roadmap.json, not a standalone glossary concept; each phase is described in docs/roadmap.md, and the kernel and colony-memory tracks in docs/vision.md | 2026-10-01 |
+| record_decision_outcome | Illustrative method name of the ColonyMemory port (ADR-057 §3 marks the method list as illustrative); the concept is covered by the `colony memory` and `performance store` entries | 2026-10-01 |
+| record_capability_outcome | Illustrative method name of the ColonyMemory port (ADR-057 §3 marks the method list as illustrative); the concept is covered by the `colony memory` and `performance store` entries | 2026-10-01 |
+| record_capability_gap | Illustrative method name of the ColonyMemory port (ADR-057 §3 marks the method list as illustrative); the concept is covered by the `colony memory` and `performance store` entries | 2026-10-01 |
+| get_capability_stats | Illustrative method name of the ColonyMemory port (ADR-057 §3 marks the method list as illustrative); the concept is covered by the `colony memory` and `performance store` entries | 2026-10-01 |
+| get_path_stats | Illustrative method name of the ColonyMemory port (ADR-057 §3 marks the method list as illustrative); the concept is covered by the `colony memory` and `performance store` entries | 2026-10-01 |
+| PRE_CHECK | Diagram state identifier for a step of ADR-052's capability lifecycle; the lifecycle is described in the `capability` glossary entry | 2026-10-01 |
+| POST_CHECK | Diagram state identifier for a step of ADR-052's capability lifecycle; the lifecycle is described in the `capability` glossary entry | 2026-10-01 |
+| COMPILE_INVOCATION | Diagram state identifier for a step of ADR-052's capability lifecycle; the lifecycle is described in the `capability` glossary entry | 2026-10-01 |
+| REQUEST_INFORMATION | Diagram state identifier for a step of ADR-052's capability lifecycle; the lifecycle is described in the `capability` glossary entry | 2026-10-01 |
+| max_repair_attempts | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| max_concurrent_host | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| max_file_bytes | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| max_input_chars | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| min_selected_probability | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| need_required_threshold | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| need_supporting_threshold | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| on_insufficient_context | Decision Kernel config key documented in kernel design part 2 (docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md); a setting, not a standalone domain concept | 2026-10-01 |
+| expected_state_revision | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| free_text_allowed | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| input_artifact_refs | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| input_evidence_ids | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| output_json_schema | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| output_schema_id | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| relevant_evidence_ids | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| required_actor_kind | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| why_research_cannot_settle | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| work_item_id | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| avg_latency_ms | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| missing_decision_basis | Field name of a Decision Kernel contract (kernel design part 2) or of an illustrative colony-memory table (ADR-057); not a standalone domain concept | 2026-10-01 |
+| read_repo_paths | Host-operation permission identifier documented in kernel design part 4; not a standalone domain concept | 2026-10-01 |
+| read_supplied_artifacts | Host-operation permission identifier documented in kernel design part 4; not a standalone domain concept | 2026-10-01 |
+| build_knowledge_map | Function name referenced in the kernel context docs; not a standalone domain concept | 2026-10-01 |
+| create_trace_id | Langfuse SDK function name (deterministic trace id from run_id, kernel design part 5); not project jargon | 2026-10-01 |
+| run_other_leafcutter_commands | Forbidden host-operation identifier, already listed and explained in the `choose_next_step` glossary entry | 2026-10-01 |
+| node_vs_subgraph_decisions | Illustrative dataset / trace-node name from the example in ADR-058, not a real project identifier; same category as the `node_vs_subgraph` precedent | 2026-10-01 |
+| retrieve_internal_patterns | Illustrative dataset / trace-node name from the example in ADR-058, not a real project identifier; same category as the `node_vs_subgraph` precedent | 2026-10-01 |
+| LEAFCUTTER_NEO4J_USERNAME | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_PASSWORD | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_DATABASE | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_WRITER_USERNAME | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| LEAFCUTTER_NEO4J_WRITER_PASSWORD | Member of the Neo4j settings family explained in the `LEAFCUTTER_NEO4J_URI` glossary entry | 2026-10-02 |
+| max_query_terms | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_explicit_locators | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_grounding_evidence | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| max_targeted_needs | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| min_candidate_score | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| rerank_max_batches | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| rerank_max_per_need | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| satisfied_min_items | Decision Kernel config key (retrieval and research tuning); a setting, not a standalone domain concept — same category as the max_repair_attempts precedent | 2026-10-02 |
+| approved_criterion_ids | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| approved_option_ids | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| requested_output_schema | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| evidence_needs_only | Field name of a Decision Kernel contract or submission; not a standalone domain concept — same category as the expected_state_revision precedent | 2026-10-02 |
+| out_of_scope_write | Decline code of the kernel's intake intent classification (kernel/intent/roots.py), explained in the context-jev flow doc; not a standalone domain concept | 2026-10-02 |
+| cancelled_or_superseded | Submission rejection code (kernel/interaction/submissions.py); a code value documented in the request-handoff flow doc, not a standalone domain concept | 2026-10-02 |
+| compare_and_update | Run-store method name (kernel/persistence); an implementation detail, not a domain concept | 2026-10-02 |
+| FORBIDDEN_HOST_OPERATIONS | Python constant in kernel/capabilities/host; the concepts are covered by the `choose_next_step` glossary entry and the host-worker context doc | 2026-10-02 |
+| COMMON_REQUIREMENTS | Python constant in kernel/capabilities/host; the concepts are covered by the `choose_next_step` glossary entry and the host-worker context doc | 2026-10-02 |
+| OLD_ID | CLI metavar placeholder of `python -m kernel decisions publish --correct OLD_ID`; not a domain concept | 2026-10-02 |
+| GIT_OPTIONAL_LOCKS | Standard Git environment variable, not project-specific jargon | 2026-10-02 |

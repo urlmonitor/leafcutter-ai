@@ -1,0 +1,64 @@
+id: INF-500d-4-viii
+components:
+  - infrastructure
+  - feedback_collector
+title: "The feedback component diagram shows one enduring log location shared by every workspace"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a maintainer reads the feedback collector's component diagram to understand
+    where a drive's logs end up,
+  When the diagram is consulted after this change,
+  Then it shows the build recording one enduring log location, the per-drive
+    workspace inheriting that location from the project it belongs to, and every
+    writer and reader of the operational log directory reaching that one location,
+  And it shows configuration and commit-time guards still resolving to the workspace,
+    so the three resolution rules are visibly separate.
+depends_on:
+  - INF-500d-4-iii
+doc_links:
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/feedback-lifecycle.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+declared_files:
+  - path: docs/architecture/components/feedback-collector.md
+    state: existing
+it_requirements:
+  - "Follow the write-c4-diagram skill. Update the existing component diagram rather than adding a new numbered diagram, unless the skill requires one. If a new diagram id is needed, allocate it with scripts/next_diagram_seq.py immediately before publishing (CLAUDE.md, 'Ticket-Mandated Sequential Resource Paths Go Stale')."
+  - "Show the three rules as distinct edges: configuration resolves to the workspace's .leafcutter/config, guards to the worktree toplevel, logs to the declared operational_log_root. The diagram must not draw a single shared resolver."
+  - "Show the declaration as config/knowledge_sink.json with the keys as built (INF-500d-4-iii), and show setup_ticket_worktree.py passing the inherited root to the build."
+test_required: false
+delivers_to: null
+expects_from:
+  ac_id: INF-500d-4-iii
+  contract: "The declaration keys and the bootstrap inheritance flow, as implemented."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved; criteria and work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-09
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/07_TICKET-20261009-INF-500d-4-viii.md
+change_target: docs
+risk_surface: internal
+notes: |
+  Created by the IT PO, 2026-10-09, under the documentation gate (INF-500d's
+  component-diagram trigger). An L3 under INF-500d-4 because INF-500d is at its
+  L2 cap.

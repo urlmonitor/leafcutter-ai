@@ -1,0 +1,102 @@
+id: DK-500b-4-i
+title: When the run's budget cannot fund grouping, the run goes on without it and says so
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a decision run with drafted gap criteria,
+  And a remaining Jev budget that cannot fund the grouping calls and still fund the run's research and assessment,
+  When the drafted criteria would be grouped,
+  Then no grouping call is made,
+  And the approval of proposals shows the drafted criteria without suggestions and states that grouping was skipped for budget,
+  And the run's research and assessment are funded as they would be without grouping.
+depends_on:
+- DK-500b-4
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500b-4
+  contract: In-run grouping step and the run's Jev budget gate.
+change_target: code
+risk_surface: internal
+it_requirements:
+- Grouping is the first call dropped under budget pressure. Before grouping, the remaining Jev budget is compared with the calls the run still needs for research and assessment; if grouping would leave less than that reserve, no grouping call is made.
+- The approval payload then states grouping_skipped with reason budget and lists the drafted criteria without suggestions.
+- Research and assessment receive the same Jev allowance as in the same run without grouping, which the call counts show.
+test_required: true
+test_spec:
+- name: test_no_grouping_call_when_budget_tight
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: With a remaining budget that cannot fund grouping and the reserve, no grouping call is made.
+- name: test_approval_states_grouping_skipped_for_budget
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The approval shows the drafted criteria without suggestions and states grouping was skipped for budget.
+- name: test_research_and_assessment_funded_as_without_grouping
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Research and assessment Jev calls equal those of the same run without grouping.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port; assert the approval payload, call counts and staged files. A direct-import unit test of a helper would not prove the forming flow wires the step.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Grouping is the first thing dropped when the budget is tight: it serves the library, the research and assessment serve this decision. Mirrors the forming flow's budget-reserve branch (the person is told plainly what was skipped).
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping; leafcutter/decision-forming: draft-for-gap.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'
+  - flow: leafcutter/decision-forming
+    node: draft-for-gap
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

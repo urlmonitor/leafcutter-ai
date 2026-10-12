@@ -1,0 +1,61 @@
+{
+  "run_id": "run-f93d714397c649ee",
+  "interaction_id": "int-61a1dee0ede9444c",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind-precision",
+    "kind": "host"
+  },
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+    "source_scope": {
+      "read_roots": [
+        "docs"
+      ],
+      "repository_id": "leafcutter",
+      "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "source_ids": [
+        "knowledge.graph"
+      ]
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "covered_by"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "covered_by"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "unknown",
+    "unresolved": [
+      "needs_outside_catalog",
+      "The catalog cannot represent latest CI execution results, the CI run identity or the commit actually tested. Declared test references can identify relevant tests but cannot establish whether they passed. The supplied scope provides no confirmed CI execution source."
+    ],
+    "rationale": "The named criterion and its declared tests can be identified using offered meanings, but the requested outcome and run provenance require information outside the catalog. Source revision, work status, lifecycle status and authored test plans cannot substitute for execution evidence.",
+    "engine": "host_llm",
+    "status": "needs_resolution",
+    "model_id": null
+  }
+}

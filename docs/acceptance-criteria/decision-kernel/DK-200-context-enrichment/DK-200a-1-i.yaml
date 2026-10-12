@@ -1,0 +1,61 @@
+id: DK-200a-1-i
+title: "An explicit answer contract keeps its route and still receives initial context"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a new request has an explicitly requested evidence answer,
+  And the current permitted entity index recognizes a repository term in that request,
+  When the kernel starts the run,
+  Then entity recognition runs once and checkpoints compact meanings without body evidence,
+  And the explicit evidence answer remains the requested output without automatic intent selection replacing it.
+depends_on: [DK-200a-1]
+covered_by:
+  - "tests/kernel/intent/test_context_enrichment_wiring.py::TestContextEnrichmentWiring::test_explicit_contract_still_gets_enriched_without_intent_classification"
+implemented_by:
+  - "kernel/scheduler/graph.py"
+  - "kernel/scheduler/nodes_enrichment.py"
+  - "kernel/intent/step.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "An explicit output contract must remain authoritative while still receiving initial entity recognition."
+  - "Bypassing automatic answer-kind selection must not bypass the EntityContext checkpoint or introduce another recognition pass."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_explicit_contract_still_gets_enriched_without_intent_classification
+    target_dir: tests/kernel/intent/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "An explicit evidence request retains EVIDENCE_BUNDLE, checkpoints non-empty meanings with separate caller claims and registered capabilities, records exactly one context.recognized event and issues no kernel.intent question."
+test_rationale: "The service entry point exercises the explicit-contract branch; a direct call to gathering would miss an early bypass in routing."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+  - reason: "2026-10-04 DK-300 migration under the user-approved entity-context redesign: retain the fresh-run ordering, explicit-route, snapshot and downstream-handoff invariants, but replace obsolete lexical EnrichedContext/body-evidence expectations with versioned EntityContext. Historical reports and direct gather_context compatibility remain unchanged; these revised criteria are verified by current behavioral tests, not historical scores."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.
+  Fresh-run wiring now follows DK-300d-1 and DK-300d-3/-3-i. The earlier
+  lexical contract remains recorded in Git and the historical evaluation reports.

@@ -174,7 +174,6 @@ model:
     - architect-review
   contract_boundary:
     - architect-review
-    - status-checker
     - pr-reviewer
   auth:
     - architect-review
@@ -187,14 +186,13 @@ model:
     - pr-reviewer
   cost:
     - architect-review
-    - status-checker
     - pr-reviewer
 
 config:
   internal:
     []
   contract_boundary:
-    - status-checker
+    - architect-review
     - pr-reviewer
   auth:
     - architect-review
@@ -321,11 +319,11 @@ flow_change_gates:
   - change_target: config
     risk_surface: contract_boundary
     mandatory_agents:
-      - status-checker
+      - architect-review
       - pr-reviewer
     phase_constraint: >
-      status-checker must verify boundary impact before
-      config changes are merged; pr-reviewer gates the merge.
+      architect-review must assess boundary impact before
+      config changes are coded; pr-reviewer gates the merge.
 
 # ---------------------------------------------------------------------------
 # documentation_gates
@@ -448,8 +446,22 @@ knowledge_routing_wiring:
   wired:
     - fast-lane-ship.js
     - quick-fix.js
-    - build-epic.js
+    # build-feature.js (INF-700a-1-v): stage, the commit staging the manifest by
+    # name, and one observe around EACH ticket's commit dispatch in its phase
+    # loop, serialised across the tickets of a drive (they share one worktree).
+    - build-feature.js
   excluded:
+    - path: build-epic.js
+      reason: >
+        Makes no commit of its own, so it dispatches no routing step: each
+        ticket is committed by the ticket-supervisor agent it dispatches, and
+        that agent runs stage, commit-by-name and observe around every
+        ticket's commit (building-epics SKILL.md section 5.9, ADR-040 section
+        3, INF-700a-1-iv). build-epic.js consumes each ticket's
+        knowledge_routing into its own result. This guard enumerates workflow
+        artefacts only, so it cannot see the skill-hosted step; that step's
+        behaviour is covered by unit_tests/workflows/test_inf_700a_1_iv_*.py.
+      covered_by: "templates/skills/building-epics/SKILL.md §5.9 (ticket-supervisor, per ticket commit)"
     - path: build-ticket.js
       reason: >
         Genuine completion path (dispatched directly by a single-ticket
@@ -475,11 +487,6 @@ knowledge_routing_wiring:
         ordering-risk reason given for build-ticket.js above. Tracked as a
         disclosed, known gap for a follow-up AC; not silently assumed away.
       covered_by: null
-    - path: build-feature.js
-      reason: >
-        User-facing entry point that resolves to build-epic.js or
-        build-ticket.js and completes nothing itself.
-      covered_by: "build-epic.js / build-ticket.js"
     - path: plan-feature.js
       reason: >
         Produces AC specifications rather than completing built work. Agents

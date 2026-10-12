@@ -1,0 +1,76 @@
+{
+  "review_version": 1,
+  "kind": "GlossaryTerm",
+  "reviewed_on": "2026-10-02",
+  "status": "reviewed_ready_for_coder",
+  "scope": "Individually authored term sections in the configured canonical glossary Markdown file. The glossary is a section-based native store without an independent JSON schema.",
+  "authorities": [
+    {"path": "config/paths.json#/surfaces/glossary/path", "role": "Canonical configured glossary path; currently docs/glossary.md."},
+    {"path": "docs/glossary.md", "role": "Native term content and embedded authoring guide: one level-three heading followed by its definition."},
+    {"path": "templates/docs/glossary.md", "role": "Seed authoring guide and introductory prose; not a second source of project terms."},
+    {"path": "templates/scripts/commit_guardian/check_glossary_coverage.py", "symbols": ["_load_existing_glossary_terms", "_apply_decisions"], "role": "Existing term vocabulary uses unindented '### ' headings and lowercase stripped names for duplicate detection. Triage appends Markdown definitions."},
+    {"path": "templates/scripts/glossary_bootstrap.py", "role": "Bootstrap triage result is a transient authoring contract, not fields independently persisted on each term."},
+    {"path": "scripts/build_glossary.py", "role": "Copies glossary seeds only if absent. Existing canonical glossary remains human-curated content; never modify it during extraction."}
+  ],
+  "observed": {
+    "source_path": "docs/glossary.md",
+    "term_count": 41,
+    "case_insensitive_duplicate_terms": [],
+    "non_record_example": "An indented ### candle_horizon line inside the HTML-comment authoring guide must not become a term.",
+    "file_frontmatter_types": {"title": "string", "description": "string", "type": "string", "created": "string", "last_updated": "string", "status": "string", "components": "array"},
+    "file_frontmatter_components": [],
+    "term_value_examples": ["Antigravity", "ticket_frontmatter_guard", "create-ticket.js", "ticket creation pipeline", "NEGATIVE_CONTROL_RESULT", "Decision Kernel", "Jev"]
+  },
+  "record_discovery": {
+    "source": "Resolve config/paths.json surfaces.glossary.path, defaulting to docs/glossary.md when the configuration or glossary surface is absent. Require any configured path to be a nonempty repository-relative file path inside the supplied immutable root.",
+    "selection": "Recognize nonempty, unindented lines beginning exactly '### ' outside YAML frontmatter, HTML comments and fenced code. This matches the established producer's heading level and indentation contract while avoiding its simplistic loader's false-positive behavior for examples.",
+    "markdown_boundaries": "A definition includes all exact following Markdown lines through the next real heading of level 1, 2 or 3, or EOF. Nested level 4+ headings, fenced examples, lists, tables, links, inline markup and blank lines are part of the definition. Heading-looking content inside fences/comments is not a boundary. Indented or blockquoted examples are not top-level headings.",
+    "fences": "Track backtick and tilde fences, opener marker and length; only a matching marker of at least opener length closes a fence. Up to three spaces before a fence are valid; four-space indented examples never declare a term.",
+    "excluded": ["File introduction and # Glossary heading", "HTML-comment authoring guide and examples", "Fenced or indented code examples", "docs/glossary_blacklist.md", "Glossary bootstrap candidates and triage result objects", "Template seed copies"],
+    "missing_source": "An absent optional glossary source yields an empty list. Invalid configuration, unsafe paths, malformed frontmatter or duplicate normalized terms must fail explicitly rather than silently skipping authored records."
+  },
+  "record_identity": {
+    "native_id": "Lowercase stripped term text, matching the existing glossary vocabulary's normalization. Retain punctuation and spaces; do not slugify or replace underscores/hyphens.",
+    "source_path": "Configured glossary file, represented relative to the supplied repository root.",
+    "locator": "A stable logical Markdown locator such as #term=<percent-encoded normalized term>, rather than a line number or lossy punctuation-stripped HTML slug. Use URL quoting with safe='' so different punctuation cannot collide.",
+    "duplicates": "Reject two headings whose stripped names compare equal after lower(), even if definitions are equal. Never merge entries, choose the last entry or manufacture an ordinal identity that shifts when reordered.",
+    "title": "Exact stripped authored term text; case remains visible.",
+    "description": "May remain empty for progressive disclosure; the complete definition is available as a native property. Do not invent a summary or mutate the definition for display.",
+    "normalization_note": "Lowercase identity is an explicit projection rule supported by the existing loader, not an authored id field. Do not inject id into authored metadata."
+  },
+  "fields": [
+    {"name": "term", "type": "string", "required": true, "source": "Exact term text after the '### ' heading prefix with surrounding whitespace stripped; retain source case, punctuation and internal spacing.", "exposure": "Ordinary native term property."},
+    {"name": "definition", "type": "string", "required": true, "source": "Exact Markdown source slice following the term heading and before the next true section boundary, including leading/trailing blank lines and nested blocks. An empty authored definition remains an empty string rather than being filled with a default.", "exposure": "Ordinary native definition property, searchable without decoding the graph payload."}
+  ],
+  "file_context": {
+    "placement": "Keep complete glossary-file frontmatter separately in NativeRecord.derived.file_frontmatter. It describes the whole glossary, not every individual term's authored status/type/components/created date.",
+    "preservation": "Preserve all known and unknown frontmatter fields and their exact safe-YAML values. Do not fill omitted fields or change quoted dates to temporal values. Native serializer handles nested fields, explicit nulls, empty containers and reserved-name collisions.",
+    "provenance": "Optional derived heading_line or heading_source records can identify the source slice; line numbers must not be canonical identity. Source path/hash remain graph provenance, not invented native term attributes.",
+    "relationships": "No term components, related_docs, canonical_link or synonym list is independently authored in this store. Do not infer those fields or membership edges from prose, from the file's components list, or from transient triage responses. Markdown hyperlinks remain intact in definition."
+  },
+  "no_schema_invention": [
+    "Do not project triage fields action, reason, canonical_link or occurrences unless a future canonical glossary format actually persists them.",
+    "Blacklist entries are rejected/common candidate controls, not GlossaryTerm nodes.",
+    "A glossary definition can discuss a native field or concept without creating another canonical entity or schema declaration.",
+    "File-level status=active does not assert term-level status=active."
+  ],
+  "coder_contract": {
+    "module": "knowledge/native_types/glossary_term.py",
+    "signature": "extract(root: pathlib.Path) -> list[NativeRecord]",
+    "shared_type": "knowledge.native_types.common.NativeRecord",
+    "record": "NativeRecord(kind='GlossaryTerm', native_id=normalized_term, source_path=relative_path, locator=stable_term_locator, metadata={'term': authored_term, 'definition': exact_definition}, title=authored_term, description='', derived={'file_frontmatter': original_frontmatter})",
+    "ordering": "Preserve canonical file order in returned records. Identity must remain stable after unrelated terms are inserted or reordered.",
+    "acceptance_checks": [
+      "Extract exactly 41 records from the reviewed checkout, with no candle_horizon authoring example and no blacklist terms.",
+      "Retain source case in metadata.term/title and normalized case only in native_id; preserve punctuation-bearing create-ticket.js and whitespace-bearing ticket creation pipeline distinctly.",
+      "Expose the complete definition, including multiline text, Markdown links, nested headings, tables and code fences, with exact whitespace and line breaks.",
+      "Ignore fake ### headings inside backtick fences, tilde fences, HTML comments and indented/quoted examples; fake headings must also not truncate a real term's definition.",
+      "A true level 1/2/3 heading ends the preceding definition, while a level 4+ heading remains its content.",
+      "Duplicate normalized names fail explicitly without dropping an authored definition; punctuation-distinct terms and locator escaping remain collision-safe.",
+      "Empty definition is preserved as an empty string; empty glossary yields no fabricated placeholder node.",
+      "All file frontmatter fields survive separately, including future nested values, dates, explicit null and empties; no file-level status/components become authored per-term values.",
+      "Custom configured source path is honored and source traversal or symlinks resolving outside root are rejected.",
+      "Extraction is read-only and performs no glossary bootstrap, triage, external dispatch or source rewriting."
+    ]
+  }
+}

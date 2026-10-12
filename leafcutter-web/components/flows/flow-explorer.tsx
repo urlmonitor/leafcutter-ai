@@ -51,7 +51,8 @@ import {
   ARTIFACT_GROUP_HSL,
   ARTIFACT_GROUP_LABEL,
 } from "@/components/atlas/edges";
-import { FlowDrawer, type StepView } from "./flow-drawer";
+import { FlowDrawer } from "./flow-drawer";
+import { buildStepViews } from "./flow-step-view";
 
 const COL_GAP = 340;
 const AC_DROP = 210;
@@ -505,53 +506,10 @@ function ExplorerInner({
   );
 
   // Step-view lookup for the drawer, keyed by the graph node id (`step:<id>`).
-  const stepViews = React.useMemo(() => {
-    const m = new Map<string, StepView>();
-    for (const s of flow.steps) {
-      m.set(`step:${s.id}`, {
-        id: s.id,
-        label: s.label,
-        human: s.human,
-        screen: s.screen,
-        screenTitle: screenTitleFor(s.screen),
-        realization: flow.realization,
-        variant: "step",
-        status: s.implStatus,
-        agent: s.agent,
-        produces: s.produces,
-        consumes: s.consumes,
-        reads: s.reads,
-        writes: s.writes,
-        acs: s.acs,
-        scenarios: flow.scenarios.filter((sc) => sc.for === s.id),
-        expandsTo: s.expandsTo,
-        expandsToName: nameFor(s.expandsTo),
-      });
-    }
-    for (const b of flow.branches) {
-      m.set(`step:${b.id}`, {
-        id: b.id,
-        label: b.label,
-        human: b.human,
-        screen: b.screen,
-        screenTitle: screenTitleFor(b.screen),
-        realization: flow.realization,
-        variant: "branch",
-        condition: b.condition,
-        status: b.implStatus,
-        agent: b.agent,
-        produces: b.produces,
-        consumes: b.consumes,
-        reads: b.reads,
-        writes: b.writes,
-        acs: b.acs,
-        scenarios: flow.scenarios.filter((sc) => sc.for === b.id),
-        expandsTo: b.expandsTo,
-        expandsToName: nameFor(b.expandsTo),
-      });
-    }
-    return m;
-  }, [flow, nameFor, screenTitleFor]);
+  const stepViews = React.useMemo(
+    () => buildStepViews(flow, screenTitleFor, nameFor),
+    [flow, nameFor, screenTitleFor],
+  );
 
   /* ---------- positions ---------- */
   const positions = React.useMemo(() => {

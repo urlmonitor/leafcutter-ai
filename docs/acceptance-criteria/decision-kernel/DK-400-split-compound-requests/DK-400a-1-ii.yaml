@@ -1,0 +1,161 @@
+id: DK-400a-1-ii
+title: "A request that is split is not counted as a capability gap, and a real gap still is"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given run A, whose root goal is the reusable-criteria goal turned away by routing
+    (trigger jev_none) and offered as a split that the person approves,
+  And run B, whose root is the single request "Write release notes for the last ten merged pull
+    requests", which no registered capability can meet,
+  When both runs have ended and the capability-gap list across runs is read,
+  Then run A contributes no capability-gap record for the request itself,
+  And run B contributes one capability-gap record, the same record it would produce today,
+  And run A's goal does not appear in the list as a build opportunity.
+depends_on:
+  - DK-400a-1
+  - DK-400a-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-detect, single-no-capability, with their acceptance scenarios."
+  - path: docs/roadmap.json
+    relationship: related
+    status: exists
+    relevance: "phase_kernel_1_founding exit criterion 2: countable capability-gap records."
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+    relevance: "Run statuses, gap records, resume answers and the run report as they are today."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+  - path: docs/analysis/2026-09-30-decision-kernel-design-3-kernel-scheduler.md
+    relationship: describes
+    status: exists
+    relevance: Route node and batched Jev routing, intent step, guards and budgets, root completion, gap recording,
+      resume and restart.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: DK-400a-1
+  contract: The split record's trigger and capability_gap_recorded (false at detection), and the deferred gap decision
+    that the gate outcome of DK-400d-3 completes.
+it_requirements:
+  - Gap accounting for the request itself (the split subject) is decided when the split's outcome is known, never
+    at detection. Approved -> no unsupported or ambiguous gap observation for the request itself. Trigger jev_none
+    rejected, too few parts or an abandoned proposal (DK-400c-3, DK-400c-1-ii) -> exactly today's unsupported observation
+    (same gap_key, gap_type and fields, fallback_outcome blocked) and capability_gap_recorded true. Trigger ambiguous
+    rejected, too few parts or abandoned -> no gap while today's clarification question is open; today's ambiguous
+    observation only if that clarification ends unresolved (the person cannot be asked, or intent.max_clarifications
+    is reached), exactly as today. bundled_accepted or mid_run -> never a gap for the request itself. Run cancelled
+    before the gate answer -> no gap for the request itself (mock-data v6 invariant on capability_gap_recorded).
+  - 'The host.decompose_goal operation records no host_only gap observation: it is the split''s coordination step,
+    not a build opportunity, and recording it would list the subject''s goal tokens as a build opportunity.'
+  - '''No capability-gap record for the request itself'' (the BA''s final-gate wording) scopes the rule: observations
+    from a part''s own work (its research, options or synthesis host operations, a no_match of a part''s child)
+    are recorded exactly as a stand-alone run of that part would record them, attributed to the part''s request
+    and never to the split subject.'
+  - A single question no capability can meet produces today's gap observation unchanged (gap_key, gap_type, normalized_need,
+    fallback_outcome), so occurrence counts across runs stay comparable before and after this feature.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_approved_split_records_no_gap_for_its_subject
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Run A (jev_none, split approved, parts scripted to settle) leaves no gap observation for the request
+      itself (the root's request), and its goal is absent from the gaps build opportunities; observations from the
+      parts' own host operations are attributed to the parts' requests.
+  - name: test_single_unsupported_request_records_todays_gap
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Run B records one unsupported gap observation equal in every field to the split.enabled false run
+      of the same request.
+  - name: test_gap_list_across_runs_counts_only_run_b
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: list_gaps (and python -m kernel gaps) over a run root holding runs A and B returns exactly one
+      gap row, from run B.
+  - name: test_decompose_goal_answer_records_no_host_only_gap
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: Accepting a goal_decomposition.v1 host answer appends nothing to gaps/observations.jsonl.
+test_rationale: Gap counts are read across runs through the gap store, so the tests aggregate real stored observations
+  from two service runs; an in-memory flag would not prove phase_kernel_1_founding exit criterion 2.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "Final-gate rewording: 'Then run A contributes no capability-gap record,' became 'Then run A contributes no capability-gap record for the request itself,'. The parts' own host operations record their usual observations, attributed to each part's request (as the IT PO it_requirements already say). IT PO fields were not edited. One it_requirements entry still gives trigger ambiguous today's blocked observation on rejection or too few parts, which the final-gate ambiguous rule changes; it needs IT PO re-enrichment."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Gap rule aligned with the final-gate ambiguous fallback (gap only if the clarification ends unresolved)
+      and with the BA's 'for the request itself' wording; first test description updated.
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Keeps gap counts honest in both directions (DK-400 ROADMAP ALIGNMENT): a compound request
+  is not counted as a gap, and a real gap is not hidden behind a split.
+  DECIDED (user answer to BA open question Q1, 2026-10-05): when the person REJECTS the split
+  of a turned-away request, the run still records the capability gap, as today. That case is
+  DK-400d-3-i (mock-data v5 capability_gap_recorded). This AC covers the approved case, where no
+  gap is recorded for the request.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: single-no-capability
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-detect
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

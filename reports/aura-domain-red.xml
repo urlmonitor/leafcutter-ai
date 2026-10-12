@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="37.937" timestamp="2026-10-02T06:50:21.958213+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge_live.domain_graph_checks" name="test_native_labels_membership_and_retrieval" time="3.402"><failure message="AssertionError: assert [] == [{'labels': [...IN-100', ...}]&#10;  &#10;  Right contains one more item: {'labels': ['AC'], 'id': 'FIN-100', 'name': 'FIN-100', 'title': 'Title FIN-100', ...}&#10;  Use -v to get more diff">def test_native_labels_membership_and_retrieval():
+        # covers: KM-400a-6
+        # angle: real_artifact
+        async def scenario():
+            db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+            try:
+                await db.setup()
+                snap = sample(repo)
+                assert await db.publish(snap)
+                rows = await db._run(
+                    "MATCH (n:AC {repository_id:$repo}) RETURN labels(n) AS labels, "
+                    "n.id AS id, n.name AS name, n.title AS title, n.components AS components, "
+                    "n.current AS current", {"repo": repo})
+                assert rows == [{"labels": ["AC"], "id": "FIN-100", "name": "FIN-100",
+                                 "title": "Title FIN-100", "components": ["finalize", "other"],
+                                 "current": True}]
+                rows = await db._run(
+                    "MATCH (n {repository_id:$repo}) WHERE n.current AND 'finalize' IN n.components "
+                    "RETURN n.id AS id ORDER BY id", {"repo": repo})
+                assert [r["id"] for r in rows] == ["ADR-001", "FIN-100"]
+                links = await db._run(
+                    "MATCH (a:AC {repository_id:$repo})-[r]-&gt;(b) RETURN type(r) AS type, "
+                    "r.edge_type AS semantic ORDER BY type", {"repo": repo})
+                assert links == [{"type": "COMPONENT_MEMBERSHIP", "semantic": "component_membership"},
+                                 {"type": "COMPONENT_MEMBERSHIP", "semantic": "component_membership"},
+                                 {"type": "COVERED_BY", "semantic": "covered_by"}]
+                result = await db.query(repo, "one", "get_acceptance_criteria",
+                                        {"component_id": "finalize"}, 20)
+                assert [n.model_dump() for n in result] == [snap.nodes[0].model_dump()]
+                tests = await db.query(repo, "one", "get_related_tests", {"entity_ids": ["FIN-100"]}, 20)
+                assert [n.canonical_id for n in tests] == ["test.py"]
+                assert await db.publish(snap)
+            finally:
+                await db.close()
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\domain_graph_checks.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def scenario():
+        db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+        try:
+            await db.setup()
+            snap = sample(repo)
+            assert await db.publish(snap)
+            rows = await db._run(
+                "MATCH (n:AC {repository_id:$repo}) RETURN labels(n) AS labels, "
+                "n.id AS id, n.name AS name, n.title AS title, n.components AS components, "
+                "n.current AS current", {"repo": repo})
+&gt;           assert rows == [{"labels": ["AC"], "id": "FIN-100", "name": "FIN-100",
+                             "title": "Title FIN-100", "components": ["finalize", "other"],
+                             "current": True}]
+E                            AssertionError: assert [] == [{'labels': [...IN-100', ...}]
+E                              
+E                              Right contains one more item: {'labels': ['AC'], 'id': 'FIN-100', 'name': 'FIN-100', 'title': 'Title FIN-100', ...}
+E                              Use -v to get more diff
+
+tests\knowledge_live\domain_graph_checks.py:45: AssertionError</failure></testcase><testcase classname="tests.knowledge_live.domain_graph_checks" name="test_current_filter_tracks_publication_and_rollback" time="1.032"><failure message="AssertionError: assert [] == [{'revision':...bbbbbbbbbbb'}]&#10;  &#10;  Right contains one more item: {'revision': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'}&#10;  Use -v to get more diff">def test_current_filter_tracks_publication_and_rollback():
+        # covers: KM-400a-6
+        # angle: boundary
+        async def scenario():
+            db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+            try:
+                await db.setup()
+                assert await db.publish(sample(repo))
+                assert await db.publish(sample(repo, "two"), expected_generation="one")
+                query = "MATCH (n:AC {repository_id:$repo}) WHERE n.current RETURN n.source_revision AS revision"
+                assert await db._run(query, {"repo": repo}) == [{"revision": "b" * 40}]
+                assert await db.rollback(repo, "one", "two")
+                assert await db._run(query, {"repo": repo}) == [{"revision": "a" * 40}]
+                assert (await db.get_generation(repo, "two")).source_sha == "b" * 40
+            finally:
+                await db.close()
+&gt;       asyncio.run(scenario())
+
+tests\knowledge_live\domain_graph_checks.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Python314\Lib\asyncio\runners.py:204: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\runners.py:127: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\asyncio\base_events.py:719: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def scenario():
+        db, repo = local_backend(), "domain-" + uuid.uuid4().hex
+        try:
+            await db.setup()
+            assert await db.publish(sample(repo))
+            assert await db.publish(sample(repo, "two"), expected_generation="one")
+            query = "MATCH (n:AC {repository_id:$repo}) WHERE n.current RETURN n.source_revision AS revision"
+&gt;           assert await db._run(query, {"repo": repo}) == [{"revision": "b" * 40}]
+E           AssertionError: assert [] == [{'revision':...bbbbbbbbbbb'}]
+E             
+E             Right contains one more item: {'revision': 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'}
+E             Use -v to get more diff
+
+tests\knowledge_live\domain_graph_checks.py:79: AssertionError</failure></testcase></testsuite></testsuites>

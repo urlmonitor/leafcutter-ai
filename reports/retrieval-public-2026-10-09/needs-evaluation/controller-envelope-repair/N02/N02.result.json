@@ -1,0 +1,272 @@
+{
+  "case_id": "N02",
+  "original_rejected_receipt": "../N02.result.json",
+  "response_sha256": "e9fac38d804848a922ecde0854f5565a26c5ac66c78209fc4f7467b1b906cf84",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-bf45b71c8d0c48bb",
+    "root_task_id": "task-3dd5da08af584a0b",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [],
+          "required_fields": [
+            "criteria",
+            "parent"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_parents",
+        "hierarchy_levels": [],
+        "scope_resolution": "discovery_needed",
+        "unresolved": [],
+        "rationale": "The count requires discovering the full test-writing topic, inspecting criterion meaning, and using hierarchy facts to remove parent requirements. The supplied TQ-500 candidate does not establish the topic boundary. No level restriction was requested.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-bf45b71c8d0c48bb\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-fc72fb15aec22632",
+        "created_at": "2026-10-09T15:35:03.868243Z",
+        "updated_at": "2026-10-09T15:35:03.868243Z",
+        "created_seq": 0,
+        "gap_key": "356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c",
+        "gap_type": "host_only",
+        "goal": "How many ACs concern test writing? Exclude parent requirements.",
+        "normalized_need": "acs concern exclude how many parent requirements test writing",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "How many ACs concern test writing? Exclude parent requirements.",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-bf45b71c8d0c48bb"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: How many ACs concern test writing? Exclude parent requirements.",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/356e327a9c07d2eb31648a2901f2a634d8f3bf627d83ea18e8b6cca11b00b87c.md"
+        },
+        "first_seen": "2026-10-09T15:35:03.868243Z",
+        "last_seen": "2026-10-09T15:35:03.868243Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 449752,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "24a0f5ccfc573af015dc33a29b20b94a",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [],
+      "required_fields": [
+        "criteria",
+        "parent"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_count",
+    "hierarchy_scope": "exclude_parents",
+    "hierarchy_levels": [],
+    "scope_resolution": "discovery_needed",
+    "unresolved": [],
+    "rationale": "The count requires discovering the full test-writing topic, inspecting criterion meaning, and using hierarchy facts to remove parent requirements. The supplied TQ-500 candidate does not establish the topic boundary. No level restriction was requested.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "How many ACs concern test writing? Exclude parent requirements.",
+        "expected": "How many ACs concern test writing? Exclude parent requirements."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "exclude.target_ids",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "TQ-500"
+          ]
+        }
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [
+          "criteria",
+          "parent"
+        ],
+        "expected": {
+          "forbidden": [
+            "work_status",
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_count",
+        "expected": [
+          "exhaustive_count"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "exclude_parents",
+        "expected": [
+          "exclude_parents"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided",
+          "needs_resolution"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

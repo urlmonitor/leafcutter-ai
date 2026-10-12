@@ -8,19 +8,32 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
-  Given a report is filed from a context where the enduring project location cannot
-    be determined — the drive is not running under version control at all, or the
-    version-control tooling is unavailable to the caller,
-  When the durable report location is resolved,
-  Then the sink does not silently fall back to the temporary workspace directory,
-  And the report is either written to a location the caller can confirm is not the
-    disposable workspace, or the write is refused with a failure reason naming the
-    unresolved location,
-  And in the refusal case the agent's verdict is still delivered.
+  Given the durable report location cannot be determined because the install's
+    build-time declaration of its durable log location is unusable in one of these
+    ways: it is absent, it cannot be read, it cannot be parsed, it lacks the report
+    sink or log root entry, it records a location that is not absolute, or it is
+    stale (the enduring project root it records no longer exists),
+  When a report is filed and the durable report location is resolved,
+  Then no file and no directory is created anywhere: not in the temporary workspace
+    directory, not at a location derived from where the caller is running, and not
+    at or above the declared log location,
+  And the write is refused with a failure reason that names the expected declaration
+    and which of those conditions failed,
+  And no record identifier is returned to the caller,
+  And the agent's verdict is still delivered.
+
+  Given the install's build-time declaration is usable, recording an absolute
+    durable log location beneath an enduring project root that exists,
+  And the project is not under version control at all, or the version-control
+    tooling is unavailable to the caller,
+  When a report is filed,
+  Then the report is written to the declared location, and the sink location the
+    writer reports lets the caller confirm it is not the disposable workspace,
+  So that version control plays no part in deciding where reports are kept.
 
   Given a project that uses no temporary workspaces at all, so the drive runs
     directly in the ordinary project checkout,
@@ -38,16 +51,105 @@ doc_links:
   - path: docs/architecture/feedback-lifecycle.md
     relationship: describes
     status: exists
-assigned_agent: null
-estimated_complexity: null
+  - path: docs/architecture/components/feedback-collector.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Precedent for the refusal: --print-sink REFUSES rather than falling back to a CWD-relative default when the build-time declaration is missing. This AC applies the same rule to the feedback writer."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the closed reason set the refusal must map onto, and the rule that the verdict is still delivered."
+assigned_agent: python-coder
+estimated_complexity: M
+declares_side_effect: true
+declared_files:
+  - path: templates/scripts/feedback/submit_feedback.py
+    state: existing
+  - path: unit_tests/feedback/test_submit_feedback_unresolved_sink.py
+    state: to_be_created
+it_requirements:
+  - "WHAT 'CANNOT BE DETERMINED' MEANS UNDER THE ADOPTED MECHANISM. The enduring location is the build-time declaration (INF-500d-4, rule (c) as superseded), so it is undeterminable exactly when <output_root>/config/knowledge_sink.json is absent, unreadable or unparseable, lacks the feedback_sink or operational_log_root key, holds a value that is not absolute, or is STALE in INF-400c-4-v's sense (the declared directory's enduring project root no longer exists). Each of these must take the refusal branch. Version control plays no part in resolution any more: a project with no repository, or a caller with no git on PATH, resolves normally from its declaration. The criteria's first-scenario examples ('not under version control', 'tooling unavailable') are therefore exercised as SUCCESS cases that land in the declared location — the caller confirms it is not the disposable workspace from INF-500d-4-ii's '[submit_feedback] sink: <path>' line — and the refusal branch is exercised through the declaration cases above. See caveat: the Given wording should be updated by the BA."
+  - "NO SILENT FALLBACK, IN ANY FORM. In every undeterminable case the writer must not write to a path derived from __file__ (the _find_project_root walk for .claude/ that KI-FC-001 identifies as the root cause), from the current working directory, or from the worktree root. Nothing is written anywhere."
+  - "THE REFUSAL MUST BE LOUD AND LEGIBLE: one stderr line naming the expected declaration path and which condition failed (absent, unreadable, missing key, not absolute, stale), a non-zero exit, nothing on stdout, and no sidecar id file. An empty stdout is what stops every FB_ID=$(...) caller from mistaking a refusal for a captured id."
+  - "The refusal reason must map to INF-500d-3's 'the destination could not be written' reason, or to a distinct closed-set reason if INF-500d-3 adds one. It must never present as 'written but the identifier was not captured', because nothing was written: that keeps the submission eligible for INF-500d-5's hold queue, where a written-but-uncited record must never go."
+  - "THE VERDICT IS STILL DELIVERED (bounded by INF-500d-3). A refusal must not raise into its callers: emit_hook_finding.py's in-process call must stay failure-isolated, and the signoff path's existing submit-failed marker route must keep working unchanged."
+  - "DO NOT CONJURE THE ENDURING ROOT. The writer may create only the final log directory beneath an enduring project root that already exists (the ordinary first-write case). It must never create the project root or any directory above the log directory, because that turns a stale install into a healthy-looking empty one (INF-400c-4-v)."
+  - "SECOND SCENARIO, NO SECOND LOCATION. A plain-checkout install's build declares <target_root.parent>/debugging/logs, and a worktree-based drive of that install inherits the same recorded value (INF-500d-4-iii), so both resolve to one location without any branch on whether worktrees are in use. The writer must not contain a worktree-detection branch."
+  - "An explicit --jsonl override stays the caller's responsibility and is never refused (the same rule as the harvester's --sink), and INF-500d-4-ii's sink line still reports where it went."
+  - "templates/scripts/feedback/submit_feedback.py is over the 400-line check-file-size limit (637 lines): resolve and refuse through an extracted helper or a shared declaration reader, leave the file within the ratchet, and never SKIP check-file-size."
+  - "Must handle errors gracefully per the project error handling policy: wrap the declaration read in typed except, report at WARNING or above, and never swallow silently."
+test_spec:
+  - name: test_absent_declaration_refuses_and_writes_no_file_anywhere
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "the deployed-layout copy of submit_feedback.py run as a subprocess"
+    description: "Copy the script into a temp deployed layout with no config/knowledge_sink.json and run it with cwd inside a temp worktree-shaped directory. Assert a non-zero exit, empty stdout, one stderr line naming the expected declaration path, and that no feedback.jsonl or sidecar file exists anywhere under the temp root."
+    must_catch:
+      - "falling back to the __file__ walk for .claude/ (KI-FC-001's root cause)"
+      - "falling back to debugging/logs/feedback.jsonl relative to the current directory"
+      - "printing a feedback id on stdout although nothing was written"
+  - name: test_unreadable_keyless_or_relative_declaration_each_refuses
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Parametrised over a malformed-JSON declaration, one missing feedback_sink and operational_log_root, and one whose values are relative. Each must refuse like the absent case, with the stderr reason naming which condition failed."
+  - name: test_stale_declaration_refuses_without_creating_the_enduring_root
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Declare a log root whose project root does not exist. Assert refusal, and assert afterwards that neither the project root nor any directory on the way to the log root was created."
+    must_catch:
+      - "mkdir(parents=True) on the declared directory, which turns a stale install into a healthy-looking empty one"
+  - name: test_project_without_version_control_writes_to_the_declared_root
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "With no .git anywhere above the temp layout and PATH stripped of git, a valid declaration still yields a successful write. The sink line names the declared feedback_sink, which lies outside the directory the caller ran from."
+    must_catch:
+      - "an implementation that still shells out to git and refuses when git is unavailable"
+  - name: test_plain_checkout_and_worktree_drive_resolve_the_same_sink
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Write a declaration the way the build phase does for a plain checkout, and another the way the bootstrap does for a worktree of the same install by inheriting the recorded root. Run submit_feedback from each layout and assert both sink lines name the identical absolute file."
+  - name: test_refusal_keeps_the_verdict_path_and_uses_a_legible_reason
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Call emit_hook_finding.emit_finding in-process against a layout with no declaration. Assert it returns without raising and that the reason it surfaces is the destination-could-not-be-written reason, not the written-but-uncited one."
+test_rationale: "The defect this record guards against is a fallback that nobody exercises, so every refusal case runs the real script as a subprocess from a copied deployed layout and asserts that NO file appeared anywhere: a test that only checks the exit code passes on an implementation that refuses after writing to the disposable root. The no-version-control case is a positive test on purpose. Under the build-time mechanism the criteria's version-control examples must succeed, and a test asserting refusal there would bless the rejected git-based design. The plain-versus-worktree seam test compares two real resolutions, because each one is correct on its own and the defect is the difference between them."
 delivers_to: null
-expects_from: null
+expects_from:
+  - ac_id: INF-500d-4-iii
+    contract: "<output_root>/config/knowledge_sink.json carrying operational_log_root (absolute directory) and feedback_sink (absolute file directly under it), with the worktree bootstrap writing the main install's recorded root rather than the worktree's own. Absence, unreadability, a missing key, a relative value or a stale root are the conditions this AC refuses on."
+  - ac_id: INF-500d-3
+    contract: "The closed reason set for a failed submission. This AC's refusal maps to 'the destination could not be written' (or a dedicated reason if INF-500d-3 adds one) and never to 'written but the identifier was not captured'."
 origin_agent: BrainCandy
 created: 2026-08-13
-amended_by: []
+amended_by:
+  - reason: "IT PO enrichment, 2026-10-09. CRITERIA AND NOTES UNCHANGED, as both are BA-owned. The criteria were written against rule (c)'s git-common-dir anchor, which INF-500d-4's IT PO entry supersedes with the build-time declared absolute log root, the anchor INF-400c-4 adopted after rejecting git-common-dir on 2026-09-07 (ambiguous in a nested consumer install; relative from a main checkout and absolute from a worktree). Under that mechanism 'the enduring location cannot be determined' maps to the declaration being absent, unreadable, keyless, non-absolute or stale, and the writer must refuse loudly rather than fall back to __file__, the current directory or the worktree root. The first scenario's version-control examples become success cases. The BA is asked (see the IT PO report) to reword that Given so it names the declaration rather than version control."
+    by: it-po
+    at: 2026-10-09
+  - reason: "Criteria reworded, 2026-10-09 (BA rewording requested by the IT PO entry above). WHAT CHANGED: the first scenario's Given previously defined 'the enduring project location cannot be determined' as 'the drive is not running under version control at all, or the version-control tooling is unavailable to the caller'. It now defines it as the install's build-time declaration being absent, unreadable, unparseable, missing the report sink or log root entry, holding a non-absolute location, or stale. Its Then was tightened from 'either written to a location the caller can confirm is not the disposable workspace, or refused' to a refusal only: nothing created anywhere, a failure reason naming the declaration and the failed condition, no record identifier returned, and the verdict still delivered. A new middle scenario states the former version-control examples as SUCCESS cases: with a usable declaration, a project outside version control or a caller without the tooling still writes to the declared location. The plain-checkout scenario is unchanged. WHY: the version-control wording belonged to the superseded git-common-dir design (rule (c) in INF-500d-4's notes), rejected on 2026-09-07 in favour of the absolute log root fixed at build time in the deployed declaration (INF-500d-4 amended_by and it_requirements; this AC's it_requirements line 1). Under that mechanism a checkout outside version control is a success case, so the old Given described a refusal the adopted design must never produce. No test_spec descriptor asserted a retracted case: test_project_without_version_control_writes_to_the_declared_root already treats it as success and now has a criterion to cite, and the refusal tests already exercise the declaration cases."
+    by: BrainCandy
+    at: 2026-10-09
+  - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved, given after the criteria rewording above; work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-09
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/02_TICKET-20261009-INF-500d-4-i.md
 change_target:
   - code
   - infrastructure

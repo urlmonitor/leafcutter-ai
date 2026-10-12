@@ -112,10 +112,3 @@ flowchart TD
 | Pattern | Trigger | Behavior | Related Agent |
 |---------|---------|----------|---------------|
 | Conditional Behavior | a store file is missing | absent, unreadable, or oversized | `None` |
----
-
-## AC Assignments
-
-### pt-classifier
-
-- UXP-543: Only the artifact-agents the classifier calls for are run

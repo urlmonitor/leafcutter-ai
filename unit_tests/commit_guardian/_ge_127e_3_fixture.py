@@ -213,11 +213,20 @@ def snapshot_files(root: Path) -> set[Path]:
     imported at all, not something the CHECK ITSELF wrote for later
     consumption. Counting it would falsely redden every disposable-copy
     run, in a way with no connection to this AC's own subject.
+
+    Also excludes ``.git/objects``: git's own auto-gc can write a transient
+    ``tmp_pack_*`` there at any moment (flaked in CI), unrelated to the check.
+    Only that subtree is excluded -- a stray file the check leaves elsewhere
+    in ``.git`` or the working tree is still caught.
     """
+    objects = root / ".git" / "objects"
     return {
         p
         for p in root.rglob("*")
-        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
+        if p.is_file()
+        and "__pycache__" not in p.parts
+        and p.suffix != ".pyc"
+        and objects not in p.parents
     }
 
 

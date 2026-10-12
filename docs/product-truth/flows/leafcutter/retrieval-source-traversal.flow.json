@@ -1,0 +1,810 @@
+{
+  "id": "leafcutter/retrieval-source-traversal",
+  "component": "knowledge-management",
+  "product": "Leafcutter",
+  "name": "Navigate nodes, folders and files",
+  "level": "journey",
+  "summary": "Jev chooses observed navigation candidates; the system reads bounded sources and retains the path and evidence.",
+  "kind": "data",
+  "source": "real",
+  "realization": "spec",
+  "status": "active",
+  "readiness": "draft",
+  "version": 2,
+  "shape_version": 2,
+  "tags": [
+    "retrieval",
+    "target-design"
+  ],
+  "entities": [],
+  "steps": [
+    {
+      "id": "offer",
+      "label": "Offer a scoped starting frontier",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "description": "The kernel offers the permitted starting graph nodes and relationships or repository folders and files from the plan, each tied to a pinned source version.",
+      "order": 1,
+      "implements": [],
+      "consumes": [
+        "scope/workspace_id: string (required)",
+        "scope/repository_root: string (required)",
+        "scope/revision: null|object (optional; default null)",
+        "scope/read_roots: array (optional; default [])",
+        "scope/source_ids: array (optional; default [])",
+        "retrieval_needs_output/original_question: string (required)",
+        "retrieval_needs_output/selections: object (required)",
+        "retrieval_needs_output/detail_mode: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "scope",
+            "fields": [
+              {
+                "path": "/workspace_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/revision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/read_roots",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/source_ids",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "fields": [
+              {
+                "path": "/original_question",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/selections",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/detail_mode",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "scope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative scope projection; not an execution receipt",
+            "value": {
+              "workspace_id": "example-workspace",
+              "repository_root": "C:/example/leafcutter",
+              "revision": {
+                "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "dirty": false
+              },
+              "read_roots": [
+                "docs/acceptance-criteria"
+              ],
+              "source_ids": [
+                "repository"
+              ]
+            }
+          },
+          {
+            "contract": "retrieval_needs_output",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative retrieval_needs_output projection; not an execution receipt",
+            "value": {
+              "original_question": "For KM-500c-2, what must tests demonstrate?",
+              "selections": {
+                "entity_types": [
+                  "AcceptanceCriterion"
+                ],
+                "target_ids": [
+                  "KM-500c-2"
+                ],
+                "required_fields": [
+                  "criteria",
+                  "test_required"
+                ],
+                "document_types": [
+                  "acceptance_criterion"
+                ],
+                "relationships": []
+              },
+              "detail_mode": "fields"
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Observed traversal frontier",
+            "direction": "both",
+            "reason": "No implemented frontier schema distinguishes graph nodes/edges from folders/files, immutable materialization from working-tree hashes, or observed candidates and scan budgets.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "frontier",
+      "label": "Choose the next navigation step",
+      "agent": "Jev",
+      "actor_kind": "jev",
+      "description": "Jev picks which observed neighbours, folders, files or excerpts to explore next for the original question, or chooses to return evidence, switch method, ask or stop.",
+      "order": 2,
+      "implements": [],
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Multiple frontier selections",
+            "direction": "both",
+            "reason": "ChoiceAnswer is single-choice and is not substituted for selecting multiple observed nodes/edges/files. The target multi-selection plus continue/return/switch/clarify/stop record is undefined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "validate",
+      "label": "Validate the selected frontier",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "description": "The kernel checks the choice against the offered candidates, pinned version, allowed areas and limits, rejects stale or out-of-scope picks and prevents repeated or circular reads.",
+      "order": 3,
+      "implements": [],
+      "consumes": [
+        "scope/repository_root: string (required)",
+        "scope/revision: null|object (optional; default null)",
+        "scope/read_roots: array (optional; default [])"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "scope",
+            "fields": [
+              {
+                "path": "/repository_root",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/revision",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/read_roots",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "scope",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative scope projection; not an execution receipt",
+            "value": {
+              "repository_root": "C:/example/leafcutter",
+              "revision": {
+                "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "dirty": false
+              },
+              "read_roots": [
+                "docs/acceptance-criteria"
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Validated read/non-reading selection",
+            "direction": "both",
+            "reason": "No target JSON binding carries selected observed identities, visited-state checks, immutable read mode and rejection reasons across this boundary.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "read",
+      "label": "Read nodes or code locations",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "description": "The kernel reads the selected nodes, folders or file excerpts within budget and records the path, source, location and any truncation of each read.",
+      "order": 4,
+      "implements": [],
+      "consumes": [],
+      "produces": [
+        "knowledge_result/status: string (required)",
+        "knowledge_result/source_sha: null|string (optional; default null)",
+        "knowledge_result/generation_id: null|string (optional; default null)",
+        "knowledge_result/evidence/*/entity/source: object (required)",
+        "knowledge_result/evidence/*/path: array (optional; default [])",
+        "knowledge_result/evidence/*/limitations: array (optional; default [])",
+        "knowledge_result/truncated: boolean (optional; default false)"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/source_sha",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/generation_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/evidence/*/entity/source",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence/*/path",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/evidence/*/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/truncated",
+                "types": [
+                  "boolean"
+                ],
+                "required": false,
+                "default": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "generation_id": "example-generation",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "truncated": false
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Traversal result and next frontier",
+            "direction": "both",
+            "reason": "Neutral graph evidence has source/path fields, but no complete graph-and-filesystem traversal result schema preserves next frontier, scan bounds, visited identities and cumulative read charges.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "judge",
+      "label": "Judge progress on the question",
+      "agent": "Jev",
+      "actor_kind": "jev",
+      "description": "Jev judges whether the returned evidence answers the original question and chooses another place to explore, a different method, returning evidence, asking or stopping.",
+      "order": 5,
+      "implements": [],
+      "consumes": [
+        "knowledge_result/status: string (required)",
+        "knowledge_result/evidence: array (optional; default [])",
+        "knowledge_result/warnings: array (optional; default [])"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "knowledge_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/evidence",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/warnings",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "knowledge_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative knowledge_result projection; not an execution receipt",
+            "value": {
+              "status": "partial",
+              "evidence": [
+                {
+                  "entity": {
+                    "canonical_id": "KM-500c-2",
+                    "kind": "AcceptanceCriterion",
+                    "title": "Illustrative AC title",
+                    "source": {
+                      "repository_id": "leafcutter",
+                      "source_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                      "path": "docs/acceptance-criteria/knowledge-retrieval/KM-500c-2.yaml",
+                      "locator": "criteria"
+                    },
+                    "properties": {
+                      "criteria": "Illustrative acceptance clause; no real requirement text is asserted."
+                    }
+                  },
+                  "content": "Illustrative acceptance clause; no real requirement text is asserted.",
+                  "field_availability": {
+                    "test_required": "unknown"
+                  },
+                  "limitations": [
+                    "The requested test_required field is not available in this illustrative result."
+                  ]
+                }
+              ],
+              "warnings": [
+                "The test_required field is unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Traversal continuation judgment",
+            "direction": "both",
+            "reason": "The proposed judgment requires original need, attributable read outcome and actual next frontier; no scoped decision schema/template defines this combination.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retain",
+      "label": "Retain history and return or resume",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "description": "The kernel saves the visited places, attempts, evidence and remaining budget, then either continues the traversal or returns the outcomes to the shared comparison.",
+      "order": 6,
+      "implements": [],
+      "consumes": [],
+      "produces": [
+        "capability_result/status: string (required)",
+        "capability_result/continuation_state: null|object (optional; default null)",
+        "capability_result/limitations: array (optional; default [])"
+      ],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "capability_result",
+            "fields": [
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/continuation_state",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": false,
+                "default": null
+              },
+              {
+                "path": "/limitations",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "capability_result",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative capability_result projection; not an execution receipt",
+            "value": {
+              "status": "blocked",
+              "continuation_state": null,
+              "limitations": [
+                "The requested fact remains unresolved."
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Traversal checkpoint and comparison handoff",
+            "direction": "both",
+            "reason": "A typed target checkpoint for visited/frontier identities, read mode, attempts and remaining budget is absent. CapabilityResult.continuation_state is a raw object and does not define these keys.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      }
+    }
+  ],
+  "branches": [
+    {
+      "id": "continue",
+      "from": "retain",
+      "label": "Continue through observed candidates",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "condition": "Jev selected an unvisited useful frontier and budget remains",
+      "description": "The kernel goes back to choosing the next navigation step with the observed candidates, visit history and remaining budget, without starting over.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Continue with observed frontier",
+            "direction": "both",
+            "reason": "The no-replay continuation requires the actual observed frontier and visited history; no binding exists.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "fallback",
+      "from": "retain",
+      "label": "Switch or add a method",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "condition": "Jev selected an alternative/complementary method after limited progress",
+      "description": "The kernel sends the outcomes to the shared comparison and back to method selection, keeping useful evidence so the next plan can use another method or both.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Return traversal attempts for replanning",
+            "direction": "both",
+            "reason": "The shared comparison/method plan continuation is undefined, so useful retained evidence cannot yet be handed off through a typed target aggregate.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "exhausted",
+      "from": "validate",
+      "label": "No permitted next read",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "condition": "No useful unvisited candidate remains, the budget is exhausted, or the selected read is refused",
+      "description": "The kernel skips reading, records the outcome for the shared comparison and finishes as partial or blocked when no other useful method remains, without retrying the same read.",
+      "outcome_kind": "exit",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Exhausted traversal outcome",
+            "direction": "both",
+            "reason": "The target must distinguish read/time/depth/scan exhaustion from no matches; no combined traversal outcome binding exists.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "clarify",
+      "from": "judge",
+      "label": "Clarify intent or authority",
+      "agent": "Jev",
+      "actor_kind": "jev",
+      "condition": "Observed evidence exposes a material ambiguity that cannot be resolved safely",
+      "description": "Jev chooses to ask a clarifying question, which is retained with the evidence and history and passes through the shared comparison before the question is sent.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Traversal clarification decision",
+            "direction": "both",
+            "reason": "The specific missing fact plus retained frontier/history must reach the main loop; no target decision-context binding exists.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    },
+    {
+      "id": "nonreading",
+      "from": "validate",
+      "label": "Retain a decision without reading",
+      "agent": "System",
+      "actor_kind": "deterministic",
+      "condition": "Jev chose return, switch, clarification or stop instead of a read",
+      "description": "The kernel skips reading and judging and goes straight to retention, keeping the existing attempts, evidence, open candidates and budget.",
+      "outcome_kind": "alternative",
+      "implements": [],
+      "impl_asof": "2026-10-02",
+      "impl_status": "not_started",
+      "io_contracts": {
+        "missing_bindings": [
+          {
+            "name": "Validated non-reading continuation",
+            "direction": "both",
+            "reason": "A selected return/switch/clarify/stop must preserve state without reading; the target validated non-reading record is undefined.",
+            "source": "docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json"
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": []
+    }
+  ],
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "flow-author",
+      "date": "2026-10-02",
+      "note": "Proposed adaptive traversal — not built\nThis dedicated method refines the existing retrieval journey. It describes Jev frontier choice and System traversal with multi-method return routes. Existing bounded graph operations and native repository retrieval are reusable primitives, not proof that this adaptive node/folder navigation loop is wired. No runtime, provider or source publication occurs in this design task.\n\nArchitecture evidence: existing graph neighbour/recipe operations and native allowlisted file enumeration/locators are primitives. No public Jev frontier-navigation or directory-listing contract is currently exposed. A proposed typed enumerate-frontier/read-selected adapter must preserve visited IDs and scan bounds. Native worktree reads are not immutable Git reads merely because a revision label is attached. This draft does not claim a complete code/call/import graph."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "given": "Selected traversal mode, original question, pinned scope and prior history",
+      "when": "Offer a scoped starting frontier",
+      "then": "Observed scoped frontier and remaining budget",
+      "for": "offer"
+    },
+    {
+      "given": "Observed scoped frontier and remaining budget",
+      "when": "Choose the next navigation step",
+      "then": "Bounded frontier selection or return decision",
+      "for": "frontier"
+    },
+    {
+      "given": "Bounded frontier selection or return decision",
+      "when": "Validate the selected frontier",
+      "then": "Validated read selection, validated non-reading decision or explicit refusal",
+      "for": "validate"
+    },
+    {
+      "given": "Validated read selection only",
+      "when": "Read nodes or code locations",
+      "then": "Attributable traversal attempt and observed next frontier",
+      "for": "read"
+    },
+    {
+      "given": "Attributable traversal attempt and observed next frontier",
+      "when": "Judge progress on the question",
+      "then": "Continue, switch, return, clarify or stop decision",
+      "for": "judge"
+    },
+    {
+      "given": "Validated non-reading decision or post-read continue/switch/return/clarify/stop decision",
+      "when": "Retain history and return or resume",
+      "then": "Retained attributable attempt results or matching continuation",
+      "for": "retain"
+    },
+    {
+      "given": "Jev selected an unvisited useful frontier and budget remains",
+      "when": "Continue through observed candidates",
+      "then": "Return to [frontier selection](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#frontier) with the actual observed candidates, visited history and cumulative budget; do not recreate the starting state.",
+      "for": "continue"
+    },
+    {
+      "given": "Jev selected an alternative/complementary method after limited progress",
+      "when": "Switch or add a method",
+      "then": "Return outcomes to [comparison and advisory recording](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare), then [method selection](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#plan). Preserve useful evidence; the next plan may use another method or both compatible methods.",
+      "for": "fallback"
+    },
+    {
+      "given": "No useful unvisited candidate remains, the budget is exhausted, or the selected read is refused",
+      "when": "No permitted next read",
+      "then": "Skip reading and retain an explicit bounded outcome. Join [shared comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare); if no other permitted useful method remains, finish partial/blocked without an identical retry.",
+      "for": "exhausted"
+    },
+    {
+      "given": "Observed evidence exposes a material ambiguity that cannot be resolved safely",
+      "when": "Clarify intent or authority",
+      "then": "Choose the bounded clarification outcome without authoring question prose. Pass this decision to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain), then [shared attempt comparison](docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json#compare) and advisory recording before main clarification dispatch. Preserve evidence and history; do not invent the missing fact.",
+      "for": "clarify"
+    },
+    {
+      "given": "Jev chose return, switch, clarification or stop instead of a read",
+      "when": "Retain a decision without reading",
+      "then": "Validate the bounded non-reading action and route directly to [System retention](docs/product-truth/flows/leafcutter/retrieval-source-traversal.flow.json#retain). Skip both read and post-read judgment; retain the existing attempts, evidence, frontier and budget. Only an accepted read selection reaches the read step.",
+      "for": "nonreading"
+    }
+  ],
+  "impl_summary": {
+    "done": 0,
+    "in_progress": 0,
+    "not_started": 11,
+    "total": 11,
+    "asof": "2026-10-02"
+  },
+  "contract_definitions": {
+    "scope": {
+      "model": "scope"
+    },
+    "retrieval_needs_output": {
+      "model": "retrieval_needs_output"
+    },
+    "knowledge_result": {
+      "model": "knowledge_result"
+    },
+    "capability_result": {
+      "model": "capability_result"
+    }
+  }
+}

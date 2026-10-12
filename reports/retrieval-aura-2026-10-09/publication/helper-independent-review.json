@@ -1,0 +1,68 @@
+{
+  "reviewed_at": "2026-10-09T21:36:50.586384+00:00",
+  "mode": "Independent local pure controls; no controller replay, provider, graph, or Git source subprocess call.",
+  "controls": [
+    {
+      "name": "A01",
+      "old_new_saved_equal": true
+    },
+    {
+      "name": "A02",
+      "old_new_saved_equal": true
+    },
+    {
+      "name": "A03",
+      "old_new_saved_equal": true
+    },
+    {
+      "name": "A04",
+      "old_new_saved_equal": true
+    },
+    {
+      "name": "empty",
+      "old_new_equal": true,
+      "fail_closed": true
+    },
+    {
+      "name": "missing_field",
+      "old_new_equal": true,
+      "fail_closed": true
+    },
+    {
+      "name": "wrong_entity",
+      "old_new_equal": true,
+      "fail_closed": true
+    },
+    {
+      "name": "unfulfilled",
+      "old_new_equal": true,
+      "fail_closed": true
+    },
+    {
+      "name": "wrong_selected_fields",
+      "old_new_equal": true,
+      "fail_closed": true
+    },
+    {
+      "name": "OSError",
+      "explicit_cause_preserved": true,
+      "attempts": 1,
+      "real_git_calls": 0
+    },
+    {
+      "name": "CalledProcessError",
+      "explicit_cause_preserved": true,
+      "attempts": 1,
+      "real_git_calls": 0
+    }
+  ],
+  "historical_source_snapshots_verified": 8,
+  "stage1_frozen_runtime_sources_verified": 359,
+  "archival_resolutions": 4,
+  "stage1_closed_files_unchanged": 267,
+  "approved": true,
+  "maintained_hashes": {
+    "proof_support.py": "ca02bae45d8cbc251b2b2ed00ce7bda37d56b82e4321bfdfa36dd83fe3c175b4",
+    "score_support.py": "5d5a4072160d707d77f0fe82e0343a518a52fbcaad1e9a71cad72f2077f9feea"
+  }
+}

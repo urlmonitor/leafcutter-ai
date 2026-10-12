@@ -1,0 +1,31 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "$id": "leafcutter.query_activation_receipt.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Verifier-produced receipt; never accepted directly from a coding host.",
+  "properties": {
+    "receipt": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "The verifier's proof that the recipe was admitted; never accepted from a coding host.",
+      "title": "Receipt",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "receipt"
+  ],
+  "title": "QueryActivationReceipt",
+  "type": "object"
+}

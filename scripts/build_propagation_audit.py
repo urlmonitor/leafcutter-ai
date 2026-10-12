@@ -26,8 +26,11 @@ BUSINESS CONTEXT: EPIC-PortableInstallHardening discovered 5 scripts registered
     ``extends`` relationship.
 ARCHITECTURE: One public phase function ``propagation_audit``, one guard
     function ``check_broken_references``, a ``BrokenRefEntry`` dataclass, and
-    a ``build_broken_ref_report`` factory. Parsing uses ``yaml.safe_load`` with a
-    regex fallback if PyYAML is absent. The audit is intentionally fail-open: it
+    a ``build_broken_ref_report`` factory. Parsing uses ``yaml.SafeLoader`` (the
+    pure-Python parser, reverted from the shared fast accessor in the
+    loader-audit/TQ-600a-11 fix-pass of 2026-10-07 -- see
+    ``_parse_hook_entries_yaml``'s own docstring) with a regex fallback if
+    PyYAML is absent. The audit is intentionally fail-open: it
     never raises and always returns, even when warnings are emitted. The allowlist
     is a module-level frozenset constant that callers can extend by passing an
     explicit ``allowlist`` argument to ``check_broken_references``.
@@ -155,9 +158,18 @@ _ENTRY_RE = re.compile(r"scripts[/\\]commit_guardian[/\\]([\w.]+\.py)")
 
 
 def _parse_hook_entries_yaml(precommit_path: Path) -> list[str]:
-    """Parse hook entry fields from .pre-commit-config.yaml using yaml.safe_load.
+    """Parse hook entry fields from .pre-commit-config.yaml using yaml.SafeLoader.
 
-    Falls back to regex line scan when PyYAML is not importable.
+    Falls back to regex line scan when PyYAML is not importable. Reverted
+    from the shared fast accessor (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07): this docstring previously still said "using yaml.safe_load"
+    after the PR had switched the call site to the fast accessor underneath
+    it -- a stale equivalence claim the audit's criterion 3 flags on its own.
+    Fixed by reverting the call site to match the docstring's (and this
+    module's ARCHITECTURE section's) stated contract, rather than by
+    updating the docstring to describe the accessor: this audit never blocks
+    the build (fail-open by design) and reads a single config file per run,
+    so there was no speed case for the fast loader here regardless.
 
     Args:
         precommit_path: Path to the .pre-commit-config.yaml file.
@@ -172,7 +184,7 @@ def _parse_hook_entries_yaml(precommit_path: Path) -> list[str]:
         _log.debug("PyYAML not available; falling back to regex scan.")
         return re.findall(r"^\s*entry:\s*(.+)$", text, re.MULTILINE)
     try:
-        data = yaml.safe_load(text) or {}
+        data = yaml.load(text, Loader=yaml.SafeLoader) or {}
         entries: list[str] = []
         for repo in data.get("repos", []):
             for hook in repo.get("hooks", []):

@@ -228,6 +228,31 @@ _COLLISION_LINE_RE = re.compile(
 )
 
 
+def _match_collision_winner_line(output: str, name: str) -> str | None:
+    """Private, non-patchable implementation of the prescribed-line parse.
+
+    `parse_stated_collision_winner` (below) and
+    `assert_declared_winner_holds_on_every_active_surface` both need this
+    exact parse, but they are two INDEPENDENTLY breakable properties in
+    TQ-600a-9's break-property test hook (see
+    unit_tests/suite_performance/_test_helpers_tq_600a_9.py's
+    LEAFCUTTER_TQ600A9_BREAK_PROPERTY mechanism: "declared_winner" patches
+    `parse_stated_collision_winner` by NAME; "cross_platform_winner"
+    patches `assert_declared_winner_holds_on_every_active_surface` by
+    NAME). If the cross-platform check called the public
+    `parse_stated_collision_winner` function directly, breaking ONLY
+    "declared_winner" would ALSO redden the cross-platform-winner test
+    (which never patches this parse), violating the discrimination
+    contract that breaking one named property reddens EXACTLY one test.
+    Routing both public entry points through this private helper instead
+    keeps each property independently breakable.
+    """
+    for match in _COLLISION_LINE_RE.finditer(output):
+        if match.group("name") == name:
+            return match.group("winner")
+    return None
+
+
 def parse_stated_collision_winner(output: str, name: str) -> str | None:
     """Parse the prescribed ``collision: <name> -- resolves to
     <adopter|package>`` line for *name* out of *output*.
@@ -235,10 +260,7 @@ def parse_stated_collision_winner(output: str, name: str) -> str | None:
     Returns ``"adopter"`` or ``"package"`` when a matching line names
     *name*, else ``None``.
     """
-    for match in _COLLISION_LINE_RE.finditer(output):
-        if match.group("name") == name:
-            return match.group("winner")
-    return None
+    return _match_collision_winner_line(output, name)
 
 
 _COLLISION_KEYWORDS = ("collision", "conflict")
@@ -486,7 +508,13 @@ def assert_declared_winner_holds_on_every_active_surface(
         The declared winner string (``"adopter"`` or ``"package"``), for
         any further assertion a caller wants to make.
     """
-    declared_winner = parse_stated_collision_winner(combined_output, contested_name)
+    # Uses the private, non-patchable parse (not the public
+    # `parse_stated_collision_winner`) so that TQ-600a-9's "declared_winner"
+    # break property -- which patches `parse_stated_collision_winner` BY
+    # NAME -- cannot also redden THIS function's own independent
+    # "cross_platform_winner" property. See `_match_collision_winner_line`'s
+    # own docstring for the full discrimination-contract rationale.
+    declared_winner = _match_collision_winner_line(combined_output, contested_name)
     assert declared_winner is not None, (
         f"The run never declares a winner for the contested name "
         f"{contested_name!r} in the prescribed 'collision: <name> -- "
