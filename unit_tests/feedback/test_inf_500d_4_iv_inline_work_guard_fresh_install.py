@@ -36,6 +36,7 @@ def _hook(out_root: Path) -> Path:
 
 def _install(base: Path, log_root: Path | None) -> tuple[Path, Path]:
     """A locked, deployed project under ``base``; returns ``(project, out_root)``."""
+    (base / "tmpdir").mkdir(exist_ok=True)  # the run's TMPDIR: created before any snapshot is taken
     project = base / "project"
     project.mkdir()
     out_root = h.deploy_install(project)
