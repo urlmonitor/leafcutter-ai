@@ -119,7 +119,7 @@ def declare(seed: dict, hook_id: str, **fields: object) -> dict:
 
 def complexity_decl(**overrides: object) -> dict:
     """Arm-one style engage-specialist fields for check-complexity, with overrides."""
-    fields = {
+    fields: dict[str, object] = {
         "disposition": "engage-specialist",
         "agent": "restructuring-specialist",
         "skills": ["complexity-reduction"],
