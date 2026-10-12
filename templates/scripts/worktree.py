@@ -40,7 +40,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +51,7 @@ import worktree_ensure_state as wes
 import worktree_git as wg
 import worktree_identity as wi
 import worktree_layout as wl
+import worktree_migrate
 import worktree_paths as wp
 import worktree_readiness as wr
 import worktree_remove
@@ -65,18 +65,6 @@ _err = wa.error_answer  # the one status/code rule (worktree_answer owns the tab
 def _now_iso() -> str:
     """Return the current UTC time as an ISO-8601 string with a trailing 'Z'."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
-    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace."""
-    for name in (".env", ".mcp.json"):
-        src = repo_root / name
-        if not src.is_file() or (workspace_path / name).exists():
-            continue  # never overwrite a copy the work may have changed
-        try:
-            shutil.copy2(src, workspace_path / name)
-        except OSError as exc:
-            _log.warning("_copy_optional_files: could not copy %s: %s", src, exc)
 
 
 def _repo_context(repo_root: Path) -> dict[str, Any]:
@@ -159,7 +147,7 @@ def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_p
     branch, line_of_work, base_commit = line
     wg.run_git(["config", "gc.auto", "0"], workspace_path)
     wg.run_git(["config", "maintenance.auto", "false"], workspace_path)
-    _copy_optional_files(repo_root, workspace_path)
+    wg.copy_optional_files(repo_root, workspace_path)
 
     if args.config_path:
         config_path = wp.resolve_arg(args.config_path)
@@ -361,6 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
     remove_p.add_argument("--repo-root")
 
     sub.add_parser("where")
+    worktree_migrate.add_parser(sub)
     for name in ("ensure", "locate", "list", "verify", "remove"):
         sub.choices[name].add_argument("--landing-root")
     return parser
@@ -373,6 +362,7 @@ _DISPATCH = {
     "verify": cmd_verify,
     "remove": worktree_remove.cmd_remove,
     "where": cmd_where,
+    "migrate-legacy": worktree_migrate.cmd_migrate_legacy,
 }
 
 
@@ -475,4 +465,7 @@ if __name__ == "__main__":
 #   a half-made one is completed in place, answered workspace_action
 #   created | re-readied | completed. verify and locate refuse a workspace
 #   whose marker is not ready (INCOMPLETE). (ADR-018)
+# - 2026-10-12 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+#   BO-4300f-3: wired the migrate-legacy verb (worktree_migrate.py). (ADR-018)
 # ===========================================================================

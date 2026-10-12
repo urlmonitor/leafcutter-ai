@@ -63,6 +63,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_identity.py",
     "worktree_ensure_state.py",
     "worktree_remove.py",
+    "worktree_migrate.py",
 )
 
 
@@ -104,6 +105,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry): the one naming table, legacy-line and occupant checks (BO-4300a-2, d-3, d-4).
     - ``templates/scripts/worktree_remove.py`` → ``scripts/worktree_remove.py``
       (NAMED entry, BO-4300e): the remove verb and the definite locate answer.
+    - ``templates/scripts/worktree_migrate.py`` → ``scripts/worktree_migrate.py``
+      (NAMED entry, BO-4300f-3): the ``migrate-legacy`` cut-over verb.
     - ``templates/scripts/worktree_ensure_state.py`` → ``scripts/worktree_ensure_state.py``
       (NAMED entry): the lock, set-aside and half-made handling (BO-4300d-1, d-2).
 
@@ -152,6 +155,7 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     # - 2026-10-12 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
     #   Added worktree_ensure_state.py as a NAMED entry (BO-4300d-1, d-2). (ADR-018)
     #   Added worktree_remove.py as a NAMED entry (BO-4300e). (ADR-018)
+    #   Added worktree_migrate.py as a NAMED entry (BO-4300f-3). (ADR-018)
     """
     import build_phases as _bp
 

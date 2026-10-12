@@ -28,6 +28,7 @@ import contextlib
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -80,6 +81,18 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> 
         return subprocess.CompletedProcess(args=["git", *args], returncode=1, stdout="", stderr=str(exc))
     worktree_answer.forward_git_output(args, proc)
     return proc
+
+
+def copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
+    """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace."""
+    for name in (".env", ".mcp.json"):
+        src = repo_root / name
+        if not src.is_file() or (workspace_path / name).exists():
+            continue  # never overwrite a copy the work may have changed
+        try:
+            shutil.copy2(src, workspace_path / name)
+        except OSError as exc:
+            _log.warning("copy_optional_files: could not copy %s: %s", src, exc)
 
 
 def marker_path(workspace: Path) -> Path:
@@ -240,4 +253,8 @@ def normalize_slug(raw: str, kind: str | None = None) -> str:
 #   The naming table moved to worktree_identity.py (BO-4300a-2); normalize_slug
 #   here only delegates so worktree_admin's locate uses the same rule, and
 #   KIND_BRANCH_PREFIX was retired (every kind's line is <kind>/<slug>). (ADR-018)
+# - 2026-10-12 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12)
+#   copy_optional_files moved here from worktree.py (file-size ratchet) to make
+#   room for wiring the migrate-legacy verb. (ADR-018)
 # ===========================================================================

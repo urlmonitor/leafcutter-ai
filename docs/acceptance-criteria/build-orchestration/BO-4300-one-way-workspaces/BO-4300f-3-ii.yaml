@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -85,9 +85,20 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_3_ii.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/12_TICKET-20260928-BO-4300-legacy-cut-over.md
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_migrate.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
+- templates/scripts/worktree.py
+- templates/scripts/worktree_git.py
+- templates/scripts/worktree_migrate.py
+- scripts/build_phases_script_deploy_standalone.py
+- scripts/build_deploy_manifest_helpers.py
 notes: |
   ADR-018 migration step 2 (gc.auto=0) was never applied; .git/lost-found already holds 81
   objects including 18 commits from an fsck recovery on this host (decision memo).
