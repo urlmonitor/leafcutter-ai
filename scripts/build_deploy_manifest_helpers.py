@@ -257,6 +257,9 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
         for f in templates_scripts.glob("*.py"):
             if f.is_file():
                 result.add(f"scripts/{f.name}")
+        # GE-132a-1: the remedy-declaration seed is deployed by the same phase.
+        if (templates_scripts / "precommit-autofix.json").is_file():
+            result.add("scripts/precommit-autofix.json")
     return result
 
 
