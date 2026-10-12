@@ -94,10 +94,10 @@ python leafcutter/scripts/retrospective/extract_epic_facts.py \
   --telemetry "$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
 ```
 
-`extract_epic_facts.py` has its own working-directory-relative default for the telemetry
-file, so the declared stream is always passed explicitly through the location query. If
-the query prints nothing (the install declares no stream), say so in the retrospective
-rather than reporting zero telemetry events.
+`extract_epic_facts.py` reads the install's declared telemetry stream, or refuses when there
+is none; it has no working-directory-relative default. The declared stream is still passed
+explicitly through the location query. If the query prints nothing (the install declares no
+stream), say so in the retrospective rather than reporting zero telemetry events.
 
 The output JSON provides:
 - `ticket_count`, `completed_ticket_count`

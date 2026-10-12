@@ -69,6 +69,11 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   longer point a writer into the disposable worktree. A wholly absent
 #   declaration keeps the un-built source-tree fallback for the ordinary run.
 #   ``emit_event.py`` (standard library only) carries an inline copy.
+# - 2026-10-12 [python-coder/INF-500d-4-iii harvest]: Staleness is now "the
+#   enduring root holding the declared ``operational_log_root`` is gone"
+#   (``enduring_root_exists``), not "the declared sink differs from
+#   ``<project>/debugging/logs``", which refused every ordinary harvest in an
+#   inherited-root install. The legacy-sink NOTE needs a non-empty legacy file.
 """
 
 from __future__ import annotations
@@ -299,22 +304,24 @@ def resolve_default_sink(output_root: Path) -> Path:
     return Path("debugging/logs/knowledge_emissions.jsonl")
 
 
-def recomputed_sink_for_output_root(output_root: Path) -> Path:
-    """Recompute the conventional sink path from where this script currently lives.
+def enduring_root_exists(output_root: Path) -> bool:
+    """Return whether the enduring project root the declaration records still exists.
 
-    Mirrors ``build_knowledge_sink_declaration``'s own derivation in
-    ``build_phases_knowledge.py`` (``<project_root>/debugging/logs/
-    knowledge_emissions.jsonl``, where ``project_root == output_root.parent``)
-    so that comparing this against a DECLARED value is what staleness
-    detection (AC INF-400c-4-v) is built on: a declaration written for an
-    install that has since been moved by hand still names its OLD absolute
-    path verbatim, and that stops matching what this exact layout would
-    produce right now -- without either path needing to exist on disk for
-    the comparison itself to hold.
-
-    Pure function: no I/O, no shared-state mutation.
+    The enduring root is the directory holding the declared ``operational_log_root``:
+    its parent, or -- for the conventional ``<project>/debugging/logs`` layout -- the
+    project above ``debugging``. An inherited root (ADR-069 section 3) lies outside
+    this install on purpose, so it is NOT compared with this layout. A missing log
+    directory under a live root is a first write, not staleness. A declaration with
+    no usable root is reported as existing here; ``read_usable_stream`` refuses it.
+    Side-effect free.
     """
-    return output_root.parent / "debugging" / "logs" / "knowledge_emissions.jsonl"
+    root = read_declared_value(output_root, _ROOT_KEY)
+    if root is None or not Path(root).is_absolute():
+        return True
+    holder = Path(root).parent
+    if holder.name == "debugging":
+        holder = holder.parent
+    return holder.is_dir()
 
 
 def stale_declaration_message(output_root: Path) -> str | None:
@@ -329,13 +336,15 @@ def stale_declaration_message(output_root: Path) -> str | None:
     meaningful for an absolute path that used to match this layout and no
     longer does -- a relative declared value never "used to match" an
     absolute recomputation, so treating it as stale would misreport a
-    resolution-hazard case as an install-moved case), or when the declared
-    value still matches what this layout would produce right now.
+    resolution-hazard case as an install-moved case), or when the enduring
+    root the declaration records still exists (``enduring_root_exists``). A
+    declared sink that differs from this layout's own is NOT stale: an
+    inherited root differs on purpose (ADR-069 section 3).
     """
     declared = read_sink_declaration(output_root)
     if declared is None or not Path(declared).is_absolute():
         return None
-    if Path(declared) == recomputed_sink_for_output_root(output_root):
+    if enduring_root_exists(output_root):
         return None
     return (
         f"Declared knowledge-emission sink is STALE: {declared} (its "
@@ -449,7 +458,7 @@ def warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> Non
     does not exist or is already the same file the declaration names.
     """
     legacy = legacy_sink_candidate(output_root)
-    if legacy == resolved_sink or not legacy.is_file():
+    if legacy == resolved_sink or not legacy.is_file() or legacy.stat().st_size == 0:
         return
     message = (
         f"NOTE: declared knowledge-emission sink is {resolved_sink}, which "
