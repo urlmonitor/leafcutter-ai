@@ -43,13 +43,14 @@ related_code:
 
 | Field | Value |
 |---|---|
-| **Status** | Proposed — implemented on `epic/one-durable-log-root-for-every-workspace` 2026-10-12, not yet merged (see [Implementation record](#implementation-record-2026-10-12)) |
+| **Status** | Accepted (BrainCandy confirmed on 2026-10-12; implemented in PR #1169, merge 818c301c0; see [Implementation record](#implementation-record-2026-10-12)) |
 | **Date** | 2026-10-09 |
 | **Author** | adr-author (dispatched for ticket INF-500d-4-iii after architect-review) |
 | **Supersedes** | None |
 
-The status stays `Proposed` until the epic is merged. Promotion to `Accepted` is the user's
-call ([write-adr §5](../../how-to/documentation/write-adr.md#5-status-values)).
+**2026-10-12:** Accepted by BrainCandy 2026-10-12; implemented in PR #1169 (merge SHA
+818c301c0ff7f7186cf1d8a924f24befd9a1a3ba). The promotion from `Proposed` was the user's
+call, per [write-adr §5](../../how-to/documentation/write-adr.md#5-status-values).
 
 ---
 
@@ -256,7 +257,7 @@ extracted into `sink_resolution.py` or a new helper rather than added to those f
 
 ## Implementation record (2026-10-12)
 
-What was built on the epic branch, where it refines the decision above:
+What was built in PR #1169 (merged to main as 818c301c0), where it refines the decision above:
 
 - **The usable-stream rule.** A declared stream is usable only when the declaration also
   records an absolute `operational_log_root` and the stream is an absolute path directly
