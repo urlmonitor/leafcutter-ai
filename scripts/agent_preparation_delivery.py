@@ -309,5 +309,10 @@ def refuse_if_agents_compiled(project_root: Path, config: dict[str, Any], dry_ru
     if compiled is None:
         print("agent preparation delivery: skipped -- no agents were compiled in this run")
         return 0
-    expected = compiled * len(_compiled_roots(project_root, config))
-    return refuse_on_undelivered_preparations(project_root, config, dry_run, expected_prompt_count=expected)
+    from agent_grant_delivery_gate import refuse_if_grants_undelivered  # noqa: PLC0415 - import cycle
+
+    roots = _compiled_roots(project_root, config)
+    expected = compiled * len(roots)
+    prep = refuse_on_undelivered_preparations(project_root, config, dry_run, expected_prompt_count=expected)
+    grants = refuse_if_grants_undelivered(project_root, config, dry_run, compiled_roots=roots, expected=expected)
+    return prep or grants

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_declaration_shape import require_well_formed, spawn_problems
 from agent_preparation_delivery import compute_preparation, register_preparation
 from injection_builders import build_per_agent_spawn_table
 
@@ -44,9 +45,16 @@ _SELF = "__declaring_agent__"
 
 
 def declared_spawn(fm: dict[str, Any]) -> list[str]:
-    """Return the ids in the frontmatter ``spawn_allowlist`` (macro as written); absent or empty gives []."""
+    """Return the ids in the frontmatter ``spawn_allowlist`` (macro as written); absent or empty gives [].
+
+    Raises:
+        MalformedDeclarationError: When the value is not a list or an entry is not a string.
+    """
     raw = fm.get("spawn_allowlist")
-    return [item for item in raw if isinstance(item, str)] if isinstance(raw, list) else []
+    if not raw:
+        return []
+    require_well_formed("spawn_allowlist", spawn_problems(raw))
+    return list(raw)
 
 
 def resolve_spawn_ids(declared: list[str], ticket_phase_ids: list[str]) -> list[str]:

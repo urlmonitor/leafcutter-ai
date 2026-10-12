@@ -126,17 +126,6 @@ Convention: [PROJECT_CONTEXT Injection](../../docs/conventions/PROJECT_CONTEXT-i
 — shows all portable agents, their spawn relationships, and the runtime-discovery convention
 legend (including which SQL agents have PROJECT_CONTEXT companions and the edge labelling rules).
 
-## Package-Extension Skills
-
-Invoke these four skills to extend the package:
-
-| Skill | When to use |
-|-------|-------------|
-| `create-hook` | Scaffold a new pre-commit hook, add it to the hook manifest, and register it in `package_boundary.json` |
-| `add-agent-to-package` | Promote a project-local agent to the portable package: copy template, add registry entry, run `build.py --validate` |
-| `add-skill-to-package` | Promote a project-local skill to the portable package: copy `SKILL.md`, add to build phase, update README |
-| `package-audit` | Run `package_audit.py` to surface files that should be in the package but aren't, or project-specific files that leaked into the package |
-
 ## Decision Rules
 
 **"I need a new pre-commit hook"** → invoke `create-hook`  

@@ -49,11 +49,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _agent_ability_sync import (  # noqa: E402
+    MalformedDeclarationError,
     declared_spawn,
     dump_registry,
     frontmatter_of,
@@ -104,12 +103,20 @@ def _declaration_for(root: Path, agent: dict[str, Any]) -> tuple[list[dict[str, 
     path = root / template_path if template_path else None
     if path is None or not path.is_file():
         return None
+    import yaml  # noqa: PLC0415 - lazy: the caller (``main``) has already proven PyYAML imports
+
     try:
         fm = frontmatter_of(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as exc:
         _warn(f"cannot read declaration from {path}: {exc}")
         return None
-    return None if fm is None else (normalize_declared(fm.get("skills")), declared_spawn(fm))
+    if fm is None:
+        return None
+    try:
+        return normalize_declared(fm.get("skills")), declared_spawn(fm)
+    except MalformedDeclarationError as exc:
+        _warn(f"agent '{agent.get('id')}' ({path}) has a malformed declaration; its registry record is left as is: {exc}")
+        return None
 
 
 def regenerate(root: Path, data: dict[str, Any]) -> None:
@@ -144,6 +151,11 @@ def main(argv: list[str] | None = None) -> int:
         original = json.loads(registry_path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         _warn(f"cannot read {registry_path}: {exc}")
+        return 0
+    try:
+        import yaml  # noqa: F401, PLC0415 - fail-open probe: templates cannot be read without PyYAML
+    except ImportError as exc:
+        _warn(f"PyYAML is unavailable, registry left unchanged: {exc}")
         return 0
     data = json.loads(json.dumps(original))
     regenerate(root, data)

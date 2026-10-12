@@ -33,7 +33,6 @@ from _ar_300e_support import (  # noqa: E402
     BODY,
     HAND_WRITTEN_STEMS,
     REPO_ROOT,
-    TABLE_STEMS,
     captured_report,
     compile_with,
     fresh_spawn_build,

@@ -44,8 +44,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import yaml
-
 DEFAULT_MODE = "always"
 _ABILITY_FIELDS = ("skills_used", "skills_invoked")
 SPAWN_FIELD = "spawn_allowlist"
@@ -72,16 +70,60 @@ def descriptive_entries(agent: dict[str, Any]) -> list[tuple[str, dict[str, Any]
     ]
 
 
+class MalformedDeclarationError(ValueError):
+    """A ``skills`` / ``spawn_allowlist`` value is malformed (the message names the offending value).
+
+    The build gate (``scripts/agent_declaration_shape``) applies the same rules;
+    this hook is deployed on its own, so it carries its own copy of them.
+    """
+
+    def __init__(self, problems: list[str]) -> None:
+        """Join ``problems`` (one message per offending value) into the exception message."""
+        super().__init__("; ".join(problems))
+
+
+def _skill_problem(item: Any) -> str | None:
+    """Return what is wrong with one ``skills`` entry, or None when it is well-formed."""
+    if isinstance(item, str):
+        return None
+    if not isinstance(item, dict) or not isinstance(item.get("skill_id"), str):
+        return f"entry {item!r} is not a skill id string or a mapping with a string 'skill_id'"
+    mode = item.get("mode")
+    if mode is not None and mode not in ("always", "conditional"):
+        return f"entry {item!r} has mode {mode!r} (expected always or conditional)"
+    return None
+
+
+def _skills_problems(raw: Any) -> list[str]:
+    """Return one message per defect in a non-empty ``skills`` value."""
+    if not isinstance(raw, list):
+        return [f"skills must be a list, got {type(raw).__name__} {raw!r}"]
+    return [p for p in map(_skill_problem, raw) if p]
+
+
+def _spawn_problems(raw: Any) -> list[str]:
+    """Return one message per defect in a non-empty ``spawn_allowlist`` value."""
+    if not isinstance(raw, list):
+        return [f"{SPAWN_FIELD} must be a list, got {type(raw).__name__} {raw!r}"]
+    return [f"{SPAWN_FIELD} entry {item!r} is not an agent id string" for item in raw if not isinstance(item, str)]
+
+
 def normalize_declared(raw: Any) -> list[dict[str, str]]:
     """Normalise a frontmatter ``skills`` value to ``{skill_id, mode[, condition]}`` dicts.
 
-    A bare string is an ``always`` grant of that id; malformed items are dropped.
+    A bare string is an ``always`` grant of that id.
+
+    Raises:
+        MalformedDeclarationError: When ``raw`` is not a list or an entry is malformed.
     """
     out: list[dict[str, str]] = []
-    for item in raw if isinstance(raw, list) else []:
+    if not raw:
+        return out
+    problems = _skills_problems(raw)
+    if problems:
+        raise MalformedDeclarationError(problems)
+    for item in raw:
         entry = {"skill_id": item} if isinstance(item, str) else item
-        if not isinstance(entry, dict) or not isinstance(entry.get("skill_id"), str):
-            continue
         norm = {"skill_id": entry["skill_id"], "mode": entry.get("mode") or DEFAULT_MODE}
         if entry.get("condition"):
             norm["condition"] = str(entry["condition"])
@@ -103,6 +145,8 @@ def frontmatter_of(text: str) -> dict[str, Any] | None:
     close = next((i for i in range(1, len(lines)) if lines[i].rstrip() == "---"), None)
     if close is None:
         return None
+    import yaml  # noqa: PLC0415 - lazy: a missing PyYAML must reach the caller's fail-open path
+
     loaded = yaml.safe_load("\n".join(lines[1:close]))
     return loaded if isinstance(loaded, dict) else {}
 
@@ -118,9 +162,17 @@ def declared_spawn(fm: dict[str, Any] | None) -> list[str]:
 
     The ticket-phase macro is an ordinary entry and is kept as written. An absent
     key, an empty list or no frontmatter all yield ``[]`` (no permission).
+
+    Raises:
+        MalformedDeclarationError: When the value is not a list or an entry is not a string.
     """
     raw = (fm or {}).get(SPAWN_FIELD)
-    return list(dict.fromkeys(item for item in raw if isinstance(item, str))) if isinstance(raw, list) else []
+    if not raw:
+        return []
+    problems = _spawn_problems(raw)
+    if problems:
+        raise MalformedDeclarationError(problems)
+    return list(dict.fromkeys(raw))
 
 
 def regenerate_spawn(agent: dict[str, Any], declared: list[str]) -> None:

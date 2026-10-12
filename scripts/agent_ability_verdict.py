@@ -63,6 +63,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent_declaration_shape import require_well_formed, skills_problems, spawn_problems
 from agent_spawn_declaration import MACRO, resolve_spawn_ids
 
 _DEFAULT_MODE = "always"
@@ -76,6 +77,7 @@ class EmptyPopulationError(ValueError):
 
     def __init__(self, population: str) -> None:
         """Name the empty population (``agents`` or ``abilities``)."""
+        self.population = population
         super().__init__(f"no {population} examined: an empty population is not a clean verdict")
 
 
@@ -89,13 +91,18 @@ def normalize_entries(raw: Any) -> list[dict[str, str]]:
         raw: The raw ``skills`` value from frontmatter (list or None).
 
     Returns:
-        Entries in declaration order; malformed items are dropped.
+        Entries in declaration order.
+
+    Raises:
+        MalformedDeclarationError: When the value is not a list, an entry has
+            no string ``skill_id``, or a mode is neither always nor conditional.
     """
     out: list[dict[str, str]] = []
-    for item in raw or []:
+    if not raw:
+        return out
+    require_well_formed("skills", skills_problems(raw))
+    for item in raw:
         entry = {"skill_id": item} if isinstance(item, str) else item
-        if not isinstance(entry, dict) or not isinstance(entry.get("skill_id"), str):
-            continue
         norm = {"skill_id": entry["skill_id"], "mode": entry.get("mode") or _DEFAULT_MODE}
         if entry.get("condition"):
             norm["condition"] = str(entry["condition"])
@@ -339,7 +346,9 @@ def verify_spawn_allowlists(
         EmptyPopulationError: When no agent declares or records a sub-agent -- a
             verdict over nothing must not read as clean.
     """
-    declared = {agent: [s for s in raw if isinstance(s, str)] for agent, raw in declarations.items() if raw}
+    for agent, raw in declarations.items():
+        require_well_formed(f"spawn_allowlist of agent '{agent}'", spawn_problems(raw) if raw else [])
+    declared = {agent: list(raw) for agent, raw in declarations.items() if raw}
     records = {a["id"]: a for a in registry_agents}
     agent_ids = sorted(set(declared) | {i for i, r in records.items() if r.get("spawn_allowlist")})
     if not agent_ids:
@@ -375,6 +384,8 @@ def _describe_spawn_finding(finding: dict[str, Any]) -> str:
 
 def describe_finding(finding: dict[str, Any]) -> str:
     """Render one finding as a single human-readable line for the build output."""
+    if finding["kind"] == "malformed-declaration":
+        return f"agent '{finding['agent']}' has a {finding['message']}"
     if finding.get("field") == "spawn_allowlist" or finding["kind"] == "unresolvable-sub-agent":
         return _describe_spawn_finding(finding)
     if finding["kind"] == "missing-condition":

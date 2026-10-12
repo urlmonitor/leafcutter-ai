@@ -345,9 +345,15 @@ def test_descriptive_only_entries_are_absent_from_compiled_prompts(shared_refere
     by_id = {a["id"]: a for a in agents}
     for agent_id, skill_id in sorted(population):
         a = by_id[agent_id]
+        # Positive control against the CURRENT declaration (the source of truth), not the
+        # frozen pre-migration registry: a grant legitimately added after the migration
+        # (python-coder/complexity-reduction, once main shipped that skill) must not read
+        # as a defect here (same rule as AR-300d-3 / decision 12).
+        declared = declared_ids(template_frontmatter(REPO_ROOT / "templates" / "agents" / f"{template_stem(a)}.md"))
+        assert granted_ids(a) & installed <= declared, (agent_id, "a pre-migration grant was lost")
         for root in roots:
             text = (root / f"{template_stem(a)}.md").read_text(encoding="utf-8")
-            assert named_abilities(text, installed) == granted_ids(a) & installed, (agent_id, root.name)
+            assert named_abilities(text, installed) == declared & installed, (agent_id, root.name)
             assert skill_id not in text, f"{agent_id} compiled prompt mentions {skill_id} ({root.name})"
 
 

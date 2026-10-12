@@ -31,16 +31,24 @@ ARCHITECTURE: One shared check, ``_check_pair``, is parameterised over a
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from template_compiler import parse_frontmatter
+_log = logging.getLogger(__name__)
 
 INVOKING_TOOL = "Skill"
 ERROR_PREFIX = "skill-tool-grant:"
 SPAWN_INVOKING_TOOL = "Agent"
 SPAWN_ERROR_PREFIX = "spawn-tool-grant:"
+
+
+def _frontmatter_parser() -> Callable[[str], tuple[dict[str, Any], str]]:
+    """Return ``template_compiler.parse_frontmatter``, imported lazily (it hard-imports PyYAML)."""
+    from template_compiler import parse_frontmatter  # noqa: PLC0415 - KI-BP-019: no yaml at import time
+
+    return parse_frontmatter
 
 
 def _declared_tools(frontmatter: dict[str, Any]) -> list[str]:
@@ -57,7 +65,8 @@ def _granted_abilities(frontmatter: dict[str, Any]) -> list[str]:
     """Return the granted skill ids in `skills:`; absent or empty yields []."""
     abilities = []
     for entry in frontmatter.get("skills") or []:
-        abilities.append(str(entry.get("skill_id") if isinstance(entry, dict) else entry))
+        skill_id = entry.get("skill_id") if isinstance(entry, dict) else entry
+        abilities.append(str(skill_id) if skill_id is not None else repr(entry))
     return abilities
 
 
@@ -85,8 +94,14 @@ def _check_pair(
     granted = 0
     findings: list[dict[str, Any]] = []
     paths = sorted(template_dir.glob("*.md")) if template_dir.is_dir() else []
+    parse_frontmatter = _frontmatter_parser()
     for path in paths:
-        frontmatter, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            _log.warning("cannot read agent template %s: %s", path, exc)
+            raise
+        frontmatter, _ = parse_frontmatter(text)
         name = frontmatter.get("name")
         if not name:
             continue
@@ -186,5 +201,17 @@ def validate_spawn_tool_grants(template_dir: Path) -> list[str]:
 
 
 def validate_tool_grants(template_dir: Path) -> list[str]:
-    """Return the error strings of every (declaration, invoking tool) pair for ``template_dir``."""
+    """Return the error strings of every (declaration, invoking tool) pair for ``template_dir``.
+
+    The registry validator's entry: a package with no templates directory has no
+    templates to check (not an error here -- ``validate_skill_tool_grants`` still
+    errors on an empty population when called directly), and a missing PyYAML is
+    REPORTED as an error rather than crashing the import chain (KI-BP-019).
+    """
+    if not template_dir.is_dir():
+        return []
+    try:
+        _frontmatter_parser()
+    except ImportError as exc:
+        return [f"{ERROR_PREFIX} cannot read agent template frontmatter (PyYAML unavailable?): {exc}"]
     return validate_skill_tool_grants(template_dir) + validate_spawn_tool_grants(template_dir)

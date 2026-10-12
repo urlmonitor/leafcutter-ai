@@ -25,6 +25,8 @@ skills:
   condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 - skill_id: doc-enforcer
   mode: always
+- skill_id: complexity-reduction
+  mode: always
 portable: true
 signoff: true
 domain: null

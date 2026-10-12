@@ -6,10 +6,13 @@ BUSINESS CONTEXT: Templates carry YAML frontmatter (adopter_notes, config_keys,
     portability declarations) that the AI runtime would never act on.
     This module strips that metadata and resolves {{config.key}} placeholders,
     producing clean output files that contain only actionable AI instructions.
-    Ticket 29 extended this module with three registry-injection functions now
-    in injection_builders.py: build_per_agent_spawn_table (Type 1),
-    build_per_agent_skills_table (Type 2), build_registry_block (Type 3).
-    Ticket 08 added build_doc_type_reference_table (Type 4) also in
+    Registry-injection functions live in injection_builders.py:
+    build_per_agent_spawn_table (used by agent_spawn_declaration to render the
+    declared sub-agent section) and build_registry_block (Type 3). The
+    ``{{my_skills_used}}`` / ``{{my_spawn_allowlist}}`` placeholders are retired:
+    an agent's skills table and sub-agent section are appended from its own
+    frontmatter declaration (agent_declared_sections), never resolved from a
+    placeholder. Ticket 08 added build_doc_type_reference_table (Type 4) also in
     injection_builders.py. Ticket 10 added build_project_paths_table (Type 5).
     EPIC-AgentRegistryAsSourceOfTruth ticket 10 added build_agent_priority_table
     (Type 6) and build_doc_types_dispatch_table (Type 7). Registry injection
@@ -48,7 +51,6 @@ from injection_builders import (  # noqa: E402
     build_agent_priority_table,
     build_doc_type_reference_table,
     build_doc_types_dispatch_table,
-    build_per_agent_skills_table,
     build_per_agent_spawn_table,
     build_project_paths_table,
     build_registry_block,
@@ -84,7 +86,6 @@ __all__ = [
     "inject_config",
     "build_agent_priority_table",
     "build_per_agent_spawn_table",
-    "build_per_agent_skills_table",
     "build_registry_block",
     "build_doc_type_reference_table",
     "build_doc_types_dispatch_table",
@@ -245,33 +246,10 @@ Even if the diff is huge, always paste at least the `--stat` summary and list ea
 """
 
 
-def _resolve_agent_id(template_path: Path, agents: list[dict[str, Any]]) -> str:
-    """Resolve the agent ID for a template file by matching against registry entries.
-
-    Falls back to the template filename stem when no registry entry matches.
-
-    Args:
-        template_path: Absolute path to the agent template file being compiled.
-        agents: List of agent dicts from agent_registry.json.
-
-    Returns:
-        The resolved agent ID string (never empty).
-    """
-    template_stem = template_path.stem
-    for a in agents:
-        reg_tpl = a.get("template_path") or ""
-        if reg_tpl and Path(reg_tpl).stem == template_stem:
-            return a["id"]
-    return template_stem
-
-
 def _apply_registry_injection(
     body: str,
     template_name: str,
-    agent_id: str,
-    agents: list[dict[str, Any]],
     registry_path: Path | None,
-    skills_root: Path | None,
     inject_registry: bool,
     config: dict[str, Any] | None = None,
 ) -> str:
@@ -283,11 +261,8 @@ def _apply_registry_injection(
 
     Args:
         body: Template body text after config injection.
-        template_name: Filename of the template (used in error messages).
-        agent_id: Registry ID for the agent being compiled.
-        agents: Full list of agent dicts from agent_registry.json.
+        template_name: Filename of the template (its stem is the compiled prompt's agent name).
         registry_path: Path to agent_registry.json (for Type 3 only).
-        skills_root: Path to ``templates/skills/`` (for Type 2 descriptions).
         inject_registry: When True, resolve Type 3 placeholder.
         config: Optional merged config dict. When provided, passed to
             ``build_project_paths_table()`` so that config-overridden paths
@@ -356,7 +331,8 @@ def compile_agent_template(
     (2) build output header — runtime-relevant keys only, build directives stripped;
     (3) strip metadata sections from body;
     (4) inject config placeholders;
-    (5) inject registry placeholders (Types 1–4) via ``_apply_registry_injection``;
+    (5) inject the remaining registry placeholders (phase-agents, doc-type, project-paths,
+        priority and dispatch tables) via ``_apply_registry_injection``;
     (6) conditionally append sign-off block when ``signoff: true`` is set;
     (7) append the frontmatter ``skills`` table and ``spawn_allowlist`` sub-agent section.
 
@@ -367,10 +343,11 @@ def compile_agent_template(
         registry_path: Optional absolute path to ``agent_registry.json``. When
             provided together with ``agents``, used for Type 3 injection.
         agents: Optional pre-loaded list of agent dicts from agent_registry.json.
-            Required for Types 1 and 2. When None, registry placeholders are
+            Enables registry placeholder injection and supplies the sub-agent
+            section's Role/Tier rows. When None, registry placeholders are
             left as-is (graceful degradation — no error).
         skills_root: Optional absolute path to the ``templates/skills/`` directory.
-            Used for skill description lookup in Type 2 injection.
+            Used for the skill descriptions in the declared skills table.
 
     Returns:
         Compiled agent prompt string ready to be written to the target
@@ -386,14 +363,10 @@ def compile_agent_template(
     body = inject_config(body, config)
 
     if agents is not None:
-        agent_id = _resolve_agent_id(template_path, agents)
         body = _apply_registry_injection(
             body=body,
             template_name=template_path.name,
-            agent_id=agent_id,
-            agents=agents,
             registry_path=registry_path,
-            skills_root=skills_root,
             inject_registry=bool(fm.get("inject_registry", False)),
             config=config,
         )

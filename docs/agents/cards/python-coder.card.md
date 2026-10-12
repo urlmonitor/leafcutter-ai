@@ -127,6 +127,7 @@ flowchart TD
 |-------|------|-----------|
 | `signoff` | always | — |
 | `doc-enforcer` | always | — |
+| `complexity-reduction` | always | — |
 | `run-tests` | conditional | — |
 ---
 

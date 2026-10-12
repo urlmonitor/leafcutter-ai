@@ -55,16 +55,19 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from agent_ability_verdict import (
     REPORT_ONLY_KINDS,
+    EmptyPopulationError,
     describe_finding,
     missing_condition_findings,
     verify_abilities,
     verify_spawn_allowlists,
 )
+from agent_declaration_shape import skills_problems, spawn_problems
 from build_colors import error as _error
 from build_colors import warn as _warn
 from template_compiler import parse_frontmatter
@@ -132,8 +135,19 @@ def _read_spawn_declarations(agents_dir: Path, registry_agents: list[dict[str, A
     return declarations
 
 
+def _malformed_findings(
+    declarations: dict[str, list[Any]], problems_of: Callable[[Any], list[str]]
+) -> tuple[list[dict[str, Any]], dict[str, list[Any]]]:
+    """Return ``(refusing findings, well-formed declarations)``: a malformed one is named, never dropped silently."""
+    findings = [{"agent": agent, "kind": "malformed-declaration", "message": message}
+                for agent, raw in sorted(declarations.items()) for message in problems_of(raw)]
+    refused = {f["agent"] for f in findings}
+    return findings, {a: raw for a, raw in declarations.items() if a not in refused}
+
+
 def _spawn_findings(
-    package_root: Path, registry_agents: list[dict[str, Any]], config: dict[str, Any] | None
+    package_root: Path, declarations: dict[str, list[Any]], registry_agents: list[dict[str, Any]],
+    config: dict[str, Any] | None,
 ) -> list[dict[str, Any]]:
     """Return the sub-agent findings (comparison and resolution); none when nothing is permitted anywhere.
 
@@ -141,30 +155,23 @@ def _spawn_findings(
     one has nothing to compare, so it is skipped rather than refused (the verdict
     function itself raises on that empty population).
     """
-    agents_dir = package_root / "templates" / "agents"
-    declarations = _read_spawn_declarations(agents_dir, registry_agents)
     if not declarations and not any(a.get("spawn_allowlist") for a in registry_agents):
         return []
     project_root = package_root.parent
     return verify_spawn_allowlists(
-        declarations, registry_agents, packaged_agents_root=agents_dir, project_root=project_root,
-        output_root_name=_output_root_name(config, project_root))["findings"]
+        declarations, registry_agents, packaged_agents_root=package_root / "templates" / "agents",
+        project_root=project_root, output_root_name=_output_root_name(config, project_root))["findings"]
 
 
-def _verdict_findings(package_root: Path, config: dict[str, Any] | None) -> tuple[list[dict[str, Any]], list[str]]:
-    """Return ``(findings, cannot_verify)`` for the package at ``package_root``.
+def _skill_findings(
+    package_root: Path, declarations: dict[str, list[Any]], registry_agents: list[dict[str, Any]],
+    config: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Return ``(findings, cannot_verify, notes)`` for the skills side.
 
-    ``cannot_verify`` holds the single refusing message produced when the
-    verdict population is empty (a verdict over nothing must not read as clean).
-    A package without a registry file or an agents template directory has
-    nothing to verify and yields ``([], [])``.
+    Nothing declared anywhere is SKIPPED with a stated note (like the sub-agent
+    side); an empty agent population is still a refusing ``cannot_verify``.
     """
-    registry_path = package_root / "config" / "agent_registry.json"
-    agents_dir = package_root / "templates" / "agents"
-    if not registry_path.is_file() or not agents_dir.is_dir():
-        return [], []
-    registry_agents = _read_json(registry_path).get("agents") or []
-    declarations = _read_declarations(agents_dir, registry_agents)
     project_root = package_root.parent
     try:
         verdict = verify_abilities(
@@ -174,10 +181,43 @@ def _verdict_findings(package_root: Path, config: dict[str, Any] | None) -> tupl
             project_root=project_root,
             output_root_name=_output_root_name(config, project_root),
         )
-    except ValueError as exc:
-        return [], [f"[abilities] cannot verify agent abilities: {exc}"]
-    return (verdict["findings"] + missing_condition_findings(declarations)
-            + _spawn_findings(package_root, registry_agents, config)), []
+    except EmptyPopulationError as exc:
+        if exc.population == "abilities":
+            return [], [], ["[abilities] skills comparison skipped: no agent declares any skills (nothing to compare)"]
+        return [], [f"[abilities] cannot verify agent abilities: {exc}"], []
+    return verdict["findings"] + missing_condition_findings(declarations), [], []
+
+
+def _verdict_findings(
+    package_root: Path, config: dict[str, Any] | None
+) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Return ``(findings, cannot_verify, notes)`` for the package at ``package_root``.
+
+    ``cannot_verify`` holds the refusing message produced when the agent
+    population is empty (a verdict over nothing must not read as clean);
+    ``notes`` states each comparison that was skipped. A malformed declaration
+    is a refusing finding naming the agent and the value; that agent is left out
+    of the comparisons. A package without a registry file or an agents template
+    directory has nothing to verify and yields ``([], [], [])``.
+    """
+    registry_path = package_root / "config" / "agent_registry.json"
+    agents_dir = package_root / "templates" / "agents"
+    if not registry_path.is_file() or not agents_dir.is_dir():
+        return [], [], []
+    registry_agents = _read_json(registry_path).get("agents") or []
+    bad_skills, skills = _malformed_findings(_read_declarations(agents_dir, registry_agents), skills_problems)
+    bad_spawn, spawn = _malformed_findings(_read_spawn_declarations(agents_dir, registry_agents), spawn_problems)
+    found, cannot_verify, notes = _skill_findings(package_root, skills, registry_agents, config)
+    return (bad_skills + bad_spawn + found + _spawn_findings(package_root, spawn, registry_agents, config),
+            cannot_verify, notes)
+
+
+def _split(package_root: Path, config: dict[str, Any] | None) -> tuple[list[str], list[str], list[str]]:
+    """Return ``(reported, refusing, notes)`` message lists for the package."""
+    findings, cannot_verify, notes = _verdict_findings(package_root, config)
+    reported = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] in REPORT_ONLY_KINDS]
+    refusing = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] not in REPORT_ONLY_KINDS]
+    return reported, refusing + cannot_verify, notes
 
 
 def split_ability_findings(package_root: Path, config: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:
@@ -185,13 +225,11 @@ def split_ability_findings(package_root: Path, config: dict[str, Any] | None = N
 
     ``reported`` holds the comparison findings (the registry copy disagrees with a
     declaration): the build prints them and continues. ``refusing`` holds every
-    other finding -- an unresolvable declared ability, or an empty verdict
-    population -- which makes the build exit non-zero.
+    other finding -- a malformed declaration, an unresolvable declared ability,
+    or an empty agent population -- which makes the build exit non-zero.
     """
-    findings, cannot_verify = _verdict_findings(package_root, config)
-    reported = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] in REPORT_ONLY_KINDS]
-    refusing = [f"[abilities] {describe_finding(f)}" for f in findings if f["kind"] not in REPORT_ONLY_KINDS]
-    return reported, refusing + cannot_verify
+    reported, refusing, _notes = _split(package_root, config)
+    return reported, refusing
 
 
 def ability_errors(package_root: Path, config: dict[str, Any] | None = None) -> list[str]:
@@ -226,8 +264,8 @@ def refuse_on_ability_findings(package_root: Path, config: dict[str, Any], dry_r
     Returns:
         1 when the build must refuse, 0 to continue.
     """
-    reported, refusing = split_ability_findings(package_root, config)
-    for line in reported:
+    reported, refusing, notes = _split(package_root, config)
+    for line in notes + reported:
         _warn(line)
     for err in refusing:
         _error(err)

@@ -52,6 +52,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+import agent_grant_delivery_gate as _grants
 import agent_preparation_delivery as _prep
 from build_capability_merge import (
     detect_skill_local_changes,
@@ -172,10 +173,12 @@ def build_agents(target_root: Path, config: dict[str, Any],
 
     Skips helper files whose names start with ``_`` (e.g. ``_signoff_block.md``).
 
-    Registry injection (ticket 29): loads ``agent_registry.json`` once and passes
-    the agents list, registry path, and skills root to ``compile_agent_template``
-    so that ``{{my_spawn_allowlist}}``, ``{{my_skills_used}}``, and
-    ``{{registry_phase_agents_table}}`` placeholders are resolved at compile time.
+    Registry injection: loads ``agent_registry.json`` once and passes the agents
+    list, registry path, and skills root to ``compile_agent_template`` so that
+    ``{{registry_phase_agents_table}}`` and the other table placeholders are
+    resolved at compile time, and each agent's skills table and sub-agent
+    section are appended from its own frontmatter declaration (the
+    ``{{my_skills_used}}`` / ``{{my_spawn_allowlist}}`` placeholders are retired).
     When the registry is absent, compilation proceeds without injection (graceful
     degradation — unresolved placeholders remain as-is in the compiled output).
 
@@ -194,6 +197,7 @@ def build_agents(target_root: Path, config: dict[str, Any],
     agents_template_dir = _bp.TEMPLATES_DIR / "agents"
     if not agents_template_dir.exists():
         return 0
+    _grants.note_agents_source(agents_template_dir)  # AR-300a: the grant-delivery gate reads declarations from here
 
     # Load registry once for the whole phase (ticket 29)
     agents_list = _load_registry(_bp.REGISTRY_PATH)

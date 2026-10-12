@@ -327,12 +327,13 @@ merge conflict situation:
    - `conflicted_files`: the list from step 3.
    - `branch`: current branch name.
    - `base`: base branch name.
-5. `conflict-resolver` returns a result block with field `escalation`:
-   - `escalation: none` -- conflict resolved silently. Proceed to retry.
-   - `escalation: opus` -- Opus resolved; the result block also contains
-     `resolved_diff`. Surface the diff to the user:
-     "conflict-resolver used Opus escalation. Here is the resolved diff:
-     <diff>
+5. `conflict-resolver` returns a result block whose `resolved_files` lists each
+   resolved path as `<path>: line-by-line — ...` or `<path>: structural — ...`.
+   - No `structural` entry -- every conflict was line-by-line. Proceed to retry.
+   - For every file listed as `structural`, show the user the resolved diff
+     (`git diff -- <path>`) with the rubric trigger from its entry:
+     "conflict-resolver resolved <path> as a structural conflict (<trigger>).
+     Here is the resolved diff: <diff>
      Continuing with push and PR creation."
      Then proceed to retry.
 6. **Retry once**: re-run the push and `gh pr create`. If the retry also fails,

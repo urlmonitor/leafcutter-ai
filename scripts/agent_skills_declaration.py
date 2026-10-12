@@ -32,6 +32,7 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,7 @@ from agent_ability_verdict import normalize_entries
 from agent_preparation_delivery import compute_preparation, register_preparation
 from injection_builders import _parse_frontmatter_description
 
+_log = logging.getLogger(__name__)
 # The registry name of this preparation (AR-300b-2; the gate derives the set, it does not list it).
 PREPARATION_NAME = "declared_skills"
 
@@ -50,7 +52,12 @@ def _skill_description(skill_id: str, skills_root: Path | None) -> str:
     skill_md = skills_root / skill_id / "SKILL.md"
     if not skill_md.is_file():
         return ""
-    raw = _parse_frontmatter_description(skill_md.read_text(encoding="utf-8"))
+    try:
+        text = skill_md.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        _log.warning("cannot read skill description from %s: %s", skill_md, exc)
+        raise
+    raw = _parse_frontmatter_description(text)
     return " ".join(raw.replace("|", "\\|").split())
 
 

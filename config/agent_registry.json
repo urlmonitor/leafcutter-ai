@@ -470,7 +470,8 @@
             "model": "sonnet",
             "skills_used": [
                 "signoff",
-                "doc-enforcer"
+                "doc-enforcer",
+                "complexity-reduction"
             ],
             "skills_invoked": [
                 {
@@ -480,6 +481,10 @@
                 },
                 {
                     "skill_id": "doc-enforcer",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "complexity-reduction",
                     "mode": "always"
                 },
                 {

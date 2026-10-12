@@ -152,7 +152,11 @@ _HEADING_LINE_RE = re.compile(r"^(#{1,6})\s+\S")
 
 # ----------------------------------------------------------------- mutations
 def _install_mutation() -> None:
-    import template_compiler as tc
+    # The compiler reaches the skills section through
+    # ``agent_declared_sections.append_declared_sections``, which calls the name
+    # ``append_declared_skills`` bound in ITS OWN module namespace -- that is the seam
+    # to patch (patching template_compiler no longer intercepts anything).
+    import agent_declared_sections as tc
     from agent_ability_verdict import normalize_entries
 
     original = tc.append_declared_skills

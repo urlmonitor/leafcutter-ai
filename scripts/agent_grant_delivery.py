@@ -66,7 +66,8 @@ def _classify(stem: str, root: str, text: str, want: set[str], known: set[str]) 
     base = {"agent": stem, "platform_root": root}
     accounts = find_accounts(text, known)
     if not want:
-        return [{**base, "kind": "unexpected-section", "accounts": len(accounts)}] if accounts else []
+        named_ids = sorted({i for account in accounts for i in account["ids"]})
+        return [{**base, "kind": "unexpected-section", "accounts": len(accounts), "named": named_ids}] if accounts else []
     if not accounts:
         return [{**base, "kind": "undelivered", "missing": sorted(want)}]
     named = {i for account in accounts for i in account["ids"]}

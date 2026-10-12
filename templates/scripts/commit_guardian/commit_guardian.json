@@ -1854,6 +1854,10 @@
       "ground": "Targets config/paths.json, one of this package's own internal files. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?config/paths\\.json$) is correct for both the self-hosted and the tracked-vendor layout."
     },
     {
+      "id": "transform-agent-registry",
+      "ground": "Targets this package's own development-source files (templates/agents/*.md and config/agent_registry.json), the class-2 case above: reachable when committing to the package's self-hosted checkout (git root == package root), but under the consumer deploy layout those paths exist only inside the vendored leafcutter-ai/ subtree or the gitignored .leafcutter/ mirror, never at a consumer's own tracked repo root (AR-300c-3)."
+    },
+    {
       "id": "check-architecture-scaffolds",
       "ground": "Targets templates/docs/architecture/, one of this package's own internal template trees. A consumer install may vendor leafcutter-ai/ as an untracked directory or git submodule, in which case this path is never part of the consumer's own tracked tree even though the trigger pattern (^(leafcutter-ai/)?templates/docs/architecture/) is correct for both the self-hosted and the tracked-vendor layout."
     },
