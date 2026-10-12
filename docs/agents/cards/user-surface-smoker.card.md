@@ -94,6 +94,7 @@ flowchart TD
 | `Read` |
 | `Edit` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used

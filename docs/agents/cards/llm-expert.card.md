@@ -106,15 +106,16 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | conditional | — |
-| `add-agent-to-package` | conditional | — |
-| `add-skill-to-package` | conditional | — |
+| `signoff` | always | — |
+| `add-agent-to-package` | conditional | When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package. |
+| `add-skill-to-package` | conditional | When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package. |
 ---
 
 ## Configuration
