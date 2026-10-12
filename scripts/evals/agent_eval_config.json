@@ -95,6 +95,28 @@
       "timeout": 900,
       "threshold": 0.66,
       "notes": "Per-row /tmp sandbox copy of docs/product-truth plus its declared contract dependencies. The GOLDEN row removes the gold track-an-order artifact (sandbox_prep.remove_artifacts) so the agent must reverse-engineer it. Assertions cover ordered steps, screens-resolve, one acceptance_scenario per step AND per branch, has_branch (the held-out journey requires an alternate path), and extend-not-duplicate for the negative add-vs-create row. validator_clean is a DELTA gate. Model=opus per the template frontmatter. Flow targets must independently pass scoped contract validation; target errors and unavailable validation are never subtracted as baseline noise."
+    },
+    "restructuring-specialist": {
+      "template": "templates/agents/restructuring-specialist.md",
+      "eval_set": "scripts/evals/sets/restructuring-specialist.jsonl",
+      "scoring_mode": "label",
+      "input_field": "demand",
+      "expected_field": "expected",
+      "response_label_field": "skills_applied",
+      "model": "sonnet",
+      "label_axes": [
+        "complexity-reduction"
+      ],
+      "threshold": 1.0,
+      "triggers": [
+        "templates/agents/restructuring-specialist.md",
+        "scripts/evals/sets/restructuring-specialist.jsonl",
+        "scripts/evals/run_agent_eval.py",
+        "scripts/evals/agent_eval_config.json",
+        "scripts/evals/label_scoring.py",
+        "scripts/evals/cli_envelope.py"
+      ],
+      "notes": "INF-800f-1 arms 2 and 3. Label mode: the report's machine-readable skills_applied object (skill id -> bool) is scored on the complexity-reduction axis. The complexity row (scripts/planner.py, plan_batches, complexity 31, 30 allowed) expects true; the file-size row (120 measured lines to leave scripts/planner.py) expects false, so the skill is chosen by the demand and not applied on every engagement. Triggers are limited to the agent's own files (owner decision 2026-10-06). A live run needs model credentials; CI holds none, so the live run is the informational gate and the offline --self-test is the deterministic one."
     }
   }
 }

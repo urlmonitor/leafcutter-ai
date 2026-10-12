@@ -3584,6 +3584,69 @@
                 "changes_repository",
                 "publishes"
             ]
+        },
+        {
+            "id": "restructuring-specialist",
+            "name": "Restructuring Specialist",
+            "tier": "phase",
+            "category": "implementation",
+            "role": "restructuring",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Engaged only on a refusal whose declaration names it; never assigned by default. A separate party from every coder.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "a commit-guardian refusal declares restructuring-specialist as the remedy for a complexity or file-size demand"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/restructuring-specialist.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff",
+                "complexity-reduction"
+            ],
+            "description": "Restructures named code to meet a complexity or file-size demand without changing behaviour. Brought in by a depth-0 driver after a refusal, as a different party from the coder that wrote the change. Applies complexity-reduction only when the demand is about complexity, and returns a machine-readable skills_applied report.",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "complexity-reduction",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "brief carrying the refusing check's demand"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (tests, complexity and size checkers)"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "infrastructure"
+            ]
         }
     ]
 }

@@ -22,6 +22,12 @@ doc_links:
   - path: templates/workflows/code-refactoring-specialist.md
     relationship: evolves
     status: exists
+  - path: templates/agents/restructuring-specialist.md
+    relationship: related
+    status: exists
+  - path: docs/agents/cards/restructuring-specialist.card.md
+    relationship: related
+    status: exists
 origin_agent: product-owner-v3
 created: 2026-06-05
 amended_by: []
