@@ -120,3 +120,13 @@ export function FlowNotice({ notice }: { notice: FlowsViewNotice }) {
     </div>
   );
 }
+
+/** A known flow opened with a `?step=` that names no step or branch (not a 404). */
+export function StepNotice({ detail }: { detail: string }) {
+  return (
+    <div role="status" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+      <h2 className="text-sm font-semibold text-foreground">Step not found</h2>
+      <p className="mt-1 break-words text-sm text-muted-foreground">{detail}</p>
+    </div>
+  );
+}

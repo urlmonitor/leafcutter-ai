@@ -1,4 +1,5 @@
 /** Shared drawer view model and the pure projection from a loaded flow. */
+import * as React from "react";
 import type { FlowContractDefinition, FlowIoContracts } from "@/lib/data/flow-contracts";
 import type { AcRef, Flow, FlowRealization, FlowScenario, WorkStatus } from "@/lib/data/types";
 import type { ActorKind } from "@/lib/data/actor-kind";
@@ -85,3 +86,10 @@ export function buildStepViews(
   }
   return m;
 }
+
+/**
+ * The graph node id whose drawer the address opened with (`?step=`), or null.
+ * Provided by <FlowsView>, read once by the explorer for its initial selection.
+ */
+export const InitialStepContext = React.createContext<string | null>(null);
+export const useInitialStepId = (): string | null => React.useContext(InitialStepContext);

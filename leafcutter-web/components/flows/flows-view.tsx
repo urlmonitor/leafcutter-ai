@@ -31,9 +31,12 @@ import {
   FlowNotice,
   LevelChip,
   RealizationBanner,
+  StepNotice,
   StepRollup,
   type FlowsViewNotice,
 } from "./flows-view-banners";
+import { InitialStepContext } from "./flow-step-view";
+import { stepNotFoundDetail } from "@/lib/flow-url";
 import { RealizationBadge } from "./realization-badge";
 import { Workflow } from "lucide-react";
 
@@ -52,6 +55,7 @@ export function FlowsView({
   flowId,
   crumbs: initialCrumbs,
   filters,
+  step,
   notice,
 }: {
   flows: Flow[];
@@ -62,7 +66,7 @@ export function FlowsView({
   /** Drill path (flow ids) the address opens with. */
   crumbs: string[];
   filters: FlowsViewFilters;
-  /** Step drawer target — step addresses arrive in a later group. */
+  /** The step or branch whose drawer the address opens (`?step=`), if any. */
   step: string | null;
   notice?: FlowsViewNotice;
 }) {
@@ -162,6 +166,16 @@ export function FlowsView({
     [flowById],
   );
 
+  // The address's step only applies to the flow it was opened on. A step naming
+  // nothing opens that flow with a notice and no drawer (not a 404).
+  const stepFlow = initialCrumbs[initialCrumbs.length - 1];
+  const stepKnown =
+    step !== null && flow?.id === stepFlow
+      ? [...flow.steps, ...flow.branches].some((x) => x.id === step)
+      : false;
+  const initialStep = stepKnown ? `step:${step}` : null;
+  const stepNotice = step !== null && flow?.id === stepFlow && !stepKnown;
+
   const crumbs = path.map((id) => flowById.get(id)).filter((f): f is Flow => Boolean(f));
 
   return (
@@ -186,6 +200,7 @@ export function FlowsView({
       </PageHeader>
 
       {flow && <RealizationBanner flow={flow} />}
+      {stepNotice && <StepNotice detail={stepNotFoundDetail(step)} />}
 
       {/* source + kind controls */}
       <div className="mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -257,14 +272,16 @@ export function FlowsView({
             )}
           </div>
 
-          <FlowExplorer
-            key={flow.id}
-            flow={flow}
-            mock={mock}
-            flowNames={flowNames}
-            screenTitles={screenTitles}
-            onDrill={drillTo}
-          />
+          <InitialStepContext.Provider value={initialStep}>
+            <FlowExplorer
+              key={flow.id}
+              flow={flow}
+              mock={mock}
+              flowNames={flowNames}
+              screenTitles={screenTitles}
+              onDrill={drillTo}
+            />
+          </InitialStepContext.Provider>
         </>
       ) : notice ? (
         <FlowNotice notice={notice} />

@@ -21,7 +21,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { RAW_FLOW_ID_HEADER } from "@/lib/flow-url";
+import { RAW_FLOW_ID_HEADER, legacyFlowLocation } from "@/lib/flow-url";
 
 const FLOWS_PREFIX = "/flows/";
 
@@ -51,8 +51,15 @@ function trailingSlashRedirect(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(url, 308);
 }
 
+/** Old /flows?flow=<id>&step=<s> links: permanent redirect to the canonical address (UXP-591-2). */
+function legacyFlowRedirect(request: NextRequest): NextResponse | null {
+  if (request.nextUrl.pathname !== "/flows") return null;
+  const location = legacyFlowLocation(request.nextUrl.search);
+  return location ? NextResponse.redirect(new URL(location, request.url), 308) : null;
+}
+
 export function middleware(request: NextRequest): NextResponse {
-  const redirect = trailingSlashRedirect(request);
+  const redirect = trailingSlashRedirect(request) ?? legacyFlowRedirect(request);
   if (redirect) return redirect;
 
   // Hand the route the raw flow id; always drop a client-supplied copy first.

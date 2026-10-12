@@ -21,10 +21,13 @@ function rawIdFromRequest(): string | null {
 
 export default function FlowPage({
   params,
+  searchParams,
 }: {
   params: { id: string[] };
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
+  const rawStep = searchParams?.step;
+  const step = (Array.isArray(rawStep) ? rawStep[0] : rawStep) || null;
   const segments = params.id;
   if (segments.length !== 2 || segments.some((s) => s === "" || s.includes("/"))) notFound();
 
@@ -38,13 +41,14 @@ export default function FlowPage({
 
   return (
     <FlowsView
+      key={`${flow.id}?${step ?? ""}`}
       flows={flows}
       mocks={mocks}
       screenTitles={screenTitles}
       flowId={flow.id}
       crumbs={[flow.id]}
       filters={{ source: flow.source, kind: flow.kind, realization: "all" }}
-      step={null}
+      step={step}
     />
   );
 }
