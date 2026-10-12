@@ -51,7 +51,7 @@ it_requirements:
   - "THE KEY MUST BE BUILT ONLY FROM FIELDS THE RECONCILED SHAPE REQUIRES OF EVERY PRODUCER. Under INF-400b-2-ii's recommended resolution that is (timestamp, agent, component, destination, entry_kind). `ticket` becomes optional and must NOT appear in the key under any spelling — including as a defaulted-to-empty lookup, which is exactly the present bug. If INF-400b-2-ii settles the shape differently, take the required set from that decision; do not re-derive it here and do not land ahead of it."
   - "THE COLLISION IS REACHABLE, NOT THEORETICAL, AND ONLY AFTER THE REPAIR. Verified 2026-08-26: 17 of the 28 records carry a day-resolution timestamp of the form 2026-06-16T00:00:00Z, and the 28 records happen to yield 28 distinct (timestamp, destination, entry_kind) triples — so no collision exists today and no test against the current corpus alone can demonstrate one. The defect becomes reachable the moment emissions resume at volume, which is precisely when INF-700b repairs the capture loop. This AC must therefore ship in the same release as INF-700b-1, not in a follow-up. A repaired loop running against an unrepaired digest silently drops the second learning of any same-day, same-destination, same-kind pair."
   - "PRESERVE IDEMPOTENCY WHILE FIXING IT — these pull in opposite directions and the naive repairs fail one or the other. Widening the key to include a value that changes between runs (a read timestamp, a line number, a file offset, a UUID minted at read time) makes every re-run reprocess everything. Narrowing it, or keying on the whole record including a mutable field, is equally wrong. The key must be a pure function of the record's own persisted content."
-  - "DO NOT KEY ON THE LEARNING BODY. INF-700b-1 adds an additive `text` field, and including it would make the digest unstable for the 28 existing records that lack it and for any future record whose prose is later corrected. `text` is content; the digest is identity. Keep them separate."
+  - "AMENDED 2026-10-12 (BrainCandy, INF-400b-2-iii): THE LEARNING TEXT IS NOW PART OF IDENTITY. This replaces the original 'do not key on the learning body' requirement, which let distinct learnings emitted in the same second share a hash (16 distinct snapshot records, 3 hashes) and be lost while marked routed. `ticket` is still never part of identity. State written under the old identity is read by the rule in INF-400b-2-iii."
   - "CHANGING THE KEY INVALIDATES EVERY PREVIOUSLY STORED DIGEST. State the consequence explicitly wherever processed-state is persisted: after this change, records processed under the old digest are no longer recognised as processed. For the current corpus that is harmless — INF-700c establishes that all 28 are ineligible-to-write and nothing was ever written for them — but the behaviour must be deliberate and documented, not discovered."
   - "SILENCE IS NOT A PASS. If a record is missing a field the key requires, the run must report it with the record's line number rather than substituting an empty string and hashing on. Defaulting an absent required field to \"\" is the mechanism that produced this defect in the first place; reproducing it for a different field would reproduce the defect."
   - "Must handle errors gracefully per the project error handling policy, and must not change the harvester's exit-code vocabulary — the malformed-line handling is KI-KM-011's territory and must not be conflated with this change."
@@ -73,7 +73,7 @@ test_spec:
     framework: unittest
     type: unit
     angle: seam
-    description: "Two records identical in every required field but differing in an optional one (ticket present versus absent, text present versus absent) yield the SAME digest, proving optionality was honoured rather than smuggled back into identity."
+    description: "Two records identical in every required field but differing in `ticket` (present versus absent) yield the SAME digest, proving that optional field was not smuggled back into identity. AMENDED 2026-10-12 (INF-400b-2-iii): a record differing in `text` yields a DIFFERENT digest."
   - name: test_every_required_key_component_is_populated_across_the_real_corpus
     target_dir: tests/knowledge/
     framework: unittest
@@ -123,7 +123,10 @@ expects_from:
   contract: "The reconciled record shape and, from it, the set of fields required of every producer — expected to be (timestamp, agent, component, destination, entry_kind), with `ticket` optional. This AC builds the idempotency digest from exactly that required set and from nothing else."
 origin_agent: BrainCandy
 created: 2026-08-26
-amended_by: []
+amended_by:
+  - reason: "Learning text became part of record identity (option A, INF-400b-2-iii): the 'do not key on the learning body' requirement and the text half of the optional-field test were replaced."
+    by: BrainCandy
+    at: 2026-10-12
 superseded_by: null
 covered_by:
   - "tests/knowledge/test_harvest_learnings.py"
