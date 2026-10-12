@@ -150,6 +150,36 @@ amended_by:
     (INF-600b-2)" that cites this record by id and documents the whole-store scan, the
     rendered heading and the four-step data flow. It is the only surface in the project
     that names the section by its heading, and it is a modify target of INF-600b-3.
+- reason: canonical-home-for-the-three-true-looking-and-wrong-shapes
+  by: business-analyst
+  at: '2026-10-12'
+  note: >-
+    ADDITIVE ONLY. criteria, status (deprecated), req_status, work_status, readiness,
+    test_spec, test_required, superseded_by, doc_links and every other field are
+    UNTOUCHED. One notes block is added and this entry.
+
+
+    WHY THIS RECORD HOLDS A LIST THAT IS NOT ABOUT IT. Two of the three shapes were
+    already written up here — the disjunctive-done that this record is itself the
+    instance of, and the present-tense-field-storing-history that its retirement ran
+    into three times. The third was found on 2026-10-12 on TQ-600a-13-xix, where a
+    guard hardcoded the inventory of timing-ratio tests it expected and went red in CI
+    when one of them was legitimately deleted elsewhere. It was written up there
+    first, which was the wrong home: a reader arriving at the retirement-shape block
+    above would never find a third shape filed under timing lanes, and these three
+    only work as a SET — three forms of one failure, something that looks verified and
+    is not. The value is in recognising the family. So the set is assembled here and
+    TQ-600a-13-xix keeps the incident and points at this record for the family.
+
+
+    THE PART WORTH PRESERVING MOST IS NOT THE THIRD SHAPE BUT ITS CURE'S ADDRESS.
+    BP-1600a already owns the rule — "the population a check walks is taken from
+    reality, never from a list that can omit things" — and BP-1600a-2 already carries
+    the anti-literal control that defeats it. Shape (3) is BP-1600a's defect in the
+    OPPOSITE DIRECTION: a list that retains a deleted member rather than omitting an
+    added one. Recording that connection is what turns three incidents into one
+    principle with an existing home, and the block is written so the next person finds
+    BP-1600a rather than re-deriving it from scratch.
 - reason: retired-carrier-was-the-wrong-mechanism-and-the-other-half-was-never-built
   by: business-analyst
   at: '2026-10-09'
@@ -458,6 +488,101 @@ notes: |
   retiring TQ-600a-11 and its three children — done afterwards, by someone who had
   just written an earlier version of this block — still took two more, because the
   block was incomplete. Set all four fields together.
+
+  ==========================================================================
+  THREE WAYS A RECORD OR A GUARD CAN BE TRUE-LOOKING AND WRONG.
+  THE CANONICAL LIST. ALL THREE WERE FOUND IN FOUR DAYS, IN ONE SUBTREE.
+  ==========================================================================
+  WHY THIS LIST LIVES HERE RATHER THAN ONE SHAPE PER RECORD. Each of the three was
+  found on a different record, and each is individually easy to read as a one-off
+  mistake by whoever wrote that record. They are not. They are three forms of a single
+  failure — something that LOOKS verified and is not — and the value is in recognising
+  the family, not any one member. A reader who arrives at the retirement-shape block
+  above will not find the third shape in a record about timing lanes, so the set is
+  assembled here and the other records point at it.
+
+  (1) A DISJUNCTIVE `When` MARKED done TELLS YOU ONE CARRIER WORKS, NEVER WHICH.
+      THIS RECORD IS THE INSTANCE. It required a per-agent grouping "in the ticket body
+      OR agent card". Only the card was ever built. It read work_status: done for four
+      months with covered_by [] and no covering test, and nothing could notice, because
+      a disjunction is satisfied by either side and nobody had established which side
+      was live. It surfaced only when an unrelated change removed the carrier.
+      THE GENERAL FORM: an "A or B" criterion marked done is evidence that one of A and
+      B works, never evidence of which — and nothing will notice when the live one
+      disappears.
+
+  (2) A PRESENT-TENSE FIELD USED TO STORE HISTORY.
+      THE INSTANCE IS THE RETIREMENT ABOVE. work_status: done, readiness: approved and
+      a populated test_spec were each defended on the ground that the field held a TRUE
+      FACT ABOUT THE PAST — the work was done, the record was approved, these were the
+      tests. Each defence was wrong the same way: these fields describe the present,
+      and the past belongs in prose. Three fields, three different gates, one error.
+      THE GENERAL FORM, AND THE TEST FOR IT: if you find yourself arguing to leave a
+      field wrong in order to preserve something true, you are in this trap. Write the
+      fact down, then make the field honest.
+
+  (3) A GUARD WHOSE SUBJECT IS A POPULATION, IMPLEMENTED AGAINST A LITERAL LIST OF
+      THAT POPULATION'S CURRENT MEMBERS. THE INSTANCE IS TQ-600a-13-xix, which owns the
+      timing lane and whose guard carried a hardcoded tuple of the two timing-ratio
+      tests it expected to find there. On 2026-10-12 the agent-cards-static change
+      deleted `_scan_all_ac_assignments`, and with it one of those two tests. The guard
+      went red in CI days later, reporting the absence as its own failure.
+      THIS IS THE ONE WITH THE LONGEST FUSE, because the failure is REMOTE IN THREE
+      DIMENSIONS AT ONCE. In TIME: deleted on one day, red on a later CI run, never in
+      the editor. In SPACE: deleted code in scripts/, deleted test in
+      unit_tests/ac_store/, breakage in a tuple in unit_tests/suite_performance/ —
+      three directories, no import edge, nothing a grep for the deleted symbol would
+      surface. In OWNERSHIP: the person deleting a card-generation function has no
+      reason to think about a timing lane's inventory, and the record owning that lane
+      has no way to know a test elsewhere is about to be legitimately removed. NOTHING
+      AT DELETION TIME CONNECTED THE TWO. A correct, well-reasoned deletion somewhere
+      else breaks the guard, and the guard blames itself.
+
+  THE TELL FOR (3), WHICH IS THE OPERATIONALLY USEFUL SENTENCE IN THIS WHOLE BLOCK —
+  AND THE ONLY ONE OF THE THREE THAT IS CHECKABLE BY INSPECTION:
+
+      A guard whose criterion quantifies over a population — "EACH default-run test
+      that asserts a wall-clock ratio", "EVERY script present on disk", "ALL cards in
+      the directory" — while its implementation holds a LITERAL LIST of that
+      population's current members.
+
+  The criterion is general; the implementation is an inventory; the gap between them
+  is filled silently by whoever next changes the population. Shapes (1) and (2) need
+  history or a gate to reveal them. This one you can see by reading the guard beside
+  its criterion.
+
+  ==========================================================================
+  THE CURE FOR (3) ALREADY EXISTS IN THIS STORE. GO TO BP-1600a, DO NOT RE-DERIVE IT.
+  ==========================================================================
+  This is the most useful thing in this block and it should not have to be rediscovered.
+  BP-1600a's entire subject, in its own title and criteria, is that THE POPULATION A
+  CHECK WALKS IS TAKEN FROM REALITY, NEVER FROM A LIST THAT CAN OMIT THINGS. Its child
+  BP-1600a-2 carries the control that defeats exactly this defect — the anti-literal
+  descriptor, which its own test_rationale says is "written first because it is the
+  only one that cannot pass on an implementation holding a literal list, however that
+  list is spelled": add ONE new member to the population, change nothing else, and
+  require the check's own STATED COMPARED COUNT to rise by exactly one, with both
+  numbers read from the check's output rather than from any expected value.
+
+  THE CONNECTION THAT TURNS THREE INCIDENTS INTO ONE PRINCIPLE WITH AN EXISTING HOME:
+  BP-1600a's defect and shape (3) are THE SAME DEFECT IN OPPOSITE DIRECTIONS. There,
+  a hardcoded population OMITS a member that was added, so a new unregistered gate
+  script is never examined. Here, a hardcoded population RETAINS a member that was
+  deleted, so a guard demands a test that no longer exists. Both are a literal list
+  standing in for a population that moves; both are cured by enumerating at run time
+  and stating the count. BP-1600a is therefore not merely analogous — it is the record
+  that owns this rule, and a new population-shaped guard anywhere in this project
+  should be built to its shape and cite it.
+
+  ONE WARNING FOR WHOEVER APPLIES THE CURE, BECAUSE THE OBVIOUS REFACTOR CAN MAKE THE
+  GUARD WEAKER WHILE LOOKING MORE PRINCIPLED. Deriving the expected population from
+  the thing that defines it — for the timing lane, from the `timing_ratio` marker
+  rather than from a tuple — makes "the population is empty" TRIVIALLY SELF-CONSISTENT:
+  zero marked tests, zero expected, green. The non-emptiness of the population must be
+  asserted INDEPENDENTLY of its derivation, or the guard becomes vacuously passable.
+  BP-1600a-2 already requires its count to be greater than zero and TQ-600a-13-xix's
+  criteria already require that "a lane that collects no test at all also concludes
+  red" — both clauses exist for this reason and neither survives a careless refactor.
 
   THE SIBLING TO READ NEXT. INF-600b-3 requires the card to be assembled from the
   agent's own declared facts and nothing else, so that adding a criterion to the store
