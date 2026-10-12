@@ -126,25 +126,3 @@ flowchart TD
 | Delegation to how-to-author | task requiring how-to-author capabilities | Delegates to how-to-author via Agent tool | `how-to-author` |
 | Conditional Behavior | a ticket is provided (`ticket_path`) | check whether the ticket body contains | `None` |
 | Conditional Behavior | items 1–3 are missing and cannot be inferred from context | surface the gaps | `None` |
----
-
-## AC Assignments
-
-### reference-author
-
-- BO-1800f-4: A contributor can look up the exact form of a removal declaration before typing one
-- BO-1900c-3: Reference doc defines the charter-vs-task-verb matching rules
-- BO-1900d-3: Reference doc specifies the allowlisted dispatch-payload contract
-- BO-2900g-5: Reference documentation states the one set of words for a required proof and what is always asked for
-- BO-300d-5: A reference entry states the unbuilt-work causes, what establishes each, and which distinctions the run cannot make
-- BO-3100a-4: Reference documentation tells an author how to grant, revoke and repair hand-off authority
-- BO-3100d-3: Reference documentation states the real constraint on delegation and what it forbids
-- BO-3200a-3: Reference documentation tells a workflow author which questions a specialist may be asked
-- BO-3200e-4: Reference documentation defines the three answers a check may give and when each applies
-- BP-1100g-6: Reference documentation states what a claimed kind of proof does and does not mean
-- BP-1300a-3: Reference doc specifies canonical-source skill-pointer resolution for the build
-- BP-1300b-3: Reference doc states the canonical-source-resolution rule for all guardrails
-- BP-1300c-4: Reference doc lists the warn-to-fail checks and the drive-context rule
-- BP-1500g-5: The ownership boundary of an installed project is written down: what the build claims, and what stays the adopter's
-- TKT-200e-3: Reference doc defines the premise-capture format for tickets
-- TQ-100e-2: Reference doc for the enforcement rollout stages and their controlling configuration

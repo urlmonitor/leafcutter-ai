@@ -737,49 +737,23 @@ applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
 is updated to include the child AC ID (this was already done by `build-ac` during
 AC creation). The test-writer only updates the child AC's `covered_by` field.
 
-### python-coder — AC Assignments section in generated card (INF-600b-2)
+### Agent cards — no AC Assignments section (removed 2026-10-09)
 
-When `generate_agent_cards.py` (called by `build.py`) generates a card for
-an agent, it now scans `docs/acceptance-criteria/` recursively for AC YAML
-files whose `assigned_agent` field equals the card's agent ID and whose
-`status` is `"active"`. The matching ACs are passed to `generate_card()` as
-`ac_assignments` and rendered as a `## AC Assignments` section at the end of
-the card:
+`generate_agent_cards.py` no longer emits a `## AC Assignments` section in
+`docs/agents/cards/<agent>.card.md` and no longer scans the AC store.
+`render_ac_assignments`, `_scan_ac_assignments`, `_scan_all_ac_assignments`
+and the `ac_assignments=` parameter of `generate_card` were deleted.
 
-```markdown
-## AC Assignments
+Reason: the AC store is the source of truth, and `assigned_agent` can be
+grouped at read time by any consumer. Caching that query into generated
+markdown made every `build.py` run rewrite the cards (a permanently dirty
+working tree), and the regenerated cards could not be committed because of
+the doc-length growth ratchet.
 
-### python-coder
-- INF-600g-1: spawned_by/spawn_allowlist reciprocity validation
-- INF-600g-2: __ticket_phase_agents__ redundancy detection
-```
-
-This section is omitted entirely when no active ACs are assigned to the agent.
-
-**`ac_traceability` frontmatter field → per-agent grouping**
-
-When a ticket has `ac_traceability: [INF-600g-1, INF-600g-2, INF-600g-3]`
-frontmatter referencing multiple L2/L3 AC YAML files, each of which has an
-`assigned_agent` field, the generated agent card groups those ACs by their
-`assigned_agent`. The grouping allows each agent to identify exactly which
-ACs it is responsible for without inspecting ACs assigned to other agents,
-and enables agents to implement one AC at a time rather than attempting all
-ticket work at once.
-
-**Data flow:**
-
-1. `build_agent_cards()` calls `_scan_ac_assignments(agent_id, target_root)`.
-2. `_scan_ac_assignments()` walks `docs/acceptance-criteria/**/*.yaml` and
-   collects dicts `{id, title, assigned_agent}` for all active ACs whose
-   `assigned_agent` equals the card agent.
-3. Results are passed to `generate_card(..., ac_assignments=results)`.
-4. `generate_card()` calls `render_ac_assignments(agent_id, ac_list)` which
-   produces the `## AC Assignments` section or returns `""` for an empty list.
-
-**Error handling:** `_scan_ac_assignments()` wraps file reads in
-`try/except OSError` and YAML parsing in `try/except yaml.YAMLError`. On
-error, a WARNING is emitted and the file is skipped — card generation
-continues without failing the build.
+Source today: the AC YAML store, grouped by `assigned_agent` at read time. The
+field is still live: the ticket generator reads `assigned_agent` to build the
+ticket's `agents:` map and render a single `Assigned agent:` line. AC
+INF-600b-2, which specified the section, is retired as superseded.
 
 ### triage agent (glossary-triage, debug)
 
