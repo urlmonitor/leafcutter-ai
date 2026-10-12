@@ -15,17 +15,40 @@ change_target: code
 risk_surface: contract_boundary
 package_surface: false
 criteria: |
-  Given 150 live workspaces, some holding work that has not reached the shared
-    main line and some holding none,
+  Given 150 live workspaces, among them:
+    - "pushed", whose branch carries two commits that are on its own line of work
+      on the shared project but not on the shared main line, its pull request open
+      and unmerged, and which has no uncommitted change,
+    - "squashed", whose three commits reached the shared main line only as one
+      combined commit with the same content under a new identifier, and which has
+      no uncommitted change,
+    - "rebuilt", whose commits are all on the shared main line and whose only
+      uncommitted changes are tracked files that the build-output rule of
+      BO-4300c-1-iii identifies as changed by a build rather than by the work,
+    - "unsent", carrying one commit that is on neither its own line of work on the
+      shared project nor the shared main line, one changed tracked file the work
+      made, and one new file the project's ignore rules do not exclude,
   When the live set is assessed,
-  Then every one of the 150 carries exactly one of two verdicts: holds work not
-    on the shared main line, or holds nothing not on the shared main line,
+  Then every one of the 150 carries exactly one of two verdicts: holds work, or
+    holds nothing,
   And no workspace is left without a verdict,
-  And a workspace carries the holds-work verdict when any one of these is true
-    of it on its own: it has modified tracked files; it has staged changes; it
-    has untracked files that are not ignored; its branch carries a commit not
-    reachable from the shared main line; or a stash entry belongs to it.
-depends_on: [BO-4100c]
+  And a workspace carries the holds-nothing verdict only when both of these are
+    true of it: every commit on its branch is on its own line of work on the shared
+    project or on the shared main line, a commit counting as on the shared main line
+    when its content arrived there under a different identifier; and it has no
+    uncommitted change other than tracked files that the build-output rule of
+    BO-4300c-1-iii identifies as changed by a build,
+  And every other workspace carries the holds-work verdict, which follows from any
+    one of these on its own: a commit on neither its own line of work on the shared
+    project nor the shared main line; a modified tracked file that the build-output
+    rule does not identify as changed by a build; a staged change; an untracked file
+    the project's ignore rules do not exclude; or a stash entry belonging to it,
+  And every holds-work verdict names each commit that produced it by identifier,
+    each file that produced it by path, and each stash entry that produced it,
+  And "pushed", "squashed" and "rebuilt" each carry the holds-nothing verdict,
+  And "unsent" carries the holds-work verdict naming exactly its one commit, its
+    one changed tracked file and its one new file.
+depends_on: [BO-4100c, BO-4300c-1-iii]
 doc_links:
   - path: docs/architecture/components/worktree-manager.md
     relationship: describes
@@ -41,6 +64,14 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Angle taxonomy this record's test_spec entries declare."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-1-iii.yaml
+    relationship: constrains
+    status: exists
+    relevance: "Owns the build-output rule. The only uncommitted changes the holds-nothing verdict tolerates are tracked files that rule identifies as changed by a build; this record never decides on its own that a file is build output."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Clears a workspace right after its pull request is opened; relies on a pushed, unmerged line reading as holds-nothing (2026-10-09 amendment)."
   - path: scripts/worktree/assess_workspaces.py
     relationship: creates
     status: planned
@@ -58,12 +89,15 @@ estimated_complexity: L
 it_requirements:
   - "The verdict must be produced by an invocable program, not by an agent following a procedure. templates/workflows/close-worktree.md is today's only disposal surface and it is a prompt: it judges one workspace a human already chose, so it structurally cannot carry the clause that all 150 receive a verdict. It must not be the thing this record changes."
   - "The five triggers are independently sufficient and must be evaluated as a disjunction over a DECLARED set, so a sixth trigger is added by extending the set rather than by editing the verdict logic. A hard-coded chain of conditions reproduces the count-coupling defect this family is full of."
-  - "Reachability from the shared main line must be decided by PATCH CONTENT, not by commit identity: after a squash merge the pre-squash SHAs are absent from main's history while their diffs are on it, and treating them as unreached makes every delivered workspace read as holding work. The existing close-worktree procedure already uses git cherry for exactly this reason and records why."
+  - "A commit is accounted for when it is reachable from the workspace's OWN pushed remote branch OR is on the shared main line; only a commit that is neither produces holds-work. Reachability from the shared main line must be decided by PATCH CONTENT, not by commit identity (BO-4100c-1-i's rule, unchanged): after a squash merge the pre-squash SHAs are absent from main's history while their diffs are on it, so a squash- or patch-equivalent commit counts as on main. The existing close-worktree procedure already uses git cherry for exactly this reason and records why. A pushed-but-unmerged commit must read as accounted for; a commit whose pushed branch was deleted after merge must still be caught by the main-line / patch-content check."
+  - "The pushed-line half of the reachability check must read the locally known remote-tracking ref of the workspace's OWN branch -- the ref the workspace's own push updates -- and must not fetch to refresh it. A workspace with no remote-tracking ref for its branch has no pushed line, and its commits are judged against the shared main line alone. Open, not decided here: BO-4300e-2's it_requirements say reachability is judged after a fetch; reconciling that with this record's no-fetch read is unresolved and must not be settled silently by the implementation."
+  - "The ONLY exemption for a modified tracked file is that BO-4300c-1-iii's build-output rule identifies it as changed by a build. The verdict must consume that rule's answer and must hold no file-name list, path pattern or heuristic of its own for what counts as build output; until BO-4300c-1-iii is available, every modified tracked file produces holds-work (the safe direction). Staged changes, non-ignored untracked files and stash entries are never exempted by the build-output rule."
+  - "Every holds-work record must name every item that produced it -- commit by full identifier, file by repo-relative path, stash entry by its stash reference -- and nothing that did not produce it, so the named set is exact rather than a sample."
   - "Untracked-file detection must honour the project's ignore rules as git itself resolves them -- nested .gitignore files and the worktree's own exclude file included -- or every workspace with a build cache reads as holding work and the accumulation half of BO-4100c never improves (see BO-4100c-1-i)."
   - "A stash entry must be attributed to the workspace it was made in. Git's stash list is per-repository and shared across every workspace, so an attribution rule is required. An entry that cannot be attributed to any workspace must not be silently dropped -- it is itself an unaccounted holding and must be surfaced rather than discarded."
   - "An assessment that raises or cannot read must yield the no-verdict outcome, never holds-nothing. The natural implementation reads an unanswerable question as an empty finding set; that path must be closed here, because BO-4100c-3 can only act on an outcome this record produces."
   - "Assessing the whole live set must be fast enough for routine use at the recorded scale -- on the order of seconds for 150 workspaces -- so per-workspace git invocations must not be issued serially without bound."
-  - "The assessment is a READ. It must not fetch, prune, reset, stash, or write any ref or file in any workspace it inspects."
+  - "The assessment is a READ. It must not fetch, prune, reset, stash, or write any ref or file in any workspace it inspects. (The fetch question against BO-4300e-2 remains open -- see the pushed-line requirement above.)"
   - "Any new module must be registered in the build deploy manifest (scripts/build_phases*.py). The hook and CLI layers run from the DEPLOYED layout, so a module present only in the source tree raises ModuleNotFoundError at runtime while every source-tree unit test passes."
 delivers_to:
   agent: python-coder
@@ -82,7 +116,31 @@ test_spec:
     framework: unittest
     type: behavioral
     angle: criterion
-    description: "Five workspaces are built, each carrying exactly ONE trigger -- a modified tracked file, a staged change, a non-ignored untracked file, a commit unreachable from the shared main line, and an attributed stash entry -- and each is asserted holds_work on its own. Independently sufficient means a fixture combining them cannot prove this."
+    description: "Five workspaces are built, each carrying exactly ONE trigger -- a modified tracked file the build-output rule does not identify as build-changed, a staged change, a non-ignored untracked file, a commit on neither its own pushed line nor main, and an attributed stash entry -- and each is asserted holds_work on its own, naming exactly that one item. Independently sufficient means a fixture combining them cannot prove this. Real git repos in temp dirs (a bare repo as the shared project), no mocks of git, no build.py spawn."
+  - name: test_pushed_unmerged_workspace_holds_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "'pushed': a workspace whose branch carries two commits pushed to its own branch on a bare-repo shared project but absent from main, with a clean tree, is asserted holds_nothing with empty items. Discriminates the amended rule from the old main-only rule, under which this read holds_work. The assessment does not fetch -- the remote-tracking ref is the one the fixture's own push updated. Real git repos in temp dirs, no mocks of git, no build.py spawn."
+  - name: test_squash_merged_workspace_holds_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "'squashed': three commits whose combined content landed on main as one new commit under a different identifier, with the workspace's pushed branch deleted and a clean tree, are asserted holds_nothing -- proving patch-equivalence counts as on main rather than commit identity. Real git repos in temp dirs, no mocks of git, no build.py spawn."
+  - name: test_rebuilt_workspace_with_only_build_output_dirt_holds_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "'rebuilt': all commits on main and the only uncommitted changes are tracked files that BO-4300c-1-iii's build-output rule identifies as build-changed; asserted holds_nothing. A paired control modifies one further tracked file the rule does NOT identify and is asserted holds_work naming exactly that path, proving the exemption comes from the rule and not from a blanket tolerance of dirt. The build-output rule is exercised through its real interface, not a name list in the test or verdict. Real git repos in temp dirs, no mocks of git, no build.py spawn."
+  - name: test_unsent_workspace_holds_work_naming_exactly_its_three_items
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "'unsent': one commit on neither its own pushed line nor main, one work-made change to a tracked file, and one new non-ignored file; asserted holds_work whose items are exactly {unreached_commit: <that commit's full identifier>, modified: <that path>, untracked: <that path>} -- no more, no fewer. Real git repos in temp dirs, no mocks of git, no build.py spawn."
   - name: test_the_assessment_covers_the_whole_live_set_rather_than_one_named_workspace
     target_dir: unit_tests/build_orchestration/
     framework: unittest
@@ -118,7 +176,13 @@ test_rationale: |
   unattributable entry gets a test of its own rather than being assumed away.
 origin_agent: BrainCandy
 created: 2026-09-21
-amended_by: []
+amended_by:
+  - date: 2026-10-12
+    agent: business-analyst
+    reason: "Holds-nothing redefined from 'every commit reachable from the shared main line' to 'every commit on the workspace's own pushed line of work on the shared project or on the shared main line (content-equivalent counts), and no uncommitted change other than tracked files the BO-4300c-1-iii build-output rule identifies as changed by a build'. Holds-work is everything else, with the commits, files and stash entries named. Required by BO-4400a-1 and BO-4400a-2 (IT-PO note 2026-10-09) and consistent with the 2026-10-09 BO-4300 Q8 decision recorded in BO-4400.yaml. Approved by BrainCandy on 2026-10-12."
+  - date: 2026-10-12
+    agent: it-po
+    reason: "Technical fields aligned with the approved 2026-10-12 criteria amendment: it_requirements reachability now against the workspace's own pushed remote branch OR main (patch-equivalent counts as on main); build-changed tracked files exempted only by BO-4300c-1-iii's build-output rule; the verdict reads the locally known remote-tracking ref and does not fetch (reconciliation with BO-4300e-2 left open); test_spec five-trigger fixture reworded and four named-scenario tests added. Criteria unchanged."
 superseded_by: null
 covered_by: [BO-4100c-1-i]
 implemented_by:
@@ -131,3 +195,51 @@ notes: >-
   detections. Coverage of the WHOLE live set is asserted rather than the verdict for one
   workspace, because a per-workspace answer that nothing calls for all 150 leaves the
   accumulation exactly where it was.
+
+  AMENDMENT 2026-10-12 (approved by BrainCandy on 2026-10-12) -- WHY. The original wording made a
+  workspace hold work whenever "its branch carries a commit not reachable from the shared
+  main line". Read literally, every workspace with an open, unmerged pull request holds
+  work. BO-4400a-1 clears a workspace right after its pull request is opened (work pushed,
+  so nothing unsent), and BO-4400a-2 expects a halted workspace to flip to holds-nothing
+  once its work is pushed by hand; under the old wording neither could ever fire. The
+  BO-4400 IT-PO recorded on 2026-10-09 that this record must be amended to "reachable from
+  neither its pushed line nor main" before BO-4400a-1 and a-2 can be built. BO-4300e-2's
+  it_requirements already used that wider definition; this amendment brings the criteria
+  into line with it.
+
+  AMENDMENT -- THE 2026-10-09 DECISION THIS RELIES ON. BrainCandy decided (BO-4300 Q8,
+  recorded in BO-4400.yaml notes): clearing a workspace whose verdict is holds-nothing
+  needs no confirmation token -- the verdict IS the safety check. Unsent work is discarded
+  only with up-front permission (BO-4300e-3). Because the verdict is now the only thing
+  standing between an unattended clear and lost work, the holds-nothing side is defined
+  narrowly (both conditions must hold) and holds-work is "everything else", naming what
+  produced it.
+
+  AMENDMENT -- WHAT DID NOT CHANGE. Content-equivalent (squash-merged) commits still count
+  as on the shared main line (BO-4100c-1-i). Staged changes, non-ignored untracked files
+  and stash entries still each produce holds-work on their own. A commit whose pushed
+  line was deleted after merging is still caught by the main-line / content check.
+
+  AMENDMENT -- BUILD-OUTPUT DIRT IS NOT FIXED HERE. A modified tracked file still produces
+  holds-work unless the build-output rule owned by BO-4300c-1-iii identifies it as changed
+  by a build. This record does not invent its own idea of build output (no file-name list,
+  no heuristic); until BO-4300c-1-iii is built, a build-dirtied tracked file reads as
+  holds-work, which is the safe direction. BO-4300c-1-iii is added to depends_on so that
+  sequencing is explicit.
+
+  AMENDMENT -- OPEN FOR IT PO. (1) This record's it_requirements say the assessment must not
+  fetch; BO-4300e-2's say "after a fetch". Pushing from the workspace updates this machine's
+  knowledge of its own line, so the clear-on-PR case works without a fetch, but which
+  view of the pushed line the verdict reads needs one stated answer. (2) it_requirements
+  item 3 and the test_spec entry for the five triggers still describe the commit trigger
+  as "unreachable from the shared main line"; they need the pushed-line wording, a
+  pushed-unmerged discrimination test, and a build-output exemption test.
+
+  IT-PO FOLLOW-UP 2026-10-12. Item (2) is done: it_requirements now state reachability
+  against the workspace's own pushed remote branch OR main (patch-equivalent counts as on
+  main, BO-4100c-1-i's rule kept), the build-output exemption is delegated wholly to
+  BO-4300c-1-iii, and test_spec carries one test per named scenario (pushed, squashed,
+  rebuilt, unsent). Item (1) is NOT decided: it_requirements state the verdict reads the
+  locally known remote-tracking ref of the workspace's own branch, updated by its own push,
+  and does not fetch; reconciling that with BO-4300e-2's "after a fetch" remains open for
+  the user.
