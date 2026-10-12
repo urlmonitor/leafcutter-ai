@@ -181,7 +181,8 @@ class TestTq600a13XvJobExecution(unittest.TestCase):
             suite_history(svc, "success", "failure")
             default = scratch_default_branch(base)
             event = write_event(base, SUITE_NAME, 102, SHAS["A"])
-            result = WorkflowRun(FOLLOWUP, default, base / "scratch", {"GITHUB_EVENT_PATH": str(event)}, svc.url).execute_job("reevaluate")
+            env = {"GITHUB_EVENT_PATH": str(event), "VARS_POST_MERGE_REEVAL_RERUN": "true"}  # the repo variable is on: re-runs are opt-in
+            result = WorkflowRun(FOLLOWUP, default, base / "scratch", env, svc.url).execute_job("reevaluate")
             with rows.case("suite completion"):
                 self.assertEqual("success", result.conclusion, result.log_text()[-1500:])
                 self.assertEqual([1005, 1009, 1011], svc.rerun_ids())

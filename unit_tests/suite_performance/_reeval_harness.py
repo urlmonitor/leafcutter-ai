@@ -39,6 +39,8 @@ from unittest import mock
 from ._notice_fakes import REPO, SERVER, captured_logs, import_production, run_record
 
 SUITE_NAME, PROOF_NAME, TIMING_NAME = "Post-merge suite", "Post-merge fix proof", "Post-merge timing suite"
+PROOF_JOB = "Post-merge fix proof"  # the proof workflow's `prove` job: skipped when no fix is declared
+RERUN_FLAG = "REEVAL_RERUN_ENABLED"  # the env the workflow passes from vars.POST_MERGE_REEVAL_RERUN
 REEVAL_MODULE = "scripts.ci.post_merge_reeval"
 HOLD_FILE, SUITE_FILE = "post-merge-hold.yml", "post-merge-suite.yml"
 _PREFIX = f"/repos/{REPO}"
@@ -112,6 +114,7 @@ class ReevalService:
         self.workflows = {}  # workflow file name -> run records, served in insertion order
         self.refuse, self.failing = set(), []  # run ids whose re-run is refused with 403; path fragments that answer 500
         self.requests, self.write_attempts = [], []
+        self.proof_job = "success"  # conclusion of the proof run's `Post-merge fix proof` job; None = the job is absent
 
     # ---- routing
     def handle(self, method, raw_path, body):
@@ -132,8 +135,11 @@ class ReevalService:
             return 200, self._runs(self.workflows.get(runs_match.group(1), []), query), {}
         if method == "GET" and rest == "/actions/runs":
             return 200, self._runs([r for runs in self.workflows.values() for r in runs], query), {}
-        if method == "GET" and _JOBS.fullmatch(rest):
-            return 200, {"total_count": 0, "jobs": []}, {}
+        if method == "GET" and _JOBS.fullmatch(rest):  # the proof run's jobs: `prepare` always ran, `prove` concluded `proof_job`
+            jobs = [{"name": "Prepare fix proof", "conclusion": "success"}]
+            if self.proof_job is not None:
+                jobs.append({"name": PROOF_JOB, "conclusion": self.proof_job})
+            return 200, {"total_count": len(jobs), "jobs": jobs}, {}
         one_run = _ONE_RUN.fullmatch(rest) if method == "GET" else None
         if one_run:  # one run with its workflow `path` (TQ-600a-13-xi: the client reads it before it re-runs it)
             found = [r for runs in self.workflows.values() for r in runs if r["id"] == int(one_run.group(1))]
@@ -293,8 +299,12 @@ class Reeval:
         return json.loads(found[-1].split("=", 1)[1]) if found else None
 
 
-def run_reeval(svc, directory, name, run_id, head_sha, overrides=None):
-    """Call ``scripts.ci.post_merge_reeval.main`` with a ``workflow_run`` event for the named run, through the real REST client."""
+def run_reeval(svc, directory, name, run_id, head_sha, overrides=None, *, rerun_enabled=True):
+    """Call ``scripts.ci.post_merge_reeval.main`` with a ``workflow_run`` event for the named run, through the real REST client.
+
+    ``rerun_enabled`` True sets ``REEVAL_RERUN_ENABLED`` to ``"true"`` (the repo variable is on), False leaves it unset (the default
+    of a repo), a string sets exactly that value.
+    """
     module = import_production(REEVAL_MODULE)
     out = Path(directory) / "github-output.txt"
     try:
@@ -305,7 +315,11 @@ def run_reeval(svc, directory, name, run_id, head_sha, overrides=None):
     event = write_event(directory, name, run_id, head_sha, overrides)
     argv = ["--api-url", svc.url, "--repo", REPO, "--event-path", str(event), "--output-file", str(out)]
     printed = io.StringIO()
-    with captured_logs() as lines, contextlib.redirect_stdout(printed), mock.patch.dict(os.environ, {"GITHUB_TOKEN": "fake-token"}):
+    flag = "true" if rerun_enabled is True else rerun_enabled  # a string is set verbatim; False leaves the variable unset
+    env = {"GITHUB_TOKEN": "fake-token", **({RERUN_FLAG: flag} if flag else {})}
+    with captured_logs() as lines, contextlib.redirect_stdout(printed), mock.patch.dict(os.environ, env):
+        if not flag:
+            os.environ.pop(RERUN_FLAG, None)  # patch.dict restores the caller's environment on exit
         code = module.main(argv)
     try:
         written = out.read_text(encoding="utf-8").splitlines()

@@ -85,6 +85,8 @@ def _lookup(path, ctx):
         return ctx.env.get(_GITHUB_KEYS[parts[1]], "")
     elif head == "runner" and parts[1:] == ["name"]:
         return ctx.env.get("RUNNER_NAME", "")
+    elif head == "vars" and len(parts) == 2:  # repository variables arrive as VARS_<name> in the executor's env (unset = "")
+        return ctx.env.get(f"VARS_{parts[1]}", "")
     elif head == "env" and len(parts) == 2:
         return ctx.env.get(parts[1], "")
     elif head == "job" and parts[1:] == ["status"]:

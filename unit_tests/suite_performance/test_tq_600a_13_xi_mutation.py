@@ -98,7 +98,8 @@ class TestTq600a13XiAddedStepIsCaught(unittest.TestCase):
                 seed_world(svc)
                 suite_history(svc, "success", "failure")
             event = write_event(base, SUITE_NAME, 102, SHAS["A"] if job == "reevaluate" else self.repo.r)
-            run = WorkflowRun(workflow, proj, base / "scratch", {"GITHUB_EVENT_PATH": str(event), "PYTHONDONTWRITEBYTECODE": "1"}, svc.url)
+            env = {"GITHUB_EVENT_PATH": str(event), "PYTHONDONTWRITEBYTECODE": "1", "VARS_POST_MERGE_REEVAL_RERUN": "true"}  # re-runs on: the control must really write
+            run = WorkflowRun(workflow, proj, base / "scratch", env, svc.url)
             verdict = base / "post-merge-verdict.json"
             verdict.write_text(json.dumps(make_verdict("red", run_id=102, head_sha=self.repo.r, failing=("tests/test_shared.py::test_a",))), encoding="utf-8")
             run.artifacts.upload("post-merge-verdict", [("post-merge-verdict.json", verdict)])
