@@ -52,18 +52,22 @@ def apply_log_root_input(args: argparse.Namespace, config: dict[str, Any]) -> in
     is not an absolute path (nothing has been written at that point), else
     ``None``. Pure apart from the stderr message and the *config* mutation.
     """
-    if args.no_log_root:
+    # A caller may hand in a partial Namespace (tests drive the guard stage that
+    # way); a missing attribute means "flag not given", the default.
+    no_log_root = getattr(args, "no_log_root", False)
+    log_root = getattr(args, "log_root", None)
+    if no_log_root:
         config[CONFIG_KEY] = False
-    elif args.log_root is not None:
-        if not Path(args.log_root).is_absolute():
+    elif log_root is not None:
+        if not Path(log_root).is_absolute():
             print(
-                f"ERROR: --log-root {args.log_root!r} is a relative path; the operational "
+                f"ERROR: --log-root {log_root!r} is a relative path; the operational "
                 "log root must be an absolute directory (it is recorded verbatim, never "
                 "resolved against the current directory).",
                 file=sys.stderr,
             )
             return 1
-        config[CONFIG_KEY] = args.log_root
+        config[CONFIG_KEY] = log_root
     return None
 
 
