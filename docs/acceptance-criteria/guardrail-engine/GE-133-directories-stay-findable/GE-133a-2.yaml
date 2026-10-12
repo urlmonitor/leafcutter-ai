@@ -7,8 +7,8 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: done
-readiness: draft
+work_status: todo
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -75,8 +75,9 @@ doc_links:
     relevance: >-
       Must describe check-folder-density's set-aside (the docs obligation GE-133a's
       documentation_rationale names, folded into this record's it_requirements). Measured
-      2026-10-12: the file has NO check-folder-density section today and stands at 292 of
-      its 300-line doc-length limit.
+      2026-10-12 on origin/main e93eda09a: the file has the check-folder-density section
+      PR #1168 added, naming one shipped location, and stands at 298 of its 300-line
+      doc-length limit.
   - path: docs/architecture/components/commit-guardian.md
     relationship: describes
     status: exists
@@ -99,14 +100,17 @@ it_requirements:
   - "The judged/set-aside lines are written to the same stream as the check's existing
     verdict lines and appear on both completed and refused runs, so a test and a person read
     them in one place. Wording and placement are the implementer's."
-  - "DOCS (folded in, no separate record). docs/pre-commit-hooks.md gains a
+  - "DOCS (folded in, no separate record). docs/pre-commit-hooks.md carries a
     check-folder-density entry stating: the per-folder limit and how files are counted; that
     folders at or below a location declared in folder_density.set_aside_locations are set
-    aside and reported with their ground and counted apart; the shipped entry
-    (docs/acceptance-criteria/) and its ground; and that an absent or malformed declaration
-    judges everything and says so while an empty one simply sets nothing aside. The file
-    must still pass check-doc-length: it stands at 292 of 300 lines (2026-10-12), so the
-    entry fits in the remaining headroom or tightens existing text; it must not cross 300."
+    aside and reported with their ground and counted apart; the two shipped entries,
+    docs/acceptance-criteria/ (the AC store) and docs/decisions/ (the decision kernel's
+    record store), and their grounds as GE-133a-1's first it_requirement words them; and
+    that an absent or malformed declaration judges everything and says so while an empty
+    one simply sets nothing aside. The file must still pass check-doc-length: it stands at
+    298 of 300 lines (origin/main e93eda09a, 2026-10-12; the entry PR #1168 added names one
+    shipped location and no ground), so the update fits in the remaining headroom or
+    tightens existing text; it must not cross 300."
   - "templates/scripts/commit_guardian/ is the SOURCE; scripts/commit_guardian/ and
     .leafcutter/ copies are build outputs."
   - "TESTS. Same harness as GE-133a-1: a real git commit in a scratch repository running the
@@ -189,6 +193,24 @@ amended_by:
       former second arm (one more judged folder moves the judged count) was dropped; the
       set-aside count still moves in the second arm, and the first arm's literal judged
       count of 3 is checked against a different staged set in the third arm.
+  - reason: second-shipped-set-aside-entry-and-approval-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores"): GE-133a-1 now ships two set_aside_locations entries,
+      docs/acceptance-criteria/ and docs/decisions/ (the decision kernel's flat record
+      store). The DOCS it_requirement now names both shipped entries and their grounds
+      instead of the one, says the entry already exists ("carries", not "gains"), and
+      restates the headroom as measured on origin/main e93eda09a: 298 of 300 lines. The
+      docs/pre-commit-hooks.md doc_link's relevance is restated to the same measurement.
+      readiness moved draft -> approved by the same decision. work_status moved done ->
+      todo: docs/pre-commit-hooks.md on main names only docs/acceptance-criteria/ and no
+      ground, so the amended DOCS requirement is not met, and the done-proof gate cannot
+      see a docs gap (the requirement is checked by check-doc-length and review, not by a
+      test). The record goes done again when the docs line lands. criteria, title,
+      req_status, depends_on and test_spec are unchanged: the tests use scratch
+      declarations and none names a shipped entry.
 superseded_by: null
 covered_by: []
 implemented_by: []
