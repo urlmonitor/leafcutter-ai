@@ -381,7 +381,7 @@ class Neo4jBackend:
         self,
         repository_id: str,
         generation_id: str,
-        retention_seconds: int = 3600,
+        retention_seconds: int | None = None,
         now: float | None = None,
     ) -> bool:
         """Remove only an inactive owned generation after its retention deadline.
@@ -389,7 +389,8 @@ class Neo4jBackend:
         Args:
             repository_id: Trusted repository namespace that isolates all reads and writes.
             generation_id: Immutable generation identifier within the repository.
-            retention_seconds: Minimum elapsed retirement time before removal is permitted.
+            retention_seconds: Declared minimum retirement time; there is no built-in
+                value, so omitting it is refused with ValueError.
             now: Optional clock value for deterministic retention checks.
 
         Returns:
@@ -398,6 +399,19 @@ class Neo4jBackend:
         from knowledge.adapters.neo4j_projection import cleanup
 
         return await cleanup(self, repository_id, generation_id, retention_seconds, now)
+
+    async def retention_facts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, the per-generation facts a retention policy decides on.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per retained ready generation.
+        """
+        from knowledge.adapters.neo4j_projection import retention_facts
+
+        return await retention_facts(self, repository_id)
 
     async def close(self) -> None:
         """Close the configured driver's pool."""

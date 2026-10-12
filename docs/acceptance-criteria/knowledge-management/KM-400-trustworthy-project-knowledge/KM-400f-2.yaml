@@ -84,6 +84,22 @@ amended_by:
     parent, depends_on, the references in doc_links and the delivers_to/expects_from
     contracts, the covers tags and the approval fields were touched. readiness moved to
     approved and priority to high at the user's approval gate."
+  - "2026-10-12: BLOCKING PRECONDITION found while building KM-400f-1, recorded here
+    because this is the AC that deletes. KM-400f-1's evaluator derives
+    pinned_continuation_unexpired from a pinned_until property on the Snapshot node,
+    and NOTHING WRITES THAT PROPERTY. Real continuation pinning lives in the retrieval
+    path (knowledge/retrieval_steps.py), not on the node. Against a live store every
+    generation therefore reports a null pin, so a generation holding an unexpired
+    continuation is reported reclaimable: true. KM-400f-1's own unit tests prove the
+    precedence only against a hand-supplied pinned_until fixture, so they do not
+    detect this. That is harmless while the evaluation only reports. It is NOT harmless
+    here: this AC reclaims what the evaluation names reclaimable, and doing so against
+    the current pin source would delete a generation a retrieval is still pinned to -
+    exactly the guarantee KM-400b-3 makes and this AC's own criteria restate ('G28 is
+    not reclaimed while its continuation is unexpired'). Before building this AC,
+    either populate a real pin source the evaluator can read, or require the reclaiming
+    path to treat an absent pin source as pin-state-unknown and decline to reclaim -
+    never as not-pinned. Found by pr-reviewer on the KM-400f-1 drive (finding H-2)."
 superseded_by: null
 covered_by: []
 implemented_by: []

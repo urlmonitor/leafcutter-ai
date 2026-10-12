@@ -46,7 +46,26 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: '2026-10-09'
-amended_by: []
+amended_by:
+  - "2026-10-12: SCOPE GAP found by running KM-400f-1's evaluator against the live store,
+    recorded here because it belongs to this L1 rather than to any one child. This L1's
+    children reason only about READY generations - an active one plus retired ones, as
+    KM-400f-1's Gherkin describes (G32 active, G31..G1 retired). The accumulation that
+    actually filled two instances in four days was NOT ready generations. It was FAILED
+    publications. Measured on the live store 2026-10-12: 12 Snapshot records, every one
+    status='failed', zero status='ready'; 123,810 nodes belong to generations and 0 of
+    them belong to a ready generation. retention_facts filters WHERE g.status='ready',
+    so the evaluator correctly reports zero generations and zero reclaimable while
+    123,810 reclaimable nodes sit in the store. On the first destroyed instance the same
+    shape held: 25 of 32 generations were status='failed' and held 137,980 of 189,950
+    nodes. So KM-400f-1 and KM-400f-2 as currently specified would not have prevented
+    either incident. Note that the pre-existing cleanup() command CAN delete a failed
+    generation - it guards on active-ness and elapsed retention, not on status - which is
+    why a manual sweep found 29 eligible generations. The gap is in these criteria, not
+    in that command. A further criterion is needed: an incomplete or failed publication's
+    generation is reclaimable, and the retention report must account for it rather than
+    filtering it out of view. Until that exists, do not describe this L1 as closing the
+    capacity incident."
 superseded_by: null
 covered_by:
   - KM-400f-1
