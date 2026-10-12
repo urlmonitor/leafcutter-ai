@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-12'
 components:
   - ac_driven_dev
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 2
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Occurrences:** 3
+- **First seen:** 2026-08-25 · **Last seen:** 2026-10-12
 - **Where:** `scripts/goal_to_epic.py` → per-ticket `generate_ticket_from_ac.py`, plus
   `_translate_ticket_depends_on` and the Master_Plan dependency map
 
@@ -80,5 +80,26 @@ reusing the existing shared store index rather than adding a third reader of the
 Emit a per-ticket progress line so the run is legible while it is happening. A regression
 test should assert the store is read a bounded number of times independent of ticket count
 — asserting a wall-clock budget would encode today's store size and rot immediately.
+
+**Third occurrence, 2026-10-12: `--ids`, 48 tickets, over ten minutes.** Scaffolding
+`EPIC-RightJobRightAgent` (48 ids, store at 5,022 YAML files) took more than ten minutes. That
+figure was reported by the session and not timed precisely. It works out to over 12 s per ticket.
+The shape is unchanged, and two per-ticket whole-store passes were verified in code on origin/main
+`a104d934`:
+
+- **One generator subprocess per ticket.** `epic_tickets.generate_tickets_for_leaves`
+  (`:212-216`) calls `_call_generate_ticket_from_ac` (`:118-180`). Each call starts a fresh
+  interpreter, which finds its AC by walking the whole store (`_gtfa_store._find_ac_by_id`,
+  `rglob` at `:79`).
+- **One in-process whole-store walk and parse per ticket in the repoint pass.** After assembly,
+  `epic_phases._apply_epic_backrefs` (`:198-202`) calls
+  `epic_assembly._replace_implemented_by_entry` (`rglob` at `:321`) once per ticket. That is
+  about 48 × 5,000 YAML parses to rewrite 48 lines. On Windows the pass also rewrites nothing
+  (`KI-BO-014`, Occurrence 2).
+
+The run prints nothing per ticket. Subprocess output is captured, and only the `Written:` line is
+read, so this entry's silence point also holds for `--ids`. What the run did print part-way
+through was a reader-thread traceback; see
+`KI-ACD-20261012-epic-generator-child-output-decoded-with-the-wrong-codec`.
 
 ---
