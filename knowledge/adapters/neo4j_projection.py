@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from neo4j import ManagedTransaction
     from knowledge.adapters.neo4j_backend import Neo4jBackend
+    from knowledge.config import RetentionBound
     from knowledge.contracts import ProjectionSnapshot
 
 import hashlib
@@ -214,7 +215,7 @@ async def switch_active(
 async def evaluate_retention(
     db: Neo4jBackend,
     repository_id: str,
-    bound: object,
+    bound: RetentionBound,
     now: float | None = None,
 ) -> dict:
     """Report which retained generations a declared bound permits reclaiming.
@@ -282,7 +283,7 @@ _NO_RETENTION = (
 )
 
 
-def _verdict(fact: dict, rank: int, bound: object, now: float) -> dict:
+def _verdict(fact: dict, rank: int, bound: RetentionBound, now: float) -> dict:
     """Decide one generation's reclaimability and the reason, in precedence order.
 
     Args:
