@@ -74,6 +74,7 @@ covered_by:
   - GE-132a-1
   - GE-132a-2
   - GE-132a-3
+  - GE-132a-4
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

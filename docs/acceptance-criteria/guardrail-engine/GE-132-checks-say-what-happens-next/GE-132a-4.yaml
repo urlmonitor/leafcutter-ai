@@ -1,0 +1,357 @@
+id: GE-132a-4
+title: "The commit-time remedy checks judge the package's committed declaration table, so a stale or absent local copy can neither refuse a correct commit nor pass a defective one"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package checkout whose local declaration table was written before
+    GE-132a-2 and never refreshed, so its check-doc-frontmatter rule is
+    mechanical-autofix with no agent and it still holds a rule for check-docstrings,
+    which no registered check has,
+  And the committed package declaration table declares check-doc-frontmatter as
+    mechanical-autofix naming general-purpose, holds no check-docstrings rule, and
+    passes every registration and validity rule of GE-132a-1 and GE-132a-2,
+  When a change to the committed package declaration table is committed,
+  Then the commit is not refused, and no refusal names check-doc-frontmatter,
+    check-docstrings or the local table.
+
+  Given the committed package declaration table declares check-doc-frontmatter as
+    mechanical-autofix with no agent,
+  And the local declaration table declares check-doc-frontmatter as
+    mechanical-autofix naming general-purpose and is otherwise correct,
+  When that change is committed,
+  Then the commit is refused, naming check-doc-frontmatter as a declaration that names
+    no agent, and naming the committed package declaration table as the file it came
+    from.
+
+  Given a project's local declaration table declares check-complexity as
+    engage-specialist, naming restructuring-specialist and complexity-reduction, with
+    the instruction "split plan_batches into two functions",
+  And the package seed gives check-complexity a different instruction,
+  When check-complexity refuses a commit that raises plan_batches from 30 to 31, and
+    the specialist run reads check-complexity's declaration,
+  Then the refusal shows "split plan_batches into two functions" and not the seed's
+    instruction,
+  And the specialist run receives the local declaration, reported as coming from the
+    local table.
+
+  Given a package checkout with no local declaration table at all,
+  And a committed package declaration table that passes every rule of GE-132a-1 and
+    GE-132a-2,
+  When a change to the committed package declaration table is committed,
+  Then the commit is not refused.
+depends_on:
+  - GE-132a
+  - GE-132a-1
+  - GE-132a-2
+  - GE-132a-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Narrows one constraint of GE-132a-1: "the check judges the merged view the shared
+      loader produces". At commit time, in a repository that tracks the package table, the
+      registration and validity legs judge that committed table alone. GE-132a-1's shared
+      loader and its per-hook fallback to the seed are unchanged for every run-time reader.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The validity rules applied, unchanged. Only the table they are applied to changes."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "A run-time reader whose local-first behaviour arm three keeps."
+  - path: templates/scripts/precommit-autofix.json
+    relationship: describes
+    status: exists
+    relevance: "The committed package declaration table: the only table the commit-time legs judge in this repository."
+  - path: docs/reference/remedy-declarations.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Updated in the same change. It must say which table each reader judges: the
+      check-hook-parity registration and validity legs judge the committed package table
+      templates/scripts/precommit-autofix.json (package checkout only; not applicable where
+      the canonical manifest is absent); check-complexity's refusal text and the BO-3800 run
+      read the shared loader, local table first, seed per missing declaration. Reason (c)'s
+      "in either table" and the "Inputs that raise" list are revised to match.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep". Each arm is a real commit
+      through the generated check-hook-parity stanza.
+declared_files:
+  - path: templates/scripts/commit_guardian/_remedy_registration_parity.py
+    state: existing
+  - path: templates/scripts/commit_guardian/_remedy_declaration_validity.py
+    state: existing
+  - path: docs/reference/remedy-declarations.md
+    state: existing
+  - path: unit_tests/commit_guardian/test_ge_132a_4_committed_table.py
+    state: to_be_created
+delivers_to:
+  - ac_id: BO-3800b-3
+    contract: >-
+      The run keeps reading declarations through GE-132a-1's shared loader, local table
+      first. This record changes only which table the commit-time judgement reads, so the
+      run's view of a project's own declaration is untouched.
+expects_from:
+  - ac_id: GE-132a-1
+    contract: >-
+      The shared declaration loader (templates/scripts/commit_guardian/_remedy_declarations.py),
+      local table first with per-hook fallback to the package seed, reporting the source file
+      per declaration. Shapes consumed here: the per-table rules[] parse (a list of objects
+      with a string hook_id; malformed input raises RemedyInputError) and the view
+      {hook_id: {hook_id, disposition, instruction, agent, skills, source}}, where a rule is
+      a declaration only when it carries a disposition.
+  - ac_id: GE-132a-2
+    contract: "The validity rules (disposition, agent and skill existence, non-empty instruction), applied here to the committed table."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    THE COMMITTED TABLE, EXACTLY. Where the canonical manifest
+    templates/scripts/commit_guardian/commit_guardian.json exists (a package checkout),
+    every commit-time remedy finding (GE-132a-1 reasons (a) undeclared, (b) excused-list
+    ratchet, (c) declaration for an unregistered check, and every GE-132a-2 validity
+    finding) is judged against one table: templates/scripts/precommit-autofix.json under the
+    project root (the process cwd). It is the only routing table git tracks in this
+    repository (git ls-files, 2026-10-12). Every refusal that names a source names that path.
+  - >-
+    NOTHING ELSE IS READ AT COMMIT TIME. The legs read neither the local table
+    (.claude/precommit-autofix.json, or skills_config's precommit_autofix_config_path) nor
+    .claude/skills_config.json, nor the deployed copy scripts/precommit-autofix.json. The
+    deployed copy is a build output in a package checkout, untracked, and goes stale in the
+    same way as the local table, so falling back to it would bring back the defect this
+    record removes. The presence, absence, staleness or unreadability of any of these files
+    must change neither a pass nor a refusal at commit time.
+  - >-
+    ABSENT COMMITTED TABLE FAILS CLOSED (decided by BrainCandy, 2026-10-12). If the
+    canonical manifest is present and templates/scripts/precommit-autofix.json is absent,
+    the leg reports could-not-check under the existing GE-120 outcome vocabulary (exit 2,
+    naming the missing path; never a pass, never "no declaration"). It never falls back to
+    the deployed scripts/ copy or to the local table. Arm two's "absent committed table"
+    subcase proves this. A committed table that exists but cannot be read or parsed is
+    could-not-check, as today.
+  - >-
+    CONSUMER INSTALLS UNCHANGED. Where the canonical manifest is absent, the leg already
+    prints its "not applicable" note and judges nothing. This record adds no read there.
+    Whether a consumer's commit-time judgement should read the deployed seed stays out of
+    scope (see notes).
+  - >-
+    THE CONTENT BEING COMMITTED. The judged content is the version in the commit being made.
+    Under pre-commit, unstaged edits are stashed, so the working-tree file is the staged
+    content. Reading the git index is also acceptable. Reading HEAD is not, because it
+    judges the previous commit.
+  - >-
+    ONE PARSER. The commit-time read uses the shared loader module's existing rules[] parsing
+    and view-building over the committed table alone: the same "declaration only when it
+    carries a disposition" rule, the same source field, and the same RemedyInputError
+    fail-closed path. Add no second parser and no hard-coded hook list.
+  - >-
+    MUST NOT CHANGE (THE OVERREACH). The shared loader's public behaviour for run-time
+    readers stays byte-for-byte the same: load(hook_id), load_tables(), declared_view(),
+    local_table_path(), seed_table_path(), the SEED_RELS order, local-first per-hook
+    fallback, and source reporting. check-complexity's refusal text (GE-132a-3) and the
+    BO-3800 run keep the local declaration. Fixing this record by pointing load() or
+    load_tables() at the committed table, or by reordering precedence, is THE OVERREACH.
+    Arm three goes red under it. test_ge132a1_shared_loader_falls_back_to_seed_for_an_old_install
+    and test_ge132a1_malformed_skills_config_is_reported_not_defaulted must stay green
+    without edits. Any helper added for the commit-time read is additive.
+  - >-
+    SURFACE. The change belongs where the leg loads its tables
+    (_remedy_registration_parity.check_remedy_declarations, which today calls
+    load_tables(root) and passes the merged view to _remedy_declaration_validity.validate
+    and iterates the tables for reason (c)). The docstrings that say "merged view" or
+    "local table first" in _remedy_registration_parity.py and _remedy_declaration_validity.py
+    are corrected to say "the committed package table" at commit time. Register no new hook
+    and do not change the trigger: the check-hook-parity files regex already matches
+    templates/scripts/precommit-autofix\.json. If a new module is added anyway, the build
+    must deploy it beside the guardian scripts, and the tests copy the deployed directory,
+    so an undeployed module shows up as a failed commit. Both modules stay within the
+    check-file-size and check-complexity ceilings
+    (_remedy_registration_parity.py is 335 lines today).
+  - >-
+    DOCUMENTATION, SAME CHANGE. docs/reference/remedy-declarations.md states which table each
+    reader judges (see doc_links). The python-coder edits it. No documentation AC is
+    triggered (GE-132a documentation_triggers is []).
+  - >-
+    PACKAGE SURFACE: false. This change adds no config key, no deployed file, no registry
+    entry and no deploy-manifest line. It edits modules whose deployment
+    test_ge132a1_loader_is_deployed_and_imports_cold already proves. So the five-field
+    package-surface object does not apply, and post-write commands are listed here as prose.
+  - >-
+    POST-WRITE COMMANDS (from the worktree root):
+    `python -m pytest unit_tests/commit_guardian/test_ge_132a_4_committed_table.py unit_tests/commit_guardian/test_ge_132a_1_registration.py unit_tests/commit_guardian/test_ge_132a_1_excused_list.py unit_tests/commit_guardian/test_ge_132a_1_loader_fail_closed.py unit_tests/commit_guardian/test_ge_132a_2_validator.py unit_tests/commit_guardian/test_ge_132a_3_refusal.py -q`
+    with AC_ENFORCE_STRICT=1, then
+    `ruff check templates/scripts/commit_guardian/_remedy_registration_parity.py templates/scripts/commit_guardian/_remedy_declaration_validity.py unit_tests/commit_guardian/test_ge_132a_4_committed_table.py`.
+    Do not run build.py from the worktree against the shared workspace. The tests get
+    their deployed layout from shared_reference_layout.
+  - >-
+    TEST HARNESS. All four arms go in the new file
+    unit_tests/commit_guardian/test_ge_132a_4_committed_table.py, each marked
+    @pytest.mark.shared_layout_reader. Each one requests shared_reference_layout and spawns
+    no build.py. Reuse _ge_132a_1_harness (_scratch, _commit, _accepted, _refused,
+    _lines_naming, _DRIVER) and _ge_132a_2_fixture (real_scratch, declare, attempt). Copy
+    no helpers. Fixtures are the REAL tracked table, registries and manifest, re-serialised
+    with json.dumps and edited in memory only where an arm needs it. The scratch repo lists
+    .claude/precommit-autofix.json in .gitignore, as a real install does. The local table
+    is written after the baseline commit and is never staged.
+test_required: true
+test_spec:
+  - name: test_ge132a4_stale_local_table_does_not_refuse_a_correct_committed_table
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    surface_invoked: "real `git commit` in a scratch repo carrying the generated check-hook-parity stanza, the deployed guardian scripts, the REAL tracked package table and registries (real_scratch), and a stale, gitignored .claude/precommit-autofix.json"
+    description: >-
+      Arm 1. The stale local table is the REAL GE-132a-1-era table
+      (`git show 5d8bb260a:templates/scripts/precommit-autofix.json`), whose nine
+      mechanical-autofix rules (check-doc-frontmatter among them) carry agent null, plus one
+      added check-docstrings rule that carries a disposition. A rule without a disposition
+      is not a declaration and would not exercise reason (c). The committed table is the
+      real one with _comment touched and staged. Asserts that check-hook-parity Passed, the
+      exit code is 0 and HEAD advanced, and that no output line names check-doc-frontmatter,
+      check-docstrings or .claude/precommit-autofix.json. RED TODAY:
+      load_tables() lists [local_table_path, seed_table_path] and declared_view() keeps the
+      first rule per hook_id that carries a disposition, so the local rules win.
+      _shape_findings refuses check-doc-frontmatter and the eight other null-agent rules
+      ("is mechanical-autofix but names no agent", from the local file). The reason-(c) loop
+      `for path, rules in tables` also refuses check-docstrings, naming the local file.
+    must_catch:
+      - "THE LOCAL JUDGE: the commit-time legs read the loader's merged view"
+      - "a half fix: the validity view reads the committed table but the reason-(c) loop still iterates the local table"
+  - name: test_ge132a4_defective_committed_table_is_refused_despite_a_perfect_local_table
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    surface_invoked: "real `git commit` through the generated check-hook-parity stanza in a real_scratch repo"
+    description: >-
+      Arm 2. The committed templates/scripts/precommit-autofix.json is the real table with
+      check-doc-frontmatter's agent set to null, staged. The local table and the deployed
+      scripts/precommit-autofix.json both hold the correct real table. Asserts the commit is
+      refused and HEAD does not move. A refusal line names check-doc-frontmatter, "names no
+      agent" and templates/scripts/precommit-autofix.json. No line names
+      .claude/precommit-autofix.json, and no line names a scripts/precommit-autofix.json
+      that is not prefixed by templates/ (match with a negative look-behind, because the
+      committed path contains the deployed path as a substring). RED TODAY, which answers
+      the BA's open question: declared_view() takes the local rule, which is correct, so the
+      committed rule is never placed in the view. validate() judges only that view, and the
+      reason-(c) loop judges only unregistered ids, so nothing refuses and the commit is
+      accepted. Today's code refuses this defect only when no local table exists. That is
+      why the arm needs one.
+      SUBCASE "absent committed table" (BrainCandy, 2026-10-12). In a fresh real_scratch
+      repo where the canonical manifest is present, templates/scripts/precommit-autofix.json
+      is deleted and the deletion is staged. The deployed scripts/precommit-autofix.json and
+      the local .claude/precommit-autofix.json both hold the correct real table. Asserts the
+      commit is refused and HEAD does not move. The output reports could-not-check (exit 2
+      from the leg) and a line names templates/scripts/precommit-autofix.json as missing.
+      There is no "names no agent" or "needs a remedy declaration" finding. RED TODAY:
+      load_tables() takes the correct local table first, and seed_table_path() falls back
+      through SEED_RELS to scripts/precommit-autofix.json, so the view is complete and valid
+      and the commit is accepted.
+    must_catch:
+      - "THE MASK: a correct local rule hides a defect in the committed table"
+      - "THE DEPLOYED JUDGE: the commit-time legs judge the deployed scripts/precommit-autofix.json instead of, or ahead of, the committed table"
+      - "THE DEPLOYED FALLBACK: with the committed table absent, the commit-time legs fall back to the deployed scripts/ copy (or the local table) instead of reporting could-not-check"
+  - name: test_ge132a4_run_time_readers_keep_the_local_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "real `git commit` through the generated check-complexity stanza, plus a cold subprocess import of the deployed _remedy_declarations (harness _DRIVER) with cwd at the scratch repo"
+    description: >-
+      Arm 3, the regression boundary. Scratch repo as in GE-132a-3 (plan_batches committed
+      at 30, staged at 31). The seed's check-complexity instruction differs from the local
+      one. The local table declares check-complexity as engage-specialist, naming
+      restructuring-specialist and complexity-reduction, with the instruction "split
+      plan_batches into two functions". Asserts the refusal block shows that instruction and
+      not the seed's. Asserts that load("check-complexity") in the deployed loader returns
+      the same instruction, with source ending in .claude/precommit-autofix.json. GREEN
+      TODAY: check_complexity.py calls load_remedy(HOOK_ID, root), which is
+      _remedy_declarations.load and so declared_view(load_tables(root)), local first. A
+      fix that points the shared loader at the committed table turns this red.
+    must_catch:
+      - "THE OVERREACH: the shared loader itself stops reading the local table"
+  - name: test_ge132a4_absent_local_table_with_correct_committed_table_passes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    surface_invoked: "real `git commit` through the generated check-hook-parity stanza in a real_scratch repo with no .claude/ directory"
+    description: >-
+      Arm 4. No .claude/precommit-autofix.json and no .claude/skills_config.json exist. The
+      real committed table is touched and staged. Asserts that check-hook-parity Passed, the
+      exit code is 0 and HEAD advanced, with no could-not-check and no line naming
+      .claude/precommit-autofix.json. GREEN TODAY: load_tables() skips a local path that is
+      not a file, so the view is the committed table alone. It must stay green after the
+      fix.
+    must_catch:
+      - "THE ABSENT-LOCAL REFUSAL: the commit-time leg demands a local table, or reports its absence as could-not-check"
+test_rationale: >-
+  One real commit per arm through the generated stanza, plus a loader read for arm three.
+  Arm one is the observed failure. Arm two stops the fix from becoming "trust whatever
+  passes", and it also catches a fix that judges the deployed copy. Arm three stops the fix
+  from moving the shared loader instead of the commit-time judgement. Arm four stops the fix
+  from making the local table mandatory. Read against the source on 2026-10-12, arms one and
+  two are red today and arms three and four are green, so the red baseline is two of four
+  by design. A test-writer who finds arm one or two green must record why before going on.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  DECIDED BY BRAINCANDY, 2026-10-12 (option 1): the registration-parity and validity legs
+  judge the committed package table, the file being changed in this repository, never a
+  gitignored local copy.
+
+  OBSERVED 2026-10-12. The local table is gitignored and the build writes it only when it is
+  absent, so an existing install never receives a newer seed. In a self-hosted checkout built
+  before GE-132a-2, the stale local table's mechanical-autofix rules had null agents, and
+  check-hook-parity refused a commit on nine checks that the committed table declared
+  correctly. Deleting the local table and rebuilding cleared it.
+
+  HOW THIS COEXISTS WITH GE-132a-1's OLD-INSTALL FALLBACK. Two different questions, two
+  different tables.
+    - "Is the package's own declaration table correct?" is asked at commit time, of the file
+      being committed. Only the committed table can answer it. A local copy is not part of
+      the commit and cannot make it pass or fail.
+    - "What should happen next for this project?" is asked at run time: check-complexity's
+      refusal text (GE-132a-3) and the BO-3800 run. These keep the shared loader's view,
+      local table first, seed per missing declaration. That is the fallback GE-132a-1 exists
+      for, and it is unchanged.
+
+  OUT OF SCOPE, FLAGGED. A consumer repository tracks no package table, so this record does
+  not change what the commit-time legs read there. Whether a consumer's commit-time
+  judgement should read the deployed seed is a separate decision.
+
+  NAMED MUTATIONS.
+  (1) THE LOCAL JUDGE: the commit-time legs keep reading the merged view. MUST GO RED: arm
+      one. MUST STAY GREEN: arm three.
+  (2) THE MASK: the committed table is judged only where the local table declares nothing.
+      MUST GO RED: arm two.
+  (3) THE OVERREACH: fix it by pointing the shared loader at the committed table. MUST GO
+      RED: arm three.
