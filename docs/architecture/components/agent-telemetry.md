@@ -5,9 +5,12 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-07-22
+last_updated: 2026-10-12
 components:
   - agent_telemetry
+related_docs:
+  - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+  - docs/architecture/feedback-lifecycle.md
 ---
 
 # Agent Telemetry
@@ -16,14 +19,36 @@ components:
 
 Agent Telemetry is a per-invocation JSONL emit module. After each phase-agent call
 completes, the calling harness (or the phase agent itself) invokes
-`emit_agent_telemetry` to append one structured record to
-`debugging/logs/agent_telemetry.jsonl`. Records carry the invocation's lane tag,
+`emit_agent_telemetry` to append one structured record to the sink path it is given.
+Records carry the invocation's lane tag,
 agent identifier, wall-clock duration, and token counts (input, output, and
 cache-read). A companion report function (`build_lane_comparison_report`) reads the
 sink and returns per-lane aggregates for the fast-lane vs heavy-pipeline comparison.
 
-There is no separate event-based emission path. The earlier `emit_event.py` entry
-point no longer exists; all telemetry flows through `scripts/agent-health/agent_telemetry.py`.
+## Where the telemetry stream is kept
+
+The install's telemetry stream is the `operational_telemetry_stream` value in the
+build-time declaration `<output_root>/config/knowledge_sink.json`, i.e.
+`<operational_log_root>/agent_telemetry.jsonl`. It sits beside the feedback sink in one
+directory that outlives per-drive worktrees
+([ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md); full description in
+[Feedback Lifecycle — Where every log is kept](../feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
+
+- **Event writer.** The supervisor-event emitter
+  `.claude/skills/agent-telemetry/scripts/emit_event.py` writes to the stream named by
+  its own deployed workspace's declaration when `--log` is omitted. It finds that
+  declaration from its own resolved location, never from the caller's directory. If the
+  declaration is unusable, it warns on stderr naming it, writes nothing, and exits 0. Each
+  record is one `os.write` on an `O_APPEND` descriptor. Shipped prompts no longer pass
+  `--log` (INF-500d-4-vi).
+- **Other writers.** `inline_work_guard.py` appends its audit record to
+  `<operational_log_root>/inline_work_guard.jsonl`. `plan-feature.js` gets the stream from
+  `sink_resolution.py --print-location telemetry` and does not compose a path itself.
+- **Readers.** `generate_health_report.py` defaults `--telemetry` and `--feedback` to the
+  declared values and prints `read N records from <path>` per stream.
+- **Location query.**
+  `python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry`
+  prints the stream without writing.
 
 ## Responsibilities
 
@@ -45,7 +70,9 @@ point no longer exists; all telemetry flows through `scripts/agent-health/agent_
 - `scripts/agent-health/generate_health_report.py` — report module
   - `build_lane_comparison_report(sink_path: Path) -> dict` — per-lane aggregate report
   - CLI: `python generate_health_report.py [--telemetry PATH] [--feedback PATH] [--agent AGENT_ID] [--format markdown|json]`
-- `debugging/logs/agent_telemetry.jsonl` — telemetry sink (JSONL, one record per line, append-only)
+  (`--telemetry` / `--feedback` default to the declared stream and sink)
+- `templates/skills/agent-telemetry/scripts/emit_event.py` — supervisor-event emitter (see above)
+- declared `operational_telemetry_stream` — telemetry sink (JSONL, one record per line, append-only)
 
 ## JSONL Record Schema
 
@@ -77,7 +104,8 @@ permission is denied):
 
 After a drive, inspect `get_failed_write_count()` to detect dropped records. A non-zero
 value means the sink was unreachable for some invocations. The pre-drive sink-reachability
-probe in `CLAUDE.md` (§ "Feedback sink reachable") provides a pre-flight check.
+probe in `CLAUDE.md` (§ "Feedback sink reachable") provides a read-only pre-flight check
+of the declared stream.
 
 ## Cross-links
 

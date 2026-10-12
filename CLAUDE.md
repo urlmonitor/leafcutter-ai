@@ -548,20 +548,36 @@ User, you cannot access this content (createPullRequest)".
 
 ### Feedback sink reachable
 
-**What to check:** Verify that `debugging/logs/agent_telemetry.jsonl` (or the configured
-remote endpoint, if any) is writable before the drive begins.
+**What to check:** Before the drive begins, check that the install declares a telemetry
+stream and a feedback sink, and that their directory is writable. Both live under one
+durable `operational_log_root` recorded at build time in
+`.leafcutter/config/knowledge_sink.json`, which outlives the worktree (ADR-069;
+[feedback-lifecycle.md](docs/architecture/feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
+The check is **read-only** and appends nothing:
 
 ```bash
-# Quick writability probe — should exit 0 and append one line
-echo '{"probe":"pre-drive-check"}' >> debugging/logs/agent_telemetry.jsonl
+# Each prints one absolute path, or nothing on stdout plus an ERROR on stderr (exit 1)
+python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry
+python3 <worktree-root>/.leafcutter/scripts/knowledge/sink_resolution.py --print-location feedback
+
+# Then check the printed file's directory (exit 0 = writable)
+test -w <directory-of-the-printed-path>
 ```
 
-If the command exits non-zero, the sink is unreachable — fix before invoking `/build-feature`.
+Treat empty output as a failure, even with exit 0. A deployed `sink_resolution.py` that is
+older than INF-500d-4-iii has no `--print-location` and prints nothing.
 
-**If the check fails:** Do not start the drive. The most common causes are:
-- The `debugging/logs/` directory does not exist yet (`mkdir -p debugging/logs/`).
-- A remote endpoint (future) is down — wait for it to recover or disable remote logging.
-- A permissions issue on WSL2 NTFS mounts — remount or use a native Linux path.
+**If the check fails:** Do not start the drive. The causes:
+- **No declaration, or one without these keys.** Writers refuse rather than write into the
+  worktree. `submit_feedback.py` prints `destination could not be written`, exits 1, and
+  agents record `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: rebuild.
+  A worktree bootstrap (`setup_ticket_worktree.py`) passes the main install's recorded
+  root as `--log-root`. A bare `build.py --target-dir <worktree>` without `--log-root`
+  declares the worktree's own, disposable root.
+- **A permissions issue on WSL2 NTFS mounts.** Remount, or use a native Linux path.
+
+The BO-100d probe ACs still describe an appending probe pinned to the relative path. Their
+owner has to change them (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path).
 
 **Why this matters:** During a past epic drive, the sink was unreachable for the entire
 run. 23 `submit-failed` events occurred without detection — the drive completed but zero
@@ -578,25 +594,15 @@ ls <worktree-root>/.leafcutter/config/feedback_categories.yaml
 
 If the command fails (`No such file or directory`), the file is missing.
 
-Fix: **do not** reach for `python scripts/build.py --target-dir <workspace-root>` here. That
-command is the subject of KI-BP-016 (severity high, filed the same day this line was added):
-when `docs_root` points into a subdirectory — as it does in this workspace, where
-`.claude/skills_config.json` sets `docs_root: "leafcutter-ai/docs/"` — the doc-index phase
-scans `<target_root>/docs`, finds nothing, and overwrites the tracked `docs/INDEX.md` with a
-nine-section `No docs found.` stub. It also deploys a worktree's unmerged templates over the
-shared `.leafcutter` install tree, which is a second and quieter way to lose work.
+Fix: rebuild, or symlink the worktree's `.leafcutter` to the main tree's (see the section
+below). When the worktree's `.leafcutter` is a symlink, a build deploys the worktree's
+unmerged templates over the shared install tree. After any build, run `git status` and
+check `docs/INDEX.md` before staging. KI-BP-016, now resolved, used to overwrite that file.
 
-Prefer the symlink instead — point the worktree's `.leafcutter` at the main tree's, alongside
-the `.pre-commit-config.yaml` fix in the section below. If you do run the build, run
-`git status` immediately afterwards and look at `docs/INDEX.md` before staging anything: a
-`git add -A` after an affected build silently commits a ~175-line deletion of the very index
-this file points agents at for doc discovery.
-
-Caveat on the symlink, so it is chosen with eyes open: a symlinked `scripts/feedback` makes
-`submit_feedback.py` resolve `__file__` through the link, so its walk-up for `.claude/` lands
-in the **install tree** and feedback is written to the install tree's
-`debugging/logs/feedback.jsonl` rather than the worktree's. See KI-BP-017 and KI-FC-001 — the
-sink still works, it is just not where you will look for it.
+The old symlink caveat no longer applies. It said that through a symlinked `.leafcutter`,
+feedback landed in the install tree's own sink. `submit_feedback.py` no longer walks up for
+`.claude/`. Through the symlink it reads the main install's declaration, which names the
+same durable root. INF-500d-4 removed the cause, and KI-FC-001 closes once that work lands.
 
 **The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
 (Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
