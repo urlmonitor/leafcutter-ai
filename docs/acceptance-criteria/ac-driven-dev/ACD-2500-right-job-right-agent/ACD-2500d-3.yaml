@@ -55,7 +55,8 @@ amended_by:
 superseded_by: null
 covered_by:
 - ACD-2500d-3-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/38_TICKET-20261012-ACD-2500d-3.md
 change_target: prompt
 risk_surface: internal
 notes: |

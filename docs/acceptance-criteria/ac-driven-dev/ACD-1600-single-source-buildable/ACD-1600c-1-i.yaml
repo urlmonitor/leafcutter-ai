@@ -53,7 +53,8 @@ amended_by:
     directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/02_TICKET-20261012-ACD-1600c-1-i.md
 change_target: pipeline
 risk_surface: contract_boundary
 test_spec:

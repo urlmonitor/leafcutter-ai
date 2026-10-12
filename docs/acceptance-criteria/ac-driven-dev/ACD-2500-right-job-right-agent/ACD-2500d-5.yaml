@@ -133,7 +133,8 @@ amended_by:
 superseded_by: null
 covered_by:
 - ACD-2500d-5-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/27_TICKET-20261012-ACD-2500d-5.md
 change_target:
 - prompt
 - config
