@@ -5,15 +5,17 @@ Split out of ``_workflow_jobs.py`` (file-size limit). Test infrastructure, not a
 Grammar: ``always()``, ``success()``, ``failure()``, ``cancelled()``, ``!`` negation,
 ``==`` / ``!=`` against a literal, ``&&`` / ``||`` (no parentheses), over the contexts
 ``steps.<id>.outputs.<k>``, ``steps.<id>.outcome|conclusion``, ``needs.<job>.result``,
-``needs.<job>.outputs.<k>``, ``github.<sha|ref|event_name|run_id|repository>``,
+``needs.<job>.outputs.<k>``, ``github.<sha|ref|event_name|run_id|repository>``, ``github.event.<path>`` (read from the event file),
 ``runner.name``, ``env.<K>``, ``job.status``. Anything outside it FAILS with
 :class:`HarnessError`; the evaluator never guesses.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 
 _STATUS_FUNCTIONS = ("always()", "success()", "failure()", "cancelled()")
 _EXPRESSION = re.compile(r"\$\{\{\s*(.*?)\s*\}\}", re.S)
@@ -47,9 +49,22 @@ class _Context:
     cancelled: bool = False  # the whole run was cancelled: only status-agnostic steps (always(), cancelled()) still run
 
 
+def _event_field(keys, ctx):
+    """``github.event.<a>.<b>...`` read from the JSON event file at ``GITHUB_EVENT_PATH`` (TQ-600a-13-xvi: the head SHA)."""
+    try:
+        node = json.loads(Path(ctx.env.get("GITHUB_EVENT_PATH", "")).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return _fail(f"github.event.{'.'.join(keys)}: the event file is unreadable: {exc}", exc)
+    for key in keys:
+        node = node.get(key) if isinstance(node, dict) else None
+    return "" if node is None else node
+
+
 def _lookup(path, ctx):
     parts = path.split(".")
     head = parts[0]
+    if head == "github" and len(parts) > 2 and parts[1] == "event":
+        return _event_field(parts[2:], ctx)
     if head == "steps" and len(parts) in (3, 4):
         step = ctx.steps.get(parts[1])
         if step is None:

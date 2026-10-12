@@ -7,7 +7,7 @@ diagram_type: container
 status: draft
 root: true
 created: 2026-09-30
-last_updated: 2026-10-02
+last_updated: 2026-10-10
 source_ticket: null
 components:
   - decision_kernel
@@ -22,6 +22,12 @@ children:
   - docs/architecture/diagrams/c3-020-decision-kernel-flows-learning-loop.md
   - docs/architecture/diagrams/c3-021-decision-kernel-flows-regression-memory.md
   - docs/architecture/diagrams/c3-022-decision-kernel-flows-open-points.md
+  - docs/architecture/diagrams/c3-024-decision-kernel-flows-forming-round.md
+  - docs/architecture/diagrams/c3-025-decision-kernel-flows-decision-states.md
+  - docs/architecture/diagrams/c3-026-decision-kernel-flows-record-staging.md
+  - docs/architecture/diagrams/c3-027-decision-kernel-flows-record-publishing.md
+  - docs/architecture/diagrams/c3-028-decision-kernel-flows-record-lifecycle.md
+  - docs/architecture/diagrams/c3-029-decision-kernel-flows-precedent-reuse.md
 related_docs:
   - docs/architecture/components/decision-kernel.md
   - docs/architecture/components/colony-memory.md
@@ -194,6 +200,12 @@ flowchart LR
 | [Learning loop](c3-020-decision-kernel-flows-learning-loop.md) | Live: approved records → Git → precedent. Planned: Langfuse → evaluator → Neo4j → routing |
 | [Regression memory](c3-021-decision-kernel-flows-regression-memory.md) | Confirmed mistakes → Langfuse datasets → regression evaluation before a change |
 | [Open points](c3-022-decision-kernel-flows-open-points.md) | Where the sources are silent or disagree, with their 2026-10-02 status |
+| [Decision forming round](c3-024-decision-kernel-flows-forming-round.md) | One round from your question to the ranked options: intent, precedent, grounding, synthesis, proposals, your approval, option research, assessment, and the budget-reserve exit |
+| [Decision states](c3-025-decision-kernel-flows-decision-states.md) | A decision from proposed through approved and ranked to resolved, with the re-rank loop and the no-answer exit |
+| [Record staging](c3-026-decision-kernel-flows-record-staging.md) | A resolved, human-approved decision staged as a record in the run folder, and the publish notice; nothing staged without a human approval |
+| [Record publishing](c3-027-decision-kernel-flows-record-publishing.md) | `decisions publish` checks, writes the record and index, then commit, review and merge; both exit-3 stops end before any write |
+| [Record lifecycle](c3-028-decision-kernel-flows-record-lifecycle.md) | A record staged, published (in review, then merged), kept staged, or superseded with corrections appended only |
+| [Precedent and reuse](c3-029-decision-kernel-flows-precedent-reuse.md) | Lookup through the index, Jev's judgement, citing as evidence, the reuse question and your answer |
 
 ## Definitions
 

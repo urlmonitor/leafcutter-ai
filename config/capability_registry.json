@@ -1,6 +1,6 @@
 {
   "$schema": "./capability_registry.schema.json",
-  "_comment": "Kernel-routable capabilities only. Legacy agent and skill registries are never read, normalised or routed. A legacy asset may enter only with an admission record of kind legacy_admission that names a recorded decision (ADR-nnn). The seven entries below are the V0 native and host-handoff capabilities (native_registration, TICKET-20260930-KernelBootstrapV0). Fixed capabilities are never offered to Jev.",
+  "_comment": "Kernel-routable capabilities only. Legacy agent and skill registries are never read, normalised or routed. A legacy asset may enter only with an admission record of kind legacy_admission that names a recorded decision (ADR-nnn). The registered entries below are the V0 native and host-handoff capabilities (native_registration, TICKET-20260930-KernelBootstrapV0). Fixed capabilities are never offered to Jev.",
   "registry_id": "leafcutter.capabilities",
   "registry_version": 1,
   "capabilities": [
@@ -322,6 +322,40 @@
         "decision_ref": "TICKET-20261001-KM-500b-3",
         "admitted_on": "2026-09-30",
         "admitted_by": "BrainCandy"
+      }
+    },
+    {
+      "id": "host.retrieval_needs",
+      "name": "Retrieval needs interpretation",
+      "description": "Interpret all information needs of a repository question in one typed host handoff; no retrieval or answer generation.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "interpret_retrieval_needs"
+      ],
+      "accepts_schemas": [
+        "leafcutter.retrieval_needs_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.retrieval_needs_output.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.retrieval_needs",
+      "side_effect_class": "run_artifacts",
+      "permissions_required": [],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "ADR-053",
+        "admitted_on": "2026-10-09",
+        "admitted_by": "user-authorized-retrieval-integration"
       }
     }
   ]

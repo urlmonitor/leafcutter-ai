@@ -53,9 +53,9 @@ REQUESTS["host.retrieval_needs"] = {"original_question": "Which tests cover CMP-
                 "required_fields": {"name": "The test name."},
                 "document_types": {"source": "A source file."},
                 "relationships": {"covers": "A test covers a component."}}}
-# Operations the code table binds but config/capability_registry.json deliberately omits: the
-# retrieval-needs interpreter is exposed only by explicitly supplied experiment registries.
-EXPERIMENT_ONLY = frozenset({"host.retrieval_needs"})
+# Every current operation is admitted in the production registry; retain the
+# explicit exception set so future experimental-only registrations stay visible.
+EXPERIMENT_ONLY: frozenset[str] = frozenset()
 FAKE_HASH = "f" * 64
 ANSWER_AFTER = timedelta(milliseconds=1500)
 SCHEMAS = {

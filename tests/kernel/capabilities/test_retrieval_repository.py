@@ -128,6 +128,7 @@ class TestEvidenceShape(RepoTestCase):
     """Every result carries source, locator, revision, hash and truncation."""
 
     def test_evidence_has_locator_hash_revision_and_provenance(self) -> None:
+        # covers: DK-600a-2
         rev = RevisionInfo(commit="abc1234567", dirty=True)
         result = self.run_retrieval(scope_update={"revision": rev})
         self.assertEqual(result.status, ResultStatus.COMPLETED)
@@ -158,6 +159,7 @@ class TestEvidenceShape(RepoTestCase):
         self.assertEqual(bundle.coverage["need.prior_decisions"], NeedStatus.OPEN)
 
     def test_no_writes_to_the_repository(self) -> None:
+        # covers: DK-600c-3
         before = sorted(p.as_posix() for p in self.root.parent.rglob("*"))
         self.run_retrieval()
         self.assertEqual(before, sorted(p.as_posix() for p in self.root.parent.rglob("*")))

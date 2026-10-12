@@ -4,7 +4,7 @@ description: "What each finding the product-truth checker can report means, what
 type: how-to
 status: active
 created: 2026-09-25
-last_updated: 2026-09-25
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -118,7 +118,7 @@ in the wrong direction quietly launders a real regression into "the record was j
 out of date."
 
 **The code was right, the record was wrong.** The journey's `summary`, a step's
-`human` line, an `acceptance_scenarios` entry, or an `implements` pointer describes
+`description`, an `acceptance_scenarios` entry, or an `implements` pointer describes
 behaviour the product no longer has, or never quite had. Fix the flow's prose,
 steps, or pointers to match what the code actually does, then re-confirm (Part 2,
 steps 4–6). This is ordinary authoring — follow

@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-222c09f6167341a3",
+  "interaction_id": "int-5341aefd924b47e5",
+  "sha256": "f917fb8e0f96fd4e61b76175a5067a72fea16bc19b231dc36855dc9bd6e7bce2",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-222c09f6167341a3",
+    "interaction_id": "int-5341aefd924b47e5",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-precision",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "Show the source of one test declared to cover KM-500c-2.",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "test"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "content"
+        ],
+        "document_types": [
+          "code"
+        ],
+        "relationships": [
+          "covered_by"
+        ]
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "examples",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The question asks for the source text of one example test reached through the named criterion's declared coverage relationship. It does not request a whole source file or every covering test. The supplied source scope remains unchanged.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-09T21:27:58.826870Z"
+}

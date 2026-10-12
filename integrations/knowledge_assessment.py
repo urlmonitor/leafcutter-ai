@@ -87,7 +87,8 @@ def assessment_limits(result: KnowledgeRetrievalResult) -> list[str]:
             "Conditional evidence assessment remains " + report.get("status", "unresolved")]
 
 
-def assessment_bundle(result: KnowledgeRetrievalResult, need_id: str) -> dict[str, dict]:
+def assessment_bundle(result: KnowledgeRetrievalResult, need_id: str, *,
+                      include_answer: bool = False) -> dict[str, dict]:
     """Key the actual finalized assessment by the evidence need it answers.
 
     Args:
@@ -96,9 +97,20 @@ def assessment_bundle(result: KnowledgeRetrievalResult, need_id: str) -> dict[st
 
     Returns:
         Per-need report mapping without source-fact promotion.
+
+    Keyword-only include_answer adds deterministic obligations for the interpreted public path.
     """
-    return {need_id: result.assessment} if result.assessment is not None else {}
+    if not include_answer or result.answer is None:
+        return {need_id: result.assessment} if result.assessment is not None else {}
+    report = {"kind": "retrieval_answer", **result.answer.model_dump(mode="json")}
+    if result.assessment is not None:
+        report["conditional_assessment"] = result.assessment
+        if result.assessment.get("status") not in {"fulfilled", "supported"}:
+            report["status"] = "unresolved"
+    return {need_id: report}
 
 
 # DECISION HISTORY
 # - 2026-10-01 23:00 [python-coder]: Preserve scoped conditional assessment through real research. (#EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500f-2)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

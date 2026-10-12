@@ -1,0 +1,113 @@
+id: GE-133
+title: "A directory stays small enough that a person can still find their way around it"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Directories never quietly fill up past the point where a person can find
+  anything in them.
+
+  A folder holding dozens of unrelated files is where things get lost: the
+  next file lands next to whatever happens to be there, related work drifts
+  apart, and nobody can tell at a glance what the folder is for. The project
+  already has a check for this, and it now runs on every ordinary commit. What
+  it does not yet know is the difference between a folder a person browses
+  and a store of records that only tools read, so it refuses the second for
+  the reason it exists to apply to the first.
+
+  After this goal, the crowding standard is applied where a person navigates
+  by hand, a place that is deliberately flat because tools read it is set
+  aside openly and on a stated ground rather than by someone bypassing the
+  check and is reported as set aside, and nothing about this makes a folder of
+  source or tests any easier to crowd.
+depends_on: []
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SIBLING GOAL, AND WHY THIS IS NOT A CHILD OF IT. GE-127 ("The codebase stays a
+      size a person can still work in") owns the size of FILES. Its title would stretch
+      to directories, but its criteria are about files throughout, and it holds 7 of 7
+      permitted L1 children with no child_limit_override; its own notes say the next
+      scope-shaped record in its family needs a new L0 or a split. This goal is the new
+      L0 those notes ask for, for the sibling standard: the crowding of DIRECTORIES.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL. GE-127g sets aside generated documents from the file-length standard as
+      a declared class of locations, reported, and judged when the declaration cannot be
+      read. GE-133a mirrors those guarantees for directory density. Neither
+      may be satisfied by the other: different standard, different unit (lines per
+      document against files per folder), different locations.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE. GE-120h-3 is the record that made the crowded-directory
+      check run on an ordinary commit and requires that the state already existing is
+      reported rather than refused. This goal takes "the check runs" as inherited and
+      does not restate it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. GE-120h-5 owns what a crowded-directory refusal names as help. No
+      record under this goal takes a position on refusal wording.
+  - path: docs/known-issues/commit-guardian/open-low-ki-cg-20260909-gate-folder-density.md
+    relationship: context
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-133a
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  AUTHORED BY THE BUSINESS ANALYST, NOT THE PRODUCT OWNER — REVIEW THE FRAMING. This L0
+  exists because the decision it carries (BrainCandy, 2026-10-09: set the AC store aside
+  from the crowded-directory check, openly, not silently) had no home: the suggested host,
+  GE-127, is full and is about files. Its wording is the analyst's and should be read by
+  the product owner or the user before approval.
+
+  WHY A NEW GOAL AND NOT GE-127h. Three grounds, in order of weight:
+    - GE-127 HOLDS 7 OF 7 L1 CHILDREN. The store's tree-limit check refuses an eighth, and
+      GE-127's own amendment record and notes say in capitals that no L1 headroom remains
+      and that the next scope-shaped record needs a new L0 or a split. Raising its cap
+      with a child_limit_override would spend a temporary escape hatch on a permanent
+      placement and contradict a recorded decision.
+    - THE SUBJECT IS DIFFERENT. GE-127's criteria begin "Files never quietly grow past
+      the point where they can be understood" and every one of its seven L1s is about
+      file length. Directory crowding is a sibling standard with its own check, its own
+      unit and its own grandfathering rule. Filing it under a file-size goal misfiles it
+      the way GE-127g's notes warn against.
+    - THIS GOAL WILL HAVE MORE CHILDREN. The crowded-directory check has open subjects of
+      its own (the refusal's help text under GE-120h-5's judgement; the known issue on
+      its grandfather rule), so a density goal is the home they would otherwise lack.
+  The sparse-tree advisory (fewer than three children) applies to this goal on day one
+  and is accepted.
+
+  IDENTIFIER. GE-133 was checked free on 2026-10-09 by: every `^id: GE-` value across the
+  AC store in this worktree (highest GE-131); a grep for GE-133 across every worktree under
+  the workspace and the shared main checkout (no hits); and `git grep` against origin/main
+  (no hits). GE-132 was skipped because it is claimed by an unmerged authoring worktree
+  (ac-guardrail-remedies, "GE-132-checks-say-what-happens-next"). Re-verify at merge time;
+  id allocation in this store is known to be unreliable.

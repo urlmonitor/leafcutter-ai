@@ -23,7 +23,8 @@
     {
       "id": "plan",
       "label": "Plan",
-      "human": "Say what you want; the ACs get authored.\n\nI/O boundary: Plain-language input and reviewed AC YAML are the coarse journey boundary. JSON shows parsed AC fields; it is not a new planning service.\n\nContract fields and examples (generated)\nConsumes:\n  No checked JSON binding documented in this direction.\nProduces:\n  ac/id: string (required)\n  ac/criteria: string (required)\n  ac/readiness: string (optional)\n  ac/assigned_agent: null|string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\",\n  \"readiness\": \"draft\",\n  \"assigned_agent\": \"python-coder\"\n}",
+      "description": "You say what you want and AI agents author the acceptance criteria for it.",
+      "actor_kind": "llm",
       "order": 1,
       "expands_to": [
         "leafcutter/define-a-feature"
@@ -97,7 +98,8 @@
     {
       "id": "build",
       "label": "Build",
-      "human": "The wired ticket is driven through its phase agents.\n\nI/O boundary: The ticket remains Markdown. These are the real flattened driver planner and phase-response JSON contracts; completion is checked against ticket sign-offs, not inferred from an example ok.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js planner response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  planner/ticket_path: string (required)\n  planner/source_ac: array (optional)\n  planner/ordered_phases: array (required)\n  Schema: [planner](docs/product-truth/schemas/delivery-workflow-planner.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js phase-result response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  phase-result/status: string (required)\n  phase-result/message: string (optional)\n  Schema: [phase-result](docs/product-truth/schemas/delivery-workflow-phase-result.schema.json)\n\nInput illustrative planner projection; not an execution receipt — planner; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"source_ac\": [\n    \"ACD-300\"\n  ],\n  \"ordered_phases\": [\n    {\n      \"agent\": \"test-writer\",\n      \"status\": \"needed\"\n    },\n    {\n      \"agent\": \"python-coder\",\n      \"status\": \"needed\"\n    }\n  ]\n}\n\nOutput illustrative phase-result projection; not an execution receipt — phase-result; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"status\": \"ok\",\n  \"message\": \"The assigned phase completed; the ticket retains its evidence.\"\n}",
+      "description": "AI phase agents drive the wired ticket through its build phases until it is green and committed.",
+      "actor_kind": "llm",
       "order": 2,
       "expands_to": [
         "leafcutter/how-acs-are-built"
@@ -205,7 +207,8 @@
     {
       "id": "finalize",
       "label": "Finalize",
-      "human": "The PR is merged and the epic/ticket is closed.\n\nI/O boundary: GitHub PR and Git merge operations are external artifacts. Parsed ticket readback and AC YAML progress are the structured records; this example performs no merge.\n\nContract fields and examples (generated)\nConsumes:\n  SOURCE-REVIEWED DOCUMENTATION: Source-reviewed transcription of templates/workflows-js/build-ticket.js readback response schema (also used by build-feature.js); no new runtime registration or automatic JavaScript/schema parity.\n  readback/ticket_path: string (optional)\n  readback/lifecycle_status: string (optional)\n  readback/needed_phases: array (optional)\n  readback/failed_phases: array (optional)\n  readback/signoffs: array (optional)\n  Schema: [readback](docs/product-truth/schemas/delivery-workflow-readback.schema.json)\nProduces:\n  ac/id: string (required)\n  ac/work_status: null|string (optional)\n  ac/implemented_by: array (optional; default [])\n  ac/covered_by: array (optional; default [])\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative readback projection; not an execution receipt — readback; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"ticket_path\": \"tickets/01_todo/feature.md\",\n  \"lifecycle_status\": \"in_progress\",\n  \"needed_phases\": [\n    \"python-coder\"\n  ],\n  \"failed_phases\": [],\n  \"signoffs\": [\n    {\n      \"agent\": \"test-writer\",\n      \"status\": \"passed\"\n    }\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"work_status\": \"done\",\n  \"implemented_by\": [\n    \"app/service.py\"\n  ],\n  \"covered_by\": [\n    \"tests/test_service.py::test_contract\"\n  ]\n}",
+      "description": "The finalize pipeline merges the pull request and closes the epic or ticket.",
+      "actor_kind": "deterministic",
       "order": 3,
       "expands_to": [
         "leafcutter/finalize-feature"

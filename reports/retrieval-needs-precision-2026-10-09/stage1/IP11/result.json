@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-f93d714397c649ee",
+  "root_task_id": "task-87c70f63bdf54213",
+  "state_revision": 3,
+  "status": "completed",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.retrieval_needs_output.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "original_question": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "ac"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "covered_by"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [
+          "covered_by"
+        ]
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "single_entity",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "unknown",
+      "unresolved": [
+        "needs_outside_catalog",
+        "The catalog cannot represent latest CI execution results, the CI run identity or the commit actually tested. Declared test references can identify relevant tests but cannot establish whether they passed. The supplied scope provides no confirmed CI execution source.",
+        "scope_resolution"
+      ],
+      "rationale": "The named criterion and its declared tests can be identified using offered meanings, but the requested outcome and run provenance require information outside the catalog. Source revision, work status, lifecycle status and authored test plans cannot substitute for execution evidence.",
+      "engine": "host_llm",
+      "status": "needs_resolution",
+      "model_id": null
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-needs-precision-2026-10-09\\stage1\\IP11\\runtime\\runs\\run-f93d714397c649ee\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [
+    "host-reported; not verified by the kernel",
+    "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+  ],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-a9c629c624ebdc1d",
+      "created_at": "2026-10-09T21:27:59.261721Z",
+      "updated_at": "2026-10-09T21:27:59.261721Z",
+      "created_seq": 0,
+      "gap_key": "003ad54bd72e1b656c39e7f01cc66c88c9fab46ec2e08b866058e2832782c393",
+      "gap_type": "host_only",
+      "goal": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+      "normalized_need": "2 500c ci cite commit did km latest pass run s tested",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+      "candidates_considered": [
+        "host.retrieval_needs"
+      ],
+      "candidate_exclusions": {},
+      "need_title": "Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-f93d714397c649ee"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: Did KM-500c-2's tests pass on the latest CI run? Cite the run and tested commit.",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/003ad54bd72e1b656c39e7f01cc66c88c9fab46ec2e08b866058e2832782c393.md"
+      },
+      "first_seen": "2026-10-09T21:27:59.261721Z",
+      "last_seen": "2026-10-09T21:27:59.261721Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 0,
+    "host_operations": 1,
+    "input_tokens": null,
+    "output_tokens": null,
+    "cost_usd_known": null,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 187262,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "8fdc26710275bc28d9aa986230d64e81",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

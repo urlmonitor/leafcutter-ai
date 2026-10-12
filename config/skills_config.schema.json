@@ -185,6 +185,22 @@
           "items": {"type": "string"},
           "description": "Path substrings — any process whose cmdline matches any entry aborts the cleanup instead of being killed. Use to protect production processes (e.g. live trader).",
           "default": []
+        },
+        "scratch_root": {
+          "type": "string",
+          "description": "The one designated scratch location for throwaway files. Empty means <user cache dir>/leafcutter/scratch (outside the project root, the system temp folder and every durable folder).",
+          "default": ""
+        },
+        "scratch_max_age_hours": {
+          "type": "number",
+          "description": "Age limit in hours after which a scratch item whose owner has ended or cannot be identified is expired.",
+          "default": 24
+        },
+        "durable_paths": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Project-relative folders that hold logs and evidence. Nothing under them is ever treated as scratch, and a test-runner scratch base may not point inside them.",
+          "default": ["debugging/logs", "test-logs"]
         }
       },
       "additionalProperties": false

@@ -118,6 +118,7 @@ class TestKnowledgeRun(ScenarioCase):
                             if request.disclosure_level
                             else None,
                             disclosure_level=request.disclosure_level,
+                            field_locators={"content": ""},
                         )
                     ],
                 )
@@ -136,6 +137,9 @@ class TestKnowledgeRun(ScenarioCase):
         )
         self.params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.9}
         paused = await self.service().start_run(task)
+        from tests.kernel.retrieval.needs_public_support import resume_graph_needs
+        paused = await resume_graph_needs(self.service, paused, target="decision_kernel",
+            entity_type="adr", document_type="adr", relationship="component_context", completeness="examples")
         assert "knowledge.operation_select" in {batch.purpose for batch in self.jev.batches}, (
             "The graph read ran without the Jev operation selection (DK-300d-4).")
         selected_operations = [

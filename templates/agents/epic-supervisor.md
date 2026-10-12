@@ -535,7 +535,9 @@ Move the epic folder to `tickets/99_done/EPIC-<Name>/`:
    - `mergeStateStatus` in (`BLOCKED`, `BEHIND`, `DIRTY`, `UNSTABLE`,
      `UNKNOWN`) → halt the merge step. Show the user the exact
      `mergeStateStatus` value and the failing required checks (from
-     `statusCheckRollup`), and stop. Do NOT call `gh pr merge`.
+     `statusCheckRollup`), and stop. Do NOT call `gh pr merge`. If the
+     failing check is `Post-merge suite status`, it is an external hold:
+     report it per `building-epics` §3.6.
    - `mergeable == "UNKNOWN"` → GitHub has not finished computing
      mergeability. Wait briefly and re-query once; if still `UNKNOWN`,
      surface that to the user and stop.

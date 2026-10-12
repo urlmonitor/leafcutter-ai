@@ -1,0 +1,156 @@
+{
+  "authored_by": "BA/IT PO frozen before runtime revision2; exact final H04 allowance excludes content.",
+  "common": {
+    "exact_question_and_source_echo": true,
+    "literal_anchor_unchanged": true,
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "ordinary_status": "decided",
+    "ordinary_scope_resolution": "sufficient",
+    "forbidden_extra_fields": "Every offered required field outside the stated minimal set, incidental set, or explicit equivalent provenance alternative.",
+    "rationale_does_not_substitute_for_selections": true,
+    "interpretation_and_execution_are_separate": true,
+    "ordinary_detail_mode": "fields"
+  },
+  "cases": [
+    {
+      "id": "H01",
+      "question": "What is the value of the declared test-reference field in KM-500c-1's canonical AC definition? Return that authored value only.",
+      "target": "KM-500c-1",
+      "context": [],
+      "expected": {
+        "kind": "fields",
+        "entity_types": [
+          "ac"
+        ],
+        "document_types": [
+          "ac_yaml"
+        ],
+        "relationships": [],
+        "completeness": "single_entity",
+        "detail_mode": "fields",
+        "status": "decided",
+        "scope_resolution": "sufficient",
+        "minimal_fields": [
+          "covered_by"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ]
+      }
+    },
+    {
+      "id": "H02",
+      "question": "Show a source excerpt from one test linked to KM-500a-2 as a covering test.",
+      "target": "KM-500a-2",
+      "context": [],
+      "expected": {
+        "kind": "one_test_source",
+        "entity_types": [
+          "test"
+        ],
+        "document_types": [
+          "code"
+        ],
+        "relationships": [
+          "covered_by"
+        ],
+        "completeness": "examples",
+        "detail_mode": "fields",
+        "minimal_fields": [
+          "content"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ],
+        "optional_provenance_side": {
+          "entity_type": "ac",
+          "document_type": "ac_yaml",
+          "field": "covered_by"
+        }
+      }
+    },
+    {
+      "id": "H03",
+      "question": "Return the complete set of source locators for test records linked as covering KM-500c-1.",
+      "target": "KM-500c-1",
+      "context": [],
+      "expected": {
+        "kind": "linked_locators",
+        "entity_types": [
+          "test"
+        ],
+        "document_types": [
+          "code"
+        ],
+        "relationships": [
+          "covered_by"
+        ],
+        "completeness": "exhaustive_set",
+        "detail_mode": "fields",
+        "minimal_fields": [
+          "source_locator"
+        ],
+        "incidental_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ],
+        "optional_provenance_side": {
+          "entity_type": "ac",
+          "document_type": "ac_yaml",
+          "field": "covered_by"
+        },
+        "execution_supported": false
+      }
+    },
+    {
+      "id": "H04",
+      "question": "For KM-500a-2, give the latest CI execution verdict with its run reference and tested commit.",
+      "target": "KM-500a-2",
+      "context": [],
+      "expected": {
+        "kind": "execution_gap",
+        "status": "needs_resolution",
+        "scope_resolution": [
+          "unknown",
+          "discovery_needed"
+        ],
+        "detail_mode": "fields",
+        "relationships": [],
+        "standalone_unresolved": "needs_outside_catalog",
+        "explanation": "Explicitly name missing execution verdict, run reference and tested commit; optional discovery belongs only in rationale.",
+        "candidate_entity_types": [
+          "ac",
+          "test",
+          "document"
+        ],
+        "candidate_document_types": [
+          "ac_yaml",
+          "code",
+          "documentation"
+        ],
+        "investigative_fields_allowed": [
+          "canonical_id",
+          "kind",
+          "title",
+          "source_sha",
+          "source_locator"
+        ],
+        "execution_supported": false
+      }
+    }
+  ],
+  "historical_IP11_unchanged": true,
+  "no_model_outputs_seen": true
+}

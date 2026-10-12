@@ -1,18 +1,33 @@
-# Post-merge timing suite (TQ-600a-13-xix).
+# Post-merge timing suite -- the timing lane (TQ-600a-13-xix, extended by TQ-600a-13-xii).
 #
-# Runs ONLY the tests marked `timing_ratio` -- the wall-clock ratio assertions
-# that are excluded from the default (required) pytest run because a ratio
-# measured on a shared runner fails on host noise. The job's exit status is the
-# run's conclusion: a failing ratio test turns THIS run red, and a lane that
-# collects nothing (pytest exit 5) is also made red rather than green. It never
-# holds a merge and writes no notice; TQ-600a-13-xii extends this file.
+# Runs ONLY the tests marked `timing_ratio` -- the wall-clock ratio assertions that are
+# excluded from the default (required) pytest run because a ratio measured on a shared
+# runner fails on host noise. This lane REPORTS and never holds a merge: the per-PR hold
+# reads post-merge-suite.yml by file name and never this workflow's runs.
 #
-# The build step is needed even though the timing_ratio tests themselves use no
-# deployed layout: pytest imports EVERY test module to evaluate `-m`, and some
-# modules import build outputs (scripts/commit_guardian/... symlinks). Without
-# the build, the first live run on main went red on 4 collection errors while
-# both ratio tests passed. Keep the name, triggers and concurrency group
-# unchanged when extending.
+# Three jobs, one conclusion, the same shape as post-merge-suite.yml (TQ-600a-13-ii):
+#   run     executes the lane once, uploads the per-test report and the list of
+#           first-run failures. It exits ZERO whenever it produced a report.
+#   retry   starts on a FRESH runner, receives ONLY the failure list, builds for itself
+#           and re-executes exactly those ids once under the SAME `-m` selection.
+#           Skipped when there were no failures. A timing test that fails and then
+#           passes is recorded (`passed_on_retry`) and never escalated: noise is the
+#           expected cause on a shared runner.
+#   verdict reads both reports and the run/retry results, writes post-merge-verdict.json
+#           (artifact `post-merge-verdict`, lane "timing") and fails at exactly one of
+#           the steps named `Verdict: red` / `Verdict: did not complete` on a non-green
+#           run. A lane that collects no test at all is did_not_complete (stage
+#           empty_selection), so an empty lane is red rather than green. The run's
+#           conclusion IS this job's exit status.
+# All decision logic lives in scripts/ci/post_merge_suite.py (`--lane timing`); the
+# `post-merge-timing` notice is written by post-merge-followup.yml, outside this run.
+# No run: step carries a dollar-brace expression (context arrives through env:).
+#
+# The build step is needed even though the timing_ratio tests themselves use no deployed
+# layout: pytest imports EVERY test module to evaluate `-m`, and some modules import build
+# outputs (scripts/commit_guardian/... symlinks). Without the build, the first live run on
+# main went red on 4 collection errors while both ratio tests passed. Keep the name,
+# triggers and concurrency group unchanged when extending.
 
 name: Post-merge timing suite
 
@@ -31,12 +46,62 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  timing:
+  run:
     name: Timing lane (timing_ratio)
     runs-on: ubuntu-latest
     # 45, not 20: the lane also carries TQ-600a-9's before/after ratio test, which
     # times two scoped pytest runs (one in a detached worktree at the merge-base).
     timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      failures: ${{ steps.lane.outputs.failure_count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Build — deploy .leafcutter so every test module imports
+        run: python scripts/build.py --target-dir .
+
+      - name: Run the timing lane
+        id: lane
+        env:
+          AC_ENFORCE_STRICT: "1"
+        run: python scripts/ci/post_merge_suite.py run --report first-run-report.json --failures first-run-failures.txt -- python -m pytest -m timing_ratio tests/ unit_tests/ -p no:cacheprovider --durations=20
+
+      - name: Upload the first-run report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-run-report
+          path: first-run-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload the first-run failure list
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: first-run-failures
+          path: first-run-failures.txt
+          if-no-files-found: ignore
+          retention-days: 30
+
+  retry:
+    needs: run
+    if: needs.run.outputs.failures != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -56,13 +121,77 @@ jobs:
       - name: Build — deploy .leafcutter so every test module imports
         run: python scripts/build.py --target-dir .
 
-      - name: Run the timing lane
+      - name: Download the failure list
+        uses: actions/download-artifact@v4
+        with:
+          name: first-run-failures
+          path: first-run-failures
+
+      - name: Re-execute the first-run failures once
         env:
           AC_ENFORCE_STRICT: "1"
-        run: |
-          rc=0
-          python -m pytest tests/ unit_tests/ -m timing_ratio -p no:cacheprovider || rc=$?
-          if [ "$rc" -eq 5 ]; then
-            echo "timing lane collected no tests (pytest exit 5): an empty lane is red" >&2
-          fi
-          exit "$rc"
+        run: python scripts/ci/post_merge_suite.py retry --failures first-run-failures/first-run-failures.txt --report retry-report.json -- python -m pytest -m timing_ratio -p no:cacheprovider
+
+      - name: Upload the retry report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retry-report
+          path: retry-report.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+  verdict:
+    needs: [run, retry]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    # EVERY step below is status-agnostic (`if: always()`): a step with no `if:` implies
+    # `success()` and is skipped once the run is cancelled, which would leave a cancelled
+    # run with no verdict artifact.
+    steps:
+      - uses: actions/checkout@v4
+        if: always()
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        if: always()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Download the reports
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # The dependency results tell a failed setup, a failed retry and a cancellation apart
+      # from a run that simply had no failures (TQ-600a-13-v). They arrive through env:.
+      - name: Classify the run
+        id: classify
+        if: always()
+        env:
+          RUN_RESULT: ${{ needs.run.result }}
+          RETRY_RESULT: ${{ needs.retry.result }}
+        run: python scripts/ci/post_merge_suite.py verdict --lane timing --artifacts artifacts --output post-merge-verdict.json
+
+      - name: Upload the verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-merge-verdict
+          path: post-merge-verdict.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: "Verdict: red"
+        if: always() && steps.classify.outputs.verdict == 'red'
+        run: python scripts/ci/post_merge_suite.py exit-status --verdict-file post-merge-verdict.json
+
+      - name: "Verdict: did not complete"
+        if: always() && steps.classify.outputs.verdict == 'did_not_complete'
+        run: python scripts/ci/post_merge_suite.py exit-status --verdict-file post-merge-verdict.json

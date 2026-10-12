@@ -84,8 +84,9 @@
           "label": {
             "type": "string"
           },
-          "human": {
-            "type": "string"
+          "description": {
+            "type": "string",
+            "description": "The stored step or branch description: one plain sentence of what happens."
           },
           "order": {
             "type": "number"
@@ -101,6 +102,20 @@
               "string",
               "null"
             ]
+          },
+          "actorKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human",
+              null
+            ],
+            "description": "Normalized actor_kind: which mechanism runs the node (deterministic, jev, llm or human); null when the stored value is absent or not one of the four."
           },
           "produces": {
             "type": "array",
@@ -213,10 +228,11 @@
         "required": [
           "id",
           "label",
-          "human",
+          "description",
           "order",
           "screen",
           "agent",
+          "actorKind",
           "produces",
           "consumes",
           "reads",
@@ -241,8 +257,9 @@
           "label": {
             "type": "string"
           },
-          "human": {
-            "type": "string"
+          "description": {
+            "type": "string",
+            "description": "The stored step or branch description: one plain sentence of what happens."
           },
           "screen": {
             "type": [
@@ -255,6 +272,20 @@
               "string",
               "null"
             ]
+          },
+          "actorKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human",
+              null
+            ],
+            "description": "Normalized actor_kind: which mechanism runs the node (deterministic, jev, llm or human); null when the stored value is absent or not one of the four."
           },
           "produces": {
             "type": "array",
@@ -373,9 +404,10 @@
         "required": [
           "id",
           "label",
-          "human",
+          "description",
           "screen",
           "agent",
+          "actorKind",
           "produces",
           "consumes",
           "reads",

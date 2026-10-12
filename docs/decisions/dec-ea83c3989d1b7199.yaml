@@ -1,0 +1,523 @@
+schema_version: '1.0'
+kind: decision
+id: dec-ea83c3989d1b7199
+repository_id: leafcutter-ai
+title: the fast lane once per code AC after resetting both to todo, plus one hand-authored docs ...
+description: 'Which build path should the open DK-600 decision-lifecycle ACs take? Open: two kernel ...'
+decision_type: design
+question: 'Which build path should the open DK-600 decision-lifecycle ACs take? Open: two kernel code ACs, DK-600a-3 (a finding
+  that cites any evidence id the kernel did not hand over is not accepted) and DK-600e-3-i (the run''s publish instruction
+  carries --correct, plus an end-to-end test), and nine documentation ACs (six assigned to architecture-diagram-author, three
+  to documentation-expert). The user set: review before main means a blocking pr-reviewer before commit; DK-600a-3 follows
+  its AC, not its ticket; the nine doc ACs get test_required false with a test_rationale; defect cost is low and the user
+  is present; about three PRs are preferred. The fast lane refuses documentation ACs. Options: (A) the fast lane once per
+  code AC after resetting both to todo, plus one hand-authored docs ticket with architecture-diagram-author, documentation-expert
+  and documentation-verifier built through build-feature; (B) rewire the two existing kernel tickets with source_ac, test-writer,
+  pr-reviewer and Test Requirements and build each through build-feature, plus the same docs ticket; (C) build-ac in leaf
+  mode on the two code ACs with pr-reviewer added, retiring the existing tickets, plus the same docs ticket; (D) build-ac
+  in goal mode on DK-600, one epic of about fourteen tickets through build-feature.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.A_fast_code_docs_ticket
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Which build path should the open DK-600 decision-lifecycle ACs take? Open: two kernel code ACs, DK-600a-3 (a finding
+    that cites any evidence id the kernel did not hand over is not accepted) and DK-600e-3-i (the run''s publish instruction
+    carries --correct, plus an end-to-end test), and nine documentation ACs (six assigned to architecture-diagram-author,
+    three to documentation-expert). The user set: review before main means a blocking pr-reviewer before commit; DK-600a-3
+    follows its AC, not its ticket; the nine doc ACs get test_required false with a test_rationale; defect cost is low and
+    the user is present; about three PRs are preferred. The fast lane refuses documentation ACs. Options: (A) the fast lane
+    once per code AC after resetting both to todo, plus one hand-authored docs ticket with architecture-diagram-author, documentation-expert
+    and documentation-verifier built through build-feature; (B) rewire the two existing kernel tickets with source_ac, test-writer,
+    pr-reviewer and Test Requirements and build each through build-feature, plus the same docs ticket; (C) build-ac in leaf
+    mode on the two code ACs with pr-reviewer added, retiring the existing tickets, plus the same docs ticket; (D) build-ac
+    in goal mode on DK-600, one epic of about fourteen tickets through build-feature.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.B_rewire_existing] rewire the two existing kernel
+    tickets with source_ac, test-writer, pr-reviewer and Test Requirements and build each through build-feature, plus the
+    same docs ticket (required mean 0.44, 0/6 passed); 2. [opt.C_build_ac_leaf] build-ac in leaf mode on the two code ACs
+    with pr-reviewer added, retiring the existing tickets, plus the same docs ticket (required mean 0.41, 0/6 passed); 3.
+    [opt.D_goal_epic] build-ac in goal mode on DK-600, one epic of about fourteen tickets through build-feature (required
+    mean 0.40, 0/6 passed); 4. [opt.A_fast_code_docs_ticket] the fast lane once per code AC after resetting both to todo,
+    plus one hand-authored docs ticket with architecture-diagram-author, documentation-expert and documentation-verifier built
+    through build-feature (required mean 0.33, 0/6 passed). human:user chose option [opt.A_fast_code_docs_ticket] the fast
+    lane once per code AC after resetting both to todo, plus one hand-authored docs ticket with architecture-diagram-author,
+    documentation-expert and documentation-verifier built through build-feature (kernel rank 4 of 4).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.3333
+  selected_rank: 4
+  ranking:
+    - option_id: opt.B_rewire_existing
+      rank: 1
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.4417
+      scores:
+        crit.blocking_review: 0.71
+        crit.builds_against_ac: 0.35
+        crit.code_test_first: 0.63
+        crit.docs_done_with_proof: 0.32
+        crit.docs_written_and_verified: 0.25
+        crit.flows_built: 0.39
+        crit.low_overhead: 0.28
+    - option_id: opt.C_build_ac_leaf
+      rank: 2
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.4083
+      scores:
+        crit.blocking_review: 0.61
+        crit.builds_against_ac: 0.74
+        crit.code_test_first: 0.18
+        crit.docs_done_with_proof: 0.37
+        crit.docs_written_and_verified: 0.27
+        crit.flows_built: 0.28
+        crit.low_overhead: 0.46
+    - option_id: opt.D_goal_epic
+      rank: 3
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.4017
+      scores:
+        crit.blocking_review: 0.56
+        crit.builds_against_ac: 0.33
+        crit.code_test_first: 0.36
+        crit.docs_done_with_proof: 0.36
+        crit.docs_written_and_verified: 0.44
+        crit.flows_built: 0.36
+        crit.low_overhead: 0.19
+    - option_id: opt.A_fast_code_docs_ticket
+      rank: 4
+      required_passed: 0
+      required_total: 6
+      required_mean: 0.3333
+      scores:
+        crit.blocking_review: 0.38
+        crit.builds_against_ac: 0.41
+        crit.code_test_first: 0.27
+        crit.docs_done_with_proof: 0.29
+        crit.docs_written_and_verified: 0.35
+        crit.flows_built: 0.3
+        crit.low_overhead: 0.47
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.A_fast_code_docs_ticket
+    title: the fast lane once per code AC after resetting both to todo, plus one hand-authored docs ticket with architecture-diagram-author,
+      documentation-expert and documentation-verifier built through build-feature
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-9cd9150f05d5407a
+      - ev-d65ccfb1f0c00c8e
+      - ev-b81f287fc8357d71
+      - ev-be91f8ef8cacac99
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.B_rewire_existing
+    title: rewire the two existing kernel tickets with source_ac, test-writer, pr-reviewer and Test Requirements and build
+      each through build-feature, plus the same docs ticket
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-90a44b4c86864d3b
+      - ev-94d26a30b868ab21
+      - ev-6f867dc48347f9c6
+      - ev-05a7390659d1261a
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.C_build_ac_leaf
+    title: build-ac in leaf mode on the two code ACs with pr-reviewer added, retiring the existing tickets, plus the same
+      docs ticket
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-05a7390659d1261a
+      - ev-bccf4f315019a551
+      - ev-6f867dc48347f9c6
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.D_goal_epic
+    title: build-ac in goal mode on DK-600, one epic of about fourteen tickets through build-feature
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-05a7390659d1261a
+      - ev-6f867dc48347f9c6
+      - ev-bccf4f315019a551
+    proposed_by: caller_goal
+    approved_by: null
+criteria:
+  - id: crit.flows_built
+    question: Do DK-600a-3 and DK-600e-3-i reach done through the coverage-gated done marker with passing covers-tagged tests,
+      so the decision flows show as built in the Atlas?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-9cd9150f05d5407a
+      - ev-90a44b4c86864d3b
+      - ev-0a2604e87d3b3d12
+      - ev-bccf4f315019a551
+      - ev-c1b1e1f4e321b768
+  - id: crit.docs_done_with_proof
+    question: Does each of the nine documentation ACs reach done through mark_ac_done.py, with its doc file named in implemented_by
+      and changed in the PR?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-9cd9150f05d5407a
+      - ev-90a44b4c86864d3b
+      - ev-0a2604e87d3b3d12
+      - ev-05a7390659d1261a
+      - ev-c1b1e1f4e321b768
+  - id: crit.code_test_first
+    question: Does each kernel change start with a test-writer whose new covers-tagged test is proven red before the coder
+      runs and green afterwards?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-9cd9150f05d5407a
+      - ev-bccf4f315019a551
+      - ev-05a7390659d1261a
+      - ev-a8fc6e77fef11233
+      - ev-7ac9a0e4dd480d9c
+  - id: crit.docs_written_and_verified
+    question: Is each documentation AC produced by its assigned producer (architecture-diagram-author or documentation-expert)
+      as a build phase and checked by documentation-verifier?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-d65ccfb1f0c00c8e
+      - ev-c9572d7d2e4daf4a
+      - ev-7ac9a0e4dd480d9c
+      - ev-6f867dc48347f9c6
+      - ev-bccf4f315019a551
+  - id: crit.blocking_review
+    question: Does each kernel diff get a blocking pr-reviewer verdict before it is committed?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-bccf4f315019a551
+      - ev-baacf1c2010cabec
+      - ev-7ac9a0e4dd480d9c
+      - ev-90f8fc5cef305c19
+      - ev-d65ccfb1f0c00c8e
+  - id: crit.builds_against_ac
+    question: Is each change built against its AC's criteria and test_spec rather than a ticket whose scope differs from the
+      AC?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-05a7390659d1261a
+      - ev-9cd9150f05d5407a
+      - ev-be91f8ef8cacac99
+      - ev-b81f287fc8357d71
+      - ev-90a44b4c86864d3b
+  - id: crit.low_overhead
+    question: How few workflow runs, worktrees, PRs and human confirmation prompts does the path need?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-a8fc6e77fef11233
+      - ev-7caeb8163053969c
+      - ev-7ac9a0e4dd480d9c
+evidence:
+  - id: ev-9cd9150f05d5407a
+    locator: docs/known-issues/build-orchestration/open-high-ki-bo-013.md#L16-L49 (§KI-BO-013 — A documentation-only AC anywhere
+      in a resolved …)
+    category: task_context
+    content_hash: 708e747da6745162d9896e6bb2a38709c924c1255d2fed4b8e2f77816aa1ec54
+    verification: source_verified
+    relevance: 0.87
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-be91f8ef8cacac99
+    locator: docs/acceptance-criteria/decision-kernel/DK-600-decide-once-reuse/DK-600a-3.yaml#L72-L112 (test_spec)
+    category: task_context
+    content_hash: 96435b331c8c2a80fd1007c3aef7bc2d983e447082d7bf9bc0dcf263bb9b931a
+    verification: source_verified
+    relevance: 0.58
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-94d26a30b868ab21
+    locator: tickets/00_inbox/TICKET-20261002-KernelSupersedePublishCorrect.md#L29-L36 (§Context)
+    category: prior_decisions
+    content_hash: a0891d35e34f8b409dae1c59f1a67a3cbbe1bd226d969726aedf0883d68941a4
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-b81f287fc8357d71
+    locator: docs/known-issues/ac-store/resolved/resolved-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md#L82-L106
+      (§KI-ACS-20260914-mark-ac-done-refuses-every-test-required-fa…)
+    category: task_context
+    content_hash: 77f63fa56f947399cd61d826dcbec277fa5101974d6294d31e05d1a50471e5af
+    verification: source_verified
+    relevance: 0.65
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-d65ccfb1f0c00c8e
+    locator: docs/architecture/components/build-orchestration.md#L120-L129 (§Documentation Coverage — Runtime Phase Flow)
+    category: prior_decisions
+    content_hash: 52e07df283a5ded160221f2201771503d44604ebfcf8feba4db5d4ac9897a7ab
+    verification: source_verified
+    relevance: 0.67
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-9cc8895292df8a93
+    locator: docs/acceptance-criteria/decision-kernel/DK-600-decide-once-reuse/DK-600e-3-i.yaml#L73-L114 (test_spec)
+    category: task_context
+    content_hash: 0deaa29e34c1572da50faeece0c9bdada327a017e3a8d2cf5be17567e83cb403
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-6f867dc48347f9c6
+    locator: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md#L33-L76 (§Feature to Merged PR — End-to-End Sequence
+      Diagram)
+    category: existing_patterns
+    content_hash: a0ca71bb4f7813c4743481682d9e0f066baf78a86e0919dd30ce729928abd98c
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-bccf4f315019a551
+    locator: scripts/ac_store/_gtfa_constants.py#L164-L188
+    category: existing_patterns
+    content_hash: 08cf1a39e1b11181780376ea8bc8f2736e114660788cd1388e7184f9d3c50b90
+    verification: source_verified
+    relevance: 0.72
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-05a7390659d1261a
+    locator: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md#L33-L63 (§Context)
+    category: prior_decisions
+    content_hash: 0727f28d82cae684e3783ca465321f66f0c1ad608192d9794232bc67ddd70e32
+    verification: source_verified
+    relevance: 0.82
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-90a44b4c86864d3b
+    locator: tickets/00_inbox/TICKET-20261002-KernelSynthesisCitationCheck.md#L38-L44 (§Scope (no ACs, by user decision))
+    category: prior_decisions
+    content_hash: 623dd15d9c4946f9c1128c834b17c95722496323be0f227f53f583537a169b89
+    verification: source_verified
+    relevance: 0.75
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-95e49249ff03ae92
+    locator: tickets/00_inbox/TICKET-20261002-DecisionKernelACTestGaps.md#L51-L54 (§Out of Scope)
+    category: prior_decisions
+    content_hash: 0088e169706c3044ec2251decbe937e032f3b6cddec0d26fcbca681ce711ae93
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-7caeb8163053969c
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L274-L278 (§As built (decision store))
+    category: prior_decisions
+    content_hash: fcce247efd2a062157be713753e887de52bd58dd4800e8fc96b889704c48751c
+    verification: source_verified
+    relevance: 0.65
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-a8fc6e77fef11233
+    locator: docs/architecture/diagrams/c2-fast-lane-build-path-components.md#L211-L220 (§Component Descriptions)
+    category: existing_patterns
+    content_hash: f8fde773bd5934b5be2189c61e0aa5f997783d4d4deb3a636026ea10fbc3e386
+    verification: source_verified
+    relevance: 0.84
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-c1b1e1f4e321b768
+    locator: docs/known-issues/ac-store/resolved/resolved-high-ki-acs-20260914-mark-ac-done-refuses-every-test-required-false-leaf.md#L110-L134
+      (§KI-ACS-20260914-mark-ac-done-refuses-every-test-required-fa…)
+    category: existing_patterns
+    content_hash: 6cb563b46dab8c3a08853cb317e98157aed82acb715c7d1ff752e0240110d05e
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-0a2604e87d3b3d12
+    locator: docs/known-issues/ac-store/open-high-ki-acs-004.md#L16-L50 (§KI-ACS-004 — An AC is marked `done` with no link
+      to the cod…)
+    category: existing_patterns
+    content_hash: aa5148489cc7a0b227fdf5c98fc3123b85331342701bdacaeca2d4858fe4275c
+    verification: source_verified
+    relevance: 0.61
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-baacf1c2010cabec
+    locator: scripts/build_orchestration/_fl_producibility.py#L142-L171 (module level)
+    category: existing_patterns
+    content_hash: 1d18dff7a05fde4161049bca992dfe7ff8c743531348d98a275ad76a2129f660
+    verification: source_verified
+    relevance: 0.79
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-a313e8b42a7ad796
+    locator: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-13.yaml#L161-L163 (delivers_to)
+    category: existing_patterns
+    content_hash: 06985928b59f16e4623ece1ab4e1254224d0a0b190a51cb88f5242968e25d108
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-9fdd625eede4388e
+    locator: 'docs/architecture/diagrams/c2-fast-lane-build-path-components.md#L177-L198 (§Fast-Lane vs Heavy Pipeline: Key
+      Distinctions)'
+    category: existing_patterns
+    content_hash: f510dbcd637b440d3da619792f3ee049a88df6cedca25065b9793b41a01de331
+    verification: source_verified
+    relevance: 0.75
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-411a95b8097bc96b
+    locator: docs/known-issues/build-orchestration/open-high-ki-bo-011.md#L16-L44 (§KI-BO-011 — A grep-only test aimed at
+      an orphaned file kept…)
+    category: existing_patterns
+    content_hash: 5ebbb256fd61802431bfb22ab6c6847b3ab1bab5f98ee99ca8eedafde30caaf3
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-552f5277eb1949c5
+    locator: docs/architecture/adrs/ADR-039-fast-lane-occupied-workspace-refusal.md#L157-L171 (§Decision > 3. The refusal
+      is a discriminated payload that cannot be mi…)
+    category: existing_patterns
+    content_hash: ed1579afc947d0641ede97992eb356529b31b0d28cbf6a9365f91da2fd5aa2f6
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-7ac9a0e4dd480d9c
+    locator: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md#L30-L67 (§Fast-Lane Build Loop — Sequence Diagram)
+    category: existing_patterns
+    content_hash: 1a8a4d1b022951e438df115187e38c2d4b20a61f4aea1118ab04b1e3c04e1702
+    verification: source_verified
+    relevance: 0.69
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-c9572d7d2e4daf4a
+    locator: docs/architecture/adrs/ADR-036-documentation-dispatch-caller-boundary.md#L212-L229 (§4. Consequences > Negative)
+    category: existing_patterns
+    content_hash: cffccebf2af1727906c22052228b402a77b5a2115212727f6a7665ca3be8f5c7
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-90f8fc5cef305c19
+    locator: scripts/ac_store/_gtfa_constants.py#L163-L187
+    category: existing_patterns
+    content_hash: d0c2bd73d56b6a00c47d45006d040752d5846e64887ed8fdc7f4b5c61f93ce89
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-7dbbaa2a5dd512c6
+    locator: docs/build-dataflow.json#L11966-L12026 (nodes)
+    category: existing_patterns
+    content_hash: 6d4dc7f5b81fc0e30df7f511e931ad14066019c75c8fd512c9b5e43d23d3ddd5
+    verification: source_verified
+    relevance: 0.7
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-bf6444911750e7ab
+    locator: docs/how-to/writing-a-tdd-ticket.md#L135-L156 (§FAQ > How do I set up a ticket for docs-only or config-only work?)
+    category: existing_patterns
+    content_hash: da3a6465222a21cc99f0e60daafd0335f5a0601fc89f77a35e7f977dc8d883d0
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-9127904f5625dae9
+    locator: docs/architecture/adrs/ADR-017-computed-quality-gates.md#L169-L191 (§Decision > 4. Generation-time materialisation
+      in Python (AC-Computatio…)
+    category: existing_patterns
+    content_hash: 177e43fc02cf353876c067521ee6d2fe92aead07d4c5d04378b8cbec4d0d1c1a
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+  - id: ev-63e4a38c07cac600
+    locator: docs/reference/documentation-coverage-guarantee.md#L37-L45 (§1. The `documentation_gates` Trigger Policy)
+    category: existing_patterns
+    content_hash: 4f91ebbcfb11f7b2aa228323212f38fde0fdff47be4f115dcf18dbe791ab9ee8
+    verification: source_verified
+    relevance: 0.61
+    source_version:
+      commit: baa59981acb51775fade5f45f332d10f0a0429af
+      dirty: true
+precedents_considered:
+  - id: dec-9925ebf1895222f4
+    applicability: 0.22
+    action: not_applicable
+    note: judged not to apply to this question; human:user approved [opt.added.1] on 2026-10-05
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-10T09:45:24Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-10T09:45:24Z'
+  run_id: run-15370804bdd84656
+  root_task_id: task-27275983d7d94e1e
+  langfuse_trace_id: 46763bf9d0929e24bec4d1c760c3af91
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: c66b5a81312a
+    criteria: 2f04d5d03ed2
+    templates: decision.assess@1
+corrections: []

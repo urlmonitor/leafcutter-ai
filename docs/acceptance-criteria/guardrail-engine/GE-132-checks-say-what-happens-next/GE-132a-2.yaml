@@ -1,0 +1,206 @@
+id: GE-132a-2
+title: "A remedy declaration naming a specialist or a skill that does not exist, or giving the author no instructions, is refused"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given check-complexity's remedy declaration names the restructuring specialist,
+    names the complexity-reduction skill, and gives the author the instruction "bring
+    in the restructuring specialist to apply the complexity-reduction skill to the
+    named function; never raise the limit",
+  And check-doc-links' remedy declaration names no specialist because the author clears
+    it, and gives the author the instruction "fix or remove the broken link",
+  When a change to the remedy declarations is committed,
+  Then the commit is not refused on account of either declaration.
+
+  Given check-complexity's declaration instead names the agent complexity-fixer, which
+    no agent definition provides,
+  When that change is committed,
+  Then the commit is refused, naming check-complexity and complexity-fixer as an agent
+    that does not exist.
+
+  Given check-complexity's declaration instead names the skill complexity-reducer, which
+    no installed skill provides,
+  When that change is committed,
+  Then the commit is refused, naming check-complexity and complexity-reducer as a skill
+    that does not exist.
+
+  Given check-doc-links' declaration instead gives the author instructions that are
+    absent, empty or only whitespace,
+  When that change is committed,
+  Then the commit is refused, naming check-doc-links as a declaration that tells the
+    author nothing.
+depends_on:
+  - GE-132a
+  - INF-800f-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e-3-ii.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The same "names only help that exists" rule for one check's instructions. This record
+      applies it to the specialist and the skill of every declaration.
+  - path: config/agent_registry.json
+    relationship: depends_on
+    status: exists
+  - path: templates/skills/complexity-reduction/SKILL.md
+    relationship: related
+    status: exists
+  - path: templates/scripts/precommit-autofix.json
+    relationship: modifies
+    status: exists
+  - path: config/skill_registry.json
+    relationship: depends_on
+    status: exists
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to:
+  - ac_id: BO-3800b-3
+    contract: >-
+      A declared specialist and skill that resolve to a real agent and a real skill, so the
+      run never brings in a party that cannot be engaged. Added 2026-10-09: every
+      declaration carries a validated disposition (author-clears | mechanical-autofix |
+      engage-specialist), and only engage-specialist triggers the BO-3800 run.
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    One validator. This record extends the check GE-132a-1 hosts (check-hook-parity, with
+    its widened trigger) and registers no second hook. It reads the declarations through
+    GE-132a-1's shared loader (local table, with a per-hook fallback to the package seed)
+    and refuses under the same outcome vocabulary. Each refusal names the file that supplied
+    the offending declaration.
+  - >-
+    PER-CHECK DISPOSITION (decided by BrainCandy, 2026-10-09). Every declaration carries
+    exactly one disposition: author-clears, mechanical-autofix or engage-specialist.
+    author-clears names no agent and may carry no skills. mechanical-autofix names the fixer
+    agent of BO-210's existing autofix route, such as general-purpose or glossary-triage.
+    engage-specialist names the specialist the BO-3800 run brings in, plus the skills that
+    specialist applies. Only engage-specialist triggers the BO-3800 run (BO-3800b-3). The
+    validator refuses, naming the hook: a disposition that is absent or not one of the
+    three; an author-clears declaration that names an agent; and a mechanical-autofix or
+    engage-specialist declaration that names no agent. The disposition is the only signal
+    a reader uses to choose the route. Inferring the route from the agent's name or from
+    category is forbidden.
+  - >-
+    "THE AGENT EXISTS", decided here. A named agent exists when its id is in
+    config/agent_registry.json agents[] and that entry's template_path resolves to a file.
+    The other route is membership of a closed list of platform-provided agents, declared as
+    data beside the declarations, never in code. Its only member is general-purpose: 11 of
+    today's 20 rules name it, and so does defaults.subagent_type. Widening that list is a
+    reviewed edit to the data. Accepting any name, a prefix, or "anything not obviously
+    wrong" is forbidden, and arm two (complexity-fixer) is the test of that.
+  - >-
+    "THE SKILL EXISTS" means the id is in config/skill_registry.json skills[] and its
+    template_path resolves.
+  - >-
+    "Names no specialist because the author clears it" is the author-clears disposition. It
+    is never the absence of a field, which GE-132a-1 treats as no declaration. The author's
+    instruction is one named field per rule. It is refused when absent, empty or
+    whitespace-only, whatever the disposition.
+  - >-
+    SAME CHANGE, or the real tree refuses itself on day one.
+    check-complexity: engage-specialist, naming restructuring-specialist (INF-800f-1) and the
+    skill complexity-reduction, with arm one's instruction.
+    check-doc-links: author-clears, with "fix or remove the broken link". Its general-purpose
+    autofix route is dropped deliberately, as arm one requires.
+    Every other rule for a registered check (18 once GE-132a-1 removes the stale one and
+    renames the other) keeps today's behaviour: mechanical-autofix, naming its current
+    subagent_type, plus a non-empty instruction that its description may seed. That covers
+    the other 10 general-purpose rules, glossary-triage and sql-coder. The structural coder
+    rules (check-exception-handling, check-file-size, check-ac-schema,
+    check-contract-shrinking) also take mechanical-autofix, because BO-210c's
+    originator re-dispatch stays their route. Moving check-file-size to engage-specialist is
+    BO-3800b-1's change, not this one.
+  - >-
+    A registry that cannot be read refuses as could-not-check. It never passes, and is never
+    reported as "agent does not exist". Each refusal names the hook id, the unresolved name,
+    and whether that name is an agent or a skill.
+  - >-
+    OUT OF THIS POPULATION, ON PURPOSE. commit_review.subagent_type is commit-reviewer, which
+    is not in config/agent_registry.json (checked at origin/main bd4ecb9a). commit_review is
+    not a rules[] remedy declaration, so this validator does not judge it. Do not widen the
+    platform list to make it pass. Raise it separately.
+  - >-
+    Tests drive the real check through real `git commit` in a scratch repo carrying the
+    generated stanza from shared_reference_layout (@pytest.mark.shared_layout_reader), with
+    copies of the REAL agent and skill registries. Add no new build.py spawn.
+test_required: true
+test_spec:
+  - name: test_ge132a2_real_declarations_with_specialist_and_author_clears_are_accepted
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: real_artifact
+    description: "Arm 1, the regression boundary. The scratch repo carries the REAL tracked routing table and registries. A commit touching the declarations passes. The shared loader resolves three dispositions. check-complexity is engage-specialist, naming restructuring-specialist and complexity-reduction. check-doc-links is author-clears, naming no agent. The remaining general-purpose rules are mechanical-autofix and pass through the platform-agent route. RED TODAY: the real rule names python-coder, there are no disposition, skill or instruction fields, and restructuring-specialist is unregistered."
+    must_catch:
+      - "a validator that refuses every declaration"
+      - "naming no specialist mistaken for naming one that does not exist"
+  - name: test_ge132a2_unknown_agent_is_refused_naming_it
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Arm 2. check-complexity's fixture declaration is engage-specialist, naming complexity-fixer. The commit is refused, naming check-complexity and complexity-fixer as an agent that does not exist. Disposition-shape subcases in the same test: an absent disposition, an unknown value, author-clears naming an agent, and engage-specialist naming none. Each is refused, naming check-complexity. RED TODAY."
+    must_catch:
+      - "the route inferred from the agent name instead of a declared disposition"
+  - name: test_ge132a2_unknown_skill_is_refused_naming_it
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Arm 3. The fixture names the skill complexity-reducer. The commit is refused, naming check-complexity and complexity-reducer as a skill that does not exist. RED TODAY."
+  - name: test_ge132a2_declaration_with_no_instruction_is_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Arm 4, with subcases for an absent, an empty and a whitespace-only instruction on check-doc-links. Each commit is refused, naming check-doc-links as a declaration that tells the author nothing. RED TODAY."
+test_rationale: >-
+  The validator is only as good as arm one. A validator that refuses everything passes arms
+  two to four, so arm one runs over the real tracked declarations and registries. One test
+  per arm, all through a real commit. All four are red today.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PLATFORM-PROVIDED AGENTS. 11 of today's 20 routing rules name `general-purpose`, which is
+  provided by the platform and has no entry in the agent registry. "Exists" must accept it
+  on that basis, or every one of those rules is refused on day one. Which names count as
+  provided is the IT PO's decision. Do not quietly widen it to "any name".
+
+  ORDER OF LANDING. The first arm's real check-complexity declaration names the
+  restructuring specialist, which only exists once INF-800f-1 lands; hence the depends_on.
+  The "does not exist" arms are exactly what would refuse that declaration if it landed
+  first. BrainCandy decided on 2026-10-09 that complexity and file size share this one
+  specialist, and python-coder is no longer complexity's handler.
+
+  THE FIRST ARM IS THE REGRESSION BOUNDARY. A validator that refuses every declaration
+  passes arms two to four. Only arm one, real declarations accepted, rules that build out.
+  The "author clears it" declaration is in arm one so that naming no specialist is never
+  mistaken for naming one that does not exist.
+
+  WHY REFUSE AND NOT WARN. A declaration pointing at a missing specialist does damage at
+  the worst moment: during a drive, when the run tries to bring that specialist in.
+  BO-3800c-1-i and BO-3800d-2 would then report a stop the author can do nothing about.
+  The cheap moment to catch it is the commit that wrote the declaration.

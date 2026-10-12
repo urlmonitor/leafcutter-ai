@@ -1,0 +1,1282 @@
+{
+  "mode": "Real TypeSafe Jev plus independent blind host; local storage over 18 actual committed AC mappings and real Git source disclosure. No live Neo4j positive claim.",
+  "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+  "working_source_hash": "9ee31b7b905631431dbad9b2c02f30f434e509be9c6699982539a587a6435d07",
+  "complete_positive_answers": 0,
+  "positive_cases": 5,
+  "negative_stale_control_passed": true,
+  "honest_noncomplete_cases": 6,
+  "actual_jev_calls": 7,
+  "accepted_host_results": 8,
+  "host_model_id": null,
+  "host_provider_request_count": null,
+  "jev_model_id": "jev-1.13.0",
+  "scope": {
+    "graph_writes": 0,
+    "catalog_writes": 0,
+    "telemetry_exports": 0,
+    "prompt_or_threshold_changes": 0
+  },
+  "cases": [
+    {
+      "id": "P01",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Complete canonical criteria, literal target and source citations; no caller operation/fields/answer.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [
+        {
+          "model": "jev-1.13.0",
+          "input": {
+            "questions": [
+              {
+                "id": "operation",
+                "kind": "choice",
+                "template_id": "knowledge.operation_select.v1",
+                "template_version": "1"
+              }
+            ],
+            "state_chars": 2537,
+            "input_fingerprint": "ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4"
+          },
+          "output": {
+            "answers": {
+              "operation": {
+                "schema_version": "1.0",
+                "kind": "choice",
+                "question_id": "operation",
+                "choice": "get_entities",
+                "probabilities": {
+                  "get_entities": 0.95,
+                  "get_related_tests": 0.04,
+                  "get_declared_dependents": 0.0,
+                  "unsupported": 0.01,
+                  "unsupported_population": 0.0
+                },
+                "confidence": 0.94
+              }
+            }
+          },
+          "usage": {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 1641,
+            "output_tokens": 62,
+            "duration_ms": 340,
+            "cost_usd": 6.8922e-05,
+            "cost_provenance": "estimated",
+            "calls": 1
+          },
+          "metadata": {
+            "purpose": "knowledge.operation_select",
+            "adapter_version": "typesafe-classifier/0.0.1a3",
+            "latency_ms": 340,
+            "question_count": 1,
+            "status": "ok",
+            "template_ids": [
+              "knowledge.operation_select.v1@1"
+            ],
+            "request_id": "req_01a1215bab6c7065bf7c7b28f32ac1a3",
+            "calls": 1,
+            "input_fingerprint": "ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4",
+            "chunk_index": 0,
+            "chunk_count": 1,
+            "attempts": 1
+          }
+        }
+      ],
+      "source_executions": [
+        {
+          "repository_id": "public-needs-acceptance",
+          "request_id": "inv-2be31754cf6c4e8a",
+          "requested_mode": "exact",
+          "operation": "get_entities",
+          "disclosure_level": 0,
+          "retrieval_id": "091ea444-b651-41d5-a092-ea3d3908f89b",
+          "generation_id": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "executed_mode": "exact",
+          "status": "ok",
+          "evidence_count": 1
+        },
+        {
+          "repository_id": "public-needs-acceptance",
+          "request_id": "inv-2be31754cf6c4e8a",
+          "requested_mode": "exact",
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "retrieval_id": "440f0138-cffd-45eb-8870-2a67004d28cb",
+          "generation_id": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "executed_mode": "exact",
+          "status": "ok",
+          "evidence_count": 1
+        }
+      ],
+      "diagnostics": [
+        {
+          "knowledge_status": "ok",
+          "knowledge_retrieval_id": "440f0138-cffd-45eb-8870-2a67004d28cb",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 3,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29328,\"max_estimated_tokens\":3140,\"deadline_ms\":6547}",
+          "knowledge_generation": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_answer": "{\"status\":\"partial\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\",\"test_spec\"],\"scope\":{\"population\":\"returned_entities\",\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[{\"canonical_id\":\"KM-500c-2\",\"field\":\"test_spec\",\"reason\":\"unknown\"}],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-2be31754cf6c4e8a\", \"retrieval_id\": \"440f0138-cffd-45eb-8870-2a67004d28cb\", \"execution_status\": \"ok\", \"answer_status\": \"partial\", \"expected\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-2be31754cf6c4e8a\"}, \"observed\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-2be31754cf6c4e8a\", \"generation_id\": \"bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [{\"canonical_id\": \"KM-500c-2\", \"field\": \"test_spec\", \"reason\": \"unknown\"}], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 2,
+          "knowledge_retrieval_refs": "091ea444-b651-41d5-a092-ea3d3908f89b,440f0138-cffd-45eb-8870-2a67004d28cb",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 3.887391700060107,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-b680fc14fad3954a",
+          "created_at": "2026-10-09T15:50:21.824898Z",
+          "updated_at": "2026-10-09T15:50:21.824898Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T15:50:21.824898Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-2be31754cf6c4e8a",
+            "strategy": "knowledge:440f0138-cffd-45eb-8870-2a67004d28cb",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        }
+      ],
+      "findings": [
+        {
+          "schema_version": "1.0",
+          "id": "find-6f50216085b601a4",
+          "created_at": "2026-10-09T15:53:41.417459Z",
+          "updated_at": "2026-10-09T15:53:41.417459Z",
+          "created_seq": 0,
+          "claim": "For KM-500c-2, tests must demonstrate that, after research obtains results from an existing or newly verified query, its existing evidence evaluation assesses answerability and the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-2c8a647a65d8edc3",
+          "created_at": "2026-10-09T15:53:41.417459Z",
+          "updated_at": "2026-10-09T15:53:41.417459Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that successful build, successful query execution, and successful answer assessment remain separate recorded outcomes.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-45959c29ff83d802",
+          "created_at": "2026-10-09T15:53:41.417459Z",
+          "updated_at": "2026-10-09T15:53:41.417459Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that zero matches, contradictory evidence, and insufficient evidence remain distinguishable, with their limitations preserved.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-216629db77a4fde3",
+          "created_at": "2026-10-09T15:53:41.417459Z",
+          "updated_at": "2026-10-09T15:53:41.417459Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that any bounded synthesis or follow-up uses the existing research policy and does not silently equate query availability with answer quality.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        }
+      ],
+      "assessments": {
+        "need.question": {
+          "kind": "retrieval_answer",
+          "status": "partial",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [
+            {
+              "canonical_id": "KM-500c-2",
+              "field": "test_spec",
+              "reason": "unknown"
+            }
+          ],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      },
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Original answer requirements remain partial",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: conditional assessment remains partial",
+        "required need need.question is partial"
+      ],
+      "jev_calls": 2,
+      "accepted_host_results": 2,
+      "receipt": "public-evaluation/P01.current.json"
+    },
+    {
+      "id": "P02",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": true,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Same obligations and canonical evidence as P01; no query construction or catalog activation.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. Test links, a test-required flag, and progress statuses do not provide those obligations.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [
+        {
+          "model": "jev-1.13.0",
+          "input": {
+            "questions": [
+              {
+                "id": "operation",
+                "kind": "choice",
+                "template_id": "knowledge.operation_select.v1",
+                "template_version": "1"
+              }
+            ],
+            "state_chars": 2537,
+            "input_fingerprint": "ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4"
+          },
+          "output": {
+            "answers": {
+              "operation": {
+                "schema_version": "1.0",
+                "kind": "choice",
+                "question_id": "operation",
+                "choice": "get_entities",
+                "probabilities": {
+                  "get_entities": 0.95,
+                  "get_related_tests": 0.04,
+                  "get_declared_dependents": 0.0,
+                  "unsupported": 0.01,
+                  "unsupported_population": 0.0
+                },
+                "confidence": 0.94
+              }
+            }
+          },
+          "usage": {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 1641,
+            "output_tokens": 62,
+            "duration_ms": 325,
+            "cost_usd": 6.8922e-05,
+            "cost_provenance": "estimated",
+            "calls": 1
+          },
+          "metadata": {
+            "purpose": "knowledge.operation_select",
+            "adapter_version": "typesafe-classifier/0.0.1a3",
+            "latency_ms": 325,
+            "question_count": 1,
+            "status": "ok",
+            "template_ids": [
+              "knowledge.operation_select.v1@1"
+            ],
+            "request_id": "req_01a1215c41eb7469b3ba497ba54a8ac5",
+            "calls": 1,
+            "input_fingerprint": "ebdb7b1bdce3bb6d6ac0660a9147f770020ca9a13a1c4461464ab5e46c4284a4",
+            "chunk_index": 0,
+            "chunk_count": 1,
+            "attempts": 1
+          }
+        }
+      ],
+      "source_executions": [
+        {
+          "repository_id": "public-needs-acceptance",
+          "request_id": "inv-677131e5c05949db",
+          "requested_mode": "exact",
+          "operation": "get_entities",
+          "disclosure_level": 0,
+          "retrieval_id": "a35e7a33-3de5-4456-8fea-198d4d094c07",
+          "generation_id": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "executed_mode": "exact",
+          "status": "ok",
+          "evidence_count": 1
+        },
+        {
+          "repository_id": "public-needs-acceptance",
+          "request_id": "inv-677131e5c05949db",
+          "requested_mode": "exact",
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "retrieval_id": "ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+          "generation_id": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "executed_mode": "exact",
+          "status": "ok",
+          "evidence_count": 1
+        }
+      ],
+      "diagnostics": [
+        {
+          "knowledge_status": "ok",
+          "knowledge_retrieval_id": "ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 3,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":49,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":29328,\"max_estimated_tokens\":3140,\"deadline_ms\":7696}",
+          "knowledge_generation": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_answer": "{\"status\":\"partial\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\",\"test_spec\"],\"scope\":{\"population\":\"returned_entities\",\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[{\"canonical_id\":\"KM-500c-2\",\"field\":\"test_spec\",\"reason\":\"unknown\"}],\"completeness\":{\"complete\":true,\"known_count\":1,\"exact_total\":1,\"limitations\":[]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-677131e5c05949db\", \"retrieval_id\": \"ac8ea80b-c6e2-4088-a1b3-f4c65fe59807\", \"execution_status\": \"ok\", \"answer_status\": \"partial\", \"expected\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-677131e5c05949db\"}, \"observed\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-677131e5c05949db\", \"generation_id\": \"bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [{\"canonical_id\": \"KM-500c-2\", \"field\": \"test_spec\", \"reason\": \"unknown\"}], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 2,
+          "knowledge_retrieval_refs": "a35e7a33-3de5-4456-8fea-198d4d094c07,ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 2.8743762000231072,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-b680fc14fad3954a",
+          "created_at": "2026-10-09T15:50:59.361881Z",
+          "updated_at": "2026-10-09T15:50:59.361881Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T15:50:59.361881Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-677131e5c05949db",
+            "strategy": "knowledge:ac8ea80b-c6e2-4088-a1b3-f4c65fe59807",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        }
+      ],
+      "findings": [
+        {
+          "schema_version": "1.0",
+          "id": "find-a54309df1c6a57c6",
+          "created_at": "2026-10-09T15:53:44.203786Z",
+          "updated_at": "2026-10-09T15:53:44.203786Z",
+          "created_seq": 0,
+          "claim": "For KM-500c-2, tests must demonstrate that, after research obtains results from an existing or newly verified query, its existing evidence evaluation assesses answerability and the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-fae2055409fbec07",
+          "created_at": "2026-10-09T15:53:44.203786Z",
+          "updated_at": "2026-10-09T15:53:44.203786Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that successful build, successful query execution, and successful answer assessment remain separate recorded outcomes.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-10063e8be25dcc0d",
+          "created_at": "2026-10-09T15:53:44.203786Z",
+          "updated_at": "2026-10-09T15:53:44.203786Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that zero matches, contradictory evidence, and insufficient evidence remain distinguishable, with their limitations preserved.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        },
+        {
+          "schema_version": "1.0",
+          "id": "find-606d3dd7fa6165bb",
+          "created_at": "2026-10-09T15:53:44.203786Z",
+          "updated_at": "2026-10-09T15:53:44.203786Z",
+          "created_seq": 0,
+          "claim": "Tests must demonstrate that any bounded synthesis or follow-up uses the existing research policy and does not silently equate query availability with answer quality.",
+          "kind": "inference",
+          "supporting_evidence_ids": [
+            "ev-b680fc14fad3954a"
+          ],
+          "contradicting_evidence_ids": [],
+          "limitations": [
+            "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed.",
+            "host-reported; not verified by the kernel"
+          ],
+          "producer": "host.synthesize",
+          "producer_version": "1.0.0"
+        }
+      ],
+      "assessments": {
+        "need.question": {
+          "kind": "retrieval_answer",
+          "status": "partial",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [
+            {
+              "canonical_id": "KM-500c-2",
+              "field": "test_spec",
+              "reason": "unknown"
+            }
+          ],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      },
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Original answer requirements remain partial",
+        "Retrieved evidence requires the existing research sufficiency assessment.",
+        "need need.question: conditional assessment remains partial",
+        "required need need.question is partial"
+      ],
+      "jev_calls": 2,
+      "accepted_host_results": 2,
+      "receipt": "public-evaluation/P02.current.json"
+    },
+    {
+      "id": "P03",
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "catalog_enabled": false,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Exact specified structural population and actual work-status counts, or explicit bounded/unknown count; lifecycle status never substituted.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "TQ-500f"
+            ],
+            "required_fields": [
+              "level",
+              "work_status"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": [
+              "all_descendants"
+            ]
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_root",
+          "hierarchy_levels": [
+            "L2",
+            "L3"
+          ],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [
+        {
+          "model": "jev-1.13.0",
+          "input": {
+            "questions": [
+              {
+                "id": "operation",
+                "kind": "choice",
+                "template_id": "knowledge.operation_select.v1",
+                "template_version": "1"
+              }
+            ],
+            "state_chars": 2837,
+            "input_fingerprint": "961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5"
+          },
+          "output": {
+            "answers": {
+              "operation": {
+                "schema_version": "1.0",
+                "kind": "choice",
+                "question_id": "operation",
+                "choice": "get_ac_descendants",
+                "probabilities": {
+                  "get_entities": 0.0,
+                  "get_related_tests": 0.0,
+                  "get_ac_descendants": 0.76,
+                  "get_declared_dependents": 0.0,
+                  "unsupported": 0.01,
+                  "unsupported_population": 0.23
+                },
+                "confidence": 0.71
+              }
+            }
+          },
+          "usage": {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 1813,
+            "output_tokens": 76,
+            "duration_ms": 337,
+            "cost_usd": 7.6146e-05,
+            "cost_provenance": "estimated",
+            "calls": 1
+          },
+          "metadata": {
+            "purpose": "knowledge.operation_select",
+            "adapter_version": "typesafe-classifier/0.0.1a3",
+            "latency_ms": 337,
+            "question_count": 1,
+            "status": "ok",
+            "template_ids": [
+              "knowledge.operation_select.v1@1"
+            ],
+            "request_id": "req_01a1215c59ae7a9191539358ac77f486",
+            "calls": 1,
+            "input_fingerprint": "961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5",
+            "chunk_index": 0,
+            "chunk_count": 1,
+            "attempts": 1
+          }
+        }
+      ],
+      "source_executions": [],
+      "diagnostics": [
+        {
+          "knowledge_selection": "uncertain",
+          "knowledge_status": "unsupported",
+          "knowledge_reason": "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}",
+          "kernel.elapsed_s": 0.3541472000069916,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "evidence": [],
+      "findings": [],
+      "assessments": {},
+      "limitations": [
+        "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}",
+        "required need need.question is unavailable"
+      ],
+      "jev_calls": 1,
+      "accepted_host_results": 1,
+      "receipt": "public-evaluation/P03.current.json"
+    },
+    {
+      "id": "P04",
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "catalog_enabled": true,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Same population and obligations as P03 with no catalog-path bypass.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "TQ-500f"
+            ],
+            "required_fields": [
+              "level",
+              "work_status"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": [
+              "all_descendants"
+            ]
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_root",
+          "hierarchy_levels": [
+            "L2",
+            "L3"
+          ],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [
+        {
+          "model": "jev-1.13.0",
+          "input": {
+            "questions": [
+              {
+                "id": "operation",
+                "kind": "choice",
+                "template_id": "knowledge.operation_select.v1",
+                "template_version": "1"
+              }
+            ],
+            "state_chars": 2837,
+            "input_fingerprint": "961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5"
+          },
+          "output": {
+            "answers": {
+              "operation": {
+                "schema_version": "1.0",
+                "kind": "choice",
+                "question_id": "operation",
+                "choice": "get_ac_descendants",
+                "probabilities": {
+                  "get_entities": 0.0,
+                  "get_related_tests": 0.0,
+                  "get_ac_descendants": 0.75,
+                  "get_declared_dependents": 0.0,
+                  "unsupported": 0.01,
+                  "unsupported_population": 0.24
+                },
+                "confidence": 0.7
+              }
+            }
+          },
+          "usage": {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 1813,
+            "output_tokens": 76,
+            "duration_ms": 314,
+            "cost_usd": 7.6146e-05,
+            "cost_provenance": "estimated",
+            "calls": 1
+          },
+          "metadata": {
+            "purpose": "knowledge.operation_select",
+            "adapter_version": "typesafe-classifier/0.0.1a3",
+            "latency_ms": 314,
+            "question_count": 1,
+            "status": "ok",
+            "template_ids": [
+              "knowledge.operation_select.v1@1"
+            ],
+            "request_id": "req_01a1215c66ee7b6ba89238e420cc6234",
+            "calls": 1,
+            "input_fingerprint": "961367f667e0145c9538166ca2a75b8a3d3636dc326a55edce73c6aceb549aa5",
+            "chunk_index": 0,
+            "chunk_count": 1,
+            "attempts": 1
+          }
+        }
+      ],
+      "source_executions": [],
+      "diagnostics": [
+        {
+          "knowledge_selection": "uncertain",
+          "knowledge_status": "unsupported",
+          "knowledge_reason": "operation selection confidence is uncertain; assessment={\"confidence\":0.7,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.75,\"selected_value\":\"get_ac_descendants\"}",
+          "kernel.elapsed_s": 0.3259812999749556,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "evidence": [],
+      "findings": [],
+      "assessments": {},
+      "limitations": [
+        "operation selection confidence is uncertain; assessment={\"confidence\":0.7,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.75,\"selected_value\":\"get_ac_descendants\"}",
+        "required need need.question is unavailable"
+      ],
+      "jev_calls": 1,
+      "accepted_host_results": 1,
+      "receipt": "public-evaluation/P04.current.json"
+    },
+    {
+      "id": "P05",
+      "question": "How many ACs concern test writing? Exclude parent requirements.",
+      "catalog_enabled": true,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Focused clarification before any exact count; same run, original question and trusted scope preserved.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [],
+            "required_fields": [
+              "criteria"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_parents",
+          "hierarchy_levels": [],
+          "scope_resolution": "discovery_needed",
+          "unresolved": [],
+          "rationale": "The count requires discovering all ACs whose acceptance obligations concern writing tests, then excluding every parent requirement using hierarchy membership. No particular family, root, or level was specified, and lacking an identifier does not require a user choice.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [],
+      "source_executions": [],
+      "diagnostics": [],
+      "evidence": [],
+      "findings": [],
+      "assessments": {
+        "retrieval_needs": {
+          "kind": "retrieval_needs",
+          "status": "unresolved",
+          "original_question": "How many ACs concern test writing? Exclude parent requirements.",
+          "limitations": [
+            "unsupported_population: no offered operation establishes the requested exhaustive population"
+          ]
+        }
+      },
+      "limitations": [
+        "unsupported_population: no offered operation establishes the requested exhaustive population"
+      ],
+      "jev_calls": 0,
+      "accepted_host_results": 1,
+      "receipt": "public-evaluation/P05.current.json"
+    },
+    {
+      "id": "P06",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog_enabled": false,
+      "status": "partial",
+      "complete_answer": false,
+      "original_expectation": "Unavailable/stale source remains unresolved; no empty success or current-source claim.",
+      "needs": [
+        {
+          "schema_version": "1.0",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "0000000000000000000000000000000000000000",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "KM-500c-2"
+            ],
+            "required_fields": [
+              "criteria",
+              "test_spec"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": []
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "single_entity",
+          "hierarchy_scope": "not_applicable",
+          "hierarchy_levels": [],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "The named acceptance criterion's exact clauses and declared expected assertions establish what its tests must demonstrate. The supplied source revision is preserved without claiming it has been verified.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        }
+      ],
+      "selector": [
+        {
+          "model": "jev-1.13.0",
+          "input": {
+            "questions": [
+              {
+                "id": "operation",
+                "kind": "choice",
+                "template_id": "knowledge.operation_select.v1",
+                "template_version": "1"
+              }
+            ],
+            "state_chars": 2528,
+            "input_fingerprint": "1a8108432a24a09ba3ecb0744fa23bbc3ba8119e78c439eed726070bb6e416fa"
+          },
+          "output": {
+            "answers": {
+              "operation": {
+                "schema_version": "1.0",
+                "kind": "choice",
+                "question_id": "operation",
+                "choice": "get_entities",
+                "probabilities": {
+                  "get_entities": 0.88,
+                  "get_related_tests": 0.11,
+                  "get_declared_dependents": 0.0,
+                  "unsupported": 0.01,
+                  "unsupported_population": 0.0
+                },
+                "confidence": 0.85
+              }
+            }
+          },
+          "usage": {
+            "schema_version": "1.0",
+            "provider": "jev",
+            "model_id": "jev-1.13.0",
+            "input_tokens": 1644,
+            "output_tokens": 62,
+            "duration_ms": 350,
+            "cost_usd": 6.9048e-05,
+            "cost_provenance": "estimated",
+            "calls": 1
+          },
+          "metadata": {
+            "purpose": "knowledge.operation_select",
+            "adapter_version": "typesafe-classifier/0.0.1a3",
+            "latency_ms": 350,
+            "question_count": 1,
+            "status": "ok",
+            "template_ids": [
+              "knowledge.operation_select.v1@1"
+            ],
+            "request_id": "req_01a1215c7d6b76b591b57641d81c5aae",
+            "calls": 1,
+            "input_fingerprint": "1a8108432a24a09ba3ecb0744fa23bbc3ba8119e78c439eed726070bb6e416fa",
+            "chunk_index": 0,
+            "chunk_count": 1,
+            "attempts": 1
+          }
+        }
+      ],
+      "source_executions": [
+        {
+          "repository_id": "public-needs-acceptance",
+          "request_id": "inv-73bde5987dbf42f7",
+          "requested_mode": "exact",
+          "operation": "get_entities",
+          "disclosure_level": 0,
+          "retrieval_id": "683ba234-4e89-4baf-96b1-490b38e91487",
+          "generation_id": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "executed_mode": "exact",
+          "status": "stale",
+          "evidence_count": 0
+        }
+      ],
+      "diagnostics": [
+        {
+          "knowledge_status": "stale",
+          "knowledge_retrieval_id": "683ba234-4e89-4baf-96b1-490b38e91487",
+          "knowledge_requested_mode": "exact",
+          "knowledge_executed_mode": "exact",
+          "knowledge_operation": "get_entities",
+          "knowledge_reason": "Jev selected a supported registered operation and authorized target",
+          "knowledge_allowed_fallback": "none",
+          "knowledge_disclosure_level": 0,
+          "knowledge_budget": "{\"max_results\":6,\"max_candidates\":50,\"max_neighbors_per_seed\":10,\"max_hops\":2,\"max_rounds\":3,\"max_content_bytes\":32768,\"max_estimated_tokens\":4000,\"deadline_ms\":10000}",
+          "knowledge_generation": "bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_source_sha": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "knowledge_answer": "{\"status\":\"unresolved\",\"original_question\":\"For KM-500c-2, what must tests demonstrate?\",\"required_fields\":[\"criteria\",\"test_spec\"],\"scope\":{\"population\":\"returned_entities\",\"root_id\":null,\"levels\":null,\"inclusion\":null},\"missing_fields\":[],\"completeness\":{\"complete\":false,\"known_count\":0,\"exact_total\":null,\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]},\"work_status_counts\":null,\"known_work_status_counts\":{},\"limitations\":[\"execution is stale\",\"requested source revision is not established\",\"requested identities are missing from returned evidence\",\"no evidence for the requested facts\"]}",
+          "knowledge_diagnosis": "{\"request_id\": \"inv-73bde5987dbf42f7\", \"retrieval_id\": \"683ba234-4e89-4baf-96b1-490b38e91487\", \"execution_status\": \"stale\", \"answer_status\": \"unresolved\", \"expected\": {\"repository_id\": \"public-needs-acceptance\", \"source_sha\": \"0000000000000000000000000000000000000000\", \"operation\": \"get_entities\", \"request_id\": \"inv-73bde5987dbf42f7\"}, \"observed\": {\"repository_id\": null, \"source_sha\": \"fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\", \"operation\": \"get_entities\", \"request_id\": \"inv-73bde5987dbf42f7\", \"generation_id\": \"bounded-actual-ac-subset-fb7c073bbc93ac4751685c5b45d1b4efeb108ac2\"}, \"contract\": \"knowledge retrieval scope binding / original answer requirements\", \"cause\": {\"status\": \"unknown\", \"reason\": \"The response alone does not establish an underlying failure cause.\"}, \"trace\": {\"state\": \"disabled\", \"trace_id\": null, \"trace_url\": null}, \"missing_fields\": [], \"next_step\": {\"action\": \"inspect_matching_attempt\", \"reason\": \"Inspect the cited request and response scope or missing-field facts before a bounded rerun of the same authorized question.\"}}",
+          "knowledge_rounds": 1,
+          "knowledge_retrieval_refs": "683ba234-4e89-4baf-96b1-490b38e91487",
+          "knowledge_selection": "selected",
+          "knowledge_selected_operation": "get_entities",
+          "knowledge_selected_arguments": "{\"entity_ids\":[\"KM-500c-2\"]}",
+          "kernel.elapsed_s": 3.2165008999872953,
+          "kernel.jev_reserved": 1
+        }
+      ],
+      "evidence": [],
+      "findings": [],
+      "assessments": {
+        "need.question": {
+          "kind": "retrieval_answer",
+          "status": "unresolved",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": false,
+            "known_count": 0,
+            "exact_total": null,
+            "limitations": [
+              "execution is stale",
+              "requested source revision is not established",
+              "requested identities are missing from returned evidence",
+              "no evidence for the requested facts"
+            ]
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": [
+            "execution is stale",
+            "requested source revision is not established",
+            "requested identities are missing from returned evidence",
+            "no evidence for the requested facts"
+          ]
+        }
+      },
+      "limitations": [
+        "requested revision is not published",
+        "knowledge status: stale",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "execution is stale",
+        "requested source revision is not established",
+        "requested identities are missing from returned evidence",
+        "no evidence for the requested facts",
+        "Original answer requirements remain unresolved",
+        "need need.question: conditional assessment remains unresolved",
+        "required need need.question is unavailable"
+      ],
+      "jev_calls": 1,
+      "accepted_host_results": 1,
+      "receipt": "public-evaluation/P06.current.json"
+    }
+  ],
+  "known_gaps": [
+    "P01/P02: criteria are retrieved and synthesized with citations, but requested authored test_spec does not survive disclosure; final answer remains partial.",
+    "P03/P04: correct proposed get_ac_descendants operation falls below unchanged probability gate (0.76/0.75 versus 0.80); no source query executes.",
+    "P05: host chooses discovery_needed without a known root; runtime cannot establish that exhaustive population. The frozen clarification expectation is unmet. Choosing discovery is not necessarily wrong; the missing discovery capability is a functional gap.",
+    "Controlled test separately demonstrates default six-result budget cannot enumerate all fifteen TQ-500f descendants. Live baseline did not reach this stage.",
+    "Aura connection works but canonical publication failed before a ready generation, so no live graph positive was run."
+  ]
+}

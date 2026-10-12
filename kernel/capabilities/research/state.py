@@ -28,6 +28,7 @@ from kernel.contracts.evidence import (
 )
 from kernel.contracts.payloads import OptionContext
 from kernel.contracts.work import RequestProposal
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 
 #: Prefix of the note of a bundle-level contradiction that names no evidence pair.
 UNLOCALISED = "unlocalised: "
@@ -38,6 +39,7 @@ STATUS_RANK = {NeedStatus.UNAVAILABLE: 0, NeedStatus.OPEN: 1, NeedStatus.PARTIAL
 class ResearchContinuation(KernelModel):
     """Persisted research state (phase: planned, collected or synthesizing)."""
 
+    retrieval_needs: RetrievalNeedsOutput | None = None
     phase: str = "planned"
     needs: list[EvidenceNeed] = Field(default_factory=list)
     child_map: dict[str, list[str]] = Field(default_factory=dict)
@@ -70,6 +72,7 @@ class Plan:
     expected_coverage: str
     mandated: list[EvidenceNeed]
     source_restrictions: list[str]
+    retrieval_needs: RetrievalNeedsOutput | None = None
     needs_only: bool = False
     answer_requirements: dict[str, JsonValue] | None = None
     assessment: dict[str, JsonValue] | None = None
@@ -148,3 +151,5 @@ class Collected:
 #   (beyond the design's field list) so the synthesis resume can rebuild the bundle even if the
 #   kernel's evidence lookup misses an item. (#KernelBootstrapV0/P5)
 # ====================================================================
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)

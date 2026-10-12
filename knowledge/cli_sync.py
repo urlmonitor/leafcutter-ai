@@ -45,6 +45,9 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
 def writer_backend(root: str | Path | None = None) -> Neo4jBackend:
     """Construct the writer from its explicit independent credential lifecycle.
 
+    Publication transactions receive a bounded 30 seconds for staged batches and
+    atomic activation. Serving keeps its separate configured default of 3 seconds.
+
     Args:
         root: Repository directory containing the canonical source data.
 
@@ -72,6 +75,7 @@ def writer_backend(root: str | Path | None = None) -> Neo4jBackend:
         username,
         password,
         database=select_value(sources, "LEAFCUTTER_NEO4J_DATABASE", "NEO4J_DATABASE") or "neo4j",
+        query_timeout=30.0,
     )
 
 
@@ -197,3 +201,5 @@ async def run(args: argparse.Namespace) -> dict:
         return {"status": "ok" if changed else "stale", "changed": changed}
     finally:
         await backend.close()
+
+# - 2026-10-09 16:20 [python-coder]: Give standalone publication its bounded writer timeout without changing serving latency or atomicity. (#KM-400/TICKET-20261001-KM-400e-5)

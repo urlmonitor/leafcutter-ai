@@ -82,7 +82,8 @@ def report_stage(first: dict) -> str | None:
     Rules, in order: a collection error (wins over an aborted session, the cause is what a reader
     needs); pytest aborted (exit status 2 interrupted, 3 internal error, 4 usage error); nothing
     collected; fewer tests reported than were selected (pytest.exit or a crash cut the session
-    short); exit status 1 although no test failed; no test passed (all skipped); more than half of
+    short); exit status 1 although no test failed; no test passed and none failed (all skipped; a
+    one-test lane whose only test fails is red, or green when the retry passes it); more than half of
     the tests skipped (a missing prerequisite hollowed the lane out).
     """
     results = first.get("results", {})
@@ -97,8 +98,8 @@ def report_stage(first: dict) -> str | None:
         return STAGE_TRUNCATED
     if first.get("exitstatus") == 1 and not any(s in FAILED_STATES for s in statuses):
         return STAGE_INCONSISTENT_EXIT
-    if "passed" not in statuses:
-        return STAGE_NOTHING_PASSED
+    if "passed" not in statuses and not any(s in FAILED_STATES for s in statuses):
+        return STAGE_NOTHING_PASSED  # a failure is a finding (red, or green if the retry passes it), not an empty lane
     if statuses.count("skipped") * 2 > len(statuses):
         return STAGE_MOSTLY_SKIPPED
     return None

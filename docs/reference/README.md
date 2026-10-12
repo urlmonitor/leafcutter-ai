@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-10-05
+last_updated: 2026-10-10
 components:
   - documentation_system
 related_docs:
@@ -103,6 +103,7 @@ below by hand.
 |---|---|
 | [kernel-request-splitting.md](kernel-request-splitting.md) | Part 1 of the ADR-067 specification for splitting a bundled request into person-approved parts: detection gates, the host operation, and the four schemas (goal_decomposition_request, goal_decomposition, decomposition, split_answer). |
 | [kernel-request-splitting-2-conversion-gate-runs-config.md](kernel-request-splitting-2-conversion-gate-runs-config.md) | Part 2: proposal conversion and bounds, the split gate, trigger-keyed endings, part runs and budgets, gap accounting, configuration and the staged `split.enabled` rollout. |
+| [decision-record.md](decision-record.md) | Every field of the decision record in `docs/decisions/` with type, requiredness, default and meaning, matching `config/decision_record.schema.json`; evidence as locators and hashes; human approval required; append-only corrections. |
 
 ## Product Truth
 
