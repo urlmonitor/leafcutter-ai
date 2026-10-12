@@ -1,6 +1,6 @@
 ---
 title: "check-folder-density refuses merge commits for folders that grew dense on the merged-in branch"
-status: in_progress
+status: done
 components:
   - commit_guardian
 created: 2026-10-10
@@ -17,7 +17,7 @@ agents:
   python-coder: signed_off
   pr-reviewer: signed_off
   commit: signed_off
-  pull-request: needed
+  pull-request: signed_off
 ---
 
 # check-folder-density refuses merge commits for folders that grew dense on the merged-in branch
@@ -43,7 +43,7 @@ In order for a branch to take in main without a hook skip, the folder-density ho
 - [x] python-coder — 2026-10-12 13:00
 - [x] pr-reviewer — 2026-10-12 07:15
 - [x] commit — 2026-10-12 14:30
-- [ ] pull-request
+- [x] pull-request — 2026-10-12 14:45
 
 ## Comments
 
@@ -85,3 +85,10 @@ completion_manifest:
   pre_commit_hooks_pass: true
   commit_message_valid: true
   ticket_staged: true
+
+### 2026-10-12 14:45 — pull-request (status: ok)
+feedback-id: fb_2026-10-12_0ce9bb2b
+Opened https://github.com/urlmonitor/leafcutter-ai/pull/1143 from fix/folder-density-merge-commit (399875bb7) into main; body lists the change, ticket, known issue and test plan. Merge awaits CI and the user's approval.
+completion_manifest:
+  pr_opened: true
+  pr_body_has_test_plan: true
