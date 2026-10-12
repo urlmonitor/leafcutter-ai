@@ -17,23 +17,20 @@ deployed file in place.
 
 PRE-FLIGHT FACT, verified manually before writing test 3 (2026-10-07,
 this checkout): the deployed manifest's ONLY `negative_control` declaration
-(`check-negative-control-liveness` itself) is `not_applicable: true` --
-every other hook in this manifest carries no `negative_control` key at all.
-`_build_records()` skips both an absent `negative_control` and a
-`not_applicable` one (see that function's own `continue` guard), so a real
-run against this specific fixture produces ZERO
-`NEGATIVE_CONTROL_RESULT` stdout lines today, confirmed by running the
-script directly: exit 0, stdout `""`. Test 3's "stdout still contains its
-per-check result lines" is therefore satisfied, for THIS real fixture, by
-asserting the verdict stays exactly what it measurably is now (exit 0,
-empty stdout) -- there is no non-empty substring to assert on without
-fabricating one, which the ticket's own instructions forbid. This is
-recorded here rather than silently substituting an invented string.
+(`check-negative-control-liveness` itself) was `not_applicable: true` and no
+other hook carried one, so the run printed ZERO result lines (exit 0, stdout
+`""`). SUPERSEDED by BP-1300e-1: the manifest now also declares a real
+`negative_control` on `check-lint-gate`, so the run prints one
+`NEGATIVE_CONTROL_RESULT` line for it (state passing, exit 0). Test 3 no
+longer hard-codes a count; it derives the examinable hooks from the copied
+manifest itself (see `_examinable_check_ids`).
 """
 from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
+import re
 import shutil
 import subprocess
 import sys
@@ -91,7 +88,30 @@ def _run_liveness_check(manifest_path: Path) -> subprocess.CompletedProcess:
         text=True,
         encoding="utf-8",
         errors="replace",
+        # Declared negative_control commands are repo-root-relative
+        # (`python .leafcutter/scripts/...`), so run from the repo root
+        # regardless of the pytest invocation's cwd.
+        cwd=str(Path(__file__).resolve().parents[2]),
     )
+
+
+def _examinable_check_ids(manifest_path: Path) -> list[str]:
+    """Ids of hooks the check examines, in manifest order.
+
+    Mirrors the script's `_build_records()` rule: a hook is examined when its
+    `negative_control` is a dict that is not `not_applicable` and the hook
+    has a usable (non-blank string) `id`.
+    """
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    ids: list[str] = []
+    for hook in data["hooks_manifest"]["hooks"]:
+        negative_control = hook.get("negative_control")
+        if not isinstance(negative_control, dict) or negative_control.get("not_applicable"):
+            continue
+        hook_id = hook.get("id")
+        if isinstance(hook_id, str) and hook_id.strip():
+            ids.append(hook_id)
+    return ids
 
 
 class TestLivenessRunLeavesManifestUnchanged(unittest.TestCase):
@@ -226,16 +246,20 @@ class TestLivenessRunStillReportsVerdict(unittest.TestCase):
         test that forced a real update would), but it does catch a fix that
         breaks the check's stdout or exit code on the way past.
 
-        Verified fact about THIS real fixture (see module docstring): the
-        deployed manifest's only `negative_control` declaration is
-        `not_applicable: true`, so `_build_records()` examines zero hooks
-        and the real, reproducible verdict today is exit 0 with stdout
-        exactly empty. That measured pair -- not an invented substring -- is
-        the "per-check result lines it prints" for this fixture: zero lines,
-        asserted as zero, not guessed at.
+        Verified fact about THIS real fixture (re-measured with BP-1300e-1):
+        the deployed manifest now carries a REAL, examinable
+        `negative_control` on `check-lint-gate` (state passing), alongside
+        the `not_applicable: true` one on this check itself. So the verdict
+        is exit 0 with exactly one `NEGATIVE_CONTROL_RESULT` stdout line per
+        examinable hook. The expected set is DERIVED from the copied
+        manifest using `_build_records()`'s own rule (a `negative_control`
+        dict that is not `not_applicable`, on a hook with a usable string
+        `id`) rather than hard-coded, so the next hook that gains a negative
+        control does not break this test again.
         """
         with tempfile.TemporaryDirectory() as tmp_dir:
             manifest_path = _copy_manifest_to_tmp(tmp_dir)
+            expected_ids = _examinable_check_ids(manifest_path)
 
             result = _run_liveness_check(manifest_path)
 
@@ -243,19 +267,38 @@ class TestLivenessRunStillReportsVerdict(unittest.TestCase):
                 result.returncode,
                 0,
                 msg=(
-                    "Expected exit 0 (every examined hook -- zero of them "
-                    f"in this fixture -- ended passing), got {result.returncode}.\n"
+                    "Expected exit 0 (every examined hook ended passing), "
+                    f"got {result.returncode}.\n"
+                    f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
+                ),
+            )
+            lines = result.stdout.splitlines()
+            for line in lines:
+                self.assertTrue(
+                    line.startswith("NEGATIVE_CONTROL_RESULT check_id="),
+                    msg=f"Unexpected non-result line on stdout: {line!r}",
+                )
+            reported = [
+                re.match(r"NEGATIVE_CONTROL_RESULT check_id=(\S+) state=(\S+) ", line)
+                for line in lines
+            ]
+            self.assertTrue(
+                all(reported),
+                msg=f"Malformed result line(s) on stdout: {result.stdout!r}",
+            )
+            self.assertEqual(
+                [m.group(1) for m in reported],
+                expected_ids,
+                msg=(
+                    "Expected exactly one NEGATIVE_CONTROL_RESULT line per "
+                    "examinable hook, in manifest order.\n"
                     f"stdout: {result.stdout!r}\nstderr: {result.stderr!r}"
                 ),
             )
             self.assertEqual(
-                result.stdout,
-                "",
-                msg=(
-                    "Expected stdout to stay exactly empty -- this fixture "
-                    "declares no examinable negative_control -- got: "
-                    f"{result.stdout!r}\nstderr: {result.stderr!r}"
-                ),
+                [m.group(2) for m in reported],
+                ["passing"] * len(expected_ids),
+                msg=f"Expected every reported state to be passing: {result.stdout!r}",
             )
 
 
