@@ -95,6 +95,7 @@ flowchart TD
 | `Read` |
 | `Edit` |
 | `Write` |
+| `Skill` |
 ---
 
 ## Skills Used
@@ -102,7 +103,7 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `signoff` | always | — |
-| `complexity-reduction` | conditional | — |
+| `complexity-reduction` | conditional | When the brief carries a complexity demand (a function's score over its ceiling), load complexity-reduction; never for a file-size demand. |
 ---
 
 ## Configuration
