@@ -120,6 +120,7 @@ class TestHarvesterRoutesEveryDistinctLearning(unittest.TestCase):
 
     def test_second_run_routes_nothing_new_and_state_holds_new_identities(self) -> None:
         # covers: INF-400b-2-iii
+        # covers: INF-400b-2-i
         # angle: criterion
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -144,6 +145,7 @@ class TestLegacyStateFailsTowardDuplicateNeverLoss(unittest.TestCase):
 
     def test_shared_legacy_hash_routes_each_colliding_record_again(self) -> None:
         # covers: INF-400b-2-iii
+        # covers: INF-400b-2-i
         # angle: failure
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
@@ -167,6 +169,7 @@ class TestLegacyStateFailsTowardDuplicateNeverLoss(unittest.TestCase):
 
     def test_unambiguous_legacy_hash_is_honoured_and_not_rerouted(self) -> None:
         # covers: INF-400b-2-iii
+        # covers: INF-400b-2-i
         # angle: criterion
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
