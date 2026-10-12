@@ -1523,12 +1523,18 @@
           "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
           "expected_result": "non-zero exit with `RESULT: refused` naming probe.py:1 and E741",
           "currently": {
-            "state": "unverified",
+            "state": "passing",
             "observed": "2026-10-12",
             "evidence": [
               {
                 "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
-                "output": "not yet run by check-negative-control-liveness"
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nprobe.py:1:1: E741 Ambiguous variable name: `l` [step: repository-rules]\nlint gate: 1 finding(s) in 1 file(s) that CI's required lint check would also reject; the commit is refused.\nRESULT: refused\n",
+                "exit_code": 1
+              },
+              {
+                "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-clean",
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nlint gate: inspected 1 staged files, found no violation CI would reject.\n  probe.py\nRESULT: ok\n",
+                "exit_code": 0
               }
             ]
           }

@@ -31,6 +31,7 @@ MISMATCH = "linter_version_mismatch"
 
 def _load_fixture(name: str):
     spec = importlib.util.spec_from_file_location("_bp_1300e_tests_conftest", fx.REPO_ROOT / "tests" / "conftest.py")
+    assert spec is not None and spec.loader is not None, "tests/conftest.py could not be loaded"
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.load_fixture(name)
