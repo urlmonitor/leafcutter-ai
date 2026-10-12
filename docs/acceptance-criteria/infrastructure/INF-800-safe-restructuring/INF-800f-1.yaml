@@ -1,0 +1,205 @@
+id: INF-800f-1
+title: "A restructuring specialist exists as an agent a run can bring in, separate from the coder that wrote the change, and it applies complexity-reduction when the demand is about complexity"
+component: infrastructure
+components:
+  - infrastructure
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket is being driven whose change was written by python-coder,
+  And the drive brings in the restructuring specialist after a refusal,
+  When the run's ordered record of parties engaged is read,
+  Then it holds an entry for the restructuring specialist under its own agent id, found
+    in the agent registry,
+  And that id is not python-coder nor the id of any other coder, so the specialist is a
+    different party from the coder that wrote the change.
+
+  Given the restructuring specialist is engaged with a complexity demand naming
+    scripts/planner.py, the function plan_batches, complexity 31 and 30 allowed,
+  When the specialist finishes,
+  Then the report it returns names complexity-reduction as the skill it applied to
+    plan_batches.
+
+  Given the restructuring specialist is engaged instead with a file-size demand of 120
+    measured lines to leave scripts/planner.py,
+  When the specialist finishes,
+  Then the report it returns does not name complexity-reduction, so the skill is chosen
+    by the demand and is not applied on every engagement.
+depends_on:
+  - INF-800f
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-800-safe-restructuring/INF-800f.yaml
+    relationship: parent
+    status: exists
+  - path: templates/workflows/code-refactoring-specialist.md
+    relationship: evolves
+    status: exists
+    relevance: >-
+      Today's only artefact: a command prompt a person runs. It is not an agent template, so
+      nothing can bring it in. Its restructuring guidance is the starting point for the
+      agent's own approach.
+  - path: templates/skills/complexity-reduction/SKILL.md
+    relationship: related
+    status: exists
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Unblocked by this record. GE-127f-3 waits on INF-800f for a restructuring specialist a
+      run can bring in. That is a cross-link only, with no depends_on edge into GE-127.
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800b-3.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The specialist is brought in by a depth-0 party and does not itself need to spawn
+      anyone.
+delivers_to:
+  - ac_id: BO-3800b-3
+    contract: >-
+      A registered agent id for the restructuring specialist, distinct from every coder,
+      that a run can bring in, and that applies complexity-reduction on a complexity demand.
+  - ac_id: GE-127f-3
+    contract: "The restructuring specialist its expects_from waits on, via INF-800f."
+expects_from: null
+assigned_agent: llm-expert
+estimated_complexity: M
+package_surface: true
+it_requirements:
+  config_schema_fragment:
+    _declares: >-
+      ONE new member of config/agent_registry.json agents[], which
+      _package_surface_registry.WATCHED_REGISTRIES watches as ("agents", "list_ids"). No new
+      top-level key. Plus the template the member's template_path points at.
+    type: object
+    required: [id, name, tier, role, portable, spawn_allowlist, spawned_by, is_ticket_phase, template_path, skills_used, components]
+    properties:
+      id: {const: restructuring-specialist}
+      tier: {const: phase}
+      role:
+        const: restructuring
+        description: "Never 'coding'. The specialist must be a different party from every coder."
+      portable: {const: true}
+      spawn_allowlist:
+        const: []
+        description: "It is engaged at depth 1 by the depth-0 driver and spawns nobody (ADR-019)."
+      is_ticket_phase:
+        const: true
+        description: "selection_criteria.default_status not_needed. It is engaged only on a refusal whose declaration names it."
+      template_path: {const: templates/agents/restructuring-specialist.md}
+      skills_invoked:
+        description: "signoff mode always; complexity-reduction mode conditional (chosen by the demand)."
+      components: {const: [infrastructure]}
+  reference_file_path: config/agent_registry.json
+  n_location_rule: >-
+    2. (a) Append one member to agents[] in config/agent_registry.json. (b) Create
+    templates/agents/restructuring-specialist.md. Also add the docs/agents/README.md row that
+    add-agent-to-package Step 5 requires. Nothing else. Placing the agent in the phaseOrder
+    twins (build-feature.js and build-ticket.js) belongs to BO-3800b-3, which is the
+    python-coder surface.
+  required_skills:
+    - llm-expert
+    - add-agent-to-package
+  post_write_commands:
+    - "python3 scripts/build.py --validate-only"
+    - "python3 -m pytest unit_tests/commit_guardian/test_agent_verification_consistency.py unit_tests/agents/"
+  constraints:
+    - >-
+      AGENT ID SETTLED: restructuring-specialist. It is the role name every GE-132a
+      declaration and refusal text uses, so the refusal names the id the run engages. It also
+      avoids colliding with the existing /code-refactoring-specialist command
+      (templates/workflows/code-refactoring-specialist.md). That command stays a human
+      surface, and turning it into a shim that brings in this agent is INF-800f's remaining
+      scope. The command's restructuring guidance is the starting point for the agent body.
+      Reuse it rather than re-derive it.
+    - >-
+      Tools are Read, Edit, Write and Bash, with no Agent tool. Because Edit and Write are
+      present, requires_verification: true is MANDATORY (CLAUDE.md; registry_validator rule A
+      otherwise fails build.py install_shims before any test runs). signoff: true, because
+      BO-3000a treats a re-dispatched target as resolved only when the ticket record
+      read-back confirms its sign-off.
+    - >-
+      A distinct party. Its role is not coding, its id is no coder's id, and its template is
+      its own file, not a copy of or alias for python-coder.md. No coder entry may resolve to
+      it. That is named mutation (1), THE RENAMED CODER.
+    - >-
+      The skill is chosen by the demand. The template loads complexity-reduction only when the
+      brief carries a complexity demand that names that skill. The brief's skills come from
+      the refusing check's declaration (BO-3800b-3). On a file-size demand it uses its own
+      restructuring approach. Its returned report lists the skills it applied in a
+      machine-readable field, and its outcome as demand met, attempted but short, or could not
+      act (BO-3800d-2's three endings). The run reads the field, never the prose.
+    - >-
+      Arms two and three are model behaviour. Register eval rows for restructuring-specialist
+      in scripts/evals/agent_eval_config.json, with triggers limited to the agent's own files
+      (owner decision of 2026-10-06).
+test_required: true
+test_spec:
+  - name: test_inf800f1_restructuring_specialist_is_registered_and_distinct_from_every_coder
+    target_dir: unit_tests/agents/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: "registry loader and scripts/registry_validator.py over the real config, plus the deployed .claude/agents/ in shared_reference_layout (@pytest.mark.shared_layout_reader)"
+    description: "Arm 1, registry half. restructuring-specialist resolves in the registry, its deployed agent file exists, its role is not coding, and its id and template_path differ from every role-coding agent's. requires_verification is true. The 'ordered record of parties engaged' half is proven by BO-3800b-3's driver-harness tests, because no run can engage the agent until BO-3800b-3 wires the driver. RED TODAY."
+    must_catch:
+      - "THE RENAMED CODER: the specialist registered as an alias that resolves to python-coder"
+  - name: test_inf800f1_eval_complexity_demand_reports_complexity_reduction
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: e2e
+    angle: criterion
+    surface_invoked: scripts/evals/run_agent_eval.py
+    description: "Arm 2. An eval row engages the real agent with the demand scripts/planner.py, plan_batches, complexity 31, 30 allowed. Its report's skills-applied field names complexity-reduction. An offline gold-score unit test proves the row's scoring rejects a report without it. A live run needs model credentials, which CI does not hold (the informational gate). RED TODAY."
+  - name: test_inf800f1_eval_file_size_demand_does_not_report_complexity_reduction
+    target_dir: unit_tests/evals/
+    framework: pytest
+    type: e2e
+    angle: discrimination
+    surface_invoked: scripts/evals/run_agent_eval.py
+    description: "Arm 3. An eval row with a file-size demand of 120 measured lines to leave scripts/planner.py. The report's skills-applied field does not name complexity-reduction. Offline gold-score coverage is as in arm 2. RED TODAY."
+    must_catch:
+      - "THE ALWAYS-ON SKILL: load complexity-reduction on every engagement"
+test_rationale: >-
+  Arm 1 is deterministic and runs over the real registry and the deployed layout. Arms 2
+  and 3 are what a model does with a brief, so no unit seam can prove them. They are agent
+  evals, and only their scoring is proven offline. The deterministic guarantee that the brief
+  carries the right skill lives in BO-3800b-3. Three tests, all red today.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  ADDED AT BRAINCANDY'S DIRECTION, 2026-10-09: "Spawn restructuring agent (which should
+  have the complexity skill)." This is INF-800f's first L2. INF-800f's own fields are the
+  Product Owner's and were not edited, apart from the mandatory covered_by back-link.
+
+  THE AGENT ID IS NOT FIXED HERE. code-refactoring-specialist, the existing prompt's name,
+  is the obvious candidate. The IT PO chooses it, and BO-3800b-1, c-1 and d-1 can then be
+  enriched against a real id (their stated unblock condition). The criteria name the
+  party by role so they survive the choice.
+
+  WHAT THIS RECORD LEAVES TO INF-800f's REST. Its tool set and sign-off protocol, and how
+  it restructures safely (INF-800a to e). This record covers only that the agent exists,
+  is distinct from the author, and picks complexity-reduction by demand.
+
+  NAMED MUTATIONS.
+  (1) THE RENAMED CODER: register the specialist as an alias that resolves to
+      python-coder. MUST GO RED: arm one.
+  (2) THE ALWAYS-ON SKILL: load complexity-reduction on every engagement. MUST GO RED:
+      arm three. MUST STAY GREEN: arms one and two.
