@@ -1,0 +1,61 @@
+id: BO-2600a-6
+components:
+  - build_orchestration
+title: "A prerequisite that records the criterion as its child is treated as its structural parent, even when the ids do not show the link"
+component: build-orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an acceptance-criterion store containing a parent criterion P-590 whose
+    covered_by lists seven not-done children [P-510, P-511, P-512, P-513, P-514, P-515, P-516],
+    where no child id has the shape of a P-590 descendant (so the parent cannot be
+    inferred from the child's id),
+  And P-512 lists P-590 in its depends_on and has no other prerequisites and no children,
+  And P-515 is assigned to a different implementing agent than P-512,
+  When the connected build set for P-512 is resolved with structural-parent
+    prerequisites excluded,
+  Then P-590 is recognised as P-512's structural parent because P-590's covered_by
+    lists P-512, and P-590 is neither added to the set nor expanded,
+  And the resolved set is exactly [P-512],
+  And none of P-510, P-511, P-513, P-514, P-515, P-516 appear in the set, and nothing
+    reachable only through P-590's own prerequisites appears in the set,
+  And a parent whose id shape does show the link (e.g. BO-2600a for BO-2600a-6) is still
+    recognised and excluded exactly as before: the recorded-edge rule is added to the
+    id-shape rule, not substituted for it.
+depends_on: [BO-2600a, BO-2600a-1]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "resolve_connected_build_set's depends_on walk is where the structural-parent test is applied; today it compares a dep only against derive_parent_id(node). The deployed mirror under .leafcutter/scripts/ must stay in step."
+  - path: scripts/ac_store/ac_parent_id.py
+    relationship: related
+    status: exists
+    relevance: "derive_parent_id returns None for ids like UXP-510 whose parent link exists only as the parent's covered_by; this AC adds the recorded edge alongside it."
+  - path: docs/reference/ac-id-hierarchy.md
+    relationship: related
+    status: exists
+    relevance: "Direct-children scope rule for covered_by: the reason a covered_by listing identifies the immediate structural parent."
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-590.yaml
+    relationship: related
+    status: exists
+    relevance: "Real-store case: /fast-lane-build UXP-512 resolved to all 13 UXP-590 descendants (including frontend-coder UXP-515) and refused. Use as the shape of the fixture, not as a live-store test dependency."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-1
+  contract: "resolve_connected_build_set accepts exclude_structural_parent; when True, deps identified as the node's structural parent are skipped in the depends_on walk while the subtree union is untouched."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-2600a-6-i, BO-2600a-6-ii, BO-2600a-6-iii]
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary

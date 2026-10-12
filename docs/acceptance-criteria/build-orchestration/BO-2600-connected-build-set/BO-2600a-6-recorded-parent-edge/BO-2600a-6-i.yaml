@@ -1,0 +1,47 @@
+id: BO-2600a-6-i
+components:
+  - build_orchestration
+title: "A prerequisite that does not record the criterion as its child is still walked as a genuine prerequisite"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a target criterion T whose structural parent P is recorded only as P's
+    covered_by listing T,
+  And T also lists three further prerequisites, all not done:
+    - Q, whose covered_by lists [Q-1, Q-2] and does not list T,
+    - R, which has no covered_by field at all,
+    - S, whose covered_by lists only test-file references
+      (e.g. "unit_tests/build_orchestration/test_s.py") and no criterion ids,
+  When the connected build set for T is resolved with structural-parent
+    prerequisites excluded,
+  Then P is excluded from the set,
+  And Q, R and S are each included and walked as genuine prerequisites, with Q's
+    not-done descendants Q-1 and Q-2 included as they are today,
+  And the resolution completes without error for R's missing covered_by and S's
+    non-criterion covered_by entries, and neither is treated as the structural parent.
+depends_on: [BO-2600a-6]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "The recorded-edge check is membership of the node id in the dep's covered_by, tolerant of absent fields and non-AC entries."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-6
+  contract: "Structural-parent recognition by recorded covered_by edge in the resolver's depends_on walk."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal

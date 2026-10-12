@@ -1,0 +1,43 @@
+id: BO-2600a-6-ii
+components:
+  - build_orchestration
+title: "A genuine prerequisite's own recorded parent is not pulled in either"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a target criterion T with no structural-parent dependency and one genuine,
+    not-done prerequisite G that lives in a different tree,
+  And G lists its own structural parent H in depends_on, where H's covered_by lists G
+    and four other not-done children [H-a, H-b, H-c, H-d], and G's id does not have the
+    shape of an H descendant,
+  When the connected build set for T is resolved with structural-parent
+    prerequisites excluded,
+  Then the set is exactly [G, T], with G ordered before T,
+  And H is not in the set and none of H-a, H-b, H-c, H-d are in the set: the
+    recorded-edge rule is applied at every criterion reached by the walk, not only at T.
+depends_on: [BO-2600a-6]
+doc_links:
+  - path: scripts/build_orchestration/fast_lane.py
+    relationship: modifies
+    status: exists
+    relevance: "The structural-parent test is evaluated per node during the transitive walk."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-2600a-6
+  contract: "Structural-parent recognition by recorded covered_by edge in the resolver's depends_on walk."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
