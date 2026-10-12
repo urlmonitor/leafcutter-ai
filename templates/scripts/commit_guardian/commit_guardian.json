@@ -42,9 +42,19 @@
     "max_lines": 300,
     "max_lines_adr": 400,
     "max_sections": 25,
-    "excluded_files": [
-      "README.md",
-      "CHANGELOG.md"
+    "set_aside_locations": [
+      {
+        "path": "docs/agents/cards/",
+        "ground": "Regenerated whole from templates/agents/ by the build's agent-card phase. No human author decides the length of any document here and no hand edit survives the next regeneration, so a length refusal names work nobody wrote and prescribes a remedy nobody can apply."
+      },
+      {
+        "path": "docs/roadmap.md",
+        "ground": "Regenerated whole from docs/roadmap.json. The document carries its own do-not-edit-by-hand marker and names its source; its length is a function of the roadmap's size, which no author of this file controls."
+      },
+      {
+        "path": "docs/INDEX.md",
+        "ground": "Regenerated whole by the build's doc-index phase from the contents of docs/. Its length is a function of how many documents the project has, so it grows whenever an unrelated document is added."
+      }
     ]
   },
   "complexity": {
