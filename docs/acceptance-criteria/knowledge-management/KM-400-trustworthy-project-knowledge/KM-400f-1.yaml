@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
@@ -82,9 +82,18 @@ amended_by:
     approval fields were touched. readiness moved to approved and priority to high at
     the user's approval gate."
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_km_400f_1.py::test_retention_policy_reports_declared_bound_and_exact_reclaimable_set
+- tests/knowledge/test_km_400f_1.py::test_undeclared_retention_bound_refuses_instead_of_defaulting
+- tests/knowledge/test_km_400f_1.py::test_count_without_minimum_age_refuses_naming_the_missing_age
+- tests/knowledge/test_km_400f_1.py::test_zero_minimum_age_is_a_declared_value_not_unset
+- tests/knowledge/test_km_400f_1.py::test_km_400f_1_reachable_from_entry_point
+- tests/knowledge_live/test_km_400f_1.py::test_policy_evaluation_changes_no_generation
 implemented_by:
 - tickets/00_inbox/TICKET-20261012-KM-400f-1.md
+- knowledge/config.py
+- knowledge/adapters/neo4j_projection.py
+- knowledge/cli_retention.py
 change_target: [code, config]
 risk_surface: contract_boundary
 notes: |
