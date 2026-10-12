@@ -2,21 +2,22 @@
 ac_traceability:
   id: BO-4300c-6
   path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-6.yaml
+ac_coverage: 11/11
 advances_current_outcome: true
 agents:
-  ac-fulfillment-gate: needed
-  ac-validator: needed
-  architect-review: needed
-  commit: needed
+  ac-fulfillment-gate: signed_off
+  ac-validator: signed_off
+  architect-review: signed_off
+  commit: signed_off
   documentation-expert: not_needed
   documentation-verifier: not_needed
   frontend-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   pull-request: not_needed
-  python-coder: needed
+  python-coder: signed_off
   sql-coder: not_needed
-  test-runner: needed
-  test-writer: needed
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 change_target: code
 complexity: medium
@@ -119,17 +120,17 @@ And a canary altered to reject every staged file, or every file a merge
   brings in, fails this proof.
 ```
 
-- [ ] AC-1: in both cases it fails, which stops the commit, and its report names the
-- [ ] AC-2: it does not give the rejection signal that the workspace maker counts as
-- [ ] AC-3: a git failure is never reported as "the reserved file is not staged".
-- [ ] AC-4: it passes with nothing to check and gives no rejection signal.
-- [ ] AC-5: it reports the merge as failing, naming the git command that failed
-- [ ] AC-6: it gives no rejection signal, and never reports the failure as "nothing
-- [ ] AC-7: each commit goes through, and the canary neither stops with a crash
-- [ ] AC-8: a commit whose first message line is exactly the reserved line the
-- [ ] AC-9: the commit-time canary and the after-merge canary both pass and give no
-- [ ] AC-10: in that same project, staging the reserved commit-time file makes the
-- [ ] AC-11: a canary altered to reject every staged file, or every file a merge
+- [x] AC-1: in both cases it fails, which stops the commit, and its report names the
+- [x] AC-2: it does not give the rejection signal that the workspace maker counts as
+- [x] AC-3: a git failure is never reported as "the reserved file is not staged".
+- [x] AC-4: it passes with nothing to check and gives no rejection signal.
+- [x] AC-5: it reports the merge as failing, naming the git command that failed
+- [x] AC-6: it gives no rejection signal, and never reports the failure as "nothing
+- [x] AC-7: each commit goes through, and the canary neither stops with a crash
+- [x] AC-8: a commit whose first message line is exactly the reserved line the
+- [x] AC-9: the commit-time canary and the after-merge canary both pass and give no
+- [x] AC-10: in that same project, staging the reserved commit-time file makes the
+- [x] AC-11: a canary altered to reject every staged file, or every file a merge
 
 ## Test Requirements
 
@@ -536,13 +537,148 @@ Existing docs to update / cross-link:
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] test-writer
-- [ ] python-coder
-- [ ] test-runner
-- [ ] pr-reviewer
-- [ ] ac-validator
-- [ ] ac-fulfillment-gate
-- [ ] commit
+- [x] architect-review — 2026-10-10 12:00
+- [x] test-writer — 2026-10-10 14:00
+- [x] python-coder — 2026-10-12 10:00
+- [x] test-runner — 2026-10-12 11:00
+- [x] pr-reviewer — 2026-10-12 12:00
+- [x] ac-validator — 2026-10-12 13:00
+- [x] ac-fulfillment-gate — 2026-10-12 09:45
+- [x] commit — 2026-10-12 14:00
 
 ## Comments
+
+### 2026-10-10 12:00 — architect-review (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  impact_classified: true
+  research_agent_blast_radius:
+    result: false
+    reason: "Agent tool not available in this dispatch; classification made from the ticket's own scope notes."
+    remediation: "None required; scope is explicit and confined to one production file."
+Small: no always-large trigger (no migration, hypertable, API or ADR contract change). One production file (templates/scripts/commit_guardian/precommit_canary.py) in one component (commit_guardian/precommit_hooks); the other 5 touched files are tests and the AC yaml, so the >5 file count is test volume, not blast radius. Design concern: canary must fail closed with no marker on git failure, absence probe must not peel ORIG_HEAD, compare bytes not text. requires_adr stays false. No acceptance adjustments, no diagrams.
+
+### 2026-10-10 14:00 — test-writer (status: ok)
+feedback-id: fb_2026-10-10_3d7b0aca
+completion_manifest:
+  tests_written: true
+  red_verified: true
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "deployed .pre-commit-config.yaml registered canary entries + real git (staged list, ORIG_HEAD, merge)"
+    consuming_side: "deployed precommit_canary.py run as its own process in a real repo (test_bo_4300c_6_real_install.py)"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python <deployed>/.leafcutter/scripts/commit_guardian/precommit_canary.py --stage <pre-commit|commit-msg|post-merge> (CLI via subprocess, plus the real .git/hooks/commit-msg shim)"
+red_baseline:
+  - test_name: test_commit_time_canary_fails_closed_on_corrupt_index_with_git_report
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 0 == 0 (canary exits 0 on git failure)"
+  - test_name: test_commit_time_canary_fails_closed_when_git_dir_is_not_a_repository
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 0 == 0"
+  - test_name: test_after_merge_canary_fails_closed_when_git_dir_is_not_a_repository
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 0 == 0"
+  - test_name: test_after_merge_canary_fails_closed_on_dangling_orig_head
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 0 == 0"
+  - test_name: test_commit_msg_canary_lets_non_utf8_and_empty_messages_through
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 1 != 0 : UnicodeDecodeError: 'utf-8' codec can't decode byte 0xf6"
+  - test_name: test_commit_msg_canary_rejects_reserved_first_line_with_lf_or_crlf
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: False != True : UnicodeDecodeError (non_utf8_body case)"
+  - test_name: test_ordinary_non_ascii_and_non_utf8_paths_never_crash_the_canary
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 1 != 0 : UnicodeDecodeError: 'charmap' codec can't decode byte 0x81"
+  - test_name: test_bo_4300c_6_reachable_from_entry_point
+    file: unit_tests/build_orchestration/test_bo_4300c_6.py
+    kind: assertion
+    error: "AssertionError: 0 != 1"
+Eight tests are red against the current canary. test_after_merge_canary_passes_when_nothing_was_merged and the three real_install tests pass today by design (regression guards: inert proof, reserved inputs, reject-everything mutant); the mutant arm is self-checking. The replaced test test_registered_canary_hooks_are_inert_for_ordinary_input was removed from test_bo_4300c_1_real_install.py in this test-only change; commit it apart from precommit_canary.py (check-contract-shrinking). Run with unittest: this repo's pytest config reports expected failures as xfailed.
+
+## Escalation
+
+Branch: none
+Reason: one production file in one component; no always-large trigger fired.
+
+### 2026-10-10 16:00 — python-coder (status: handoff)
+
+feedback-id: (submit-failed)
+
+handoff_target: test-writer
+Implemented templates/scripts/commit_guardian/precommit_canary.py (fail-closed git report, git-dir preflight, ORIG_HEAD absence probe unpeeled, byte comparison for names and messages). 11 of 12 tests in test_bo_4300c_6.py / test_bo_4300c_6_real_install.py are green; test_bo_4300c_1_real_install and the canary git-failure tests green.
+Remaining red: test_commit_msg_canary_lets_non_utf8_and_empty_messages_through, final assertion `b'Größe' in git cat-file commit HEAD`. The commit succeeds through the canary (all prior assertions pass), but git itself re-encodes the message to UTF-8 (stored bytes GrÃ¶Ãe), so the assertion is a test defect independent of the canary (classification: test_drift). test-writer: assert the stored message is either encoding, or set i18n.commitEncoding=cp1252 for that repo.
+Pre-existing unrelated failure: unit_tests/commit_guardian/test_precommit_canary.py::test_hook_manifest_stages (registry stages) fails on the unmodified registry.
+red_baseline_results: 7 of 8 red tests now green; the commit-msg test above still red.
+
+### 2026-10-12 10:00 — python-coder (status: ok)
+
+feedback-id: (submit-failed)
+Re-verified after test-writer fix: all 17 tests in test_bo_4300c_6, test_bo_4300c_6_real_install, test_bo_4300c_1_real_install, test_bo_4300c_1_canary_git_failure pass (unittest, 56s). precommit_canary.py is 137 lines.
+red_baseline_results:
+  - all 8 red_baseline tests: green
+
+### 2026-10-12 11:00 — test-runner (status: ok)
+
+feedback-id: (submit-failed)
+Suite: build-orchestration (pytest, AC_ENFORCE_STRICT=1). test_bo_4300c_6, test_bo_4300c_6_real_install, test_bo_4300c_1_real_install: 16 passed on first run plus 1 teardown error in test_bo_4300c_1_real_install (DeveloperRepoChangedError: refs/scratch/e1-merge-resolution-1 appeared in the shared repo, a concurrent-session artifact, not this change). Rerun of test_bo_4300c_1_real_install alone: 3 passed, 7 subtests passed. No failures attributable to the ticket.
+
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+
+### 2026-10-12 12:00 — pr-reviewer (status: ok)
+
+feedback-id: (submit-failed)
+Reviewed working diff (precommit_canary.py, test_bo_4300c_1_real_install.py, new BO-4300c-6 tests). No high-confidence findings; contract mismatches none. Medium: none. Suppressed: 0 low, 0 dropped. Removed test_registered_canary_hooks_are_inert_for_ordinary_input is superseded by test_bo_4300c_6_real_install inert proof; BO-4300c-1-ii remains covered elsewhere. 3 of 4 modules green on rerun; the one teardown error was env-induced (untracked-source guard / shared-repo artifact), not the change.
+
+## Escalation
+
+Branch: none
+Reason: not escalated: medium count was 0 (threshold > 3)
+
+### 2026-10-12 13:00 — ac-validator (status: ok)
+
+feedback-id: fb_2026-10-12_a2e1d6a3
+completion_manifest:
+  all_acs_covered: true
+  store_alignment_clean: true
+All 11 ACs covered (store alignment script rc=0; no delivers_to/expects_from gap). Evidence:
+AC-1/2/3 covered: impl templates/scripts/commit_guardian/precommit_canary.py (_git wrapper, fail-closed one-line report); test test_commit_time_canary_fails_closed_on_corrupt_index_with_git_report and test_commit_time_canary_fails_closed_when_git_dir_is_not_a_repository (unit_tests/build_orchestration/test_bo_4300c_6.py:48,59).
+AC-4 covered: impl precommit_canary.py post-merge ORIG_HEAD absence probe; test test_after_merge_canary_passes_when_nothing_was_merged (test_bo_4300c_6.py:71).
+AC-5/6 covered: impl same file, post-merge git failure path; test test_after_merge_canary_fails_closed_when_git_dir_is_not_a_repository and ..._on_dangling_orig_head (test_bo_4300c_6.py:86,96).
+AC-7 covered: impl byte comparison of messages/names; test test_commit_msg_canary_lets_non_utf8_and_empty_messages_through (test_bo_4300c_6.py:113).
+AC-8 covered: test test_commit_msg_canary_rejects_reserved_first_line_with_lf_or_crlf (test_bo_4300c_6.py:136).
+AC-9 covered: test test_registered_canaries_are_inert_for_ordinary_commit_and_merge_in_a_real_repo (test_bo_4300c_6_real_install.py:68).
+AC-10 covered: test test_registered_canaries_reject_reserved_inputs_in_the_same_repo (test_bo_4300c_6_real_install.py:75).
+AC-11 covered: test test_reject_everything_canary_fails_the_inert_proof (test_bo_4300c_6_real_install.py:93).
+Note: the ticket has no ## AC Coverage table, so none was filled; the new test files and fixtures are untracked and must be git-added before commit.
+
+### 2026-10-12 09:45 — ac-fulfillment-gate (status: ok)
+
+feedback-id: fb_2026-10-12_8a835577
+All 1 L2 AC verified (BO-4300c-6). 3 auto-fixes applied to docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-6.yaml:
+- implemented_by: appended templates/scripts/commit_guardian/precommit_canary.py (in files_touched and in the diff).
+- covered_by: appended unit_tests/build_orchestration/test_bo_4300c_6.py and test_bo_4300c_6_real_install.py (both carry # covers: BO-4300c-6 tags).
+- work_status: mark_ac_done.py output: 'marked BO-4300c-6 work_status=done' (exit 0).
+check_ac_schema.py exit 0 after the edit. Commit phase may proceed; the new test files and fixtures are untracked and must be git-added.
+
+### 2026-10-12 14:00 — commit (status: ok)
+
+feedback-id: (submit-failed)
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Two commits: fc95a763f (tests, incl. removal of the vacuous inert test, test-only per check-contract-shrinking) and 29a7bf203 (precommit_canary.py + BO-4300c-6.yaml). Notes: check-build-drift needed build.py re-run per template state; check-contract-shrinking crashes on cp1252 without PYTHONUTF8=1 (set it, no hook bypass). Pre-existing staged BO-4300d files and ticket 07 were left staged and uncommitted (not part of this ticket).
