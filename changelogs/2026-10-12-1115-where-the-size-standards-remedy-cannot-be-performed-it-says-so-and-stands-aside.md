@@ -43,9 +43,12 @@ the same measurement rule. What stands aside is the refusal alone.
 
 This removes the pressure that would otherwise force the lane's size to be
 confronted. The durable fix is to stop expressing orchestration of this size in
-a sandboxed JS body. A cheaper interim exists and is unevaluated: the engine's
-`workflow()` primitive runs another workflow inline one level deep, so the lane
-could delegate whole phases even though it cannot extract helper modules.
+a sandboxed JS body. Nested workflows are not an interim: in E2, `workflow()`
+throws when called from a running workflow (see
+`docs/reference/workflow-authoring-contract.md`, Edge 5). The interim that is
+available keeps the JS as control flow and moves the substance out —
+deterministic steps into Python scripts the lane runs through
+`command-step-runner`, judgment steps into agents.
 
 ### Guardrails on the mechanism itself
 

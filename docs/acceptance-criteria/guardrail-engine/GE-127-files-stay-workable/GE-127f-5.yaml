@@ -266,11 +266,17 @@ notes: |
   THE HONEST COST, recorded so the next reader can weigh it. This removes the pressure
   that would otherwise force the problem to be confronted. The durable fix is to stop
   expressing orchestration this size in a sandboxed JS body at all — the owner's stated
-  mid-term direction is LangGraph. A cheaper interim exists and should be tried before
-  that: the engine exposes a workflow() primitive that runs another workflow inline, one
-  level deep, so the lane COULD delegate whole phases to child workflows even though it
-  cannot extract helper modules. That path was identified after the refactor attempt and
-  has not been evaluated.
+  mid-term direction is LangGraph. NESTED WORKFLOWS ARE NOT AN INTERIM: an earlier draft of
+  this record claimed the engine's workflow() global runs a child workflow inline, one
+  level deep. That is false for E2. docs/reference/workflow-authoring-contract.md (Edge 5,
+  and its "Workflow nesting" row) and ADR-030 both record that workflow() THROWS when
+  called from a running E2 workflow — a leaf-invariant guard, usable only as an
+  engine-detection probe — and no script in templates/workflows-js/ calls it. The interim
+  that IS available keeps the JS as control flow only and moves the substance out of it:
+  deterministic steps into Python scripts the lane runs through command-step-runner (as
+  setup_ticket_worktree.py already is for worktree creation), and judgment steps into
+  agents. Both are reachable from E2 today, and both are what a later framework's nodes
+  would call anyway.
 
   SCOPE DISCIPLINE. One declaration, templates/workflows-js/, reasoned from the engine
   constraint rather than from the file's length. If a second location is ever proposed,

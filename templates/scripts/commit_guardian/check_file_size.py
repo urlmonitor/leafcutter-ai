@@ -905,10 +905,12 @@ DECISION HISTORY
   then reverted. HONEST COST, recorded rather than buried: this removes the
   pressure that would otherwise force the lane's size to be confronted. The
   durable fix is to stop expressing orchestration of this size in a
-  sandboxed JS body; a cheaper interim exists and is unevaluated -- the
-  engine's `workflow()` primitive runs another workflow inline one level
-  deep, so the lane could delegate whole phases even though it cannot
-  extract helper modules.
+  sandboxed JS body. NOT nested workflows: in E2 `workflow()` throws when
+  called from a running workflow (workflow-authoring-contract.md, Edge 5),
+  so a lane cannot delegate phases to child workflows. The available interim
+  is moving deterministic steps into Python scripts run via
+  command-step-runner and judgment steps into agents, leaving the JS as
+  control flow.
 - 2026-10-07 [python-coder/GE-127f-4]: `_print_grown_file`'s closing advice
   sentence stated a ONE-for-one obligation ("Shrink it, or add no more than
   you remove, to commit this edit") while the enforced rule
