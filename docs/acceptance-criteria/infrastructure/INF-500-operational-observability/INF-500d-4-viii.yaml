@@ -56,6 +56,7 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/07_TICKET-20261009-INF-500d-4-viii.md
+- docs/architecture/components/feedback-collector.md
 change_target: docs
 risk_surface: internal
 notes: |

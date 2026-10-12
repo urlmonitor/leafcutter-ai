@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -147,9 +147,18 @@ amended_by:
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/feedback/test_inf_500d_4_i.py
+- unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+- unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+- unit_tests/feedback/test_inf_500d_4_i_no_log_root_writers.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/02_TICKET-20261009-INF-500d-4-i.md
+- templates/scripts/feedback/submit_feedback.py
+- templates/scripts/feedback/feedback_sink.py
+- templates/scripts/feedback/feedback_validation.py
+- templates/scripts/feedback/emit_hook_finding.py
+- scripts/knowledge/sink_resolution.py
 change_target:
   - code
   - infrastructure

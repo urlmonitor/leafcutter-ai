@@ -185,6 +185,11 @@ alone. As of this amendment their AC records are still `work_status: todo`, thei
 `test-runner` and `commit` phases are still `needed`, and the branch is unmerged. Close the
 entry once those land: move it to `resolved/` and update the index.
 
+Update at finalize (2026-10-12): INF-500d-4-i and -iii through -vi are now
+`work_status: done` on the branch. All 175 covers-tagged INF-500d-4 / INF-400c-4 tests pass
+under `AC_ENFORCE_STRICT=1`. The entry still stays open until the epic PR is merged, because
+"land" means merged.
+
 **Still open after the epic:**
 
 - The BO-100d probe ACs still pin the relative `debugging/logs/agent_telemetry.jsonl`. See

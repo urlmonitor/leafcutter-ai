@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
@@ -106,8 +106,17 @@ amended_by:
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/knowledge/test_inf_400c_4_iii.py
+- unit_tests/feedback/test_inf_500d_4_i_no_log_root_writers.py
+implemented_by:
+- templates/skills/agent-telemetry/scripts/emit_event.py
+- scripts/knowledge/sink_resolution.py
+- scripts/knowledge/harvest_learnings.py
+- scripts/build_phases_knowledge.py
+- scripts/build_log_root.py
+- templates/scripts/setup_ticket_worktree.py
+- scripts/setup_ticket_worktree.py
 test_spec:
   - name: test_harvester_reports_zero_when_its_own_sink_is_empty_and_the_operational_stream_is_full
     target_dir: tests/knowledge/

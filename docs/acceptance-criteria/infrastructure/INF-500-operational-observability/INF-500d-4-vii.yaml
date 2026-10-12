@@ -82,6 +82,12 @@ superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/06_TICKET-20261009-INF-500d-4-vii.md
+- docs/architecture/feedback-lifecycle.md
+- docs/architecture/components/feedback-collector.md
+- docs/architecture/components/agent-telemetry.md
+- docs/reference/build-telemetry.md
+- docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+- CLAUDE.md
 change_target: docs
 risk_surface: internal
 notes: |

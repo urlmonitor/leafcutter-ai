@@ -190,7 +190,7 @@ task, then pull only those files.
 | using frontend coder with design integration | [docs/how-to/using-frontend-coder-with-design-integration.md](how-to/using-frontend-coder-with-design-integration.md) | How to use frontend-coder with design integration |
 | verify precommit active | [docs/how-to/verify-precommit-active.md](how-to/verify-precommit-active.md) | Step-by-step guide to running the verify_precommit_active.py probe and interpreting its four checks to confirm that pre-commit hooks will fire in a git worktree. |
 | verify shared layout stays read only | [docs/how-to/verify-shared-layout-stays-read-only.md](how-to/verify-shared-layout-stays-read-only.md) | How to run and read the shared_layout_integrity guard so a test that dirties the shared deployed layout (TQ-600a-1) is caught and named, instead of silently corrupting every test that runs after it. |
-| working with leafcutter | [docs/how-to/working-with-leafcutter.md](how-to/working-with-leafcutter.md) | How to work with leafcutter end-to-end |
+| working with leafcutter | [docs/how-to/working-with-leafcutter.md](how-to/working-with-leafcutter.md) | Overview of How to work with leafcutter end-to-end. |
 | write a test that catches the wrong version | [docs/how-to/write-a-test-that-catches-the-wrong-version.md](how-to/write-a-test-that-catches-the-wrong-version.md) | Guard a bug fix or a gate change with a test that goes red under named wrong versions of the code, not only when the code is missing. Worked through on the refresh-gate retry storm. |
 | writing a tdd ticket | [docs/how-to/writing-a-tdd-ticket.md](how-to/writing-a-tdd-ticket.md) | This guide walks you through writing a ticket that will go through the leafcutter |
 
