@@ -35,6 +35,80 @@ class KnowledgeConfig(Model):
     embedding_model: str | None = None
     embedding_dimensions: int | None = None
     query_timeout: float = Field(default=3.0, gt=0, le=30)
+    # KM-400f-1: the retention bound is DECLARED, never defaulted. Both parts
+    # are required together and neither has a fallback value, so an unset
+    # bound is refused rather than silently resolved.
+    retention_max_generations: int | None = None
+    retention_min_age_seconds: int | None = None
+
+
+class RetentionBound(Model):
+    """Declared generation retention bound: a count limit AND a minimum retirement age."""
+
+    generation_limit: int
+    minimum_age_seconds: int
+    source: str
+
+
+def _unset_bound(name: str, source: str) -> ValueError:
+    """Build the refusal naming one undeclared retention setting.
+
+    Args:
+        name: Configuration setting that is not declared.
+        source: Inspectable name of the configuration that was read.
+
+    Returns:
+        ValueError: Refusal that states no built-in value is used.
+    """
+    return ValueError(
+        f"retention bound is unset: {name} is not declared in configuration "
+        f"(source: {source}); no built-in value is used"
+    )
+
+
+_COUNT_RANGE = "retention_max_generations must be at least 1"
+_AGE_RANGE = "retention_min_age_seconds must be nonnegative"
+
+
+def _out_of_range(message: str) -> ValueError:
+    """Wrap a range refusal for a declared retention setting.
+
+    Args:
+        message: Refusal text naming the setting.
+
+    Returns:
+        ValueError: Refusal carrying the message.
+    """
+    return ValueError(message)
+
+
+def resolve_retention_bound(config: KnowledgeConfig, *, source: str) -> RetentionBound:
+    """Resolve the declared retention bound, refusing an incomplete declaration.
+
+    Args:
+        config: Knowledge configuration carrying the declared bound, if any.
+        source: Inspectable name of where the bound was read from.
+
+    Returns:
+        RetentionBound: Count limit, minimum retirement age and configuration source.
+
+    Raises:
+        ValueError: When either setting is undeclared (zero counts as declared) or out of range.
+    """
+    # `is None`, never falsiness: a zero minimum age is a declared value.
+    if config.retention_max_generations is None:
+        raise _unset_bound("retention_max_generations", source)
+    if config.retention_min_age_seconds is None:
+        raise _unset_bound("retention_min_age_seconds", source)
+    if config.retention_max_generations < 1:
+        raise _out_of_range(_COUNT_RANGE)
+    if config.retention_min_age_seconds < 0:
+        raise _out_of_range(_AGE_RANGE)
+    return RetentionBound(
+        generation_limit=config.retention_max_generations,
+        minimum_age_seconds=config.retention_min_age_seconds,
+        source=source,
+    )
 
 
 def build_retriever(

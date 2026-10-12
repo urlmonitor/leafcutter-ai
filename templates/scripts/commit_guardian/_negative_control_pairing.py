@@ -130,6 +130,25 @@ DECISION HISTORY
   depth only; the caller never calls it that way) classifies
   `reach_inside`, never `entry_point`.
   (#EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/02)
+- 2026-10-12 [python-coder, GE-120g-4-i]: Added `same_verdict()` (pure, no
+  try/except) and `_same_probe()`. Measured 2026-10-12: the liveness sweep
+  built a fresh `currently` stamped with the run's date on every run, so
+  from the day after the manifest was built every first run of the day
+  differed from the stored record and rewrote the deployed file (reaching
+  the GE-120g-4 defect by the calendar). "Same verdict" = equal `state`,
+  equal evidence length, and per position equal `command` and equal
+  `exit_code`; `output` text and `observed` are never compared (a linter
+  reword must not rewrite the file). `observed` now means the date the
+  current verdict was FIRST observed. Blocked records: `exit_code` is
+  compared as present-or-absent -- absent on both sides is equal, absent on
+  one side only is a change. A missing or malformed stored record (not a
+  dict, `evidence` not a list, non-dict entries) is NOT the same verdict
+  and the helper never raises. KNOWN CONSEQUENCE: in the declaration-level
+  cannot-discriminate blocked record the acceptable command lives only in
+  `output`, so changing ONLY the declared acceptable command of a
+  still-non-discriminating pair is not a change; accepted, not widened.
+  Placed here, not in the liveness module, which has no line headroom.
+  (#GE-120g-4-i)
 ====================================================================
 """
 
@@ -248,6 +267,42 @@ def classify_pair(
         # reach-inside finding governs; this AC makes no claim.
         return _STATE_FAILING, DISCRIMINATION_NA
     return _STATE_PASSING, DISCRIMINATION_DISCRIMINATES
+
+
+def _same_probe(stored: object, observed: object) -> bool:
+    """True when two evidence entries name the same command and ended with
+    the same exit code (present-or-absent; `output` is never compared)."""
+    if not isinstance(stored, dict) or not isinstance(observed, dict):
+        return False
+    return (
+        stored.get("command") == observed.get("command")
+        and ("exit_code" in stored) == ("exit_code" in observed)
+        and stored.get("exit_code") == observed.get("exit_code")
+    )
+
+
+def same_verdict(stored: object, observed: dict) -> bool:
+    """True when `observed` is the same verdict as the `stored` `currently`.
+
+    Pure (Rule 4 -- no try/except). Same verdict: equal `state`, equal
+    evidence length, and per position equal `command` and `exit_code`.
+    Output text and `observed` date are ignored. A missing or malformed
+    `stored` record compares as NOT the same (it is then replaced).
+
+    Args:
+        stored: The manifest's existing `negative_control.currently` value
+            (any type -- may be absent or malformed).
+        observed: The freshly built `currently` block.
+
+    Returns:
+        True only when the verdicts match as defined above.
+    """
+    if not isinstance(stored, dict) or stored.get("state") != observed.get("state"):
+        return False
+    old, new = stored.get("evidence"), observed.get("evidence")
+    if not isinstance(old, list) or not isinstance(new, list) or len(old) != len(new):
+        return False
+    return all(_same_probe(a, b) for a, b in zip(old, new))
 
 
 def blocked_pair_currently(command: str, output: str) -> dict:

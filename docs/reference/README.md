@@ -48,6 +48,7 @@ below by hand.
 
 | [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
+| [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
 
 ## Documentation & Architecture Conventions
 

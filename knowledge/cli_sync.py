@@ -40,6 +40,9 @@ def add_parser(subparsers: argparse._SubParsersAction) -> None:
         )
         if name in ("rollback", "cleanup"):
             parser.add_argument("--generation-id", required=True)
+        if name == "cleanup":
+            # Declared by the operator; there is no built-in retention value.
+            parser.add_argument("--retention-seconds", type=int, default=None)
 
 
 def writer_backend(root: str | Path | None = None) -> Neo4jBackend:
@@ -197,7 +200,9 @@ async def run(args: argparse.Namespace) -> dict:
                 args.repository_id, args.generation_id, active.generation_id if active else None
             )
         else:
-            changed = await backend.cleanup(args.repository_id, args.generation_id)
+            changed = await backend.cleanup(
+                args.repository_id, args.generation_id, args.retention_seconds
+            )
         return {"status": "ok" if changed else "stale", "changed": changed}
     finally:
         await backend.close()

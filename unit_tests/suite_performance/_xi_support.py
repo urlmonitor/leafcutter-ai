@@ -31,6 +31,7 @@ ISSUE_PATCH_KEYS = {"body", "state", "state_reason"}  # the description, state a
 ISSUE_CREATE_KEYS = {"title", "body", "labels"}  # no assignees, milestone or other field on a created notice
 CHECK_PATCH_KEYS = {"status", "conclusion", "output"}  # a check run's completion; never a rename or a new head
 COMMENT_KEYS = {"body"}
+EXCHANGE_PERMISSIONS = ({"checks": "write"}, {"actions": "write"})  # the only two scopes a token may be minted with: the hold's and the re-evaluation's
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ def collect_writes(svc):
         verbs = {"create": "POST", "edit": "PATCH", "delete": "DELETE"}
         found = [Write(e["method"], e["path"], e["body"], svc.auth_kind(e)) for e in svc.log if e["method"] != "GET"]
         return found + [Write(verbs.get(w["kind"], w["kind"]), w["path"], {"body": w["body"]}) for w in svc.comment_writes]
-    return [Write(a["method"], a["path"], a["body"]) for a in svc.write_attempts]
+    return [Write(a["method"], a["path"], a["body"], a.get("auth")) for a in svc.write_attempts]
 
 
 def world_of(svc, *, pr=None, head=None, hold_runs=()):
@@ -74,44 +75,88 @@ def _marked(body):
     return isinstance(body, dict) and isinstance(body.get("body"), str) and body["body"].splitlines()[:1] == [MARKER]
 
 
-def verdict_on(write, world):  # noqa: PLR0911 -- one return per rule of the list
+_NOT_THIS_RULE = object()  # a rule's "this write is not mine": the next rule of the list is tried
+
+
+def _rule_issue_create(write, rest, body, world):
+    if not (write.method == "POST" and rest == "/issues"):
+        return _NOT_THIS_RULE
+    if not set(body) <= ISSUE_CREATE_KEYS:
+        return f"issue created with fields {sorted(set(body) - ISSUE_CREATE_KEYS)} beyond title, body and labels"
+    return None if _single_family_label(body.get("labels")) else f"issue created with labels {body.get('labels')!r}"
+
+
+def _rule_issue_edit(write, rest, body, world):
+    match = _ISSUE.fullmatch(rest)
+    if not (write.method == "PATCH" and match):
+        return _NOT_THIS_RULE
+    labelled = bool(set(world.labels.get(int(match.group(1)), [])) & set(FAMILY_LABELS))
+    return None if labelled and set(body) <= ISSUE_PATCH_KEYS else f"PATCH #{match.group(1)} (labelled: {labelled}, keys {sorted(body)})"
+
+
+def _rule_comment_create(write, rest, body, world):
+    match = _ISSUE_COMMENTS.fullmatch(rest)
+    if not (write.method == "POST" and match):
+        return _NOT_THIS_RULE
+    number = int(match.group(1))
+    if not set(body) <= COMMENT_KEYS:
+        return f"comment on #{number} carrying fields {sorted(set(body) - COMMENT_KEYS)}"
+    if world.labels.get(number) and set(world.labels[number]) & set(FAMILY_LABELS):
+        return None
+    return None if number == world.pr and _marked(body) else f"comment on #{number}, which is neither a notice nor the evaluated pull request's marked comment"
+
+
+def _rule_comment_edit(write, rest, body, world):
+    if not (write.method == "PATCH" and _ONE_COMMENT.fullmatch(rest)):
+        return _NOT_THIS_RULE
+    # whether the comment is the hold's OWN (its pull request, its author) is a read the client makes; a write cannot show it
+    return None if world.pr is not None and _marked(body) and set(body) <= COMMENT_KEYS else "comment edit that is not the hold's marked comment"
+
+
+def _rule_rerun(write, rest, body, world):
+    match = _RERUN.fullmatch(rest)
+    if not (write.method == "POST" and match):
+        return _NOT_THIS_RULE
+    # AMENDED 2026-10-12: a re-run is the App installation token's alone (the GITHUB_TOKEN requests none), of a pull_request_target run of the hold
+    if write.auth != "install":
+        return f"re-run of run {match.group(1)} requested with the {write.auth or 'unrecorded'} credential, not the App's installation token"
+    return None if int(match.group(1)) in world.hold_runs else f"re-run of run {match.group(1)}, which is not a pull_request_target run of the hold workflow"
+
+
+def _rule_check_run(write, rest, body, world):
+    if not (write.method in ("POST", "PATCH") and _CHECK.fullmatch(rest)):
+        return _NOT_THIS_RULE
+    if write.auth != "install":
+        return f"check run written with the {write.auth or 'unrecorded'} credential"
+    if write.method == "POST" and (body.get("name"), body.get("head_sha")) != (CHECK_NAME, world.head):
+        return f"check run {body.get('name')!r} on {body.get('head_sha')!r}"
+    if write.method == "PATCH" and (not set(body) <= CHECK_PATCH_KEYS or body.get("conclusion", "success") not in ("success", "failure")):
+        return f"check run completion with {sorted(body)} / conclusion {body.get('conclusion')!r}"
+    return None
+
+
+def _rule_exchange(write, rest, body, world):
+    if not (write.method == "POST" and _EXCHANGE.fullmatch(rest)):
+        return _NOT_THIS_RULE
+    if write.auth != "jwt":
+        return "the App credential exchange without the App's JWT"
+    # the token is asked for one permission only (the hold's check runs, the re-evaluation's re-runs), on this repository only
+    asked = (body.get("permissions"), body.get("repositories"), sorted(set(body) - {"permissions", "repositories"}))
+    return None if asked[0] in EXCHANGE_PERMISSIONS and asked[1] == [REPO.split("/", 1)[1]] and not asked[2] else f"the exchange asks for {body!r}"
+
+
+_RULES = (_rule_issue_create, _rule_issue_edit, _rule_comment_create, _rule_comment_edit, _rule_rerun, _rule_check_run, _rule_exchange)
+
+
+def verdict_on(write, world):
     """None when ``write`` is on the AC's list for ``world``; otherwise the reason it is not."""
     if not write.path.startswith(PREFIX) and not _EXCHANGE.fullmatch(write.path):
         return f"{write.method} {write.path}: not under this repository"
     rest, body = write.path[len(PREFIX) :] if write.path.startswith(PREFIX) else write.path, write.body or {}
-    if write.method == "POST" and rest == "/issues":
-        if not set(body) <= ISSUE_CREATE_KEYS:
-            return f"issue created with fields {sorted(set(body) - ISSUE_CREATE_KEYS)} beyond title, body and labels"
-        return None if _single_family_label(body.get("labels")) else f"issue created with labels {body.get('labels')!r}"
-    match = _ISSUE.fullmatch(rest)
-    if write.method == "PATCH" and match:
-        labelled = bool(set(world.labels.get(int(match.group(1)), [])) & set(FAMILY_LABELS))
-        return None if labelled and set(body) <= ISSUE_PATCH_KEYS else f"PATCH #{match.group(1)} (labelled: {labelled}, keys {sorted(body)})"
-    match = _ISSUE_COMMENTS.fullmatch(rest)
-    if write.method == "POST" and match:
-        number = int(match.group(1))
-        if not set(body) <= COMMENT_KEYS:
-            return f"comment on #{number} carrying fields {sorted(set(body) - COMMENT_KEYS)}"
-        if world.labels.get(number) and set(world.labels[number]) & set(FAMILY_LABELS):
-            return None
-        return None if number == world.pr and _marked(body) else f"comment on #{number}, which is neither a notice nor the evaluated pull request's marked comment"
-    if write.method == "PATCH" and _ONE_COMMENT.fullmatch(rest):
-        # whether the comment is the hold's OWN (its pull request, its author) is a read the client makes; a write cannot show it
-        return None if world.pr is not None and _marked(body) and set(body) <= COMMENT_KEYS else "comment edit that is not the hold's marked comment"
-    match = _RERUN.fullmatch(rest)
-    if write.method == "POST" and match:
-        return None if int(match.group(1)) in world.hold_runs else f"re-run of run {match.group(1)}, which is not a run of the hold workflow"
-    match = _CHECK.fullmatch(rest)
-    if write.method in ("POST", "PATCH") and match:
-        if write.auth != "install":
-            return f"check run written with the {write.auth or 'unrecorded'} credential"
-        if write.method == "POST" and (body.get("name"), body.get("head_sha")) != (CHECK_NAME, world.head):
-            return f"check run {body.get('name')!r} on {body.get('head_sha')!r}"
-        if write.method == "PATCH" and (not set(body) <= CHECK_PATCH_KEYS or body.get("conclusion", "success") not in ("success", "failure")):
-            return f"check run completion with {sorted(body)} / conclusion {body.get('conclusion')!r}"
-        return None
-    if write.method == "POST" and _EXCHANGE.fullmatch(rest):
-        return None if write.auth == "jwt" else "the App credential exchange without the App's JWT"
+    for rule in _RULES:
+        verdict = rule(write, rest, body, world)
+        if verdict is not _NOT_THIS_RULE:
+            return verdict
     return f"{write.method} {rest}"
 
 

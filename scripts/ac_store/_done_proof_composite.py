@@ -209,7 +209,9 @@ def _unproven_composite_children(
     entry (:func:`_composite_child_ids`, shared with
     :func:`check_staged_done_proofs` so both agree). A child proves
     itself when ``work_status: done`` AND either (a) it is a leaf (no AC-id
-    children) carrying its own ``# covers: <child-id>`` tag, or (b) it is a
+    children) carrying its own ``# covers: <child-id>`` tag or waiving it via
+    :func:`done_proof.is_covers_tag_waived` (BO-2500a-1-ii: test_required false
+    plus a non-empty test_rationale), or (b) it is a
     composite whose own children all recursively prove it.
 
     A composite is NEVER treated as proven unconditionally: a ``covered_by``
@@ -234,6 +236,8 @@ def _unproven_composite_children(
         and covered; otherwise a list of the unproven child (or composite)
         ids. Test-path entries never appear in the result.
     """
+    from done_proof import is_covers_tag_waived  # local: avoids module-load cycle
+
     seen = _seen if _seen is not None else set()
     child_ids = _composite_child_ids(data.get("covered_by"))
     if not child_ids:
@@ -262,7 +266,7 @@ def _unproven_composite_children(
             unproven.extend(
                 _unproven_composite_children(child_data, ac_root, all_covered_ids, _seen=seen)
             )
-        elif child_id_str not in all_covered_ids:
+        elif child_id_str not in all_covered_ids and not is_covers_tag_waived(child_data):
             unproven.append(child_id_str)
 
     return unproven
@@ -297,6 +301,7 @@ def _verify_composite_eligible(
         _run_python_test_phase,
         _run_ts_test_phase,
         _split_linked_tests_by_language,
+        is_covers_tag_waived,
     )
 
     leaf_child_ids = _resolve_all_child_ids(covered_by, ac_status_map)
@@ -313,7 +318,9 @@ def _verify_composite_eligible(
         child_id: _collect_linked_tests(child_id, all_tags) for child_id in leaf_child_ids
     }
     uncovered_children = sorted(
-        child_id for child_id, tests in per_child_tests.items() if not tests
+        child_id
+        for child_id, tests in per_child_tests.items()
+        if not tests and not is_covers_tag_waived(ac_status_map.get(child_id))
     )
     if uncovered_children:
         return {

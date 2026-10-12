@@ -36,8 +36,12 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from unittest import mock
 
+from ._app_fake import APP_ID, GITHUB_TOKEN, INSTALLATION_ID, AppService, key_pairs, make_jwt
 from ._notice_fakes import REPO, SERVER, captured_logs, import_production, run_record
 
+_LOCAL = threading.local()  # the bearer value of the request being served (``handle`` gets no headers)
+_INSTALL_PATH = f"/repos/{REPO}/installation"
+_EXCHANGE = re.compile(rf"/app/installations/{INSTALLATION_ID}/access_tokens")
 SUITE_NAME, PROOF_NAME, TIMING_NAME = "Post-merge suite", "Post-merge fix proof", "Post-merge timing suite"
 PROOF_JOB = "Post-merge fix proof"  # the proof workflow's `prove` job: skipped when no fix is declared
 RERUN_FLAG = "REEVAL_RERUN_ENABLED"  # the env the workflow passes from vars.POST_MERGE_REEVAL_RERUN
@@ -58,6 +62,7 @@ class _Handler(BaseHTTPRequestHandler):
         return None
 
     def _dispatch(self, method):
+        _LOCAL.auth = (self.headers.get("Authorization") or "").removeprefix("Bearer ").removeprefix("token ").strip()
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length else b""
         try:
@@ -113,21 +118,72 @@ class ReevalService:
         self.prs, self.pr_page_cap = [], pr_page_cap
         self.workflows = {}  # workflow file name -> run records, served in insertion order
         self.refuse, self.failing = set(), []  # run ids whose re-run is refused with 403; path fragments that answer 500
-        self.requests, self.write_attempts = [], []
+        self.requests, self.write_attempts, self.read_auth = [], [], []
         self.proof_job = "success"  # conclusion of the proof run's `Post-merge fix proof` job; None = the job is absent
+        self.minted, self.bearers, self.exchanges = [], [], []  # installation tokens minted, every JWT seen, every exchange body
+        self.installed, self.exchange_status = True, None  # the App is installed; a stated status overrides the exchange (401, 403, 500 ...)
+        self.grant_override = {}  # fields of the exchange answer to replace (``permissions`` / ``repositories``): a wider grant than asked
+        self.on_rerun = None  # called (no arguments) when a re-run request arrives, before it is answered
+
+    def auth_kind(self, auth):
+        """Who authorised a request: ``install`` (a token this fake minted) | ``github_token`` | ``jwt`` | ``none`` | ``other``."""
+        if not auth:
+            return "none"
+        if auth in self.minted:
+            return "install"
+        if auth == GITHUB_TOKEN:
+            return "github_token"
+        return "jwt" if auth.count(".") == 2 else "other"
+
+    def _app_plane(self, method, path, body):
+        """The installation lookup and the token exchange, authorised only by a REAL RS256 JWT (the hold's fake does the verifying)."""
+        lookup, exchange = method == "GET" and path == _INSTALL_PATH, method == "POST" and _EXCHANGE.fullmatch(path)
+        if not (lookup or exchange):
+            return None
+        auth = getattr(_LOCAL, "auth", "")
+        self.bearers.append(auth)
+        if not AppService._jwt_ok(auth):
+            return 401, {"message": "A JSON web token could not be decoded"}, {}
+        if lookup:
+            return (200, {"id": INSTALLATION_ID}, {}) if self.installed else (404, {"message": "Not Found"}, {})
+        self.exchanges.append(body)
+        if self.exchange_status:
+            return self.exchange_status, {"message": "refused"}, {}
+        self.minted.append(f"ghs_test{len(self.minted) + 1:02d}InstallationTokenValue0123456789")
+        asked = body or {}  # the service answers with the grant it made: what was asked plus the implicit read-only metadata, unless the test widens it
+        granted = {"permissions": {**(asked.get("permissions") or {}), "metadata": "read"}, "repositories": [{"name": n, "full_name": f"{REPO.split('/')[0]}/{n}"} for n in asked.get("repositories") or []]}
+        granted.update(self.grant_override)  # a key set to None is dropped from the answer
+        return 201, {"token": self.minted[-1], "expires_at": "2099-01-01T00:00:00Z", **{k: v for k, v in granted.items() if v is not None}}, {}
+
+    def credential_needles(self):
+        """Everything that must never reach a log, an output or a file: the key body and slices, every minted token, every JWT."""
+        body = "".join(line for line in key_pairs()[0].private_pem.splitlines() if "-----" not in line)
+        return sorted({body, body[:24], body[-24:], *self.minted, *(b for b in self.bearers if b.count(".") == 2)})
 
     # ---- routing
     def handle(self, method, raw_path, body):
         parsed = urlparse(raw_path)
         query = {k: v[-1] for k, v in parse_qs(parsed.query).items()}
         self.requests.append((method, raw_path))
-        if method != "GET":
-            self.write_attempts.append({"method": method, "path": parsed.path, "body": body})
+        self._record(method, parsed.path, body)
+        app = self._app_plane(method, parsed.path, body)
+        if app is not None:
+            return app
         if method == "GET" and any(fragment in parsed.path for fragment in self.failing):
             return 500, {"message": "Server Error"}, {}
         rest = parsed.path[len(_PREFIX) :] if parsed.path.startswith(_PREFIX) else None
         if rest is None:
             return 404, {"message": "Not Found"}, {}
+        return self._route(method, rest, query)
+
+    def _record(self, method, path, body):
+        auth = self.auth_kind(getattr(_LOCAL, "auth", ""))
+        if method != "GET":
+            self.write_attempts.append({"method": method, "path": path, "body": body, "auth": auth})
+        else:
+            self.read_auth.append((path, auth))
+
+    def _route(self, method, rest, query):
         if method == "GET" and rest == "/pulls":
             return self._pulls(query)
         runs_match = _RUNS.fullmatch(rest) if method == "GET" else None
@@ -172,6 +228,8 @@ class ReevalService:
         return {"total_count": len(found), "workflow_runs": found}
 
     def _rerun(self, run_id):
+        if self.on_rerun:
+            self.on_rerun()
         if run_id not in {r["id"] for runs in self.workflows.values() for r in runs}:
             return 404, {"message": "Not Found"}, {}
         if run_id in self.refuse:
@@ -184,9 +242,18 @@ class ReevalService:
         found = [_RERUN.fullmatch(a["path"][len(_PREFIX) :]) for a in self.write_attempts if a["method"] == "POST"]
         return sorted(int(m.group(1)) for m in found if m)
 
+    def rerun_attempts(self):
+        """Every re-run request the server saw, as ``(run id, who authorised it)``."""
+        return [(int(m.group(1)), a["auth"]) for a in self.write_attempts if a["method"] == "POST" and (m := _RERUN.fullmatch(a["path"][len(_PREFIX) :]))]
+
+    def exchange_writes(self):
+        """The credential exchanges the server saw (the App plane, not a write to the repository)."""
+        return [a for a in self.write_attempts if _EXCHANGE.fullmatch(a["path"])]
+
     def other_writes(self):
-        """Every write attempt that is NOT a re-run request."""
-        return [a for a in self.write_attempts if not (a["method"] == "POST" and _RERUN.fullmatch(a["path"][len(_PREFIX) :]))]
+        """Every write attempt that is NOT a re-run request and not the App's credential exchange."""
+        rerun = {id(a) for a in self.write_attempts if a["method"] == "POST" and _RERUN.fullmatch(a["path"][len(_PREFIX) :])}
+        return [a for a in self.write_attempts if id(a) not in rerun and not _EXCHANGE.fullmatch(a["path"])]
 
     def reads_of(self, fragment):
         return [raw for method, raw in self.requests if method == "GET" and fragment in urlparse(raw).path]
@@ -251,6 +318,11 @@ def suite_history(svc, *rows):
     svc.workflows[SUITE_FILE] = runs
 
 
+def app_secrets_env(**override):
+    """The environment ``post-merge-hold``'s two secrets as the executor takes them (``secrets.X`` reads ``SECRETS_X``); ``""`` is an empty secret."""
+    return {f"SECRETS_{name}": value for name, value in {"HOLD_APP_ID": APP_ID, "HOLD_APP_PRIVATE_KEY": key_pairs()[0].private_pem, **override}.items()}
+
+
 def expected_named(*, refused=()):
     """What the double must name: C (too old), E (no hold run) and every refused pull request, ordered by number."""
     named = {13: (SHAS["C"], "older_than_30_days"), 15: (SHAS["E"], "no_hold_run")}
@@ -299,11 +371,13 @@ class Reeval:
         return json.loads(found[-1].split("=", 1)[1]) if found else None
 
 
-def run_reeval(svc, directory, name, run_id, head_sha, overrides=None, *, rerun_enabled=True):
+def run_reeval(svc, directory, name, run_id, head_sha, overrides=None, *, rerun_enabled=True, jwt=None):
     """Call ``scripts.ci.post_merge_reeval.main`` with a ``workflow_run`` event for the named run, through the real REST client.
 
     ``rerun_enabled`` True sets ``REEVAL_RERUN_ENABLED`` to ``"true"`` (the repo variable is on), False leaves it unset (the default
-    of a repo), a string sets exactly that value.
+    of a repo), a string sets exactly that value. ``jwt`` is what the workflow step pipes on stdin (the script reads it there and
+    nowhere else): None is a real RS256 App JWT signed with the throwaway key the fake trusts, ``""`` is the line the step prints when
+    it could not sign one (a missing secret), any other string is used verbatim.
     """
     module = import_production(REEVAL_MODULE)
     out = Path(directory) / "github-output.txt"
@@ -317,7 +391,8 @@ def run_reeval(svc, directory, name, run_id, head_sha, overrides=None, *, rerun_
     printed = io.StringIO()
     flag = "true" if rerun_enabled is True else rerun_enabled  # a string is set verbatim; False leaves the variable unset
     env = {"GITHUB_TOKEN": "fake-token", **({RERUN_FLAG: flag} if flag else {})}
-    with captured_logs() as lines, contextlib.redirect_stdout(printed), mock.patch.dict(os.environ, env):
+    piped = make_jwt(directory) if jwt is None else jwt
+    with captured_logs() as lines, contextlib.redirect_stdout(printed), mock.patch.dict(os.environ, env), mock.patch("sys.stdin", io.StringIO(piped + "\n")):
         if not flag:
             os.environ.pop(RERUN_FLAG, None)  # patch.dict restores the caller's environment on exit
         code = module.main(argv)

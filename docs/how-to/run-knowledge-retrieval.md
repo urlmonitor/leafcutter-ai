@@ -6,7 +6,7 @@ created: '2026-10-01'
 components:
 - knowledge_management
 - decision_kernel
-last_updated: '2026-10-09'
+last_updated: '2026-10-12'
 description: Run scoped repository queries and inspect answer completeness, evidence and observation delivery.
 related_docs:
 - docs/reference/neo4j-native-queries.md
@@ -129,10 +129,10 @@ Reviewed case fields are id, reviewed_by, synthetic, request, relevant_ids and c
 
 ```sh
 python -m knowledge rollback --root REPOSITORY --repository-id leafcutter --generation-id RETAINED_GENERATION
-python -m knowledge cleanup --root REPOSITORY --repository-id leafcutter --generation-id EXPIRED_GENERATION
+python -m knowledge cleanup --root REPOSITORY --repository-id leafcutter --generation-id EXPIRED_GENERATION --retention-seconds SECONDS
 ```
 
-Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters.
+Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. `--retention-seconds` is required and has no built-in value: omitting it is refused rather than defaulted, so the minimum retirement age a deletion is judged against is always one you stated. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters.
 
 Restore connectivity then replay a failed revision. Repair canonical reference errors in source before replay. Continue explicit graph requests during vector outage; never interpret unavailable semantic retrieval as no match. Inspect published SHA/status for lag and telemetry-loss diagnostics when trace export fails. Actual external merge execution, production memory mapping and real-model usefulness remain separately identified verification limits.
 
@@ -235,6 +235,47 @@ Omit `--observability-config` to remain disabled. Configuration does not grant p
 
 Inspect `observation.state`: `disabled` means no attempt; `unavailable` means initialization or delivery failed; `unverified` means local emission did not establish matching remote ingestion. Follow `trace_url` only when the state is `verified` for the same request/retrieval IDs. The default application composition does not install a remote-read verifier, so local success alone cannot produce that claim. A trace ID or plausible URL is not evidence of remote visibility. Sanitized final shutdown warnings preserve the result and do not rerun retrieval or query construction.
 
+### Step 12 - Declare and evaluate the generation retention bound
+
+Every sync publishes a generation. Before this bound existed, nothing reclaimed them. Generations accumulated until the backing store latched read-only, and because reclaiming needs writes, the instance could not be recovered: it was destroyed and recreated. This happened to two instances in four days. Both latches occurred while the store was **under** its documented node and relationship caps, so those published limits do not tell you the real ceiling. Previously the only retention window was a hidden `retention_seconds = 3600` default in the adapter, visible and settable nowhere. That default is removed.
+
+A retention bound has two parts, and you must declare both:
+
+| Setting | Meaning |
+|---|---|
+| `retention_max_generations` | Count of generations to keep, newest first. The active generation occupies one slot. Must be at least 1. |
+| `retention_min_age_seconds` | Seconds a generation must have been retired before it may be reclaimed. `0` is a declared value. Must be nonnegative. |
+
+Both settings default to `null` (undeclared) in the `knowledge` section of `config/kernel_config.default.json`, and are described in `config/kernel_config.schema.json`. Neither setting has a built-in fallback value.
+
+Run the evaluation, supplying the bound on the command line:
+
+```sh
+python -m knowledge retention --backend neo4j --repository-id leafcutter --retention-max-generations 5 --retention-min-age-seconds 86400
+```
+
+The values `5` and `86400` are placeholders; choose your own. The command reads Neo4j with serving credentials and requires `--backend neo4j`.
+
+**The evaluation reports and changes nothing.** It does not reclaim, retire or re-point any generation. The `reclaimable` list it returns is a verdict, not an action taken. A generation is only deleted by a separate `cleanup` command (Step 6).
+
+The response carries the `bound` with its configuration source, a `generations` list, and a `reclaimable` list of generation IDs. Each generation has a `reason`, decided in this order:
+
+- `active_generation`: the published generation is never reclaimable.
+- `inside_count_bound`: it ranks within the newest `retention_max_generations`.
+- `younger_than_minimum_age`: it was retired (or, if never retired, created) less than `retention_min_age_seconds` ago.
+- `pinned_continuation_unexpired`: a continuation pinned to it has not yet expired. **This reason does not currently fire against a real store.** It reads `pinned_until` on the `Snapshot` node, and nothing writes that property yet — continuation pinning lives in the retrieval path instead. So a generation holding a live continuation is reported reclaimable today. That is safe while this command only reports; it would not be safe for anything that deletes what it names. See [the retention bound reference](../reference/knowledge-retention-bound.md) for the full caveat.
+- `reclaimable`: none of the above applies.
+
+The command refuses an incomplete bound before connecting to Neo4j, with a nonzero exit and a JSON error on stderr:
+
+- Neither flag given: the error names `retention_max_generations` as unset.
+- Count given without an age: the error names `retention_min_age_seconds` as unset.
+- A count below 1 or a negative age is refused naming the setting.
+
+Neither case falls back to a built-in value. `cleanup` follows the same rule: it now requires `--retention-seconds` and raises a refusal naming the unset value rather than assuming 3600.
+
+What this does not establish: the `retention` command takes its bound from its two flags only. In the code reviewed, it does not read the `knowledge` section of kernel configuration, and nothing in that code path schedules or performs reclamation. Declaring the values in kernel configuration records them but does not make this command use them. The safe count and age for a given Neo4j instance are not established here.
+
 ## Verification
 
 Run the count command after substituting your authorized repository and published revision:
@@ -253,7 +294,8 @@ Verification labels: public kernel/observer acceptance tests exercise the real k
 2. **A count is partial or has no exact total.** Inspect truncation, continuation and budget limitations. Refine the population or use an authorized sufficient budget; do not equate the first or final continued page with all requirements. The absence of another cursor is not proof of a complete aggregate.
 3. **A query build is unavailable.** Check the pinned mapping and required fields before the query catalog. Missing source data needs an approved mapping/source change, not a new query; backend outages need recovery.
 4. **A declared test has no run proof.** Keep the declaration and the missing execution receipt distinct. Do not use a historical result at another SHA as current proof.
-5. **There is no accessible trace.** Preserve the answer and explicit observation state. Check the configured owner/permissions and matching diagnostics; do not repeat the query merely to obtain a trace.
+5. **`retention` is refused as unset.** A retention setting was not supplied. Pass both `--retention-max-generations` and `--retention-min-age-seconds` (see Step 12); the error names the missing one. No default is applied.
+6. **There is no accessible trace.** Preserve the answer and explicit observation state. Check the configured owner/permissions and matching diagnostics; do not repeat the query merely to obtain a trace.
 
 ## See Also
 

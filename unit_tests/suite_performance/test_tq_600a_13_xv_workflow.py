@@ -33,6 +33,7 @@ from ._reeval_harness import (
     SUITE_NAME,
     TIMING_NAME,
     ReevalService,
+    app_secrets_env,
     expected_named,
     seed_world,
     suite_history,
@@ -99,19 +100,26 @@ class TestTq600a13XvWorkflowShape(unittest.TestCase):
                 self.assertNotEqual("write", (suite_job.get("permissions") or {}).get("actions"))
         rows.check()
 
-    def test_tq600a_13_xv_permissions_are_only_rerun_and_pull_request_read(self):
+    def test_tq600a_13_xv_permissions_are_exactly_read_and_the_job_runs_in_the_hold_environment(self):
         # covers: TQ-600a-13-xv
+        # covers: TQ-600a-13-xi
         # angle: criterion
-        """The job's only write is the re-run: `actions: write` + `pull-requests: read`, workflow level `{}`, no other job with `actions: write`."""
+        """AMENDED 2026-10-12: the job's GITHUB_TOKEN is exactly `actions: read` + `pull-requests: read` + `contents: read` (no `actions: write`
+        on ANY job), workflow level `{}`; the job runs in environment `post-merge-hold` (App secrets, main only)."""
         rows = Cases()
         with rows.case("workflow level"):
             self.assertEqual({}, self.doc["permissions"])
-        with rows.case("the job"):
-            self.assertEqual({"actions": "write", "pull-requests": "read", "contents": "read"}, _job(self.doc, "reevaluate").get("permissions"))
+        with rows.case("the job's permissions are exact"):
+            self.assertEqual({"actions": "read", "pull-requests": "read", "contents": "read"}, _job(self.doc, "reevaluate").get("permissions"))
+        with rows.case("the job runs in the hold's environment"):
+            self.assertEqual("post-merge-hold", _job(self.doc, "reevaluate").get("environment"))
         for job_id, job in self.doc["jobs"].items():
+            with rows.case(f"job {job_id!r} holds no actions: write"):
+                self.assertNotEqual("write", (job.get("permissions") or {}).get("actions"))
             if job_id != "reevaluate":
-                with rows.case(f"job {job_id!r} holds no actions: write"):
-                    self.assertNotEqual("write", (job.get("permissions") or {}).get("actions"))
+                with rows.case(f"job {job_id!r} is not in the hold's environment and names no secret"):
+                    self.assertIsNone(job.get("environment"))
+                    self.assertNotIn("secrets.", json.dumps(job))
         rows.check()
 
     def test_tq600a_13_xv_the_notice_job_waits_for_reevaluate_even_if_it_failed_and_carries_unrerunnable(self):
@@ -181,11 +189,12 @@ class TestTq600a13XvJobExecution(unittest.TestCase):
             suite_history(svc, "success", "failure")
             default = scratch_default_branch(base)
             event = write_event(base, SUITE_NAME, 102, SHAS["A"])
-            env = {"GITHUB_EVENT_PATH": str(event), "VARS_POST_MERGE_REEVAL_RERUN": "true"}  # the repo variable is on: re-runs are opt-in
+            env = {"GITHUB_EVENT_PATH": str(event), "VARS_POST_MERGE_REEVAL_RERUN": "true", **app_secrets_env()}  # the repo variable is on: re-runs are opt-in; the environment's App secrets
             result = WorkflowRun(FOLLOWUP, default, base / "scratch", env, svc.url).execute_job("reevaluate")
             with rows.case("suite completion"):
                 self.assertEqual("success", result.conclusion, result.log_text()[-1500:])
                 self.assertEqual([1005, 1009, 1011], svc.rerun_ids())
+                self.assertEqual({"install"}, {auth for _, auth in svc.rerun_attempts()}, "every re-run is requested with the App's installation token")
                 self.assertEqual([], svc.other_writes())
                 named = json.loads(result.outputs.get("unrerunnable") or "null")
                 self.assertEqual(expected_named(refused=[(14, "D", 403)]), sorted(named or [], key=lambda e: e["pr"]), result.outputs)
