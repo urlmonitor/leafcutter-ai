@@ -1,0 +1,163 @@
+id: GE-133a
+title: "A store of records that only tools read is not judged by a limit written for folders people browse, and you can see that it was set aside"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - ac_store
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The crowding standard protects a person looking for something. Where nobody
+  looks by hand, it does not apply, and where it does not apply, that is said
+  out loud.
+
+  The acceptance-criteria store is flat by design: one folder per feature
+  family, no folder nested inside another, and every tool that reads it walks
+  it from the top. Most of its folders already hold more than the standard
+  permits and pass only because a folder already over may keep growing. So the
+  first time any family that started small crosses the line, the commit adding
+  its next record is refused, for a crowding nobody experiences, and the only
+  way through is to switch the check off for that commit.
+
+  After this, whether a location is held to the standard is a stated,
+  reviewable property of that location, declared in configuration rather than
+  built into the check. A folder set aside is reported as set aside and on
+  which stated ground, counted apart from the folders that were judged, so a
+  run that judged nothing never reads as a run that found nothing. A
+  declaration that cannot be read sets nothing aside, and says so. A folder of
+  source or tests is judged whatever it is called.
+depends_on:
+  - GE-133
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-133-directories-stay-findable/GE-133.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MODEL. GE-127g-1, GE-127g-3 and GE-127g-2-i (declared class, exactly the
+      declared population, unreadable declaration judges) map to GE-133a-1; GE-127g-2
+      (reported, counted separately, counts move) maps to GE-133a-2. Do not satisfy
+      any record here by pointing at its GE-127g counterpart: that subtree judges
+      documents by length; this one judges folders by file count.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-3.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, INHERITED AND NOT RESTATED. The check runs on an ordinary commit and
+      folders already over are reported rather than refused. Nothing here changes how a
+      judged folder is treated.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120h-5.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. What a refusal names as help is GE-120h-5's. The false refusal here is
+      not answered by better wording; it is answered by the folder not being refused.
+  - path: templates/scripts/commit_guardian/check_folder_density.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE SOURCE. scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/ are
+      build outputs regenerated from it.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the check's configuration already lives (the folder_density section: the
+      limit of 15, a list of directory names skipped by name, exempt extensions and
+      filenames). The existing name-matched skip list is the silent, name-shaped
+      mechanism this L1 must NOT be expressed through; see GE-133a-1's second arm.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" binds every child: each arm
+      is an ordinary commit in a real repository with the verdict read from the commit's
+      own outcome. A test that asserts the declaration is present in configuration passes
+      on a check that never reads it.
+delivers_to: null
+expects_from: null
+documentation_triggers: []
+documentation_rationale: >-
+  No documentation child is authored, to keep the family to two records, and that leaves
+  a real gap rather than none: docs/pre-commit-hooks.md describes check-folder-density as
+  refusing any folder that crosses 15, and once this L1 lands it must also state that
+  declared locations are set aside and on what ground. Named here as a follow-up so it is
+  not mistaken for "no docs needed". GE-127g discharged the same obligation with a
+  dedicated child (GE-127g-4); a third L2 on that model is the recommended shape.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: slimmed-by-user-decision
+    date: '2026-10-12'
+    by: business-analyst
+    entry: >-
+      BrainCandy slimmed the family to two L2s. GE-133a-3's guarantees (exact matching,
+      absent or malformed declaration judges and says so, empty declaration sets nothing
+      aside) were folded into GE-133a-1, and GE-133a-3 and GE-133a-4 were deleted.
+      covered_by is now [GE-133a-1, GE-133a-2].
+superseded_by: null
+covered_by:
+  - GE-133a-1
+  - GE-133a-2
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  THE DECISION THIS CARRIES. BrainCandy, 2026-10-09: the AC store is set aside from the
+  crowded-directory check (limit 15 non-markdown files per folder), and it is not exempted
+  silently. Modelled on GE-127g, which sets generated documents aside from the file-length
+  limit.
+
+  A per-location size bound was considered and dropped by BrainCandy's decision on
+  2026-10-12: the AC store's tree limits already cap growth.
+
+  WHY THE FALSE REFUSAL APPEARED NOW, READ FROM THE CHECK'S OWN RECORDED HISTORY, NOT
+  MEASURED. The known issue KI-CG-20260909-gate-folder-density recorded that the check's
+  "already over" comparison read a snapshot that already contained the commit's own
+  additions, so a crossing was never refused. The check's own documentation now states it
+  compares against the parent revision instead. That made the crossing refusal reachable,
+  and the first store family to cross 15 after it was refused: BO-3800 grew from 15 to 19
+  records on 2026-10-09 and the commit needed the check skipped. The fix was right; the
+  store was never meant to be judged by it.
+
+  MEASURED IN THIS WORKTREE ON 2026-10-09, AT HEAD, COUNTING AS THE CHECK COUNTS (files
+  tracked at the revision, markdown and package-marker files not counted, hidden and
+  name-skipped directories not counted). CARRY THE FIGURES INTO ENRICHMENT, NOT INTO
+  TESTS:
+    - 170 folders under the store hold a countable file; 114 of them hold more than 15.
+      The decision text cites 115 of 179; the difference is method (this count is of
+      folders holding at least one countable file at HEAD) and is not reconciled further.
+    - 56 store folders stand at or below 15 today. Each is a future instance of the
+      BO-3800 refusal under the current check.
+    - No store folder is nested more than one feature-folder level below a component
+      folder.
+    - Directories OUTSIDE the store whose path contains the same name: a source directory
+      templates/acceptance-criteria/ (the template the installer ships) and a test-data
+      directory leafcutter-web/fixtures/docs/acceptance-criteria/. These are the concrete
+      reason a name-matched rule is wrong here (GE-133a-1's second arm).
+
+  DESIGN NOTE FOR ENRICHMENT (NOT A CRITERION). GE-127g's it_requirements recommend a
+  declaration shape for the document gate: a list of entries, each a repo-relative path
+  and a stated ground. Using the same shape and key name for this check means the two
+  set-asides are expressed one way in one configuration file, which is the drift
+  GE-127g's notes rule out. They should NOT share one list: a location set aside from one
+  standard is not thereby set aside from the other.
+
+  WHAT IS NOT DECIDED HERE. Whether a declared location may itself contain a source or
+  test directory and still set it aside. The decision text says source and test
+  directories stay judged "whatever they are named" and that the set-aside population is
+  exactly the declared locations; this L1 reads that as forbidding name-matching, not as
+  a rule that classifies directories as source. GE-133a-1 is written to that reading. If
+  the user meant the stronger rule, it needs its own record.
