@@ -26,7 +26,10 @@ ARCHITECTURE: Stdlib-only CLI (argparse, json, subprocess, shutil, sys,
     place, ``--landing-root`` validation and config derivation in
     ``worktree_layout`` (never re-implemented here); the read-only/removal verbs live in
     ``worktree_admin`` so this file stays under the package's file-size
-    ratchet. A caller-supplied condition this script cannot classify is
+    ratchet. The per-work lock, the set-aside of the work's uncommitted
+    changes, the half-made-folder helpers and the abort-only test seam live in
+    ``worktree_ensure_state`` (BO-4300d); asking again re-readies a ready
+    workspace or completes a half-made one in place. A caller-supplied condition this script cannot classify is
     answered as ``{"status": "error", "code": "INTERNAL_ERROR", ...}`` on
     stdout -- never a raw traceback, never an "ok" answer for a request that
     did not actually succeed.
@@ -45,6 +48,7 @@ from typing import Any
 
 import worktree_admin
 import worktree_answer as wa
+import worktree_ensure_state as wes
 import worktree_git as wg
 import worktree_identity as wi
 import worktree_layout as wl
@@ -66,8 +70,8 @@ def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
     """Best-effort copy ``.env``/``.mcp.json`` from the main checkout into the workspace."""
     for name in (".env", ".mcp.json"):
         src = repo_root / name
-        if not src.is_file():
-            continue
+        if not src.is_file() or (workspace_path / name).exists():
+            continue  # never overwrite a copy the work may have changed
         try:
             shutil.copy2(src, workspace_path / name)
         except OSError as exc:
@@ -77,26 +81,6 @@ def _copy_optional_files(repo_root: Path, workspace_path: Path) -> None:
 def _repo_context(repo_root: Path) -> dict[str, Any]:
     """Build the BO-4300c-2 'Common fields' this maker can supply as soon as repo_root resolves."""
     return {**wp.repo_fields(repo_root), "layout": wl.layout_for(repo_root)}
-
-
-def _answer_from_existing(workspace_path: Path, marker: dict[str, Any], hub: str,
-                         repo_root: Path) -> dict[str, Any]:
-    """Build an ``ensure`` answer for an already-ready workspace (idempotent short-circuit)."""
-    computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "", project_root=repo_root)
-    return {
-        "status": "ok",
-        "mechanism": "clone",
-        "kind": marker.get("kind"),
-        "slug": marker.get("slug"),
-        "branch": marker.get("branch"),
-        "line_of_work": marker.get("line_of_work", "new"),
-        "hub": hub,
-        **wp.path_fields(workspace_path),
-        "base_commit": marker.get("base_commit"),
-        "bootstrap": {"restored_tracked": []},
-        "hooks_stages_declared": marker.get("hooks_stages_declared", []),
-        "checks": wr.stored_checks(computed, marker),
-    }
 
 
 def _build_marker(kind: str, slug: str, branch: str, hub: str, repo_root: Path, base_commit: str | None,
@@ -123,11 +107,12 @@ def _build_marker(kind: str, slug: str, branch: str, hub: str, repo_root: Path, 
     return marker
 
 
-def _start_line(workspace_path: Path, ident: wi.Identity, place: Path,
-                ticket: wi.TicketRequest | None) -> tuple[str, str, dict[str, Any] | None]:
+def _start_line(workspace_path: Path, ident: wi.Identity, place: Path, ticket: wi.TicketRequest | None,
+                *, discard: bool = True) -> tuple[str, str, dict[str, Any] | None]:
     """Check out the line of work: resume the one hub line, else start fresh at origin/main.
 
-    Returns ``(branch, line_of_work, refusal)``; a refusal discards the new clone.
+    Returns ``(branch, line_of_work, refusal)``; a refusal discards the clone
+    this request just made (*discard*), never a folder being finished.
     """
     lines = wi.hub_lines(workspace_path, ident)
     refusal = wi.line_refusal(lines, ident)
@@ -139,35 +124,38 @@ def _start_line(workspace_path: Path, ident: wi.Identity, place: Path,
         proc = wg.run_git(cmd, workspace_path)
         if proc.returncode != 0:
             refusal = _err("GIT_FAILED", f"git {' '.join(cmd)} failed: {proc.stderr.strip()}")
-    if refusal is not None:
+    if refusal is not None and discard:
         wi.discard_new_clone(workspace_path, place)
     return branch, line, refusal
 
 
-def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
-                       args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
-    """Clone, fetch, checkout, install, and mark a brand-new workspace ready."""
-    kind, slug = ident.kind, ident.slug
-    workspace_path.parent.mkdir(parents=True, exist_ok=True)
-    clone_proc = wg.run_git(["clone", "--no-checkout", "--local", hub, str(workspace_path)], repo_root)
-    if clone_proc.returncode != 0:
-        return _err("FETCH_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
-
-    wg.write_marker(workspace_path, _build_marker(kind, slug, ident.branch, hub, repo_root, None, "creating", workspace=workspace_path))
-
+def _checkout_line(hub: str, ident: wi.Identity, place: Path, workspace_path: Path, args: argparse.Namespace,
+                   ticket: wi.TicketRequest | None, *, discard: bool,
+                   ) -> tuple[tuple[str, str, str] | None, dict[str, Any] | None]:
+    """Point origin at the hub, fetch, and check out the line; returns ``((branch, line, base), refusal)``."""
     wg.run_git(["remote", "set-url", "origin", hub], workspace_path)
     fetch_proc = wg.run_git(["fetch", "origin", "main"], workspace_path)
     if fetch_proc.returncode != 0 and not args.allow_stale_base:
-        return _err("FETCH_FAILED", f"git fetch origin main failed: {fetch_proc.stderr.strip()}")
-
+        return None, _err("FETCH_FAILED", f"git fetch origin main failed: {fetch_proc.stderr.strip()}")
     base_commit = wg.run_git(["rev-parse", "origin/main"], workspace_path).stdout.strip()
     if not base_commit:
-        return _err("FETCH_FAILED", "origin/main did not resolve to a commit after fetch.")
-
-    branch, line_of_work, refusal = _start_line(workspace_path, ident, place, ticket)
+        return None, _err("FETCH_FAILED", "origin/main did not resolve to a commit after fetch.")
+    branch, line_of_work, refusal = _start_line(workspace_path, ident, place, ticket, discard=discard)
     if refusal is not None:
-        return refusal
+        return None, refusal
+    wes.abort_if("after_branch")
+    return (branch, line_of_work, base_commit), None
 
+
+def _install_and_mark(repo_root: Path, hub: str, ident: wi.Identity, workspace_path: Path, args: argparse.Namespace,
+                      ticket: wi.TicketRequest | None, line: tuple[str, str, str], action: str,
+                      marker: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Install inside the folder, prove every ingredient, mark it ready, and build the ok answer.
+
+    The work's uncommitted changes (if any) are set aside around the set-up and
+    put back byte for byte, so finishing or re-readying never overwrites them.
+    """
+    branch, line_of_work, base_commit = line
     wg.run_git(["config", "gc.auto", "0"], workspace_path)
     wg.run_git(["config", "maintenance.auto", "false"], workspace_path)
     _copy_optional_files(repo_root, workspace_path)
@@ -183,21 +171,27 @@ def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
                 "(.claude/, .gemini/, .cursor/, .github/, .cline/); never the build's "
                 "default config, never this maker's own location.",
             )
-    proof = wr.prove_ready(workspace_path, hub, kind=kind, branch=branch, project_root=repo_root,
-                           config_path=config_path, line_of_work=line_of_work)
+    wes.arm_after_install()
+    with wes.work_set_aside(workspace_path):
+        proof = wr.prove_ready(workspace_path, hub, kind=ident.kind, branch=branch, project_root=repo_root,
+                               config_path=config_path, line_of_work=line_of_work)
     if proof.get("status") in ("refused", "error"):
         return proof  # a refusal never carries a workspace location
     checks = proof["checks"]
-    marker = _build_marker(kind, slug, branch, hub, repo_root, base_commit, "ready", checks, workspace=workspace_path)
-    marker["hooks_stages_declared"] = proof["hooks_stages_declared"]
-    marker["line_of_work"] = line_of_work
-    wg.write_marker(workspace_path, marker)
+    ready = {**(marker or {}), **_build_marker(ident.kind, ident.slug, branch, hub, repo_root, base_commit, "ready",
+                                               checks, workspace=workspace_path)}
+    if marker and marker.get("created_at"):
+        ready["created_at"] = marker["created_at"]
+    ready["hooks_stages_declared"] = proof["hooks_stages_declared"]
+    ready["line_of_work"] = line_of_work
+    wes.write_ready_marker(workspace_path, ready)
 
     answer = {
         "status": "ok",
         "mechanism": "clone",
-        "kind": kind,
-        "slug": slug,
+        "workspace_action": action,
+        "kind": ident.kind,
+        "slug": ident.slug,
         "branch": branch,
         "line_of_work": line_of_work,
         "hub": hub,
@@ -208,6 +202,64 @@ def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path
         "checks": checks,
     }
     return wi.attach_ticket(answer, ticket, workspace_path) or answer
+
+
+def _create_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
+                       args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
+    """Clone, fetch, checkout, install, and mark a brand-new workspace ready."""
+    workspace_path.parent.mkdir(parents=True, exist_ok=True)
+    clone_proc = wg.run_git(["clone", "--no-checkout", "--local", hub, str(workspace_path)], repo_root)
+    if clone_proc.returncode != 0:
+        return _err("FETCH_FAILED", f"git clone --no-checkout --local failed: {clone_proc.stderr.strip()}")
+    wg.write_marker(workspace_path, _build_marker(ident.kind, ident.slug, ident.branch, hub, repo_root, None,
+                                                  "creating", workspace=workspace_path))
+    wes.abort_if("after_clone")
+    line, refusal = _checkout_line(hub, ident, place, workspace_path, args, ticket, discard=True)
+    if refusal is not None:
+        return refusal
+    return _install_and_mark(repo_root, hub, ident, workspace_path, args, ticket, line, "created")
+
+
+def _resume_workspace(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
+                      args: argparse.Namespace, ticket: wi.TicketRequest | None,
+                      marker: dict[str, Any]) -> dict[str, Any]:
+    """Re-ready a ready workspace, or complete a half-made one, in place (the folder is never deleted)."""
+    at_risk = wes.rescue_refusal(workspace_path)
+    if at_risk is not None:
+        return at_risk
+    state = marker.get("state")
+    if state not in ("ready", "creating") or not (workspace_path / ".git").is_dir():
+        return wes.incomplete_refusal(workspace_path, marker)
+    wes.clear_torn_markers(workspace_path)
+    action = "re-readied" if state == "ready" else "completed"
+    if state == "creating" and not wes.checked_out(workspace_path):
+        line, refusal = _checkout_line(hub, ident, place, workspace_path, args, ticket, discard=False)
+        if refusal is not None:
+            return refusal
+        return _install_and_mark(repo_root, hub, ident, workspace_path, args, ticket, line, action, marker)
+    if state == "ready":
+        fetch = wg.run_git(["fetch", "origin", "main"], workspace_path)
+        if fetch.returncode != 0 and not args.allow_stale_base:
+            return _err("FETCH_FAILED", f"git fetch origin main failed: {fetch.stderr.strip()}")
+    branch, line_of_work, base = wes.head_state(workspace_path)
+    if not ident.matches_branch(branch):
+        return wes.incomplete_refusal(workspace_path, {**marker, "state": f"on line {branch!r}, not this work's"})
+    if state == "ready":  # the line already begun: its recorded start, never moved or rebased
+        base, line_of_work = marker.get("base_commit") or base, "resumed"
+    return _install_and_mark(repo_root, hub, ident, workspace_path, args, ticket, (branch, line_of_work, base),
+                             action, marker)
+
+
+def _ensure_locked(repo_root: Path, hub: str, ident: wi.Identity, place: Path, workspace_path: Path,
+                   args: argparse.Namespace, ticket: wi.TicketRequest | None) -> dict[str, Any]:
+    """The ensure decision, taken while holding this work's lock: create, re-ready, or complete."""
+    refusal = wi.occupied_refusal(repo_root, ident, workspace_path, hub)
+    if refusal is not None and not (refusal.get("code") == "OCCUPIED" and wes.empty_folder(workspace_path)):
+        return refusal
+    marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
+    if marker is None:
+        return _create_workspace(repo_root, hub, ident, place, workspace_path, args, ticket)
+    return _resume_workspace(repo_root, hub, ident, place, workspace_path, args, ticket, marker)
 
 
 def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
@@ -236,14 +288,10 @@ def cmd_ensure(args: argparse.Namespace) -> dict[str, Any]:
     ident = wi.resolve(args.kind, args.slug)
     workspace_path = wl.workspace_path_for(place, args.kind, ident.slug)
 
-    refusal = wi.occupied_refusal(repo_root, ident, workspace_path, hub)
-    if refusal is not None:
-        return {**refusal, **ctx}
-    marker = wg.read_marker(workspace_path) if workspace_path.exists() else None
-    if marker is not None and marker.get("state") == "ready":
-        answer = {**ctx, **_answer_from_existing(workspace_path, marker, hub, repo_root)}
-        return {**(wi.attach_ticket(answer, ticket, workspace_path) or answer), **ctx}
-    return {**ctx, **_create_workspace(repo_root, hub, ident, place, workspace_path, args, ticket)}
+    with wes.ensure_lock(place, repo_root, ident.kind, ident.slug) as in_progress:
+        if in_progress is not None:
+            return {**in_progress, **ctx}
+        return {**_ensure_locked(repo_root, hub, ident, place, workspace_path, args, ticket), **ctx}
 
 
 def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
@@ -255,6 +303,8 @@ def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     marker = wg.read_marker(workspace_path)
     if marker is None:
         return _err("NOT_FOUND", f"No leafcutter workspace marker found at {workspace_path}.")
+    if marker.get("state", "ready") != "ready":
+        return wes.incomplete_refusal(workspace_path, marker)
     hub = wp.from_portable(marker.get("hub", ""), workspace_path)
     project_root = marker.get("project_root")
     computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "",
@@ -316,7 +366,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 _DISPATCH = {
     "ensure": cmd_ensure,
-    "locate": worktree_admin.cmd_locate,
+    "locate": wes.locate_ready_only,
     "list": worktree_admin.cmd_list,
     "verify": cmd_verify,
     "remove": worktree_admin.cmd_remove,
@@ -415,4 +465,12 @@ if __name__ == "__main__":
 #   proved every ingredient (build, restored tracked files, per-stage
 #   canaries, branch/base/independence); a refusal carries checks and no
 #   workspace location. (ADR-018)
+# - 2026-10-12 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
+#   BO-4300d-1/-i/-ii, d-2/-i/-ii/-iii: ensure now runs under a per-work lock
+#   (worktree_ensure_state); a ready workspace is re-readied (fetch, rebuild,
+#   fresh canaries, the work's uncommitted changes set aside and put back) and
+#   a half-made one is completed in place, answered workspace_action
+#   created | re-readied | completed. verify and locate refuse a workspace
+#   whose marker is not ready (INCOMPLETE). (ADR-018)
 # ===========================================================================
