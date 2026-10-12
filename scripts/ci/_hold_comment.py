@@ -29,7 +29,9 @@ ARCHITECTURE: ``render_comment(verdict, now, previous, head_sha=)`` is pure: the
     has the shape this check renders, else a one-line summary is folded; a comment is
     "own" only with a positive int ``id`` and an ``issue_url`` ending ``/issues/{pr}``.
     Extension points: -viii adds the ``exempt`` state (``LIFT_STATES``); -ix and -xiv
-    own the wording of their states (``HELD_HEADLINES``).
+    own the wording of their states (``HELD_HEADLINES``; the headline values must not change:
+    published comments are recognised by them). Every held body carries a restore line built from
+    ``_hold_wording.RESTORE_ACTIONS``, the same source the check output uses (-xiv).
 """
 
 from __future__ import annotations
@@ -41,6 +43,7 @@ from datetime import datetime, timezone
 
 from scripts.ci._github_rest import GitHubClient, GitHubError
 from scripts.ci._hold_reads import cause_of
+from scripts.ci._hold_wording import RESTORE_ACTIONS
 from scripts.ci._notice_render import MAX_FAILING_SHOWN, code
 
 logger = logging.getLogger("post_merge_hold")
@@ -189,6 +192,8 @@ def _held_body(verdict: dict, now: datetime, head_sha: str | None) -> list[str]:
     lines = [HELD_HEADLINES.get(state, GENERIC_HEADLINE), "", OUTSIDE_NOTE, ""]
     if state in STATE_SENTENCES:
         lines += [STATE_SENTENCES[state], ""]
+    if state in RESTORE_ACTIONS:  # one source with the check output; code span: the red action carries a ``<notice>`` placeholder
+        lines += [f"To restore a verdict: {code(RESTORE_ACTIONS[state])}.", ""]
     if state == "could_not_read" and verdict.get("reason"):
         lines += [f"Detail: {code(str(verdict['reason'])[:300])}", ""]
     lines += [*_run_lines(verdict), "", f"Evaluated at {_stamp(now)}; {_head_text(head_sha)}."]

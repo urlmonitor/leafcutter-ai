@@ -3,7 +3,7 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-09-28
+last_updated: 2026-10-12
 components:
 - infrastructure
 related_docs:
@@ -170,6 +170,26 @@ Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and
 the holding correctness lane into the timing lane. That is a reviewed change: name the
 test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
 `-m manual` for the correctness lane).
+
+### `Post-merge suite status` hold messages
+
+The check prints one line. The headline is the text before the first `:`, `(`, `.` or `;`.
+Every held message also says "This is not caused by this pull request." and ends with
+"To restore a verdict: ...". Wording lives in `scripts/ci/_hold_wording.py`; thresholds in
+`scripts/ci/post_merge_tunables.json`.
+
+| State | Headline | When it occurs | How to restore a verdict |
+|---|---|---|---|
+| `pass` | `Post-merge suite is green` | The latest settled run concluded success and started within `staleness_hours`. | Nothing; the check passes. |
+| `red` | `Post-merge suite is not green` | The latest settled run's tests failed. | Fix the failing tests on main. A fix PR that declares the fix of the open `post-merge-red` notice and has a passing proof on its head is exempted. |
+| `did_not_complete` | `Post-merge suite run did not finish` | The run did not finish, or its jobs could not be read. | Re-run the post-merge suite on main until it completes. |
+| `stale` | `Post-merge verdict is stale` | The latest settled run started more than `staleness_hours` (30) ago, or no settled run is among the most recent `run_history_page` (30) runs. | Dispatch the post-merge correctness workflow on main. |
+| `disabled` | `Post-merge suite workflow is disabled and not active` | The workflow state is not `active` (`disabled_inactivity`, `disabled_manually`, `deleted`, `disabled_fork`); checked on every evaluation. | Re-enable the workflow (`gh workflow enable`). |
+| `never_run` | `Post-merge suite has never run on main` | No post-merge run has ever completed. | Wait for the first run to complete, or dispatch it. |
+| `could_not_read` | `Post-merge run history could not be read` | The workflow state or run history could not be read; one retry is made for 429, 5xx, timeout and connection errors. | Re-run this check once the read succeeds. |
+
+- The hold refuses to run (`could_not_read`, naming both keys) if `staleness_hours` is not greater than `heartbeat_max_hours` (12).
+- Age is measured from the run's `run_started_at`, so a re-run counts as fresh.
 
 ---
 

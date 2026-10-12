@@ -63,8 +63,11 @@ ARCHITECTURE: ``evaluate(client, repo, *, now=None, claim=None, sleep=time.sleep
     ``state="exempt"`` (a declared fix of an open notice AND a passing proof on the
     head); ``match_declaration`` (re-exported) is the pure matcher the proof
     workflow shares. The verdict's run summary also carries ``updated_at``.
-    -xiv owns the stale/disabled/never_run wording (``_reason_*`` helpers,
-    ``_hold_comment.HELD_HEADLINES``).
+    -xiv: the wording of all six held states lives in ``_hold_wording`` (six distinct headlines, each
+    saying the cause is not the pull request and how to restore a verdict); the comment headlines are
+    ``_hold_comment.HELD_HEADLINES``. ``_verdict_inputs`` refuses to run (``_hold_config``: state
+    ``could_not_read`` under the headline "Post-merge hold configuration is invalid", naming the file, both keys
+    and both values) when the staleness bound is not a finite number above the heartbeat bound.
 """
 
 from __future__ import annotations
@@ -88,6 +91,17 @@ from scripts.ci._hold_comment import EventError, read_event, render_comment, syn
 from scripts.ci._hold_exempt import Claim, apply_claim, match_declaration, read_body  # noqa: E402, F401 -- match_declaration is this module's public API (the proof workflow calls the same function)
 from scripts.ci._hold_publish import GREEN_STATES, conclusion_for, publish  # noqa: E402, F401 -- conclusion_for is this module's public API
 from scripts.ci._hold_reads import base_delay_seconds, cause_of, read_with_retry, shape_error, timeout_seconds  # noqa: E402
+from scripts.ci._hold_config import TunablesError, check_staleness_bounds  # noqa: E402
+from scripts.ci._hold_wording import (  # noqa: E402
+    UNREADABLE_HEADLINE,  # noqa: F401 -- kept importable from here since -ix
+    config_invalid_reason,
+    could_not_read_reason,
+    disabled_reason,
+    held_reason,
+    never_run_reason,
+    no_settled_reason,
+    stale_reason,
+)
 from scripts.ci._notice_render import LABEL, parse_state  # noqa: E402
 from scripts.ci._run_history import (  # noqa: E402
     KIND_NEVER_RUN,
@@ -108,7 +122,6 @@ ACTIVE = "active"
 CONTENT_ERRORS = (GitHubError, AttributeError, KeyError, TypeError, ValueError)  # a content read that failed or came back malformed
 EXIT_OK, EXIT_HELD, EXIT_BAD_INPUT = 0, 1, 2
 PUBLISH_FLAG = "--publish"
-UNREADABLE_HEADLINE = "Post-merge run history could not be read"  # shared with no other state
 REPO_RE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 
 
@@ -199,8 +212,7 @@ def _parse_time(text: object) -> datetime | None:
 
 def _reason_held(kind: str, run: dict, notice: dict | None) -> str:
     """The output line for a held run: its link and conclusion, red or did-not-complete, and the notice."""
-    what = "the tests failed" if kind == VERDICT_RED else "the run did not complete"
-    line = f"Post-merge suite is not green: run {run.get('html_url')} concluded {run.get('conclusion')}; {what}."
+    line = held_reason(kind == VERDICT_RED, run)
     if notice:
         line += f" Notice: {notice['html_url']}"
     return line
@@ -259,10 +271,10 @@ def _settled_verdict(run: dict, workflow_state: str, now: datetime, staleness_ho
     """A settled green run passes when fresh and is stale otherwise."""
     started = _parse_time(run.get("run_started_at"))
     if started is None:
-        return _verdict("could_not_read", f"Post-merge suite status could not be read: run {run.get('html_url')} has no usable start time.", run=run, workflow_state=workflow_state, cause="no run_started_at")
+        return _verdict("could_not_read", could_not_read_reason(f"run {run.get('html_url')} has no usable start time"), run=run, workflow_state=workflow_state, cause="no run_started_at")
     age = now - started
     if age > timedelta(hours=staleness_hours):
-        reason = f"Post-merge suite has no fresh verdict: the latest run {run.get('html_url')} started {age.total_seconds() / 3600:.0f} h ago (limit {staleness_hours:g} h)."
+        reason = stale_reason(run, age.total_seconds() / 3600, staleness_hours)
         return _verdict("stale", reason, run=run, workflow_state=workflow_state, cause="stale")
     return _verdict("pass", f"Post-merge suite is green: run {run.get('html_url')} concluded success.", run=run, workflow_state=workflow_state)
 
@@ -283,7 +295,7 @@ def _could_not_read(exc: BaseException) -> dict:
     """The verdict for a verdict read that failed: its own headline, the cause named, logged at WARNING. Never a pass."""
     cause = cause_of(exc)
     logger.warning("post-merge hold: the run history could not be read (%s), holding", cause)
-    return _verdict("could_not_read", f"{UNREADABLE_HEADLINE}: {cause}.", cause=cause)
+    return _verdict("could_not_read", could_not_read_reason(cause), cause=cause)
 
 
 def _verdict_inputs(client: GitHubClient, repo: str, sleep: Callable[[float], object]) -> tuple[dict, str, Selection | None]:
@@ -294,6 +306,7 @@ def _verdict_inputs(client: GitHubClient, repo: str, sleep: Callable[[float], ob
     (and nothing raised later, on the content path) into ``could_not_read``.
     """
     tunables = load_tunables()
+    check_staleness_bounds(tunables)  # fail closed: the bound must outlast the heartbeat (TunablesError)
     workflow_state, runs = _verdict_reads(client, repo, int(tunables["run_history_page"]), sleep)
     return tunables, workflow_state, None if runs is None else select_verdict_run(runs)
 
@@ -302,14 +315,17 @@ def _evaluate(client: GitHubClient, repo: str, now: datetime, claim: Claim | Non
     """Read and decide; a failed verdict read is ``could_not_read``. A defect on the content path propagates (never that headline)."""
     try:
         tunables, workflow_state, selection = _verdict_inputs(client, repo, sleep)
+    except TunablesError as exc:  # before the generic handler: it is a ValueError with its own headline
+        logger.warning("post-merge hold: invalid tunables (%s), holding", exc)
+        return _verdict("could_not_read", config_invalid_reason(str(exc)), cause="invalid tunables")
     except (GitHubError, OSError, ValueError, TypeError, KeyError) as exc:
         return _could_not_read(exc)
     if selection is None:
-        return _verdict("disabled", f"Post-merge suite workflow is not active (state: {workflow_state}).", workflow_state=workflow_state, cause=str(workflow_state))
+        return _verdict("disabled", disabled_reason(workflow_state), workflow_state=workflow_state, cause=str(workflow_state))
     if selection.run is None:
         if selection.kind == KIND_NEVER_RUN:
-            return _verdict("never_run", "Post-merge suite has never run on main.", workflow_state=workflow_state, cause=selection.kind)
-        reason = "Post-merge suite has no settled run in its latest runs on main."
+            return _verdict("never_run", never_run_reason(), workflow_state=workflow_state, cause=selection.kind)
+        reason = no_settled_reason(int(tunables["run_history_page"]))
         return _verdict("stale", reason, workflow_state=workflow_state, cause=selection.kind)
     run = selection.run
     if selection.kind != KIND_SETTLED or run.get("conclusion") != "success":
