@@ -218,7 +218,7 @@ def count_files_per_folder(files: list[str]) -> dict[str, int]:
             continue
 
         # Get the parent directory
-        parent = str(Path(filepath).parent)
+        parent = Path(filepath).parent.as_posix()
 
         # Skip root directory (handled by check_root_files.py)
         if parent == ".":
@@ -242,7 +242,7 @@ def get_folder_file_list(folder: str, files: list[str]) -> list[str]:
     """
     result = []
     for filepath in files:
-        parent = str(Path(filepath).parent)
+        parent = Path(filepath).parent.as_posix()
         if parent == folder and is_countable_file(filepath) and not is_excluded_path(filepath):
             result.append(Path(filepath).name)
     return sorted(result)
@@ -325,7 +325,7 @@ def main() -> int:
     affected_dirs = set()
     for filepath in staged_files:
         if not is_excluded_path(filepath):
-            parent = str(Path(filepath).parent)
+            parent = Path(filepath).parent.as_posix()
             if parent != ".":
                 affected_dirs.add(parent)
 

@@ -185,7 +185,11 @@
     "set_aside_locations": [
       {
         "path": "docs/acceptance-criteria/",
-        "ground": "the AC store is flat by design: records read by tools and navigated by nobody (GE-133a)"
+        "ground": "Holds acceptance-criteria records that tools read and write and nobody navigates by hand. It is flat by design, one folder per feature family, and its folders are bounded by the AC store's tree limits rather than by a file count."
+      },
+      {
+        "path": "docs/decisions/",
+        "ground": "Holds kernel decision records, one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing the folder."
       }
     ]
   },
