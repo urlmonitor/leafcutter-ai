@@ -24,7 +24,7 @@ import yaml
 
 from ._ending_harness import CHECK, Cases
 from ._notice_fakes import FakeIssueService, ScratchRepo, make_verdict, run_record
-from ._reeval_harness import HOLD_FILE, SHAS, SUITE_NAME, ReevalService, seed_world, suite_history, write_event
+from ._reeval_harness import HOLD_FILE, SHAS, SUITE_NAME, ReevalService, app_secrets_env, seed_world, suite_history, write_event
 from ._workflow_jobs import REPO_ROOT, JobResult, WorkflowRun
 from ._xi_support import changed, collect_writes, git, make_origin, snapshot, verdict_on, world_of
 
@@ -53,6 +53,7 @@ MUTANTS = {
     "deletes a branch of the origin": ("notice", ["git push -q origin :refs/heads/side\n"]),
     "dispatches the suite workflow to retry it green": ("reevaluate", [http_step("POST", "/actions/workflows/post-merge-suite.yml/dispatches", {"ref": "main"})]),
     "re-runs the suite run to retry it green": ("reevaluate", [http_step("POST", "/actions/runs/102/rerun", {})]),
+    "re-runs a hold run with the job's own GITHUB_TOKEN": ("reevaluate", [http_step("POST", "/actions/runs/1005/rerun", {})]),  # AMENDED 2026-10-12: only the App token may re-run
     "disables another workflow": ("reevaluate", [http_step("PUT", "/actions/workflows/ci.yml/disable", None)]),
 }
 CONTROLS = {"the unmutated notice job": ("notice", []), "the unmutated re-evaluation job": ("reevaluate", [])}
@@ -98,14 +99,14 @@ class TestTq600a13XiAddedStepIsCaught(unittest.TestCase):
                 seed_world(svc)
                 suite_history(svc, "success", "failure")
             event = write_event(base, SUITE_NAME, 102, SHAS["A"] if job == "reevaluate" else self.repo.r)
-            env = {"GITHUB_EVENT_PATH": str(event), "PYTHONDONTWRITEBYTECODE": "1", "VARS_POST_MERGE_REEVAL_RERUN": "true"}  # re-runs on: the control must really write
+            env = {"GITHUB_EVENT_PATH": str(event), "PYTHONDONTWRITEBYTECODE": "1", "VARS_POST_MERGE_REEVAL_RERUN": "true", **app_secrets_env()}  # re-runs on and the App secrets present: the control must really write
             run = WorkflowRun(workflow, proj, base / "scratch", env, svc.url)
             verdict = base / "post-merge-verdict.json"
             verdict.write_text(json.dumps(make_verdict("red", run_id=102, head_sha=self.repo.r, failing=("tests/test_shared.py::test_a",))), encoding="utf-8")
             run.artifacts.upload("post-merge-verdict", [("post-merge-verdict.json", verdict)])
             needs = {"reevaluate": JobResult("reevaluate", "success", outputs={"unrerunnable": "[]"})} if job == "notice" else None
             result = run.execute_job(job, needs)
-            hold_runs = {r["id"] for r in svc.workflows[HOLD_FILE]} if job == "reevaluate" else ()
+            hold_runs = {r["id"] for r in svc.workflows[HOLD_FILE] if r["event"] == "pull_request_target"} if job == "reevaluate" else ()
             writes = collect_writes(svc)
             world = world_of(svc, hold_runs=hold_runs)
             violations = [f"{w.method} {w.path}: {why}" for w in writes if (why := verdict_on(w, world))]

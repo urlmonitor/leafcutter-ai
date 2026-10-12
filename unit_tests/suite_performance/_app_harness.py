@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ._app_fake import APP_ID, CHECK_NAME, AppService, key_pairs
+from ._app_fake import APP_ID, CHECK_NAME, AppService, key_pairs, without_masks
 from ._ending_harness import CHECK
 from ._hold_harness import DNC_JOBS, OBSERVER, RED_JOBS, WORKFLOW, HoldRun, HoldTestCase, JobOutcome, fresh_base, make_run, scratch_default_branch
 from ._notice_fakes import REPO
@@ -126,7 +126,7 @@ def scan_for_credentials(svc, base, outcome, needles=None):
         if path.is_file():
             data = path.read_bytes()
             found += [f"file {path.relative_to(base)}" for n in wanted if n.encode() in data]
-    log = outcome.result.log_text()
+    log = without_masks(outcome.result.log_text())  # the runner hides a registered value; the masking command itself is not a leak
     found += ["log" for n in wanted if n in log]
     recorded = json.dumps([e["body"] for e in svc.log], default=str)
     found += ["recorded body" for n in wanted if n in recorded]

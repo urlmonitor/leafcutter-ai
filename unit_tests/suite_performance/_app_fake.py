@@ -81,6 +81,34 @@ def _b64url(text):
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
+MASK = "::add-mask::"  # the runner's workflow command: it hides the rest of the line from every later log line
+
+
+def mask_lines(text):
+    """The values registered with the runner's masking command in ``text`` (the one place a credential may be printed)."""
+    return [line[len(MASK) :] for line in text.splitlines() if line.startswith(MASK)]
+
+
+def without_masks(text):
+    """``text`` minus its masking commands: what a reader of the platform log would still see."""
+    return "\n".join(line for line in text.splitlines() if not line.startswith(MASK))
+
+
+def make_jwt(directory):
+    """An RS256 App JWT signed with the throwaway key the fake trusts, built the way the workflow's shell step builds it."""
+    key = Path(directory) / "app-key.pem"
+    key.write_text(key_pairs()[0].private_pem, encoding="utf-8")
+
+    def b64(raw):
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+    now = int(time.time())
+    head = b64(b'{"alg":"RS256","typ":"JWT"}')
+    claims = b64(json.dumps({"iat": now - 60, "exp": now + 540, "iss": APP_ID}).encode())
+    signed = _openssl("dgst", "-sha256", "-sign", str(key), "-binary", data=f"{head}.{claims}".encode())
+    return f"{head}.{claims}.{b64(signed.stdout)}"
+
+
 # --------------------------------------------------------------------------- the service
 class _HeaderHandler(_Handler):
     """The shared handler, remembering the bearer value of the request it is serving (``handle`` gets no headers)."""
@@ -115,13 +143,21 @@ class AppService(HoldService):
         if method == "GET" and path == _INSTALL_PATH:
             return self._jwt_gate(entry) or ((200, {"id": INSTALLATION_ID}) if self.installed else (404, {"message": "Not Found"}))
         if method == "POST" and _EXCHANGE.fullmatch(path):
-            gate = self._jwt_gate(entry)
-            if gate or self.exchange_status:
-                return gate or (self.exchange_status, {"message": "refused"})
-            self.minted.append(f"ghs_test{len(self.minted) + 1:02d}InstallationTokenValue0123456789")
-            return 201, {"token": self.minted[-1], "expires_at": "2099-01-01T00:00:00Z"}
+            return self._exchange(entry)
         if _PR_COMMENTS.fullmatch(path):  # the hold's own PR comment (-vii): no comment exists yet, a create is accepted
             return (200, []) if method == "GET" else (201, {"id": 9000 + entry["n"], "body": (entry["body"] or {}).get("body", "")})
+        return self._check_routes(method, path, entry)
+
+    def _exchange(self, entry):
+        gate = self._jwt_gate(entry)
+        if gate or self.exchange_status:
+            return gate or (self.exchange_status, {"message": "refused"})
+        self.minted.append(f"ghs_test{len(self.minted) + 1:02d}InstallationTokenValue0123456789")
+        asked = entry["body"] or {}  # the service answers with the grant it made: what was asked, plus the implicit read-only metadata
+        granted = {"permissions": {**(asked.get("permissions") or {}), "metadata": "read"}, "repositories": [{"name": n, "full_name": f"{REPO.split('/')[0]}/{n}"} for n in asked.get("repositories") or []]}
+        return 201, {"token": self.minted[-1], "expires_at": "2099-01-01T00:00:00Z", **granted}
+
+    def _check_routes(self, method, path, entry):
         if method == "POST" and path == _CHECKS_PATH:
             return self._write_gate(entry, self.create_status) or self._create_check(entry["body"] or {})
         match = _ONE_CHECK.fullmatch(path)
@@ -129,10 +165,13 @@ class AppService(HoldService):
             return self._write_gate(entry, self.complete_status) or self._complete_check(int(match.group(1)), entry["body"] or {})
         head = _HEAD_CHECKS.fullmatch(path)
         if method == "GET" and head:
-            wanted = entry["query"].get("check_name", [None])[0]
-            runs = [r for r in self.check_runs if r["head_sha"] == head.group(1) and wanted in (None, r["name"])]
-            return 200, {"total_count": len(runs), "check_runs": runs}
+            return self._head_check_runs(head.group(1), entry)
         return None
+
+    def _head_check_runs(self, sha, entry):
+        wanted = entry["query"].get("check_name", [None])[0]
+        runs = [r for r in self.check_runs if r["head_sha"] == sha and wanted in (None, r["name"])]
+        return 200, {"total_count": len(runs), "check_runs": runs}
 
     def _jwt_gate(self, entry):
         """None when the bearer is a JWT signed by the trusted key for this App ID that expires within 10 minutes."""

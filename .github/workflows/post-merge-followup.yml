@@ -30,16 +30,20 @@ permissions: {}
 jobs:
   # Re-evaluate every open pull request's hold when the verdict changed (TQ-600a-13-xv), or the one
   # hold of a fix-proof's head commit (TQ-600a-13-xvi). It is a workflow_run job, so it starts only
-  # after the triggering run has settled and reads the new history. It holds the ONLY `actions: write`
-  # in this file and no `issues` scope: what it could not re-run goes to its `unrerunnable` output and
-  # the `notice` job (which holds `issues: write`) carries it onto the notice. Its only write is a
-  # re-run request of the hold workflow. Not a required check, so selecting on the workflow name is fine.
+  # after the triggering run has settled and reads the new history. Its GITHUB_TOKEN holds NO write scope
+  # (`actions: write` is on no job in the family, owner decision 2026-10-12): every read uses it, and the one
+  # write, a re-run request of the hold workflow, uses the hold App's installation token, minted in this job for
+  # `{actions: write}` on this repository only. The job runs in environment `post-merge-hold`, which holds the App
+  # secrets and admits only `main` (a workflow_run job runs on main). It holds no `issues` scope: what it could not
+  # re-run goes to its `unrerunnable` output and the `notice` job (which holds `issues: write`) carries it onto
+  # the notice. Not a required check, so selecting on the workflow name is fine.
   reevaluate:
     if: github.event.workflow_run.name == 'Post-merge suite' || github.event.workflow_run.name == 'Post-merge fix proof'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: post-merge-hold
     permissions:
-      actions: write
+      actions: read
       pull-requests: read
       contents: read
     # Overlapping fan-outs (two verdict changes close together) queue instead of doubling up; none is cancelled,
@@ -66,11 +70,40 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           API_URL: ${{ github.api_url }}
-          # Opt-in (TQ-600a-13-xv hotfix, 2026-10-12): the script requests a re-run only when this is exactly "true".
-          # GITHUB_TOKEN's re-run POST is accepted live but the re-run ends in startup_failure, so the repo variable
-          # POST_MERGE_REEVAL_RERUN stays unset until a credential (App or fine-grained token with actions:write) is observed working.
+          # Opt-in (TQ-600a-13-xv hotfix, 2026-10-12): the script requests a re-run, and the step mints a token, only when
+          # this is exactly "true". The GITHUB_TOKEN re-run ended in startup_failure, so re-runs use the hold App's installation
+          # token; the repo variable POST_MERGE_REEVAL_RERUN stays unset until the App has "Actions: Read and write" and the
+          # installation has accepted it.
           REEVAL_RERUN_ENABLED: ${{ vars.POST_MERGE_REEVAL_RERUN }}
-        run: python scripts/ci/post_merge_reeval.py --api-url "$API_URL" --repo "$REPO" --event-path "$GITHUB_EVENT_PATH" --output-file "$GITHUB_OUTPUT"
+          HOLD_APP_ID: ${{ secrets.HOLD_APP_ID }}
+          HOLD_APP_PRIVATE_KEY: ${{ secrets.HOLD_APP_PRIVATE_KEY }}
+        run: |
+          # Sign the App's RS256 JWT (iss = App ID, 9 minutes) with openssl, exactly as post-merge-hold.yml does. The key is
+          # moved at once into an UNEXPORTED shell variable and unset from the environment, so no child process (openssl, tr,
+          # date, python) ever has it; openssl reads it through a process substitution built by the printf builtin (a pipe: no
+          # file, no argument). The JWT goes to Python on stdin (printf is a builtin too, so it is in no argument list) and is
+          # never in an environment variable, a file or a log. Gate off, or a secret missing or malformed: no JWT is signed and
+          # the script names every would-be re-run (`rerun_disabled` / `rerun_no_credential`).
+          b64() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          key=$HOLD_APP_PRIVATE_KEY
+          unset HOLD_APP_PRIVATE_KEY
+          jwt=""
+          if [ "$REEVAL_RERUN_ENABLED" = "true" ]; then
+            case "$HOLD_APP_ID" in ''|*[!0-9]*) id_ok=0 ;; *) id_ok=1 ;; esac
+            if [ -n "$key" ] && [ "$id_ok" = 1 ]; then
+              now=$(date +%s)
+              header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64)
+              payload=$(printf '{"iat":%s,"exp":%s,"iss":"%s"}' "$((now-60))" "$((now+540))" "$HOLD_APP_ID" | b64)
+              sig=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign <(printf '%s' "$key") -binary 2>/dev/null | b64)
+              if [ -n "$header" ] && [ -n "$payload" ] && [ -n "$sig" ]; then
+                jwt="$header.$payload.$sig"
+                # Register the JWT with the runner's masking command at once (printf is a builtin: not an argument of any process).
+                printf '::add-mask::%s\n' "$jwt"
+              fi
+            fi
+          fi
+          unset key
+          printf '%s\n' "$jwt" | python scripts/ci/post_merge_reeval.py --api-url "$API_URL" --repo "$REPO" --event-path "$GITHUB_EVENT_PATH" --output-file "$GITHUB_OUTPUT"
 
   notice:
     needs: reevaluate
