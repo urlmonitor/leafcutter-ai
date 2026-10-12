@@ -13,7 +13,7 @@ ARCHITECTURE: ``GitHubClient(api_url, token)`` offers ``get`` / ``post`` /
     it stays on the API's origin, so the token never leaves it. Every failure that
     crosses the process boundary (HTTP status, connection, undecodable body) is raised as
     ``GitHubError`` with the HTTP status (0 when none), a ``kind`` (``KINDS``: http,
-    timeout, connection, tls, not_json, shape, other) and the ``Retry-After`` text (TQ-600a-13-ix) so callers
+    timeout, connection, tls, not_json, shape, other, refused) and the ``Retry-After`` text (TQ-600a-13-ix) so callers
     decide what a failed call means; this module never swallows one. The token is never
     logged or put in an exception message. ``get_bytes`` (TQ-600a-13-xiii) is the
     one method that follows a redirect, exactly once and without the token.
@@ -28,6 +28,10 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from scripts.ci._write_policy import WriteGuard, WritePolicy, path_refusal
+
+__all__ = ["GitHubClient", "GitHubError", "KINDS", "WritePolicy"]
 
 logger = logging.getLogger("github_rest")
 
@@ -64,7 +68,7 @@ class GitHubError(RuntimeError):
         self.retry_after = retry_after
 
 
-KINDS = frozenset({"http", "timeout", "connection", "tls", "not_json", "shape", "other"})
+KINDS = frozenset({"http", "timeout", "connection", "tls", "not_json", "shape", "other", "refused"})
 
 
 def _transport_kind(exc: BaseException) -> str:
@@ -80,7 +84,7 @@ def _transport_kind(exc: BaseException) -> str:
 class GitHubClient:
     """Authenticated JSON client for one GitHub API root."""
 
-    def __init__(self, api_url: str, token: str, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(self, api_url: str, token: str, timeout: float = DEFAULT_TIMEOUT_SECONDS, policy: WritePolicy | None = None) -> None:
         scheme = urllib.parse.urlparse(api_url).scheme
         if scheme not in ALLOWED_SCHEMES:
             message = f"refusing API URL with scheme {scheme!r}"
@@ -88,6 +92,22 @@ class GitHubClient:
         self._root = api_url.rstrip("/")
         self._token = token
         self._timeout = timeout
+        self._guard = WriteGuard(policy or WritePolicy(), self._read_or_none)
+
+    def _read_or_none(self, path: str):
+        """GET ``path`` for a write's pre-check; None when it cannot be read (the failure is logged by ``request``)."""
+        try:
+            return self.get(path)
+        except GitHubError:
+            return None
+
+    def _enforce(self, method: str, path: str, body: dict | None) -> None:
+        """Raise ``GitHubError(kind="refused")``, before anything is sent, for a write the policy does not grant."""
+        reason = path_refusal(path) or self._guard.refusal(method, path, body)
+        if reason is not None:
+            logger.warning("refused %s", reason)
+            message = f"refused {reason}"
+            raise GitHubError(message, kind="refused")
 
     def request(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return the decoded JSON body (None for an empty body)."""
@@ -109,6 +129,7 @@ class GitHubClient:
 
     def request_with_headers(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return ``(decoded JSON body, response headers)``; header names are lower-cased."""
+        self._enforce(method, path, body)
         url = f"{self._root}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -139,7 +160,9 @@ class GitHubClient:
             logger.warning("%s %s -> %s", method, path, exc)
             message = f"{method} {path} failed: {exc}"
             raise GitHubError(message, kind=_transport_kind(exc)) from exc
-        return self._decode(method, path, raw), headers
+        decoded = self._decode(method, path, raw)
+        self._guard.record(method, path, decoded)
+        return decoded, headers
 
     @staticmethod
     def _decode(method: str, path: str, raw: bytes):

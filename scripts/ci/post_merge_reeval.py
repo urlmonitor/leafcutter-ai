@@ -41,7 +41,7 @@ from typing import NamedTuple
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_reeval.py`: make `scripts.ci` importable
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
+from scripts.ci._github_rest import GitHubClient, GitHubError, WritePolicy  # noqa: E402
 from scripts.ci._hold_comment import MAX_PAGES, next_link, valid_sha  # noqa: E402
 from scripts.ci._run_history import verdict_changed  # noqa: E402
 from scripts.ci.post_merge_notice import REPO_RE, read_runs  # noqa: E402
@@ -258,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
         logger.warning("GITHUB_TOKEN is not set or the repository name %r is refused; nothing re-run", opts.repo)
         return EXIT_BAD_INPUT
     try:
-        named = decide(GitHubClient(opts.api_url, token), opts, read_trigger(opts.event_path))
+        named = decide(GitHubClient(opts.api_url, token, policy=WritePolicy(repo=opts.repo, rerun_hold=True)), opts, read_trigger(opts.event_path))
     except (GitHubError, ValueError) as exc:
         logger.warning("cannot decide what to re-run: %s", exc)
         return EXIT_BAD_INPUT

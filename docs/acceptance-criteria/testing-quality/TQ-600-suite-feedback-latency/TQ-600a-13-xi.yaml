@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -263,10 +263,27 @@ amended_by:
   agent: approve_acs
   date: '2026-10-09'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/suite_performance/test_tq_600a_13_xi.py
+  - unit_tests/suite_performance/test_tq_600a_13_xi_client.py
+  - unit_tests/suite_performance/test_tq_600a_13_xi_mutation.py
+  - unit_tests/suite_performance/test_tq_600a_13_xi_scopes.py
+implemented_by:
+  - scripts/ci/_github_rest.py
+  - scripts/ci/_write_policy.py
+  - scripts/ci/_hold_publish.py
+  - scripts/ci/post_merge_hold.py
+  - scripts/ci/post_merge_notice.py
+  - scripts/ci/post_merge_reeval.py
 change_target: pipeline
 risk_surface: internal
 notes: |
+  Measured cost: the every-path test (about 2 s) and the mutation test (about 6 s) exceed
+  this record's 1 s budget because they spawn real bash, python and git subprocesses.
+  Security review (2026-10-12): the client is bound to one repository (WritePolicy.repo); a PATCH
+  of a notice carries only body, state and state_reason (no caller edits a title, so `title` is
+  not on the list); the hold's comment edit is verified against the comment as the service holds
+  it (its pull request, marker first line, Actions bot author); a re-run needs the hold's
+  pull_request_target event from this repository; the hold holds comment-only access to notices.
   Automated TRIAGE is out of scope and not ruled out: a later step that writes a
   diagnosis as a notice comment falls inside the allowed set.
