@@ -18,12 +18,14 @@ GOAL: Give the FEW YAML readers in this package that genuinely earn it --
     error-path dependence on a safety-relevant outcome; no equivalence
     contract with the pure-Python parser; not a guardrail decision point),
     and ALL FOUR had to hold for the site to keep the accessor. The outcome:
-    only ONE caller still uses it --
+    only ONE caller still used it --
     ``scripts/generate_agent_cards.py``'s ``_scan_ac_assignments`` /
     ``_scan_all_ac_assignments`` (a single whole-AC-store walk run once per
     `build.py` invocation, never gating, no equivalence claim; measured on
     the real store at ~1.7-2.1s via the accessor vs ~20.6-22.7s forced
-    pure-Python across two sittings, ~10-13x). Every other former call site,
+    pure-Python across two sittings, ~10-13x). That walk was removed on
+    2026-10-09 (see DECISION HISTORY), so that caller no longer exists.
+    Every other former call site,
     including the one this module's own headline number below was measured
     on (``validate_ac_schema.py``, the required "AC store valid" gate), has
     been reverted to ``yaml.SafeLoader`` directly. This module itself is
@@ -119,6 +121,12 @@ ARCHITECTURE: A single, uncached accessor module, generalising the one
       unaffected and stays on the fast accessor. A reader relying on "four
       divergence classes, all checked and found to agree" as exhaustive
       would be misled without this entry.
+
+    - 2026-10-09 [python-coder/agent-cards-static]: docstring-only. The
+      ``generate_agent_cards.py`` AC-store walk named above was removed
+      because the AC store is the source of truth and caching it in
+      generated card markdown produced an uncommittable, permanently dirty
+      tree. No code in this module changed.
 
     - 2026-10-07 [loader-audit, TQ-600a-1 follow-up]: An independent
       differential probe (both loaders fed ~45 deliberately awkward inputs:

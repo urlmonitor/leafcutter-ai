@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -114,8 +114,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300c_3_i_unresolvable_ability.py
+implemented_by:
+  - scripts/agent_ability_gate.py
+  - scripts/agent_ability_verdict.py
 notes: |
   THIS IS INF-600a-1-i's REQUIREMENT, RE-HOMED AND NOT REINVENTED. That record
   already asked for exactly this resolution and exactly this two-way

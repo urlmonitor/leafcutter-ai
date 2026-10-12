@@ -26,6 +26,7 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from ._skills_frontmatter_support import assert_grant_in_frontmatter
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _HOOK_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "commit_guardian" / "check_ac_limits.py"
@@ -635,38 +636,12 @@ class TestAgentTemplatesSkillsUsed(unittest.TestCase):
         )
 
     def test_product_owner_v3_skills_used_is_in_frontmatter(self) -> None:
-        """skills_used must appear within the frontmatter block (between --- markers)."""
-        content = self._read_agent("product-owner.md")
-        parts = content.split("---", 2)
-        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in product-owner.md")
-        frontmatter = parts[1]
-        self.assertIn(
-            "skills_used",
-            frontmatter,
-            msg="'skills_used' must be in the frontmatter of product-owner.md",
-        )
-        self.assertIn(
-            "ac-tree-split",
-            frontmatter,
-            msg="'ac-tree-split' must be in the skills_used frontmatter of product-owner.md",
-        )
+        """ac-tree-split must be granted in the frontmatter ``skills:`` list (AR-300c-2)."""
+        assert_grant_in_frontmatter(self, self._read_agent("product-owner.md"), "product-owner.md", "ac-tree-split")
 
     def test_business_analyst_v3_skills_used_is_in_frontmatter(self) -> None:
-        """skills_used must appear within the frontmatter block (between --- markers)."""
-        content = self._read_agent("business-analyst.md")
-        parts = content.split("---", 2)
-        self.assertGreaterEqual(len(parts), 3, msg="No frontmatter found in business-analyst.md")
-        frontmatter = parts[1]
-        self.assertIn(
-            "skills_used",
-            frontmatter,
-            msg="'skills_used' must be in the frontmatter of business-analyst.md",
-        )
-        self.assertIn(
-            "ac-tree-split",
-            frontmatter,
-            msg="'ac-tree-split' must be in the skills_used frontmatter of business-analyst.md",
-        )
+        """ac-tree-split must be granted in the frontmatter ``skills:`` list (AR-300c-2)."""
+        assert_grant_in_frontmatter(self, self._read_agent("business-analyst.md"), "business-analyst.md", "ac-tree-split")
 
 
 class TestHookRegisteredInCommitGuardian(unittest.TestCase):

@@ -99,14 +99,13 @@ If no category fits, add it to the most relevant existing category.
    the template to `.claude/skills/<skill_name>/SKILL.md`.
 3. Confirm `.claude/skills/<skill_name>/SKILL.md` was (re)generated from the template.
 
-## Step 7 — Update workflow-architect skills_used (if applicable)
+## Step 7 — Grant the skill to its caller (if applicable)
 
-If `workflow-architect` is the primary caller of this skill, update `skills_used` in
-`leafcutter/config/agent_registry.json`:
-
-```json
-"skills_used": [..., "<skill_name>"]
-```
+If `workflow-architect` (or another agent) is the primary caller of this skill, add the
+skill to that agent's own frontmatter `skills:` declaration, beside `tools:`. Do NOT edit
+`skills_used` / `skills_invoked` in `leafcutter/config/agent_registry.json`: those are
+derived copies regenerated from the declarations by the "Transform agent registry"
+pre-commit hook.
 
 Run `build.py --validate-only` again to confirm.
 

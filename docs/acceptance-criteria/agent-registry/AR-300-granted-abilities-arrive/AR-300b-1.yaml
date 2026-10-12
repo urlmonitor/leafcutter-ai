@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -111,11 +111,22 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: child-added-and-premise-note
+  agent: business-analyst
+  date: '2026-10-09'
+  changed: "covered_by gains AR-300b-1-iii; a dated paragraph is appended to notes. WHY: user decision 9 (BrainCandy, 2026-10-09) delivers the spawn-allowlist preparation in the AR-300 pull request, so the second of the two preparations this record names moves from 'undelivered and reported' to 'delivered and guarded'. That after-repair behaviour is stated in the new L3 rather than by rewriting these criteria. criteria, title, req_status, depends_on, it_requirements and test_spec unchanged; readiness stays approved because no requirement-defining text changed."
+- reason: it-po-premise-note-review
+  agent: it-po
+  date: '2026-10-09'
+  changed: "notes: an 'IT PO CHECK OF THE PREMISE NOTE' paragraph was appended. WHY: the orchestrator asked the IT PO to check the business-analyst's 2026-10-09 premise note and amended_by entry against AR-300b-1-iii and user decisions 5, 9, 10 and 11. Both are consistent and are kept as written. The appended paragraph clarifies three things. (1) The `{{my_spawn_allowlist}}` it_requirements line is a historical measurement; the spawn section now reaches the gate as the registered preparation 'spawn_allowlist' through the slice-3 contract (compute_preparation / register_preparation in scripts/agent_preparation_delivery.py). (2) The both-preparations test descriptor's 'synthetic fixture' is a stripped copy of a real compiled tree. (3) AR-300b-1-i's real-population clean path also depends on resolving conflict-resolver-deep, a second unresolvable target the IT PO measured that no user decision covers yet. criteria, title, req_status, depends_on, it_requirements and test_spec unchanged; readiness stays approved."
 superseded_by: null
 covered_by:
   - AR-300b-1-i
   - AR-300b-1-ii
-implemented_by: []
+  - AR-300b-1-iii
+implemented_by:
+  - scripts/agent_preparation_delivery.py
+  - scripts/build.py
 notes: |
   BOTH INSTANCES ARE NAMED SO THE CRITERION CANNOT BE HALF-SATISFIED. The
   measured defect hit two independent per-agent preparations simultaneously, by
@@ -127,3 +138,33 @@ notes: |
   EVIDENCE IS THE COMPILED PROMPT. Stated again here rather than inherited,
   because the natural implementation of this criterion is a check at the point
   of preparation, and a check at the point of preparation passes today.
+
+  PREMISE STATUS, 2026-10-09 (business-analyst, BrainCandy decision 9). The
+  "two undelivered preparations" premise was measured on 2026-09-30 and is
+  being retired in the AR-300 pull request, one preparation per slice: the
+  abilities section is delivered by slice 2, and the spawn-allowlist section is
+  now also delivered in this pull request (AR-300c-5, AR-300a-5, AR-300d-5).
+  The criteria above stay true of the tree they were written against and are
+  not rewritten. What the gate must do once the spawn preparation is delivered
+  -- report it by the same check when it goes missing, stay silent when it
+  arrives -- is AR-300b-1-iii. The "both dead preparations are reported
+  independently" test descriptor needs a synthetic stripped-section fixture once
+  neither preparation is dead on the real tree; that is AR-300b-2's synthetic
+  third-instance posture applied to the first two.
+
+  IT PO CHECK OF THE PREMISE NOTE, 2026-10-09. The paragraph above is consistent
+  with AR-300b-1-iii and with user decisions 5, 9, 10 and 11; it is kept as
+  written. Three clarifications, none changing the criteria: (1) The
+  it_requirements line naming `{{my_spawn_allowlist}}` records the 2026-09-30
+  measurement. Under decision 9 the spawn section is no longer placed through
+  that placeholder; it is appended from the agent's frontmatter `spawn_allowlist`
+  declaration (AR-300a-5) and reaches this gate as a REGISTERED preparation named
+  'spawn_allowlist', through compute_preparation / register_preparation in
+  scripts/agent_preparation_delivery.py. "Covered by the same pass" still holds,
+  through registration rather than a placeholder. (2) The "synthetic fixture" for
+  the both-preparations descriptor means a COPY of a real compiled tree with one
+  section stripped. That keeps the descriptor's real_artifact angle and never
+  mutates the shared reference layout. (3) AR-300b-1-i's clean path on the real
+  population also needs no unresolvable declared sub-agent. Decision 10 removes
+  architect-review-deep. conflict-resolver-deep is a second measured instance
+  that still needs a user decision (see AR-300c-5-iii).

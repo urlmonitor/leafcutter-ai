@@ -106,7 +106,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "building-epics",
-                    "mode": "conditional"
+                    "mode": "always"
                 },
                 {
                     "skill_id": "signoff",
@@ -170,7 +170,7 @@
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -222,7 +222,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "building-epics",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -268,10 +268,6 @@
             "skills_invoked": [
                 {
                     "skill_id": "building-epics",
-                    "mode": "always"
-                },
-                {
-                    "skill_id": "signoff",
                     "mode": "always"
                 }
             ],
@@ -328,12 +324,7 @@
             "model": "sonnet",
             "skills_used": [],
             "category": "research",
-            "skills_invoked": [
-                {
-                    "skill_id": "signoff",
-                    "mode": "always"
-                }
-            ],
+            "skills_invoked": [],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -365,8 +356,7 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "research-agent",
-                "architect-review-deep"
+                "research-agent"
             ],
             "spawned_by": [
                 "ticket-supervisor"
@@ -410,7 +400,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -445,7 +436,8 @@
             "portable": true,
             "domain": null,
             "spawn_allowlist": [
-                "research-agent"
+                "research-agent",
+                "test-runner"
             ],
             "spawned_by": [
                 "ticket-supervisor",
@@ -477,15 +469,22 @@
             "template_path": "templates/agents/python-coder.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff"
+                "signoff",
+                "doc-enforcer",
+                "complexity-reduction"
             ],
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "doc-enforcer",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "complexity-reduction",
                     "mode": "always"
                 },
                 {
@@ -618,7 +617,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -663,6 +663,7 @@
             "spawned_by": [
                 "ticket-supervisor",
                 "test-writer",
+                "python-coder",
                 "finalize-feature.js"
             ],
             "is_ticket_phase": true,
@@ -696,7 +697,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -775,6 +777,7 @@
             "template_path": "templates/agents/documentation-expert.md",
             "model": "sonnet",
             "skills_used": [
+                "route-knowledge",
                 "signoff"
             ],
             "priority": 10,
@@ -784,11 +787,13 @@
             "skills_invoked": [
                 {
                     "skill_id": "route-knowledge",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When asked to remember, capture or save knowledge rather than author a doc, load route-knowledge to pick its target surface."
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "direct-write",
@@ -881,7 +886,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -955,7 +961,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1047,8 +1054,14 @@
             "requires_verification": false,
             "category": "supervisor",
             "skills_invoked": [
-                "review-for-code-smells",
-                "review-for-structural-code-smells"
+                {
+                    "skill_id": "review-for-code-smells",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "review-for-structural-code-smells",
+                    "mode": "always"
+                }
             ],
             "knowledge_channels": [
                 {
@@ -1092,8 +1105,14 @@
             "requires_verification": false,
             "category": "supervisor",
             "skills_invoked": [
-                "review-for-code-smells",
-                "review-for-design-code-smells"
+                {
+                    "skill_id": "review-for-code-smells",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "review-for-design-code-smells",
+                    "mode": "always"
+                }
             ],
             "knowledge_channels": [
                 {
@@ -1139,7 +1158,8 @@
             "template_path": "templates/agents/commit.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff"
+                "signoff",
+                "precommit-autofix"
             ],
             "priority": 12,
             "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
@@ -1148,7 +1168,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "precommit-autofix",
@@ -1219,7 +1240,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1260,9 +1282,7 @@
             "role": "commit",
             "portable": true,
             "domain": null,
-            "spawn_allowlist": [
-                "conflict-resolver-deep"
-            ],
+            "spawn_allowlist": [],
             "spawned_by": [
                 "pull-request"
             ],
@@ -1334,7 +1354,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1383,11 +1404,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "feature",
-                    "mode": "conditional"
-                },
-                {
-                    "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When a create request names an epic ticket path (an EPIC-*/ path segment), load feature and run its Epic Workflow with the ticket path as $ARGUMENTS."
                 }
             ],
             "knowledge_channels": [
@@ -1600,7 +1618,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1665,8 +1684,8 @@
             "template_path": "templates/agents/frontend-coder.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff",
-                "webapp-testing"
+                "webapp-testing",
+                "signoff"
             ],
             "priority": 8,
             "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
@@ -1685,11 +1704,13 @@
             "skills_invoked": [
                 {
                     "skill_id": "webapp-testing",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "After UI changes, if webapp-testing is installed and ANTIGRAVITY is unset, load it to screenshot and check console errors."
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1749,7 +1770,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1811,8 +1833,8 @@
             "template_path": "templates/agents/sql-query.md",
             "model": "sonnet",
             "skills_used": [
-                "signoff",
-                "sql-query-past-queries"
+                "sql-query-past-queries",
+                "signoff"
             ],
             "priority": 7,
             "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
@@ -1825,7 +1847,8 @@
                 },
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1880,7 +1903,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1932,7 +1956,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -1984,7 +2009,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2036,7 +2062,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2088,7 +2115,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2134,16 +2162,32 @@
             "template_path": "templates/agents/workflow-architect.md",
             "model": "sonnet",
             "skills_used": [
+                "package-audit",
                 "create-hook",
                 "add-agent-to-package",
-                "add-skill-to-package",
-                "package-audit"
+                "add-skill-to-package"
             ],
             "category": "supervisor",
             "skills_invoked": [
                 {
                     "skill_id": "package-audit",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When asked to audit package boundary drift, load package-audit to run package_audit.py and report gaps."
+                },
+                {
+                    "skill_id": "create-hook",
+                    "mode": "conditional",
+                    "condition": "When asked to add a new pre-commit hook, load create-hook to scaffold, register and document it."
+                },
+                {
+                    "skill_id": "add-agent-to-package",
+                    "mode": "conditional",
+                    "condition": "When asked to promote a project-local agent into the package, load add-agent-to-package."
+                },
+                {
+                    "skill_id": "add-skill-to-package",
+                    "mode": "conditional",
+                    "condition": "When asked to promote a project-local skill into the package, load add-skill-to-package."
                 }
             ],
             "knowledge_channels": [
@@ -2206,7 +2250,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 },
                 {
                     "skill_id": "doc-enforcer",
@@ -2238,27 +2283,6 @@
             "produces": "documentation",
             "components": [
                 "documentation_system"
-            ]
-        },
-        {
-            "id": "architect-review-deep",
-            "name": "Architect Review Deep",
-            "tier": "utility",
-            "role": "review",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "architect-review"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "opus",
-            "skills_used": [],
-            "produces": "review_verdict",
-            "components": [
-                "review_system"
             ]
         },
         {
@@ -2300,7 +2324,7 @@
             "skills_invoked": [
                 {
                     "skill_id": "write-c4-diagram",
-                    "mode": "conditional"
+                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -2324,27 +2348,6 @@
             "produces": "documentation",
             "components": [
                 "documentation_system"
-            ]
-        },
-        {
-            "id": "conflict-resolver-deep",
-            "name": "Conflict Resolver Deep",
-            "tier": "utility",
-            "role": "commit",
-            "portable": true,
-            "domain": null,
-            "spawn_allowlist": [],
-            "spawned_by": [
-                "conflict-resolver"
-            ],
-            "is_ticket_phase": false,
-            "selection_criteria": null,
-            "template_path": null,
-            "model": "opus",
-            "skills_used": [],
-            "produces": "orchestration",
-            "components": [
-                "git_vcs_operations"
             ]
         },
         {
@@ -2384,7 +2387,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2447,7 +2451,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2514,7 +2519,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -2819,16 +2825,9 @@
             "selection_criteria": null,
             "template_path": "templates/agents/onboard.md",
             "model": "sonnet",
-            "skills_used": [
-                "webapp-testing"
-            ],
+            "skills_used": [],
             "category": "supervisor",
-            "skills_invoked": [
-                {
-                    "skill_id": "webapp-testing",
-                    "mode": "conditional"
-                }
-            ],
+            "skills_invoked": [],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2957,7 +2956,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3022,7 +3022,8 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "always"
+                    "mode": "conditional",
+                    "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
                 }
             ],
             "knowledge_channels": [
@@ -3083,9 +3084,9 @@
             "template_path": "templates/agents/llm-expert.md",
             "model": "sonnet",
             "skills_used": [
+                "signoff",
                 "add-agent-to-package",
-                "add-skill-to-package",
-                "signoff"
+                "add-skill-to-package"
             ],
             "priority": 6,
             "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
@@ -3095,15 +3096,17 @@
             "skills_invoked": [
                 {
                     "skill_id": "signoff",
-                    "mode": "conditional"
+                    "mode": "always"
                 },
                 {
                     "skill_id": "add-agent-to-package",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When a new agent template is complete and must be promoted to the portable package, load add-agent-to-package."
                 },
                 {
                     "skill_id": "add-skill-to-package",
-                    "mode": "conditional"
+                    "mode": "conditional",
+                    "condition": "When a new skill body is complete and must be promoted to the portable package, load add-skill-to-package."
                 }
             ],
             "knowledge_channels": [
@@ -3151,7 +3154,9 @@
             "template_path": "templates/agents/product-owner.md",
             "model": "opus",
             "skills_used": [
-                "knowledge-query"
+                "signoff",
+                "knowledge-query",
+                "ac-tree-split"
             ],
             "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
             "category": "planning",
@@ -3159,6 +3164,16 @@
                 {
                     "skill_id": "signoff",
                     "mode": "always"
+                },
+                {
+                    "skill_id": "knowledge-query",
+                    "mode": "conditional",
+                    "condition": "Use when you need to search a keyword across agents, skills, docs and ADRs for component context."
+                },
+                {
+                    "skill_id": "ac-tree-split",
+                    "mode": "conditional",
+                    "condition": "When an L0 or L1 exceeds its child limit, load ac-tree-split for split patterns A and C."
                 }
             ],
             "knowledge_channels": [
@@ -3204,7 +3219,8 @@
             "template_path": "templates/agents/business-analyst.md",
             "model": "opus",
             "skills_used": [
-                "knowledge-query"
+                "knowledge-query",
+                "ac-tree-split"
             ],
             "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
             "category": "planning",

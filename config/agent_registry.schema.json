@@ -57,7 +57,7 @@
         "category": {
           "type": "string",
           "enum": ["implementation", "planning", "testing", "research", "supervisor"],
-          "description": "Functional-domain category, keyed against the top-level 'agent_categories' map (default_tools, signoff_capable, spawn_constraints per category). Distinct from and additive to 'tier' (tier = supervisor-hierarchy role; category = functional domain for capability inference). Read by scripts/registry_validator.py (_check_agent_categories) and scripts/propose_agent_self_description.py. Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep) that have no template to derive it from."
+          "description": "Functional-domain category, keyed against the top-level 'agent_categories' map (default_tools, signoff_capable, spawn_constraints per category). Distinct from and additive to 'tier' (tier = supervisor-hierarchy role; category = functional domain for capability inference). Read by scripts/registry_validator.py (_check_agent_categories) and scripts/propose_agent_self_description.py. Optional — absent on a template-less registry entry, which has no template to derive it from."
         },
         "components": {
           "type": "array",
@@ -148,7 +148,7 @@
               }
             ]
           },
-          "description": "Structured record of skills this agent invokes, superseding the flat skills_used list with per-skill mode/descriptive_only detail. Cross-referenced against each agent's template body by scripts/build_phases.py (check_skills_invoked_xref) — a mismatch is currently a [WARNING], not a build failure (see KI-AR-003). Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep)."
+          "description": "Structured record of skills this agent invokes, superseding the flat skills_used list with per-skill mode/descriptive_only detail. Cross-referenced against each agent's template body by scripts/build_phases.py (check_skills_invoked_xref) — a mismatch is currently a [WARNING], not a build failure (see KI-AR-003). Optional — absent on a template-less registry entry."
         },
         "knowledge_channels": {
           "type": "array",
@@ -177,7 +177,7 @@
             },
             "additionalProperties": false
           },
-          "description": "Documents which of the 11 Agent Knowledge Plane channels this agent draws on and from where. Range-validated (channel 1-11) and resolvability-checked by scripts/build_phases.py's self-description build guard. Optional — absent on the two template-less inline sub-agents (architect-review-deep, conflict-resolver-deep)."
+          "description": "Documents which of the 11 Agent Knowledge Plane channels this agent draws on and from where. Range-validated (channel 1-11) and resolvability-checked by scripts/build_phases.py's self-description build guard. Optional — absent on a template-less registry entry."
         },
         "doc_links": {
           "type": "array",

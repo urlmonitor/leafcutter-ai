@@ -13,7 +13,16 @@ description: 'Depth-0 ticket orchestrator — dispatched directly by `/build-fea
   '
 model: sonnet
 name: ticket-supervisor
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- __ticket_phase_agents__
+- brainstorm-lead
+- llm-expert
+skills:
+- skill_id: building-epics
+  mode: always
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -677,37 +686,16 @@ When parity is violated or the ticket file cannot be parsed:
 - Do NOT escalate to a user directly. All escalation flows via the §6 payload
   returned to the caller (`/build-feature` or the user's session).
 
-### Spawn Allowlist (is_ticket_phase agents)
+### Which agents you may spawn
 
-The following agents may be spawned via the Agent tool. Every agent name that
-appears in a ticket's `agents:` map must be in this list (validated against
-`leafcutter/config/agent_registry.json` when present):
+The agents you may spawn via the Agent tool are the ones named in the generated
+**Your Available Sub-Agents** section at the end of this prompt: your
+`spawn_allowlist` declaration, with the ticket-phase entry resolved to every
+agent whose `is_ticket_phase` is true in `leafcutter/config/agent_registry.json`
+on each build. Every agent name that appears in a ticket's `agents:` map must be
+among them.
 
-```
-adr-author
-architect-review
-architecture-diagram-author
-brainstorm-lead
-change-scope-reviewer
-commit
-documentation-expert
-explanation-author
-frontend-coder
-how-to-author
-pr-reviewer
-pull-request
-python-coder
-reference-author
-sql-coder
-sql-query
-status-checker
-test-runner
-test-writer
-user-surface-smoker
-```
-
-Source of truth: `leafcutter/config/agent_registry.json` (`is_ticket_phase: true` entries).
-Validation: if an agent name in the ticket's `agents:` map is NOT in this list and the
+Validation: if an agent name in the ticket's `agents:` map is NOT among them and the
 registry file does not exist, log a warning and attempt to spawn (backward-compatible
 fallback). If the registry IS present and the name is absent, block with a structured
 payload (see Agent Name Validation above).

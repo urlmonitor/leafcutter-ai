@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-09'
 components:
   - agent_registry
 related_docs:
@@ -21,9 +21,20 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open — no AC
+- **Status:** resolved 2026-10-09 (feature/ar-300-skills-delivery)
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+
+**Resolution (2026-10-09).** Fixed on `feature/ar-300-skills-delivery` by removing the stale
+`signoff` grant from `research-agent` and `worktree-agent`, and from a third instance this
+entry missed: `brainstorm-worker`, whose body says it does not invoke the `signoff` skill yet
+was granted it. The registry's derived copy was regenerated with
+`transform_agent_registry.py`. The rule is now pinned by
+`unit_tests/agents/test_ar_200a_1_no_signoff_grant_without_obligation.py`. The "Blast radius
+today: none" statement below stopped being true once AR-300 slice 2 began delivering declared
+grants into compiled prompts: the stale grant had been copied into template `skills:` by the
+slice 1 migration and was being delivered as `always`. The text below is the original entry,
+kept unchanged.
 - **Where:** `config/agent_registry.json` — `research-agent.skills_invoked`, `worktree-agent.skills_invoked`; detected by `check_skills_invoked_xref` in `scripts/build_phases.py`
 
 **Symptom.** `AR-200a-1` (PR #557) removed the sign-off obligation from `research-agent` and
