@@ -161,11 +161,12 @@ class TestNoWorktreeFoundError:
     actionable error — not silently misdetect the branch as 'main'."""
 
     def test_found_false_early_return_present(self):
-        """An early return on found === false must be present."""
+        """An early return on a workspace answer that is not accepted must be present (BO-4300c-3: the
+        old ``preflightInfo.found === false`` detection is replaced by the workspace maker's answer)."""
         js = _js_text()
-        assert "preflightInfo.found === false" in js, (
-            "Pre-flight must check 'preflightInfo.found === false' and return early "
-            "with a clear error when no matching worktree is found"
+        assert "if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace)" in js, (
+            "Pre-flight must stop with the shared workspace failure (quoting what was received) when the "
+            "workspace maker's answer is not an accepted ok answer"
         )
 
     def test_no_worktree_error_has_actionable_message(self):
@@ -178,11 +179,14 @@ class TestNoWorktreeFoundError:
         )
 
     def test_no_worktree_error_action_required_field(self):
-        """The early-return object must include action_required for structured routing."""
+        """The early-return is the shared failure, which is a structured error that quotes the reply (the
+        old ``resolve_worktree_argument`` action is retired together with the detection it belonged to)."""
         js = _js_text()
-        assert "resolve_worktree_argument" in js, (
-            "The no-worktree-found error must include "
-            "action_required: 'resolve_worktree_argument'"
+        assert "return workspaceFailure(finalizeWorkspace)" in js, (
+            "The no-workspace error must be the shared structured failure (status error, quoting the reply)"
+        )
+        assert "resolve_worktree_argument" not in js, (
+            "No branch of the workflow may still route on the retired worktree-detection action"
         )
 
 
@@ -204,20 +208,17 @@ class TestMainMasterGuardPreserved:
         )
 
     def test_branch_derived_from_preflight_info(self):
-        """BRANCH must be set from preflightInfo (the resolved worktree result),
-        not from a separate CWD-anchored shell call."""
+        """BRANCH must be set from the workspace maker's accepted answer, not from a CWD-anchored shell call."""
         js = _js_text()
-        assert "const BRANCH = (preflightInfo.branch" in js, (
-            "BRANCH must be derived from preflightInfo.branch "
-            "(the resolved-worktree response), not from a raw shell call"
+        assert "finalizeWorkspace.answer.branch" in js and "const BRANCH =" in js, (
+            "BRANCH must be derived from the accepted workspace answer's branch"
         )
 
     def test_worktree_root_derived_from_preflight_info(self):
-        """WORKTREE_ROOT must be set from preflightInfo (the resolved worktree result)."""
+        """WORKTREE_ROOT must be the accepted workspace answer's workspace_path."""
         js = _js_text()
-        assert "const WORKTREE_ROOT = (preflightInfo.worktree_root" in js, (
-            "WORKTREE_ROOT must be derived from preflightInfo.worktree_root "
-            "(the resolved-worktree response)"
+        assert "const WORKTREE_ROOT = finalizeWorkspace.workspace_path" in js, (
+            "WORKTREE_ROOT must be derived from the accepted workspace answer's workspace_path"
         )
 
 
@@ -227,15 +228,18 @@ class TestMainMasterGuardPreserved:
 
 
 class TestNoArgFallback:
-    """When no epicArg is provided, the pre-flight must fall back to CWD-based
-    detection (backward-compatible with callers that pass no argument)."""
+    """When no epicArg is provided the workflow still asks the workspace maker for ONE workspace under the
+    default slug (backward-compatible with callers that pass no argument); the run is never anchored at the
+    folder it was started in (BO-4300c-3)."""
 
     def test_fallback_path_present(self):
-        """The agent prompt must include a fallback branch for when epicArg is empty."""
+        """The default slug is requested from the maker; no CWD-based detection remains."""
         js = _js_text()
-        # The ternary structure: epicArg ? <resolution path> : <fallback path>
-        # Detect the fallback by looking for the CWD git branch call in the no-arg branch.
-        assert "fall back to CWD-based detection" in js, (
-            "The pre-flight must include a fallback to CWD-based detection "
-            "when no epicArg is provided (backward compatibility)"
+        assert '"finalize-feature"' in js and "finalizeSlug" in js, (
+            "With no epicArg the maker must be asked for the default finalize-feature workspace"
+        )
+        assert "fall back to CWD-based detection" not in js.replace(
+            "falls back to CWD-based detection (FIN-100g-2-i)", ""
+        ).split("const finalizeSlug")[1].split("phase('Pre-flight 2')")[0], (
+            "The workspace step must not fall back to detecting a location from the folder the run started in"
         )

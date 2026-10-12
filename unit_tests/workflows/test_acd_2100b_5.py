@@ -97,6 +97,7 @@ import unittest
 from pathlib import Path
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import _strip_exports  # noqa: E402
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _PREFLIGHT_SCRIPT = (
     _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
@@ -108,7 +109,7 @@ _TIMEOUT = 40  # seconds; includes real git I/O and (for the real harness) real 
 # agent() call sites around the Pre-Stage-0 Workspace-Setup Dispatch
 # Permission Gate and the step immediately after it.
 _REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
-_NEXT_STEP_LABEL = "resolve-worktree-setup-script-path"
+_NEXT_STEP_LABEL = "workspace-ensure"  # BO-4300c-3: the step after the permission gate is the ONE workspace dispatch
 
 _DEFAULT_AGENT_ID = "worktree-agent"
 _ARGS_VERDICT_KEY = "workspace_setup_permission"
@@ -183,26 +184,6 @@ def _real_preflight_verdict(repo_dir: Path, agent_id: str = _DEFAULT_AGENT_ID) -
             f"Pre-flight script produced non-JSON stdout: {exc}\n"
             f"stdout={proc.stdout[:2000]!r}"
         ) from exc
-
-
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy; see sibling files
-    test_acd_2100b_1.py / test_acd_2100a_3.py for the same convention).
-    """
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------

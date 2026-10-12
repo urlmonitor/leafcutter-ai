@@ -36,7 +36,9 @@
  *     "record_dir": "/tmp/...",          // the worktree root for this run
  *     "args": { ... },                   // overrides the args global wholesale
  *     "resolve": {...} | null,           // resolve-target stub reply
- *     "worktree_agent": {...} | null,    // worktree-setup stub reply
+ *     "workspace_ensure": {...} | null,  // workspace-ensure stub reply (BO-4300c-3), served verbatim;
+ *                                        // absent = ready at record_dir
+ *     "worktree_agent": {...} | null,    // (retired step) worktree-setup stub reply
  *     "worktree_check": {...} | null,    // build-ticket.js ambient git check reply
  *     "epic": {
  *        "path": "<abs epic folder>",
@@ -230,7 +232,23 @@ const recordMode = !!scenario.tickets;
 const ticketConfigs = scenario.tickets || {};
 const ticketPaths = Object.keys(ticketConfigs);
 
-const source = readFileSync(scriptPath, "utf8").replace(
+// BO-4300c-3: a template run straight from templates/workflows-js/ carries an EMPTY WORKSPACE-ANSWER marker
+// pair; the build phase fills it from the single tracked source. Fill it the same way here, and only when the
+// pair is empty (a deployed copy already holds the block and is left untouched).
+function fillWorkspaceAnswer(text) {
+  const startMark = "// WORKSPACE-ANSWER-START";
+  const endMark = "// WORKSPACE-ANSWER-END";
+  const start = text.indexOf(startMark);
+  if (start === -1) return text;
+  const end = text.indexOf(endMark, start);
+  if (end === -1 || text.slice(start + startMark.length, end).trim()) return text;
+  const block = readFileSync(
+    join(REPO_ROOT, "templates", "workflows-js", "_shared", "workspace-answer.js"), "utf8"
+  ).trim();
+  return text.slice(0, start + startMark.length) + "\n" + block + "\n" + text.slice(end);
+}
+
+const source = fillWorkspaceAnswer(readFileSync(scriptPath, "utf8")).replace(
   /^export const meta/m,
   "const meta"
 );
@@ -245,6 +263,7 @@ const writes = [];
 const enumerations = [];
 const planReplies = [];
 const dirtyReads = [];
+const workspaceEnsureCalls = [];
 const logs = [];
 // INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
 // phase dispatches and routing calls together, so a test can see whether a
@@ -819,6 +838,25 @@ async function agent(prompt, opts = {}) {
     return { worktree_path: scenario.record_dir || "/fake/worktree", status: "reused" };
   }
 
+  // BO-4300c-3: the ONE workspace step. A scenario scripts it with `workspace_ensure` (the reply served
+  // verbatim, so a refusal, prose or no answer can be presented); absent, the shell-runner answers ready at
+  // the scenario's own working copy -- the same default the python engine harness scripts for this label.
+  if (label === "workspace-ensure") {
+    workspaceEnsureCalls.push({ prompt: String(prompt) });
+    if (scenario.workspace_ensure !== undefined) return scenario.workspace_ensure;
+    const path = scenario.record_dir || "/fake/worktree";
+    return {
+      command: "python3 worktree.py ensure (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "ensure",
+        workspace_path: path, worktree_path: path, branch: "harness-default", created: false,
+        message: "workspace ready (harness default)",
+      }),
+      stderr: "",
+    };
+  }
+
   if (RE_EPIC_ENUM.test(label)) {
     return epicEnumerationReply(label);
   }
@@ -1200,6 +1238,7 @@ console.log(
     enumerations,
     plan_replies: planReplies,
     dirty_reads: dirtyReads,
+    workspace_ensure_calls: workspaceEnsureCalls,
     routing_calls: routingCalls,
     timeline,
     logs,

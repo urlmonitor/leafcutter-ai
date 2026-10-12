@@ -1010,3 +1010,8 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readine
 # marker string passed as an argument to a dummy holder process so the test can check that
 # the refusal names the running program. Not a credential; the scanner fires on the name.
 GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300e_2_ii.py:*
+
+# BO-4300c-3-i (ticket 10, user standing OK 2026-10-12 for BO-4300 test marker strings). _PATH_TOKEN
+# holds a marker the test feeds in as a hostile script_path reply and expects quoted back in the
+# halt message. Not a credential; the scanner fires on the name.
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300c_3_i.py:*

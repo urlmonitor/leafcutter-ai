@@ -1,0 +1,30 @@
+{
+  "adr_id": "ADR-070",
+  "affected_files": [
+    "templates/workflows-js/build-epic.js",
+    "templates/workflows-js/build-feature.js",
+    "templates/workflows-js/build-ticket.js",
+    "templates/workflows-js/create-ticket.js",
+    "templates/workflows-js/fast-lane-ship.js",
+    "templates/workflows-js/finalize-feature.js",
+    "templates/workflows-js/plan-feature.js",
+    "templates/workflows-js/quick-fix.js",
+    "templates/workflows-js/_shared/workspace-answer.js",
+    "templates/workflows-js/_shared/README.md",
+    "scripts/build_phases_workflows.py",
+    "unit_tests/_workflow_engine_harness.py",
+    "config/agent_registry.json",
+    "templates/agents/shell-runner.md",
+    "docs/agents/README.md",
+    "docs/agents/utility/shell-runner.md",
+    "docs/architecture/components/agent-registry.md",
+    "docs/architecture/adrs/ADR-070-shell-runner-runs-workflow-shell-commands.md",
+    "unit_tests/build_orchestration/test_bo_4300a_1_ia.py",
+    "unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py",
+    "unit_tests/build_orchestration/_bo_4300a_1_ia_fixtures.py",
+    "unit_tests/build_orchestration/test_bo_4300c_3.py",
+    "unit_tests/build_orchestration/test_bo_4300c_3_i.py",
+    "unit_tests/build_orchestration/test_bo_4300c_3_ii.py"
+  ],
+  "one_line_summary": "Every workflow shell step except the fast lane's command steps goes to the new shell-runner, which returns {command, exit_status, stdout, stderr} or a decline; any reply that is not a result ends the run, quoting it."
+}

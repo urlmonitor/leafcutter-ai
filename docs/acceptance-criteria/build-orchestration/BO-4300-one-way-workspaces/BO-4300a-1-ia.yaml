@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -242,8 +242,19 @@ amended_by:
     lint tests' report now names workflow, step, agent and command, with no-permission counting as not
     permitted. readiness stays reviewed.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300a_1_ia.py
+- unit_tests/build_orchestration/test_bo_4300a_1_ia_lint.py
 implemented_by:
+- templates/workflows-js/_shared/workspace-answer.js
+- templates/workflows-js/build-epic.js
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
+- templates/workflows-js/create-ticket.js
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/finalize-feature.js
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/quick-fix.js
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md
 notes: 'IT PO split of BO-4300a-1-i (2026-09-25), workflow-body half: carries the parent''s criteria verbatim.
   The surface is templates/workflows-js/*.js (python-coder). The entry-skill half (skills and commands

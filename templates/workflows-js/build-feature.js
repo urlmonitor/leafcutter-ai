@@ -1563,7 +1563,7 @@ if (!target) {
 }
 
 const resolveResult = await agent(
-  `Resolve the /build-feature target and set up the worktree.\n\n` +
+  `Resolve the /build-feature target (the workspace is obtained separately, by the workspace maker).\n\n` +
   `Target: "${target}"\n\n` +
   `1. Determine whether the target is an epic or a single ticket:\n` +
   `   - If it ends in ".md" or is a path to a file: target_type = "ticket"\n` +
@@ -1571,11 +1571,7 @@ const resolveResult = await agent(
   `2. Resolve the absolute path:\n` +
   `   - For ticket: resolve to the absolute path of the ticket .md file\n` +
   `   - For epic: resolve to the absolute path of the epic folder\n\n` +
-  `3. Determine the worktree path:\n` +
-  `   - Run: test -f .git && echo file || echo directory\n` +
-  `   - If .git is a file, we are inside a worktree; report the current directory as worktree_path\n` +
-  `   - If .git is a directory, the caller is in the main clone; report the epic folder path as worktree_path\n\n` +
-  `Return JSON: { "target_type": "epic"|"ticket", "epic_path": "<abs>"|null, "ticket_path": "<abs>"|null, "worktree_path": "<abs>" }`,
+  `Return JSON: { "target_type": "epic"|"ticket", "epic_path": "<abs>"|null, "ticket_path": "<abs>"|null }`,
   {
     agentType: "status-checker",
     schema: RESOLVE_SCHEMA,
@@ -1634,43 +1630,26 @@ async function repoFactsCall(command, label, phase = "Resolve Target") {
 }
 /** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
 function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
-let realWorktreePath = null, stalenessReport = null;
-// Scenario 1: reuse the resolved worktree IFF facts confirm it; otherwise not used — proceed as if unresolved (scenario 2).
-if (resolveResult.worktree_path) {
-  const rf = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${resolveResult.worktree_path}" --reference "${repoAnchor}"`, "worktree-facts-resolved");
-  if (rf && rf.exists && rf.is_linked_worktree && !rf.is_main_checkout && rf.same_repository) realWorktreePath = resolveResult.worktree_path;
-}
-if (!realWorktreePath) {
-  const base = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py base "${repoAnchor}"`, "worktree-base");
-  if (!base || !base.worktree_base) return undetermined({ abort_reason: "worktree-base-unavailable", message: "The repository's worktree base could not be established. No phase agent has been spawned." });
-  const identity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
-  const instructedLocation = normalizePathForm(base.worktree_base).replace(/\/$/, "") + "/" + identity;
-  const targetBranch = (target_type === "epic" ? "epic/" : "ticket/") + identity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-  const locFacts = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py facts "${instructedLocation}" --reference "${repoAnchor}"`, "worktree-facts-location");
-  if (!locFacts) return undetermined({ abort_reason: "worktree-location-unverifiable", location: instructedLocation, message: `Whether anything occupies "${instructedLocation}" could not be established — the probe itself failed, which is NOT the same answer as "nothing is there". No phase agent has been spawned; nothing there was changed.` });
-  if (locFacts.exists) {
-    if (locFacts.is_linked_worktree && !locFacts.is_main_checkout && locFacts.same_repository && (locFacts.branch === targetBranch || locFacts.branch === identity)) realWorktreePath = instructedLocation; // scenario 2 — reuse a worktree of this repo on the target's OWN branch, named either by the epic/<kebab> convention this driver mints for a NEW worktree or by the target's own identity, which is how existing epic worktrees are actually branched; any other occupant is still refused.
-    else return undetermined({ abort_reason: "worktree-location-occupied", location: instructedLocation, occupant: locFacts, message: `The named worktree location "${instructedLocation}" is occupied by something other than the target's own worktree. No phase agent has been spawned; nothing there was changed.` });
-  } else {
-    const standing = await repoFactsCall(`python {{config.output_root}}/scripts/worktree_repo_facts.py branch-standing "${targetBranch}" --repo "${repoAnchor}"`, "branch-standing");
-    let startRef = "origin/main";
-    if (standing && standing.exists) {
-      if (!standing.fetch_ok) return undetermined({ abort_reason: "branch-standing-unverifiable", branch: targetBranch, message: `The standing of branch "${targetBranch}" against origin/main could not be checked (fetch failed). No phase agent has been spawned.` });
-      if (standing.behind > 0 && standing.ahead > 0) return undetermined({ abort_reason: "branch-has-unique-commits", branch: targetBranch, ahead: standing.ahead, behind: standing.behind, message: `Branch "${targetBranch}" is ${standing.ahead} commit(s) ahead and ${standing.behind} behind origin/main. No worktree was opened. Bring the branch up to date, remove it, or aim the run at a different branch.` });
-      if (standing.behind > 0) stalenessReport = { branch: targetBranch, behind: standing.behind, started_from: "origin/main" };
-      else startRef = targetBranch;
-    }
-    const worktreeResult = await agent(`Open a NEW git worktree at the EXACT location "${instructedLocation}" on branch "${targetBranch}", starting from "${startRef}". Do not choose any other location. Bootstrap it (copy/symlink .leafcutter so hooks are present). On any error report status "failed".\nReturn JSON: { "worktree_path": "<absolute path>", "status": "created"|"reused", "error": "<if failed, else omit>" }`, { agentType: "worktree-agent", schema: WORKTREE_SCHEMA, label: "worktree-setup", phase: "Resolve Target" });
-    if (!worktreeResult || worktreeResult.status === "failed" || worktreeResult.error || typeof worktreeResult.worktree_path !== "string") return undetermined({ abort_reason: "worktree-report-unusable", instructed_location: instructedLocation, message: `The worktree-opening agent returned no usable result for "${instructedLocation}". No phase agent has been spawned.` });
-    if (!pathsEquivalent(instructedLocation, worktreeResult.worktree_path)) return undetermined({ abort_reason: "worktree-location-mismatch", instructed_location: instructedLocation, reported_location: worktreeResult.worktree_path, message: `The worktree-opening agent reported "${worktreeResult.worktree_path}", not the instructed location "${instructedLocation}". No phase agent has been spawned, and the run's worktree was not replaced.` });
-    realWorktreePath = instructedLocation;
-  }
-}
-if (!realWorktreePath) return undetermined({ message: "The isolated working copy for this drive is UNDETERMINED. No phase agent has been spawned, and no substitute location is used in its place." });
-// The later step has now established the isolated working copy, so the
-// resolved target carries it and no longer reads as undetermined.
+// BO-4300c-3 / BO-4300a-1-ia: the build's working copy is the workspace maker's answer -- handed in as
+// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is that
+// answer's workspace_path ONLY. The maker decides reuse / open / refuse (an occupied location, a stale branch);
+// this workflow no longer opens, reuses or probes worktrees in its own words. Anything but an accepted answer
+// ends the run here, quoting what was received, with no phase agent spawned.
+
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+
+const buildIdentity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
+const buildSlug = buildIdentity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()
+  .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "build";
+const buildWorkspace = await workspaceObtain(
+  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind ${target_type === "epic" ? "epic" : "ticket"} --slug ${buildSlug}` +
+  (target_type === "ticket" && ticket_path ? ` --ticket "${ticket_path}"` : ""), "Resolve Target");
+if (!buildWorkspace.accepted) return Object.assign(workspaceFailure(buildWorkspace), { resolved_target: resolvedTarget });
+const realWorktreePath = buildWorkspace.workspace_path;
+// The accepted answer establishes the isolated working copy, so the resolved target carries it and no longer
+// reads as undetermined.
 resolvedTarget.worktree_path = realWorktreePath;
-if (stalenessReport) resolvedTarget.worktree_staleness = stalenessReport; // BO-4000b
 
 // BO-3900-PATH-HELPERS-START
 /**

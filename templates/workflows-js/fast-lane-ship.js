@@ -667,163 +667,29 @@ const acStoreRel = "docs/acceptance-criteria";
 
 phase("Worktree");
 
-const worktreeResult = await agent(
-  `You are the worktree phase agent for a fast-lane build. Create the isolated ` +
-  `build worktree — do NOT ask for confirmation (creation is non-destructive).\n\n` +
-  `Run this single Bash command from the repository root:\n` +
-  `   python3 {{config.output_root}}/scripts/setup_ticket_worktree.py create-fastlane-worktree "${slug}"\n\n` +
-  `It decides FIRST whether the workspace for this AC is already occupied — ` +
-  `something already sits at the location this run would open, or the ` +
-  `fast-lane/${slug} branch is already checked out elsewhere. If so it prints ` +
-  `a REFUSAL and does nothing else: ` +
-  `{ "outcome": "refused", "branch": "fast-lane/${slug}", "refusal": { "reason": ..., ` +
-  `"ac_id": ..., "occupied_path": ..., "occupant": "own_prior_attempt"|"foreign", ` +
-  `"occupant_branch": ..., "uncommitted_changes": ..., "published": {...}, ` +
-  `"options": [...], "message": ... } } — return that JSON verbatim, with NO ` +
-  `worktree_path key at all (absent, not blank).\n\n` +
-  `Otherwise it fetches origin, creates or reconnects the worktree rooted at the ` +
-  `latest origin/main, bootstraps it, and prints ` +
-  `{ "outcome": "opened", "worktree_path": "<abs path>", "branch": "fast-lane/${slug}", ` +
-  `"ac_store_path": "<abs>", "created": <bool>, "base_commit": "<sha>", ` +
-  `"base_matches_origin_main": <bool> } — return that JSON verbatim.\n\n` +
-  `If the command exits non-zero for a reason OTHER than an occupancy refusal ` +
-  `(e.g. it crashed), return { "outcome": null, "message": "<stderr>" }.`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_SCHEMA,
-    label: "fastlane-worktree",
-    phase: "Worktree",
-  }
-);
+// BO-4300c-3 / BO-4300a-1-ia: the lane's workspace is the workspace maker's answer, handed in as
+// args.workspace or obtained by exactly ONE verbatim dispatch of the maker command. Its location comes from
+// the accepted answer's workspace_path ONLY -- no claimed path, no "git said" cross-check, no fallback.
+// A refusal (occupied workspace included), an error, prose or no answer ends the run quoting what came back.
 
-// BO-2400f-13: fail CLOSED, by a plain-falsy read. The run proceeds on an
-// explicit `outcome === "opened"`, OR on the PRE-BO-2400f-13 success shape
-// (the `outcome` key entirely ABSENT — not explicitly null — with a
-// non-blank `worktree_path`), preserved for backward compatibility with
-// callers that predate this discriminant. Every other shape — a
-// discriminated refusal, an EXPLICIT null/unparseable outcome (even with a
-// worktree_path present — the sharpest fail-closed case), an empty reply, or
-// the legacy `{"worktree_path": ""}` blank-but-present shape — takes the
-// refusing branch. This guard sits AHEAD of where the old
-// `!worktreeResult.worktree_path` check used to live, and is now the ONLY
-// thing that can end the run at this phase.
-const isPreDiscriminantOpenedShape =
-  !!worktreeResult &&
-  worktreeResult.outcome === undefined &&
-  typeof worktreeResult.worktree_path === "string" &&
-  worktreeResult.worktree_path.trim() !== "";
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-if (!worktreeResult || (worktreeResult.outcome !== "opened" && !isPreDiscriminantOpenedShape)) {
-  const refusalBranch =
-    (worktreeResult && worktreeResult.branch) || `fast-lane/${slug}`;
-  const refusal = (worktreeResult && worktreeResult.refusal) || null;
+const workspace = await workspaceObtain(
+  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind fastlane --slug ${slug}`, "Worktree");
+if (!workspace.accepted) return workspaceFailure(workspace);
 
-  if (worktreeResult && worktreeResult.outcome === "refused" && refusal) {
-    // A real, discriminated occupancy refusal — relay it verbatim. No claim
-    // was ever taken at this point (the refusal precedes Resolve and the
-    // claim step by two whole phases), so the release step is never reached.
-    return {
-      status: "refused",
-      message:
-        refusal.message ||
-        `The workspace for ${targetAc} is occupied and the run refused before any work began.`,
-      failing_phase: "worktree",
-      target_ac: targetAc,
-      branch: refusalBranch,
-      refusal,
-    };
-  }
-
-  // Fail-closed: an unreadable, missing, or legacy reply. Refuse rather than
-  // guess that the workspace is free.
-  return {
-    status: "refused",
-    message:
-      `Occupancy of the fast-lane workspace for ${targetAc} could not be ` +
-      `determined from the worktree phase's reply — refusing rather than ` +
-      `proceeding. Detail: ${JSON.stringify(worktreeResult)}`,
-    failing_phase: "worktree",
-    target_ac: targetAc,
-    branch: refusalBranch,
-  };
-}
-
-const claimedWorktreePath = worktreeResult.worktree_path;
-const branch = worktreeResult.branch || `fast-lane/${slug}`;
+const worktreePath = workspace.workspace_path;
+const branch = (typeof workspace.answer.branch === "string" && workspace.answer.branch) || `fast-lane/${slug}`;
 // BO-2400f-13-iv: carried through to the operator so a green result is never
 // silently ambiguous about which mainline it was measured against.
 const workspaceCreated =
-  typeof worktreeResult.created === "boolean" ? worktreeResult.created : null;
-const baseCommit = worktreeResult.base_commit || null;
+  typeof workspace.answer.created === "boolean" ? workspace.answer.created : null;
+const baseCommit = workspace.answer.base_commit || null;
 const baseMatchesOriginMain =
-  typeof worktreeResult.base_matches_origin_main === "boolean"
-    ? worktreeResult.base_matches_origin_main
+  typeof workspace.answer.base_matches_origin_main === "boolean"
+    ? workspace.answer.base_matches_origin_main
     : null;
-
-// Remove the LLM from the trust path for worktree_path, as for ac_store_path below: the worktree agent has echoed
-// fabricated paths (BO-2400f 2026-08-11, UXP-700d 2026-09-07), and the location differs by layout (dev vs consumer,
-// setup_ticket_worktree.py _resolve_installed_layout), so git is the only authority — its raw output is quoted.
-const worktreeVerify = await agent(
-  `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
-  `infer, guess or normalise a path — only quote what git prints.
-
-` +
-  `Run exactly this one command (the -C pins the probe to the repository this run already knows, not wherever your shell happens to start):
-` +
-  `   git -C "${claimedWorktreePath}" worktree list --porcelain
-
-` +
-  `Find the record whose branch line is refs/heads/${branch}. Return:
-` +
-  `{ "worktree_path": "<that record's worktree line path, verbatim>", ` +
-  `"raw": "<that record's full porcelain text, verbatim>" }
-
-` +
-  `If that command cannot run at all, or no record matches that branch, return ` +
-  `{ "worktree_path": "", "raw": "<full output, verbatim>" }.`,
-  {
-    agentType: "worktree-agent",
-    schema: WORKTREE_VERIFY_SCHEMA,
-    label: "fastlane-worktree-verify",
-    phase: "Worktree",
-  }
-);
-
-// Trust git over the agent, only where it answered — an ABSENT answer (raw
-// empty) is not evidence and falls back to the claim as before; an answer
-// EMPTY OF THIS RUN'S OWN BRANCH (raw non-empty, no record for `branch`)
-// HALTs — positive evidence of a stale second clone, not silence
-// (BO-2400f-3-i, 2026-09-14). A reported path absent from its own raw
-// output is invented, not quoted, and also HALTs (BO-2400f-3; BO-2400f
-// 2026-08-11 / UXP-700d 2026-09-07).
-const gitReportedPath =
-  worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
-const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
-const branchRefLine = `refs/heads/${branch}`;
-
-if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
-  return {
-    status: "error",
-    message: `The worktree location reported for branch ${branch} does not appear in the git output it was supposedly read from, so it was composed rather than quoted. Reported: "${gitReportedPath}". git worktree list --porcelain returned: ${JSON.stringify(gitRaw)}. The worktree phase separately claimed "${claimedWorktreePath}". Proceeding on an invented path is what sent the resolver to a non-existent directory on BO-2400f and UXP-700d.`,
-    failing_phase: "worktree",
-    claimed_worktree_path: claimedWorktreePath,
-    branch,
-    classification: "halt",
-  };
-}
-
-if (gitRaw.trim() !== "" && !gitRaw.includes(branchRefLine)) {
-  return {
-    status: "error",
-    message: `git worktree list --porcelain answered, but has no record for branch ${branch} — this run's own branch, created moments earlier — so the probe looked at a repository without it (e.g. a stale second clone). That is positive evidence, not silence, and is not forgiven the way an unanswered probe is. Raw output: ${JSON.stringify(gitRaw)}. The worktree phase claimed "${claimedWorktreePath}".`,
-    failing_phase: "worktree",
-    claimed_worktree_path: claimedWorktreePath,
-    branch,
-    classification: "halt",
-  };
-}
-
-const worktreePath = gitReportedPath || claimedWorktreePath;
 // Derive the AC store root deterministically from the worktree path — do NOT
 // trust worktreeResult.ac_store_path. The store lives at a fixed convention
 // (<worktree>/docs/acceptance-criteria) inside every worktree cut from
@@ -856,41 +722,62 @@ const selectConnectedInvocation =
 const structuralParentExcluded =
   selectConnectedInvocation.includes("--exclude-structural-parent");
 
-const resolverResult = await agent(
-  `You are the resolver phase agent for a fast-lane build.\n\n` +
-  `Run this single Bash command and parse its JSON stdout (a list of AC ids):\n` +
-  `   ${selectConnectedInvocation}\n\n` +
-  `This is the connected build set for ${targetAc}: its subtree plus any unmet ` +
-  `dependency prerequisites, in dependency order, restricted to not-done leaves.\n\n` +
-  `If the command exits non-zero (e.g. the AC id does not exist), return ` +
-  `{ "ac_ids": [], "message": "<stderr>" }.\n` +
-  `Otherwise return { "ac_ids": [<the parsed list>], "message": "<n> to build" }.`,
+// BO-4300a-1-ia: the resolver is a command step -- one command-step-runner dispatch (BO-2400f-5-i, the same
+// executor and request shape as the claim step) whose reply must be a result before any field of it is read.
+// A decline, prose, no answer, or a reply without an exit status ends the run quoting what came back.
+const resolverReply = shellStepReply(await agent(
+  JSON.stringify({
+    step: "resolve-connected",
+    command: selectConnectedInvocation,
+    target: { workspace: worktreePath, branch, ac_id: targetAc },
+  }),
   {
-    agentType: "status-checker",
-    schema: RESOLVER_SCHEMA,
+    agentType: "command-step-runner",
+    schema: SHELL_REPLY_SCHEMA,
     label: "resolve-connected",
     phase: "Resolve",
   }
-);
+), "resolve-connected");
 
-const acIds = (resolverResult && resolverResult.ac_ids) || [];
+if (!resolverReply.ok) {
+  return {
+    status: "error",
+    message:
+      `Resolver step for ${targetAc} gave no usable result: ${resolverReply.reason}. ` +
+      `Received: ${resolverReply.received}. Nothing was dispatched after it.`,
+    failing_phase: "resolve",
+    worktree_path: worktreePath,
+    branch,
+    classification: "halt",
+  };
+}
+
+// The gate prints a JSON list of AC ids; a non-zero exit or any other output is a failed resolution.
+let acIds = [];
+let resolverMsg = "";
+if (resolverReply.exit_status !== 0) {
+  resolverMsg = `the resolver exited ${resolverReply.exit_status}: ${resolverReply.stderr || resolverReply.stdout}`;
+} else {
+  try {
+    const parsedIds = JSON.parse(resolverReply.stdout);
+    acIds = Array.isArray(parsedIds) ? parsedIds : [];
+    if (!Array.isArray(parsedIds)) resolverMsg = `the resolver printed no list of AC ids: ${workspaceQuote(resolverReply.stdout)}`;
+  } catch (_parseErr) {
+    resolverMsg = `the resolver's output is not JSON: ${workspaceQuote(resolverReply.stdout)}`;
+  }
+}
 
 // Distinguish a RESOLUTION ERROR from a genuinely-empty connected set.
-// A bad --ac-root (e.g. an un-deployed create-fastlane-worktree returning the
-// wrong ac_store_path), a missing store, or a typo'd id all make the resolver
-// exit non-zero with a diagnostic message while still yielding an empty ac_ids
-// list. Treating that as a clean "nothing to build" no-op hides a real failure
-// (observed 2026-08-10: ac_store_path resolved to <worktree>/tickets, so every
-// id was "not found"). Fail loudly instead so the operator sees the cause.
-const resolverMsg = (resolverResult && resolverResult.message) || "";
-if (acIds.length === 0 && /not found|no build set|no such|does not exist|no module|traceback|error/i.test(resolverMsg)) {
+// A bad --ac-root, a missing store, or a typo'd id all make the resolver
+// exit non-zero or print something that is not a list. Treating that as a clean
+// "nothing to build" no-op hides a real failure. Fail loudly instead so the
+// operator sees the cause.
+if (resolverMsg) {
   return {
     status: "error",
     message:
       `Resolver could not resolve the connected build set for ${targetAc} — ` +
-      `this is a failure, not an empty set. Check that the AC store path is ` +
-      `correct (a stale/un-deployed create-fastlane-worktree can return the ` +
-      `wrong ac_store_path) and that ${targetAc} exists on origin/main. ` +
+      `this is a failure, not an empty set. Check that ${targetAc} exists on origin/main. ` +
       `Resolver said: ${resolverMsg}`,
     failing_phase: "resolve",
     worktree_path: worktreePath,
@@ -911,7 +798,7 @@ if (acIds.length === 0) {
       (structuralParentExcluded
         ? `, with structural-parent prerequisites excluded from the dependency walk. `
         : `. NOTE: structural-parent prerequisites were NOT excluded on this run. `) +
-      `${resolverResult ? resolverResult.message || "" : ""}`,
+      "",
     worktree_path: worktreePath,
     branch,
     ac_ids: [],
@@ -1209,9 +1096,9 @@ const bundleResult = await agent(
   `Reaching for some other document instead would let two runs aimed at the ` +
   `same target compose different bundles, and then no comparison across runs ` +
   `means anything.\n\n` +
-  `Step 2 — Run this single Bash command:\n` +
-  `   python3 ${bundleScript} assemble-bundle --architecture <path> ` +
-  `--high-level <path> --prior-tests <path>\n\n` +
+  `Step 2 — Assemble the bundle with the repository's own assembler, ${bundleScript}, ` +
+  `using its assemble-bundle subcommand with --architecture, --high-level and --prior-tests ` +
+  `each pointing at the matching temp file from Step 1.\n\n` +
   `SIZE EXPECTATION: the assembled bundle is roughly twenty kilobytes (~20 KB) ` +
   `of text — small enough to return in full. The ask is to return that text ` +
   `ITSELF, as text, in the "bundle" field below — NOT a path to it, NOT a ` +
@@ -1467,10 +1354,10 @@ const reviewResult = await agent(
   `defect already in the delivered history.\n\n` +
   `Worktree: ${worktreePath}\n` +
   `Branch: ${branch}\n\n` +
-  `Run this single Bash command to see the actual uncommitted diff to review — do NOT ` +
+  `Read the actual uncommitted diff of the worktree below to review it — do NOT ` +
   `review a written summary, a files_modified list, or an account of what the coder ` +
   `believes it did:\n` +
-  `   git -C "${worktreePath}" diff\n\n` +
+  `   the uncommitted diff of the worktree at ${worktreePath}\n\n` +
   `Classify every finding as high, medium, or low confidence using your own judgement ` +
   `(escalate a medium cluster to a second opinion as usual — your own promotion rules ` +
   `apply unchanged).\n\n` +
@@ -1604,13 +1491,11 @@ if (changelogRequired) {
     `   ${changelogPayloadInvocation}\n` +
     `Parse the printed JSON payload verbatim — do not hand-edit any of its fields.\n\n` +
     `Step 2 — Write the entry through the repository's own emitter (never hand-compose a ` +
-    `markdown file):\n` +
-    `   python3 {{config.output_root}}/scripts/changelog/emit_entry.py ` +
-    `--changelog-dir "${worktreePath}/changelogs" --payload '<the JSON payload from Step 1>'\n\n` +
+    `markdown file): the emit_entry.py script under {{config.output_root}}/scripts/changelog/, ` +
+    `given --changelog-dir "${worktreePath}/changelogs" and --payload set to the JSON payload from Step 1.\n\n` +
     `Step 3 — Verify INDEPENDENTLY of your own report: re-read the delivered change (not ` +
     `your own memory of Step 2) to confirm an added changelogs/*.md file is actually present, ` +
-    `e.g.:\n` +
-    `   git -C "${worktreePath}" status --porcelain -- changelogs/\n\n` +
+    `by listing the worktree's changelogs/ folder for an added file.\n\n` +
     `Return JSON: { "status": "ok", "entry_added": <bool, from the Step 3 re-read, not from ` +
     `Step 2's own report>, "entry_path": "<path or null>", "message": "<summary>" }. ` +
     `If Step 1 or Step 2 errors, return { "status": "error", "entry_added": false, ` +
@@ -1715,9 +1600,9 @@ const commitResult = await agent(
   `If it exits non-zero or all_done is false, STOP and return ` +
   `{ "status": "error", "message": "mark_done stale: <stale ids>" }.\n\n` +
   `Step 2 — Stage everything on the worktree:\n` + knowledgeStageStep +
-  `   git -C "${worktreePath}" add -A\n\n` +
+  `   Stage every change in the worktree at ${worktreePath} (add all).\n\n` +
   `Step 3 — Commit (set the COMMIT_AGENT_MODE token so the guardian allows it):\n` +
-  `   COMMIT_AGENT_MODE=1 git -C "${worktreePath}" commit -m "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" -m "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green."\n` +
+  `   Commit it in that worktree with the subject "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" and the body "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green."\n` +
   `   Every claim in the commit message must be verifiable in the staged diff.\n` +
   `   If a pre-commit hook fails, fix the reported issue and retry once.\n\n` +
   `Return JSON: { "status": "ok", "branch": "${branch}", "message": "<summary>" } ` +
@@ -1804,24 +1689,23 @@ const prResult = await agent(
   `Worktree: ${worktreePath}\n` +
   `Base: main\n\n` +
   `Step 1 — Push the branch:\n` +
-  `   git -C "${worktreePath}" push --set-upstream origin ${branch}\n` +
+  `   Push ${branch} to origin from the worktree at ${worktreePath}, setting the upstream.\n` +
   `   If push exits non-zero, return { "status": "error", "message": "push failed: <stderr>" }.\n\n` +
   `Step 2 — Switch to the authorized account (EMU-tolerant):\n` +
-  `   gh auth switch --user urlmonitor\n` +
+  `   Switch the gh CLI to the account urlmonitor.\n` +
   `   If this exits non-zero, continue anyway (it may already be active).\n\n` +
   `Step 3 — Open the PR (with REST fallback for EMU accounts):\n` +
   `   Attempt A — gh pr create:\n` +
-  `     gh pr create --base main --head "${branch}" ` +
-  `--title "${prTitle.replace(/"/g, '\\"')}" ` +
-  `--body "$(cat <<'PREOF'\n${prBody}\nPREOF\n)"\n` +
+  `     Create the PR with base main and head "${branch}", ` +
+  `title "${prTitle.replace(/"/g, '\\"')}" and a body read from this text:\n${prBody}\n` +
   `     Capture the PR URL from stdout. On success, go to Step 4.\n` +
   `     If it fails with "Enterprise Managed User", "createPullRequest", or "GraphQL", ` +
   `fall through to Attempt B. Any other failure: return ` +
   `{ "status": "error", "message": "gh pr create failed: <stderr>" }.\n\n` +
   `   Attempt B — REST fallback:\n` +
-  `     Get org/repo: git -C "${worktreePath}" remote get-url origin (parse org/repo).\n` +
-  `     gh api -X POST repos/<org>/<repo>/pulls -f title="${prTitle.replace(/"/g, '\\"')}" ` +
-  `-f head="${branch}" -f base="main" -f body="<body>"\n` +
+  `     Get org/repo from the origin remote URL of the worktree at ${worktreePath} (parse org/repo).\n` +
+  `     Make the REST call (the gh CLI's api subcommand, POST to repos/<org>/<repo>/pulls) with title="${prTitle.replace(/"/g, '\\"')}", ` +
+  `head="${branch}", base="main", body="<body>"\n` +
   `     Parse .html_url from the JSON response. If gh api exits non-zero, return ` +
   `{ "status": "error", "message": "gh api REST fallback failed: <stderr>" }.\n\n` +
   `Step 4 — Return: { "status": "ok", "pr_url": "<full https url>", "message": "PR opened" }.`,

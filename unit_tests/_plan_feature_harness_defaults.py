@@ -79,8 +79,7 @@ from typing import Any
 
 _PLAN_FEATURE_SCRIPT_NAME = "plan-feature.js"
 
-_WORKTREE_SETUP_SCRIPT_LABEL = "resolve-worktree-setup-script-path"
-_WORKTREE_SETUP_LABEL = "worktree-setup"
+_WORKSPACE_STEP_LABEL = "workspace-ensure"
 _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH = (
     "/tmp/harness-default-repo/.leafcutter/scripts/setup_ticket_worktree.py"
 )
@@ -116,31 +115,34 @@ def _is_plan_feature_script(script_path: Path) -> bool:
 
 
 def worktree_setup_default_responses() -> dict[str, Any]:
-    """Return the two real, well-formed default responses (keyed by label)
-    for 'resolve-worktree-setup-script-path' / 'worktree-setup',
-    unconditionally -- for a caller that already knows it is talking to
-    plan-feature.js (e.g. unit_tests/_plan_feature_e2_runner.py's agent
-    shim) and only needs the payload shapes, not the `_is_plan_feature_script()`
-    gate `plan_feature_default_label_responses()` applies below for
-    run_workflow_under_e2()'s generic multi-script dispatch. The single
-    source of these two shapes -- never pasted per caller.
+    """Return the real, well-formed default response (keyed by label) for the ONE workspace step
+    (``workspace-ensure``, BO-4300c-3), unconditionally -- for a caller that already knows it is talking to
+    plan-feature.js (e.g. unit_tests/_plan_feature_e2_runner.py's agent shim) and only needs the payload
+    shape, not the `_is_plan_feature_script()` gate `plan_feature_default_label_responses()` applies below
+    for run_workflow_under_e2()'s generic multi-script dispatch. The single source of this shape -- never
+    pasted per caller.
+
+    The reply is the shell executor's ``{command, exit_status, stdout, stderr}`` carrying the workspace
+    maker's ok answer as the stdout STRING, exactly as the real engine delivers it. The retired
+    ``resolve-worktree-setup-script-path`` / ``worktree-setup`` labels are no longer dispatched.
     """
     return {
-        _WORKTREE_SETUP_SCRIPT_LABEL: {
-            "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
-            "exit_code": 0,
-            "stderr": "",
-        },
-        _WORKTREE_SETUP_LABEL: {
-            "output": json.dumps(
+        _WORKSPACE_STEP_LABEL: {
+            "command": "python3 worktree.py ensure --kind ac (harness default)",
+            "exit_status": 0,
+            "stdout": json.dumps(
                 {
+                    "schema_version": 1,
+                    "status": "ok",
+                    "code": "OK",
+                    "verb": "ensure",
+                    "workspace_path": _WORKTREE_SETUP_DEFAULT_WORKTREE_PATH,
                     "worktree_path": _WORKTREE_SETUP_DEFAULT_WORKTREE_PATH,
                     "branch": _WORKTREE_SETUP_DEFAULT_BRANCH,
                     "ac_store_path": _WORKTREE_SETUP_DEFAULT_AC_STORE_PATH,
                     "created": False,
                 }
             ),
-            "exit_code": 0,
             "stderr": "",
         },
     }

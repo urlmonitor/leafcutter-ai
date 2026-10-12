@@ -97,10 +97,20 @@ def test_no_shipped_recipe_is_newly_blocked_by_the_argv_parser() -> None:
 
 def test_census_actually_sees_recipes() -> None:
     # covers: BP-1100d-3-i
-    """Guard against a census that silently scans nothing."""
+    """Guard against a census that silently scans nothing.
+
+    BO-4300a-1-ia: the fast-lane commit step no longer carries a command line (the commit agent is asked for
+    the outcome, and its own protocol sets the exemption), so the sample recipe is taken from the shipped
+    workflows that DO still spell one out -- the census must find at least one exempt commit recipe across
+    them, and the detector must still recognise it as a commit.
+    """
     hook = _load_hook()
-    fast_lane = _TEMPLATES / "workflows-js" / "fast-lane-ship.js"
-    exempt = [t for _, t in _js_recipes(fast_lane) if "COMMIT_AGENT_MODE=1" in t and "commit" in t]
-    assert exempt, "census found no exempt fast-lane commit recipe; extraction is broken"
+    exempt = [
+        t
+        for path in sorted((_TEMPLATES / "workflows-js").glob("*.js"))
+        for _, t in _js_recipes(path)
+        if "COMMIT_AGENT_MODE=1" in t and "commit" in t
+    ]
+    assert exempt, "census found no exempt shipped commit recipe in any workflow; extraction is broken"
     payload = {"tool_input": {"command": exempt[0]}}
-    assert hook._is_git_commit_call(payload), "detector no longer recognises the fast-lane commit"
+    assert hook._is_git_commit_call(payload), "detector no longer recognises the shipped exempt commit recipe"

@@ -1373,10 +1373,9 @@ async function concludeTicket(spec) {
 // ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
-// Read the worktree path from args if provided. If args.worktree_path is set,
-// the caller already resolved the worktree context — skip the ambient CWD check.
-// This fixes the false-halt that occurred when build-ticket was invoked from
-// the session root (where CWD is the main clone, not the worktree).
+// The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check and no args.worktree_path
+// fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -1389,9 +1388,6 @@ if (!ticketPath) {
       "No ticket_path provided. Pass args: { ticket_path: '<path>' }",
   };
 }
-
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = (args && args.worktree_path) || null;
 
 /**
  * The resolved target this drive emits for its consumers.
@@ -1411,51 +1407,24 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-let gitInfo = null;
+// BO-4300c-3 / BO-4300a-1-ia: the drive's working copy is the workspace maker's answer -- handed in as
+// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path is not a source of a location, and
+// there is no ambient probe of the folder the run was started in: anything but an accepted answer ends the
+// drive here, quoting what was received, with no phase agent spawned.
 
-if (callerWorktreePath) {
-  resolvedTarget.worktree_path = callerWorktreePath;
-} else {
-  // No caller-supplied working copy. The ambient git check may POSITIVELY
-  // identify one — .git as a file on a non-protected branch is a real,
-  // verified worktree, and its root is reported explicitly. What the check
-  // must never do is answer the question by reaching for whatever is nearest:
-  // if it cannot identify a worktree, the working copy stays undetermined and
-  // the drive holds back (BO-1900a-4-i).
-  const worktreeCheck = await agent(
-    "Run these shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "3. `git rev-parse --show-toplevel` — reports the absolute root of the working copy you are in\n" +
-    "Report worktree_path ONLY from command 3, and ONLY when command 1 said \"file\". " +
-    "If any command fails, or .git is a directory, omit worktree_path entirely — do NOT substitute the current directory, the ticket's folder, or any other location you can find.\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<absolute path, omit if unknown>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-  gitInfo = worktreeCheck;
-
-  if (gitInfo && (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master")) {
-    return {
-      status: "error",
-      worktree_required: true,
-      resolved_target: resolvedTarget,
-      message:
-        "build-ticket.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (gitInfo.git_type || 'unknown') +
-        " (branch: " + (gitInfo.branch || 'unknown') + "), so there is no isolated " +
-        "working copy for this drive and no phase agent will be spawned. " +
-        "Create a worktree first:\n" +
-        "  /worktree create <branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
-
-  if (gitInfo && gitInfo.git_type === "file") {
-    resolvedTarget.worktree_path = gitInfo.worktree_path || null;
-  }
+const ticketSlug = (ticketPath.split(/[\\/]/).pop() || "ticket").replace(/\.md$/i, "")
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "ticket";
+const ticketWorkspace = await workspaceObtain(
+  `python3 {{config.output_root}}/scripts/worktree.py ensure --kind ticket --slug ${ticketSlug} --ticket "${ticketPath}"`,
+  "Worktree Guard");
+if (!ticketWorkspace.accepted) {
+  return Object.assign(workspaceFailure(ticketWorkspace), { resolved_target: resolvedTarget });
 }
+resolvedTarget.worktree_path = ticketWorkspace.workspace_path;
 
 // BO-1900a-4-i — the refusal that makes the marker load-bearing. An unanswered
 // question about where the work belongs stops the drive instead of being

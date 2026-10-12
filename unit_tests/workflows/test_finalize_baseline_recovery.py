@@ -32,7 +32,8 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import HarnessResult, finalize_deploy_parity_responses, finalize_targeted_rerun_responses  # noqa: E402
+from _workflow_engine_harness import pytest_run_reply, run_workflow_under_e2, scratch_workspace_reply, shell_step_reply, workspace_ensure_reply  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 _JS_PATH = _REPO_ROOT / "templates" / "workflows-js" / "finalize-feature.js"
@@ -61,44 +62,38 @@ def _base_label_responses(
 
     Drives Step 0 to fail (baselineFailures=null), Step 1 to find an open PR,
     Step 2 to merge cleanly, and Step 3 test run to fail with the given tests.
-    targeted_rerun_response controls what the recovery agent returns.
+    targeted_rerun_response controls what the recovery step produces.
     """
     if post_merge_failing_tests is None:
         post_merge_failing_tests = list(_POST_MERGE_FAILURES)
     responses: dict = {
-        "pre-flight": {
-            "found": True,
-            "branch": "feature/test-recovery",
-            "worktree_root": "/tmp/test-wt",
-        },
+        "workspace-ensure": workspace_ensure_reply("/tmp/test-wt", branch="feature/test-recovery"),
         "gh-config": {"gh_target_account": None, "gh_repo": None},
-        # run_failed → baselineFailures stays null, recovery branch activates.
-        "step-0-baseline": {
-            "status": "run_failed",
-            "baseline_sha": None,
-            "baseline_failures": None,
-            "baseline_run_at": None,
-        },
-        # PR already open → skip pull-request agent dispatch.
+        # Baseline: pytest exits neither 0 nor 1 -> run_failed -> baselineFailures stays null, recovery activates.
+        "step-0-baseline-workspace": scratch_workspace_reply("baseline"),
+        "step-0-baseline-deploy": shell_step_reply("", exit_status=0),
+        "step-0-baseline": shell_step_reply("", exit_status=2, stderr="pytest crashed"),
+        "cleanup-baseline-worktree": shell_step_reply({"status": "ok"}),
+        # PR already open -> skip pull-request agent dispatch.
         "step-1-pr-probe": {
             "found": True,
             "number": 42,
             "url": "https://github.com/test/pull/42",
         },
-        # Clean merge → no conflict halt.
+        # Clean merge -> no conflict halt.
         "step-2-merge-main": {"status": "merged", "merge_strategy": "merged_main"},
-        # Non-empty failing_tests → enters triage sub-step (and potentially recovery).
+        # Non-empty failing_tests -> enters triage sub-step (and potentially recovery).
         "step-3-test-run": {
             "passed": False,
             "output": "test output stub",
             "failing_tests": post_merge_failing_tests,
         },
         "step-3-changed-files": {"changed_files": []},
-        # blocks_finalization=false → triage does not halt the workflow.
+        # blocks_finalization=false -> triage does not halt the workflow.
         "step-3-triage": {"triage_report": [], "blocks_finalization": False},
     }
     if targeted_rerun_response is not None:
-        responses["step-3-targeted-rerun"] = targeted_rerun_response
+        responses.update(finalize_targeted_rerun_responses(targeted_rerun_response))
     return responses
 
 
@@ -424,88 +419,83 @@ def test_fin_100c_4_recovery_deploys_before_targeted_rerun():
 # ---------------------------------------------------------------------------
 
 
-def _base_with_captured_baseline(post_merge_failing_tests, deploy_parity_response):
+def _base_with_captured_baseline(post_merge_failing_tests, deploy_parity_responses):
     """label_responses with a SUCCESSFUL Step 0 baseline (non-null) so the
-    null-baseline recovery branch does NOT run — isolating the deploy-parity
-    self-check — plus a step-3-deploy-parity response.
+    null-baseline recovery branch does NOT run -- isolating the deploy-parity
+    self-check -- plus the deploy-parity replies.
     """
     lr = _base_label_responses(post_merge_failing_tests=post_merge_failing_tests)
-    lr["step-0-baseline"] = {
-        "status": "ok",
-        "baseline_sha": "deadbeef",
-        "baseline_failures": [],
-        "baseline_run_at": "2026-07-21T00:00:00Z",
-    }
-    lr["step-3-deploy-parity"] = deploy_parity_response
+    lr["step-0-baseline"] = pytest_run_reply([])
+    lr.update(deploy_parity_responses)
     return lr
 
 
 def test_h1_empty_post_merge_failures_does_not_run_deploy_parity():
     """H-1: a Step-3 run with testPassed=false but an EMPTY failure set (the
     malformed/ambiguous case) must NOT enter the deploy-parity self-check, so it can
-    never flip testPassed→true and skip triage/merge on a malformed test run.
+    never flip testPassed->true and skip triage/merge on a malformed test run.
     """
     lr = _base_with_captured_baseline(
         post_merge_failing_tests=[],  # testPassed=false, postMergeFailures=[]
-        deploy_parity_response={
-            "deploy_consistent": False, "redeployed": True,
-            "build_state_only_failures": ["tests/x.py::t"], "still_failing": [],
-        },
+        deploy_parity_responses=finalize_deploy_parity_responses(still_failing=[]),
     )
     result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
     labels = [c.label for c in result.agent_calls]
-    assert "step-3-deploy-parity" not in labels, (
-        "deploy-parity ran on an EMPTY post-merge failure set — the H-1 gate "
-        "(postMergeFailures.length > 0) is missing; an empty set could flip "
-        f"testPassed→true and skip triage. Dispatched: {labels!r}. stderr: {result.stderr[:300]!r}"
-    )
+    assert "step-3-deploy-parity" not in labels, f"deploy-parity ran on an EMPTY failure set (H-1 gate missing): {labels!r}"
 
 
 def test_fin_100g_4i_genuine_failure_survives_exclusion_and_reaches_triage():
     """FIN-100g-4-i: when some failures are build-state (cleared by re-deploy) but a
     GENUINE failure remains, the genuine one is NOT excluded and triage IS dispatched
     (so it can HALT). If the exclusion wrongly cleared everything, testPassed would flip
-    true and triage would be skipped — this test would then fail.
+    true and triage would be skipped -- this test would then fail. The genuine failure is the
+    one the re-run still reports failing; the other two pass after the verified re-deploy.
     """
     failures = ["tests/a.py::t1", "tests/b.py::t2", "tests/c.py::t3"]
     lr = _base_with_captured_baseline(
         post_merge_failing_tests=failures,
-        deploy_parity_response={
-            "deploy_consistent": True, "redeployed": True,
-            "build_state_only_failures": ["tests/a.py::t1", "tests/b.py::t2"],
-            "still_failing": ["tests/c.py::t3"],
-        },
+        deploy_parity_responses=finalize_deploy_parity_responses(still_failing=["tests/c.py::t3"]),
     )
     result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
     labels = [c.label for c in result.agent_calls]
-    assert "step-3-deploy-parity" in labels, (
-        f"deploy-parity self-check did not run with a non-empty failure set. Dispatched: {labels!r}"
-    )
-    assert "step-3-triage" in labels, (
-        "A genuine failure (tests/c.py::t3) remained after build-state exclusion, so triage "
-        "must be dispatched (it can HALT). It was not — the exclusion likely cleared a genuine "
-        f"failure or flipped testPassed→true. Dispatched: {labels!r}"
-    )
+    assert "step-3-deploy-parity" in labels, f"deploy-parity self-check did not run. Dispatched: {labels!r}"
+    assert "step-3-triage" in labels, f"a genuine failure remained, so triage must be dispatched. Dispatched: {labels!r}"
+    prompt = str(next(c for c in result.agent_calls if c.label == "step-3-triage").prompt)
+    assert "tests/c.py::t3" in prompt, "the genuine failure must be handed to triage"
+    assert "tests/a.py::t1" not in prompt and "tests/b.py::t2" not in prompt, "build-state failures must NOT reach triage"
 
 
 def test_fin_100g_4i_still_failing_contradiction_is_not_excluded():
-    """M-2 contradiction guard: a test the agent lists in BOTH build_state_only_failures
-    AND still_failing must NOT be excluded — it reaches triage. Without the guard all
-    three would be excluded, testPassed would flip true, and triage would be skipped.
+    """M-2 (re-pointed): a test the re-run still reports failing must never be excluded. The build-state
+    set is COMPUTED from what the re-run reported (post-merge failures minus the still-failing ones), so
+    the old agent-prose contradiction cannot arise; what remains to guard is that EVERY still-failing test
+    reaches triage. Without that all three would be excluded, testPassed would flip true and triage would
+    be skipped.
     """
     failures = ["tests/a.py::t1", "tests/b.py::t2", "tests/c.py::t3"]
     lr = _base_with_captured_baseline(
         post_merge_failing_tests=failures,
-        deploy_parity_response={
-            "deploy_consistent": True, "redeployed": True,
-            "build_state_only_failures": failures,            # claims all cleared
-            "still_failing": ["tests/c.py::t3"],              # but c.py::t3 still fails
-        },
+        deploy_parity_responses=finalize_deploy_parity_responses(still_failing=failures),
     )
     result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
     labels = [c.label for c in result.agent_calls]
-    assert "step-3-triage" in labels, (
-        "A test listed in BOTH build_state_only_failures and still_failing was excluded "
-        "anyway (contradiction), flipping testPassed→true and skipping triage. The M-2 guard "
-        f"must keep it. Dispatched: {labels!r}"
+    assert "step-3-triage" in labels, f"still-failing tests were excluded, skipping triage. Dispatched: {labels!r}"
+    prompt = str(next(c for c in result.agent_calls if c.label == "step-3-triage").prompt)
+    for test_id in failures:
+        assert test_id in prompt, f"{test_id} still fails after the re-deploy and must reach triage"
+
+
+def test_failed_deploy_keeps_every_failure_for_triage():
+    """A build.py that exits non-zero proves nothing about deploy skew: no failure may be excluded, so the
+    whole post-merge set is handed to triage (conservative), and the re-run is not dispatched."""
+    failures = ["tests/a.py::t1", "tests/b.py::t2"]
+    lr = _base_with_captured_baseline(
+        post_merge_failing_tests=failures,
+        deploy_parity_responses=finalize_deploy_parity_responses(still_failing=[], deploy_exit_status=1),
     )
+    result = run_workflow_under_e2(_JS_PATH, label_responses=lr, timeout=_HARNESS_TIMEOUT)
+    labels = [c.label for c in result.agent_calls]
+    assert "step-3-deploy-parity-rerun" not in labels, f"re-run dispatched after a failed deploy: {labels!r}"
+    assert "step-3-triage" in labels, f"a failed deploy must leave the failures for triage. Dispatched: {labels!r}"
+    prompt = str(next(c for c in result.agent_calls if c.label == "step-3-triage").prompt)
+    assert all(test_id in prompt for test_id in failures), "every failure must reach triage"

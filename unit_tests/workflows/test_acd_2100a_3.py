@@ -71,13 +71,15 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
 _TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
 _MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
-_SETUP_RELATED_LABELS = ("resolve-worktree-setup-script-path", "worktree-setup")
+_SETUP_RELATED_LABELS = ("workspace-ensure",)  # BO-4300c-3: the ONE workspace step (the script-path resolution and worktree-setup labels are retired)
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -315,7 +317,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     set to the given directory. Returns the parsed
     {calls: [...], result: ..., error?: ...} payload.
     """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     body = _strip_exports(source)
 
     shim = (

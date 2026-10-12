@@ -37,7 +37,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests._workflow_engine_harness import run_workflow_under_e2, shell_step_reply  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
@@ -51,10 +51,7 @@ TEMP_BRANCH = "epic/anchored-worktree"
 
 # Labels belonging to the Resolve-Target phase itself; anything else dispatched
 # is a phase agent, which the incident proved were never reached.
-_FACTS_LABELS = frozenset({
-    "resolve-target", "worktree-facts-resolved", "worktree-base",
-    "worktree-facts-location", "branch-standing", "worktree-setup",
-})
+_FACTS_LABELS = bfx.RESOLVE_PHASE_LABELS
 
 
 def _phase_calls(result):
@@ -282,43 +279,44 @@ class TestRealAnswersDecideTheRun(_RealRepositoryFixture):
     def test_unanchored_answers_abort_the_run_and_anchored_answers_do_not(self) -> None:
         # covers: BO-4000f
         # angle: real_artifact
-        """The two real answers above, fed to build-feature.js's own top-level
-        body, reproduce the incident and its absence: the cwd-defaulted pair
-        aborts worktree-base-unavailable with no phase agent spawned, while
-        the anchored pair reuses the healthy worktree and the run goes on.
+        """RE-POINTED (BO-4300c-3): the driver no longer asks cwd-sensitive repository questions itself; the
+        question "which repository is this" is the workspace maker's. Its REAL answer, produced from the
+        directory the run was launched from (not a git checkout), is fed to build-feature.js's own top-level
+        body: a real refusal aborts the run with no phase agent spawned and the refusal quoted, while a ready
+        answer for the healthy worktree (what the maker answers when it can place the workspace) lets the run
+        go on rooted at that worktree.
         """
-        unanchored_facts = self._facts_script("facts", str(self.linked))
-        unanchored_base = self._facts_script("base")
+        maker = _REPO_ROOT / "templates" / "scripts" / "worktree.py"
+        proc = subprocess.run(
+            [sys.executable, str(maker), "ensure", "--kind", "epic", "--slug", "anchored-worktree"],
+            cwd=str(self.not_a_repo), capture_output=True, text=True, timeout=120,
+        )
+        real_answer = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual(real_answer["status"], "refused", real_answer)
+        self.assertEqual(proc.returncode, 2, "a refusal exits 2 (BO-4300c-2 result contract)")
+
         responses = bfx.success_label_responses(
             ticket_paths=[TICKET],
             resolved_worktree_path=str(self.linked),
-            resolved_worktree_facts=unanchored_facts,
+            workspace_reply=shell_step_reply(proc.stdout.strip(), exit_status=proc.returncode, stderr=proc.stderr),
         )
-        responses["worktree-base"] = bfx.envelope(unanchored_base)
         aborted = run_workflow_under_e2(
             _BUILD_FEATURE_JS, label_responses=responses, args={"target": bfx.EPIC_NAME}
         )
         payload = aborted.result or {}
-        self.assertEqual(payload.get("abort_reason"), "worktree-base-unavailable")
-        self.assertTrue(payload.get("worktree_undetermined"))
+        self.assertEqual(payload.get("status"), "error")
+        self.assertIn(real_answer["code"], str(payload.get("message")), "the maker's refusal must be quoted")
         self.assertEqual(_phase_calls(aborted), [])
 
-        anchored_facts = self._facts_script(
-            "facts", str(self.linked), "--reference", str(self.epic_target)
-        )
-        anchored_base = self._facts_script("base", str(self.epic_target))
         responses = bfx.success_label_responses(
             ticket_paths=[TICKET],
             resolved_worktree_path=str(self.linked),
-            resolved_worktree_facts=anchored_facts,
+            workspace_reply=bfx.ready_workspace(str(self.linked), created=False, branch=TEMP_BRANCH),
         )
-        responses["worktree-base"] = bfx.envelope(anchored_base)
         proceeded = run_workflow_under_e2(
             _BUILD_FEATURE_JS, label_responses=responses, args={"target": bfx.EPIC_NAME}
         )
-        self.assertNotEqual(
-            (proceeded.result or {}).get("abort_reason"), "worktree-base-unavailable"
-        )
+        self.assertNotEqual((proceeded.result or {}).get("status"), "error", proceeded.result)
         self.assertTrue(_phase_calls(proceeded), f"stderr={proceeded.stderr!r}")
 
 
@@ -355,10 +353,13 @@ class TestDriverAnchorsEveryInvocation(unittest.TestCase):
                     f"the {subcommand!r} invocation's reference {reference!r} is a "
                     "fixed literal, not one derived from the resolved target",
                 )
+        # RE-POINTED (BO-4300c-3): the driver no longer constructs facts / base / branch-standing at all -- the
+        # workspace maker owns those questions. Whatever invocation REMAINS is the dirty-state read, and it was
+        # checked above; a re-introduced probe of another kind fails the closed set below instead of passing.
         self.assertLessEqual(
-            {"facts", "base", "branch-standing"}, seen,
-            "the driver's worktree step no longer reaches every subcommand this "
-            "record covers; the parse above is not seeing the real call sites",
+            seen, {"dirty"},
+            "the driver constructs a worktree_repo_facts.py subcommand other than the dirty-state read; the "
+            "repository questions belong to the workspace maker (BO-4300c-3)",
         )
 
 

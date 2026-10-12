@@ -65,7 +65,6 @@ def _get_full_step_block(js: str, step_label: str) -> str:
     start = js.find(start_marker)
     if start == -1:
         return ""
-    # Find next phase( call after this one
     next_phase = js.find("phase(", start + len(start_marker))
     if next_phase == -1:
         return js[start:]
@@ -130,13 +129,13 @@ class TestFin100a1BaselineCapture:
 
     def test_ac_fin100a1_step0_removes_temp_worktree(self):
         # covers: FIN-100a-1
-        """AC FIN-100a-1: Step 0 must remove the temp worktree after the run."""
-        step0 = _get_step_block(_js_text(), "Step 0", "Step 1")
-        assert "worktree remove" in step0, (
-            "Step 0 must remove the temporary baseline worktree via "
-            "'git worktree remove' after the test run completes. "
-            "Required by FIN-100a-1 to avoid leaving stale directories."
-        )
+        """AC FIN-100a-1: Step 0 must remove the temp worktree after the run (BO-4300a-1-ia: through the
+        workspace maker's ``remove``, issued by the shared helper right after the pytest run)."""
+        js = _js_text()
+        helper = js[js.index("async function mainTestRun"):js.index("function pytestFailedIds")]
+        assert "mainTestRun(" in _get_step_block(js, "Step 0", "Step 1"), "Step 0 must use the shared scratch-run helper"
+        assert helper.index("python3 -m pytest") < helper.index("await cleanupBaselineWorktree()"), "scratch not removed after the run"
+        assert "scripts/worktree.py remove" in js[js.index("async function cleanupBaselineWorktree"):js.index("async function mainTestRun")]
 
     def test_ac_fin100a1_baseline_forwarded_to_step3_triage(self):
         # covers: FIN-100a-1
@@ -160,13 +159,11 @@ class TestFin100a2GracefulDegradation:
 
     def test_ac_fin100a2_null_on_worktree_failure(self):
         # covers: FIN-100a-2
-        """AC FIN-100a-2: When worktree creation fails, baseline_failures is set to null."""
+        """AC FIN-100a-2: When the scratch workspace cannot be made, baseline_failures is set to null."""
         js = _js_text()
-        step0 = _get_step_block(js, "Step 0", "Step 1")
-        # The failure path must set/return baseline_failures: null (not empty array)
-        assert "baseline_failures\": null" in step0 or 'baseline_failures: null' in step0, (
-            "Step 0 must return baseline_failures=null (not empty array) when worktree "
-            "creation fails. Required by FIN-100a-2: 'null (not empty array) on any failure path.'"
+        refused = js[js.index("if (!made.accepted)"):js.index("const root = made.workspace_path")]
+        assert "baseline_failures: baselineRun.failures" in _get_step_block(js, "Step 0", "Step 1") and "failures: null" in refused, (
+            "Step 0 must return baseline_failures=null (not empty array) when the workspace cannot be made (FIN-100a-2)."
         )
 
     def test_ac_fin100a2_null_on_run_failure(self):
@@ -195,7 +192,6 @@ class TestFin100a2GracefulDegradation:
         # covers: FIN-100a-2
         """AC FIN-100a-2: Workflow must log a warning explaining the failure reason."""
         step0 = _get_step_block(_js_text(), "Step 0", "Step 1")
-        # There should be a warning-style log message in the degradation path
         assert (
             "triage will treat all failures as regressions" in step0.lower()
             or "triage will treat all post-merge failures as regressions" in step0.lower()
@@ -248,7 +244,6 @@ class TestFin100a3WorktreeCleanupOnAllExits:
             "finalize-feature.js must define a cleanupBaselineWorktree() function. "
             "Required by FIN-100a-3."
         )
-        # The function must be best-effort (not throw)
         cleanup_idx = js.find("async function cleanupBaselineWorktree")
         assert cleanup_idx != -1, (
             "cleanupBaselineWorktree must be declared as 'async function cleanupBaselineWorktree' "
@@ -642,8 +637,6 @@ class TestFin100d2ContinuePath:
         )
         # Verify there is no 'status: "halted"' immediately before the push
         context = step3[max(0, false_path_idx - 200):false_path_idx]
-        # It's OK to have "halted" earlier in the block (for the true path),
-        # but the completedSteps.push(3) itself must NOT be preceded by a halt.
         assert 'status: "halted"' not in context, (
             "Step 3's blocks_finalization=false path must NOT return halted before "
             "completedSteps.push(3). Required by FIN-100d-2."
@@ -715,7 +708,6 @@ class TestFin100f1Step4StructurallyUnreachable:
         # covers: FIN-100f-1
         """AC FIN-100f-1: the return in step 3's halt gate precedes phase('Step 4') in source."""
         js = _js_text()
-        # Find the step 3 halt return (the one with halted_at_step: 3)
         step3_halt_idx = js.find("halted_at_step: 3")
         step4_phase_idx = js.find("phase('Step 4')")
         assert step3_halt_idx != -1, (
@@ -796,16 +788,13 @@ class TestFin100f2SequentialOrdering:
         # covers: FIN-100f-2
         """AC FIN-100f-2: no parallel() dispatch may wrap steps 2, 3, or 4 together."""
         js = _js_text()
-        # Extract from Step 2 start to Step 5 start (covering steps 2, 3, 4)
         step2_start = js.find("phase('Step 2')")
         step5_start = js.find("phase('Step 5')")
         if step2_start == -1 or step5_start == -1:
-            # Fallback: check whole file — parallel() should not appear for these steps
             steps_2_to_4 = js
         else:
             steps_2_to_4 = js[step2_start:step5_start]
 
-        # parallel() is the keyword that would indicate non-sequential dispatch
         assert "parallel(" not in steps_2_to_4, (
             "Steps 2, 3, and 4 must NOT use parallel() dispatch. Each step must "
             "await the previous one before executing so that: Step 2 (merge) completes "

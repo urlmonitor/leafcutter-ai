@@ -205,13 +205,14 @@ async function announceUnpublishedLearnings() {
   try {
     const probe = await agent(`Run: gh pr view ${prNumber} --json state --jq '.state'\nReturn ONLY a JSON object: { "state": "OPEN"|"MERGED"|"CLOSED" }`, { agentType: "status-checker", label: "step-7-pr-merged-probe", phase: "Step 7" });
     merged = String(parsedOr(() => parseAgentJson(probe, { stage: "step-7-pr-merged-probe", agent: "status-checker" }), {}, "treating the branch as not merged").state || "").toUpperCase() === "MERGED";
-    const observed = await agent(
-      "Report, read-only, which routed learnings written in this worktree did NOT reach the merged tree. " +
-      "Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n" +
-      `   python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ${merged ? "ok" : "not_run"} --all-stages\n` +
-      'If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail.',
-      { agentType: "status-checker", label: "step-7-unpublished-learnings", phase: "Step 7" });
-    const reply = parsedOr(() => parseAgentJson(observed, { stage: "step-7-unpublished-learnings", agent: "status-checker" }), {}, "announcing nothing; removal proceeds");
+    // Read-only observation: one shell-runner dispatch of the exact command; a reply that is no usable result is
+    // recorded as "did not run" (never as nothing-unpublished) and the advisory step never blocks the removal.
+    const observed = shellStepReply(await shellStepDispatch(
+      `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py observe --working-dir ${WORKTREE_ROOT} --commit-status ${merged ? "ok" : "not_run"} --all-stages`,
+      "step-7-unpublished-learnings", "Step 7"), "step-7-unpublished-learnings");
+    const reply = observed.ok
+      ? parsedOr(() => parseAgentJson(observed.stdout, { stage: "step-7-unpublished-learnings", agent: "shell-runner" }), {}, "announcing nothing; removal proceeds")
+      : { case: "did_not_run", detail: observed.reason + " -- " + observed.received };
     unpublishedLearnings = (Array.isArray(reply.unwritten_records) ? reply.unwritten_records : [])
       .filter((r) => r && typeof r === "object" && r.destination)
       .map((r) => (merged || r.reason !== "stopped_before_publication" ? r : { ...r, reason: "branch_not_merged" }));
@@ -521,122 +522,42 @@ const _epicArgCandidate = (
     ? args
     : (args && (args.target || args.target_branch)) || ''
 );
-// A non-string target value (e.g. a number or object) is treated as no target —
-// it falls back to CWD detection (FIN-100g-2-i) rather than raising a .trim()
-// TypeError. Only a string candidate is trimmed.
+// A non-string target value (number, object) is treated as no target (FIN-100g-2-i), not a .trim() TypeError.
 const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '').trim();
 
-const preflightResult = await agent(
-  "Detect the target worktree branch and root path for /finalize-feature.\n" +
-  "\n" +
-  (epicArg
-    ? "A target argument was provided. Resolve the worktree from it.\n" +
-      `Argument: "${epicArg}"\n` +
-      "\n" +
-      "Step 1 — list all registered worktrees:\n" +
-      "  Run: git worktree list --porcelain\n" +
-      "  Parse the output. Each block starts with 'worktree <path>' followed by\n" +
-      "  'HEAD <sha>' and optionally 'branch refs/heads/<branch_name>'.\n" +
-      "  Detached-HEAD entries have no 'branch' line — skip them.\n" +
-      "\n" +
-      "Step 2 — find the matching worktree:\n" +
-      "  Find a worktree whose branch_name:\n" +
-      `    - equals "${epicArg}" (exact match), OR\n` +
-      `    - equals "feature/${epicArg}", OR\n` +
-      `    - contains "${epicArg}" as a substring.\n` +
-      "  Exclude any worktree whose branch_name is 'main' or 'master'.\n" +
-      "  If multiple candidates match, prefer the one whose branch_name is\n" +
-      "  shortest (fewest extra characters beyond the argument string).\n" +
-      "\n" +
-      "Step 3a — matching worktree found:\n" +
-      "  Let <wt_path> = the matched worktree path.\n" +
-      "  Run: git -C \"<wt_path>\" branch --show-current\n" +
-      "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
-      "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
-      "\n" +
-      "Step 3b — no matching worktree found (FIN-100g-3):\n" +
-      "  A target was supplied but resolves to no registered worktree. Build a\n" +
-      "  SINGLE actionable error string containing ALL THREE of:\n" +
-      `    (a) the unresolved target name '${epicArg}';\n` +
-      "    (b) the expected argument forms — a bare branch-name string, OR an\n" +
-      "        object with a target/target_branch key;\n" +
-      "    (c) the candidate worktrees that ARE currently registered and their\n" +
-      "        checked-out branches — list the '<path> [<branch>]' entries you\n" +
-      "        parsed from `git worktree list --porcelain` in Step 1, sorted by\n" +
-      "        path for deterministic output.\n" +
-      "  This message is intentionally more specific than the generic\n" +
-      "  branch-named error (it adds the expected forms and the candidate list).\n" +
-      `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
-      `               "error": "No worktree found matching target '${epicArg}'. ` +
-      `Expected a bare branch-name string OR an object with a target/target_branch key. ` +
-      `Candidate worktrees (from git worktree list --porcelain): <path> [<branch>], ..." }`
-    : "No target argument provided — fall back to CWD-based detection.\n" +
-      "1. Run: git branch --show-current\n" +
-      "2. Run: git rev-parse --show-toplevel\n" +
-      "Return ONLY: { \"found\": true, \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }"
-  ),
-  { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
-)
+// BO-4300c-3 / BO-4300a-1-ia: ONE workspace -- the maker's answer (args.workspace, or exactly ONE verbatim dispatch).
+// Branch and root come from that answer only; a decline / prose / result-less reply ends the run quoting it.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
 
-const preflightInfo = parsedOr(() => parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }),
-  { found: true, branch: "unknown", worktree_root: "unknown" }, "using safe defaults (branch: unknown)");
+const finalizeSlug = (epicArg || "finalize-feature").toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "finalize-feature";
+const finalizeWorkspace = await workspaceObtain(
+  "python3 {{config.output_root}}/scripts/worktree.py ensure --kind feature --slug " + finalizeSlug, "Pre-flight");
+if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace);
 
-// When the worktree resolution step found no matching worktree, fail with a
-// clear, actionable message rather than a silent misdetection.
-if (preflightInfo.found === false) {
-  return {
-    status: "error",
-    message:
-      preflightInfo.error ||
-      `/finalize-feature could not find a worktree matching target "${epicArg}". ` +
-      "Expected a bare branch-name string OR an object with a target/target_branch key. " +
-      "Run `git worktree list` to see the candidate worktrees and their branches, " +
-      "then re-run with the correct epic or ticket name.",
-    action_required: "resolve_worktree_argument",
-  };
-}
-
-const BRANCH = (preflightInfo.branch || "").trim();
-const WORKTREE_ROOT = (preflightInfo.worktree_root || "").trim();
+const BRANCH = (typeof finalizeWorkspace.answer.branch === "string" ? finalizeWorkspace.answer.branch : "").trim();
+const WORKTREE_ROOT = finalizeWorkspace.workspace_path;
 
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   return {
     status: "error",
     message:
       "/finalize-feature must be run from a feature branch, not main/master " +
-      `(detected branch: "${BRANCH}" from worktree resolved via arg: "${epicArg}"). ` +
-      "Checkout your feature branch and re-run.",
+      `(the workspace maker named branch: "${BRANCH}" for target: "${epicArg}"). ` +
+      "Re-run with the feature's own name.",
     action_required: "switch_to_feature_branch",
   };
 }
 
 // ---------------------------------------------------------------------------
-// Run-progress journal — AC BO-1000c-1a (REDEFINED, BP-1100b-45, 2026-08-18)
+// Run-progress journal -- AC BO-1000c-1a (REDEFINED, BP-1100b-45, 2026-08-18)
 //
-// This script previously defined its own on-disk append-only journal
-// (a helper function plus a path variable, writing run-progress.journal.jsonl)
-// so an external launcher could poll in-flight progress. That mechanism could
-// never work: it loaded the Node.js "fs" module via the CommonJS module
-// loader, and the real E2 engine injects only
-// agent/parallel/pipeline/phase/log/args/workflow/budget into a workflow
-// script's top-level body — no filesystem primitive, no module loader
-// (ADR-030; docs/reference/workflow-authoring-contract.md #4/#6). The append
-// was wrapped in a try/catch that swallowed the throw and logged a WARNING
-// while the run still reported success, so the AC read work_status: done
-// while the mechanism had never once written a line.
-//
-// The E2 engine already writes its own per-run journal at
-// <transcriptDir>/journal.jsonl — a `{"type":"started",...}` /
-// `{"type":"result",...}` record pair per agent() dispatch. In-flight
-// visibility is provided by that engine-native journal, not by anything
-// this script writes. This is a granularity change from the old per-step
-// (narrate/outcome) journal to per-agent-dispatch — the engine journal does
-// not persist log() output, so per-step text lines are not recoverable from
-// it. See this ticket's Comments for the full decision record, and
-// BO-1000c-1a's amended_by entries for the AC-level history.
+// This script writes no journal of its own: the E2 engine injects no filesystem primitive or module loader
+// (ADR-030; docs/reference/workflow-authoring-contract.md #4/#6), so the old fs-based journal never worked.
+// In-flight visibility is the engine-native <transcriptDir>/journal.jsonl, one record pair per agent()
+// dispatch (per-step log() text is not persisted there). See BO-1000c-1a's amended_by entries.
 // ---------------------------------------------------------------------------
 
-// Track completed and skipped steps for the final summary.
 const completedSteps = [];
 const skippedSteps = [];
 let prNumber = null;
@@ -644,59 +565,89 @@ let prUrl = null;
 let mergeResult = null;
 let testResult = null;
 const ticketsClosed = [];
-// Failures that could not be auto-ticketed (create-ticket is a workflow, not an agent).
-// Populated by step 6a; never confused with actually-created tickets.
 const untrackedFailures = [];
 let worktreeRemoved = false;
 // Triage report from step 3; null means tests passed (no triage needed).
 let triageReport = null;
-// Closure counts from step 3.5 (pre-merge AC closure).
 let ticketsClosedPreMerge = 0;
 let acsClosed = 0;
 let acsSkipped = 0;
 
-// Baseline state (populated by step 0; forwarded to step 3 triage).
-// null means the baseline run did not complete — triage treats all failures
-// as regressions in that case (conservative classification).
+// Baseline state (step 0, forwarded to step 3 triage); null = the run did not complete (all failures count as regressions).
 let baselineFailures = null; // string[] | null
 let baselineSha = null;      // string | null
 let baselineRunAt = null;    // ISO string | null
 
-// Cleanup guard: remove temp baseline worktree on any early exit.
-// The path is set by step 0 and cleared after the worktree is removed.
-// args.baseline_ts replaces Date.now() (banned in E2 — non-deterministic).
-const baselineTmpPath = `/tmp/leafcutter-main-baseline-${args.baseline_ts || 'baseline'}`;
+// Cleanup guard: the scratch workspace of a baseline / targeted-rerun run, removed through the
+// workspace maker (never by a hand-written git or rm command) on any early exit.
+// The slug embeds args.baseline_ts, which replaces Date.now() (banned in E2 -- non-deterministic).
+const baselineSlug = ("finalize-baseline-" + String((args && args.baseline_ts) || "baseline"))
+  .toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
 let baselineWorktreePath = null;
 
-/**
- * Attempt to remove the temporary baseline worktree if it still exists.
- * Silently swallows errors — this is a best-effort cleanup.
- */
+/** Remove the scratch baseline workspace: one shell-runner dispatch of the maker's `remove`; best-effort, a failed reply is logged. */
 async function cleanupBaselineWorktree() {
   if (!baselineWorktreePath) return;
-  // Use WORKTREE_ROOT for the -C anchor when it is already resolved; fall
-  // back to the baseline path itself (which is a valid git repo checkout) so
-  // the worktree remove still works even if WORKTREE_ROOT is "unknown".
-  const gitAnchor = (WORKTREE_ROOT && WORKTREE_ROOT !== "unknown")
-    ? WORKTREE_ROOT
-    : baselineWorktreePath;
-  try {
-    await agent(
-      `Remove the temporary baseline worktree if it still exists:\n` +
-      `Run: git -C "${gitAnchor}" worktree remove "${baselineWorktreePath}" --force 2>/dev/null || true\n` +
-      `Run: rm -rf "${baselineWorktreePath}" 2>/dev/null || true\n` +
-      `Return: { "removed": true }`,
-      { agentType: "status-checker", label: "cleanup-baseline-worktree" }
-    );
-  } catch (_err) {
-    // Swallow — cleanup is best-effort.
-  }
+  const path = baselineWorktreePath;
   baselineWorktreePath = null;
+  try {
+    const removal = shellStepReply(await shellStepDispatch(
+      "python3 {{config.output_root}}/scripts/worktree.py remove --path \"" + path + "\" --force",
+      "cleanup-baseline-worktree", "Cleanup"), "cleanup-baseline-worktree");
+    if (!removal.ok) log("[finalize-feature][WARNING] baseline workspace " + path + " was not removed: " + removal.reason + " -- " + removal.received);
+  } catch (err) {
+    log("[finalize-feature][WARNING] baseline workspace cleanup failed: " + (err && err.message));
+  }
+}
+
+/**
+ * A scratch workspace from the maker, ONE pytest run in it (whole suite, or only `testIds`), its removal; every
+ * step is a shell-runner dispatch. status "declined" = an answer that was no usable result -- never "the step ran".
+ */
+async function mainTestRun(slug, testIds, phaseName, stepLabel) {
+  const made = workspaceAcceptAnswer(await workspaceDispatch(
+    "python3 {{config.output_root}}/scripts/worktree.py ensure --kind scratch --slug " + slug, phaseName, stepLabel + "-workspace"));
+  if (!made.accepted) {
+    const makerSaidNo = made.kind === "refused" || made.kind === "error";
+    return { status: makerSaidNo ? "worktree_failed" : "declined", failures: null, sha: null, detail: made.reason + ": " + made.received };
+  }
+  const root = made.workspace_path;
+  baselineWorktreePath = root;
+  const sha = typeof made.answer.base_commit === "string" ? made.answer.base_commit : null;
+  // Deploy shims first (build parity with Step 3); pytest runs only when the deploy succeeded.
+  const deploy = shellStepReply(await shellStepDispatch(
+    "python3 \"" + root + "/scripts/build.py\" --target-dir \"" + root + "\"", stepLabel + "-deploy", phaseName), stepLabel + "-deploy");
+  const deployOk = deploy.ok && deploy.exit_status === 0;
+  const targets = testIds ? testIds.map((id) => "\"" + root + "/" + id + "\"").join(" ") : "\"" + root + "\"";
+  const run = deployOk
+    ? shellStepReply(await shellStepDispatch(
+      "python3 -m pytest --tb=no -q --rootdir \"" + root + "\" " + targets, stepLabel, phaseName), stepLabel)
+    : null;
+  await cleanupBaselineWorktree();
+  const fin = (status, detail, failures) => ({ status, failures: failures || null, sha, detail });
+  if (!deploy.ok) return fin("declined", deploy.reason + ": " + deploy.received);
+  if (!deployOk) return fin("build_failed", "build.py exited " + deploy.exit_status);
+  if (!run.ok) return fin("declined", run.reason + ": " + run.received);
+  if (run.exit_status !== 0 && run.exit_status !== 1) return fin("run_failed", "pytest exited " + run.exit_status);
+  return fin("ok", "", pytestFailedIds(run.stdout));
+}
+
+/** The failing test ids named in pytest's output (`FAILED <id> - ...` or `<id> FAILED`). */
+function pytestFailedIds(stdout) {
+  return String(stdout || "").split(/\r?\n/).map((l) => /^FAILED\s+(\S+)/.exec(l) || /^(\S+::\S+)\s+FAILED/.exec(l)).filter(Boolean).map((m) => m[1]);
 }
 
 /** Branch, PR and step-progress fields every halt return carries (each still states its own step_summary). */
 function haltRefs() {
   return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps, step_outcomes: stepOutcomes };
+}
+
+/** A step_refused halt: the shell-runner's answer was no usable result, so whether the step ran is unknown. */
+async function refusedHalt(step, what, message) {
+  await cleanupBaselineWorktree();
+  outcome(`Step ${step} of ${STEP_COUNT}`, `halted: ${what}`);
+  return { status: "halted", halted_at_step: step, reason: "step_refused", message, ...haltRefs(),
+    step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n') };
 }
 
 // -------------------------------------------------------------------------
@@ -739,20 +690,22 @@ if (GH_TARGET_ACCOUNT) {
   const activeAccount = (ghStatus.active_account || "").trim() || null;
 
   if (activeAccount !== GH_TARGET_ACCOUNT) {
-    // Switch to the configured account.
-    const ghSwitchResult = await agent(
-      `Run: gh auth switch --user "${GH_TARGET_ACCOUNT}" 2>&1\n` +
-      "Capture exit code and output.\n" +
-      "Then re-verify: run `gh auth status 2>&1` and extract the active account (see prior step).\n" +
-      "Return ONLY a JSON object: { \"switch_exit_code\": <integer>, \"verified_account\": \"<username or null>\" }",
-      { agentType: "status-checker", label: "gh-auth-switch", phase: "Pre-flight 2" }
-    )
-
-    const ghSwitch = parsedOr(() => parseAgentJson(ghSwitchResult, { stage: "gh-auth-switch", agent: "status-checker" }), { switch_exit_code: 1, verified_account: null }, "assuming switch failed");
-
-    const verifiedAccount = (ghSwitch.verified_account || "").trim() || null;
-    const switchFailed =
-      ghSwitch.switch_exit_code !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
+    // BO-4300a-1-ia: switch and re-verification are two shell-runner dispatches; no usable result ends the run quoting it.
+    const ghHalt = (r) => ({ status: "error", message: `gh account pre-flight failed: ${r.reason}. Received: ${r.received}`, action_required: "gh_login_required" });
+    const ghSwitch = shellStepReply(await shellStepDispatch(
+      `gh auth switch --user "${GH_TARGET_ACCOUNT}"`, "gh-auth-switch", "Pre-flight 2"), "gh-auth-switch");
+    if (!ghSwitch.ok) return ghHalt(ghSwitch);
+    const ghVerify = shellStepReply(await shellStepDispatch(
+      "gh auth status", "gh-auth-verify", "Pre-flight 2"), "gh-auth-verify");
+    if (!ghVerify.ok) return ghHalt(ghVerify);
+    // The active account is the one named just before an "Active account: true" line (gh prints one block per account).
+    let verifiedAccount = null;
+    for (const line of (ghVerify.stdout + "\n" + ghVerify.stderr).split(/\r?\n/)) {
+      const named = /Logged in to \S+ (?:account|as) (\S+)/.exec(line);
+      if (named) verifiedAccount = named[1];
+      if (/Active account:\s*true/i.test(line) && verifiedAccount) break;
+    }
+    const switchFailed = ghSwitch.exit_status !== 0 || verifiedAccount !== GH_TARGET_ACCOUNT;
 
     if (switchFailed) {
       return {
@@ -770,95 +723,31 @@ if (GH_TARGET_ACCOUNT) {
 // -------------------------------------------------------------------------
 // Step 0 — Capture pre-merge test baseline on current main HEAD
 //
-// Creates a temporary worktree at origin/main, runs test-runner against it,
-// and stores the list of failing test IDs as the baseline. This baseline is
-// passed to the triage agent in step 3 so regressions can be distinguished
-// from pre-existing failures.
-//
-// Graceful degradation: if the worktree creation or test run fails for any
-// reason, log a warning and set baselineFailures = null. The workflow DOES
-// NOT halt — triage will classify all failures conservatively as regressions.
-//
-// Resumability: before creating the temp worktree, the agent probes for any
-// stale /tmp/leafcutter-main-baseline-* directory from a prior interrupted run
-// and removes it. This prevents git worktree add from failing because the
-// target path already exists.
+// Makes a scratch workspace at origin/main, runs the suite in it, and stores the failing test IDs as the
+// baseline passed to triage in step 3. Graceful degradation: if the workspace or the run fails, set
+// baselineFailures = null -- the workflow does NOT halt; triage classifies all failures as regressions.
 // -------------------------------------------------------------------------
 
 phase('Step 0')
 
 narrate("Step 0 of 9", 'Capturing pre-merge test baseline on current main HEAD...')
 
-// Set the cleanup guard path so cleanupBaselineWorktree() can remove it on
-// any early exit after this point. Step 0 clears it on success (step D).
-// baselineTmpPath uses args.baseline_ts (replaces Date.now(), banned in E2).
-baselineWorktreePath = baselineTmpPath;
-
-const baselineResult = await agent(
-  "Capture a pre-merge test baseline on the current main HEAD.\n" +
-  `Use git -C "${WORKTREE_ROOT}" for all git commands to avoid CWD ambiguity.\n` +
-  "\n" +
-  "Step A0 — Reclaim any stale baseline worktrees from prior interrupted runs:\n" +
-  "  Run: ls /tmp/leafcutter-main-baseline-* 2>/dev/null || true\n" +
-  "  For each path returned (if any):\n" +
-  `    Run: git -C "${WORKTREE_ROOT}" worktree remove \"<path>\" --force 2>/dev/null || true\n` +
-  "    Run: rm -rf \"<path>\" 2>/dev/null || true\n" +
-  "  Log each removed path as: 'Reclaimed stale baseline worktree: <path>'\n" +
-  "  If no paths found: log 'No stale baseline worktrees found.'\n" +
-  "\n" +
-  "Step A — Create a temporary detached worktree at origin/main:\n" +
-  `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${baselineTmpPath}" origin/main\n` +
-  "  Capture the exit code.\n" +
-  "  If exit code is non-zero:\n" +
-  "    Log: 'Baseline worktree creation failed — triage will treat all failures as regressions.'\n" +
-  "    Return: { \"status\": \"worktree_failed\", \"baseline_sha\": null,\n" +
-  "              \"baseline_failures\": null, \"baseline_run_at\": null }\n" +
-  "\n" +
-  "Step B — Capture the SHA of main HEAD inside the temp worktree:\n" +
-  `  Run: git -C "${baselineTmpPath}" rev-parse HEAD\n` +
-  "  Store as <baseline_sha>.\n" +
-  "\n" +
-  "Step C — Deploy shims then run the test suite inside the temp worktree (FIN-100a-4):\n" +
-  `  Run: python3 "${baselineTmpPath}/scripts/build.py" --target-dir "${baselineTmpPath}"\n` +
-  "  (Deploys commit_guardian, feedback scripts, and .pre-commit-config.yaml — same build state as production.)\n" +
-  "  If build.py exits non-zero: log a warning but continue (shim deploy failure is non-fatal for baseline).\n" +
-  `  Then run inside "${baselineTmpPath}": pytest --tb=no -q 2>&1\n` +
-  "  Collect each line that matches the pattern '<file>::<test_name> FAILED'.\n" +
-  "  Build a list of failing test IDs (strings like 'test_foo.py::test_bar').\n" +
-  "  Note: a zero-length list means the baseline is clean (all tests pass).\n" +
-  "\n" +
-  "Step D — Remove the temp worktree:\n" +
-  `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${baselineTmpPath}" --force\n` +
-  `  Run: rm -rf "${baselineTmpPath}" 2>/dev/null || true\n` +
-  "\n" +
-  "Step E — Return the baseline result:\n" +
-  "  If the test run completed (even with failures): return:\n" +
-  "    { \"status\": \"ok\",\n" +
-  "      \"baseline_sha\": \"<sha>\",\n" +
-  "      \"baseline_failures\": [<list of failing test IDs or empty>],\n" +
-  "      \"baseline_run_at\": \"<ISO 8601 timestamp>\" }\n" +
-  "  If the test run itself failed to execute (pytest not found, import error, etc.):\n" +
-  "    Log: 'Baseline run failed — triage will treat all failures as regressions.'\n" +
-  "    Return: { \"status\": \"run_failed\", \"baseline_sha\": \"<sha>\",\n" +
-  "              \"baseline_failures\": null, \"baseline_run_at\": \"<ISO 8601 timestamp>\" }",
-  // AC FIN-100h: NOT status-checker. This step provisions a git worktree, runs
-  // build.py and runs pytest — none of which is in that agent's contract, and
-  // it refuses the dispatch outright ("this task should be routed to whichever
-  // agent owns pre-merge CI baseline capture").
-  { agentType: "general-purpose", label: "step-0-baseline", phase: "Step 0" }
-)
-
-// AC-4: a malformed reply is not "baseline failed" — it degrades like run_failed, never halts.
-const baselineInfo = parsedOr(() => parseAgentJson(baselineResult, { stage: "step-0-baseline", agent: "status-checker" }),
-  { status: "parse_failed", baseline_sha: null, baseline_failures: null, baseline_run_at: null }, "treating as run_failed (triage will use conservative classification)");
+// BO-4300a-1-ia: a scratch workspace from the maker (no hand-written worktree add/remove or rm) and one pytest run in it
+// (after the build.py deploy, so deploy-dependent tests are not RED in the baseline), each a shell-runner dispatch.
+const baselineRun = await mainTestRun(baselineSlug, null, "Step 0", "step-0-baseline");
+const baselineInfo = {
+  status: baselineRun.status,
+  baseline_sha: baselineRun.sha,
+  baseline_failures: baselineRun.failures,
+  baseline_run_at: null, // no clock in an E2 body
+  detail: baselineRun.detail,
+};
 
 const baselineStatus = (baselineInfo.status || "unknown").toLowerCase();
 
-// AC FIN-100h: a REFUSAL is not a run failure. run_failed / parse_failed mean
-// the baseline was attempted and produced nothing usable, which the degrade
-// path below handles conservatively. A refusal means the step never ran, so
-// there is no evidence either way — and the baseline is what the whole
-// regression comparison is measured against. Halt instead of degrading.
+// AC FIN-100h: a REFUSAL is not a run failure (run_failed / parse_failed degrade conservatively below). A
+// refusal means the step never ran -- no evidence either way, and the whole regression comparison rests on
+// the baseline -- so halt instead of degrading.
 if (isRefusalStatus(baselineStatus)) {
   await cleanupBaselineWorktree();
   outcome(`Step 0 of ${STEP_COUNT}`, `halted: baseline agent refused the dispatch (${baselineStatus})`);
@@ -871,8 +760,7 @@ if (isRefusalStatus(baselineStatus)) {
       "DECLINED the dispatch, so no baseline was captured and no test run happened. " +
       "Without a baseline the post-merge regression check has nothing to compare against, " +
       "so continuing would either halt on every pre-existing failure or merge unchecked. " +
-      "Re-dispatch step 0 to an agent whose contract covers git worktree provisioning, " +
-      "build.py and pytest.",
+      "Received: " + baselineInfo.detail,
     branch: BRANCH,
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
@@ -1134,30 +1022,29 @@ let postMergeFailures = Array.isArray(testResult.failing_tests) ? testResult.fai
 // nothing to attribute to deploy skew, and rescuing an ambiguous/empty result to
 // "passed" would skip triage and merge on a malformed test run (H-1).
 if (!testPassed && postMergeFailures.length > 0) {
-  const deployParityResult = await agent(
-    `Verify the deployed layer of the post-merge worktree "${WORKTREE_ROOT}" is consistent BEFORE triage (FIN-100g-4).\n` +
-    "1. For every runtime artifact the failing tests import, check it is present at its\n" +
-    "   expected DEPLOYED location under the worktree root — INCLUDING gitignored,\n" +
-    "   non-git-tracked deployed copies (e.g. scripts/commit_guardian/*.py, scripts/feedback/*.py\n" +
-    "   deployed by install_shims), not just git-tracked files.\n" +
-    "2. If ANY expected deployed artifact is missing, re-run the deterministic deploy:\n" +
-    `     python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"\n` +
-    "   (same build.py deploy as the Step 0 baseline and the Step 3 pre-test build), then\n" +
-    "   re-verify and re-run the previously-failing tests so build-state failures clear.\n" +
-    "3. A test that FAILED before the re-deploy but PASSES after it is an environment/\n" +
-    "   build-state condition — report it in build_state_only_failures. This classification\n" +
-    "   is data-driven (passes-after-verified-redeploy), NEVER keyed on a hard-coded name.\n" +
-    "   A build/deploy inconsistency is NEVER a test regression.\n" +
-    "Return ONLY: { \"deploy_consistent\": true|false, \"redeployed\": true|false, " +
-    "\"build_state_only_failures\": [\"<file>::<test>\", ...], \"still_failing\": [\"<file>::<test>\", ...] }",
-    { agentType: "test-runner", label: "step-3-deploy-parity", phase: "Step 3" }
-  )
-
-  const parsedDp = parsedOr(() => parseAgentJson(deployParityResult, { stage: "step-3-deploy-parity", agent: "test-runner" }), {},
-    "proceeding with the original post-merge failures (conservative).");
-  const buildStateOnly = Array.isArray(parsedDp.build_state_only_failures) ? parsedDp.build_state_only_failures : [];
-  // still_failing: the agent's post-redeploy remaining set; null when not reported (older/ambiguous replies).
-  const stillFailing = Array.isArray(parsedDp.still_failing) ? parsedDp.still_failing : null;
+  // BO-4300a-1-ia: the deploy is ONE shell-runner dispatch of the exact build command; the re-run of the failing
+  // tests is a second. The classification is computed here from what the re-run reported, never taken from prose.
+  const deployReply = shellStepReply(await shellStepDispatch(
+    `python3 "${WORKTREE_ROOT}/scripts/build.py" --target-dir "${WORKTREE_ROOT}"`, "step-3-deploy-parity", "Step 3"), "step-3-deploy-parity");
+  if (!deployReply.ok) {
+    return await refusedHalt(3, `deploy-parity step produced no usable answer (${deployReply.reason})`,
+      `Step 3 (deploy parity) received no usable answer, so whether the deploy ran is unknown: ${deployReply.reason}. Received: ${deployReply.received}`);
+  }
+  let buildStateOnly = [];
+  let stillFailing = null;
+  if (deployReply.exit_status === 0) {
+    const rerun = shellStepReply(await shellStepDispatch(
+      "python3 -m pytest --tb=no -q --rootdir \"" + WORKTREE_ROOT + "\" " +
+      postMergeFailures.map((id) => "\"" + WORKTREE_ROOT + "/" + id + "\"").join(" "), "step-3-deploy-parity-rerun", "Step 3"), "step-3-deploy-parity-rerun");
+    if (rerun.ok && (rerun.exit_status === 0 || rerun.exit_status === 1)) {
+      stillFailing = pytestFailedIds(rerun.stdout);
+      buildStateOnly = postMergeFailures.filter((t) => !stillFailing.includes(t));
+    } else {
+      log(`[finalize-feature] step 3 deploy-parity re-run gave no usable result (${rerun.ok ? "pytest exited " + rerun.exit_status : rerun.reason}); proceeding with the original post-merge failures (conservative).`);
+    }
+  } else {
+    log(`[finalize-feature] step 3 deploy-parity: build.py exited ${deployReply.exit_status}; proceeding with the original post-merge failures (conservative).`);
+  }
 
   // Contradiction guard (M-2): never exclude a test the agent itself still reports
   // failing after the re-deploy. Only tests classified build-state AND absent from
@@ -1234,52 +1121,15 @@ if (testPassed) {
       `${postMergeFailures.length} failing test ID(s) against origin/main HEAD (FIN-100c-4).`
     );
 
-    const recoveryWorktreePath = `${baselineTmpPath}-recovery`;
-    // Register with the workflow-level cleanup guard so cleanupBaselineWorktree()
-    // fires on any early exit (crash/non-compliant agent/malformed output) that
-    // occurs while the recovery worktree exists (mirrors the Step 0 pattern at
-    // line 413 where baselineWorktreePath = baselineTmpPath is set before dispatch).
-    baselineWorktreePath = recoveryWorktreePath;
-
-    const recoveryResult = await agent(
-      "Perform a targeted rerun of specific failing test IDs against a fresh origin/main checkout.\n" +
-      "Rerun ONLY the specified failing test IDs — NOT the full suite (bounded runtime, FIN-100c-5).\n" +
-      "\n" +
-      "Step A — Create a temporary detached worktree at origin/main HEAD:\n" +
-      `  Run: git -C "${WORKTREE_ROOT}" worktree add --detach "${recoveryWorktreePath}" origin/main\n` +
-      "  Capture exit code.\n" +
-      "  If non-zero:\n" +
-      "    Log: 'targeted rerun unavailable — worktree checkout failed.'\n" +
-      "    Return: { \"status\": \"checkout_failed\", \"recovered_failures\": null }\n" +
-      "\n" +
-      "Step B — Deploy shims before rerun (build parity with Step 0 and Step 3, FIN-100c-4):\n" +
-      `  Run: python3 "${recoveryWorktreePath}/scripts/build.py" --target-dir "${recoveryWorktreePath}"\n` +
-      "  Capture exit code.\n" +
-      "  If non-zero:\n" +
-      "    Log: 'targeted rerun unavailable — build/deploy step failed.'\n" +
-      `    Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
-      `    Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
-      "    Return: { \"status\": \"build_failed\", \"recovered_failures\": null }\n" +
-      "\n" +
-      "Step C — Targeted rerun of ONLY the failing test IDs (not full suite):\n" +
-      `  Run in "${recoveryWorktreePath}": pytest --tb=no -q <each_failing_test_id_as_separate_arg>\n` +
-      "  Where the failing test IDs are listed in Context below.\n" +
-      "  Collect each output line matching '<file>::<test_name> FAILED'.\n" +
-      "  Build recovered_failures = list of test IDs that ALSO fail on origin/main HEAD.\n" +
-      "\n" +
-      "Step D — Remove the temp recovery worktree:\n" +
-      `  Run: git -C "${WORKTREE_ROOT}" worktree remove "${recoveryWorktreePath}" --force 2>/dev/null || true\n` +
-      `  Run: rm -rf "${recoveryWorktreePath}" 2>/dev/null || true\n` +
-      "\n" +
-      "Step E — Return result:\n" +
-      "  Return: { \"status\": \"ok\", \"recovered_failures\": [<list of test IDs that failed on origin/main>] }\n" +
-      "  An empty list means no post-merge failure also fails on main (all are regressions).\n" +
-      `Context: failing_test_ids=${JSON.stringify(postMergeFailures)}`,
-      { agentType: "status-checker", label: "step-3-targeted-rerun", phase: "Step 3" }
-    )
-
-    const recoveryInfo = parsedOr(() => parseAgentJson(recoveryResult, { stage: "step-3-targeted-rerun", agent: "status-checker" }),
-      { status: "parse_failed", recovered_failures: null }, "targeted rerun unavailable, using conservative fallback.");
+    // Deploy shims before rerun (build parity with Step 0): the helper runs build.py in the scratch workspace first.
+    // BO-4300a-1-ia: the same helper as Step 0 -- a scratch workspace from the maker, one pytest run of ONLY the
+    // failing ids in it, its removal. A reply that is no usable result ends the run; it is never "the rerun ran".
+    const recoveryRun = await mainTestRun(baselineSlug + "-recovery", postMergeFailures, "Step 3", "step-3-targeted-rerun");
+    if (recoveryRun.status === "declined") {
+      return await refusedHalt(3, `targeted rerun step produced no usable answer (${recoveryRun.detail})`,
+        "Step 3 (targeted rerun on origin/main) received no usable answer, so whether it ran is unknown: " + recoveryRun.detail);
+    }
+    const recoveryInfo = { status: recoveryRun.status, recovered_failures: recoveryRun.failures };
 
     const recoveryStatus = (recoveryInfo.status || "").toLowerCase();
     if (recoveryStatus === "ok" && Array.isArray(recoveryInfo.recovered_failures)) {

@@ -1,57 +1,33 @@
 """
 MODULE: unit_tests/workflows/test_bo2400f_3_i_worktree_verify_workflow.py
-GOAL: RED behavioural (workflow-level) tests for BO-2400f-3-i — the
-      worktree-verification guard in fast-lane-ship.js's Phase 1 (Worktree),
-      driven through unit_tests/_workflow_engine_harness.py's
-      run_workflow_under_e2(), exactly as
-      unit_tests/workflows/test_bo2400f_13_workspace_refusal_workflow.py
-      already does for the sibling occupied-workspace refusal path.
+GOAL: behavioural (workflow-level) tests for BO-2400f-3-i -- the lane must never trust a CLAIMED
+      worktree location -- driven through unit_tests/_workflow_engine_harness.py's
+      run_workflow_under_e2() against fast-lane-ship.js's workspace step.
 
-=== The defect (BO-2400f-3-i) ===
+=== The defect (BO-2400f-3-i) and how BO-4300c-3 closes it for good ===
 
-Today's guard (fast-lane-ship.js, the block immediately after the
-"fastlane-worktree-verify" agent() dispatch) treats two different situations
-as the same thing:
+The lane used to take its location from a worktree agent's claim and cross-check it with a second
+"fastlane-worktree-verify" git probe. An absent probe answer and a probe answer that omitted this run's
+own branch both collapsed to the same falsy value and both fell back to the claim, so two runs died on
+2026-09-14 at Resolve inside a stale second clone.
 
-    const gitReportedPath =
-      worktreeVerify && worktreeVerify.worktree_path ? worktreeVerify.worktree_path : "";
-    const gitRaw = (worktreeVerify && worktreeVerify.raw) || "";
-
-    if (gitReportedPath && !gitRaw.includes(gitReportedPath)) {
-      // HALT — the reported path is not quoted from the raw output.
-    }
-    const worktreePath = gitReportedPath || claimedWorktreePath;
-
-  - "git said NOTHING at all" (the probe could not be run, or crashed) and
-  - "git answered, and its answer is EMPTY OF THIS RUN'S OWN BRANCH" (the
-    probe ran, but somewhere with no record for the branch this run just
-    created a moment earlier — e.g. a stale second clone of the repo)
-
-both collapse to the same falsy `gitReportedPath`, so both fall back to
-`claimedWorktreePath` — trusting the very claim the probe existed to check.
-This is exactly the failure observed twice on 2026-09-14: two runs reported
-their worktree as a stale clone on the Windows mount and died at Resolve
-looking for fast_lane.py there, even though the worktree phase had in fact
-created the correct worktree in the right place.
-
-The fix this suite specifies must distinguish the two: an answer that lists
-worktrees but omits this run's own branch is POSITIVE evidence the probe
-looked somewhere without the branch, and must halt; an absent answer (probe
-never ran / crashed) is not evidence of anything and must still fall back,
-exactly as today.
+Since BO-4300c-3 / BO-4300a-1-ia the claim, the probe and the fallback are all gone. The location is the
+``workspace_path`` of the workspace maker's ACCEPTED answer (one ``workspace-ensure`` dispatch, or
+``args.workspace``) and nothing else: anything that is not an ok answer with a workspace_path ends the run,
+quoting what was received, before any later phase. These tests re-state the descriptor arms against that
+contract: a reply that is a stale-clone git listing instead of an answer halts before Resolve and is
+quoted (not forgiven), no later phase is dispatched, a good answer is used verbatim even when another
+field names a different path, and an absent answer is NOT forgiven by a fallback.
 
 === Why this is not a grep test ===
 
-Every assertion below drives fast-lane-ship.js through run_workflow_under_e2(),
-which executes the script's REAL top-level control flow in a Node.js
-subprocess (inside a locked-down vm context — see _workflow_engine_harness.py)
-and records every agent() dispatch verbatim, plus the script's own terminal
-return value. Nothing here inspects the JS source text — see
-"Gate / Workflow ACs — Verify Behaviorally, Not by Grep" in this repo's
-CLAUDE.md.
+Every assertion below drives fast-lane-ship.js through run_workflow_under_e2(), which executes the
+script's REAL top-level control flow in a Node.js subprocess and records every agent() dispatch
+verbatim, plus the script's own terminal return value. Nothing here inspects the JS source text.
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -63,7 +39,13 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
-from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+from _workflow_engine_harness import (  # noqa: E402
+    HarnessResult,
+    resolve_connected_reply,
+    run_workflow_under_e2,
+    shell_step_reply,
+    workspace_ensure_from_opened,
+)
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
@@ -110,180 +92,116 @@ class _FixtureCase(unittest.TestCase):
         self._tmp.cleanup()
 
 
-class TestProbeAnsweringWithoutTheRunsOwnBranchHalts(_FixtureCase):
+_STALE_CLONE_RAW = (
+    "worktree /some/other/checkout\n"
+    "HEAD deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n"
+    "branch refs/heads/main\n"
+    "\n"
+    "worktree /some/other/checkout/worktrees/unrelated-feature\n"
+    "HEAD cafebabecafebabecafebabecafebabecafebabe\n"
+    "branch refs/heads/feature/unrelated-work\n"
+)
+
+
+class TestAReplyThatIsAGitListingInsteadOfAnAnswerHalts(_FixtureCase):
     """BO-2400f-3-i, descriptor 1 (angle: failure).
 
-    The probe answers — it lists worktrees — but none of them is this run's
-    own branch. That is positive evidence the probe looked at a repository
-    without this run's branch (e.g. a stale second clone), not silence. The
-    run must halt instead of falling back to the claim.
+    The workspace step comes back with a worktree LISTING (somewhere without this run's branch) instead of
+    the maker's answer. That is not an answer and must not be quietly forgiven: the run halts.
     """
 
     def test_a_probe_answering_without_the_runs_own_branch_halts(self) -> None:
         # covers: BO-2400f-3-i
         # angle: failure
-        stale_clone_raw = (
-            "worktree /some/other/checkout\n"
-            "HEAD deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n"
-            "branch refs/heads/main\n"
-            "\n"
-            "worktree /some/other/checkout/worktrees/unrelated-feature\n"
-            "HEAD cafebabecafebabecafebabecafebabecafebabe\n"
-            "branch refs/heads/feature/unrelated-work\n"
-        )
-        result = _run_lane(
-            {
-                "fastlane-worktree": _opened_worktree_payload(_CLAIMED_PATH),
-                "fastlane-worktree-verify": {
-                    "worktree_path": "",
-                    "raw": stale_clone_raw,
-                },
-            }
-        )
+        result = _run_lane({"workspace-ensure": shell_step_reply(_STALE_CLONE_RAW)})
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
-        self.assertNotEqual(
+        self.assertEqual(
             (payload or {}).get("status"),
-            "ok",
-            f"An answer that lists worktrees but omits this run's own branch "
-            f"must not be treated as a silent probe and quietly forgiven — "
-            f"the run must halt. Got: {payload}",
+            "error",
+            f"A listing that is not the maker's answer must halt the run. Got: {payload}",
         )
         self.assertFalse(
             _calls_with_label(result, "resolve-connected"),
-            f"The run must halt BEFORE Resolve when the probe's answer omits "
-            f"this run's own branch. Labels seen: {_labels_seen(result)}. "
-            f"stderr={result.stderr!r}",
+            f"The run must halt BEFORE Resolve. Labels seen: {_labels_seen(result)}. stderr={result.stderr!r}",
         )
 
 
-class TestHaltNamesTheUnconfirmedBranchAndTheClaimedLocation(_FixtureCase):
+class TestHaltNamesWhatWasReceived(_FixtureCase):
     """BO-2400f-3-i, descriptor 2 (angle: criterion).
 
-    The halt payload must name both the branch that could not be confirmed
-    and the location the worktree phase claimed — a halt naming neither
-    leaves the reader unable to tell a wrong-repo probe from a genuine
-    absence.
+    The halt payload quotes what the workspace step returned, so a reader can tell a wrong-repo reply
+    from a genuine absence.
     """
 
-    def test_the_halt_names_the_unconfirmed_branch_and_the_claimed_location(
-        self,
-    ) -> None:
+    def test_the_halt_names_the_unconfirmed_branch_and_the_claimed_location(self) -> None:
         # covers: BO-2400f-3-i
         # angle: criterion
-        stale_clone_raw = (
-            "worktree /some/other/checkout\n"
-            "HEAD deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n"
-            "branch refs/heads/main\n"
-        )
-        result = _run_lane(
-            {
-                "fastlane-worktree": _opened_worktree_payload(_CLAIMED_PATH),
-                "fastlane-worktree-verify": {
-                    "worktree_path": "",
-                    "raw": stale_clone_raw,
-                },
-            }
-        )
+        result = _run_lane({"workspace-ensure": shell_step_reply(_STALE_CLONE_RAW)})
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result or {}
-        self.assertNotEqual(
-            payload.get("status"),
-            "ok",
-            f"This case must produce an actual HALT, not a successful "
-            f"payload that merely happens to echo the branch/path fields as "
-            f"part of a normal 'ok' result (that would satisfy the name "
-            f"checks below without the run having stopped at all). "
-            f"Got: {payload}",
-        )
-        as_text = str(payload)
+        self.assertEqual(payload.get("status"), "error", f"This case must be an actual HALT. Got: {payload}")
+        message = str(payload.get("message"))
+        self.assertIn("/some/other/checkout", message, f"The halt must quote the received listing. Got: {payload}")
+        self.assertIn("refs/heads/main", message, f"Got: {payload}")
         self.assertIn(
-            _BRANCH,
-            as_text,
-            f"The halt payload must name the branch that could not be "
-            f"confirmed ({_BRANCH}). Got: {payload}",
-        )
-        self.assertIn(
-            _CLAIMED_PATH,
-            as_text,
-            f"The halt payload must name the location the worktree phase "
-            f"claimed ({_CLAIMED_PATH}), so a reader can tell a wrong-repo "
-            f"probe from a genuine absence. Got: {payload}",
+            "no other location was used", message.lower(),
+            f"The halt must say no other location was substituted. Got: {payload}",
         )
 
 
-class TestNoLaterPhaseRunsAgainstTheClaimedLocation(_FixtureCase):
-    """BO-2400f-3-i, descriptor 3 (angle: criterion) — LOAD-BEARING.
+class TestNoLaterPhaseRunsAgainstAClaimedLocation(_FixtureCase):
+    """BO-2400f-3-i, descriptor 3 (angle: criterion) -- LOAD-BEARING.
 
-    Asserted on whether the Resolve phase was DISPATCHED, not on the
-    returned status: a run can report a halt and still have taken the step.
-    The observed failure reached Resolve and died there — a status field
-    saying "halt" would not have prevented that.
+    Asserted on whether ANY dispatch followed the workspace step, not on the returned status: a run can
+    report a halt and still have taken the step.
     """
 
     def test_no_later_phase_runs_against_the_claimed_location(self) -> None:
         # covers: BO-2400f-3-i
         # angle: criterion
-        stale_clone_raw = (
-            "worktree /some/other/checkout\n"
-            "HEAD deadbeefdeadbeefdeadbeefdeadbeefdeadbeef\n"
-            "branch refs/heads/main\n"
-        )
         result = _run_lane(
             {
-                "fastlane-worktree": _opened_worktree_payload(_CLAIMED_PATH),
-                "fastlane-worktree-verify": {
-                    "worktree_path": "",
-                    "raw": stale_clone_raw,
-                },
-                # If Resolve is (wrongly) reached, give it something so a
-                # bug that proceeds does not also crash for an unrelated
-                # reason and mask the dispatch-count assertion below.
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "workspace-ensure": shell_step_reply(_STALE_CLONE_RAW),
+                # If Resolve is (wrongly) reached, give it something so a bug that proceeds does not also
+                # crash for an unrelated reason and mask the dispatch assertion below.
+                "resolve-connected": resolve_connected_reply([]),
             }
         )
 
-        self.assertFalse(
-            _calls_with_label(result, "resolve-connected"),
-            f"The resolve phase must NEVER be dispatched against a location "
-            f"whose only confirmation came from a probe that omitted this "
-            f"run's own branch — proof by absence of the call itself, not by "
-            f"the terminal status. Labels seen: {_labels_seen(result)}. "
-            f"stderr={result.stderr!r}",
+        self.assertEqual(
+            _labels_seen(result),
+            ["workspace-ensure"],
+            f"Nothing may be dispatched after a workspace step that gave no answer. stderr={result.stderr!r}",
         )
 
 
-class TestProbeThatListsTheRunsBranchProceedsOnGitsPath(_FixtureCase):
-    """BO-2400f-3-i, descriptor 4 (angle: criterion) — non-regression arm.
+class TestAnAcceptedAnswerIsUsedVerbatim(_FixtureCase):
+    """BO-2400f-3-i, descriptor 4 (angle: criterion) -- non-regression arm.
 
-    A probe answering from the RIGHT repository, listing this run's own
-    branch, must let the run proceed using GIT'S reported path — even when
-    that differs from the worktree phase's own claim. Fails any fix that
-    halts whenever the probe is anything but a byte-for-byte match with the
-    claim.
+    A good answer lets the run proceed on the answer's ``workspace_path`` -- even when another field of the
+    same answer names a different path, and even when a stale git listing is scripted for the retired
+    probe label (which is never dispatched).
     """
 
     def test_a_probe_that_lists_the_runs_branch_proceeds_on_gits_path(self) -> None:
         # covers: BO-2400f-3-i
         # angle: criterion
         real_path = str(self.real_worktree_root)
-        real_raw = (
-            f"worktree {real_path}\n"
-            "HEAD 1111111111111111111111111111111111111111\n"
-            f"branch refs/heads/{_BRANCH}\n"
+        answer = workspace_ensure_from_opened(
+            {"worktree_path": real_path, "branch": _BRANCH, "created": True}
         )
+        # The workspace_path is the accepted location; a different legacy field must not outrank it.
+        body = json.loads(answer["stdout"])
+        body["worktree_path"] = _CLAIMED_PATH
+        answer["stdout"] = json.dumps(body)
         result = _run_lane(
             {
-                # The claimed path deliberately differs from git's real
-                # answer, so we can prove which one the run actually used.
-                "fastlane-worktree": _opened_worktree_payload(_CLAIMED_PATH),
-                "fastlane-worktree-verify": {
-                    "worktree_path": real_path,
-                    "raw": real_raw,
-                },
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "workspace-ensure": answer,
+                "fastlane-worktree-verify": {"worktree_path": "", "raw": _STALE_CLONE_RAW},
+                "resolve-connected": resolve_connected_reply([]),
             }
         )
 
@@ -292,42 +210,36 @@ class TestProbeThatListsTheRunsBranchProceedsOnGitsPath(_FixtureCase):
         self.assertNotIn(
             payload.get("status"),
             ("refused", "error"),
-            f"A probe that confirms this run's own branch from the right "
-            f"repository must never halt the lane. Got: {payload}",
+            f"A good workspace answer must never halt the lane. Got: {payload}",
         )
+        self.assertNotIn("fastlane-worktree-verify", _labels_seen(result), "the retired probe must not be dispatched")
 
         resolve_calls = _calls_with_label(result, "resolve-connected")
         self.assertTrue(
             resolve_calls,
-            f"An opened workspace confirmed by a correct probe must proceed "
-            f"to dispatch the resolver. Labels seen: {_labels_seen(result)}. "
+            f"An accepted answer must proceed to dispatch the resolver. Labels seen: {_labels_seen(result)}. "
             f"stderr={result.stderr!r}",
         )
-        dispatch_text = str(resolve_calls[0].prompt)
+        # The prompt is a JSON request; read the command out of it so path separators compare as typed.
+        command = json.loads(resolve_calls[0].prompt)["command"]
         self.assertIn(
             real_path,
-            dispatch_text,
-            f"The resolver must be dispatched against the location GIT "
-            f"reported, not the worktree phase's own claim — git outranks "
-            f"the claim wherever it actually answers. Dispatch text: "
-            f"{dispatch_text!r}",
+            command,
+            f"The resolver must be dispatched against the answer's workspace_path. Command: {command!r}",
         )
         self.assertNotIn(
             _CLAIMED_PATH,
-            dispatch_text,
-            f"The resolver must NOT be dispatched against the merely-claimed "
-            f"location once git has confirmed a different one. Dispatch "
-            f"text: {dispatch_text!r}",
+            command,
+            f"The resolver must NOT be dispatched against any other path named in the reply. "
+            f"Command: {command!r}",
         )
 
 
-class TestProbeThatCouldNotRunAtAllStillFallsBack(_FixtureCase):
-    """BO-2400f-3-i, descriptor 5 (angle: boundary) — narrowing arm.
+class TestAnAbsentAnswerIsNotForgiven(_FixtureCase):
+    """BO-2400f-3-i, descriptor 5 (angle: boundary).
 
-    No answer of any kind (the probe dispatch itself hiccuped/crashed) must
-    still fall back to the claim, exactly as today. Fails any fix that
-    deletes the fallback wholesale rather than narrowing it, which would
-    halt the lane on a single flaky dispatch.
+    No answer of any kind (empty output) used to fall back to the claim. There is no claim and no fallback
+    now: the run halts, quoting that no valid answer was received.
     """
 
     def test_a_probe_that_could_not_run_at_all_still_falls_back(self) -> None:
@@ -335,38 +247,16 @@ class TestProbeThatCouldNotRunAtAllStillFallsBack(_FixtureCase):
         # angle: boundary
         result = _run_lane(
             {
-                "fastlane-worktree": _opened_worktree_payload(_CLAIMED_PATH),
-                # Genuinely absent answer: no path, no raw output at all —
-                # distinct from "answered but omitted the branch".
-                "fastlane-worktree-verify": {"worktree_path": "", "raw": ""},
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+                "workspace-ensure": shell_step_reply(""),
+                "resolve-connected": resolve_connected_reply([]),
             }
         )
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result or {}
-        self.assertNotIn(
-            payload.get("status"),
-            ("refused", "error"),
-            f"An unanswered probe (no path, no raw output) is not evidence "
-            f"of anything and must not halt the lane. Got: {payload}",
-        )
-
-        resolve_calls = _calls_with_label(result, "resolve-connected")
-        self.assertTrue(
-            resolve_calls,
-            f"An unanswered probe must still let the run proceed to Resolve "
-            f"on the worktree phase's own claim. Labels seen: "
-            f"{_labels_seen(result)}. stderr={result.stderr!r}",
-        )
-        dispatch_text = str(resolve_calls[0].prompt)
-        self.assertIn(
-            _CLAIMED_PATH,
-            dispatch_text,
-            f"With no probe answer at all, the resolver must be dispatched "
-            f"against the claimed location — the documented fallback. "
-            f"Dispatch text: {dispatch_text!r}",
-        )
+        self.assertEqual(payload.get("status"), "error", f"An absent answer must halt, not fall back. Got: {payload}")
+        self.assertIn("no valid answer", str(payload.get("message")).lower())
+        self.assertEqual(_labels_seen(result), ["workspace-ensure"], "no fallback location may be used")
 
 
 if __name__ == "__main__":

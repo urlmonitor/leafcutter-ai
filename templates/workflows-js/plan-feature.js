@@ -385,8 +385,8 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
           `worktree and NEVER in the original checkout or any other worktree.\n\n`
         : "") +
       `IMPORTANT STAGING RULE: You MUST stage ONLY the files that correspond to the\n` +
-      `AC IDs listed above. Never run 'git ${gitC} add ${acStorePath}' or\n` +
-      `'git ${gitC} add .' — those commands would include files from previous stages or\n` +
+      `AC IDs listed above. Never add the whole store (${acStorePath}) or '.' to the index —\n` +
+      `those would include files from previous stages or\n` +
       `unrelated working-tree changes, which is a correctness violation.\n` +
       `\n` +
       `Step 1 — Discover which AC files from this stage exist on disk:\n` +
@@ -411,11 +411,9 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "  Return: { \"status\": \"ok\", \"message\": \"no new AC files to commit — skipped\" }\n" +
       "\n" +
       "Step 3 — Stage each matching file individually:\n" +
-      "  For each file path found in Step 1, run:\n" +
-      `    git ${gitC} add <path>\n` +
-      `  Run one 'git ${gitC} add' command per file. Do NOT use 'git ${gitC} add .' or\n` +
-      `  'git ${gitC} add ${acStorePath}/' — only individual explicit paths.\n` +
-      `  If any 'git ${gitC} add <path>' exits non-zero:\n` +
+      "  Stage each file path found in Step 1 with its own explicit-path add (one add per file).\n" +
+      `  Do NOT add the whole directory or '.' ('git ${gitC} add .' or 'git ${gitC} add ${acStorePath}/') — only individual explicit paths.\n` +
+      "  If staging any single path exits non-zero:\n" +
       "    Return: { \"status\": \"error\", \"message\": \"git add failed for <path>\", \"hook_name\": null, \"failing_files\": [\"<path>\"], \"is_conflict\": false }\n" +
       "\n" +
       "Step 4 — Verify only the expected files are staged:\n" +
@@ -772,12 +770,11 @@ async function deliverAuthoringBranch(authoringBranch, authoringWorktreePath, al
       `    Determine the GitHub org/repo from the git remote URL:\n` +
       `      Run: ${gitC} remote get-url origin\n` +
       `      Parse the org and repo name from the URL (e.g. git@github.com:org/repo.git → org/repo).\n` +
-      `    Run the REST API call:\n` +
-      `      gh api -X POST repos/<org>/<repo>/pulls \\\n` +
-      `        -f title="${prTitle.replace(/"/g, '\\"')}" \\\n` +
-      `        -f head="${authoringBranch}" \\\n` +
-      `        -f base="main" \\\n` +
-      `        -f body="${prBody.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"\n` +
+      `    Make the REST API call (the gh CLI's api subcommand, POST to repos/<org>/<repo>/pulls) with these fields:\n` +
+      `      title="${prTitle.replace(/"/g, '\\"')}"\n` +
+      `      head="${authoringBranch}"\n` +
+      `      base="main"\n` +
+      `      body="${prBody.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"\n` +
       `    Parse the JSON response to extract .html_url as the PR URL.\n` +
       `    If gh api exits non-zero, return:\n` +
       `      { "status": "error", "message": "gh api REST fallback failed: <stderr>", "pr_url": null }\n\n` +
@@ -2273,35 +2270,45 @@ if (!request) {
 // Pre-Stage-0 — Authoring Worktree Bootstrap (AC BO-1500a-1, BO-1500e-1).
 // -------------------------------------------------------------------------
 
-// Detect whether the user's current checkout is on main (best-effort).
+// BO-4300c-3 / BO-4300a-1-ia: this workflow works in ONE authoring workspace -- the workspace maker's answer,
+// handed in as args.workspace or obtained by exactly ONE verbatim dispatch of the maker command (further down).
+// A decline / prose / result-less reply to any shell step ends the run quoting it; there is no mode in which
+// the run carries on in the current checkout.
+
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+
+// Detect whether the user's current checkout is on main. One shell-runner dispatch of one exact command; a
+// reply that is not a result (a decline, prose, no exit status) ends the run quoting it -- it is never taken
+// as the step having run.
 let userIsOnMain = false;
+let currentBranchRaw = null;
+let currentBranchDispatchFailed = false;
 try {
-  const currentBranchResult = await agent(
-    "Run the following command and return ONLY the raw stdout:\n" +
-    "git branch --show-current\n" +
-    "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number> }",
-    { agentType: "status-checker", label: "detect-current-branch" }
+  currentBranchRaw = await shellStepDispatch("git branch --show-current", "detect-current-branch", "Stage 0");
+} catch (branchDispatchErr) {
+  // A transport failure (no reply at all) is not a reply to quote; detection is best-effort then.
+  currentBranchDispatchFailed = true;
+  log("[plan-feature][WARNING] Could not dispatch the current-branch check: " + branchDispatchErr.message);
+}
+const currentBranchReply = currentBranchDispatchFailed
+  ? { ok: false, transport: true }
+  : shellStepReply(currentBranchRaw, "detect-current-branch");
+if (!currentBranchReply.ok && !currentBranchReply.transport) {
+  return {
+    status: "error",
+    message:
+      "Could not detect the current branch: " + currentBranchReply.reason + ". Received: " +
+      currentBranchReply.received + ". Nothing was dispatched after it.",
+  };
+}
+if (currentBranchReply.ok && currentBranchReply.exit_status === 0 && currentBranchReply.stdout.trim().toLowerCase() === "main") {
+  userIsOnMain = true;
+  log(
+    "[plan-feature] Detected: current checkout is on protected main branch.\n" +
+    "[plan-feature] The AC-authoring workspace is made by the workspace maker from origin/main " +
+    "on its own branch -- your main branch will not be modified."
   );
-  let cbParsed;
-  try {
-    cbParsed = parseAgentJson(currentBranchResult, { stage: "detect-current-branch", agent: "status-checker" });
-  } catch (_parseErr) {
-    cbParsed = null;
-  }
-  if (cbParsed && cbParsed.exit_code === 0) {
-    const currentBranch = (cbParsed.output || "").trim();
-    if (currentBranch.toLowerCase() === "main") {
-      userIsOnMain = true;
-      log(
-        "[plan-feature] Detected: current checkout is on protected main branch.\n" +
-        "[plan-feature] The AC-authoring worktree will be created from origin/main " +
-        "on a dedicated ac-authoring/ branch — your main branch will not be modified.\n" +
-        "[plan-feature] No branch switch is required. Proceeding with worktree setup."
-      );
-    }
-  }
-} catch (_branchDetectErr) {
-  // Cannot determine current branch — proceed normally.
 }
 
 const sessionSlug = component
@@ -2331,7 +2338,7 @@ const sessionSlug = component
 // caller-supplied data. This workflow makes NO agent() dispatch and touches
 // no filesystem for this check at all; it only consumes the pre-computed
 // verdict, and fails closed whenever one does not reach it.
-const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
+const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-runner";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
 // Fail closed when NO pre-flight verdict reaches this workflow at all. A
@@ -2423,122 +2430,14 @@ if (workspaceSetupPermission.permits !== true) {
   return { status: "error", message: deniedMessage };
 }
 
-let authoringWorktreePath = null;
-let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
+// The authoring workspace: the maker's answer (args.workspace) or exactly one verbatim dispatch of the maker
+// command. Anything but an accepted answer ends the run here, quoting what was received (BO-4300c-3).
+const authoringWorkspace = await workspaceObtain(
+  "python3 {{config.output_root}}/scripts/worktree.py ensure --kind ac --slug " + (sessionSlug || "ac-authoring"), "Stage 0");
+if (!authoringWorkspace.accepted) return workspaceFailure(authoringWorkspace);
 
-// Resolve the setup script to an ABSOLUTE, repository-anchored location
-// BEFORE building the worktree-setup dispatch's own command text — never a
-// `{{config.output_root}}`-relative path, whose resolution would depend on
-// the dispatching agent's own working directory and could silently select
-// the wrong physical copy (KI-ACD-004, ACD-2100a-1). Learning the resolved
-// path via a dedicated dispatch first (rather than resolving it inline
-// inside the worktree-setup command) is what lets the worktree-setup
-// dispatch's own static command text carry the literal absolute path,
-// satisfying "the run's own record of the command it issued names an
-// absolute location" rather than an unexpanded shell variable.
-// BO-2300a-1-ii: workspaceSetupAgentId (worktree-agent), same as
-// worktree-setup below -- never status-checker.
-const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
-  "scripts/setup_ticket_worktree.py", workspaceSetupAgentId, "resolve-worktree-setup-script-path"
-);
-
-// The worktree-setup step is dispatched EXACTLY ONCE either way. On success
-// it runs the resolved, absolute, repository-anchored invocation. On
-// failure it re-issues the SAME resolution command, which fails again for
-// real and deterministically — so the failure, and the exact location that
-// could not be resolved, is observable on the worktree-setup step's own
-// record. This must never silently fall back to a `{{config.output_root}}`-
-// relative invocation that could select the wrong physical copy (AC-3).
-const worktreeSetupCommand = worktreeScriptResolution.ok
-  ? "python \"" + worktreeScriptResolution.path + "\" create-ac-worktree" +
-    (sessionSlug ? ` "${sessionSlug}"` : "")
-  : buildRepoAnchoredResolutionCommand("scripts/setup_ticket_worktree.py");
-
-let worktreeSetupResult;
-try {
-  worktreeSetupResult = await agent(
-    "Run the following command and return ONLY the raw stdout output:\n" +
-    worktreeSetupCommand + "\n" +
-    "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-    { agentType: workspaceSetupAgentId, label: "worktree-setup" }
-  );
-} catch (wtErr) {
-  return {
-    status: "error",
-    message:
-      "Failed to dispatch worktree setup: " + wtErr.message + "\n" +
-      "Cannot create the dedicated AC-authoring worktree. " +
-      "Resolve the issue and re-run /plan-feature.",
-  };
-}
-
-let wtParsed;
-try {
-  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: workspaceSetupAgentId });
-} catch (_parseErr) {
-  wtParsed = null;
-}
-
-// BO-1500a-5-i: a refusal, an out-of-scope reply, or an uninterpretable
-// reply is a failed setup, halting BEFORE exit_code/wtPayload checks and
-// before Stage 0 dispatches any authoring agent. wtParsed is null only for
-// a STRING reply with no parseable JSON (free text, not a structured
-// outcome) -- the OLD code fell through to `if (wtPayload) {...}` instead.
-if (wtParsed === null) {
-  const _rawText = (typeof worktreeSetupResult === "string") ? worktreeSetupResult : "";
-  // Reuses isAgentRefusal()'s AGENT_REFUSAL_MARKERS scan, never a second
-  // copy of that word list, by wrapping the free text as its `message` field.
-  const _isRefusal = isAgentRefusal({ message: _rawText });
-  return buildSetupFailureResult(
-    _isRefusal ? "refused" : "uninterpretable",
-    _isRefusal
-      ? "The isolated-workspace setup step declined the work as outside its own scope (a refusal)."
-      : "The isolated-workspace setup step's reply could not be interpreted as any recognised setup outcome.",
-    _rawText
-  );
-}
-
-// Only fail-hard when exit_code is explicitly non-zero.
-if (wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
-  const wtStderr = wtParsed.stderr ? wtParsed.stderr : "(no stderr captured)";
-  return {
-    status: "error",
-    message:
-      "Authoring worktree creation failed (exit code " +
-      wtParsed.exit_code + ").\n" +
-      wtStderr + "\n" +
-      "Resolve the git error and re-run /plan-feature.",
-  };
-}
-
-let wtPayload = null;
-try {
-  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) wtPayload = JSON.parse(wtParsed.output.trim().split(/\r?\n/).filter((l) => l.trim()).pop().trim());
-} catch (_parseErr) {
-  // Unparseable payload — handled by the no-worktree-path check below.
-  wtPayload = null;
-}
-
-const _hasWorktreePath = !!(
-  wtPayload && typeof wtPayload.worktree_path === "string" && wtPayload.worktree_path.trim()
-);
-
-if (!_hasWorktreePath) {
-  // BO-1500a-5-i shapes (3)/(4): success-shaped but no directory, vs.
-  // no-failure-reported and no directory/branch. Either way this must
-  // halt -- authoringWorktreePath must NEVER stay null past this point.
-  const _hasExplicitExitCode = wtParsed.exit_code !== undefined && wtParsed.exit_code !== null;
-  return buildSetupFailureResult(
-    _hasExplicitExitCode ? "no_workspace_named" : "silent_success",
-    _hasExplicitExitCode
-      ? "The isolated-workspace setup step reported success but named no workspace directory."
-      : "The isolated-workspace setup step's reply reported no failure but named neither a directory nor a branch.",
-    wtParsed
-  );
-}
-
-authoringWorktreePath = wtPayload.worktree_path;
-acStoreDir = wtPayload.ac_store_path || acStoreDir;
+const authoringWorktreePath = authoringWorkspace.workspace_path;
+const acStoreDir = (typeof authoringWorkspace.answer.ac_store_path === "string" && authoringWorkspace.answer.ac_store_path) || "docs/acceptance-criteria";
 
 // -------------------------------------------------------------------------
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
@@ -3465,7 +3364,7 @@ for (const step of pipeline) {
         // §D — Delivery: push authoring branch to origin and open a PR to main.
         // (AC BO-1500c-1)
         // -----------------------------------------------------------------------
-        const authoringBranch = wtPayload ? wtPayload.branch : null;
+        const authoringBranch = typeof authoringWorkspace.answer.branch === "string" ? authoringWorkspace.answer.branch : null;
         let deliveryOutcome = { status: "skipped", message: "No authoring branch available — push manually." };
 
         if (authoringBranch && authoringWorktreePath) {

@@ -66,10 +66,16 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+_UT_DIR = Path(__file__).resolve().parent.parent
+if str(_UT_DIR) not in sys.path:
+    sys.path.insert(0, str(_UT_DIR))
+from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 
@@ -347,7 +353,7 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     instead of halting fail-closed at Pre-Stage-0. A caller-supplied entry
     for either label still wins (dict merge order below).
     """
-    source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
+    source = fill_workspace_answer(_PLAN_FEATURE_JS.read_text(encoding="utf-8"))
     body = _strip_exports(source)
 
     shim = (

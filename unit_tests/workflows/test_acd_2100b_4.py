@@ -85,6 +85,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
+from _workflow_engine_harness import _strip_exports  # noqa: E402
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
@@ -107,8 +108,8 @@ _REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
 
 # The two labels that only ever fire AFTER the permission gate resolves a
 # permitted verdict. Neither may appear in any of the four halted runs.
-_SCRIPT_RESOLVE_LABEL = "resolve-worktree-setup-script-path"
-_WORKTREE_SETUP_LABEL = "worktree-setup"
+_SCRIPT_RESOLVE_LABEL = "workspace-ensure"  # BO-4300c-3: the script-path resolution is retired; the workspace step replaces it
+_WORKTREE_SETUP_LABEL = "workspace-ensure"  # BO-4300c-3: the worktree-setup label is retired
 _DOWNSTREAM_LABELS = (_SCRIPT_RESOLVE_LABEL, _WORKTREE_SETUP_LABEL)
 
 # A distinctive, low-collision probe id for the workspace-setup agent this
@@ -312,24 +313,6 @@ __SCRIPT_BODY__
   }));
 });
 """
-
-
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy; see module docstring)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
 
 
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:

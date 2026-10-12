@@ -270,7 +270,7 @@ from build_phases_agents_skills import (  # noqa: E402, F401  # re-exported for 
     build_skills,
 )
 from build_phases_workflows import (  # noqa: E402, F401  # re-exported for callers
-    _emit_workflow_variant,
+    _emit_workflow_variant, _workflow_source_bytes,
     build_workflow_scripts,
     build_workflows,
     build_workflow_tools,

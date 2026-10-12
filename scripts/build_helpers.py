@@ -982,13 +982,12 @@ def _compute_output_mappings(
             if build_phases_mod is None:
                 _add(tpl, output, tpl.read_text(encoding="utf-8"))
                 continue
-            emitted = build_phases_mod._emit_workflow_variant(tpl.read_bytes(), engine)
+            emitted = build_phases_mod._emit_workflow_variant(build_phases_mod._workflow_source_bytes(tpl, workflows_js_dir), engine)
             try:
                 emitted = inject_config(emitted.decode("utf-8"), config).encode("utf-8")
             except UnicodeDecodeError:
                 pass  # Non-UTF-8 content: injection skipped, matching the real phase's fallback.
             _add(tpl, output, emitted)
-
     return mappings
 
 
