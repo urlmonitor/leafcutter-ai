@@ -14,14 +14,22 @@ ARCHITECTURE: Pure stdlib. ``scratch_root()`` resolves the location from the
     item folder holding ``label.json``. ``classify()`` is the single definition
     of the expiry rule; the sweep, route-end removal and the pytest plugin only
     consume it. Owner liveness is process liveness of the pid in the label.
+    ``sweep()`` (CLI ``sweep``) removes exactly what classify() calls expired,
+    over the scratch root's items and the declared third-party leftovers
+    (pre-commit's stash patch files, BO-4400f-1-ii); an active owner keeps its
+    item however old it is (BO-4400f-1-i). The route workflows create their
+    item through ``new-item ... --owner-pid $PPID`` so the label names the
+    long-lived process that runs the drive, not the short-lived command.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import os
 import re
+import shutil
 import socket
 import sys
 import tempfile
@@ -34,6 +42,19 @@ LABEL_NAME = "label.json"
 DEFAULT_AGE_LIMIT_HOURS = 24
 DEFAULT_DURABLE_PATHS = ["debugging/logs", "test-logs"]
 _CONFIG_RELATIVE = (".claude/skills_config.json",)
+
+# Third-party leftovers (BO-4400f-1-ii), declared beside the durable-path list:
+# where a tool the project does not own leaves throwaway FILES, and the exact
+# top-level file names that are its leftovers. They carry no run owner, so the
+# owner-unknown branch of classify() applies (age by mtime alone).
+THIRD_PARTY_LEFTOVERS = (
+    {
+        "tool": "pre-commit",
+        "home_env": "PRE_COMMIT_HOME",
+        "cache_subdir": "pre-commit",
+        "file_pattern": r"patch\d+(?:-\d+)?",
+    },
+)
 
 
 def _find_cleanup_config(start: Path) -> dict:
@@ -57,13 +78,16 @@ def _cleanup_config() -> dict:
     return _find_cleanup_config(Path.cwd())
 
 
+def _user_cache_dir() -> str:
+    return os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+
+
 def scratch_root() -> str:
     """Return the absolute path of the one scratch location."""
     configured = str(_cleanup_config().get("scratch_root") or "").strip()
     if configured:
         return os.path.abspath(os.path.expanduser(configured))
-    cache = os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
-    return os.path.abspath(os.path.join(cache, "leafcutter", "scratch"))
+    return os.path.abspath(os.path.join(_user_cache_dir(), "leafcutter", "scratch"))
 
 
 def scratch_max_age_hours() -> float:
@@ -84,15 +108,21 @@ def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "-", text).strip("-")[:40] or "x"
 
 
-def new_item(owner_run_id: str, route: str) -> str:
-    """Create a fresh labelled item folder in the scratch root; return its path."""
+def new_item(owner_run_id: str, route: str, owner_pid: int | None = None) -> str:
+    """Create a fresh labelled item folder in the scratch root; return its path.
+
+    ``owner_pid`` is the process whose liveness decides whether the owning run
+    is still going; it defaults to the calling process. A workflow's shell step
+    passes the long-lived process that runs the drive, since the short-lived
+    command that creates the item exits at once.
+    """
     root = scratch_root()
     os.makedirs(root, exist_ok=True)
     item = tempfile.mkdtemp(prefix=f"{_slug(route)}-{_slug(owner_run_id)}-", dir=root)
     label = {
         "owner_run_id": owner_run_id,
         "route": route,
-        "pid": os.getpid(),
+        "pid": os.getpid() if owner_pid is None else int(owner_pid),
         "host": socket.gethostname(),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -106,7 +136,13 @@ def new_item(owner_run_id: str, route: str) -> str:
 
 
 def _read_label(item: str) -> dict | None:
-    """Return the item's label, or None when missing/unreadable/malformed."""
+    """Return the item's label, or None when missing/unreadable/malformed.
+
+    A plain file (a third-party leftover, a stray file in the root) carries no
+    label by construction, so it is owner-unknown without a warning.
+    """
+    if not os.path.isdir(item):
+        return None
     try:
         with open(os.path.join(item, LABEL_NAME), encoding="utf-8") as handle:
             label = json.load(handle)
@@ -167,17 +203,109 @@ def classify(item: str, now: datetime, age_limit_hours: float) -> dict:
     return {"expired": True, "reason": f"owner_{owner_state}_and_old"}
 
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI used by workflow shell steps: ``new-item <owner_run_id> <route>``.
+def leftover_candidates() -> list[str]:
+    """Return the declared third-party leftover FILES that exist right now.
 
-    Prints one JSON line ``{"item": "<abs path>"}`` for the fresh item.
+    Only top-level regular files whose whole name matches the declared pattern
+    are candidates; directories (a tool's installed environments), symlinks and
+    every other entry in that folder never are.
     """
-    args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 3 or args[0] != "new-item":
-        print("usage: scratch.py new-item <owner_run_id> <route>", file=sys.stderr)
-        return 2
-    print(json.dumps({"item": new_item(args[1], args[2])}))
-    return 0
+    found: list[str] = []
+    for spec in THIRD_PARTY_LEFTOVERS:
+        folder = os.environ.get(spec["home_env"]) or os.path.join(
+            _user_cache_dir(), spec["cache_subdir"]
+        )
+        pattern = re.compile(spec["file_pattern"])
+        try:
+            entries = list(os.scandir(folder))
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            logger.warning("scratch: cannot list %s leftovers in %s: %s", spec["tool"], folder, exc)
+            continue
+        found.extend(
+            entry.path for entry in entries
+            if pattern.fullmatch(entry.name) and entry.is_file(follow_symlinks=False)
+        )
+    return sorted(found)
+
+
+def _scratch_items() -> list[str]:
+    """Return every entry in the scratch root (symlinks are never followed)."""
+    root = scratch_root()
+    try:
+        entries = list(os.scandir(root))
+    except FileNotFoundError:
+        return []
+    except OSError as exc:
+        logger.warning("scratch: cannot list scratch root %s: %s", root, exc)
+        return []
+    return sorted(entry.path for entry in entries if not entry.is_symlink())
+
+
+def _remove(path: str) -> None:
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
+
+
+def sweep(now: datetime | None = None, age_limit_hours: float | None = None) -> dict:
+    """Remove exactly what ``classify()`` calls expired; return the report.
+
+    Candidates are the scratch root's items and the declared third-party
+    leftovers. There is no age-only path here: every decision is classify()'s,
+    so an item whose owner is still running is kept however old it is.
+    Removals are counted under the ``scratch`` kind.
+    """
+    now = now or datetime.now(timezone.utc)
+    limit = scratch_max_age_hours() if age_limit_hours is None else age_limit_hours
+    removed: list[str] = []
+    errors: list[dict] = []
+    kept = 0
+    for path in _scratch_items() + leftover_candidates():
+        try:
+            expired = classify(path, now, limit)["expired"]
+            if expired:
+                _remove(path)
+        except OSError as exc:
+            logger.warning("scratch: cannot sweep %s: %s", path, exc)
+            errors.append({"path": path, "error": str(exc)})
+            continue
+        if expired:
+            removed.append(path)
+        else:
+            kept += 1
+    return {"removed": {"scratch": len(removed)}, "removed_paths": removed, "kept": kept, "errors": errors}
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(prog="scratch.py")
+    commands = parser.add_subparsers(dest="command", required=True)
+    make = commands.add_parser("new-item", help="create a labelled scratch item")
+    make.add_argument("owner_run_id")
+    make.add_argument("route")
+    make.add_argument("--owner-pid", type=int, default=None,
+                      help="the run's long-lived process (default: this process)")
+    commands.add_parser("sweep", help="remove expired scratch and declared leftovers")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI used by workflow shell steps and the sweep.
+
+    ``new-item <owner_run_id> <route> [--owner-pid PID]`` prints one JSON line
+    ``{"item": "<abs path>"}``. ``sweep`` prints the sweep report as one JSON
+    line and exits 1 when any expired entry could not be removed.
+    """
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
+    args = _parse_args(list(sys.argv[1:] if argv is None else argv))
+    if args.command == "new-item":
+        print(json.dumps({"item": new_item(args.owner_run_id, args.route, args.owner_pid)}))
+        return 0
+    report = sweep()
+    print(json.dumps(report))
+    return 1 if report["errors"] else 0
 
 
 if __name__ == "__main__":

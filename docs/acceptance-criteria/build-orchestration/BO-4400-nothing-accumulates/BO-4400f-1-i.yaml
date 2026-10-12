@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -62,8 +62,10 @@ origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4400f_1_i.py
+implemented_by:
+  - templates/scripts/scratch.py
 notes: |
   Long epic drives run longer than any reasonable age limit. Named wrong version: age-only
   expiry -- an active drive's scratch is deleted mid-run. Turns only this record red.

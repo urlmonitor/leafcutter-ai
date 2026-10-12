@@ -36,11 +36,9 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for agent() responses
 // The E2 engine enforces these and returns already-parsed objects.
 // Do NOT call JSON.parse() on agent() results when schema is provided.
-// ---------------------------------------------------------------------------
 
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -237,9 +235,7 @@ const COMPLETION_WRITE_SCHEMA = {
   required: ['status'],
 }
 
-// ---------------------------------------------------------------------------
 // Constants and helper functions (pure — no I/O)
-// ---------------------------------------------------------------------------
 
 /**
  * Maximum number of retry attempts for a single phase agent on a mechanical
@@ -474,7 +470,6 @@ function absorbPromotedPhases(record, pending, known, attempted, deferred) {
   return added;
 }
 
-// ---------------------------------------------------------------------------
 // Record adjudication — pure functions over a ticket record read back off disk
 //
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
@@ -485,7 +480,6 @@ function absorbPromotedPhases(record, pending, known, attempted, deferred) {
 // own success is therefore never sufficient: the verdict the drive carries
 // forward is derived from the record that was read back, never from the gate's
 // own report of itself (BO-2900f-1-i).
-// ---------------------------------------------------------------------------
 
 /**
  * Sign-off statuses that count as a gate having PASSED.
@@ -933,7 +927,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
 // The plan reply the drive cannot use (BO-1900a-4-ii)
 //
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
@@ -945,7 +938,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
 // the drive concludes the ticket needs no phase, takes its no-phases exit, and
 // arrives at a completion decision with an empty required set. Nothing throws,
 // because every step did exactly what it was written to do.
-// ---------------------------------------------------------------------------
 
 /**
  * Why the drive cannot use this plan reply — or null when it can.
@@ -1610,6 +1602,14 @@ if (neededPhases.length === 0) {
   });
 }
 
+/* BO-4400f-1: this run's labelled scratch item. A shell step creates it (ADR-030: the
+ * workflow body cannot touch the filesystem) and records the long-lived process that
+ * runs the drive as its owner ($PPID). scratchEnvNote is appended to every dispatch
+ * below that starts processes, so their temp files land in the item. Fail-open: no
+ * item, no note. TWIN: mirrors build-feature.js. */
+const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-ticket-$PPID" build-ticket --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Phase Dispatch", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+
 const retryCounts = {};
 const completedPhases = [];
 const skippedPhases = [];
@@ -1749,7 +1749,7 @@ while (pendingPhases.length > 0) {
         `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${ticketPath}`;
       const gateReply = await agent(
         `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
-        `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+        `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }` + scratchEnvNote,
         { agentType: "status-checker", schema: RED_BASELINE_GATE_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
       );
       let gateVerdict = null;
@@ -1814,7 +1814,7 @@ while (pendingPhases.length > 0) {
       `therefore in force: record your outcome in this ticket's own record before ` +
       `you return.\n` +
       `ticket_path: ${ticketPath}\n` +
-      `worktree_path: ${resolvedTarget.worktree_path}`,
+      `worktree_path: ${resolvedTarget.worktree_path}` + scratchEnvNote,
       { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
     );
 

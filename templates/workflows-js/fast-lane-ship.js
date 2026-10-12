@@ -1282,6 +1282,14 @@ const greenCoverageInvocation =
   `python ${gateScript} verify_green_and_coverage` +
   ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
 
+/* BO-4400f-1: this run's labelled scratch item. A shell step creates it (ADR-030: the
+ * workflow body cannot touch the filesystem) and records the long-lived process that
+ * runs the lane as its owner ($PPID). scratchEnvNote is appended to the test-writer,
+ * coder and review dispatches, which start processes, so their temp files land in the
+ * item. Fail-open: no item, no note. */
+const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "fast-lane-${slug}-$PPID" fast-lane --owner-pid $PPID`, { agentType: "status-checker", label: "scratch-item", phase: "Test Writer", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+
 // Phase 3 — test-writer: red stubs for the resolved ids + red-baseline gate
 
 phase("Test Writer");
@@ -1303,7 +1311,7 @@ const testWriterResult = await agent(
   `"reason": <string|null>, "green_at_baseline": [...], "message": "<summary>" }\n\n` +
   `CRITICAL: gate_passed and reason MUST reflect the real gate output — do NOT fabricate ` +
   `them. Fail closed: if the gate's JSON cannot be parsed or "gate_passed" is absent, ` +
-  `report gate_passed: false.`,
+  `report gate_passed: false.` + scratchEnvNote,
   {
     agentType: "test-writer",
     schema: TEST_WRITER_SCHEMA,
@@ -1389,7 +1397,7 @@ const coderResult = await agent(
   `Parse the JSON: { "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...] }.\n\n` +
   `Return JSON: { "status": "ok", "files_modified": ["<path>", ...], "green": <bool>, "coverage_ok": <bool>, "uncovered_ac_ids": [...], "message": "<summary>" }\n\n` +
   `CONSTRAINT: implement only what the failing tests require — no gold-plating.\n` +
-  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.`,
+  `CRITICAL: green and coverage_ok MUST reflect the real gate output — do NOT fabricate them.` + scratchEnvNote,
   {
     agentType: "python-coder",
     schema: CODER_SCHEMA,
@@ -1480,7 +1488,7 @@ const reviewResult = await agent(
   `If you cannot reach a classified verdict (the diff could not be read, or the review ` +
   `could not be completed), return { "verdict_obtained": false, "high_findings": [], ` +
   `"medium_findings": [], "low_suppressed_count": 0, "message": "<why no verdict>" } — ` +
-  `never fabricate a clean verdict.`,
+  `never fabricate a clean verdict.` + scratchEnvNote,
   {
     agentType: "pr-reviewer",
     schema: REVIEW_SCHEMA,
@@ -1489,18 +1497,18 @@ const reviewResult = await agent(
   }
 );
 
-// Fail closed on an unusable verdict — the same plain-falsy read already used
-// for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
-// the ONLY positive signal. A missing key, a null, an unparseable reply, or
-// any other shape takes the not-committed branch.
-//
-// Deliberately NOT accepted: a generic `passed: true`. An earlier cut allowed
-// it so that a test fixture which never stubbed this phase could still reach
-// the commit dispatch — the harness default reply carries `passed: true`. That
-// is a fail-open backdoor wearing a test-compatibility disguise: in production
-// it would let a reply carrying no verdict at all count as a clean review,
-// which is the exact defect this criterion exists to prevent. The fixture was
-// corrected to stub a real verdict instead.
+/* Fail closed on an unusable verdict — the same plain-falsy read already used
+ * for the red-baseline gate_passed key (BO-2400f-11). `verdict_obtained` is
+ * the ONLY positive signal. A missing key, a null, an unparseable reply, or
+ * any other shape takes the not-committed branch.
+ *
+ * Deliberately NOT accepted: a generic `passed: true`. An earlier cut allowed
+ * it so that a test fixture which never stubbed this phase could still reach
+ * the commit dispatch — the harness default reply carries `passed: true`. That
+ * is a fail-open backdoor wearing a test-compatibility disguise: in production
+ * it would let a reply carrying no verdict at all count as a clean review,
+ * which is the exact defect this criterion exists to prevent. The fixture was
+ * corrected to stub a real verdict instead. */
 const reviewVerdictUsable = !!(
   reviewResult && reviewResult.verdict_obtained === true
 );
