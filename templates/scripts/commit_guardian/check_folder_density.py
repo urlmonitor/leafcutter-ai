@@ -31,6 +31,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from _density_parents import get_merge_parent_files
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
@@ -331,10 +332,15 @@ def main() -> int:
     if not affected_dirs:
         return 0
 
-    # BEFORE = the parent commit's tree; AFTER = the index. The two are read
+    # BEFORE = the parent commit's tree (all parents during a merge); AFTER = the index. The two are read
     # independently (AFTER is never derived from BEFORE) so staged deletions
     # and rename sources are correctly absent from AFTER.
     before_counts = count_files_per_folder(get_all_tracked_files())
+    # In a merge, a folder already dense in ANY MERGE_HEAD parent is
+    # pre-existing too (max over parents); no MERGE_HEAD => unchanged.
+    for parent_files in get_merge_parent_files():
+        for folder, count in count_files_per_folder(parent_files).items():
+            before_counts[folder] = max(before_counts.get(folder, 0), count)
     all_files = get_index_files()
     after_counts = count_files_per_folder(all_files)
 
@@ -375,5 +381,10 @@ DECISION HISTORY
   modularity sweet spot). Only checks folders touched by the commit.
   Excludes .md, __init__.py, hidden dirs, and __pycache__.
 - 2026-05-01 20:30 [AI]: Updated failure message to mandate agent-led refactoring for folder density violations.
+- 2026-10-12 [AI/python-coder]: Merge commits count a folder as pre-existing when
+  it is over the limit in HEAD OR any MERGE_HEAD parent (BEFORE = max over parents,
+  via _density_parents.py). Previously a merge of main refused every folder that
+  crossed the limit on main since the branch point. Only a folder the merge result
+  itself pushes over the limit (under it in every parent) is still blocked.
 ====================================================================
 """
