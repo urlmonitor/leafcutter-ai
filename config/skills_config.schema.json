@@ -132,8 +132,8 @@
     },
     "test_output_dir": {
       "type": "string",
-      "description": "Directory for test output files. Must be outside the project root.",
-      "default": "%TEMP%/leafcutter-tests/"
+      "description": "Directory for longer-lived test output. Empty (default) means the scratch home: `python <output_root>/scripts/scratch.py test-output-dir` returns a fresh labelled folder in worktree_cleanup.scratch_root that expires like any other scratch. A legacy system-temp value (%TEMP%/..., /tmp/...) is treated as empty. Any other explicit value is used as given and should be outside the project root (BO-4400f-1).",
+      "default": ""
     },
     "worktree_base_path": {
       "type": "string",

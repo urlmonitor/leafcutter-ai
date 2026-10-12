@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -78,8 +78,10 @@ origin_agent: business-analyst
 created: 2026-10-09
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_orchestration/test_bo_4400f_1_ii.py
+implemented_by:
+  - templates/scripts/scratch.py
 notes: |
   Gap G7: "pre-commit stash patch files (~/.cache/pre-commit/patch*) expire". These live
   outside the scratch location because the third-party tool writes them; they have no run

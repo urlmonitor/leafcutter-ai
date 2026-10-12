@@ -114,7 +114,7 @@ Controls how `build.py` and agents locate project-wide resources.
 | `changelog_folder` | string | `changelogs/` | Folder where per-entry changelog Markdown files are written. |
 | `changelog_categories_path` | string | `.claude/changelog_categories.md` | Path to a Markdown file containing project-specific commit categorization rules. Read by changelog-agent at runtime. If absent, changelog-agent falls back to conventional-commit prefix heuristics only. |
 | `precommit_autofix_config_path` | string | `.claude/precommit-autofix.json` | Path to the precommit-autofix routing config JSON used by the pre-commit autofix hook. |
-| `test_output_dir` | string | `%TEMP%/leafcutter-tests/` | Directory for test output files. Must be outside the project root. The `%TEMP%` placeholder is expanded at runtime on Windows; use `/tmp/` on Linux/macOS. |
+| `test_output_dir` | string | `""` | Folder for longer-lived test output. Empty (default) means the scratch home: `scratch.py test-output-dir` prints a fresh labelled folder in `worktree_cleanup.scratch_root`. A legacy system-temp value (`%TEMP%/...`, `/tmp/...`) is treated as empty; any other value is used as given and should be outside the project root. |
 
 ---
 

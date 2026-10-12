@@ -42,9 +42,7 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for agent() responses
-// ---------------------------------------------------------------------------
 
 const RESOLVE_SCHEMA = {
   type: "object",
@@ -388,11 +386,9 @@ const CLASSIFY_SCHEMA = {
   required: ["classification"],
 };
 
-// ---------------------------------------------------------------------------
 // Constants and helper functions (pure — no I/O)
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Maximum retry attempts for a single phase on a mechanical failure.
@@ -692,7 +688,6 @@ function writtenPhaseEntries(dispatchedPhases, phaseOutcomes) {
   return written;
 }
 
-// ---------------------------------------------------------------------------
 // Record adjudication — pure functions over a ticket record read back off disk
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
@@ -703,7 +698,6 @@ function writtenPhaseEntries(dispatchedPhases, phaseOutcomes) {
 // own success is therefore never sufficient: the verdict the drive carries
 // forward is derived from the record that was read back, never from the gate's
 // own report of itself (BO-2900f-1-i).
-// ---------------------------------------------------------------------------
 
 /**
  * Sign-off statuses that count as a gate having PASSED.
@@ -1151,7 +1145,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
 // The plan reply the drive cannot use (BO-1900a-4-ii)
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
@@ -1163,7 +1156,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
 // the drive concludes the ticket needs no phase, takes its no-phases exit, and
 // arrives at a completion decision with an empty required set. Nothing throws,
 // because every step did exactly what it was written to do.
-// ---------------------------------------------------------------------------
 
 /**
  * Why the drive cannot use this plan reply — or null when it can.
@@ -1265,10 +1257,8 @@ function buildPlanHoldback(recordPath, reason, resolved) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Read the ticket's record back off disk after a gate has run.
@@ -1539,9 +1529,7 @@ async function concludeTicket(spec) {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Resolve target and worktree
-// ---------------------------------------------------------------------------
 
 phase("Resolve Target");
 
@@ -2159,7 +2147,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${worktreeTicketPath}`;
         const gateReply = await agent(
           `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
-          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+          `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }` + scratchEnvNote,
           { agentType: "status-checker", schema: REPO_FACTS_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
         );
         let gateVerdict = null;
@@ -2225,7 +2213,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         `therefore in force: record your outcome in this ticket's own record before ` +
         `you return.\n` +
         `ticket_path: ${worktreeTicketPath}\n` +
-        `worktree_path: ${resolvedTarget.worktree_path}${stageNote}`,
+        `worktree_path: ${resolvedTarget.worktree_path}${stageNote}${scratchEnvNote}`,
         {
           agentType: phaseName,
           schema: PHASE_RESULT_SCHEMA,
@@ -2942,11 +2930,14 @@ function prerequisiteStateFromOutcome(outcome) {
   return "no_outcome_recorded";
 }
 
-// ---------------------------------------------------------------------------
 // Phase 1 — Build: route to epic or single-ticket flow
-// ---------------------------------------------------------------------------
 
 phase("Build");
+
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-ticket.js.
+const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-feature-$PPID" build-feature --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Build", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
 
 if (target_type === "epic") {
   // -----------------------------------------------------------------------

@@ -303,6 +303,9 @@ class TestBP600WorkflowFullRunTopology:
             "isolation-check",
             "guard-checks",
             "ac-creation",
+            # BO-4400f-1: the shell step that creates this run's labelled scratch
+            # item, before the first dispatch that starts processes.
+            "scratch-item",
             "test-writer",
             "red-verify/strict",
             "baseline-dirty-snapshot",
