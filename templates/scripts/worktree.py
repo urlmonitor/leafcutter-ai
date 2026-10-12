@@ -54,6 +54,7 @@ import worktree_identity as wi
 import worktree_layout as wl
 import worktree_paths as wp
 import worktree_readiness as wr
+import worktree_remove
 
 _log = logging.getLogger(__name__)
 
@@ -304,7 +305,7 @@ def cmd_verify(args: argparse.Namespace) -> dict[str, Any]:
     if marker is None:
         return _err("NOT_FOUND", f"No leafcutter workspace marker found at {workspace_path}.")
     if marker.get("state", "ready") != "ready":
-        return wes.incomplete_refusal(workspace_path, marker)
+        return worktree_remove.incomplete_answer(workspace_path, marker)
     hub = wp.from_portable(marker.get("hub", ""), workspace_path)
     project_root = marker.get("project_root")
     computed = wr.compute_checks(workspace_path, hub, branch=marker.get("branch") or "",
@@ -354,7 +355,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     remove_p = sub.add_parser("remove")
     remove_p.add_argument("--path", required=True)
-    remove_p.add_argument("--force", action="store_true")
+    remove_p.add_argument("--force", action="store_true", help="accepted and ignored: loss needs --discard-token")
+    remove_p.add_argument("--discard-token")
     remove_p.add_argument("--delete-remote-branch", action="store_true")
     remove_p.add_argument("--repo-root")
 
@@ -366,10 +368,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 _DISPATCH = {
     "ensure": cmd_ensure,
-    "locate": wes.locate_ready_only,
+    "locate": worktree_remove.cmd_locate,
     "list": worktree_admin.cmd_list,
     "verify": cmd_verify,
-    "remove": worktree_admin.cmd_remove,
+    "remove": worktree_remove.cmd_remove,
     "where": cmd_where,
 }
 

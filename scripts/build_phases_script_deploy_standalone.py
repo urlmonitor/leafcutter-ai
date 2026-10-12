@@ -62,6 +62,7 @@ NAMED_STANDALONE_SCRIPTS: tuple[str, ...] = (
     "worktree_canaries.py",
     "worktree_identity.py",
     "worktree_ensure_state.py",
+    "worktree_remove.py",
 )
 
 
@@ -101,6 +102,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
       (NAMED entry): the per-stage canary proofs worktree_readiness imports.
     - ``templates/scripts/worktree_identity.py`` → ``scripts/worktree_identity.py``
       (NAMED entry): the one naming table, legacy-line and occupant checks (BO-4300a-2, d-3, d-4).
+    - ``templates/scripts/worktree_remove.py`` → ``scripts/worktree_remove.py``
+      (NAMED entry, BO-4300e): the remove verb and the definite locate answer.
     - ``templates/scripts/worktree_ensure_state.py`` → ``scripts/worktree_ensure_state.py``
       (NAMED entry): the lock, set-aside and half-made handling (BO-4300d-1, d-2).
 
@@ -148,6 +151,7 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     #   Added worktree_identity.py as a NAMED entry (BO-4300a-2, d-3, d-4). (ADR-018)
     # - 2026-10-12 09:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07)
     #   Added worktree_ensure_state.py as a NAMED entry (BO-4300d-1, d-2). (ADR-018)
+    #   Added worktree_remove.py as a NAMED entry (BO-4300e). (ADR-018)
     """
     import build_phases as _bp
 

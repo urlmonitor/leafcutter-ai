@@ -250,7 +250,7 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
     path-spelling modules (``worktree_answer.py``, ``worktree_paths.py``) and the
     landing-place module (``worktree_layout.py``) and the readiness module
     (``worktree_readiness.py``) and its canary module (``worktree_canaries.py``) and the identity module (``worktree_identity.py``) and the ensure-state module
-    (``worktree_ensure_state.py``) -- is unioned
+    (``worktree_ensure_state.py``) and the remove module (``worktree_remove.py``) -- is unioned
     in explicitly (BO-4300a-1: "the matching manifest helper... [gets] its
     own named entry") so those names appear in Set B even on a source
     tree state where the dynamic scan would otherwise miss one, keeping this

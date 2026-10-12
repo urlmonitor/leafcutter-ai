@@ -12,7 +12,7 @@ BUSINESS CONTEXT: AC BO-4300a-1 requires ``locate`` and ``list`` to scan the
     ratchet -- the same "further helper module the maker imports needs a
     named deploy-manifest entry too" pattern this ticket's own Implementation
     Notes call out for the resolver module.
-ARCHITECTURE: Stdlib-only (argparse typing only; no CLI parsing of its own --
+ARCHITECTURE: ``remove`` now lives in ``worktree_remove`` (BO-4300e). Stdlib-only (argparse typing only; no CLI parsing of its own --
     worktree.py owns argument parsing and calls these three functions
     directly with the parsed ``argparse.Namespace``). Depends only on
     ``worktree_git`` for the marker registry, landing-place resolution, and
@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -94,55 +93,14 @@ def cmd_list(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def _branch_pushed(workspace_path: Path, branch: str | None) -> bool:
-    """Return ``True`` when *branch* has a matching ``refs/remotes/origin/<branch>``."""
-    if not branch:
-        return False
-    proc = wg.run_git(["rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}"], workspace_path)
-    return proc.returncode == 0
-
-
-def cmd_remove(args: argparse.Namespace) -> dict[str, Any]:
-    """Remove the workspace at ``--path``, refusing a dirty/unpushed one unless ``--force``."""
-    bad_override = wl.override_refusal(args)
-    if bad_override is not None:
-        return bad_override
-    workspace_path = wp.resolve_arg(args.path)
-    marker = wg.read_marker(workspace_path)
-    if marker is None:
-        return _err("NOT_FOUND", f"No workspace marker found at {workspace_path}.")
-
-    if not args.force:
-        dirty = not wg.is_clean(workspace_path)
-        pushed = _branch_pushed(workspace_path, marker.get("branch"))
-        if dirty or not pushed:
-            return _err(
-                "REFUSED",
-                f"{workspace_path} has uncommitted changes or an unpushed branch; pass --force to discard it.",
-                dirty=dirty, pushed=pushed,
-            )
-
-    if args.delete_remote_branch and marker.get("branch"):
-        wg.run_git(["push", "origin", "--delete", marker["branch"]], workspace_path)
-
-    try:
-        shutil.rmtree(workspace_path)
-    except OSError as exc:
-        _log.warning("cmd_remove: rmtree failed for %s: %s", workspace_path, exc)
-        # PROCESS_HOLDS_FILES is the closest BO-4300c-2 result-contract code
-        # to an rmtree failure: on the platforms this maker targets, a
-        # directory that survives `git clone --no-checkout --local` almost
-        # always fails to remove because some process still holds a file
-        # handle inside it (Windows file locking), not because of a git
-        # concept "REMOVE_FAILED" never named in the contract's own code enum.
-        return _err("PROCESS_HOLDS_FILES", f"Could not remove {workspace_path}: {exc}")
-
-    return {"status": "ok", **wp.path_fields(workspace_path)}
-
-
 # ===========================================================================
 # DECISION HISTORY
 # ===========================================================================
+# - 2026-10-12 17:30 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08]:
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08)
+#   cmd_remove and _branch_pushed moved to worktree_remove.py (BO-4300e-2/-3:
+#   fetch-before-verdict, discard token, process check); this file keeps the
+#   read-only locate/list verbs. (ADR-018)
 # - 2026-09-27 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01]:
 #   Split out of worktree.py to keep that file under the package's 400-line
 #   file-size ratchet. locate/list scan the marker registry only -- no git

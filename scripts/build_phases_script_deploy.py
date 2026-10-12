@@ -130,6 +130,12 @@ AGENT_SUPPORT_SCRIPT_FILES: tuple[str, ...] = (
     # only (argparse, json, logging, subprocess, sys, pathlib) — no sibling
     # module to co-deploy.
     "worktree/check_workspace_setup_permission.py",
+    # BO-4300e-2-ii: the workspace maker's remove verb (worktree_remove.py) loads
+    # this module from beside itself (<scripts>/worktree/sweep_processes.py) to
+    # find programs running in or holding files of a workspace before it deletes
+    # anything. Its config_loader import is lazy and only reached when no config
+    # is passed; the maker always passes one.
+    "worktree/sweep_processes.py",
 )
 
 

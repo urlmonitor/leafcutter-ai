@@ -1005,3 +1005,8 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+
+# BO-4300e-2-ii (ticket 08, approved by the user 2026-10-12). The constant TOKEN holds a
+# marker string passed as an argument to a dummy holder process so the test can check that
+# the refusal names the running program. Not a credential; the scanner fires on the name.
+GENERIC_SECRET:unit_tests/build_orchestration/test_bo_4300e_2_ii.py:*

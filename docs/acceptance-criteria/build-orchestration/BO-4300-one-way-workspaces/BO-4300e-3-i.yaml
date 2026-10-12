@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -117,7 +117,8 @@ amended_by:
     it_requirement restated for the token; tests added for token-for-A-cannot-clear-B, a new commit,
     an edited file and a re-made workspace. readiness stays approved.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300e_3_i.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08_TICKET-20260928-BO-4300-locate-and-clear.md
 notes: |
