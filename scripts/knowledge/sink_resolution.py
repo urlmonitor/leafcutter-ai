@@ -81,6 +81,30 @@ _LEGACY_SINK_RELATIVE_PARTS: tuple[str, ...] = (
 )
 
 
+def load_declaration(output_root: Path) -> tuple[dict | None, str | None]:
+    """Load the build-time declaration as ``(data, None)`` or ``(None, failure)``.
+
+    *failure* is a short phrase naming which condition failed -- ``absent``,
+    ``unreadable`` (a directory, or an OS error) or ``unparseable`` (not JSON,
+    or JSON that is not an object) -- so a refusing caller can say why
+    (AC INF-500d-4-i). Side-effect free; never logs (the caller reports it).
+    """
+    path = output_root / "config" / "knowledge_sink.json"
+    if not path.exists():
+        return None, "absent: no such file"
+    if not path.is_file():
+        return None, "unreadable: not a regular file"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return None, f"unreadable: {exc}"
+    except ValueError as exc:  # json.JSONDecodeError and UnicodeDecodeError
+        return None, f"unparseable: {exc}"
+    if not isinstance(data, dict):
+        return None, "unparseable: the declaration is not a JSON object"
+    return data, None
+
+
 def read_declared_value(output_root: Path, key: str) -> str | None:
     """Read one string value from the build-time declaration, if it is there.
 
@@ -88,18 +112,38 @@ def read_declared_value(output_root: Path, key: str) -> str | None:
     source-tree run), it cannot be parsed, or *key* is absent or not a
     non-empty string. Side-effect free.
     """
-    declaration_path = output_root / "config" / "knowledge_sink.json"
-    if not declaration_path.is_file():
+    data, failure = load_declaration(output_root)
+    if data is None:
+        if failure is not None and not failure.startswith("absent"):
+            logger.warning(
+                "Could not read sink declaration under %s: %s", output_root, failure
+            )
         return None
-    try:
-        data = json.loads(declaration_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Could not read sink declaration %s: %s", declaration_path, exc
-        )
-        return None
-    value = data.get(key) if isinstance(data, dict) else None
+    value = data.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def read_absolute_values(
+    output_root: Path, keys: tuple[str, ...]
+) -> tuple[dict[str, str] | None, str | None]:
+    """Return ``({key: absolute path}, None)`` or ``(None, failure)`` for *keys*.
+
+    The failure names the condition that stopped it -- the load failures of
+    ``load_declaration``, ``missing: no '<key>' entry`` or ``not absolute:
+    '<key>' is '<value>'`` -- for a caller that refuses rather than falls back.
+    """
+    data, failure = load_declaration(output_root)
+    if data is None:
+        return None, failure
+    values: dict[str, str] = {}
+    for key in keys:
+        value = data.get(key)
+        if not isinstance(value, str) or not value:
+            return None, f"missing: no '{key}' entry"
+        if not Path(value).is_absolute():
+            return None, f"not absolute: '{key}' is {value!r}"
+        values[key] = value
+    return values, None
 
 
 def read_sink_declaration(output_root: Path) -> str | None:
