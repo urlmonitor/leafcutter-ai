@@ -521,7 +521,9 @@ With the effective status determined (either the original parsed tag, or
 ## Failure adjudication
 
 When the latest comment status is `blocker`, walk the four-case ladder
-in `building-epics` §3 in order; pick the FIRST matching case:
+in `building-epics` §3 in order; pick the FIRST matching case. Exception: a
+blocker (or PR check list) naming `Post-merge suite status` is an external
+hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
 1. **Trivial mechanical** (§3.1) — single file/line/concrete fix. Respawn
    the same agent with the blocker comment as input. Cap: 1 respawn per
