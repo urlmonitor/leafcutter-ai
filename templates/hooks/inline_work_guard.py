@@ -75,9 +75,14 @@ def _declaration_path() -> Path:
 
     The hook deploys to ``<output_root>/hooks/`` and is reached through the
     ``.claude/hooks`` symlink, so its resolved location is one directory below
-    ``<output_root>``, whose ``config/`` holds ``knowledge_sink.json``.
+    ``<output_root>``, whose ``config/`` holds ``knowledge_sink.json``. The Gemini
+    copy (``<output_root>/gemini/hooks/``, reached through ``.gemini``) is one
+    directory deeper, so a ``gemini`` directory is stepped out of.
     """
-    return Path(__file__).resolve().parents[1] / "config" / "knowledge_sink.json"
+    install = Path(__file__).resolve().parents[1]
+    if install.name == "gemini":
+        install = install.parent
+    return install / "config" / "knowledge_sink.json"
 
 
 def _resolve_audit_path() -> tuple[Path | None, str]:

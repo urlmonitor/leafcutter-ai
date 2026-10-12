@@ -1161,7 +1161,12 @@ async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath)
  * command asks the deployed `sink_resolution.py --print-location telemetry`
  * (INF-500d-4-iii) for it, repository-anchored through
  * _buildRepoRootResolutionSnippet(), so the line lands in the enduring log
- * root and not in the authoring worktree that is deleted afterwards.
+ * root and not in the authoring worktree that is deleted afterwards. On a
+ * fresh install the log directory does not exist yet, so the command creates
+ * it (mkdir -p) -- but only when the enduring root holding it is live (the
+ * directory above the log root, or the project above `debugging`; the same
+ * rule as sink_resolution.enduring_root_exists), so a vanished project is
+ * never conjured back and the first event is not lost.
  * Best-effort: never throws, never blocks the pipeline. This is the "never
  * silent" guarantee for the store-absent self-skip.
  *
@@ -1175,7 +1180,8 @@ async function emitPtTelemetry(event, detail, authoringWorktreePath) {
   const line = JSON.stringify({ source: "plan-feature", phase: "product-truth", event, detail });
   const target = ".leafcutter/scripts/knowledge/sink_resolution.py";
   const cmd = _buildRepoRootResolutionSnippet(target) + "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
-    "STREAM=$(python \"$SCRIPT\" --print-location telemetry) || exit 1; " +
+    "STREAM=$(python \"$SCRIPT\" --print-location telemetry) || exit 1; LOG_DIR=$(dirname \"$STREAM\"); HOLDER=$(dirname \"$LOG_DIR\"); " +
+    "[ \"$(basename \"$HOLDER\")\" != debugging ] || HOLDER=$(dirname \"$HOLDER\"); [ -d \"$HOLDER\" ] && mkdir -p \"$LOG_DIR\" || exit 1; " +
     "printf '%s\\n' " + JSON.stringify(line) + " >> \"$STREAM\"";
   try {
     await agent(
@@ -2602,12 +2608,10 @@ if (orphans.length > 0) {
 
 // -------------------------------------------------------------------------
 // Pre-Stage-0 — Committed-Stage Detection
-// -------------------------------------------------------------------------
 const committedStageKeys = await scanCommittedStages(authoringWorktreePath);
 
 // -------------------------------------------------------------------------
 // Stage 0 — ac-triage: duplicate check + route classification
-// -------------------------------------------------------------------------
 const triageResult = await agent(
   "Triage the user's request against the AC store. " +
   "Return a JSON object with keys: route, existing_acs, parent_l1_id, rationale. " +
@@ -2634,7 +2638,6 @@ const { route, existing_acs = [], parent_l1_id = null, rationale = "" } = triage
 
 // -------------------------------------------------------------------------
 // Handle "covered" route: show existing ACs + prompt user
-// -------------------------------------------------------------------------
 if (route === "covered" && !force) {
   // ADR-024: resolveGate checks args.resume_answer before the live agent call.
   const _covGateResult = await resolveGate(
@@ -2910,7 +2913,6 @@ if (ptRunSet.skip) {
 
 // -------------------------------------------------------------------------
 // Build the agent dispatch sequence based on effective route
-// -------------------------------------------------------------------------
 const effectiveRoute = triage.route;
 
 // flow_backlinks reported by the business-analyst (for the reconciliation step).

@@ -74,6 +74,11 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   (``enduring_root_exists``), not "the declared sink differs from
 #   ``<project>/debugging/logs``", which refused every ordinary harvest in an
 #   inherited-root install. The legacy-sink NOTE needs a non-empty legacy file.
+# - 2026-10-12 [python-coder/INF-500d-4 review fix]: Added ``enduring_holder``
+#   (``enduring_root_exists`` now delegates to it) so ``feedback_sink`` -- the
+#   report writer -- asks this module's own rule instead of a stale copy, and
+#   ``--print-location feedback`` now refuses on ``read_usable_stream`` like the
+#   other streams (the one usable-stream rule covers ``feedback_sink`` too).
 """
 
 from __future__ import annotations
@@ -179,6 +184,7 @@ _LOCATION_KEYS: dict[str, str] = {
 _ROOT_KEY = "operational_log_root"
 _KNOWLEDGE_KEY = "knowledge_emission_sink"
 _TELEMETRY_KEY = "operational_telemetry_stream"
+_FEEDBACK_KEY = "feedback_sink"
 
 
 def read_usable_stream(output_root: Path, key: str) -> tuple[Path | None, str]:
@@ -238,12 +244,12 @@ def handle_print_location(output_root: Path, name: str) -> int:
     same answer from every working directory. Refuses exactly as
     ``handle_print_sink`` does: when the declaration is absent, the key is
     missing, or the value is not absolute, nothing goes to stdout and stderr
-    names the expected declaration path. ``telemetry`` and ``knowledge`` are
-    streams, so they are also refused unless ``read_usable_stream`` accepts them
-    (INF-500d-4-i).
+    names the expected declaration path. ``telemetry``, ``knowledge`` and
+    ``feedback`` are streams, so they are also refused unless
+    ``read_usable_stream`` accepts them (INF-500d-4-i).
     """
     key = _LOCATION_KEYS[name]
-    if key in (_TELEMETRY_KEY, _KNOWLEDGE_KEY):
+    if key in (_TELEMETRY_KEY, _KNOWLEDGE_KEY, _FEEDBACK_KEY):
         stream, why = read_usable_stream(output_root, key)
         declared = str(stream) if stream is not None else None
     else:
@@ -304,6 +310,12 @@ def resolve_default_sink(output_root: Path) -> Path:
     return Path("debugging/logs/knowledge_emissions.jsonl")
 
 
+def enduring_holder(log_root: Path) -> Path:
+    """Return the enduring directory that holds *log_root*: its parent, or the project above ``debugging``."""
+    holder = log_root.parent
+    return holder.parent if holder.name == "debugging" else holder
+
+
 def enduring_root_exists(output_root: Path) -> bool:
     """Return whether the enduring project root the declaration records still exists.
 
@@ -318,10 +330,7 @@ def enduring_root_exists(output_root: Path) -> bool:
     root = read_declared_value(output_root, _ROOT_KEY)
     if root is None or not Path(root).is_absolute():
         return True
-    holder = Path(root).parent
-    if holder.name == "debugging":
-        holder = holder.parent
-    return holder.is_dir()
+    return enduring_holder(Path(root)).is_dir()
 
 
 def stale_declaration_message(output_root: Path) -> str | None:

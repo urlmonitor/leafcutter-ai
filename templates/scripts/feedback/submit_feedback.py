@@ -323,7 +323,9 @@ def _prepare_sink(jsonl_arg: str | None) -> Path | None:
     An explicit ``--jsonl`` is the caller's own responsibility and is never
     refused. Otherwise the sink is the declared ``feedback_sink``; when the
     declaration is unusable one refusal line goes to stderr and nothing is
-    created. Only the final log directory is ever created (never its parents).
+    created. ``resolve_feedback_sink`` has established that the enduring root
+    holding the log directory is live, so only the missing log directory (and
+    ``debugging`` above it, on a fresh install) is created -- never a project.
     """
     if jsonl_arg:
         path = Path(jsonl_arg)
@@ -334,7 +336,7 @@ def _prepare_sink(jsonl_arg: str | None) -> Path | None:
         print(refusal, file=sys.stderr)
         return None
     try:
-        path.parent.mkdir(exist_ok=True)
+        path.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         print(f"[submit_feedback] ERROR: destination could not be written: {path.parent}: {exc}", file=sys.stderr)
         return None

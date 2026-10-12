@@ -104,6 +104,23 @@ def _load_jsonl(path: Path) -> list[dict]:
     return entries
 
 
+def resolve_telemetry_stream(label: str, explicit: str | None) -> Path:
+    """Return the telemetry stream *label* reads, or exit 1 after saying why there is none.
+
+    An *explicit* path is honoured as given. Otherwise the stream is the install's declared
+    ``operational_telemetry_stream``, resolved through ``feedback_reader.resolve`` (never a path
+    under the repository, a disposable per-drive workspace); with no usable declaration the resolver
+    names the expected one and nothing is reported. States ``read N records from <path>`` on stderr.
+    """
+    reader = _load_feedback_reader()
+    paths = None if reader is None else reader.resolve(_OUTPUT_ROOT, label, operational_telemetry_stream=explicit)
+    if paths is None:
+        raise SystemExit(1)
+    stream = paths["operational_telemetry_stream"]
+    reader.report(label, stream, len(_load_jsonl(stream)), None)
+    return stream
+
+
 # ---------------------------------------------------------------------------
 # Data extraction helpers
 # ---------------------------------------------------------------------------

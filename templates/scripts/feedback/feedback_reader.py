@@ -14,14 +14,18 @@ ARCHITECTURE: Sibling of ``submit_feedback.py`` and ``feedback_sink.py`` (the
       ``feedback_sink.read_declared`` -- never a second parser. Resolving and
       announcing create nothing. Rewrites keep the inode (truncate and write
       through the locked descriptor) so an appender waiting on the lock
-      appends to the same file afterwards.
+      appends to the same file afterwards; a dated copy of the original is
+      kept beside the sink for the duration of the rewrite so a failed write
+      loses nothing.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -146,7 +150,21 @@ def load_entries(fh, path: Path) -> list[dict]:
 
 
 def replace_entries(fh, path: Path, entries: list[dict]) -> None:
-    """Rewrite the locked *fh* in place with *entries*, one JSON object per line; exit 2 on a write error."""
+    """Rewrite the locked *fh* in place with *entries*, one JSON object per line; exit 2 on a write error.
+
+    The inode is kept, so the truncate-and-write cannot be atomic. A copy of the original is therefore
+    made beside the sink first (``<sink>.bak-<UTC timestamp>``) and removed once the rewrite succeeded;
+    when the rewrite fails the error names that copy, so the records stay recoverable. If the copy cannot
+    be made the sink is left untouched.
+    """
+    backup = path.with_name(f"{path.name}.bak-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}")
+    try:
+        shutil.copyfile(path, backup)
+    except OSError as exc:
+        print(f"ERROR: Cannot write {path}: could not make a safety copy at {backup} first ({exc}); "
+              "the sink was left untouched", file=sys.stderr)
+        backup.unlink(missing_ok=True)
+        raise SystemExit(2) from exc
     try:
         fh.seek(0)
         fh.truncate()
@@ -154,5 +172,6 @@ def replace_entries(fh, path: Path, entries: list[dict]) -> None:
             fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
         fh.flush()
     except OSError as exc:
-        print(f"ERROR: Cannot write {path}: {exc}", file=sys.stderr)
+        print(f"ERROR: Cannot write {path}: {exc}; the original records are kept at {backup}", file=sys.stderr)
         raise SystemExit(2) from exc
+    backup.unlink(missing_ok=True)

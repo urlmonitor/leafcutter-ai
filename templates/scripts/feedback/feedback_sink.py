@@ -13,8 +13,10 @@ ARCHITECTURE: Sibling of ``submit_feedback.py`` (the build deploys
       ``templates/scripts/feedback/`` whole, so no deploy-map entry is needed).
       It reads the declaration through ``scripts/knowledge/sink_resolution.py``
       (``read_absolute_values``) rather than parsing the file a second time. It
-      only inspects the filesystem; creating the final log directory is the
-      caller's job, so a refusal creates nothing. No git, no working-directory
+      only inspects the filesystem; creating the log directory is the
+      caller's job (only under a live enduring root), so a refusal creates
+      nothing. "Is the enduring root gone?" is answered by
+      ``sink_resolution.enduring_root_exists``, the harvester's own rule. No git, no working-directory
       lookup, no walk for ``.claude/``.
 """
 
@@ -23,7 +25,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-_KEYS = ("operational_log_root", "feedback_sink")
+_STREAM_KEYS = ("feedback_sink", "operational_telemetry_stream")
 _REBUILD = "python scripts/build.py --target-dir <project-root>"
 
 
@@ -43,24 +45,55 @@ def _load_sink_resolution(output_root: Path):
     return module
 
 
+def _read(reader, output_root: Path, keys: tuple[str, ...]) -> tuple[dict[str, str] | None, str | None]:
+    """Read *keys* through *reader*; a stream key must satisfy ``read_usable_stream`` (ADR-069 section 4)."""
+    values: dict[str, str] = {}
+    for key in keys:
+        if key in _STREAM_KEYS:
+            stream, why = reader.read_usable_stream(output_root, key)
+            if stream is None:
+                return None, why
+            values[key] = str(stream)
+            continue
+        found, condition = reader.read_absolute_values(output_root, (key,))
+        if found is None:
+            return None, condition
+        values.update(found)
+    return values, None
+
+
 def read_declared(output_root: Path, keys: tuple[str, ...]) -> tuple[dict[str, str] | None, str | None]:
-    """Return ``({key: absolute path}, None)`` or ``(None, condition)`` for *keys* of the declaration."""
+    """Return ``({key: absolute path}, None)`` or ``(None, condition)`` for *keys* of the declaration.
+
+    ``feedback_sink`` and ``operational_telemetry_stream`` are streams and are
+    returned only when the declaration also records an absolute
+    ``operational_log_root`` with the stream directly under it -- the one
+    usable-stream rule, shared with ``sink_resolution.read_usable_stream``.
+    """
     reader = _load_sink_resolution(output_root)
     if reader is None:
         return None, "unreadable: the shared declaration reader scripts/knowledge/sink_resolution.py is not deployed"
-    return reader.read_absolute_values(output_root, keys)
+    return _read(reader, output_root, keys)
 
 
 def _failure(output_root: Path) -> tuple[Path | None, str | None]:
-    """Return ``(sink, None)`` for a usable declaration, else ``(None, condition)``."""
-    values, condition = read_declared(output_root, _KEYS)
+    """Return ``(sink, None)`` for a usable declaration, else ``(None, condition)``.
+
+    "Is the enduring root gone?" is asked of ``sink_resolution.enduring_root_exists`` itself, so the
+    harvester and this writer agree on every layout. A log directory (or ``debugging``) that was
+    simply never created under a live project is a first write, not staleness.
+    """
+    reader = _load_sink_resolution(output_root)
+    if reader is None:
+        return None, "unreadable: the shared declaration reader scripts/knowledge/sink_resolution.py is not deployed"
+    values, condition = _read(reader, output_root, ("feedback_sink",))
     if values is None:
         return None, condition
     sink = Path(values["feedback_sink"])
-    if not sink.parent.exists() and not sink.parent.parent.exists():
+    if not reader.enduring_root_exists(output_root):
         return None, (
-            f"stale: {sink.parent.parent} (the enduring root that should hold {sink.parent}) "
-            "no longer exists"
+            f"stale: {reader.enduring_holder(sink.parent)} (the enduring root that should hold {sink.parent}) "
+            "no longer exists, so the project was moved or deleted after the build recorded it"
         )
     return sink, None
 
@@ -82,6 +115,6 @@ def resolve_feedback_sink(output_root: Path) -> tuple[Path | None, str | None]:
         "[submit_feedback] ERROR: destination could not be written: the durable feedback "
         f"location cannot be determined from the build-time declaration {declaration_path(output_root)} "
         f"({condition}). Refusing to fall back to the working directory or the script location; "
-        f"nothing was recorded. Rebuild ({_REBUILD}) to declare it."
+        f"nothing was recorded. Rebuild ({_REBUILD}) to re-declare it at this install's current location."
     )
     return None, " ".join(message.split())

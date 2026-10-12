@@ -42,13 +42,13 @@ falls back to a path of its own: if the install declares no location, the probe 
 ```bash
 # pre-drive-reachability-check
 SINK_PATH="$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
-if [ -n "$SINK_PATH" ] && [ -w "$(dirname "$SINK_PATH")" ]; then
+LOG_DIR="$(dirname "$SINK_PATH")"; HOLDER="$(dirname "$LOG_DIR")"; [ "$(basename "$HOLDER")" != debugging ] || HOLDER="$(dirname "$HOLDER")"
+WRITE_AT="$LOG_DIR"; while [ ! -d "$WRITE_AT" ] && [ "$WRITE_AT" != "$HOLDER" ]; do WRITE_AT="$(dirname "$WRITE_AT")"; done
+if [ -n "$SINK_PATH" ] && [ -d "$HOLDER" ] && [ -w "$WRITE_AT" ]; then
   echo "Feedback sink OK: $SINK_PATH"
   SINK_OK=1
 else
-  echo "## Warning: Feedback sink unreachable or undeclared"
-  echo "Path: ${SINK_PATH:-(no declared telemetry stream)}"
-  echo "Telemetry events will not be recorded for this drive."
+  printf '%s\n' "## Warning: Feedback sink unreachable or undeclared" "Path: ${SINK_PATH:-(no declared telemetry stream)}" "Telemetry events will not be recorded for this drive."
   SINK_OK=0
 fi
 ```

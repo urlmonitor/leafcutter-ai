@@ -37,11 +37,14 @@ Usage:
         --weeks     8          whole ISO weeks, ending with the current (partial) one
         --repo      auto       discovered by walking up from this file to the git root
         --format    markdown
-        --telemetry <repo>/debugging/logs/agent_telemetry.jsonl
+        --telemetry the operational_telemetry_stream declared at build time
+                    (config/knowledge_sink.json); states "read N records from
+                    <path>" and refuses when no usable declaration exists
 
 Exit codes:
     0: success (report printed to stdout)
-    1: unrecoverable error (not a git repository, or git is unavailable)
+    1: unrecoverable error (not a git repository, git is unavailable, or no
+       usable telemetry declaration and no --telemetry)
 """
 
 from __future__ import annotations
@@ -59,7 +62,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from generate_health_report import build_lane_comparison_report  # noqa: E402
+from generate_health_report import build_lane_comparison_report, resolve_telemetry_stream  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1113,7 +1116,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--telemetry", default=None,
-        help="Path to agent_telemetry.jsonl. Default: <repo>/debugging/logs/agent_telemetry.jsonl",
+        help="Path to agent_telemetry.jsonl. Default: the operational_telemetry_stream declared at build time.",
     )
     parser.add_argument(
         "--format", choices=["markdown", "json", "tsv"], default="markdown",
@@ -1161,10 +1164,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         today = date.today()
 
-    telemetry = (
-        Path(args.telemetry) if args.telemetry
-        else repo / "debugging" / "logs" / "agent_telemetry.jsonl"
-    )
+    telemetry = resolve_telemetry_stream("weekly_health", args.telemetry)
 
     try:
         report = build_report(repo, args.weeks, today, telemetry, not args.no_gh)

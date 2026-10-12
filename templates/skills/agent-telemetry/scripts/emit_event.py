@@ -111,7 +111,10 @@ def build_record(
 def append_record(record: dict, log_path: Path) -> bool:
     """Append *record* to *log_path* as one JSON line. Return True on success.
 
-    Creates parent directories and the file itself when absent. The line goes
+    Creates missing parent directories and the file itself when absent (for a
+    declared stream ``_declared_stream`` has already established that the
+    enduring root holding the log directory is live, so at most ``debugging``
+    and the log directory appear). The line goes
     out in ONE ``os.write`` on an ``O_APPEND`` descriptor, so records from
     simultaneous drives sharing one stream are neither lost, truncated nor
     interleaved (AC INF-500d-4-iv). Never raises: a telemetry sink that cannot
@@ -147,9 +150,14 @@ def _declaration_path() -> Path:
     sits three directories below ``<output_root>``, whose ``config/`` holds
     ``knowledge_sink.json``. The answer does not depend on the caller's
     current directory (AC INF-500d-4-iv; ADR-069 rule (a): configuration
-    follows the workspace).
+    follows the workspace). The Gemini copy sits one directory deeper
+    (``<output_root>/gemini/skills/...``, reached through ``.gemini``), so a
+    ``gemini`` directory is stepped out of.
     """
-    return Path(__file__).resolve().parents[3] / "config" / "knowledge_sink.json"
+    install = Path(__file__).resolve().parents[3]
+    if install.name == "gemini":
+        install = install.parent
+    return install / "config" / "knowledge_sink.json"
 
 
 def _declared_stream(declaration: Path) -> tuple[Path | None, str]:
@@ -159,8 +167,11 @@ def _declared_stream(declaration: Path) -> tuple[Path | None, str]:
     An inline copy of ``scripts/knowledge/sink_resolution.read_usable_stream``,
     the one usable-stream rule (INF-500d-4-i): the declaration must record an
     absolute ``operational_log_root`` AND an absolute
-    ``operational_telemetry_stream`` sitting directly under it. Keep the two
-    in step.
+    ``operational_telemetry_stream`` sitting directly under it. It also mirrors
+    ``enduring_root_exists``: the directory holding the root (its parent, or the
+    project above ``debugging``) must exist, so a vanished project is refused
+    rather than recreated; a missing log directory under a live one is a first
+    write. Keep the two in step.
     """
     try:
         data = json.loads(declaration.read_text(encoding="utf-8"))
@@ -182,6 +193,12 @@ def _declared_stream(declaration: Path) -> tuple[Path | None, str]:
     if Path(stream).parent != Path(root):
         return None, (f"'operational_telemetry_stream' is {stream}, which is not "
                       f"directly under operational_log_root {root}")
+    holder = Path(root).parent
+    if holder.name == "debugging":
+        holder = holder.parent
+    if not holder.is_dir():
+        return None, (f"stale: {holder} (the enduring root that should hold {root}) "
+                      "no longer exists")
     return Path(stream), ""
 
 

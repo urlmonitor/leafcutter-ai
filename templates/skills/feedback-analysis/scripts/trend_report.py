@@ -36,14 +36,13 @@ from pathlib import Path
 from typing import Any
 
 # The skill deploys to <output_root>/skills/feedback-analysis/scripts/; the shared reader sits in <output_root>/scripts/feedback/.
-_OUTPUT_ROOT = Path(__file__).resolve().parents[3]
+_OUTPUT_ROOT = next(p for p in Path(__file__).resolve().parents[3:] if p.name != "gemini")  # the Gemini copy sits one directory deeper
 sys.path.insert(0, str(_OUTPUT_ROOT / "scripts" / "feedback"))
 
 import feedback_reader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 # Closed vocabulary of feedback categories with severity weights.
 # Must stay in sync with config/feedback_categories.yaml.

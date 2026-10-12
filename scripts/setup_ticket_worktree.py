@@ -1171,7 +1171,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
     leafcutter_dst = worktree_path / ".leafcutter"
     pre_commit_dst = worktree_path / ".pre-commit-config.yaml"
 
-    # Step 1 — idempotent no-op: config already present.
     if leafcutter_dst.exists() or leafcutter_dst.is_symlink():
         return
     if pre_commit_dst.exists() or pre_commit_dst.is_symlink():
@@ -1179,7 +1178,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
 
     leafcutter_src = main_repo / ".leafcutter"
 
-    # Step 2 — symlink .leafcutter (preferred).
     if leafcutter_src.exists():
         try:
             os.symlink(leafcutter_src, leafcutter_dst)
@@ -1197,10 +1195,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
             )
             return
 
-    # Step 3 — copy .pre-commit-config.yaml (fallback).
-    # Resolve the source: the main repo may expose it directly as a file or as
-    # a symlink pointing into .leafcutter/.  shutil.copy follows symlinks by
-    # default, so both cases produce a plain file copy in the worktree.
     pre_commit_src = main_repo / ".pre-commit-config.yaml"
     if pre_commit_src.exists():
         try:
@@ -1220,7 +1214,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
             )
         return
 
-    # Step 4 — neither source exists; warn and continue.
     print(
         f"WARNING: neither {leafcutter_src} nor {pre_commit_src} found in "
         "the main repo.  Run build.py inside the worktree manually to "
@@ -1282,7 +1275,14 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     5. **``build.py`` run**: materialises ``.leafcutter/`` (workflows, agents,
        skills, hooks, and the pre-commit config shim).  Probes both the
        consumer layout (``leafcutter-ai/scripts/build.py``) and the
-       self-hosted layout (``scripts/build.py``).
+       self-hosted layout (``scripts/build.py``).  The build is handed the
+       main install's log root (``--log-root`` / ``--no-log-root``).  A
+       worktree whose own ``build.py`` predates those flags rejects them with
+       an argparse error (exit 2, ``unrecognized arguments``); the build is
+       then retried ONCE without the flag and a loud WARNING says the worktree
+       has no durable log root (what it logs will not survive its removal and
+       writers will refuse) -- never ``missing_config`` for that case (AC
+       INF-500d-4-iii, ADR-069).
 
     6. **Pre-commit config safety net** (``_establish_pre_commit_config``):
        ensures ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in
@@ -1378,7 +1378,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     except FileNotFoundError:
         pass
 
-    # Populate submodules (like leafcutter) in the new worktree
     try:
         subprocess.run(["git", "submodule", "update", "--init"], cwd=worktree_path, check=True,
                        stdout=sys.stderr)
@@ -1387,13 +1386,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             f"Failed to update submodules in {worktree_path}: {exc}"
         ) from exc
 
-    # Install Python dev dependencies. Detect the project's packaging style
-    # rather than assuming poetry: a poetry/PEP-621 project carries a
-    # pyproject.toml, while this package and many consumers pin dev deps in
-    # requirements-dev.txt (no pyproject.toml). Dependency install is treated
-    # as best-effort — a failure warns and continues, because the deps are
-    # frequently already present in the active environment and a hard failure
-    # here should not block the entire worktree setup.
     if (worktree_path / "pyproject.toml").exists():
         dep_cmd = ["poetry", "install", "--no-root"]
     elif (worktree_path / "requirements-dev.txt").exists():
@@ -1416,13 +1408,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 file=sys.stderr,
             )
 
-    # Run build.py to materialise .leafcutter/ (workflows, agents, skills, hooks)
-    # in the new worktree.  Without this step, named-workflow resolution
-    # (`workflow("build-epic")`) fails because .claude/workflows/ is gitignored
-    # and therefore absent from fresh worktrees, and the .pre-commit-config
-    # (a .leafcutter shim) is missing so package hooks silently skip.
-    # Probe both layouts: consumer installs carry leafcutter-ai/scripts/build.py
-    # as a subdirectory; the self-hosted package has scripts/build.py at root.
     build_candidates = [
         worktree_path / "leafcutter-ai" / "scripts" / "build.py",
         worktree_path / "scripts" / "build.py",
@@ -1430,17 +1415,21 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     build_script = next((c for c in build_candidates if c.exists()), None)
     build_exc: Exception | None = None
     if build_script is not None:
-        try:
-            subprocess.run([sys.executable, str(build_script), "--target-dir", str(worktree_path),
-                            *_inherited_log_root_args(main_repo)],
-                           cwd=str(worktree_path), check=True, stdout=sys.stderr)
-        except subprocess.CalledProcessError as exc:
-            build_exc = exc
-            print(
-                f"WARNING: build.py run failed in new worktree ({exc}); "
-                "named-workflow resolution may fail until build.py is run manually.",
-                file=sys.stderr,
-            )
+        cmd = [sys.executable, str(build_script), "--target-dir", str(worktree_path)]
+        for flags in (_inherited_log_root_args(main_repo), []):
+            try:
+                proc = subprocess.run([*cmd, *flags], cwd=str(worktree_path), check=True, stdout=sys.stderr,
+                                      stderr=subprocess.PIPE, text=True)
+                build_exc, err = None, proc.stderr
+            except subprocess.CalledProcessError as exc:
+                build_exc, err = exc, exc.stderr or ""
+            print(err, end="", file=sys.stderr)
+            if not (build_exc and flags and build_exc.returncode == 2 and "unrecognized arguments" in err):
+                break
+            print(f"WARNING: this worktree's build.py does not accept {flags[0]}; retrying without it, so the worktree has no durable log root, what it logs will not survive its removal and writers will refuse.", file=sys.stderr)
+        if build_exc is not None:
+            print(f"WARNING: build.py run failed in new worktree ({build_exc}); "
+                  "named-workflow resolution may fail until build.py is run manually.", file=sys.stderr)
     else:
         print(
             "WARNING: build.py not found in worktree (probed "
@@ -1452,11 +1441,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     _establish_pre_commit_config(main_repo, worktree_path)
 
-    # AC-5 fail-fast safety net: _establish_pre_commit_config warns-and-continues
-    # when neither source exists in the main repo (its step 4). Convert that
-    # silent gap into a hard failure so the drive never proceeds with hooks
-    # disabled. Checks BOTH markers to match that function's success contract:
-    # a .leafcutter symlink alone is a valid established state.
     leafcutter_path = worktree_path / ".leafcutter"
     config_path = worktree_path / ".pre-commit-config.yaml"
     if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):

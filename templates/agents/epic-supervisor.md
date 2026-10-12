@@ -246,7 +246,9 @@ On every invocation, before reading any ticket or spawning any
    ```bash
    # pre-drive-reachability-check
    SINK_PATH="$(python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry)"
-   if [ -n "$SINK_PATH" ] && [ -w "$(dirname "$SINK_PATH")" ]; then SINK_OK=1; else SINK_OK=0; fi
+   LOG_DIR="$(dirname "$SINK_PATH")"; HOLDER="$(dirname "$LOG_DIR")"; [ "$(basename "$HOLDER")" != debugging ] || HOLDER="$(dirname "$HOLDER")"
+   WRITE_AT="$LOG_DIR"; while [ ! -d "$WRITE_AT" ] && [ "$WRITE_AT" != "$HOLDER" ]; do WRITE_AT="$(dirname "$WRITE_AT")"; done
+   if [ -n "$SINK_PATH" ] && [ -d "$HOLDER" ] && [ -w "$WRITE_AT" ]; then SINK_OK=1; else SINK_OK=0; fi
    ```
 
    - **If `SINK_OK=1`** (write succeeded): proceed silently.
