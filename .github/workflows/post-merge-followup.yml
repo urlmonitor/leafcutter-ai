@@ -66,6 +66,10 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           API_URL: ${{ github.api_url }}
+          # Opt-in (TQ-600a-13-xv hotfix, 2026-10-12): the script requests a re-run only when this is exactly "true".
+          # GITHUB_TOKEN's re-run POST is accepted live but the re-run ends in startup_failure, so the repo variable
+          # POST_MERGE_REEVAL_RERUN stays unset until a credential (App or fine-grained token with actions:write) is observed working.
+          REEVAL_RERUN_ENABLED: ${{ vars.POST_MERGE_REEVAL_RERUN }}
         run: python scripts/ci/post_merge_reeval.py --api-url "$API_URL" --repo "$REPO" --event-path "$GITHUB_EVENT_PATH" --output-file "$GITHUB_OUTPUT"
 
   notice:

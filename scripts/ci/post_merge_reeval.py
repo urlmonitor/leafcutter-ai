@@ -22,7 +22,12 @@ ARCHITECTURE: Stdlib only, through the one REST client (``_github_rest``). Two p
     re-run is named in the ``unrerunnable`` output, one line
     ``unrerunnable=<JSON list of {pr, head_sha, reason}>`` appended to ``--output-file``
     (``GITHUB_OUTPUT``) and printed. ``reason`` is ``older_than_30_days`` |
-    ``rerun_refused_<status>`` | ``no_hold_run``. CLI: ``--api-url --repo --event-path
+    ``rerun_refused_<status>`` | ``no_hold_run`` | ``rerun_disabled``. Hotfix 2026-10-12: re-runs are opt-in. The
+    GITHUB_TOKEN re-run POST is accepted live but the re-run ends in ``startup_failure``, so a request is made only when
+    env ``REEVAL_RERUN_ENABLED`` is exactly ``true`` (the workflow passes repo variable ``POST_MERGE_REEVAL_RERUN``);
+    otherwise every read is still done, no POST is made, and each hold that would have been re-run is named
+    ``rerun_disabled``. A fix-proof completion also reads ``GET /actions/runs/{id}/jobs`` and re-runs only when the job
+    ``Post-merge fix proof`` concluded success or failure (skipped or absent: nothing, output ``[]``). CLI: ``--api-url --repo --event-path
     --output-file``, the token in GITHUB_TOKEN; exit 0 once a decision is reached, 2 on
     unusable input or an unreadable history or pull request list.
 """
@@ -56,6 +61,10 @@ RERUN_WINDOW = timedelta(days=30)
 PAGE_SIZE, HOLD_RUNS_PAGE = 100, 5
 
 ACTION_RERUN, ACTION_SKIP, ACTION_NAME = "rerun", "skip", "name"
+REASON_DISABLED = "rerun_disabled"
+PROOF_JOB = "Post-merge fix proof"  # the proof workflow's `prove` job; skipped when no fix is declared
+PROOF_RAN = ("success", "failure")  # a conclusion that means the proof actually ran
+RERUN_FLAG, RERUN_ON = "REEVAL_RERUN_ENABLED", "true"
 
 
 def _entry(pr: int | None, head_sha: str, reason: str) -> dict:
@@ -179,13 +188,16 @@ def request_rerun(client: GitHubClient, repo: str, run_id: int) -> str | None:
     return None
 
 
-def reevaluate(client: GitHubClient, repo: str, targets: list[tuple[int | None, str, dict | None]], now: datetime) -> list[dict]:
-    """Re-run each target's completed hold run; return the entries that could not be re-run."""
+def reevaluate(client: GitHubClient, repo: str, targets: list[tuple[int | None, str, dict | None]], now: datetime, *, rerun_enabled: bool = False) -> list[dict]:
+    """Re-run each target's completed hold run; return the entries that could not be re-run.
+
+    With ``rerun_enabled`` False no request is made: each hold that would have been re-run is named ``rerun_disabled``.
+    """
     named: list[dict] = []
     for pr, sha, run in targets:
         action, reason = classify_hold(run, now)
         if action == ACTION_RERUN and run is not None:
-            reason = request_rerun(client, repo, run["id"])
+            reason = request_rerun(client, repo, run["id"]) if rerun_enabled else REASON_DISABLED
         if reason:
             named.append(_entry(pr, sha, reason))
     return named
@@ -205,16 +217,36 @@ def _proof_trusted(trigger: Trigger, repo: str) -> bool:
     return True
 
 
+def proof_ran(client: GitHubClient, repo: str, run_id: int | None) -> bool:
+    """True when the proof run's ``Post-merge fix proof`` job concluded success or failure (read-only); skipped or absent is False.
+
+    Raises ``GitHubError`` when the jobs cannot be read or are not the expected shape.
+    """
+    if run_id is None:
+        return False
+    payload = client.get(f"/repos/{repo}/actions/runs/{run_id}/jobs", {"per_page": PAGE_SIZE})
+    jobs = payload.get("jobs") if isinstance(payload, dict) else None
+    if not isinstance(jobs, list):
+        message = "the proof run's job list is not the expected shape"
+        raise GitHubError(message, kind="shape")
+    return any(isinstance(j, dict) and j.get("name") == PROOF_JOB and j.get("conclusion") in PROOF_RAN for j in jobs)
+
+
 def decide(client: GitHubClient, opts: argparse.Namespace, trigger: Trigger) -> list[dict]:
     """Read what the trigger needs and perform the re-runs; return the named pull requests.
 
-    Raises ``GitHubError`` on an unreadable history, pull request list or hold run list, before any re-run.
+    ``opts.rerun_enabled`` (False when absent) gates every re-run request; reads are always done.
+    Raises ``GitHubError`` on an unreadable history, pull request list, job list or hold run list, before any re-run.
     """
     now = datetime.now(timezone.utc)
+    enabled = bool(getattr(opts, "rerun_enabled", False))
     if trigger.name == PROOF_NAME:
         if not _proof_trusted(trigger, opts.repo) or trigger.head_sha is None:
             return []
-        return reevaluate(client, opts.repo, [(None, trigger.head_sha, latest_hold_run(client, opts.repo, trigger.head_sha))], now)
+        if not proof_ran(client, opts.repo, trigger.run_id):
+            logger.info("the %s job did not run in proof run %s; nothing was proved, nothing is re-run", PROOF_JOB, trigger.run_id)
+            return []
+        return reevaluate(client, opts.repo, [(None, trigger.head_sha, latest_hold_run(client, opts.repo, trigger.head_sha))], now, rerun_enabled=enabled)
     if trigger.name != SUITE_NAME:
         logger.info("workflow %r is not one this job re-evaluates for; nothing to do", trigger.name)
         return []
@@ -222,7 +254,7 @@ def decide(client: GitHubClient, opts: argparse.Namespace, trigger: Trigger) -> 
     if verdict_changed(read_runs(client, opts.repo), run_id if run_id is not None else -1) is not True:
         logger.info("the verdict did not change at run %s (or it is not settled); nothing is re-evaluated", run_id)
         return []
-    return reevaluate(client, opts.repo, _pull_request_targets(client, opts.repo), now)
+    return reevaluate(client, opts.repo, _pull_request_targets(client, opts.repo), now, rerun_enabled=enabled)
 
 
 # --------------------------------------------------------------------------- entry point
@@ -253,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     """CLI entry point; the token comes from GITHUB_TOKEN."""
     logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
     opts = build_parser().parse_args(sys.argv[1:] if argv is None else argv)
+    opts.rerun_enabled = os.environ.get(RERUN_FLAG, "") == RERUN_ON
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token or not REPO_RE.fullmatch(opts.repo):
         logger.warning("GITHUB_TOKEN is not set or the repository name %r is refused; nothing re-run", opts.repo)
