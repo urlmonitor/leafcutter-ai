@@ -1,0 +1,165 @@
+id: BO-2900a-2-iii
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "The observation is asked which code is under proof, and an unnamed question is answered with no answer rather than a negative one"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a rule asking the observation whether a proof reached the code under
+    proof through the unit's way in,
+  When the rule asks the question without naming which code is under proof,
+  Then the observation answers that the question cannot be decided, and the rule
+    reaches no verdict from it,
+    And no criterion is refused on the strength of a question that named no code,
+    And the answer to an unnamed question is never the same as the answer "the
+      code under proof was not reached through the way in", so the two can never
+      be confused for one another.
+
+  Given the same rule asking the same question, this time naming the code under
+    proof — the code belonging to the unit the criterion's record names,
+  When a proof enters the way in for an unrelated action and then reaches that
+    code by a separate route,
+  Then the answer is that the code was not reached through the way in,
+    And the answer keeps "the way in was entered" and "the code under proof was
+      reached through it" as two separate facts that a reader can tell apart,
+    And a rule that reads only the first of those two facts cannot produce a
+      refusal.
+depends_on:
+  - BO-2900a-2
+  - BO-2900a-2-i
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not.md
+    relationship: describes
+    status: exists
+    relevance: "Section 2 is the defect in full: the rule asks with an empty naming of the code under proof, so the reached-through fact is structurally always negative and the rule degenerates to reading whether the way in was entered at all. The executed probe table shows a ritual proof accepted and an honest one refused."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-2-remedies.md
+    relationship: describes
+    status: exists
+    relevance: "Its section 4 records why the obvious repair is not available: no field in the store names a callable, so handing the observation a declared file path where it expects a named piece of code reproduces the same defect in a new spelling. Its C2 is the alternative — derive what to ask about from the unit, not from a field that does not exist."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule this AC makes answerable. It already forbids expressing the condition as two independently recorded facts; this AC is the reason that rule cannot be satisfied today at all, and the two must be read together."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Supplies the unit whose code this question is about. Without it the question is well-formed but aimed at whatever the proof happened to import."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: modifies
+    status: exists
+    relevance: "The parent whose question shape this constrains. Its contract names one piece of code under proof per record; the store contains no field that names one, so where the name comes from is an open design point this AC deliberately answers at the level of the unit rather than the function."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE REFUSAL TO ANSWER LIVES ON THE ANSWERING SIDE, NOT AT THE CALL SITE. The observation's own entry point must reject an empty, whitespace-only or None subject and return reached_through 'undecidable' with cause subject_not_named. Fixing only the caller is insufficient: today's call site passes \"\" (scripts/ac_store/_done_proof_entry_point_gate.py line 202, _observe_reachability(test_file, test['function'], \"\", entry_point)), and as long as an unnamed question can come back with a plausible negative, the next caller repeats the mistake and no test of that caller catches it."
+  - "THE SUBJECT IS DERIVED FROM THE RUN AGAINST THE DECLARED UNIT, NEVER LOOKED UP IN A STORE FIELD. No field anywhere in the store names a callable: surface_invoked holds 271 records across 368 occurrences and ZERO are of '<module>:<callable>' shape (166 are free prose), and reference_file_path is schema-defined as a registration edit surface. The subject is therefore the SET of code belonging to the declared unit — every frame whose resolved co_filename equals the declared unit's resolved source path — and 'reached through' is true when any member of that set was entered while an entry-point frame of that same unit was a live ancestor."
+  - "NO NEW STORE FIELD, NO NEW AC-RECORD KEY, NO SCHEMA CHANGE IS PERMITTED BY THIS AC. Reaching for a field to hold a function name recreates the empty-question defect with more ceremony — asking the store for a name it does not hold is how target_spec=\"\" arose in the first place."
+  - "THREE DISTINGUISHABLE ANSWERS: 'reached', 'not_reached', 'undecidable'. 'undecidable' must not be representable as False, must not compare equal to 'not_reached', and must not be the default value of the field. A consumer that ignores the distinction must be structurally unable to produce a refusal from it: the refusal path must test for the literal 'not_reached'."
+  - "entered_entry_point AND reached_through STAY TWO SEPARATELY READABLE FACTS, AND A CONSUMER READING ONLY THE FIRST MUST BE UNABLE TO REFUSE. That degeneration is the measured defect, not a hypothesis: with the subject empty, reached_through is structurally negative for every proof ever judged, so the rule fell back to the only fact left and now ACCEPTS a proof that calls main(['noop']) then calls the code directly, while REFUSING an honest direct-import proof. Both verified by execution."
+  - "THE POSITIVE HALF IS PART OF THE CONTRACT. When the subject is named and a proof enters the way in for an unrelated action and then reaches the code by a separate route, the answer is 'not_reached' — a real, non-undecidable negative. Without this, 'always answer undecidable' satisfies the AC and the rule is inert."
+  - "THE ANSWER IS PER (nodeid, declared unit), NOT PER RUN. A run reaching several members of the declared unit's code set answers once for the unit; a run reaching code belonging to some other unit contributes nothing to this answer, however thoroughly it was exercised."
+  - "INHERITED, NOT RESTATED: ancestry remains one fact about one live call chain (BO-2900a-2), and no code path may read the proof's source text to decide any of this. This AC constrains only the well-formedness of the question and the arity of the answer."
+delivers_to:
+  agent: python-coder
+  contract: "An observation answer that carries three distinguishable states for the reached-through question — reached through, not reached through, and cannot be decided because nothing named the code — consumed by BO-2900a-1 and BO-2900a-1-i. Concretely: reached_through: 'reached'|'not_reached'|'undecidable', with undecidable_cause: 'subject_not_named'|null, alongside the separately readable entered_entry_point: bool; the refusal path may fire only on the literal 'not_reached'."
+expects_from:
+  ac_id: BO-2900a-2
+  contract: "The ancestry-aware observation whose question this AC requires to be well-formed: the amended reach_record, whose subject is the declared unit's code set derived from the run rather than a '<module>:<callable>' string looked up in a field. The parent already forbids computing reached-through as two independent booleans; this AC forbids asking for it without naming a subject, and widens the answer from a boolean to three values."
+test_spec:
+  - name: test_an_unnamed_subject_is_answered_undecidable_and_never_not_reached
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "scripts/ac_store/done_proof.py::_run_pytest_and_parse"
+    description: "Runs the real observation over a real proof that DOES reach the code, first with the subject omitted and then with it named. Asserts the unnamed call answers undecidable with cause subject_not_named, the named call answers reached, and the two answers are not equal — the half that fails on today's code, where the unnamed question returns a plausible negative."
+    must_catch:
+      - "an observation that returns a false-y reached_through for an empty subject, which is today's behaviour"
+      - "an implementation that raises on an empty subject so the caller's own except branch converts it into a refusal"
+      - "an implementation that answers undecidable for the named call too"
+  - name: test_a_named_subject_tells_reached_through_apart_from_reached_by_another_route
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Executes the exact pair the analysis measured, in one assertion block: a proof that calls main([action]) and reaches the code through it, and a ritual proof that calls main([noop]) and then calls the code directly. Asserts reached and not_reached respectively — the verdicts the shipped gate returns in the wrong order."
+    must_catch:
+      - "a predicate that degenerates to entered_entry_point and so accepts the ritual"
+      - "a predicate that always answers undecidable"
+      - "a predicate that credits any entry into the way in regardless of the action taken"
+  - name: test_no_criterion_is_refused_from_an_undecidable_answer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Drives the real verify_done_eligible over a fixture whose observation answers undecidable, and asserts the returned verdict is equal in every key to the verdict the same evaluation returns with the rule not invoked. Separately asserts the undecidable case was announced, so an implementation that never reached the rule cannot pass on the equality alone."
+    must_catch:
+      - "an undecidable answer that produces a refusal"
+      - "an undecidable answer that silently credits the criterion with no announcement"
+      - "a rule never reached at all, making the equality assertion vacuous"
+  - name: test_only_the_not_reached_answer_can_produce_a_finding_in_the_real_consumer
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Feeds the real consumer in _done_proof_entry_point_gate.py each of the three answers as produced by three real runs, and asserts exactly one of them — not_reached — yields a finding. Proves the consumer discriminates on the value rather than on falsiness."
+    must_catch:
+      - "a consumer written as `if not reached_through:`, which fires on undecidable too"
+      - "a consumer that treats undecidable as reached and stays silent on a genuine miss"
+test_rationale: "Both halves must execute in one run. The unnamed-question half is what fails on today's code — the gate passes an empty subject and the answer is structurally negative for every proof ever judged — and the named-question half is what stops the fix being 'always answer undecidable', which would satisfy the first half perfectly while leaving the rule inert. A test handed pre-computed answers proves neither; it is the same shape of evidence that let the empty question ship in the first place. The second entry is the decisive one because it executes the measured pair directly: a ritual proof the gate ACCEPTS today and an honest proof it REFUSES today, asserted to swap. The fourth entry exists because the durable repair is on the answering side but the observable damage is on the consuming side, and a three-valued answer read with `if not x:` reproduces the defect exactly while every test of the observation still passes."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE MEASURED DEFECT. The rule asks the observation the reached-through question
+  while naming no code under proof. Nothing can match an unnamed subject, so the
+  reached-through answer is negative for every proof that has ever been judged,
+  and the rule is left reading the only other fact available: whether the way in
+  was entered at all. That is how a proof that enters the way in for an unrelated
+  action and then calls the code directly is ACCEPTED, while an honest proof that
+  executes the behaviour by import is REFUSED. Both verified by execution.
+
+  WHY THIS IS AN OBSERVATION AC AND NOT A RULE AC. The rule's mistake is visible
+  in what it asks, but the durable repair is on the answering side: a question
+  with no subject must come back undecidable rather than negative. As long as an
+  unnamed question can return a plausible negative, every future caller can make
+  the same mistake and no test of the caller will catch it.
+
+  WHERE THE NAME COMES FROM, stated deliberately. No field anywhere in the store
+  names a piece of code — every candidate names a file, and one of them is
+  defined by the schema as a registration edit-surface rather than the unit under
+  proof. Asking the store for a name it does not hold is how the empty question
+  arose in the first place. The subject of the question is therefore the code
+  belonging to the named unit, derived from the run, not a name looked up in a
+  record. An implementer who reaches for a new store field to hold a function
+  name has recreated the problem with more ceremony.
+
+  THE PARENT'S CONTRACT CANNOT EXPRESS THIS TODAY and needs amending rather than
+  replacing — one named piece of code and one pair of booleans per record, which
+  cannot carry either a set of code reached or a third undecidable state. The
+  parent's criteria are right; the record shape underneath them is the part that
+  is short. Flagged here for the IT PO pass rather than decided here.
+
+  BOUNDARY. What the observation spans is BO-2900a-2-i; what happens when it can
+  see nothing is BO-2900a-2-ii; which unit the question is about is
+  BO-2900a-1-iv; what the answer is used for is BO-2900a-1 and BO-2900a-1-i. This
+  AC covers only the well-formedness of the question and the three-way shape of
+  the answer.
+
+  VERIFICATION MUST EXECUTE BOTH HALVES IN ONE RUN. The unnamed-question half is
+  what fails on today's code; the named-question half is what stops the fix being
+  "always answer undecidable". A test handed pre-computed answers proves neither
+  — it is the same shape of evidence that let the empty question ship.

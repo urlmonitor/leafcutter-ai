@@ -52,6 +52,10 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from build_capability_merge import (
+    detect_skill_local_changes,
+    propagate_capability_winner,
+)
 from template_compiler import (
     _load_registry,
     compile_agent_template,
@@ -337,6 +341,16 @@ def build_skills(target_root: Path, config: dict[str, Any],
     Markdown files (``.md``) are compiled via ``compile_skill_template``.
     Non-markdown files (scripts, data) are copied verbatim.
 
+    BP-1500g-2-i: before writing a skill's deploy files, every ACTIVE
+    platform's own physical output is checked for local change
+    (``build_capability_merge.detect_skill_local_changes``). A contested
+    name is reported exactly once, and the adopter's version is made the
+    one every active surface resolves to
+    (``build_capability_merge.propagate_capability_winner``) -- never
+    overwritten on the surface it was written to, and never left standing
+    on only that one surface while a sibling surface still holds the
+    package's own bytes.
+
     Args:
         target_root: Absolute path to the target project root directory.
         config: Merged config dictionary used for placeholder injection.
@@ -368,6 +382,18 @@ def build_skills(target_root: Path, config: dict[str, Any],
         "cline": None
     }
 
+    # BP-1500g-2-i defect 2: `.claude/skills` (-> `skills`) and
+    # `.gemini/skills` (-> `gemini/skills`) are TWO PHYSICALLY DISTINCT
+    # output directories, each with its OWN independent local-change check
+    # -- an adopter editing only one surface's copy leaves the other's
+    # physical file untouched and overwritable. Resolved once, up front,
+    # for every skill this call processes.
+    active_output_dirs: dict[str, Path] = {}
+    for platform, is_active in platforms.items():
+        output_subpath = platform_dirs.get(platform)
+        if is_active and output_subpath:
+            active_output_dirs[platform] = target_root / output_subpath
+
     written = 0
     internal_skills: list[str] = []
     deprecated_skills: list[str] = []
@@ -397,8 +423,30 @@ def build_skills(target_root: Path, config: dict[str, Any],
         if is_deprecated:
             continue
 
-        for template_file in _skill_deploy_files(skill_dir):
+        deploy_files = _skill_deploy_files(skill_dir)
+        rels = [f.relative_to(skills_template_dir) for f in deploy_files]
+
+        # BP-1500g-2-i defects 1 and 2: detect divergence for the WHOLE
+        # skill in one pre-pass, then report the contested name EXACTLY
+        # ONCE and make the declared winner ("adopter") true on every
+        # active surface -- never once per (file, platform) pair, and
+        # never true on only the surface the divergence was detected on.
+        divergence = detect_skill_local_changes(
+            rels, active_output_dirs, _bp.target_locally_changed
+        )
+        if divergence:
+            written += propagate_capability_winner(
+                skill_dir.name, divergence, active_output_dirs, dry_run
+            )
+
+        for template_file in deploy_files:
             rel = template_file.relative_to(skills_template_dir)
+            if rel in divergence:
+                # Already handled above: the originating surface is left
+                # untouched, and every other active surface was just made
+                # to agree with it. Writing package content here for any
+                # platform would immediately undo that.
+                continue
 
             for platform, is_active in platforms.items():
                 if not is_active:
@@ -470,4 +518,38 @@ def build_skills(target_root: Path, config: dict[str, Any],
 #   to frontend-design/SKILL.md prevents it from being deployed, satisfying
 #   AC BP-700d-1-i (fresh install must not create .claude/skills/frontend-design/).
 #   (#EPIC-Oneagenthandlesboththelookandthecodefor/14)
+# - 2026-09-23 [python-coder/BP-1500g-2-i]: build_skills() now checks
+#   _bp.target_locally_changed(output_path) (build_phases_local_change.py)
+#   before writing EITHER a compiled .md or a verbatim-copied non-.md skill
+#   file. `.claude/skills` (and `.gemini/skills`) is a symlink straight into
+#   this same output_path when the shim is intact, so an adopter's content
+#   written at a package-shipped, discoverable capability name IS this
+#   physical file -- previously silently overwritten with no ownership check
+#   at all. A detected local change is now reported via
+#   build_capability_merge.report_capability_collision (the prescribed
+#   `collision: <name> -- resolves to adopter` line) and left completely
+#   untouched, never silently replaced. Every other generated-file family
+#   (agents, commands, workflows, hooks) is unaffected: their own write
+#   paths still call announce_if_local_change_replaced, whose "the install
+#   always wins" behaviour is unchanged. (#BP-1500g-2-i)
+# - 2026-09-23 [python-coder/BP-1500g-2-i design-review defect fixes]: The
+#   single-check-per-(file, platform) shape above had two confirmed defects.
+#   DEFECT 1: `report_capability_collision(skill_dir.name)` sat inside the
+#   per-deploy-file loop, itself nested inside the per-platform loop, so a
+#   multi-file skill printed the same collision line once per file. DEFECT
+#   2: `platform_dirs` maps `claude` and `antigravity` to two PHYSICALLY
+#   DISTINCT output directories (`skills` vs `gemini/skills`); the
+#   per-(file, platform) check only ever inspected the ONE physical file a
+#   given loop iteration was about to write, so an adopter's edit reaching
+#   only the `.claude/skills` copy was invisible to the `gemini/skills`
+#   copy's own independent check, which then silently overwrote it with
+#   the package's own bytes while the run still declared "resolves to
+#   adopter". Both fixed by moving detection to a single pre-pass per skill
+#   (`build_capability_merge.detect_skill_local_changes`) and reporting +
+#   propagating once per contested NAME
+#   (`build_capability_merge.propagate_capability_winner`): the adopter's
+#   bytes are now copied into every OTHER active surface for the same
+#   relative file, so the declared winner holds everywhere, not only on
+#   the surface the divergence was detected on. The originating surface's
+#   own file is still never touched. (#BP-1500g-2-i)
 # ====================================================================

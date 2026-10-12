@@ -7,19 +7,22 @@ GOAL: Failing test-first stubs for AC BP-1500g-1-ii -- "A build that cannot
     removing/emptying/overwriting adopter-owned content.
 AC: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g-1-ii.yaml
 
-TRIGGERING CONDITION USED THROUGHOUT: the same container-conflict scenario
-as BP-1500g-1 -- a real directory at `.claude/skills` (the adopter's correct
-workaround) forces the shim-install step to either overwrite adopter content
-or fail. Today's build.py does neither correctly: it silently `rmtree`s the
-real directory (`_cleanup_stale_paths`) and reports SUCCESS
-(`✓ removed stale: .claude/skills`) with exit code 0 -- the exact inversion
-this AC forbids (KI-BP-009, re-confirmed 2026-09-08).
+TRIGGERING CONDITION: the exit-code / reporting entries below (clauses 2 and
+3) plant a real REGULAR FILE at `.claude/skills`
+(`plant_regular_file_where_container_expected`) -- the container-conflict
+variant that survives BP-1500g-2's item-level merge (ADR-041 §2), because a
+file has no items to merge into. The content-survival entry (clause 1) and
+the over-trigger control still use the original real-DIRECTORY fixture
+(`plant_capability_at_discoverable_location`) -- see DECISION HISTORY below
+for why each fixture is used where it is.
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+
+import pytest
 
 _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
@@ -29,8 +32,26 @@ from _bp1500g1_harness import (  # noqa: E402
     assert_ac_bp_1500g_1_ii_satisfied,
     fresh_scratch_adopter,
     plant_capability_at_discoverable_location,
+    plant_regular_file_where_container_expected,
     run_build,
 )
+
+
+@pytest.fixture(scope="module")
+def _shared_blocked_container_build(tmp_path_factory):
+    """Produce the ONE real build the two read-only blocked-container tests
+    below share (TQ-600a-9): both plant the identical regular file at the
+    `.claude/skills` container path via
+    `plant_regular_file_where_container_expected` and run the identical
+    no-flag build -- one asserting the compound exit-code/no-success-marker
+    outcome, the other asserting the specific blocked path is named in the
+    output -- so one real build safely serves both instead of each paying
+    its own `fresh_scratch_adopter` + plant + `run_build` sequence."""
+    root = tmp_path_factory.mktemp("bp1500g1ii_blocked_container")
+    target_root = fresh_scratch_adopter(root)
+    planted = plant_regular_file_where_container_expected(target_root)
+    result = run_build(target_root)
+    return target_root, planted, result
 
 
 def test_bp_1500g_1_ii_a_run_that_cannot_proceed_without_taking_adopter_content_leaves_it_present_and_unchanged(
@@ -60,7 +81,7 @@ def test_bp_1500g_1_ii_a_run_that_cannot_proceed_without_taking_adopter_content_
 
 
 def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_no_success_marker(
-    tmp_path: Path,
+    _shared_blocked_container_build,
 ) -> None:
     # covers: BP-1500g-1-ii
     # angle: criterion
@@ -68,11 +89,17 @@ def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_
     exit status is not the success status, AND the blocked step's own line
     in the output carries no success marker. Either alone is satisfiable
     while the other is wrong -- the reproduced defect printed a green check
-    AND exited 0."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    planted = plant_capability_at_discoverable_location(target_root)
+    AND exited 0.
 
-    result = run_build(target_root)
+    RE-TARGETED 2026-09-23 (BP-1500g-2 fast-lane): now triggered via
+    `plant_regular_file_where_container_expected` rather than
+    `plant_capability_at_discoverable_location` -- see the DECISION HISTORY
+    block at the bottom of this file for why the original fixture stopped
+    satisfying this AC's Given clause.
+
+    Reads the ONE shared blocked-container build (TQ-600a-9) -- see
+    `_shared_blocked_container_build`'s own docstring."""
+    _target_root, planted, result = _shared_blocked_container_build
 
     assert_ac_bp_1500g_1_ii_satisfied(
         content_survived=planted["skill_md"].is_file(),
@@ -87,21 +114,26 @@ def test_bp_1500g_1_ii_that_run_does_not_exit_zero_and_the_blocked_step_carries_
 
 
 def test_bp_1500g_1_ii_the_run_names_the_specific_content_and_the_specific_step_that_could_not_proceed(
-    tmp_path: Path,
+    _shared_blocked_container_build,
 ) -> None:
     # covers: BP-1500g-1-ii
     # angle: criterion
     """THE THIRD CLAUSE. The output contains the exact path of the content
     that blocked the step and identifies the step. Assert on the specific
     planted path, never on a generic phrase, so a categorical message like
-    `some paths could not be cleaned` fails."""
-    target_root = fresh_scratch_adopter(tmp_path)
-    # Planted for its side effect only. The assertion below names
-    # ".claude/skills" literally rather than deriving it from the return
-    # value, so the binding would be dead (ruff F841).
-    plant_capability_at_discoverable_location(target_root)
+    `some paths could not be cleaned` fails.
 
-    result = run_build(target_root)
+    RE-TARGETED 2026-09-23 (BP-1500g-2 fast-lane): now triggered via
+    `plant_regular_file_where_container_expected` rather than
+    `plant_capability_at_discoverable_location` -- see the DECISION HISTORY
+    block at the bottom of this file for why the original fixture stopped
+    satisfying this AC's Given clause. The blocked path IS the specific
+    adopter content here (a regular file occupies the whole container), so
+    ".claude/skills" remains the correct literal to assert on.
+
+    Reads the ONE shared blocked-container build (TQ-600a-9) -- see
+    `_shared_blocked_container_build`'s own docstring."""
+    _target_root, _planted, result = _shared_blocked_container_build
     combined = result.stdout + result.stderr
 
     assert ".claude/skills" in combined, (
@@ -146,4 +178,40 @@ def test_bp_1500g_1_ii_an_ordinary_build_over_a_tree_with_no_conflict_still_succ
 #   The over-trigger control is expected GREEN at baseline (no backstop
 #   exists yet, so an unaffected tree already builds cleanly) -- kept as the
 #   control for whatever backstop implementation follows.
+# - 2026-09-23 [test-writer/fast-lane BP-1500g-2]: RE-TARGETED the two
+#   exit-code/reporting entries (`...does_not_exit_zero_and_the_blocked_
+#   step_carries_no_success_marker` and `...names_the_specific_content_and_
+#   the_specific_step_that_could_not_proceed`) from
+#   `plant_capability_at_discoverable_location` to
+#   `plant_regular_file_where_container_expected`. THIS IS NOT A WEAKENING
+#   OF BP-1500g-1-ii's CRITERIA -- the criteria text is unchanged. What
+#   changed is that BP-1500g-2 (docs/acceptance-criteria/build_pipeline/
+#   BP-1500-honest-builds/BP-1500g-2.yaml) landed an item-level merge
+#   (`scripts/build_capability_merge.py`, ADR-041 §2): package items are now
+#   copied individually into an existing, real `.claude/skills` DIRECTORY,
+#   leaving the adopter's own non-colliding items untouched. The original
+#   fixture (a real directory holding only the adopter's uniquely-named,
+#   non-colliding item) therefore no longer forces the build to choose
+#   between destroying content and leaving the package unreachable -- the
+#   build can now complete via a clean merge, so this AC's Given clause
+#   ("a build has reached a step it CANNOT COMPLETE WITHOUT removing,
+#   emptying or overwriting content the adopter owns") is no longer
+#   satisfied by that fixture, and the fixture stopped exercising this AC at
+#   all rather than the AC having been relaxed. The new fixture plants a
+#   real REGULAR FILE at the same `.claude/skills` container path: a file
+#   has no items to merge INTO, so `build_capability_merge.
+#   resolve_veto_or_merge` returns the original "blocked" veto unchanged
+#   (its own docstring: "for anything else the veto fires on -- a plain
+#   file occupying a directory shim's canonical path ... merging has no
+#   meaning for a non-directory"), which is a genuine, durable trigger of
+#   this AC's Given clause rather than an artifact of today's merge
+#   implementation being incomplete. The content-survival entry (clause 1)
+#   and the over-trigger control keep the ORIGINAL directory fixture
+#   unchanged -- clause 1 still needs to prove content survives whichever
+#   trigger is used, and the control's whole point is to prove an ordinary,
+#   non-colliding tree (which the directory fixture now correctly is) still
+#   builds clean. See `_bp1500g1_harness.py`'s own DECISION HISTORY and
+#   `build_capability_merge.py`'s DECISION HISTORY (2026-09-23,
+#   BP-1500g-2/BP-1500g-2-i) for the production-side account of the same
+#   change. (#BP-1500g-1-ii/#BP-1500g-2)
 # ====================================================================

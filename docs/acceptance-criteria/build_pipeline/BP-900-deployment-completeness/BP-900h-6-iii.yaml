@@ -37,6 +37,28 @@ criteria: |
   And the set of watched kinds is read from the deployed guard configuration at
     run time, so a guard registered later that watches a new kind is covered by
     this simulation without the job being edited.
+
+  REACHABILITY GUARD IS RUN, NOT WITHHELD.
+  Given the simulated adopter's first commit is attempted against the real
+    deployed guard registry the freshly built install produced,
+  And the hook-trigger reachability guard is part of that registry,
+  When the simulation narrows the registry before the commit,
+  Then the reachability guard is not among the withheld guards and executes
+    during that commit, because the reason it was withheld — the fresh-consumer
+    misfire recorded as KI-CG-20260831-0713 — is resolved, so withholding it
+    would assume an absence rather than observe one,
+  And the first commit completes,
+  And the job's output shows the reachability guard as executed and passed,
+    with its result line reporting zero unreachable conditions,
+  And given a registry that additionally carries a gate whose activation
+    condition names a location that neither the consumer project nor the
+    vendored package can produce,
+  When the simulation attempts the adopter's first commit,
+  Then that commit is blocked by the reachability guard,
+  And the job fails and names the reachability guard as the blocker — the
+    negative case that establishes this guard can turn the job red,
+  And the build-drift guard may remain withheld under its own recorded reason
+    (KI-CG-017); this clause constrains only the reachability guard.
 depends_on:
   - BP-900h-6
 doc_links:
@@ -79,6 +101,12 @@ it_requirements:
     - "The negative case is mandatory and is the point. Without a fixture guard that turns the job red, this AC adds a step that cannot fail, which is the defect class this repository exists to prevent and would make the coverage claim worse than no claim."
     - "This is the detection half of BP-100k-4-ii. Landing detection without the gate correction leaves adopters blocked and the job red; landing the correction without detection lets the blocker return unobserved. Build both."
     - "Must follow the repo error-handling policy in any Python added: specific-exception try/except around file, JSON and subprocess I/O, log at WARNING or higher or re-raise; no bare or blind excepts."
+    - "REACHABILITY GUARD IS RUN (2026-09-28 clause) — withheld set. check-hook-trigger-reachability must leave the set the scratch-fixture narrowing withholds. That narrowing is _isolate_precommit_registry_for_scratch_fixture in scripts/ci/_use_install_step.py, and it is a KEEP-WHITELIST (_ALWAYS_KEEP_HOOK_IDS plus the check_identifier_uniqueness entry match), so the guard is withheld today by omission rather than by name: the change must make it KEPT, and every other deployed guard's kept/withheld outcome must be unchanged. check-build-drift stays withheld (KI-CG-017)."
+    - "REACHABILITY GUARD IS RUN — BP-900h-6-ii accounting preserved. Every guard still withheld must continue to be named in WITHHELD GUARDS with a recorded reason, and the verdict must stay qualified while anything is withheld. The shared _WITHHELD_REASON text must not go on citing a reason that no longer applies to the remaining withheld guards (it must not imply the reachability misfire, KI-CG-20260831-0713, is still why anything is withheld). The reachability guard must appear in the executed set, read from the commit's own captured output as today, never inferred from the registry."
+    - "REACHABILITY GUARD IS RUN — evidence comes from the commit's own run. The job output must carry the guard's RESULT line (total=N unreachable=0 ...) from the execution that happened inside the adopter's first commit, against the real deployed registry the build produced. A separate direct invocation of check_hook_trigger_reachability.py does not satisfy the clause. pre-commit suppresses the output of passing hooks by default, so this must be surfaced deliberately; parsing an absent line as a pass is a defect."
+    - "REACHABILITY GUARD IS RUN — negative case. The impossible-location fixture gate must be added to a copy of the deployed registry inside the scratch consumer only, never to templates/scripts/commit_guardian/commit_guardian.json or to the repo's own .pre-commit-config.yaml. The failing job must name the guard by its registered id (check-hook-trigger-reachability) or registered name (Check Hook Trigger Reachability (BP-100k-4)). A failure of the job for any other reason, such as a different guard blocking, does not satisfy the negative case."
+    - "Windows portability: every subprocess whose output is read as text (git, pre-commit install, the commit itself) must decode as UTF-8 explicitly (encoding='utf-8', with an explicit errors policy), never the platform default. None of the existing text=True subprocess.run calls in scripts/ci/_use_install_step.py pass an encoding today, so on a cp1252 Windows console pre-commit's output (including the RESULT line and dot-fill status lines) can fail to decode or mis-decode. Every path comparison (registry entry paths, tracked-file sets, the fixture gate's location) must use POSIX-normalised forms, never raw OS separators."
+    - "check-file-size ratchet (.py limit 400, measured 2026-09-28 with _file_size_ratchet.measure_current_length, the gate's own counting rule; wc -l reports 624 / 605 / 475 because the rule strips docstrings and block comments before counting). scripts/ci/_use_install_step.py = 399, 1 line of headroom: any net growth past 400 is a crossing refusal, so the clause must land at net <=+1 there or move logic into a new sibling module, as check_consumer_install.py already did to create this one. scripts/ci/check_consumer_install.py = 394, 6 lines of headroom: must stay <=400. templates/scripts/commit_guardian/check_hook_trigger_reachability.py = 306, within limit. No hook may be skipped to land this change."
 test_spec:
   - name: test_simulated_adopter_tracks_no_file_of_a_watched_kind
     target_dir: unit_tests/commit_guardian/
@@ -105,6 +133,16 @@ test_spec:
     framework: unittest
     type: behavioral
     description: "Whether the install's deployed files of a watched kind are tracked in the simulation project is stated in the job's output, so the fixture cannot silently drift back to tracking the package's own sources."
+  - name: test_reachability_guard_executes_and_passes_on_first_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "Driving scripts/ci/check_consumer_install.py --use-install over a real build, the narrowing in scripts/ci/_use_install_step.py (_isolate_precommit_registry_for_scratch_fixture) leaves check-hook-trigger-reachability out of WITHHELD GUARDS (check-build-drift may remain), the deployed templates/scripts/commit_guardian/check_hook_trigger_reachability.py is listed as executed and Passed in the commit's own output with RESULT unreachable=0, and the first commit completes."
+  - name: test_impossible_location_gate_blocks_commit_and_names_reachability_guard
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    description: "With the scratch consumer's registry additionally carrying a gate whose activation condition names a location neither the consumer nor the vendored package can produce, the adopter's first commit is blocked by check_hook_trigger_reachability.py, and scripts/ci/check_consumer_install.py exits non-zero naming check-hook-trigger-reachability as the blocker, proving the un-withheld guard can turn the job red."
 test_rationale: "This AC exists because a correctly-specified, done parent stayed green through a blocker it was written to catch. BP-900h-6 performs a real commit and fails on an adopter-hostile guard, and both properties held — the simulation simply never presented the condition, because its adopter tracks the package's own deployed Python and every language-conditional guard therefore finds what it is looking for. So the assertions here are about the FIXTURE's shape, and each is made by inspecting the prepared project and the job's emitted record rather than by reading the workflow file: a job that declares the right intent and prepares the wrong tree is source-shaped exactly like one that does neither. The adopter-hostile-guard descriptor is load-bearing per CLAUDE.md's rule that a gate must be shown capable of failing; without it this reduces to a step that always passes, which is how the parent came to be green over a live blocker."
 delivers_to: null
 expects_from:
@@ -112,10 +150,13 @@ expects_from:
   contract: "The use-the-install simulation that attempts a first commit and fails on a guard blocking over what a new project legitimately lacks — whose adopter fixture this edge case requires to vary in language shape, so that clause is actually exercised."
 origin_agent: BrainCandy
 created: 2026-09-07
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-09-28"
+    reason: "Added the REACHABILITY GUARD IS RUN, NOT WITHHELD clause as a regression guard after closing blocker KI-CG-20260831-0713. Re-measured 2026-09-28 in a real consumer install built by build.py from origin/main (package vendored at leafcutter-ai/, consumer tracking nothing, real registry, check run directly): exit 0, RESULT total=69 unreachable=0 exempt=6 nothing_to_match=1 — resolved by BP-100k-4-iii counting untracked stageable paths. The CI consumer simulation still withholds check-hook-trigger-reachability as known to misfire, so a returning misfire would go unobserved; BP-900h-6-ii only requires withheld guards to be named, not that this one runs. check-build-drift may stay withheld under KI-CG-017. Existing test_spec entries left for IT PO reconciliation."
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target: pipeline
 risk_surface: contract_boundary
-notes: "Detection half of the KI-CG-20260831-0713 pair; the gate-side correction is BP-100k-4-ii. The parent BP-900h-6 and its two edge cases are all work_status done, and their criteria are genuinely met — the defect they missed lies outside what they specify, which is why this is filed as a new constraint rather than as a reopening. Measured context on 2026-09-07: the reachability gate is always_run true with pass_filenames false, so it runs on every adopter commit, and two registered conditions select Python files. A fresh TypeScript consumer exits 1 with total=52 unreachable=27 exempt=9."
+notes: "Detection half of the KI-CG-20260831-0713 pair; the gate-side correction is BP-100k-4-ii. The parent BP-900h-6 and its two edge cases are all work_status done, and their criteria are genuinely met — the defect they missed lies outside what they specify, which is why this is filed as a new constraint rather than as a reopening. Measured context on 2026-09-07: the reachability gate is always_run true with pass_filenames false, so it runs on every adopter commit, and two registered conditions select Python files. A fresh TypeScript consumer exits 1 with total=52 unreachable=27 exempt=9. That measurement is superseded: the 2026-09-28 re-measurement recorded in amended_by (exit 0, unreachable=0) is the current state."

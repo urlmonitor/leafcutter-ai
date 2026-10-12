@@ -1,0 +1,211 @@
+id: KM-400a-1-vii
+title: Document metadata preserves authored fields and prose without duplicating other native types
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+priority: medium
+work_status: done
+parent: KM-400a-1
+criteria: |
+  Given an authored Document has title, description, type, status, created, last_updated and components
+  And an architecture document may also declare flight_level, diagram_type, parent, children and labeled relationship references
+  And a UI context document may declare nested stack and data_layer values
+  When Document metadata is exposed from the selected source revision
+  Then the complete authored frontmatter is available, including conditional architecture fields and extension fields
+  And labels, order and path values in related_docs or related_code remain associated
+  And nested data-layer values, explicit null parent, empty children and false flags retain their source meanings
+  And the exact body remains separately available without interpreting arbitrary prose as structured metadata
+  And a known issue's prose status cannot overwrite the document lifecycle status
+  And derived document-family or display-title information cannot replace authored type or invent missing title or description fields
+
+  Given a legacy prose-only memory document, an ADR, a generated agent card and a generated product-truth view
+  When Document records are selected
+  Then the legacy memory document remains available with its original body and absent frontmatter fields
+  And artifacts owned by other native types and generated views do not appear as duplicate Documents
+  And malformed frontmatter on an admitted Document is reported explicitly rather than treated as absent
+depends_on: [KM-400a-1]
+doc_links:
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Document.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Document.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: docs/reference/artifact-knowledge-graph-data-map.md
+  relationship: context
+  status: exists
+- path: reports/native-fields/review-Document.json
+  relationship: context
+  status: exists
+- path: reports/native-fields/code-Document.json
+  relationship: context
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Shared native-reader, lossless property mapping, immutable publication and component diagram boundary.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_document.py::test_document_preserves_complete_frontmatter_and_body
+- tests/knowledge/test_native_document.py::test_document_legacy_memory_identity_and_safe_display_fallback
+- tests/knowledge/test_native_document.py::test_document_excludes_owned_views_without_dropping_authored_guides
+- tests/knowledge/test_native_document.py::test_document_configured_surfaces_and_product_manifest_views
+- tests/knowledge/test_native_document.py::test_document_malformed_frontmatter_fails_explicitly
+- tests/knowledge/test_native_document.py::test_document_refuses_invalid_or_escaping_surface
+- tests/knowledge/test_native_document.py::test_document_missing_roots_is_empty
+- tests/knowledge/test_native_document.py::test_document_real_corpus_full_metadata_fidelity
+- tests/knowledge/test_native_metadata_integration.py::test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved
+implemented_by:
+  - knowledge/native_types/document.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective type-specific refinement of KM-400a-3-i. Current document-authoring
+  requirements are not universal extraction prerequisites: the reviewed corpus includes
+  legacy prose-only documents. Reference, how-to and component-diagram documentation
+  obligations remain inherited from KM-400a; this refinement specifies source fidelity,
+  not completion of new documentation. IT PO review and criterion-specific test links are now recorded; fresh execution remains separately evidenced.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Configured document surfaces and resolved source paths remain bounded to the selected snapshot; unreadable or
+  malformed admitted records must not silently become empty metadata.
+- Specialized source ownership and generated-view exclusions remain deterministic so the same source is not counted
+  again as a generic Document.
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_document_preserves_complete_frontmatter_and_body
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Document preserves complete frontmatter and body.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_legacy_memory_identity_and_safe_display_fallback
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Document legacy memory identity and safe display fallback.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_excludes_owned_views_without_dropping_authored_guides
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Document excludes owned views without dropping authored guides.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_configured_surfaces_and_product_manifest_views
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Document configured surfaces and product manifest views.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_malformed_frontmatter_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Document malformed frontmatter fails explicitly.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_refuses_invalid_or_escaping_surface
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Document refuses invalid or escaping surface.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_missing_roots_is_empty
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Document missing roots is empty.
+  covers:
+  - KM-400a-1-vii
+- name: test_document_real_corpus_full_metadata_fidelity
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Document real corpus full metadata fidelity.
+  covers:
+  - KM-400a-1-vii
+- name: test_scoped_native_import_keeps_declared_component_filter_and_reports_unresolved
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: Document fixture retains declared component filtering and reports unresolved membership.
+  covers:
+  - KM-400a-1-vii
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

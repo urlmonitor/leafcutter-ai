@@ -1,0 +1,57 @@
+{
+  "run_id": "run-be1b78c7b929407c",
+  "interaction_id": "int-ca4359d1c16445bf",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:/root/needs_llm_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "For KM-500c-2, what must tests demonstrate?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "test_spec"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The literal question selects KM-500c-2 and asks for its prescribed testing obligations. The supplied prior note has no authority to replace that target with KM-500c-1. Only the named criterion's test_spec is indispensable.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

@@ -470,8 +470,9 @@ def _get_ticket_scope(rel_path: str, repo_root: str) -> set[str] | None:
     ticket is status: done and declares a ``files_touched`` key.
 
     Wires the ``is_docs_only_or_config_only_ticket`` guard explicitly (AC
-    BP-1100e-1-iii): a ticket whose declared files are all non-source returns
-    an empty set, contributing no source paths to the reconciliation union.
+    BP-1100e-1-iii): a ticket whose declared files are all non-source
+    contributes no source paths OF ITS OWN, but still contributes whatever it
+    declared in ``out_of_scope``.
 
     Args:
         rel_path: Repo-relative path to the staged ticket .md file.
@@ -479,9 +480,10 @@ def _get_ticket_scope(rel_path: str, repo_root: str) -> set[str] | None:
 
     Returns:
         set[str] with normalised declared paths when the ticket is done and
-        has a parseable scope; empty set for docs-only tickets; None when the
-        ticket should be skipped (not done, key absent, read error, or empty
-        scope after parsing).
+        has a parseable scope; for a docs-only ticket, its normalised
+        ``out_of_scope`` set, which is empty when it declared none; None when
+        the ticket should be skipped (not done, key absent, read error, or
+        empty scope after parsing).
     """
     abs_path = Path(repo_root, rel_path) if repo_root else Path(rel_path)
 
@@ -511,12 +513,12 @@ def _get_ticket_scope(rel_path: str, repo_root: str) -> set[str] | None:
     if not files_touched and not out_of_scope:
         return None  # declared key present but resolves to empty — skip
 
-    # Explicit docs/config-only guard (AC BP-1100e-1-iii): a ticket whose
-    # declared files are all non-source has no source paths to add to the
-    # reconciliation union.  Source changes are still caught because they are
-    # absent from the (empty) union declared scope.
+    # Docs/config-only guard (AC BP-1100e-1-iii): such a ticket contributes no
+    # source paths of its own, but its out_of_scope entries still stand -- that
+    # field answers "changed, but not mine" (BP-1100e-1-iii amended). Narrowing,
+    # not removal: declaring nothing out of scope still yields an empty set.
     if is_docs_only_or_config_only_ticket(files_touched):
-        return set()
+        return {_normalise_path(p) for p in out_of_scope}
 
     return {_normalise_path(p) for p in files_touched + out_of_scope}
 

@@ -1,0 +1,123 @@
+id: BO-2400a-1-ii
+components:
+  - build_orchestration
+title: "A command output too large to relay is handed over as a file in the run's workspace, named by path and hash, and checked by whoever reads it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the lane states, in one place, a size limit for command output relayed verbatim
+    — call it L bytes,
+  And a command step run by the command-step-runner (BO-2400a-1-i) whose output is
+    larger than L — for example the resolved connected set of a large subtree, or the
+    assembled context bundle,
+  When the command-step-runner replies,
+  Then the reply does not carry the output itself: it carries the absolute path of a file
+    inside the run's own workspace that holds the output byte-for-byte, the length of
+    that file in bytes, and a hash of those bytes stated by the command that produced
+    them,
+  And a command whose output is exactly L bytes or fewer is still returned verbatim, as
+    BO-2400a-1-i requires, so the two outputs either side of the limit take different
+    forms.
+
+  Given a reply that hands over a file by path and hash,
+  When the workflow passes it on,
+  Then the workflow relays only the path, the length and the hash, because the workflow
+    engine cannot read files itself,
+  And the workflow never claims to have seen, checked or forwarded the file's contents.
+
+  Given an agent that receives a path and hash as its input — the next command step, or a
+    context-carrying agent receiving the bundle,
+  When it reads the file,
+  Then it uses the contents only when the hash of the bytes it read equals the stated
+    hash,
+  And when the file is missing, a different length, or has a different hash, it uses
+    nothing and returns a decline naming the path, the expected hash and what it found,
+    which the run reports as a declined step (BO-2400f-5-iii).
+
+  Given a run that handed over one or more files this way,
+  When the run commits and opens its pull request,
+  Then none of those hand-over files is part of the commit or the pull request.
+depends_on: [BO-2400a-1, BO-2400a-1-i]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The verbatim reply contract this record extends for outputs above the limit."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400c-1-viii.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires the lane to compare the bundle it received against a producer-stated value. With a path hand-off the lane never holds the text, so that comparison moves to the reader. The two records must be reconciled before either is built on top of the other."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400c-1-x.yaml
+    relationship: related
+    status: exists
+    relevance: "A reply that carries only part of the output is reported as a shortfall. A path hand-off is one way to remove that ceiling; the length field keeps a shortfall detectable."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "The workflow body reaches nothing outside itself except through agent(); it cannot read a file."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    PROMOTION BLOCKER. Reconcile with BO-2400c-1-viii (approved, todo) first. With a
+    path hand-off the lane never holds the bundle text, so c-1-viii's lane-side
+    comparison against the producer-stated value has to move to the reader. Either
+    c-1-viii is amended to allow a reader-side comparison or this record is reshaped.
+    Neither is built on top of the other until that is decided.
+  - >-
+    Mixed surface. The lane and the producing commands are python-coder's work. The
+    reply form in the command-step-runner template is llm-expert's. Split it at
+    promotion, before a test contract is written.
+  - >-
+    The limit L is stated once, in one lane-level declaration, and every step reads it
+    from there. The hash algorithm is stated by the producing command, and the reader
+    rejects an algorithm it does not recognise rather than skipping the check.
+  - >-
+    Hand-over files live in a run-scoped location inside the workspace that the commit
+    and PR steps can never pick up, because the location is excluded mechanically and
+    not by instruction. They are removed or left untracked at the end of the run.
+  - >-
+    A reader's integrity decline uses BO-2400f-5-iii's declined_step form, adding the
+    path, the expected hash and the hash it found.
+  - >-
+    The test contract is deferred until promotion. The record stays draft, and the
+    approval gate requires test_spec only on approved records.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-1-i
+  contract: "A registered command-step-runner whose verbatim result {command, workspace, exit_status, stdout, stderr} this record extends with a hand-over form {path, length, hash} for outputs above the lane's limit."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  USER DECISION 2026-09-27 (round 3): stdout stays verbatim for now (BO-2400a-1-i). This is
+  the follow-up for large outputs, drafted now and deliberately OUTSIDE the current build's
+  dependency chain: no record in the BO-2400f-5 / BO-2400f-3-ii / BO-2400f-10-iii set depends
+  on it. Build it only after the user promotes it.
+
+  THE WORKFLOW ENGINE CANNOT READ FILES. Its only awaited primitives are agent(), parallel()
+  and prompt() (docs/reference/workflow-constraints.md). So a path hand-off moves the reading
+  AND the integrity check to the agent that consumes the file. That is why the reader, not the
+  lane, checks the hash here — and why this record conflicts in shape with BO-2400c-1-viii,
+  which has the lane compare the bundle text itself. Reconcile before building.
+
+  ONE AGENT. Assigned python-coder for the lane and the producing commands. If the reply form
+  must also change in the command-step-runner template, that half is llm-expert's surface and
+  the IT PO may split it.
+
+  The limit L is left to the IT PO; the criterion only requires one stated value and the two
+  forms either side of it.

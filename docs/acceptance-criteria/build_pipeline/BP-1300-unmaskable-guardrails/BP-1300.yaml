@@ -33,7 +33,7 @@ origin_agent: product-owner-v3
 created: 2026-07-07
 amended_by: []
 superseded_by: null
-covered_by: [BP-1300a, BP-1300b, BP-1300c]
+covered_by: [BP-1300a, BP-1300b, BP-1300c, BP-1300e]
 implemented_by: []
 notes: |
   Systemic gap 5. Placed as a new build-pipeline L0 rather than under BP-100

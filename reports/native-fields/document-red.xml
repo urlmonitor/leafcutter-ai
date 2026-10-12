@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="12" time="0.540" timestamp="2026-10-02T08:42:04.839715+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_document" name="test_document_preserves_complete_frontmatter_and_body" time="0.014"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_preserves_comple0')
+
+    def test_document_preserves_complete_frontmatter_and_body(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: criterion
+        from knowledge.native_properties import decode, encode
+    
+        metadata = {
+            "id": "authored-id", "title": "Source title", "type": "how-to",
+            "status": "active", "created": date(2026, 9, 1),
+            "last_updated": "2026-09-02", "description": "Contains --- here",
+            "current": "authored", "components": [], "source_ticket": None,
+            "related_docs": ["docs/a.md", {"Label": "docs/b.md"}],
+            "stack": {"framework": "native", "css": "none"},
+            "data_layer": {"mock_toggle": {"production_lock": True}, "future": [{"x": 7}]},
+        }
+        body = "\n# Another title\n\n**Status:** open\n\n```yaml\nx: 1\n```\n"
+        _write(tmp_path, "docs/known-issues/a.md", metadata, body)
+&gt;       (record,) = _extract(tmp_path)
+                    ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_legacy_memory_identity_and_safe_display_fallback" time="0.014"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_legacy_memory_id0')
+
+    def test_document_legacy_memory_identity_and_safe_display_fallback(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        body = "```md\n# Example title\n```\n\n# Real title\ntext\n"
+        _write(tmp_path, "memory/same.md", None, body)
+        _write(tmp_path, "docs/sub/same.md", {"title": None, "description": []}, "plain\n")
+        _write(tmp_path, "memory/nested/ignored.md")
+&gt;       by_id = {r.native_id: r for r in _extract(tmp_path)}
+                                         ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:68: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_excludes_owned_views_without_dropping_authored_guides" time="0.016"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_excludes_owned_v0')
+
+    def test_document_excludes_owned_views_without_dropping_authored_guides(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        excluded = ["docs/architecture/adrs/ADR-001-a.md", "docs/agents/cards/a.md",
+                    "docs/glossary.md", "docs/roadmap.md", "docs/changelog/a.md",
+                    "docs/elsewhere-card.md"]
+        included = ["docs/architecture/adrs/README.md", "docs/architecture/components/a.md",
+                    "docs/agents/documentation/reference-author.md", "docs/agents/README.md",
+                    "docs/product-truth/README.md", "docs/acceptance-criteria/guide.md"]
+        for name in excluded + included:
+            _write(tmp_path, name, {"type": "card"} if name.endswith("elsewhere-card.md") else {})
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_configured_surfaces_and_product_manifest_views" time="0.009"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_configured_surfa0')
+
+    def test_document_configured_surfaces_and_product_manifest_views(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: criterion
+        _config(tmp_path, {"docs": {"path": "manual/"}, "adrs": {"path": "manual/decisions/"},
+                           "glossary": {"path": "manual/words.md"},
+                           "roadmap": {"path": "manual/plan.json"},
+                           "components": {"path": "manual/parts/"}})
+        for name in ["manual/decisions/ADR-1.md", "manual/words.md", "manual/plan.md",
+                     "manual/parts/one.md", "manual/flow-guide.md", "docs/ignored.md"]:
+            _write(tmp_path, name)
+        product = tmp_path / "manual/product-truth"
+        (product / "flows").mkdir(parents=True)
+        (product / "flows/one.flow.json").write_text("{}", encoding="utf-8")
+        (product / "index.json").write_text(json.dumps({"artifacts": [
+            {"type": "flow", "path": "flows/one.flow.json"}]}), encoding="utf-8")
+        _write(tmp_path, "manual/product-truth/flows/one.md")
+        _write(tmp_path, "manual/product-truth/flows/authored.md", body="Generated content guide\n")
+&gt;       records = _extract(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_malformed_frontmatter_fails_explicitly[---\ntitle: missing close\n]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_malformed_frontm0')
+contents = '---\ntitle: missing close\n'
+
+    @pytest.mark.parametrize("contents", ["---\ntitle: missing close\n", "---\n- a\n---\n", "---\ntitle: [\n---\n"])
+    def test_document_malformed_frontmatter_fails_explicitly(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _write(tmp_path, "docs/invalid.md")
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError, match="frontmatter"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_malformed_frontmatter_fails_explicitly[---\n- a\n---\n]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_malformed_frontm1')
+contents = '---\n- a\n---\n'
+
+    @pytest.mark.parametrize("contents", ["---\ntitle: missing close\n", "---\n- a\n---\n", "---\ntitle: [\n---\n"])
+    def test_document_malformed_frontmatter_fails_explicitly(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _write(tmp_path, "docs/invalid.md")
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError, match="frontmatter"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_malformed_frontmatter_fails_explicitly[---\ntitle: [\n---\n]" time="0.005"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_malformed_frontm2')
+contents = '---\ntitle: [\n---\n'
+
+    @pytest.mark.parametrize("contents", ["---\ntitle: missing close\n", "---\n- a\n---\n", "---\ntitle: [\n---\n"])
+    def test_document_malformed_frontmatter_fails_explicitly(tmp_path, contents):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: failure
+        path = _write(tmp_path, "docs/invalid.md")
+        path.write_text(contents, encoding="utf-8")
+        with pytest.raises(ValueError, match="frontmatter"):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_refuses_invalid_or_escaping_surface[entry0]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_refuses_invalid_0')
+entry = {'path': '../outside'}
+
+    @pytest.mark.parametrize("entry", [{"path": "../outside"}, {"path": 4}, []])
+    def test_document_refuses_invalid_or_escaping_surface(tmp_path, entry):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _config(tmp_path, {"docs": entry})
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_refuses_invalid_or_escaping_surface[entry1]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_refuses_invalid_1')
+entry = {'path': 4}
+
+    @pytest.mark.parametrize("entry", [{"path": "../outside"}, {"path": 4}, []])
+    def test_document_refuses_invalid_or_escaping_surface(tmp_path, entry):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _config(tmp_path, {"docs": entry})
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_refuses_invalid_or_escaping_surface[entry2]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_refuses_invalid_2')
+entry = []
+
+    @pytest.mark.parametrize("entry", [{"path": "../outside"}, {"path": 4}, []])
+    def test_document_refuses_invalid_or_escaping_surface(tmp_path, entry):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+        _config(tmp_path, {"docs": entry})
+        with pytest.raises(ValueError):
+&gt;           _extract(tmp_path)
+
+tests\knowledge\test_native_document.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_missing_roots_is_empty" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3006/test_document_missing_roots_is0')
+
+    def test_document_missing_roots_is_empty(tmp_path):
+        # covers: KM-400a-3-i
+        # type: unit
+        # angle: boundary
+&gt;       assert _extract(tmp_path) == []
+               ^^^^^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase><testcase classname="tests.knowledge.test_native_document" name="test_document_real_corpus_full_metadata_fidelity" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.document'">def test_document_real_corpus_full_metadata_fidelity():
+        # covers: KM-400a-3-i
+        # type: integration
+        # angle: real_artifact
+        from knowledge.native_types.common import frontmatter
+    
+        root = Path(__file__).resolve().parents[2]
+&gt;       records = _extract(root)
+                  ^^^^^^^^^^^^^^
+
+tests\knowledge\test_native_document.py:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\knowledge\test_native_document.py:13: in _extract
+    return importlib.import_module("knowledge.native_types.document").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+name = 'knowledge.native_types.document'
+import_ = &lt;function _gcd_import at 0x00000220937EBE20&gt;
+
+&gt;   ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.document'
+
+&lt;frozen importlib._bootstrap&gt;:1335: ModuleNotFoundError</failure></testcase></testsuite></testsuites>

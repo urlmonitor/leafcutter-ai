@@ -161,6 +161,7 @@ flowchart TD
 - BP-600d-4-i: Quick-fix opens a PR when none exists, only on explicit user confirmation
 - BP-600e-1: Quick-fix workflow warns when the fix modifies more than the target file
 - BP-600e-1-i: Quick-fix workflow counts only intentional source changes, not auto-formatted files
+- BP-600e-1-ii: Quick-fix scope guard ignores the workflow's own artifacts (AC YAMLs, test file)
 - BP-600e-2: Quick-fix workflow warns when red-phase test reveals a deeper root cause
 - BP-600e-3: Quick-fix workflow preserves progress when escalating to full build pipeline
 - BP-600e-3-i: Quick-fix workflow does not leave partial commits when escalating

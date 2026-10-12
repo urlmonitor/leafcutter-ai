@@ -2,72 +2,95 @@
   "_comment": "Single declared entry_kind vocabulary (AC INF-400c-5). Both the route-knowledge classifier (templates/skills/route-knowledge/SKILL.md taxonomy table) and the harvester (scripts/knowledge/harvest_learnings.py _KNOWN_ENTRY_KINDS) must reconcile to exactly this member set. destination_pattern is advisory routing metadata used by scripts/knowledge/emit_knowledge.py to suggest candidates on rejection; a null value means the destination is caller-determined and has no fixed path pattern.",
   "members": {
     "adr": {
+      "description": "A recorded architecture decision and its rationale.",
       "destination_pattern": "docs/architecture/adrs/ADR-NNN-<slug>.md"
     },
     "agent-frontmatter": {
+      "description": "Machine-readable configuration of an agent role.",
       "destination_pattern": "templates/agents/<name>.md"
     },
     "architecture-doc": {
+      "description": "A description of system components and their relationships.",
       "destination_pattern": "docs/architecture/<name>.md"
     },
     "claude-md": {
+      "description": "Project-wide operating instructions for the coding assistant.",
       "destination_pattern": "CLAUDE.md"
     },
     "claude-md-inline": {
+      "description": "A concise instruction maintained directly in the project guidance.",
       "destination_pattern": "CLAUDE.md"
     },
     "claude-md-toc": {
+      "description": "A linked instruction document indexed from the project guidance.",
       "destination_pattern": "docs/<subdir>/<name>.md"
     },
     "code-comment": {
+      "description": "An explanation maintained next to the implementation it describes.",
       "destination_pattern": null
     },
     "explanation": {
+      "description": "An explanation of project concepts and their rationale.",
       "destination_pattern": "docs/explanation/<name>.md"
     },
     "explanation-doc": {
+      "description": "An explanatory document about a project concept.",
       "destination_pattern": "docs/explanation/<name>.md"
     },
     "glossary": {
+      "description": "An authored definition of project terminology.",
       "destination_pattern": "docs/glossary.md"
     },
     "how-to": {
+      "description": "A task-oriented procedure for completing a specific operation.",
       "destination_pattern": "docs/how-to/<name>.md"
     },
     "memory-project": {
+      "description": "Persistent context about the project and its current work.",
       "destination_pattern": "memory/project_<topic>.md"
     },
     "memory-reference": {
+      "description": "A persistent pointer to information used in future work.",
       "destination_pattern": "memory/reference_<topic>.md"
     },
     "memory-user": {
+      "description": "A persistent user preference or correction for future assistance.",
       "destination_pattern": "memory/feedback_<topic>.md"
     },
     "per-agent-memory": {
+      "description": "Persistent guidance specific to one agent role.",
       "destination_pattern": null
     },
     "per-folder-readme": {
+      "description": "Local guidance describing a directory and its contents.",
       "destination_pattern": "<folder>/README.md"
     },
     "reference": {
+      "description": "A lookup-oriented record of authoritative project details.",
       "destination_pattern": "docs/reference/<name>.md"
     },
     "reference-doc": {
+      "description": "A reference document for looking up project facts.",
       "destination_pattern": "docs/reference/<name>.md"
     },
     "retrospective": {
+      "description": "Recorded lessons from completed project work.",
       "destination_pattern": "docs/retrospectives/<name>.md"
     },
     "settings-json": {
+      "description": "Machine-readable runtime or tool settings.",
       "destination_pattern": "config/settings.json"
     },
     "skill-context": {
+      "description": "Reusable knowledge needed by a particular skill.",
       "destination_pattern": null
     },
     "skills-config": {
+      "description": "Project-specific configuration consumed by installed skills.",
       "destination_pattern": "config/skills_config.json"
     },
     "ticket-body": {
+      "description": "Implementation context maintained with its tracked work item.",
       "destination_pattern": "tickets/<status>/<ticket>.md"
     }
   }

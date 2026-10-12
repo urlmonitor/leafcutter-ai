@@ -239,6 +239,7 @@ from build_phases_deploy_failures import (  # noqa: E402, F401  # re-exported
 from build_phases_local_change import (  # noqa: E402, F401  # re-exported for callers
     set_local_change_baseline,
     announce_if_local_change_replaced,
+    target_locally_changed,
 )
 from build_precommit import (  # noqa: E402, F401  # re-exported for callers
     build_precommit_config,
@@ -487,7 +488,7 @@ def _compute_phase_mappings(
 #   (#EPIC-TruthfulProjectRecord/04)
 # - 2026-09-13 [python-coder/BP-1000a-7]: Fixed _write()'s compare-before-write
 #   guard and the write itself to operate on raw UTF-8 bytes instead of text
-#   mode. Previously target.write_text(content, encoding="utf-8") let Python's
+#   mode. Previously target.write_text(content, encoding="utf-8", newline="\n") let Python's
 #   text-mode newline translation widen every LF in content to os.linesep, so
 #   on Windows every deployed text artifact landed CRLF while its source
 #   template stayed LF, producing check-hook-parity / check-output-drift
@@ -506,4 +507,9 @@ def _compute_phase_mappings(
 #   raise UnicodeDecodeError. Landing this rewrites every previously-CRLF-
 #   deployed artifact once, on the next build, which is expected.
 #   (#BP-1000a-7)
+# - 2026-09-23 [python-coder/BP-1500g-2-i]: Re-exported the new
+#   target_locally_changed predicate from build_phases_local_change.py so
+#   build_phases_agents_skills.py's build_skills() can reach it as
+#   _bp.target_locally_changed, matching every other cross-module helper this
+#   file already re-exports for that call site. (#BP-1500g-2-i)
 # ====================================================================

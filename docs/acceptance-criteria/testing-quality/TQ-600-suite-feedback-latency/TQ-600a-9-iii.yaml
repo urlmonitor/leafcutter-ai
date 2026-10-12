@@ -1,0 +1,229 @@
+id: TQ-600a-9-iii
+components:
+  - testing_quality
+  - build_pipeline
+title: "Four test classes share one finished install as four private copies, and the isolation their author wrote down is demonstrated rather than assumed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the installer-announcement file: four test classes, eight real builds, two per
+    class — a first install produced in a shared setup step and a second install each
+    class runs after its own mutation — costing about 107 s, of which about 39 s is the
+    three redundant first installs,
+  And the file's own written decision, which this change revises and must therefore
+    answer rather than ignore: it records that the first install is never shared or
+    reused across tests so that no test's mutation or assertion can be order-dependent
+    on another test's run,
+  And the reason the file's layout cannot simply be made cheaper some other way: it
+    builds a synthetic package root deliberately, because a target directory pointed
+    away from the package root makes the output-mapping computation fail and produce an
+    empty mapping, which is the very thing the criterion inspects,
+  And the distinction that answers the author's concern: the proposal is not to share
+    one install between classes, but to produce one install and give each class its own
+    copy of the finished result before it mutates anything — so nothing mutable is
+    shared and the stated order-dependency cannot arise,
+  When the first install is produced once and each class receives its own copy of it
+    before mutating and running its second install,
+  Then the file starts five real builds where it started eight, and all four classes
+    still pass,
+  And each class's copy is independent: a mutation made by one class is absent from
+    every other class's copy,
+  And the four classes reach the same verdicts when run in declaration order, in
+    reverse order, and each one alone — which is the author's stated concern, now
+    checked by execution instead of guaranteed by repetition,
+  And each class still fails when the announcement property it alone names is broken,
+    so the shared origin of the copies has not made any class's assertion true by
+    construction,
+  And the synthetic package root each class builds against still has its package root
+    and its target root coinciding, so the output-mapping computation this file exists
+    to inspect is still the one being exercised.
+depends_on:
+  - TQ-600a-9
+doc_links:
+  - path: unit_tests/build_guards/test_acd_2100d_2_i.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE and subject. Its docstring explains why the self-hosting layout is
+      mandatory rather than an oversight, and its shared base class carries the written
+      isolation decision this record revises. Read both before changing either.
+  - path: unit_tests/build_guards/test_bp_100k_2.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns the synthetic full-package helper this file already uses. The helper is not
+      changed here; it is the reason the file is already minimally sized and the cost
+      is purely the number of installs.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-4-per-item-verdicts.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The per-item verdict set this file's row belongs to, and the source of the copy-
+      not-share framing that answers the author's isolation objection.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Owns `emit_execution_signal` (line 100), the counter the five-builds-not-eight
+      descriptor reads. This file's `_run_build()` at line 115 does not call it today.
+  - path: unit_tests/suite_performance/_test_helpers_tq_600a_5.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      `run_child_session()` at line 44. Seven child sessions are needed here — three
+      arrangements plus four discrimination runs — and each must be its own process.
+declared_files:
+  - path: unit_tests/build_guards/test_acd_2100d_2_i.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THIS RECORD REVISES A WRITTEN AUTHOR DECISION AND MUST NOT BE BUILT WITHOUT THE
+    OWNER OF ACD-2100d-2-i AGREEING TO THE REVISION. The file states in its own source
+    that the first install is never shared or reused, for a stated reason. The
+    copy-not-share technique is believed to resolve that reason completely, and the
+    order-independence criterion above is the proof — but the belief is the reviser's,
+    not the author's. Obtain the agreement before the change, and if it is refused,
+    this record is withdrawn and about 39 s stays on the table. That is the correct
+    outcome, not a failure.
+  - >-
+    COPY THE FINISHED INSTALL, DO NOT SHARE IT. The entire answer to the author's
+    objection is that nothing mutable is shared. A shared directory with a convention
+    about who may write to it reintroduces exactly the order-dependency the decision
+    was written to prevent.
+  - >-
+    DO NOT CHANGE THE SYNTHETIC PACKAGE SHAPE. The package root and target root
+    coincide on purpose; pointing the target directory elsewhere makes the
+    output-mapping computation fail and produces the empty mapping the criterion is
+    looking for, which would make the file pass for the wrong reason.
+  - >-
+    THE THREE-ARRANGEMENT RUN IS THE DELIVERABLE, NOT A NICETY. Before this change the
+    isolation was guaranteed by never sharing; after it, isolation is a property of the
+    copying. A property has to be executed to be believed.
+  - >-
+    THE AGREEMENT IS A PRECONDITION ON STARTING, AND THE IMPLEMENTER CANNOT GRANT IT TO
+    THEMSELVES. The first requirement above makes this record conditional on the owner
+    of ACD-2100d-2-i agreeing. That agreement is a human decision recorded outside this
+    store; an implementing agent that reads the reasoning, finds it convincing and
+    proceeds has not obtained it. If no recorded agreement is in hand when this record
+    reaches a coder, the correct action is to stop and report blocked — not to build
+    it and let review catch the question.
+  - >-
+    `_run_build()` AT LINE 115 IS THIS FILE'S OWN BUILDER AND IS WHERE THE COUNT COMES
+    FROM. It takes `(pkg_root, workspace)` and calls subprocess.run at line 136. Emit
+    `emit_execution_signal` from scripts/suite_performance/_shared_layout_coordination.py
+    there. Note the signature already separates package root from workspace, which is
+    what makes the coinciding-roots descriptor checkable from the emitted record rather
+    than by re-reading the call site.
+  - >-
+    DO NOT TOUCH THE SYNTHETIC-PACKAGE HELPER. This file loads
+    `_build_synthetic_full_package` from unit_tests/build_guards/test_bp_100k_2.py by
+    FILE PATH under a unique module name (lines 75-113), freshly per use. That loader
+    is deliberate and TQ-600a-10 is simultaneously adopting the same helper for a
+    different file — a change to it lands in both records at once and neither one's
+    tests would attribute the breakage correctly.
+  - >-
+    FOUR RUNS AND THREE ARRANGEMENTS MEAN SEVEN CHILD SESSIONS, NOT SEVEN IN-PROCESS
+    LOOPS. Same reasoning as TQ-600a-9-i: a reversed arrangement that reuses the
+    forward arrangement's memoised install tests nothing about order, and four
+    discrimination runs sharing one install inherit each other's breakage.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-9
+    contract: >-
+      The produce-once-then-copy mechanism, applied here to a completed install rather
+      than to a build artifact.
+test_spec:
+  - name: test_tq600a_9_iii_the_installer_file_starts_five_builds_not_eight
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session() over unit_tests/build_guards/test_acd_2100d_2_i.py, no --splits, LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG set"
+    description: >-
+      Run the file in ONE child session with the execution log set, and count the
+      `deploy_executed` lines emitted by `_run_build()` at line 115. The count is 5, and
+      all four classes pass.
+  - name: test_tq600a_9_iii_one_classs_mutation_is_absent_from_every_other_copy
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the four classes are handed one shared directory instead of four copies, so a mutation by one class is visible to the others — this is the author's recorded objection, and the test exists to answer it by execution"
+      - "the copies are made by symlink or by reference rather than by content, so a write through one reaches the others"
+    description: >-
+      Mutate the copy one class holds, then inspect the copies the other three hold.
+      None carries the mutation.
+  - name: test_tq600a_9_iii_the_four_classes_agree_across_three_run_arrangements
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "run_child_session(), one child pytest session per arrangement (declaration order, reverse, each class alone)"
+    description: >-
+      Declaration order, reverse order, and each class alone, in SEPARATE child
+      sessions so no arrangement inherits another's memoised install. Identical
+      verdicts in all three. THIS IS THE DESCRIPTOR THAT DISCHARGES THE WRITTEN
+      DECISION; without it the revision rests on an argument rather than a result.
+  - name: test_tq600a_9_iii_each_class_still_fails_on_its_own_broken_announcement
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "breaking one class's announcement property leaves that class green, because the copied install supplies the property regardless of the behaviour under test"
+      - "breaking one class's announcement property reddens more than one class, which means the four runs shared an install rather than each taking its own copy"
+    description: >-
+      Four runs, each in its own child session, each breaking only the announcement
+      property one class names. Exactly one class is red in each run.
+  - name: test_tq600a_9_iii_the_package_root_and_target_root_still_coincide
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "the target root is pointed at a sibling of the package root, which makes the output-mapping computation fail and return an empty mapping — the exact condition this file inspects, so the file would pass for the wrong reason"
+    description: >-
+      Read the emitted install invocations — `_run_build()` takes package root and
+      workspace as separate arguments, so the two are recoverable from the record — and
+      assert the two roots resolve to the same tree.
+test_rationale: |
+  This file is the one place in the set where the cheap change contradicts something a
+  previous author deliberately wrote down. The descriptor set is therefore built around
+  discharging that objection in its own terms rather than around the saving: the
+  independence descriptor and the three-arrangement descriptor together say precisely
+  what the author's sentence says, and say it by running rather than by construction.
+
+  The coinciding-roots descriptor is here because this file's expensive shape is
+  mandatory, not accidental. A future reader optimising it will see a self-hosting
+  build and reach for a directed one; that change makes the output mapping empty, which
+  is the condition the file is looking for, so the file would pass for exactly the
+  wrong reason.
+origin_agent: business-analyst
+created: 2026-10-07
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  FLAGGED FOR AC-OWNER SIGN-OFF, AND THE FLAG IS THE POINT. Of everything in this
+  branch of work, this is the only item that overrides a decision somebody made on
+  purpose and recorded in the source. The technique is believed sound and the criteria
+  above are designed to prove it, but a mechanically sound revision of someone else's
+  stated reasoning is still a revision of someone else's stated reasoning. It is filed
+  as its own record, separate from the uncontested savings in TQ-600a-9, precisely so
+  it can be refused on its own without blocking them.
+
+  If the owner of ACD-2100d-2-i declines, mark this record superseded with that reason
+  and leave the file alone. About 39 s is not worth re-litigating a deliberate
+  isolation decision against its author's judgement.

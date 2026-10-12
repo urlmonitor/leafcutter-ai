@@ -1,0 +1,117 @@
+id: AR-300a-2
+title: "The delivered abilities section says when each ability applies, not just that it exists"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - template_compiler
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an agent whose declaration grants abilities of both kinds -- at least
+    one it is expected to use on every task, and at least one it is expected to
+    use only under a stated condition,
+  When that agent's compiled prompt is read,
+  Then the abilities section names each granted ability together with what that
+    ability is for,
+    And an ability granted for every task is distinguishable in that section
+      from one granted only under a condition,
+    And an ability granted under a condition carries the condition in the same
+      section, so the agent can decide whether this task is one of them without
+      going to look the answer up,
+    And an ability whose declaration carries no statement of when it applies is
+      reported by name when the prompt is compiled, rather than delivered as a
+      bare name the agent must guess at,
+  So the agent can act on the grant during the task rather than merely knowing
+    a word.
+depends_on:
+  - AR-300a
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Today's grants already distinguish an unconditional ability from a conditional one; that distinction is part of the grant and must survive delivery."
+  - path: docs/architecture/agent_knowledge_plane.md
+    relationship: describes
+    status: exists
+    relevance: "Channel 5 is invocation on demand during the task -- the agent must be able to decide, mid-task, whether this is a task the ability applies to."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The block that does arrive, and the shape of a delivered section that tells its reader when to act on it rather than only that it exists."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The mode/condition distinction already exists in the grant records as `mode: always | conditional` plus a `condition` string (INF-600a-1's `skills_invoked` shape). It must survive into the frontmatter declaration AR-300c-1 establishes and then into the compiled prompt -- this AC forbids flattening it, it does not introduce it."
+  - "The condition text is rendered in the same section as the ability it belongs to, so the agent can decide mid-task without a second lookup. A separate table, a footnote, or a pointer to another document does not satisfy this."
+  - "An ability description is sourced from the installed ability itself rather than retyped in the grant, so the delivered text cannot drift from the ability it names. Where the grant carries no description, the ability's own declared description is the source."
+  - "A conditional grant carrying no condition string is reported by name at build time (agent + ability), refusing rather than warning per ADR-050. It must not be silently delivered as a bare name."
+  - "Evidence is the compiled prompt read from the declared output root across every platform root, never the registry or the source template."
+  - "State the count of granted agents examined and the count of conditional grants found, so a run that recognised no conditional grants is distinguishable from one where every condition was delivered."
+  - "File-size ratchet applies: the per-agent table builder lives in scripts/injection_builders.py, already 876 lines and over the 400-content-line limit. Content-shaping logic must not leave that file longer."
+test_spec:
+  - name: test_compiled_prompt_names_each_ability_with_what_it_is_for
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "For an agent granted both an unconditional and a conditional ability, the compiled prompt names each ability together with its purpose text."
+  - name: test_unconditional_and_conditional_grants_are_distinguishable_in_the_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "A reader of the compiled section can tell an every-task grant from a conditional one without consulting the registry."
+  - name: test_condition_text_appears_in_the_same_section_as_its_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "The condition recorded on a conditional grant is rendered adjacent to that ability in the compiled prompt, not elsewhere in the prompt or omitted."
+  - name: test_conditional_grant_without_a_condition_is_reported_by_name
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "A grant declared conditional with no condition string fails the build, naming the agent and the ability; it is not delivered as a bare name."
+test_rationale: >-
+  The measured behaviour this criterion targets is 33 ability invocations against
+  about 32,600 raw-text-search fallbacks across roughly 90,000 recorded actions.
+  Not knowing an ability exists and not knowing it applies here produce the same
+  fallback, so asserting only that a name is present would leave the observed
+  behaviour largely intact. The assertions are therefore about the rendered
+  adjacency of the condition to its ability in the artifact the agent reads, which
+  no unit test over the builder's return value can establish.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-1
+  contract: "An abilities section present in every granted agent's compiled prompt, which this criterion constrains the content of"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY A SECOND CRITERION RATHER THAN AN 'AND' ON AR-300a-1. AR-300a-1 is
+  satisfied by a list of names. A list of names is a measurable improvement on
+  nothing and would still leave the observed behaviour largely intact: over
+  roughly 90,000 recorded agent actions, abilities were invoked 33 times and raw
+  text search about 32,600, including for questions a shipped ability already
+  answers. Not knowing an ability exists and not knowing it applies here produce
+  the same fallback.
+
+  THE CONDITION IS ALREADY IN THE GRANT. The distinction between an ability used
+  on every task and one used under a stated condition is part of what is
+  recorded today. This criterion forbids flattening it on the way through -- it
+  does not ask anyone to invent it.

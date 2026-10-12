@@ -1,0 +1,60 @@
+{
+  "run_id": "run-4e1d3c5394f44084",
+  "interaction_id": "int-faca89fa9bd041f7",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "codex:/root/needs_llm_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "content",
+        "parent"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "parent_direct"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "bounded_context",
+    "completeness": "selected_entities",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "Retrieve the whole named acceptance-criterion item together with its immediate parent for context. The parent identity establishes that one requested surrounding item. This is bounded context for exact items, not an open hierarchy population or a request for further ancestors or descendants.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

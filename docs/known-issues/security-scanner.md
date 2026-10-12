@@ -91,7 +91,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 2** (0 blocker, 1 high, 1 low) · **Resolved: 0**
+**Open: 3** (0 blocker, 1 high, 2 low) · **Resolved: 0**
 
 ## Open
 
@@ -99,6 +99,7 @@ Fixed issues move to [`security-scanner/resolved/`](security-scanner/resolved/) 
 |---|---|---|
 | `high` | KI-SEC-001 — Prose exemption disables entropy detection for WHOLE FILES, including executable Python under `templates/skills/` | [open-high-ki-sec-001.md](security-scanner/open-high-ki-sec-001.md) |
 | `low` | KI-SEC-20260914-entropy-flags-test-class-names — ENTROPY_HIGH reads a long CamelCase test class name carrying an AC id as a secret, and the only remedy it offers is an allowlist edit that an automated reviewer rightly refuses | [open-low-ki-sec-20260914-entropy-flags-test-class-names.md](security-scanner/open-low-ki-sec-20260914-entropy-flags-test-class-names.md) |
+| `low` | KI-SEC-20260927-generic-secret-flags-placeholder-constants-by-name — GENERIC_SECRET fires on any constant whose name contains TOKEN and whose value is a quoted string, and on ticket prose that quotes the line | [open-low-ki-sec-20260927-generic-secret-flags-placeholder-constants-by-name.md](security-scanner/open-low-ki-sec-20260927-generic-secret-flags-placeholder-constants-by-name.md) |
 
 ## Resolved
 

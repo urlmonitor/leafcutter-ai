@@ -1,0 +1,103 @@
+id: DK-400c-2-i
+title: "The quote check ignores line breaks and spacing but not changed words"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a goal whose text breaks the line between "put them into a new file" and "type (needs
+    evaluation)",
+  When the host proposes part p1 quoting "put them into a new file type (needs evaluation)", with a
+    single space where the goal has a line break,
+  And part p2 quoting "put them into a new file kind (needs evaluation)",
+  And part p3 quoting "we must make sure that we are able to cluster them somehow",
+  Then p1 and p3 are kept, because their quotes match the goal once spaces and line breaks are
+    treated alike,
+  And p2 is set aside read-only with the reason "quote not found in the goal".
+depends_on:
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "subject_text is verbatim with whitespace normalised; covers is a verbatim substring."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check that sets proposals aside."
+it_requirements:
+  - One shared normalisation helper is used for subject_text and for every quote (also by DK-400a-1). Line breaks,
+    tabs and repeated spaces are treated alike; letter case and words are not.
+  - No fuzzy, token-set or edit-distance match may let a quote pass.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_quote_check_treats_line_break_as_space
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote with one space where the goal breaks the line is kept.
+  - name: test_quote_check_rejects_changed_word
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote reading 'file kind' where the goal says 'file type' is set aside with 'quote not found
+      in the goal'.
+  - name: test_quote_check_is_case_sensitive
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: A quote that differs from the goal only in letter case is set aside.
+test_rationale: The rule is pure and exact, so unit tests of the shared helper pin both sides of it.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Pins the mock-data rule "verbatim (whitespace normalised)" from both sides, so that neither
+  an over-strict nor a fuzzy match passes. Letter case is not normalised by the mock data and is
+  not relaxed here.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

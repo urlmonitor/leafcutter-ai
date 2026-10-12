@@ -6,8 +6,8 @@ component: guardrail-engine
 level: L3
 status: active
 req_status: draft
-work_status: todo
-readiness: draft
+work_status: done
+readiness: approved
 priority: critical
 roadmap_phase: phase_1
 criteria: |

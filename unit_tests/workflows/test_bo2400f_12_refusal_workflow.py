@@ -71,6 +71,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
 # Every agentType the lane can dispatch to do build work. sql-coder and
@@ -376,11 +378,12 @@ class TestProducibleSetIsNeverRefused(_FixtureCase):
                 # on having claimed nothing. Closing that fall-through is precisely
                 # what BO-2400f-7-iii does, so the bare stub now halts as "never
                 # attempted" and this test must state what a real claim looks like.
-                "claim-connected": {
-                    "claimed": ["FLT-960a"],
-                    "excluded_claimed": [],
-                    "target_refused": False,
-                },
+                #
+                # From 2026-09-30 the claim step goes to command-step-runner, which
+                # hands back the command's stdout rather than a parsed result, so
+                # "what a real claim looks like" is now the runner envelope with the
+                # gate payload inside it.
+                "claim-connected": _claim_fx.claim_ran(["FLT-960a"]),
             },
         )
 

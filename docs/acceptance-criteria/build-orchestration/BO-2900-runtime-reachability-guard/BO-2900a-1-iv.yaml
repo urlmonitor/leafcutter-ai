@@ -1,0 +1,157 @@
+id: BO-2900a-1-iv
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A reachability judgement is about the unit the criterion's own record names as implementing it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a criterion whose record names the unit that implements it,
+    And the criterion's proof also reaches for a second, unrelated unit that
+      exposes a runtime way in of its own,
+  When the criterion is evaluated for eligibility to be marked done,
+  Then the judgement is about the unit the criterion's record names and about
+    the way in that unit exposes,
+    And no finding ever names a unit the criterion's record does not name, so no
+      author is ever told to drive their proof through an unrelated unit's way
+      in,
+    And the unit a finding names is the one the record names, not a copy of that
+      unit produced by the build,
+    And when the criterion's record names no unit at all, the rule returns no
+      verdict rather than choosing a unit from whatever the proof happens to
+      reach for,
+    And when the record names a unit that exposes no runtime way in, the rule
+      returns no verdict and the case is left to the separate no-way-in rule,
+      unchanged.
+depends_on:
+  - BO-2900a-1
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not.md
+    relationship: describes
+    status: exists
+    relevance: "Section 3 is the measurement: 29 of 54 in-scope criteria that declare a file are judged against a different one, and 627 of 811 detections resolve into the build-output tree rather than the source. It also names the live example, and the mechanism — the alphabetically-first import that defines a way in."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-3-scoping-recommendation.md
+    relationship: describes
+    status: exists
+    relevance: "States this AC's rule in one line — a refusal must name a unit drawn from the criterion's own implemented_by — and records the clearing action the current misattribution trains: make your test call an unrelated module's way in."
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-2-remedies.md
+    relationship: describes
+    status: exists
+    relevance: "Its C3 section measures the adoption of every candidate declaration field and shows what each one would do to the judged population. READ BEFORE CHOOSING A FIELD: one candidate is carried by zero done records, which would make the rule exactly inert, and the other is defined by the schema as a registration edit-surface rather than the unit under proof."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Requires every clearing action to be something the reader does to the CODE, never to the guard or to the AC record. That rule is what makes 'correct your record so the rule judges the right unit' an unacceptable resolution of this defect."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule this one hands off to when the named unit exposes no way in. The two remain mutually exclusive by construction; this AC narrows which unit the fence is applied to and must not merge the two verdicts."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "THE UNIT COMES FROM THE AC RECORD, AND THE IMPORT LIST IS DELETED FROM THE SELECTION PATH. Resolve the unit from the AC's own implemented_by entries, filtered to .py paths that resolve to an existing file under the project root and outside the test root — implemented_by mixes ticket .md paths with code paths (BO-2900a-1's own record carries one of each). The fix is to REMOVE the sorted(_local_import_module_names(test_file)) iteration in _done_proof_entry_point_gate.py::_detect_module_entry_point from the unit-selection path, not to reorder it or to use it as a tie-break. After this change, neither _local_import_module_names nor _resolve_candidate_unit may be reachable from this rule's unit selection at all."
+  - "DO NOT USE it_requirements.reference_file_path AS THE DECLARED UNIT. config/ac_store_schema.json defines it as the file that must be modified FOR REGISTRATION — an edit surface, not the unit under proof. It carries a .py value on 11.9% of done ACs and 112 of the 234 done ACs using the object form name a non-.py file. Nor may a new store field be introduced to carry the unit: asking the store for something it does not hold is the mechanism that produced the empty question in BO-2900a-2-iii."
+  - "IDENTITY IS THE RESOLVED FILE PATH, NEVER THE MODULE STEM. Compare Path(...).resolve() of the declared unit against Path(...).resolve() of the candidate. Stem comparison is forbidden outright: .leafcutter/ and scripts/ hold same-stem copies of the same module, so a '<module-stem>:main' spec cannot tell the source from its deployed copy. Every entry point recorded in a finding must therefore be spelled '<repo-relative source path>:<callable>', replacing today's f'{candidate.stem}:main'."
+  - "THE FINDING MUST NAME THE SOURCE THE RECORD NAMES, NOT A BUILD-OUTPUT COPY. When a declared path resolves inside a build-output tree (.leafcutter/, .claude/, or a deployed scripts/ copy of a templates/ source), the finding names the declared source path. 627 of 811 detections resolve into the build-output tree today. This clause is SEPARATE from the wrong-unit clause: an implementer who fixes only the alphabetical-sort half still emits findings pointing at a copy of the file rather than the file."
+  - "EVERY DECLARED UNIT IS CONSIDERED WHEN THE RECORD NAMES MORE THAN ONE. Do not silently take the first. A finding may name only a unit the record declares; a run that produces a finding naming anything else fails this AC regardless of how the unit was chosen."
+  - "THE NO-VERDICT BRANCHES PRODUCE NO FINDING AND NO REFUSAL CAUSE. A record declaring no resolvable .py unit, and a declared unit defining no module-level main, both return the verdict untouched and emit no reachability finding. The tempting fallback — guess from the proof's imports when the record is silent — reinstates the exact defect being removed, for exactly the population most likely to be misjudged."
+  - "THE HAND-OFF TO BO-2900a-3 IS UNCHANGED AND UNSHARED. When the declared unit exposes no way in, this rule returns no verdict and the no-way-in rule decides independently. No cached resolution, no shared mutable state and no merged refusal cause may pass between the two — BO-2900e-1 specifies two different messages with two different clearing actions."
+  - "NO EMITTED TEXT MAY ASK THE READER TO EDIT THE AC RECORD. BO-2900e-1 requires every clearing action to be something done to the CODE. When the record declares no unit, the correct output is silence from this rule — not a message telling the author to populate implemented_by."
+delivers_to:
+  agent: python-coder
+  contract: "A reachability judgement whose subject is the unit the criterion's record names, and findings whose named unit is drawn from that record — the input BO-2900e-1's first and second messages name the stranded thing from. Concretely: the resolved unit is a Path drawn from the AC's implemented_by .py entries, and every emitted finding carries unit and entry_point spelled '<repo-relative source path>' and '<repo-relative source path>:<callable>' respectively, never a module stem and never a build-output path."
+expects_from: null
+test_spec:
+  - name: test_the_finding_names_the_declared_unit_not_the_first_import_that_defines_main
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "scripts/ac_store/done_proof.py::verify_done_eligible"
+    description: "Drives the real verify_done_eligible over a fixture AC whose implemented_by names unit A, with a covers-tagged proof that imports both A and an unrelated module B that sorts first alphabetically and also defines a module-level main. Asserts the emitted finding names A's path and that B's name appears nowhere in the finding — unit, entry_point or reason."
+    must_catch:
+      - "selection that takes the alphabetically first import"
+      - "selection that takes the first import defining main"
+      - "a finding that names unit A correctly while its entry_point spec is still B's stem"
+      - "selection that reads implemented_by and then still judges against the import list"
+  - name: test_a_record_naming_no_unit_yields_no_verdict_and_no_finding
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The same fixture with implemented_by emptied of .py entries. Asserts zero findings and a verdict equal in every key to the not-invoked verdict — and, in the same test module, asserts the populated-implemented_by variant of the identical fixture DOES produce a finding, so a rule that is never reached at all cannot pass the silence assertion."
+    must_catch:
+      - "a fallback to the proof's import list when the record is silent"
+      - "an implementation that is never reached on any fixture, making every silence assertion pass"
+      - "a message telling the author to populate implemented_by"
+  - name: test_the_finding_names_the_source_path_not_its_deployed_copy
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "A fixture where the declared unit exists at two paths sharing one stem — a source and a deployed copy under a build-output directory — with the copy deliberately made the one the proof imports. Asserts the emitted entry_point is the declared source path, spelled as a path and not as a stem."
+    must_catch:
+      - "an entry_point spelled '<stem>:main', which cannot distinguish the two copies at all"
+      - "resolution that prefers whichever copy the proof imported"
+  - name: test_a_declared_unit_with_no_way_in_yields_no_verdict_from_this_rule
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A fixture whose declared unit defines no module-level main. Asserts no proof_not_through_entry_point finding is emitted, and asserts the BO-2900a-3 no-way-in rule returns an identical verdict for that fixture with and without this change — the two rules stay mutually exclusive and do not share resolution state."
+    must_catch:
+      - "merging the two rules into one unreachable verdict"
+      - "this rule firing on a unit it should have handed to BO-2900a-3"
+test_rationale: "The guarantee is about which unit a finding NAMES, so only the emitted finding can prove it. A test that patches the record loader and asserts it was called passes on an implementation that reads implemented_by and then still names the import-list unit in its message — the assertion has to be on the text the run produced. The live example is already measured: KM-KGS-100e-1, whose record names _ac_components.py, is refused today naming backfill_components:main because that import sorts first. The build-output test is separate on purpose, because the two clauses are easy to conflate and an implementer who fixes only the alphabetical sort still emits findings pointing at a copy of the file; a stem-shaped entry_point cannot express the difference, so the test asserts on the spelling as well as the resolution. The no-unit test carries the absence guarantee and distinguishes correctly silent from never ran by pairing the empty-record fixture with its populated twin in the same module."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE LIVE EXAMPLE, so no implementer has to reconstruct it. A criterion whose
+  record names one module is refused today with a message naming an entirely
+  different module's way in, because the proof imports both and the other one
+  sorts first alphabetically. The clearing action that message trains is "make
+  your test call an unrelated module's way in" — which is worse than no rule,
+  because an author who follows it writes a proof that is a ritual by
+  construction.
+
+  THIS IS THE CHEAPEST OF THE FOUR REPAIRS AND THE MOST CONTAINED. It removes a
+  guess rather than adding a mechanism: the criterion already records what
+  implements it, and the rule already has to name a unit in its finding. Nothing
+  about the observation changes.
+
+  THE NO-VERDICT BRANCH IS THE WHOLE SAFETY MARGIN. A record that names no unit
+  is common, and the tempting fallback — guess from the proof's imports when the
+  record is silent — reinstates exactly the defect being removed, for exactly the
+  population most likely to be misjudged. No verdict is the correct answer there,
+  and it must not be reported as a refusal.
+
+  THE BUILD-OUTPUT CLAUSE IS SEPARATE FROM THE WRONG-UNIT CLAUSE and the two are
+  easy to conflate. Resolving a unit into the build-output tree does not by itself
+  change whether the code was reached — it changes which path the finding names,
+  and a build output can be stale against the source the record names. An
+  implementer who fixes only the alphabetical-sort half will still emit findings
+  pointing at a copy of the file rather than the file.
+
+  DO NOT SETTLE SCOPING HERE. Narrowing the judged population is a consequence of
+  this rule, not its purpose, and the analysis it derives from recommends
+  deferring the scoping choice until the observation is honest. An implementer who
+  treats this AC as licence to decide which kinds of criteria the rule judges has
+  exceeded it.
+
+  VERIFICATION MUST EXECUTE THE EVALUATION over a criterion whose record names
+  one unit and whose proof reaches for another that has a way in, and assert
+  against the unit the run actually named. Asserting that the record is read is
+  not the same as asserting the finding names what it read.

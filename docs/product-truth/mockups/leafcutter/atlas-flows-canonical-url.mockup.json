@@ -1,0 +1,47 @@
+{
+  "id": "leafcutter/atlas-flows-canonical-url",
+  "component": "ux-prototyping",
+  "screen": "atlas-flows-canonical-url",
+  "title": "Atlas Flows: canonical flow URLs",
+  "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. From leafcutter/atlas-flows v2.",
+  "entities": [
+    "Flow",
+    "FlowRoute",
+    "FlowAppearance",
+    "FlowNavigation"
+  ],
+  "source": "mock",
+  "realization": "spec",
+  "renders": "atlas-flows-canonical-url.html",
+  "status": "active",
+  "superseded_by": null,
+  "readiness": "draft",
+  "version": 1,
+  "shape_version": 1,
+  "tags": [
+    "atlas",
+    "flows",
+    "canonical-url",
+    "deep-link",
+    "step-link",
+    "legacy-redirect",
+    "browser-history",
+    "not-found",
+    "drawer-history"
+  ],
+  "mock_data_ref": "leafcutter/atlas-flows",
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mockup-author",
+      "date": "2026-10-08",
+      "note": "Drafted from leafcutter/atlas-flows; revised the same day, before the first commit, to the owner-approved dataset edit (?step= step links and drawer, 'Step not found', legacy-link redirect, ?step= AC links); styled from the Atlas tokens via docs/ui-context.md (globals.css, layout.tsx)."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-09",
+      "note": "Extended the same day, still before the first commit (version stays 1), to dataset v2 and the owner's mockup-gate decision of 2026-10-09: opening a step drawer writes ?step=<id> and closing removes it, with history replace (no new Back entries); drill and select still push. Added the drawer-history sessions (nav-drawer-replace, nav-drawer-in-history, nav-select-from-open-drawer) with address bar and history stack per action, and labelled the FlowDrawer scrim drawer-to-drawer switch as an open build detail."
+    }
+  ]
+}

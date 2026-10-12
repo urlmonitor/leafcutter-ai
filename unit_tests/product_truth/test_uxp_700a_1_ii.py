@@ -148,7 +148,7 @@ def _flow_fixture() -> dict:
             {
                 "id": "browse",
                 "label": "Browse widgets",
-                "human": "Look at the widget catalog.",
+                "description": "Look at the widget catalog.", "actor_kind": "human",
                 "order": 1,
                 "impl_status": "not_started",
             }
@@ -198,6 +198,20 @@ class TestReinstallOverPopulatedRecord(unittest.TestCase):
     """UXP-700a-1-ii: reinstalling the tooling over a populated product-truth
     record must not replace what is already there.
     """
+
+    _tmp: tempfile.TemporaryDirectory[str]
+    target: Path
+    pt_root: Path
+    first_install: subprocess.CompletedProcess
+    second_install: subprocess.CompletedProcess
+    _flow_path: Path
+    _mock_path: Path
+    _mockup_path: Path
+    _index_path: Path
+    _precondition_error: str | None
+    _before_bytes: dict[Path, bytes]
+    _before_artifact_ids: list[str]
+    _after_bytes: dict[Path, bytes | None]
 
     @classmethod
     def setUpClass(cls) -> None:

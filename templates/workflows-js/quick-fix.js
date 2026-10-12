@@ -34,7 +34,7 @@ export const meta = {
     { title: 'Red Phase', detail: 'test-writer creates failing test, verified red under AC_ENFORCE_STRICT=1' },
     { title: 'Fix', detail: 'python-coder applies targeted fix to single file' },
     { title: 'Green Phase', detail: 'Verified green under AC_ENFORCE_STRICT=1, then mutation-proved' },
-    { title: 'Knowledge Routing', detail: 'route emitted learnings to their surfaces before commit (INF-700a-1-i, fail-open)' },
+    { title: 'Knowledge Routing', detail: 'stage learnings into the worktree for the fix commit; observe what it carried (INF-700a-5, fail-open)' },
     { title: 'Commit', detail: 'commit agent stages AC, parent back-link, test and fix' },
     { title: 'Changelog', detail: 'changelog-agent authors the entry a required CI check demands' },
     { title: 'Close', detail: 'Push, then open a PR behind a confirmation gate' },
@@ -47,8 +47,6 @@ export const meta = {
 // a harness can stub the check's answer and assert whether self-isolation actually
 // fired, which a single combined call would hide.
 
-// Every *_SCHEMA below shares a "status" enum and trailing "message"; each call
-// site supplies only its own extra properties and which of them are required.
 function schema(properties, required = []) {
   return {
     type: 'object',
@@ -146,9 +144,6 @@ function blocked(phase, message, extra = {}) {
   return { status: 'blocked', phase, message, ...extra }
 }
 
-// Shared shape for the nine `if (!x || x.status === 'blocked') return {...}` guards
-// below. The mutation-proof and changelog-authoring checks build different messages
-// entirely and call `blocked()` directly instead.
 function blockedOnFailure(result, phase, agentLabel, extra = {}) {
   if (!result || result.status === 'blocked') {
     return blocked(phase, result ? result.message : `${agentLabel} returned null`, { detail: result, ...extra })
@@ -156,29 +151,24 @@ function blockedOnFailure(result, phase, agentLabel, extra = {}) {
   return null
 }
 
-// The routing dispatch's expected reply shape (INF-700a-1-i). `case` is the
-// only required field — `read`/`written`/`unwritten`/`detail` are read
-// defensively by classifyKnowledgeRouting() below, never trusted as present
-// just because the schema names them.
-const KNOWLEDGE_ROUTING_SCHEMA = {
-  type: 'object',
-  properties: {
-    case: { type: 'string', enum: ['completed', 'could_not_complete', 'did_not_run'] },
-    read: { type: 'integer' },
-    written: { type: 'integer' },
-    unwritten: { type: 'integer' },
-    detail: { type: ['string', 'null'] },
-  },
-  required: ['case'],
-}
+// Reply shape of both routing dispatches (stage and observe); only `case` is required, the rest is read defensively.
+const KNOWLEDGE_ROUTING_SCHEMA = { type: 'object', required: ['case'], properties: {
+  case: { type: 'string', enum: ['completed', 'completed_with_waiting', 'could_not_complete', 'did_not_run'] },
+  read: { type: 'integer' }, written: { type: 'integer' }, unwritten: { type: 'integer' },
+  detail: { type: ['string', 'null'] }, manifest: { type: 'array', items: { type: 'string' } },
+  unwritten_records: { type: 'array' }, waiting: { type: ['object', 'null'] },
+} }
 
 /**
  * classifyKnowledgeRouting — the SINGLE construction site for the
  * `knowledge_routing` figures consumed into this path's terminal payload
  * (INF-700a-1 / INF-700a-1-i / INF-700a-1-ii — same contract as
  * fast-lane-ship.js's own copy of this function). Fails CLOSED: only a
- * reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
+ * reply carrying a RECOGNISED `case` value ("completed",
+ * "completed_with_waiting" or "could_not_complete": the schema's enum) is
+ * trusted as having actually run. "completed_with_waiting" (INF-700a-5-ii) is
+ * a completed run that left a late-emitted record waiting; it is passed
+ * through as its own value, never folded into "completed". Anything else —
  * a missing case, an unparseable reply, or the harness's own unlabelled
  * default stub — is reported as the third, distinct "did_not_run" case,
  * never rendered as "completed" with zero figures.
@@ -193,26 +183,42 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  const recognisedCase =
-    reply && (reply.case === 'completed' || reply.case === 'could_not_complete')
-      ? reply.case
-      : 'did_not_run'
-  const asInt = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0)
+  const recognisedCase = reply && KNOWLEDGE_ROUTING_SCHEMA.properties.case.enum.includes(reply.case) ? reply.case : 'did_not_run'
+  const ran = recognisedCase !== 'did_not_run'
+  const asInt = (value) => (ran && typeof value === 'number' && Number.isFinite(value) ? value : 0)
+  const asList = (value) => (ran && Array.isArray(value) ? value : [])
   return {
-    case: recognisedCase,
-    read: recognisedCase === 'did_not_run' ? 0 : asInt(reply.read),
-    written: recognisedCase === 'did_not_run' ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === 'did_not_run' ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === 'could_not_complete' && typeof reply.detail === 'string'
-        ? reply.detail
-        : null,
+    case: recognisedCase, read: asInt(reply && reply.read), written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    detail: recognisedCase === 'could_not_complete' && typeof reply.detail === 'string' ? reply.detail : null,
+    manifest: asList(reply && reply.manifest), unwritten_records: asList(reply && reply.unwritten_records),
+    waiting: ran && reply.waiting && typeof reply.waiting === 'object' ? reply.waiting : null,
   }
 }
 
-// ---------------------------------------------------------------------------
+/** settleKnowledgeRouting — the FINAL report (INF-700a-5 / -5-i): the post-commit observation of what the
+ * fix commit carried. If it cannot be obtained while the stage ran, nothing staged counts as written. */
+function settleKnowledgeRouting(staged, observedReply) {
+  const observed = classifyKnowledgeRouting(observedReply)
+  if (observed.case !== 'did_not_run' || staged.case === 'did_not_run') return observed
+  return { ...staged, case: 'could_not_complete', written: 0, manifest: [], unwritten: staged.written + staged.unwritten,
+    detail: "the commit's contents could not be observed, so no staged write is counted as written" }
+}
+
+/* INF-700a-1-iii: the paths the routing stage's manifest names (INF-700a-5), as extra
+   numbered entries (5., 6., ...) for the fix commit's stage list, so they are staged BY
+   NAME and not lost with the worktree. Fail-open: '' when the stage did not run or wrote
+   nothing, which leaves the commit prompt exactly as it was. Paths outside the worktree,
+   the harvester's own bookkeeping, and already-staged paths are dropped. */
+function routedStageEntries(routing, root, alreadyStaged) {
+  const inTree = (p) => typeof p === 'string' && p !== '' && !/[\n"]/.test(p) && (p.startsWith(`${root}/`) || !/^([a-zA-Z]:|[\\/])/.test(p))
+  const staged = new Set(alreadyStaged.map((p) => normalizeArtifactPath(p, root)))
+  return [...new Set(routing.manifest.filter(inTree).map((p) => normalizeArtifactPath(p, root)))]
+    .filter((p) => p && !p.split('/').includes('..') && !p.startsWith('debugging/logs/') && !staged.has(p))
+    .map((p, i) => `\n  ${i + 5}. ${p}  — learning written by the Knowledge Routing step`).join('')
+}
+
 // Phase 0 — Guards and self-isolation
-// ---------------------------------------------------------------------------
 
 phase('Guards')
 
@@ -357,9 +363,7 @@ if (guardBlock) return guardBlock
 
 log(`Guards passed. Target file clean.`)
 
-// ---------------------------------------------------------------------------
 // Phase 1 — AC creation (hierarchical store)
-// ---------------------------------------------------------------------------
 
 phase('AC Creation')
 
@@ -448,9 +452,7 @@ if (acBlock) return acBlock
 const { ac_id, ac_path, parent_ac_path, component_id, ac_title } = acResult
 log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`)
 
-// ---------------------------------------------------------------------------
 // Phase 2 — Red phase (test-writer, then strict verification)
-// ---------------------------------------------------------------------------
 
 phase('Red Phase')
 
@@ -500,8 +502,6 @@ boolean:
 An error is NOT a red result. A run that never reached the assertion proves nothing about
 the bug, and treating it as a healthy red would send a fix at a test that never executed.`
 
-// Red and Green share these two failure shapes (strict-flag missing; outcome:"error").
-// Only the explanation differs between the phases; the rest is written once.
 function strictFlagMissingBlock(phase, result, explanation) {
   return blocked(phase,
     `${phase} was not verified under AC_ENFORCE_STRICT=1.\n\nCommand reported: ${result.strict_command_run || '(none)'}\n\n${explanation}`,
@@ -551,16 +551,7 @@ if (redResult.passed === true || redResult.outcome === 'passed') {
 
 log(`Red phase confirmed under AC_ENFORCE_STRICT=1: test fails as expected.`)
 
-// Check for root-cause divergence (BP-600e-2)
-//
-// The previous check asked whether the FIRST WHITESPACE TOKEN of the prose
-// root cause appeared anywhere in the pytest output. That fails in both
-// directions and for the same reason: one word is not a topic. A root cause
-// beginning "the ..." matched almost any failure text, so real divergence went
-// unreported; a correct diagnosis paraphrased without its own first word was
-// reported as divergent. What distinguishes the two cases is whether the two
-// texts are ABOUT the same thing, so the comparison is over their content
-// vocabulary rather than over any single token.
+// Check for root-cause divergence (BP-600e-2) — see divergenceContentWords below.
 const failureMsg = redResult.failure_message || redResult.output_summary || ''
 
 // Words that carry no diagnostic weight. Counting these is what let the old
@@ -577,6 +568,15 @@ const DIVERGENCE_STOPWORDS = new Set([
  * non-alphanumerics, drop stopwords and 1-2 character fragments, and strip
  * common inflectional endings so "exhausted"/"exhausts" and
  * "header"/"headers" compare as the same word.
+ *
+ * Why content vocabulary (BP-600e-2): the previous check asked whether the FIRST
+ * WHITESPACE TOKEN of the prose root cause appeared anywhere in the pytest output.
+ * That fails in both directions and for the same reason: one word is not a topic.
+ * A root cause beginning "the ..." matched almost any failure text, so real
+ * divergence went unreported; a correct diagnosis paraphrased without its own first
+ * word was reported as divergent. What distinguishes the two cases is whether the
+ * two texts are ABOUT the same thing, so the comparison is over their content
+ * vocabulary rather than over any single token.
  */
 function divergenceContentWords(text) {
   const words = new Set()
@@ -596,33 +596,15 @@ function divergenceContentWords(text) {
 const diagnosisWords = divergenceContentWords(root_cause)
 const failureWords = divergenceContentWords(failureMsg)
 
-let sharedWords = 0
-for (const word of diagnosisWords) {
-  if (failureWords.has(word)) sharedWords += 1
-}
+const sharedWords = [...diagnosisWords].filter((word) => failureWords.has(word)).length
 
-// With no failure text, or a diagnosis carrying no content words at all, there
-// is nothing to compare. Say so rather than inventing a verdict in either
-// direction — an unanalysable diagnosis is not evidence of divergence.
 const comparable = failureMsg.length > 0 && diagnosisWords.size > 0
 
-// The test is TOTAL DISJOINTNESS: warn only when the two texts share no
-// substantive vocabulary whatsoever.
-//
-// A proportional threshold was tried first and rejected on evidence. Requiring
-// some fraction of the diagnosis's vocabulary to reappear means picking a
-// number, and any number is wrong somewhere: at 0.3 a real diagnosis paired
-// with a terse one-line assertion ("stub root cause for harness execution" vs
-// "stub AssertionError: bug not fixed", overlap 0.2) is flagged as divergent
-// and a correct run halts. Halting correct work is the more expensive error
-// here, because this gate sits in front of every fix the workflow makes, and a
-// missed warning still faces human review of the fix itself.
-//
-// Being explicit about the limitation: one incidental shared word suppresses
-// the warning. That is the honest ceiling of a lexical comparison and the
-// reason BP-600e-2's it_requirements ask for a semantic one. What this rule
-// does guarantee is that it never fires on a pair that genuinely shares a
-// topic — which is what makes it safe to run unattended.
+// TOTAL DISJOINTNESS: warn only when the two texts share no content word at all. A
+// proportional threshold was rejected on evidence: at 0.3 a correct diagnosis with a
+// terse assertion (overlap 0.2) halted a correct run, and halting correct work costs
+// more than a missed warning the fix's human review still catches. Limitation: one
+// incidental shared word suppresses the warning (BP-600e-2 asks for a semantic check).
 const divergenceCheck = comparable && sharedWords === 0
 
 if (!comparable && failureMsg.length > 0) {
@@ -650,9 +632,7 @@ if (divergenceCheck && divergence_decision === 'continue') {
     })
 }
 
-// ---------------------------------------------------------------------------
 // Phase 3 — Fix
-// ---------------------------------------------------------------------------
 
 phase('Fix')
 
@@ -722,9 +702,7 @@ const expectedArtifacts = new Set(
   [ac_path, parent_ac_path, testFile, ...((baselineResult && Array.isArray(baselineResult.dirty_paths)) ? baselineResult.dirty_paths : [])].map((p) => normalizeArtifactPath(p, worktreeRoot))
 )
 
-const genuineExtraFiles = (fixResult.extra_files || []).filter(
-  (f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot))
-)
+const genuineExtraFiles = (fixResult.extra_files || []).filter((f) => !expectedArtifacts.has(normalizeArtifactPath(f, worktreeRoot)))
 
 // modified_files gets the same treatment, plus target_file itself. scope_expanded
 // is NOT the trigger on its own — the agent can set it true while naming nothing in
@@ -744,9 +722,7 @@ if (allGenuineExtraFiles.length > 0) {
 
 log(`Fix applied to ${target_file}`)
 
-// ---------------------------------------------------------------------------
 // Phase 4 — Green phase, then mutation proof
-// ---------------------------------------------------------------------------
 
 phase('Green Phase')
 
@@ -770,8 +746,6 @@ if (!greenResult.strict_command_run || !greenResult.strict_command_run.includes(
     'A default pytest run cannot distinguish a real pass from an xfail-masked failure on a not-done AC. Re-run /quick-fix.')
 }
 
-// BP-600c-2-i, green side: an error is not a failure to diagnose as "the fix
-// did not work" — it is a run that never happened. Say which it was.
 if (greenResult.outcome === 'error') {
   return unrunnableTestBlock('Green Phase', 'green_phase_error', greenResult, 'a failing test',
     `The assertion was never evaluated, so this says nothing about whether the fix worked. The fix IS still applied to ${target_file}. Repair whatever stopped the test executing, then re-run /quick-fix.`)
@@ -875,7 +849,6 @@ fix_restored=true.`,
   { label: 'mutation-proof', phase: 'Green Phase', schema: MUTATION_SCHEMA }
 )
 
-// The two mutation-proof failures below differ only in halt_reason and message.
 function mutationProofBlock(haltReason, message) {
   return blocked('Green Phase (mutation proof)', message,
     { halt_reason: haltReason, test_file: testFile, ac_id, detail: mutationResult })
@@ -895,45 +868,20 @@ if (mutationResult.red_without_fix !== true || mutationResult.green_with_fix_res
 
 log(`Mutation proof passed: reverting the fix returns the test to red; restoring it returns green.`)
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once the phases that perform the work have
-// returned, and BEFORE the phase that publishes this unit of work's own
-// output ("commit"), so its writes can ride the commit this path already
-// makes (INF-700a-1's ordering clause, applied here per INF-700a-1-i's
-// per-path coverage requirement). Fail-open: there is deliberately no halt
-// branch below — whatever this dispatch reports, the run's own outcome and
-// exit status proceed unaffected.
-// ---------------------------------------------------------------------------
-
+// Knowledge Routing (INF-700a-1 ordering, INF-700a-5 durability), BEFORE the fix commit: `stage` writes
+// learnings INTO THE WORKTREE and marks nothing routed; the commit stages its manifest by name and the
+// post-commit `observe` decides the report. Fail-open: no halt branch on either step.
 phase('Knowledge Routing')
+const knowledgeRoutingCli = `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py`
+const runKnowledgeCli = (label, args, task) => agent(
+  `${task} Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} ${args}\n\nIf the command cannot be run, return { "case": "did_not_run", ` +
+  `"detail": "<why>" }. This step must never block, retry, or fail the build.`,
+  { label, phase: 'Knowledge Routing', schema: KNOWLEDGE_ROUTING_SCHEMA, agentType: 'python-coder' })
+const knowledgeStaged = classifyKnowledgeRouting(await runKnowledgeCli('knowledge-routing-step',
+  `stage --working-dir ${worktreeRoot}`, 'Stage the knowledge records the phases that just ran emitted into this worktree, so the fix commit carries them.'))
 
-const knowledgeRoutingReply = await agent(
-  `Route any knowledge records the phases that just ran emitted to the ` +
-  `surface each one names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be ` +
-  `done, or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  { label: 'knowledge-routing-step', phase: 'Knowledge Routing', schema: KNOWLEDGE_ROUTING_SCHEMA, agentType: 'python-coder' }
-)
-
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply)
-
-// ---------------------------------------------------------------------------
 // Phase 5 — Commit
-// ---------------------------------------------------------------------------
-
 phase('Commit')
 
 const commitResult = await agent(
@@ -944,7 +892,7 @@ const commitResult = await agent(
                           the AC guardian hooks read the git index, not the store, so an
                           unstaged parent is never checked and the back-link silently rots)
   3. ${testFile}        — new test covering the bug
-  4. ${target_file}     — bug fix
+  4. ${target_file}     — bug fix${routedStageEntries(knowledgeStaged, worktreeRoot, [ac_path, parent_ac_path, testFile, target_file])}
 
 Before staging, flip work_status on ${ac_path} from todo to done and add ${testFile} to its
 covered_by list — the test is green and mutation-proved, so the record should say so.
@@ -963,16 +911,16 @@ files — an isolated worktree may carry unrelated build-output drift, which sta
   { label: 'commit', phase: 'Commit', schema: COMMIT_SCHEMA, agentType: 'commit' }
 )
 
-const commitBlock = blockedOnFailure(commitResult, 'Commit', 'commit agent')
+// One observation per path, success AND failure: publication is observed, never inferred (INF-700a-5-i).
+const commitFailed = !commitResult || commitResult.status === 'blocked'
+const knowledgeRouting = settleKnowledgeRouting(knowledgeStaged, await runKnowledgeCli('knowledge-routing-observe',
+  `observe --working-dir ${worktreeRoot} --commit-status ${commitFailed ? 'failed' : 'ok'}`, 'Report, read-only, what the fix commit actually carried.'))
+const commitBlock = blockedOnFailure(commitResult, 'Commit', 'commit agent', { knowledge_routing: knowledgeRouting })
 if (commitBlock) return commitBlock
 
 log(`Committed: ${commitResult.commit_sha || '(sha pending)'}`)
 
-// ---------------------------------------------------------------------------
 // Phase 6 — Changelog
-// ---------------------------------------------------------------------------
-// "Changelog entry present" is a REQUIRED status check on main. Without this
-// phase every quick-fix PR is born failing a required check.
 
 phase('Changelog')
 
@@ -1026,9 +974,7 @@ if (changelogCommitBlock) return changelogCommitBlock
 
 log(`Changelog entry committed: ${changelogResult.entry_path}`)
 
-// ---------------------------------------------------------------------------
 // Phase 7 — Close: push, then open a PR behind a confirmation gate
-// ---------------------------------------------------------------------------
 
 phase('Close')
 
@@ -1079,9 +1025,7 @@ const pushBlock = blockedOnFailure(pushResult, 'Close', 'Close-phase agent',
   { halt_reason: 'push_failed', ac_id, commit_sha: commitResult.commit_sha })
 if (pushBlock) return pushBlock
 
-// ---------------------------------------------------------------------------
 // Done
-// ---------------------------------------------------------------------------
 
 // pr_opened=false covers two different endings: a PR already existed (pr_url is
 // populated, nothing left to do) and no PR exists at all (pr_url is empty — the
@@ -1111,11 +1055,7 @@ return {
     (prNotOpened
       ? `\n\n  *** ACTION REQUIRED ***\n  No pull request was opened. Opening it is now YOUR responsibility.\n  Compare: ${outstandingAction.compare_url || '(derive from branch above)'}\n  Command: ${outstandingAction.command}`
       : ''),
-  ac_id,
-  ac_path,
-  parent_ac_path,
-  test_file: testFile,
-  target_file,
+  ac_id, ac_path, parent_ac_path, test_file: testFile, target_file,
   changelog_path: changelogResult.entry_path,
   commit_sha: commitResult.commit_sha,
   worktree_root: worktreeRoot,

@@ -159,7 +159,12 @@ sys.path.insert(0, str(_MODULE_DIR))
 # These imports raise ImportError until python-coder creates fast_lane.py.
 # That ImportError IS the intended red state — it confirms the production
 # code does not yet exist.
-from fast_lane import select_batch, verify_green_and_coverage, verify_red_baseline  # noqa: E402
+from fast_lane import (  # noqa: E402
+    main,
+    select_batch,
+    verify_green_and_coverage,
+    verify_red_baseline,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -821,6 +826,27 @@ class TestVerifyGreenAndCoverage(unittest.TestCase):
             verdict.get("uncovered_ac_ids", []),
             "The uncovered composite AC id must be named in uncovered_ac_ids "
             f"so the caller refuses to mark it done. Got: {verdict}",
+        )
+        # The same refusal, driven through fast_lane's own way in. The direct
+        # call above pins the verdict; this pins the route to it — a false
+        # pass that the function refuses but the CLI reports as exit 0 would
+        # still let a caller mark the composite done, and only entering main
+        # can tell the two apart.
+        self.assertEqual(
+            main(
+                [
+                    "verify_green_and_coverage",
+                    "--ac-ids",
+                    composite_id,
+                    "--test-root",
+                    str(self.test_root),
+                    "--ac-root",
+                    str(self.ac_root),
+                ]
+            ),
+            1,
+            "fast_lane:main must exit 1 for a composite whose child has zero "
+            "linked tests; the direct call and the CLI must agree.",
         )
 
     def test_ac4_gate_passes_when_all_batch_tests_pass(self) -> None:

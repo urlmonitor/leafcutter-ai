@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -171,9 +171,12 @@ amended_by:
   agent: approve_acs
   date: '2026-09-07'
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/prompt_assembly/test_bo_400e_4.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-WorkIsOnlyEverMarkedFinishedThroughThe/04_TICKET-20260914-BO-400e-4.md
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

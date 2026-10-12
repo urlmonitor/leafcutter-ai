@@ -56,6 +56,9 @@ DECISION HISTORY:
     into the per-file validation pass so a staged leaf code AC must declare a test
     contract (test_spec or test_required: false). ACs are the source of truth for
     what test-writer must test. (AC BO-2000e)
+  - 2026-09-28 [python-coder/ACD-1600c-4]: Wired declared_files (both
+    branches) via sibling _declared_files_bridge.py (carries import/fail-open
+    logic; this file must not grow further past its ratchet).
 """
 
 from __future__ import annotations
@@ -76,6 +79,7 @@ from _ac_schema_validators import (  # noqa: E402
 )
 from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
 from _ac_store_file_discovery import find_ac_files  # noqa: E402
+from _declared_files_bridge import declared_files_messages, drain_reports  # noqa: E402
 
 try:
     from _ac_store_index import get_ac_index  # type: ignore[import]
@@ -549,6 +553,7 @@ def _validate_file(
     path: Path,
     schema: dict[str, Any] | None,
     all_ac_data: dict[str, dict[str, Any]] | None = None,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """Validate a single AC YAML file and return error messages.
 
@@ -557,6 +562,7 @@ def _validate_file(
         schema: Pre-loaded JSON Schema dict, or None.
         all_ac_data: Optional AC id to parsed content mapping; enables
             cross-file checks when provided.
+        repo_root: declared_files (ACD-1600c-4) repo root; None skips it.
 
     Returns:
         Error message strings; empty when valid.
@@ -600,15 +606,10 @@ def _validate_file(
         errors.extend(validate_manually(data))
 
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1/-2-i
-    # Test-contract gate (single-file, semantic): a leaf code AC must declare a
-    # test_spec or an explicit test_required: false. ACs are the source of truth
-    # for what test-writer must test.
+    # Test-contract gate: a leaf code AC must declare test_spec or test_required: false.
     errors.extend(validate_test_contract(path, data))
 
-    # declares_side_effect gate (single-file, semantic): the declaration must be
-    # DERIVED from the AC's own criteria, never authored by opinion and never
-    # left unset when the criteria assert a durable, observable effect
-    # (BO-2900g-2 / BO-2900g-2-i).
+    # declares_side_effect gate: DERIVED from criteria, never opinion (BO-2900g-2/-i).
     errors.extend(validate_declares_side_effect(path, data))
 
     if all_ac_data is not None:
@@ -616,6 +617,8 @@ def _validate_file(
         errors.extend(validate_deprecated_pattern_reference(path, data, all_ac_data))
         errors.extend(validate_criteria_not_pattern_duplicate(path, data, all_ac_data))
 
+    if repo_root is not None:  # declared_files (ACD-1600c-4), via the bridge.
+        errors.extend(declared_files_messages(data, repo_root))
     return errors
 
 
@@ -673,9 +676,8 @@ def main() -> int:
         # No staged AC files — skip Phase 1 entirely; still run Phase 2 below.
         failed: list[tuple[Path, list[str]]] = []
     else:
-        # Build the full-store lookup index for cross-file checks (AC-4: not narrowed).
-        # Use the shared mtime-cached index when available; fall back to the
-        # direct find_ac_files + _build_ac_index walk otherwise.
+        # Full-store lookup index for cross-file checks (AC-4: not narrowed);
+        # shared mtime-cached index when available, else the direct walk.
         ac_store_dir = root / AC_GLOB_PATTERN
         if _AC_STORE_INDEX_AVAILABLE:
             all_ac_data = get_ac_index(str(ac_store_dir))
@@ -684,7 +686,7 @@ def main() -> int:
             all_ac_data = _build_ac_index(all_store_files)
         failed = []
         for path in staged_files:
-            errs = _validate_file(path, schema, all_ac_data)
+            errs = _validate_file(path, schema, all_ac_data, root)
             if errs:
                 failed.append((path, errs))
     # Phase 2: implements_pattern field-preservation
@@ -705,6 +707,8 @@ def main() -> int:
         )
         if p_errs:
             failed.append((Path(abs_path), p_errs))
+    for report in drain_reports():  # informational only (ACD-1600c-4-i).
+        print(f"{_HOOK_PREFIX} {report}")
     if not failed:
         return 0
     print(f"{_HOOK_PREFIX}: {len(failed)} file(s) failed validation:", file=sys.stderr)

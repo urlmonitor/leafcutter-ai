@@ -21,8 +21,9 @@ criteria: |
   cases reverse-engineered from the gold artifacts and held-out cases that probe
   generalization, and it always includes at least one negative / failure case so
   the agent is proven to reject bad input as well as handle good input. The set
-  exists for the producer agents and for the AC-authoring agents; the deterministic
-  gate agents are deliberately left out because unit tests already cover them.
+  exists for the producer agents, for the AC-authoring agents, and for the agents
+  that design, write and run tests; the deterministic gate agents are deliberately
+  left out because unit tests already cover them.
 depends_on:
   - TQ-200
 doc_links:
@@ -37,7 +38,15 @@ documentation_triggers:
 documentation_rationale: null
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "Eval-set scope widened to the test-writing agents (design, write and run tests)"
+    by: product-owner
+    at: 2026-09-28
+    note: >-
+      User decision at the Phase B BA gate of the discrimination initiative,
+      mirroring the amended child TQ-200a-1-i (test-designer, test-writer,
+      sql-test-writer, test-runner now in scope). Only the scope sentence of
+      criteria changed; title, depends_on and covered_by unchanged.
 superseded_by: null
 covered_by:
   - TQ-200a-1

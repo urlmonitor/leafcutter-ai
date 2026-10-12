@@ -145,6 +145,8 @@ for _p in (_UNIT_TESTS_DIR, _BUILD_ORCH_DIR, _RELEASE_DIR, _CHANGELOG_DIR):
 
 from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 import check_changelog_presence  # noqa: E402  (scripts/release — already exists)
 import emit_entry  # noqa: E402  (scripts/changelog — already exists)
 
@@ -344,11 +346,7 @@ _BASE_RESPONSES: dict = {
         ),
     },
     "resolve-connected": {"ac_ids": ["BO-STUB-1"], "message": "1 to build"},
-    "claim-connected": {
-        "claimed": ["BO-STUB-1"],
-        "excluded_claimed": [],
-        "target_refused": False,
-    },
+    "claim-connected": _claim_fx.claim_ran(["BO-STUB-1"]),
     "test-writer-connected": {
         "status": "ok",
         "tests_written": ["unit_tests/stub/test_stub.py"],

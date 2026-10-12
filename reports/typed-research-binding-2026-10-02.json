@@ -1,0 +1,316 @@
+{
+  "recorded_at": "2026-10-02T17:01:44.486351+00:00",
+  "base_commit": "e173945931f3405a7b0e1a175451877ef2583a72",
+  "branch": "fix/typed-research-binding",
+  "scope": "Validated typed research root binding only; no exact-ID, population clarification or method-portfolio change.",
+  "ac_context": [
+    "KM-500a-2",
+    "KM-500d-1",
+    "KM-500e-1"
+  ],
+  "ac_status_changed": false,
+  "entrypoint": "KernelService.start_run(TaskInput)",
+  "actors": {
+    "jev": "ScriptedJev",
+    "tracer": "SegmentTracer",
+    "research": "production ResearchExecutor",
+    "retrieval": "production native RepositoryRetrievalExecutor over temporary ADR fixture"
+  },
+  "red": {
+    "initial": "4 failed, 10 passed, 3 subtests passed in 8.74s",
+    "child_boundary": "1 failed in 1.67s",
+    "meaning": "Typed root stopped before research. Initial equivalent caller wording was replaced with exact retained RS-02/RS-03 questions before compatibility and removed-binding mutation checks."
+  },
+  "green": {
+    "focused": "13 passed, 5 subtests passed in 10.99s",
+    "compatibility": "136 passed, 12 subtests passed in 50.30s",
+    "command": "python -B -m pytest tests/kernel/intent tests/kernel/scheduler/test_routing.py tests/kernel/scheduler/test_intent_routing.py -q --strict-markers --strict-config"
+  },
+  "mutations": {
+    "base": "e173945931f3405a7b0e1a175451877ef2583a72",
+    "restored_exact_bytes": true,
+    "production_sha256": "d2710fa693b5175d7cc00333430d28296e005e594f8895b6c156ed9dd53637fb",
+    "cases": [
+      {
+        "mutant": "removed",
+        "exit_code": 1,
+        "failed_assertions": [
+          "test_typed_pair_reaches_real_research_despite_unused_low_confidence_route",
+          "test_original_questions_reach_research_without_claiming_answer_completion"
+        ],
+        "errors": 0,
+        "nodeids": [
+          "tests/kernel/intent/test_typed_research_binding.py::TestTypedResearchBinding::test_typed_pair_reaches_real_research_despite_unused_low_confidence_route",
+          "tests/kernel/intent/test_typed_research_binding.py::TestTypedResearchBinding::test_original_questions_reach_research_without_claiming_answer_completion"
+        ],
+        "xml": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-mutant-removed.xml"
+      },
+      {
+        "mutant": "broad_explicit",
+        "exit_code": 1,
+        "failed_assertions": [
+          "test_output_only_does_not_bypass_semantic_routing",
+          "test_another_known_typed_pair_still_requires_existing_routing"
+        ],
+        "errors": 0,
+        "nodeids": [
+          "tests/kernel/intent/test_typed_research_binding.py::TestTypedResearchBinding::test_output_only_does_not_bypass_semantic_routing",
+          "tests/kernel/intent/test_typed_research_binding.py::TestTypedResearchBinding::test_another_known_typed_pair_still_requires_existing_routing"
+        ],
+        "xml": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-mutant-broad_explicit.xml"
+      },
+      {
+        "mutant": "child_leak",
+        "exit_code": 1,
+        "failed_assertions": [
+          "test_child_with_same_pair_does_not_inherit_root_binding"
+        ],
+        "errors": 0,
+        "nodeids": [
+          "tests/kernel/intent/test_typed_research_binding.py::TestTypedBindingRootBoundary::test_child_with_same_pair_does_not_inherit_root_binding"
+        ],
+        "xml": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-mutant-child_leak.xml"
+      }
+    ]
+  },
+  "receipts": [
+    {
+      "name": "typed-binding-red",
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-red.xml",
+      "sha256": "b060c15f6a5bc81da4e46d0d5e158724e878223cd33b7212740a021901bc1cb8",
+      "junit_summary": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "4",
+        "skipped": "0",
+        "tests": "17",
+        "time": "8.685",
+        "timestamp": "2026-10-02T16:49:36.098017+00:00",
+        "hostname": "BrainDesk"
+      }
+    },
+    {
+      "name": "typed-binding-child-red",
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-child-red.xml",
+      "sha256": "e0cf3e7d38ac8d967edd4c1b0d49d1763049ac3a25183e3986aa9016892d4279",
+      "junit_summary": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "1",
+        "skipped": "0",
+        "tests": "1",
+        "time": "1.624",
+        "timestamp": "2026-10-02T16:51:16.427760+00:00",
+        "hostname": "BrainDesk"
+      }
+    },
+    {
+      "name": "typed-binding-green",
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-green.xml",
+      "sha256": "d75ac96fea0725ab89c90814aff01d7f5d4282e329c9dfb064add197c1e0cfb4",
+      "junit_summary": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "18",
+        "time": "10.948",
+        "timestamp": "2026-10-02T16:52:58.128992+00:00",
+        "hostname": "BrainDesk"
+      }
+    },
+    {
+      "name": "typed-binding-compatibility",
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-compatibility.xml",
+      "sha256": "733872ae819f43d9e915cc6567625856051df76318b4d8094bbca2f466db9229",
+      "junit_summary": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "148",
+        "time": "50.259",
+        "timestamp": "2026-10-02T16:55:47.318181+00:00",
+        "hostname": "BrainDesk"
+      }
+    }
+  ],
+  "source_checks": {
+    "ruff": "pass",
+    "git_diff_check": "pass",
+    "module_and_function_docstrings": "present",
+    "diagnostics": [
+      {
+        "path": "kernel/intent/roots.py",
+        "sha256": "d2710fa693b5175d7cc00333430d28296e005e594f8895b6c156ed9dd53637fb",
+        "lines": 159,
+        "module_docstrings_present": true,
+        "undocumented": [],
+        "filewide_doc_findings": 0,
+        "head_doc_findings": 0,
+        "new_or_changed_complexities": [
+          [
+            "root_contract_bound",
+            5
+          ]
+        ],
+        "over_limit": [],
+        "head_over_limit": []
+      },
+      {
+        "path": "kernel/scheduler/nodes_route.py",
+        "sha256": "c4ca9ffa0be1380e0cef50daa1719741e5332640a7b631efcc64be3fab54a16f",
+        "lines": 400,
+        "module_docstrings_present": true,
+        "undocumented": [],
+        "filewide_doc_findings": 20,
+        "head_doc_findings": 20,
+        "new_or_changed_complexities": [
+          [
+            "run",
+            17
+          ]
+        ],
+        "over_limit": [
+          [
+            "run",
+            17
+          ]
+        ],
+        "head_over_limit": [
+          [
+            "run",
+            18
+          ]
+        ]
+      },
+      {
+        "path": "tests/kernel/intent/test_typed_research_binding.py",
+        "sha256": "163222c28c4348a2213f606863aa00407eda8e84804d7c57a14222ac1a92cae8",
+        "lines": 264,
+        "module_docstrings_present": true,
+        "undocumented": [],
+        "filewide_doc_findings": 0,
+        "head_doc_findings": 0,
+        "new_or_changed_complexities": [
+          [
+            "typed_task",
+            1
+          ],
+          [
+            "root_state",
+            2
+          ],
+          [
+            "test_typed_pair_reaches_real_research_despite_unused_low_confidence_route",
+            2
+          ],
+          [
+            "test_typed_payload_inferred_output_has_the_same_binding",
+            1
+          ],
+          [
+            "test_original_questions_reach_research_without_claiming_answer_completion",
+            3
+          ],
+          [
+            "test_output_only_does_not_bypass_semantic_routing",
+            1
+          ],
+          [
+            "test_mismatched_pair_cannot_dispatch_research",
+            2
+          ],
+          [
+            "test_unknown_input_schema_is_rejected_at_public_intake",
+            2
+          ],
+          [
+            "test_another_known_typed_pair_still_requires_existing_routing",
+            1
+          ],
+          [
+            "test_multiple_eligible_research_candidates_still_require_jev",
+            1
+          ],
+          [
+            "test_typed_pair_cannot_bypass_permissions",
+            2
+          ],
+          [
+            "test_typed_pair_cannot_bypass_availability_binding_or_scope",
+            5
+          ],
+          [
+            "test_untyped_question_still_uses_intent_then_real_research",
+            1
+          ],
+          [
+            "test_untyped_low_confidence_still_waits_without_research",
+            1
+          ],
+          [
+            "test_child_with_same_pair_does_not_inherit_root_binding",
+            3
+          ],
+          [
+            "execute",
+            2
+          ]
+        ],
+        "over_limit": [],
+        "head_over_limit": []
+      }
+    ]
+  },
+  "limitations": [
+    "No live Jev calls or new live scenario verdicts.",
+    "Native fixture evidence proves routing mechanics, not answer completion for RS-02/RS-03.",
+    "No new graph query, source refresh, provider configuration or AC lifecycle changes.",
+    "Existing router file-wide documentation findings remain 20 versus HEAD 20; run complexity improves 18 to 17 but remains above direct diagnostic limit 15. No claim that normal commit hooks have run."
+  ],
+  "final_base_validation": {
+    "recorded_at": "2026-10-02T17:14:57.486533+00:00",
+    "base_commit": "d641028cfb2d1f882257102f4306556bd2adc796",
+    "preserved_initial_base_and_receipts": true,
+    "refresh": "Fast-forward from e1739459 to merged PR998 main; five reviewed files preserved byte-exact before adding this final-base receipt and changelog census adjustment.",
+    "result": "156 passed, 12 subtests passed in 55.04s",
+    "command": "python -B -m pytest tests/kernel/intent tests/kernel/scheduler/test_routing.py tests/kernel/scheduler/test_intent_routing.py tests/knowledge/test_native_changelog_entry.py -q --strict-markers --strict-config",
+    "junit": {
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-final-main.xml",
+      "sha256": "c8dd0837132b11c2df3ed32b17e481ab7df79404f0409e6a74c46d08051eeef6",
+      "summary": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "0",
+        "tests": "168",
+        "time": "54.955",
+        "timestamp": "2026-10-02T17:12:45.505674+00:00",
+        "hostname": "BrainDesk"
+      }
+    },
+    "changelog_census": {
+      "head_count": 550,
+      "working_count": 551,
+      "added": [
+        "changelogs/2026-10-02-1701-bind-typed-research-root.md"
+      ],
+      "removed": [],
+      "oracle": "Direct configured-store path census; no native extractor used.",
+      "receipt": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\knowledge-retrieval-release-20261002T134221Z\\typed-binding-final-census.json",
+      "receipt_sha256": "8efceeebf5acf75fa74de9778ed221c2846c51f671d37d8193134e802c0eb518",
+      "red": "typed-binding-census-red.xml: actual 551 != expected550; only the two exact sentinels amended, all source/metadata/recovery assertions retained."
+    },
+    "source_fingerprints": {
+      "kernel/intent/roots.py": "d2710fa693b5175d7cc00333430d28296e005e594f8895b6c156ed9dd53637fb",
+      "kernel/scheduler/nodes_route.py": "c4ca9ffa0be1380e0cef50daa1719741e5332640a7b631efcc64be3fab54a16f",
+      "tests/kernel/intent/test_typed_research_binding.py": "163222c28c4348a2213f606863aa00407eda8e84804d7c57a14222ac1a92cae8",
+      "tests/knowledge/test_native_changelog_entry.py": "749d1c02e131a02b7e45ac164fe6846dcbc8471f60e8603b7ec0d4e31d17ef92"
+    },
+    "ruff": "pass",
+    "git_diff_check": "pass",
+    "live_provider_calls": 0,
+    "normal_commit_hooks": "Not run yet. Commit agent completed supported local build with --no-shims; shared hook bytes remained unchanged. Setup-only tracked generation changes are excluded from this repair."
+  }
+}

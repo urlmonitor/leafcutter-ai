@@ -62,8 +62,13 @@ it_requirements:
   stay byte-identical (TKT-300a-4, ACS-500c-2).
 - The test design is kept separate from the file-findings output (ACD-2500d-1); neither is written into
   the other's field.
-- Adds no must_catch or other undeclared key. The optional Opus sub-call for must_catch is deferred until
-  must_catch is specified.
+- 'Adds no undeclared key. The step MAY write the existing optional test_spec[].must_catch (TQ-500f-2) and
+  angle ''discrimination'' (TQ-500f-1) on an entry; their presence is the step''s bug-fix/gate declaration
+  (no separate declaration key). This step is the only writer of must_catch; the technical planner never
+  writes it.'
+- 'The optional Opus sub-call for must_catch was deferred until must_catch existed; it now exists (PR #911).
+  DECIDED by the user 2026-09-28: no Opus sub-call for now; the step stays
+  Sonnet-only.'
 - 'ADR-009 stays intact: the technical planner gains no source access; source reading happens only in
   this step.'
 delivers_to:
@@ -73,7 +78,7 @@ delivers_to:
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key. Consumed by ACD-2500c-1-i (grounding), ACD-2500b-2 (approval coverage)
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key. Consumed by ACD-2500c-1-i (grounding), ACD-2500b-2 (approval coverage)
     and the ticket generator.'
 - agent: llm-expert
   contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
@@ -81,7 +86,7 @@ delivers_to:
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key. Consumed by the test writer at build time (ACD-2500c-2-i).'
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key. Consumed by the test writer at build time (ACD-2500c-2-i).'
 expects_from:
 - ac_id: ACD-2500b-1
   contract: 'test_intent: list of {clause: str (the outcome clause text, verbatim from criteria), needs_test:
@@ -93,7 +98,7 @@ expects_from:
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key.'
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key.'
 - ac_id: ACD-2500d-5-i
   contract: 'Pre-pass report (JSON, deterministic, sorted): {batch: [ac_id], records: [{id: str, declared_files:
     [{path: str, state: ''exists''|''to_be_created''|''neither''}], test_dirs: [{path: str, exists: bool}],
@@ -106,6 +111,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "reconcile with main: must_catch now exists (PR #911, TQ-500f-2). it_requirement 'adds no must_catch' rewritten so this step is the sole writer of the existing field, with must_catch / angle 'discrimination' presence as its bug-fix/gate declaration; the Opus sub-call is recorded as an open user decision (Sonnet-only until decided). 'No must_catch key' replaced in both delivers_to contracts and the ACD-2500c-3 expects_from, in lockstep with ACD-2500c-3. Criteria unchanged."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500c-1-i

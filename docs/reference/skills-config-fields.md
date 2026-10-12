@@ -3,7 +3,7 @@ title: 'Reference: skills_config.json Fields'
 type: reference
 status: active
 created: 2026-05-27
-last_updated: 2026-05-27
+last_updated: 2026-09-28
 components:
 - infrastructure
 related_docs:
@@ -196,9 +196,30 @@ marked below.
 | `testing_context.directories` | object | yes | (see below) | Maps each test subdirectory name to its framework and DB-dependency flag. Used by `test-writer` to produce valid `target_dir` values and to pick the correct `setUp`/`tearDown` pattern. |
 | `testing_context.max_test_duration_seconds` | integer | yes | `5` | Maximum allowed wall-clock duration for any auto-running test. Tests that exceed this limit must use `manual_test_suffix`. |
 | `testing_context.manual_test_suffix` | string | no | `_MANUAL` | Suffix appended to test function names excluded from the standard pre-commit suite (slow or DB-requiring tests). |
-| `testing_context.db_connection_test` | string | no | `postgresql://trader:trader@localhost:5403/LIVE` | Connection string for the test database environment. Used in `setUp` for DB-requiring tests. |
+| `testing_context.db_connection_test` | string | no | — | Connection string for the test database environment, e.g. `postgresql://<user>:<password>@<host>:<port>/<database>`. Used in `setUp` for DB-requiring tests. Ships with no default; each project must set its own address. |
 | `testing_context.naming_pattern` | string | no | `test_*.py` | Glob pattern that test files must match. Enforced by the pre-commit hook and `test-runner`. |
 | `testing_context.test_output_rules` | string | no | `"Never write to project dirs; use tmp_path or %TEMP%"` | Human-readable constraint injected into `test-writer` prompts to prevent tests from writing to project directories. |
+
+### `testing_context.db_connection_test` resolution
+
+`db_connection_test` ships with no default value. When the setting is missing
+(unset, empty, or whitespace-only), database-requiring tests are reported as
+not configured and are not run — no database driver is imported and no
+connection is attempted.
+
+The shipped checker at `scripts/db_check/checker.py` resolves this setting
+before any test runs and reports exactly one of five statuses:
+
+| Status | Meaning |
+|---|---|
+| `not_configured` | Setting unset, empty, or whitespace-only. |
+| `invalid` | Configured but the value does not parse as a safe, allowlisted postgres URL. |
+| `config_error` | The project's `skills_config.json` exists but could not be read or parsed. |
+| `unreachable` | Configured and valid, but a bounded TCP probe could not reach it. |
+| `reachable` | Configured, valid, and reachable. The only status that exits `0`. |
+
+The checker's report never contains a password or a `user:password` pair, in
+any of the five statuses.
 
 ### `testing_context.directories` entry shape
 

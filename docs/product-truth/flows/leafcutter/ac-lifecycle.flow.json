@@ -11,7 +11,7 @@
   "status": "active",
   "readiness": "approved",
   "superseded_by": null,
-  "version": 1,
+  "version": 2,
   "tags": [
     "ac-driven-dev",
     "acceptance-criteria",
@@ -28,15 +28,21 @@
     {
       "id": "triage",
       "label": "Triage the request",
-      "human": "A new feature request enters through /plan-feature; a fast triage agent classifies it (strategic / behavioral / technical / covered) and checks the store for duplicates before any AC is written.",
+      "description": "A fast triage agent classifies your request as strategic, behavioral, technical or already covered and checks the store for duplicates before any criteria are written.",
       "order": 1,
       "agent": "ac-triage",
+      "actor_kind": "llm",
       "consumes": [
-        "Request",
-        "AcStore"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/component: string (required)"
       ],
       "produces": [
-        "routing_decision"
+        "triage/route: string (required)",
+        "triage/existing_acs: array (required)",
+        "triage/parent_l1_id: null|string (required)",
+        "triage/rationale: string (required)",
+        "triage/anomalies: array (required)"
       ],
       "reads": [
         "Request",
@@ -46,23 +52,129 @@
         "ACD-300a"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "triage",
+            "fields": [
+              {
+                "path": "/route",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/existing_acs",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/parent_l1_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/rationale",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/anomalies",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded."
+            }
+          },
+          {
+            "contract": "triage",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative triage projection; not an execution receipt",
+            "value": {
+              "route": "behavioral",
+              "existing_acs": [
+                "ACD-300"
+              ],
+              "parent_l1_id": "ACD-300",
+              "rationale": "The requested behavior belongs to this existing requirement.",
+              "anomalies": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "author",
       "label": "Author the AC tree (PO → BA → IT PO)",
-      "human": "The workflow runs the authoring agents in sequence — the Product Owner writes L0/L1 value, the Business Analyst decomposes them into L2/L3 Gherkin, the IT PO adds the technical fields — writing AC YAML records into the store, never into ticket files.",
+      "description": "In turn, the product owner, business analyst and IT product owner agents write the acceptance criteria into the store, from value to behaviors to technical detail.",
       "order": 2,
       "agent": "plan-feature (product-owner → business-analyst → it-po)",
+      "actor_kind": "llm",
       "consumes": [
-        "routing_decision",
-        "Request"
+        "triage/route: string (required)",
+        "triage/existing_acs: array (required)",
+        "triage/parent_l1_id: null|string (required)"
       ],
       "produces": [
-        "Ac.criteria (L0-L3)",
-        "Ac.assigned_agent",
-        "Ac.delivers_to",
-        "Ac.expects_from"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/component: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/assigned_agent: null|string (optional)",
+        "ac/delivers_to: array|null|object|string (optional)",
+        "ac/expects_from: array|null|object|string (optional)"
       ],
       "reads": [
         "Request"
@@ -75,20 +187,153 @@
         "ACD-300d"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "triage",
+            "fields": [
+              {
+                "path": "/route",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/existing_acs",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/parent_l1_id",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/delivers_to",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/expects_from",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "triage",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative triage projection; not an execution receipt",
+            "value": {
+              "route": "behavioral",
+              "existing_acs": [
+                "ACD-300"
+              ],
+              "parent_l1_id": "ACD-300"
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "draft",
+              "assigned_agent": "python-coder",
+              "delivers_to": {
+                "agent": "test-runner",
+                "contract": "Verify implementation against the recorded AC."
+              },
+              "expects_from": {
+                "agent": "test-writer",
+                "contract": "A failing behavioral test baseline."
+              }
+            }
+          }
+        ]
+      }
     },
     {
       "id": "approve",
       "label": "Review, approve & commit each stage",
-      "human": "You confirm each authoring stage before the next agent runs; on approval the AC's readiness advances and the stage's output is committed to git, so the store moves forward one reviewed step at a time.",
+      "description": "You approve each authoring stage before the next agent runs, which advances the criteria's readiness and commits that stage's output to Git.",
       "order": 3,
       "agent": "plan-feature gate + commit",
+      "actor_kind": "human",
       "consumes": [
-        "Ac.criteria (L0-L3)"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/readiness: string (optional)"
       ],
       "produces": [
-        "Ac.readiness=approved",
-        "commit (AC YAML)"
+        "ac/id: string (required)",
+        "ac/readiness: string (optional)"
       ],
       "reads": [
         "Ac"
@@ -101,21 +346,100 @@
         "ACD-300g"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "readiness": "reviewed"
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "readiness": "approved"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "scan",
       "label": "Scan the store for ready work",
-      "human": "The scanner walks the store for todo, unblocked leaf ACs and presents them as a prioritized backlog of what can be built next.",
+      "description": "The scanner finds the unblocked leaf acceptance criteria that are ready to build and presents them as a prioritized backlog of what to build next.",
       "order": 4,
       "agent": "scan_ac_store.py + ac_prioritizer.py",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ac.readiness=approved",
-        "Ac.work_status",
-        "Ac.depends_on"
+        "ac/id: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/work_status: null|string (optional)",
+        "ac/depends_on: array|null (optional)"
       ],
       "produces": [
-        "ranked ready ACs"
+        "ac/id: string (required)",
+        "ac/readiness: string (optional)",
+        "ac/work_status: null|string (optional)",
+        "ac/depends_on: array|null (optional)"
       ],
       "reads": [
         "AcStore",
@@ -125,20 +449,127 @@
         "ACD-400a"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-08-18"
+      "impl_asof": "2026-08-18",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/depends_on",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/readiness",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/depends_on",
+                "types": [
+                  "array",
+                  "null"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "readiness": "approved",
+              "work_status": "todo",
+              "depends_on": []
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "readiness": "approved",
+              "work_status": "todo",
+              "depends_on": []
+            }
+          }
+        ]
+      }
     },
     {
       "id": "generate",
       "label": "Generate a wired ticket",
-      "human": "For a chosen ready AC the generator produces a fully-wired ticket and writes the implemented_by back-reference onto the AC, so the ticket and the AC point at each other.",
+      "description": "For a chosen ready criterion, the generator produces a fully wired ticket and links the two so the ticket and the criterion point at each other.",
       "order": 5,
       "agent": "generate_ticket_from_ac.py",
+      "actor_kind": "deterministic",
       "consumes": [
-        "ranked ready ACs"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/assigned_agent: null|string (optional)",
+        "ac/delivers_to: array|null|object|string (optional)",
+        "ac/expects_from: array|null|object|string (optional)"
       ],
       "produces": [
-        "Ticket (wired)",
-        "Ac.implemented_by"
+        "ac/id: string (required)",
+        "ac/implemented_by: array (optional; default [])"
       ],
       "reads": [
         "Ac"
@@ -151,20 +582,129 @@
         "ACD-400b"
       ],
       "impl_status": "done",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/assigned_agent",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/delivers_to",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/expects_from",
+                "types": [
+                  "array",
+                  "null",
+                  "object",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "assigned_agent": "python-coder",
+              "delivers_to": {
+                "agent": "test-runner",
+                "contract": "Verify implementation against the recorded AC."
+              },
+              "expects_from": {
+                "agent": "test-writer",
+                "contract": "A failing behavioral test baseline."
+              }
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "implemented_by": [
+                "tickets/01_todo/feature.md"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "complete",
       "label": "Implement, then mark the AC done",
-      "human": "Once the implementing ticket merges, the AC store is updated automatically — mark_ac_done sets work_status to done and a post-merge hook flips every AC the completed ticket covered.",
+      "description": "Once the implementing ticket merges, the system automatically marks every acceptance criterion that ticket covered as done.",
       "order": 6,
       "agent": "mark_ac_done.py + post-merge hook",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ticket (merged)",
-        "Ac.covered_by"
+        "ac/id: string (required)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
       ],
       "produces": [
-        "Ac.work_status=done"
+        "ac/id: string (required)",
+        "ac/work_status: null|string (optional)"
       ],
       "reads": [
         "Ticket",
@@ -178,25 +718,106 @@
         "ACD-600b"
       ],
       "impl_status": "in_progress",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "implemented_by": [
+                "app/service.py"
+              ],
+              "covered_by": [
+                "tests/test_service.py::test_contract"
+              ]
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "work_status": "done"
+            }
+          }
+        ]
+      }
     }
   ],
   "branches": [
     {
       "id": "govern",
       "agent": "check-ac-schema hook / ac-fulfillment-gate",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ac.criteria (L0-L3)",
-        "origin_agent"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)",
+        "ac/origin_agent: string (optional)",
+        "ac/work_status: null|string (optional)"
       ],
-      "produces": [
-        "rejected scope edit",
-        "attributed work_status change"
-      ],
+      "produces": [],
       "from": "author",
       "condition": "an implementation agent tries to change an AC's scope",
       "label": "Scope stays locked to the author",
-      "human": "Only the requirement's author can change what 'done' means; implementation agents may report progress via work_status but not rewrite the criteria, and every change is traceable to the agent that made it.",
+      "description": "The checker lets implementation agents report progress but not rewrite the criteria, so only the author can change what done means and every change is traceable.",
       "reads": [
         "Ac"
       ],
@@ -208,23 +829,78 @@
         "ACS-400c"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/origin_agent",
+                "types": [
+                  "string"
+                ],
+                "required": false
+              },
+              {
+                "path": "/work_status",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded.",
+              "work_status": "todo",
+              "origin_agent": "business-analyst"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "backfill",
       "agent": "ac discovery audit",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ac.criteria (L0-L3)",
-        "existing code"
+        "ac/id: string (required)",
+        "ac/criteria: string (required)"
       ],
       "produces": [
-        "Ac.covered_by",
-        "Ac.implemented_by"
+        "ac/id: string (required)",
+        "ac/implemented_by: array (optional; default [])",
+        "ac/covered_by: array (optional; default [])"
       ],
       "from": "scan",
       "condition": "code for an AC already exists",
       "label": "Discover & link existing code",
-      "human": "When implementing code already exists, the audit matches it to the AC by exact-criteria text and backfills the covered_by / implemented_by links instead of generating a duplicate ticket.",
+      "description": "The audit matches the existing code to the criterion by its exact text and links them, instead of generating a duplicate ticket.",
       "reads": [
         "Ac"
       ],
@@ -235,21 +911,104 @@
         "ACD-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/criteria",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              },
+              {
+                "path": "/covered_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "criteria": "Given an approved requirement, When delivery finishes, Then its evidence is recorded."
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "implemented_by": [
+                "app/service.py"
+              ],
+              "covered_by": [
+                "tests/test_service.py::test_contract"
+              ]
+            }
+          }
+        ]
+      }
     },
     {
       "id": "rehome",
       "agent": "ac re-home tool",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ac.id"
+        "ac/id: string (required)",
+        "ac/component: string (required)"
       ],
       "produces": [
-        "Ac.component (moved, id stable)"
+        "ac/id: string (required)",
+        "ac/component: string (required)"
       ],
       "from": "author",
       "condition": "the AC tree is reorganized",
       "label": "Re-home without breaking links",
-      "human": "Each AC has a permanent id independent of its place in the tree, so a requirement can be moved to another component with a single change and every existing reference keeps working.",
+      "description": "The re-home tool moves the criterion to another component in a single change, and its permanent id keeps every existing reference working.",
       "reads": [
         "Ac"
       ],
@@ -260,22 +1019,88 @@
         "ACS-800a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/component",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev"
+            }
+          },
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Output illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "component": "ac-driven-dev"
+            }
+          }
+        ]
+      }
     },
     {
       "id": "retire",
       "agent": "ac retire check",
+      "actor_kind": "deterministic",
       "consumes": [
-        "Ac (deprecated)",
-        "Ac.implemented_by"
+        "ac/id: string (required)",
+        "ac/status: string (required)",
+        "ac/implemented_by: array (optional; default [])"
       ],
-      "produces": [
-        "code-reconciliation gate"
-      ],
+      "produces": [],
       "from": "complete",
       "condition": "a requirement is retired",
       "label": "Retire & reconcile the code",
-      "human": "Retiring an AC triggers a check that the code it claimed is actually gone, so a deprecated requirement can't quietly leave live code behind.",
+      "description": "The retire check confirms that the code a retired criterion claimed is actually gone, so a deprecated requirement cannot quietly leave live code behind.",
       "reads": [
         "Ac"
       ],
@@ -286,7 +1111,52 @@
         "ACS-900a"
       ],
       "impl_status": "not_started",
-      "impl_asof": "2026-07-20"
+      "impl_asof": "2026-07-20",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "ac",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/implemented_by",
+                "types": [
+                  "array"
+                ],
+                "required": false,
+                "default": []
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "ac",
+            "mode": "projection",
+            "origin": "illustrative",
+            "label": "Input illustrative ac projection; not an execution receipt",
+            "value": {
+              "id": "ACD-300",
+              "status": "deprecated",
+              "implemented_by": []
+            }
+          }
+        ]
+      }
     }
   ],
   "impl_summary": {
@@ -364,6 +1234,22 @@
       "by": "BrainCandy (product-truth Atlas session)",
       "date": "2026-07-14",
       "note": "Real data-flow of the AC lifecycle (create -> approve -> scan -> ticket -> done) plus the governance, backfill, re-home and retire update paths, linked to the ac-driven-dev / ac-store ACs."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (agent-led I/O contract migration)",
+      "date": "2026-10-03",
+      "note": "Added source-bound field/type/requiredness/default metadata and explicitly illustrative JSON projections. Preserved topology, actor ownership, realization and AC status. Non-JSON artifacts and genuinely undefined proposed interfaces remain explicit."
     }
-  ]
+  ],
+  "contract_definitions": {
+    "ac": {
+      "schema": "config/ac_store_schema.json"
+    },
+    "triage": {
+      "schema": "docs/product-truth/schemas/ac-triage-output.schema.json",
+      "authority": "source_reviewed",
+      "note": "Source-reviewed templates/agents/ac-triage.md Step 3 prompt contract; no runtime registration or automatic prompt/schema parity."
+    }
+  }
 }

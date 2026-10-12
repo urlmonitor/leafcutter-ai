@@ -1,0 +1,347 @@
+id: GE-118g-2
+title: "The unclaimed-number audit examines the repository it belongs to, and nothing outside it, without being told where that is"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a checkout of this repository whose decision records claim a known set of
+    numbers,
+  And that checkout sits inside a larger directory that is not itself a git work
+    tree and that holds 77 sibling checkouts of the same repository, each of
+    which claims numbers of its own,
+  When the author runs the unclaimed-number audit by absolute path — the form
+    this project's shell convention requires — with that larger directory as the
+    working directory and no argument naming a scan root,
+  Then the set of claimed numbers it reports is exactly the set claimed by the
+    repository the program belongs to,
+  And no path outside that repository appears anywhere in what it reports.
+
+  And given the same run, and a second run in which the repository is named
+    explicitly as the scan root,
+  Then the two runs report the same claimed set and the same unclaimed set — so
+    naming the repository changes nothing, which is what makes the published bare
+    command usable.
+
+  And given a decision record claiming a previously unclaimed number is added
+    inside the repository,
+  When the audit is run again from that same larger directory,
+  Then the claimed set it reports is larger by exactly that number, and the
+    unclaimed set no longer offers it.
+
+  And given instead that a decision record claiming a previously unclaimed
+    number is added to one of the sibling checkouts and to no file inside the
+    repository,
+  When the audit is run again from that same larger directory,
+  Then the claimed set it reports is unchanged and the unclaimed set still
+    offers that number — so what the audit reports moves with the repository's
+    own contents and with nothing else.
+depends_on:
+  - GE-118g
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118g.yaml
+    relationship: parent
+    status: exists
+  - path: scripts/adr_refs.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE DEFECT SITE. Its scan-root option defaults to the working directory, so an
+      invocation that does not name a root audits whatever tree the process was started
+      in. Note this file's location: unlike the commit-guardian hooks it is not a
+      templates/ source with a deployed copy, so there is no source-versus-build-output
+      trap here — but confirm that before editing, because the trap exists for its
+      sibling tools.
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The established resolver for this category. Whether this tool can reach it from its
+      own location is a technical question for enrichment; the criteria require the
+      behaviour, not a particular import.
+  - path: docs/conventions/adr-numbering.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 6 makes this audit the required way to pick a number and prescribes it as a
+      bare command with no scan root. docs/how-to/documentation/write-adr.md section 10
+      does the same. Those are the invocations the second arm above protects.
+  - path: docs/how-to/documentation/write-adr.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Section 10 is the other published surface that requires this audit. Cited so a fix
+      verified against only one of the two published procedures is visible as partial.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-022.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Carries the 2026-10-09 reproduction. Read it; do not re-derive it. It also records
+      the measurement that keeps this record off the wrong subject: with the repository
+      named explicitly the audit completes in 5.0 seconds, so it is not hung and no
+      clause above concerns duration.
+  - path: docs/known-issues/knowledge-management/open-high-ki-km-20261008-harvest-state-default-is-cwd-relative.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The same working-directory-default family in another component, cited so the class
+      is visible. Its fix is not this record's work.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Two passages bind. "Gate / Workflow ACs — Verify Behaviorally, Not by Grep": every
+      arm is a real run of the audit from a named working directory against a real tree,
+      asserted on what it reported. And the MANDATORY shell convention, "use absolute
+      paths for the script AND its arguments", is why the absolute-path invocation in the
+      first Given is the normal case rather than an unusual one — the convention that
+      makes commands auto-allowed is the same convention that leaves the scan root at its
+      default.
+delivers_to: null
+expects_from: null
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "ENRICHMENT DECISION, AMENDED — adr_refs.py must NOT import
+    scripts/commit_guardian/_resolve_root.py, and must NOT carry its own implementation
+    of the resolution order either. The first half of this is unchanged and the reason is
+    unchanged: scripts/commit_guardian/ is an UNTRACKED build output (git ls-files returns
+    nothing for it, verified 2026-10-09), a fresh clone does not have it until build.py has
+    run, and importing it would make a tracked repository script depend on a build artifact
+    and fail outright on a clean checkout. The second half CORRECTS this record's first
+    enrichment pass, which concluded from that premise that a second implementation under
+    scripts/ was therefore necessary. It is not, and a second implementation is now
+    forbidden — see the next requirement."
+  - "WHAT IT IMPORTS INSTEAD — THE TRACKED SOURCE, THROUGH THE PROJECT'S EXISTING LOADER.
+    scripts/adr_refs.py must obtain the shared resolver by calling
+    load_commit_guardian_module('<resolver-module-stem>') from
+    scripts/commit_guardian_module_loader.py — a bare sibling import, the same shape
+    adr_refs.py already uses for adr_index_frontmatter. That loader tries the git-TRACKED
+    templates/scripts/commit_guardian/<name>.py FIRST and the untracked deployed copy only
+    as a fallback, and raises ImportError naming both paths when neither resolves. So the
+    tracked source — not the build output — is what a fresh clone executes, which is
+    exactly the property the premise above required, and the module executed is the SAME
+    file the deployed hook executes. The single-source-of-truth requirement and the
+    evidence that this loader is reachable from both sides are stated once in the parent
+    L1; implement that, and add no second copy of the order here."
+  - "The loader is the sanctioned mechanism rather than an improvisation: it is tracked,
+    it already has two tracked callers solving this exact problem
+    (scripts/registry_validator.py, scripts/spawn_bidirectionality_validator.py), it has a
+    regression test at unit_tests/test_inf_600k_1_regressions.py, and its own docstring
+    records that it exists because a sys.path insert of the gitignored build output raised
+    ModuleNotFoundError on a fresh clone and was silently swallowed by a broad
+    except ImportError. Do not reach for a sys.path insert here; that is the defect the
+    loader was written to end."
+  - "WHATEVER adr_refs.py GAINS MUST NOT MAKE IT LONGER. It measures 576 lines against
+    the 400-line .py limit (measured 2026-10-09 with check_file_size's own measurement
+    rule) — already 176 over, grandfathered only by the GE-127b-1 growth ratchet, so ANY
+    commit that leaves it longer than it found it is refused at commit time.
+    adr_index_frontmatter.py's own module docstring records this constraint as the reason
+    it exists. Routing through the shared resolver helps rather than hurts here: the import
+    plus the call replace the body of the existing _repo_root(), so the net change can be a
+    REDUCTION. Verify that with the gate's own measurement before committing — do not
+    assume it, and do not solve a shortfall by adding a second local implementation, which
+    this record now forbids."
+  - "The existing _repo_root() at line 162 is the defect site and must stop falling back
+    to the directory it was asked from. Its current except branch prints a warning and
+    returns `start`, which is precisely the silent substitution GE-118g-3 forbids — the
+    warning goes to stderr and the walk proceeds against the wrong tree."
+  - "--root must keep working and must outrank every other anchor when supplied, because
+    both of this subtree's sibling records' harnesses depend on being able to point the
+    tool at a throwaway checkout."
+  - "No deploy-map entry is required for this record: scripts/adr_refs.py is not deployed
+    to consumers by any build phase (verified 2026-10-09 — no build script references it),
+    and the shared resolver it imports lives under templates/scripts/commit_guardian/,
+    which build_commit_guardian() in scripts/build_phases_lifecycle.py deploys WHOLESALE by
+    rglobbing the directory. Confirm both still hold before implementing."
+  - "NO DURATION CLAUSE. Do not add a timeout, a progress indicator, or any speed work.
+    The parent records why: with the repository named the audit completes in 5.0s, and
+    the defect is which tree is walked. A faster wide walk satisfies nothing here."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_claimed_set_excludes_sibling_checkouts_when_run_from_their_parent
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: scripts/adr_refs.py
+    description: >-
+      Arm 1. A directory that is not a work tree holding the repository under test plus
+      several sibling checkouts, each with ADR files claiming numbers of its own. Invoke
+      the audit by ABSOLUTE path — the form the shell convention mandates, and the form
+      that leaves the scan root at its default — with cwd set to that parent and no
+      --root. Assert the claimed set equals the repository's own, and separately assert
+      that no path outside the repository appears anywhere in the output. Two assertions,
+      because a correct set can still be reported alongside leaked paths. No build.py
+      spawn, no layout fixture, so no marker.
+    must_catch:
+      - "restore the working-directory default for the scan root"
+      - "verify only from the repository root, where a working-directory default is indistinguishable from the fix"
+  - name: test_named_root_and_default_root_report_the_same_sets
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 2 as an equality between two runs — once with --root naming the repository,
+      once from the sibling-holding parent with no --root — asserting both the claimed
+      and the unclaimed sets match. This is what makes the published bare command usable,
+      and it is stated as a pairing because this arm passes against the defect whenever
+      it is run from the repository root. No marker.
+    must_catch:
+      - "restore the working-directory default for the scan root"
+  - name: test_claimed_set_grows_by_a_record_added_inside_the_repository
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3. Add an ADR claiming a previously unclaimed number INSIDE the repository,
+      re-run from the sibling-holding parent, and assert the claimed set is larger by
+      exactly that number and the unclaimed set no longer offers it. The only arm a
+      hardcoded claimed set fails. No marker.
+    must_catch:
+      - "return the claimed set observed at implementation time instead of reading the repository"
+  - name: test_claimed_set_unchanged_by_a_record_added_to_a_sibling_checkout
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 4, the anti-working-directory clause and the load-bearing one. Add an ADR
+      claiming a previously unclaimed number to a SIBLING checkout and to no file inside
+      the repository; re-run from the parent. Assert the claimed set is byte-identical to
+      the previous run's and the unclaimed set still offers that number. A single-tree
+      harness cannot express this arm, so the sibling population is not optional
+      scaffolding. No marker.
+    must_catch:
+      - "restore the working-directory default for the scan root"
+      - "union the named root's contents with the working directory's"
+  - name: test_audit_from_a_fresh_clone_with_no_build_outputs_present
+    target_dir: unit_tests/docs/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: scripts/adr_refs.py
+    description: >-
+      The import-boundary arm, which exists because of this record's first two
+      it_requirements. Run the audit in a checkout containing only git-TRACKED files — no
+      scripts/commit_guardian/, no .leafcutter/, no build output of any kind — and assert
+      it resolves its repository and reports a claimed set rather than raising ImportError
+      or ModuleNotFoundError. This is the entry that proves the shared resolver is reached
+      through the loader's TRACKED-source-first path rather than across the build boundary.
+      It is the fresh-clone condition that commit_guardian_module_loader.py's own docstring
+      records as the failure it was written to end, so the fixture must contain genuinely
+      only tracked files — a tree that happens to retain a stale scripts/commit_guardian/
+      reproduces a different condition and passes on the defect. No build.py spawn — the
+      point is the ABSENCE of build output — so no marker, and a shared reference layout
+      would actively defeat this entry.
+    must_catch:
+      - "import the resolver from scripts/commit_guardian/, which is an untracked build output absent from a fresh clone"
+      - "reach the resolver by a sys.path insert instead of the tracked loader"
+      - "reimplement the resolution order locally in scripts/ instead of importing the one shared module"
+test_rationale: >-
+  Every entry runs the audit as a real subprocess against real trees on disk and asserts
+  on what it printed. The record's notes already rule out the grep form; the specific
+  weak shape to avoid here is a unit test that calls scan(root) directly with an explicit
+  root, which exercises the function this record is NOT about and leaves the default
+  — the actual defect — untested. The populations are the design: arms 3 and 4 hold one
+  population fixed and move the other in opposite directions, which is the only shape no
+  hardcoded list and no working-directory default satisfies. Arm 4 in particular requires
+  sibling checkouts to EXIST in the fixture; a single-tree harness reports green against
+  the defect. The fifth entry is not one of the record's arms — it is enrichment's own,
+  and it is the only test here that can catch the import-boundary mistake this record's
+  first two it_requirements forbid: scripts/commit_guardian/_resolve_root.py is present in
+  a developer's working tree and absent from a clone, so an import of it passes every
+  other test on this record and fails on every fresh checkout and in CI's first job. Its
+  must_catch list also names the two mistakes the AMENDED requirements add — reaching the
+  resolver by a sys.path insert, and reimplementing the order locally — because a local
+  reimplementation passes this entry's happy path as readily as a correct import does.
+  What this record can NOT prove on its own, and does not attempt to: that the audit and
+  the collision pre-flight AGREE. Every entry here asserts the audit's own outcome, so
+  the two tools could each pass all of their own arms while disagreeing with each other.
+  That property is cross-cutting, it is held by GE-118g's own test_spec, and its first
+  entry lists this record in its covers field. Markers: none of the five entries here
+  requests shared_reference_layout and none spawns build.py, so all five sit outside the
+  marker-routing mechanism. The fifth is explicitly a NO-build test — provisioning it with
+  a built layout would destroy exactly the condition it exists to prove. Deliberately
+  absent: any assertion about how long a run takes.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE LAST TWO ARMS ARE THE LOAD-BEARING ONES. A stated claimed set is satisfiable by
+  an implementation that computes it from the right tree and by one that computes it from
+  a hardcoded list — and, worse here, by one that still walks the working directory on a
+  machine where the working directory happens to contain only the repository. The two
+  varying-population arms are the only shape no such implementation satisfies: add a
+  record inside and the reported set must grow by exactly that number; add one outside and
+  it must not change at all. The second of the two is specifically the anti-cwd clause,
+  and it is the one a single-tree test harness cannot express. This construction is
+  reused from BP-1600a-2 rather than reinvented.
+
+  WHY THE DEFECT IS THE DEFAULT AND NOT THE PERFORMANCE, STATED SO IT IS NOT RE-OPENED AS
+  A SPEED RECORD. Run from the workspace parent the audit walks 77 sibling checkouts and
+  produced no output within five minutes, and was reported as hung. It is not hung. With
+  the repository named explicitly it completes in 5.0 seconds. The duration is a
+  consequence of auditing 78 trees instead of one; fixing which tree is audited removes it
+  without any work on speed. No clause above mentions a duration, no clause may be
+  satisfied by making the wide walk faster, and a test that asserts a completion time
+  satisfies nothing here.
+
+  AND THE CORRECTNESS CONSEQUENCE THAT MATTERS MORE THAN THE WAIT, WHICH IS THE REASON
+  THE FOURTH ARM EXISTS. Walking sibling checkouts means a number claimed only on another
+  branch in another tree is reported as claimed here, so a genuinely free number is
+  withheld; and the reported claimed set depends on which worktrees happen to exist on the
+  machine at the moment of the run, which makes the audit's answer unreproducible between
+  two developers. That is a wrong answer, not a slow one.
+
+  MEASURED 2026-10-09 IN THIS WORKTREE, WITH METHOD. `ls` of the workspace parent's
+  worktrees directory returns 77 entries. The prior filed note says "~100"; 77 is what is
+  there today and the two figures must not be merged. The workspace parent is not a git
+  work tree (`git -C` on it exits 128). It does NOT contain `scripts/adr_refs.py`, which
+  is why the published bare relative command fails to start from there and the reachable
+  path to this defect is the absolute-path invocation the shell convention mandates.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE DEFECT ITSELF. MUTATION: restore the working-directory default for the scan
+      root.
+      MUST GO RED: the first arm (no outside path appears) and the fourth (a sibling's
+      new record must not change the reported set).
+      MUST STAY GREEN: the second arm and the third, both of which a
+      working-directory-defaulting implementation satisfies whenever it is run from the
+      repository root. A verification performed only from the repository root cannot
+      distinguish the fix from the defect.
+
+  (2) THE LITERAL. MUTATION: return the claimed set observed at implementation time
+      instead of reading the repository.
+      MUST GO RED: the third arm only.
+      MUST STAY GREEN: arms one, two and four. This is why the third arm is stated
+      separately from the first.
+
+  (3) THE SILENT SUBSTITUTION. MUTATION: when no scan root is named and no repository can
+      be established, fall back to the working directory and report the result.
+      MUST GO RED: GE-118g-3's arms, not this record's. Recorded here so the boundary
+      between the two is visible: this record owns where the audit looks when a repository
+      CAN be established; GE-118g-3 owns what happens when one cannot.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's, as is the question of
+  whether this tool reaches the shared resolver by import or by another route.

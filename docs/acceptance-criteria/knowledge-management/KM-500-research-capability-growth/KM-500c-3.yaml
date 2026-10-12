@@ -1,0 +1,141 @@
+id: KM-500c-3
+title: Stop failed or unproductive build-and-research loops honestly
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-500c
+criteria: 'Given a build fails validation, an activation fails, a continuation repeats without new evidence, or
+  the shared attempt/time/cost budget is exhausted
+
+  When the waiting research handles that outcome
+
+  Then it records a bounded failed, partial or blocked result with the original unresolved question and specific
+  reason
+
+  And it neither retries the same unchanged candidate indefinitely nor resets the original research budget
+
+  And repeated process restart or child delivery cannot turn a failed build into verified registration
+
+  And a later authorized attempt with new information may reuse the recorded gap and original context without losing
+  prior failures.
+
+  '
+depends_on:
+- KM-500c
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse standalone retrieval, canonical provenance, budget limits and honest result statuses; this extension
+    does not replace completed KM-400 behavior.
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: context
+  status: exists
+  relevance: Deterministic eligibility before bounded semantic judgment; clarification and no-progress remain existing
+    mechanisms.
+- path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+  relationship: context
+  status: exists
+  relevance: Reuse canonical capability gaps and verified registration; provider failures and ambiguity are not
+    capability-growth evidence.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_query_growth_adversarial.py::test_no_progress_stops_without_new_children
+- tests/knowledge/test_query_growth_adversarial.py::test_repeated_failed_builder_delivery_never_becomes_activation
+- tests/knowledge/test_query_growth_boundaries.py::test_backend_outage_cannot_activate_or_replace_catalog
+- tests/kernel/scheduler/test_guards.py::TestWorkerBudgets::test_workers_share_the_remaining_jev_budget
+- tests/kernel/scheduler/test_guards.py::TestNoProgress::test_new_evidence_resets_the_fingerprint
+- tests/kernel/interaction/test_restart_resume.py::TestRejectedThenValidAcrossProcesses::test_the_repair_counter_survives_the_restart_and_the_bound_fails_the_item
+- tests/kernel/integration/test_gap_no_fallback.py::TestFallbackDisabled::test_an_exhausted_host_budget_blocks
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-500c-3.md
+- integrations/query_growth.py
+- integrations/query_planning.py
+- integrations/query_activation.py
+- integrations/query_contracts.py
+- kernel/contracts/query.py
+- kernel/capabilities/host/query_build.py
+change_target: code
+risk_surface: contract_boundary
+notes: 'User explicitly authorized implementation of this research/query capability-growth loop. PO reviewed the
+  separate KM-500 product boundary. Approval records scope authorization, not completed work. IT PO supplies technical
+  constraints and test contracts; canonical tickets precede implementation. 2026-10-01 independent BA reconciliation:
+  actual public tests linked; local Neo4j proof is synthetic graph execution, scheduler proof uses scripted Jev/Cypher.
+  This checkpoint was superseded by the final acceptance below. Final independent acceptance:
+  bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
+  external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
+  Commit/release status is separate.'
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Bound construction attempts, clarification rounds and total retrieval work in persisted continuation using existing
+  scheduler budgets; no retry that merely seeks a better confidence.
+- Failed or cancelled construction/admission leaves prior catalog unchanged and reports the exact unresolved need;
+  no build opportunity is manufactured from an outage.
+test_required: true
+test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
+  Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.
+test_spec:
+- name: test_km500_c_3_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Exercise failed admission, repeated missing capability, exhausted host/Jev/retrieval budget and restart;
+    retain useful prior evidence and stop without duplicate writes or endless handoffs.
+  covers:
+  - KM-500c-3
+  requires_db: false
+expects_from:
+  ac_id: KM-400e-3
+  contract: Existing scoped retrieval, canonical evidence, optional bootstrap and checkpoint lifecycle remain compatible.
+delivers_to:
+  agent: python-coder
+  contract: Implement KM-500c-3 at tests/knowledge/test_query_growth_kernel.py public test seam; neutral query catalog/admission
+    and kernel integration share versioned descriptors and digest-bound activation receipts.
+product_truth:
+  - flow: leafcutter/retrieval-current-baseline
+    node: assess
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: judge-coverage
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: partial
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'
+  - flow: leafcutter/retrieval-current-baseline
+    node: skip
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: null
+    entities: []
+    source: real
+    asof: '2026-10-02'

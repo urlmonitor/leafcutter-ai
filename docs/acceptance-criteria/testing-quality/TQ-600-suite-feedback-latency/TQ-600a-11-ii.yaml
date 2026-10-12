@@ -1,0 +1,193 @@
+id: TQ-600a-11-ii
+components:
+  - testing_quality
+  - ac_store
+title: "The two parsers are proved to agree on the real store, record by record"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the acceptance-criteria store exactly as it stands on disk — every record of
+    it, 4,635 of them at the time of measurement — and the fact so far established
+    about the C-backed parser being only that it parses all of them without raising,
+    which is a weaker claim than the objects matching,
+  And four classes of input on which the two parsers are known to differ in general:
+    a mapping with a duplicate key, a timestamp scalar, numeric scalars in the forms
+    the two resolve differently — leading-zero, underscore-separated, sexagesimal,
+    and hexadecimal — and a merge key,
+  When every record is parsed twice, once with the pure-Python safe parser and once
+    through the shared accessor, and the two resulting objects are compared for
+    equality,
+  Then every record in the store compares equal,
+  And the comparison reports how many records it examined, and that count equals the
+    number of record files on disk, so a run that examined nothing is distinguishable
+    from a run that found no disagreement,
+  And the comparison exits non-zero when the counts differ, rather than reporting a
+    clean result over a population it failed to enumerate,
+  And each of the four named input classes is represented in the compared set —
+    either because the real store already holds an instance, which the comparison
+    reports by record id, or because an instance is added to the compared set and
+    named in the report,
+  And a record that only one of the two parsers rejects counts as a disagreement and
+    not as a record to skip,
+  And the comparison is part of the suite as a standing guard rather than a one-off
+    performed by hand, so it re-runs against the store as the store changes.
+depends_on:
+  - TQ-600a-11
+doc_links:
+  - path: scripts/ac_store/validate_ac_schema.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The sweep shape this comparison mirrors: find every record under
+      docs/acceptance-criteria/, read it, parse it. Reuse its enumeration so the
+      compared population and the validated population cannot drift apart.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "AC-store hygiene" documents KI-ACS-001, where this very validator exited 0
+      having checked zero files for eight days. The examined-count clause is that
+      incident turned into a criterion.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-3-the-yaml-parser.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Section 4 states the gap this record closes in as many words: behaviour is
+      equivalent for this store's content, but "equivalent on our content" is a claim
+      that needs a proof, not an assertion.
+declared_files:
+  - path: unit_tests/ac_store/test_tq_600a_11_ii.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE REAL STORE IS THE INPUT, AND THIS IS THE WHOLE POINT. A hand-authored fixture
+    contains none of the four named classes, because an author who knew to put them
+    there would not need the comparison. Enumerate the real store. The repository's
+    own precedent is the files_touched parser that stayed a no-op through seven green
+    sign-offs because every fixture reproduced the author's indentation bias.
+  - >-
+    DUPLICATE KEYS ARE THE LIKELIEST REAL DIVERGENCE and the cheapest to construct.
+    The pure-Python safe parser silently keeps the last value for a duplicate mapping
+    key; the C-backed one has its own handling. Do not assume which wins — observe
+    it, record what was observed in the test's own docstring, and let the comparison
+    decide.
+  - >-
+    EQUALITY IS DEEP AND TYPE-SENSITIVE. `==` on two nested dicts compares values but
+    treats `1` and `True` as equal and `1` and `1.0` as equal. Where a type
+    difference would matter to a downstream reader — a date object versus a string is
+    the live case in this store, since `created` is accepted in both forms — compare
+    types alongside values. A comparison that cannot see a str/date divergence is
+    blind to the exact class of difference this record exists to find.
+  - >-
+    BUDGET: ABOUT 27 SECONDS. One pure-Python sweep (about 25 s) plus one C sweep
+    (about 2 s). That is acceptable for a standing guard but it is 27 s on every
+    full run, so keep it to ONE test, not one per class, and do not let it sweep the
+    store more than twice.
+  - >-
+    REPORT THE EXAMINED COUNT IN THE FAILURE MESSAGE TOO, not only on success. A
+    disagreement message that names the record and the differing field is what makes
+    this debuggable; "objects differ" over 4,635 records is not.
+  - >-
+    DO NOT ADD THE FOUR CLASSES AS PERMANENT STORE RECORDS. If the real store lacks
+    an instance of a class, add it to the COMPARED SET in the test's own fixture
+    space. Adding a duplicate-key or merge-key record under docs/acceptance-criteria/
+    would trip the schema hooks and corrupt the store this change exists to read.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-11-iii
+    contract: >-
+      The record-by-record comparison itself, as the subject TQ-600a-11-iii feeds a
+      genuinely divergent record in order to show the comparison can fail.
+expects_from:
+  - ac_id: TQ-600a-11
+    contract: >-
+      The shared parser accessor, as one of the two sides of the comparison. Note the
+      ordering: this record is the evidence that licenses TQ-600a-11's substitution,
+      so it must be green before the substitution is called done, even though it
+      imports the accessor the substitution introduces.
+test_spec:
+  - name: test_tq600a_11_ii_every_store_record_parses_identically_under_both_parsers
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Enumerate the real store, parse each record both ways, compare objects and
+      types. Zero disagreements. The failure message names the record path and the
+      field at which the two results differ.
+  - name: test_tq600a_11_ii_the_comparison_reports_the_number_of_records_it_examined
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The reported examined-count is non-zero and equals the number of record files
+      the enumeration found. NAMED MUTATION: make the enumeration return an empty
+      list; this test must go RED while the agreement assertion alone would stay
+      green.
+  - name: test_tq600a_11_ii_the_four_known_divergence_classes_are_present_in_the_compared_set
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      For each of duplicate key, timestamp scalar, ambiguous numeric form and merge
+      key, the compared set contains at least one instance, and the report names
+      where it came from — a store record id, or the test's own supplementary input.
+  - name: test_tq600a_11_ii_a_record_only_one_parser_rejects_counts_as_a_disagreement
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      Feed an input that one parser raises on and the other accepts. The comparison
+      records a disagreement. NAMED MUTATION: wrap each parse in a try/except that
+      skips on error; this test must go RED, because that wrapping is the obvious
+      implementation and it converts every divergence into a silent skip.
+test_rationale: |
+  The analyst measured that the C-backed parser reads all 4,635 records without
+  raising. That is a different claim from the objects being equal, and the gap
+  between the two is exactly where this change can ship broken: a parse that
+  succeeds while resolving a value differently is invisible until some downstream
+  gate compares the wrong thing.
+
+  Three of the four descriptors exist to stop a comparison that cannot fail. The
+  examined-count descriptor names its injection because an empty enumeration is the
+  single most likely way this guard becomes a no-op, and the repository has already
+  lived through exactly that with this validator for eight days. The
+  one-parser-rejects descriptor names its injection because try/except-and-skip is
+  the natural thing a coder writes when a parse raises mid-sweep, and it silently
+  converts the strongest signal available into no signal at all.
+
+  The four classes are named rather than left to the implementer because a
+  hand-written fixture contains none of them; they are the only inputs on which the
+  two parsers are documented to disagree, so a comparison that does not contain them
+  is a comparison over the easy cases.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE ACCEPTANCE CRITERION FOR TQ-600a-11, NOT A NICE-TO-HAVE. The parent
+  substitutes a parser in 76 places including a required pull-request gate and the
+  pre-commit path of every commit. The evidence currently in hand is "it did not
+  raise", which is compatible with a value being resolved differently in a record
+  nobody looks at until it matters.
+
+  The four classes are the known-divergence set and they are not hypothetical:
+  duplicate mapping keys, timestamp scalars, the ambiguous numeric literal forms of
+  YAML 1.1, and merge keys are where the pure-Python and libyaml implementations have
+  historically parted company. The store may well contain none of them, which is a
+  fine outcome — but it has to be an observed outcome, reported, not an assumption.

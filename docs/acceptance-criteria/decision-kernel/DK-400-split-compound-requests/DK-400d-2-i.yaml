@@ -1,0 +1,99 @@
+id: DK-400d-2-i
+title: "Unticking every part is not an approval"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the trace-analyzers split waiting at the split gate with parts p1 and p2,
+  When the person unticks both parts and approves,
+  Then the answer is not accepted as an approval and nothing is recorded as approved,
+  And the gate says that at least one part must stay in, or that the split can be rejected instead,
+  And the gate stays open with no part run.
+depends_on:
+  - DK-400d-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-revise, with their acceptance scenarios."
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "Invariant: an approved split has at least one part not left_out."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-5-client-observability.md
+    relationship: describes
+    status: exists
+    relevance: RunService resume validation, the RunEnvelope, report.md, tracing and redaction.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-2
+  contract: "The subset answer whose lower bound this case enforces."
+it_requirements:
+  - An approval with every offered part left out is refused by the semantic check of leafcutter.split_answer.v1
+    (ADR-067 §4.4) before any state change (exit 3) with an error message saying that at least one part must stay
+    in or that the split can be rejected instead; the interaction stays pending at the same state revision.
+  - Such an answer is never converted into a rejection.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_unticking_every_part_is_refused_not_rejected
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Approving the trace-analyzers split with p1 and p2 unticked is refused with the stay-in-or-reject
+      message; nothing is recorded as approved or rejected and no part runs.
+test_rationale: A refusal must leave state unchanged, which the test checks on the run's state revision after the
+  rejected submission.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      refusal named as leafcutter.split_answer.v1''s semantic check.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Settles the DK-400d CARRY TO L2 point left to the BA: the gate refuses an approval with
+  every part unticked, rather than treating it as a rejection. A rejection has different
+  consequences per trigger (blocked, or kept whole), so it must be the person's explicit answer,
+  never inferred.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-revise
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'

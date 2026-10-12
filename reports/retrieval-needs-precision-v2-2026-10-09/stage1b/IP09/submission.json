@@ -1,0 +1,57 @@
+{
+  "run_id": "run-baad17e12ff2419c",
+  "interaction_id": "int-d7f9caf91c3541cb",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind-precision",
+    "kind": "host"
+  },
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "What are the implementation work status and lifecycle status of KM-500c-2?",
+    "source_scope": {
+      "read_roots": [
+        "docs"
+      ],
+      "repository_id": "leafcutter",
+      "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "source_ids": [
+        "knowledge.graph"
+      ]
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "work_status",
+        "status"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "Implementation work status and lifecycle status are two distinct requested fields on the named criterion.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

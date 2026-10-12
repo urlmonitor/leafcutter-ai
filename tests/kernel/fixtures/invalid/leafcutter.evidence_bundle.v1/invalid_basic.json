@@ -1,0 +1,26 @@
+{
+  "evidence_ids": [
+    "ev-0000000000000000"
+  ],
+  "evidence": [
+    {
+      "id": "ev-0000000000000000",
+      "category": "prior_decisions",
+      "semantic_type": "repository_fact",
+      "excerpt": "Use sqlite for the local cache.",
+      "source": {
+        "id": "repo.decisions",
+        "kind": "repository_file",
+        "locator": "docs/architecture/adrs/ADR-001.md#L1-L3",
+        "title": "ADR-001"
+      },
+      "content_hash": "db8eab047e6f0248e4cf0b6009bc8de667c7584eb7075be0b67f9100854f6462",
+      "provenance": {
+        "producer": "retrieve.repository",
+        "strategy": "repo_text",
+        "rank": 0,
+        "relevance": 0.9
+      }
+    }
+  ]
+}

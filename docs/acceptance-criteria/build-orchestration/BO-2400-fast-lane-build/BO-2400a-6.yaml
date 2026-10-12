@@ -7,7 +7,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -40,6 +40,12 @@ origin_agent: BrainCandy
 created: 2026-07-21
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-2400a-6-i]
 implemented_by:
   - "docs/how-to/fast-lane-build.md"
+notes: |
+  2026-09-27: reset from done to in_progress (user-approved documentation update).
+  The fast lane gains a command-step-runner, a declined-step halt and launch from
+  any checkout (BO-2400f-5-i, -iii, BO-2400f-3-ii), so the fast-lane how-to must change. New
+  child BO-2400a-6-i specifies the update. Return this criterion to done once
+  BO-2400a-6-i is built and covered.

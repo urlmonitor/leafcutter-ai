@@ -1,0 +1,758 @@
+id: GE-127g-5
+title: "A set-aside location is still a bounded place: each declares the size beyond which its documents are reported, and no location may be set aside without one"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a declared set-aside location whose entry declares, alongside its stated
+    ground, a ceiling many times the limit the standard applies to a document a
+    person writes,
+  And a generated document inside that location standing above the authored
+    limit and below its location's declared ceiling at the parent revision,
+  When a regeneration leaves that document longer than it stood at the parent
+    revision but still below its location's declared ceiling, and the author
+    performs an ordinary commit,
+  Then the commit completes,
+  And the document is reported as set aside from the authored limit and is not
+    reported as judged against it — a generated document that merely grew is
+    still not something any author is asked to act on.
+
+  And given the same location and the same declared ceiling,
+  When a regeneration leaves that document above its location's declared
+    ceiling, and the author performs an ordinary commit,
+  Then the commit still completes — nobody is refused for a length they did not
+    write and cannot shorten,
+  And the outcome states that the document stands above the ceiling its location
+    declares, states the size it measured and the ceiling it measured that size
+    against, and names the source its location's stated ground identifies as
+    producing the document — so what is reported is addressed to whoever owns
+    that source rather than to whoever happened to stage the file.
+
+  And given a document inside a declared location standing above its location's
+    declared ceiling at the parent revision,
+  When a regeneration leaves it shorter than it stood at the parent revision and
+    still above that ceiling, and the author performs an ordinary commit,
+  Then the commit completes, and the outcome still states that the document
+    stands above the ceiling its location declares — standing above the bound is
+    reported for as long as it is true, and not only on the commit that crossed
+    it.
+
+  And given that same staged content with its location's declared ceiling raised
+    above the size the document measures,
+  When the author performs an ordinary commit,
+  Then the outcome does not state that the document stands above its ceiling,
+    and it names no document as standing above any ceiling.
+
+  And given instead that ceiling held where it was and the document regenerated
+    larger again,
+  When the author performs an ordinary commit,
+  Then the size the outcome states is the size newly measured from the staged
+    content, and the headroom it states against the declared ceiling is smaller
+    by the amount the document grew — each figure read from the tree at run time
+    and neither one a fixed number.
+
+  And given a commit that declares a new set-aside location whose entry carries
+    a stated ground and no ceiling,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and what it reports names that entry and
+    states that a location may be set aside only together with the size beyond
+    which its documents are reported — so no commit can create a place where a
+    document grows and nothing notices.
+depends_on:
+  - GE-127g
+  - GE-127g-1
+  - GE-127g-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE LINEAGE, AND THE STRONGEST GROUND THIS RECORD HAS. GE-127c is not merely
+      adjacent: its criteria already promise that holding work to a workable size means
+      the project "does not silently create a place where files can grow without limit".
+      The parent L1 creates exactly such a place — a declared location whose documents
+      are exempt entirely and forever — so this record is not a new principle but the one
+      GE-127c already states, applied to the exemption the parent introduces. GE-127c is
+      work_status: done and cannot host a child (see the parent's notes for the mechanical
+      reason), which is why its sentence is honoured here rather than there. Note the
+      direction of the debt: GE-127c would not fail without this record, because its own
+      coverage is about which KINDS are in scope and says nothing about which documents
+      escape — so the erosion is invisible from there and this is the only place it is
+      caught.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      DEFINES WHAT THIS RECORD BOUNDS, AND THE RECORD THIS ONE MUST NOT RE-BREAK.
+      GE-127g-1 establishes membership by declared location and the no-edit property. This
+      record adds one field to each declared entry and takes no position on membership: it
+      introduces no second membership test, no additional location, and no change to which
+      documents are set aside. Its first arm's final clause is the negative control that
+      fails if the bound is obtained by judging set-aside documents against the authored
+      limit after all — which would be GE-127g-1's own mutation (2) reinstated.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE REPORTING SURFACE THIS RECORD WRITES INTO, AND THE BOUNDARY THAT MATTERS MOST.
+      GE-127g-2 requires every set-aside document to appear in EXACTLY ONE of two counted
+      populations and never among those found within their permitted length. The
+      over-ceiling statement here is an additional thing said ABOUT a document that is
+      already counted among the set aside — it is NOT a third population, NOT a
+      reclassification, and must not move the document out of the set-aside count or into
+      the judged count. An implementation that satisfies this record by promoting
+      over-ceiling documents into the judged population breaks GE-127g-2's first arm and
+      this record's first arm together.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OTHER HALF OF THE SAME WORRY, AND NOT A DUPLICATE. GE-127g-3 bounds WHICH
+      documents may be set aside; this record bounds HOW LARGE a document may become once
+      it is. GE-127g-3's own notes state its limit explicitly — it bounds the population
+      and not its size — so a declaration that is exactly as narrow as GE-127g-3 requires
+      still leaves every document inside it unbounded. Neither record may be closed as a
+      duplicate of the other, and neither is satisfied by the other.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-2-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      ADJACENT IN SHAPE, DISTINCT IN SUBJECT, AND A WARNING FOR ENRICHMENT. That record
+      requires an entry whose stated GROUND is absent, empty or whitespace-only to be
+      rejected rather than honoured. This record's last arm requires the same of an entry
+      with no declared CEILING. The two are one validation step in all likelihood, but
+      they must stay distinguishable in what the refusal SAYS: a single message that
+      cannot tell a missing ground from a missing ceiling leaves the author of the
+      declaration unable to act, which is the diagnostic failure GE-127g-2-i's own third
+      arm exists to prevent one level up.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PUBLISHED HALF OF THIS RECORD'S MECHANISM, AND THE BOUNDARY IS EXACT IN BOTH
+      DIRECTIONS. As first authored, GE-127g-4 enumerated what the published description
+      must state — the declared locations, each stated ground, what a run reports for an
+      unjudged document, the no-edit property, and the limit that applies to everything
+      else — and it predated the ceiling, so a deliverable satisfying it exactly would have
+      published an exemption with no stated bound: the reader's question "how large may one
+      of these get?" would have had no published answer. That gap was raised here as a
+      named follow-up and has since been DISCHARGED. On 2026-10-09 GE-127g-4 gained a third
+      criteria arm requiring the published description to state that a bound applies to a
+      set-aside location, that a document standing above it is reported while the commit
+      still completes, and that declaring a location requires declaring the size as well as
+      its ground; it also gained GE-127g-5 in depends_on and a reciprocal doc_links entry.
+      That amendment was not made by this record — this author amended nothing in it, and
+      its criteria and readiness remain outside this author's reach. THE BOUNDARY, WHICH
+      THE DISCHARGE DOES NOT BLUR: this record owns the MECHANISM — the ceiling each entry
+      declares, the report that names the size, the ceiling and the source while the commit
+      completes, and the rejection of an entry declaring no ceiling — and GE-127g-4 owns the
+      PUBLISHED ACCOUNT of it. Neither discharges the other: a gate that implements the
+      ceiling perfectly and publishes nothing fails GE-127g-4, and published text describing
+      a ceiling no gate consumes fails this record. This record's criteria do not restate
+      any clause of GE-127g-4 and were not changed by the discharge.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      WHERE THE BRANCHING THIS RECORD'S ARMS EXERCISE LIVES, AND THE SOURCE OF THE TRAP A
+      SIBLING RECORD FELL INTO. classify_dimension(current, previous, limit) at lines
+      293-314 routes `previous is not None and previous > limit` to the GROWTH branch,
+      which returns "grew" only when current > previous and otherwise "pass"; everything
+      else goes to the CROSSING branch, which returns "over" only when current > limit.
+      Read it before implementing: this record's arms deliberately exercise BOTH branches
+      against the declared ceiling, and the notes state which arm is which. The same
+      document sits in different branches depending on whether it is measured against the
+      authored limit or against its location's ceiling, and confusing the two is how the
+      third arm gets silently dropped. This is the SOURCE; scripts/commit_guardian/ and
+      .leafcutter/scripts/commit_guardian/ are build outputs regenerated from it.
+  - path: templates/scripts/commit_guardian/check_doc_length.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where the run's outcome is produced and where the over-ceiling statement joins the
+      two populations GE-127g-2 requires. This is the SOURCE; the deployed copies are
+      build outputs.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Holds the declaration each entry of which must now carry a ceiling as well as a
+      ground. The sibling file_size section is still the precedent being followed — whole
+      kinds declared out of scope "each for a stated reason, not by omission" — and this
+      record extends the same not-by-omission principle to the bound: a ceiling that may
+      be left out is a bound that will be left out.
+  - path: scripts/generate_agent_cards.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SOURCE WHOSE OWNER THE SECOND ARM'S REPORT IS ADDRESSED TO. Cited so "names the
+      source its location's stated ground identifies" has a concrete referent for the
+      largest declared population: the cards are a function of templates/agents/ and of
+      this generator, and a card at ten times its present length is a fault in one of
+      those two and in nothing the committing author did. This record changes neither and
+      no criterion here is about either.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Two passages bind, and the first outranks any test_spec. "Gate / Workflow ACs —
+      Verify Behaviorally, Not by Grep": every arm here is an ordinary commit with the
+      verdict and the figures read out of the commit's own outcome, and a test asserting
+      that a ceiling key appears in a configuration file satisfies nothing — it passes on
+      a gate that never reads the ceiling and on a gate that never runs. And the paragraph
+      ending "a check that examined nothing must not look like a check that found nothing"
+      is the ground for why a document exempted entirely and forever is the same failure
+      as a check that never ran, held open indefinitely instead of for one commit.
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-1
+    contract: >-
+      The declared set of set-aside locations, each entry with its stated ground, and the
+      single membership test over it. This record adds a ceiling field to each entry and
+      consumes that membership test unchanged; it defines no second test and widens no
+      location.
+  - ac_id: GE-127g-2
+    contract: >-
+      The run's reporting of the judged and set-aside populations, and the requirement
+      that each set-aside document appears in exactly one of them. This record adds a
+      further statement about a document already counted among the set aside; it adds no
+      population and moves no document between them.
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "ENRICHMENT DECISION — THE KEY NAME: report_above_lines, a sibling of path and ground
+    inside each set_aside_locations entry in the doc_length section of
+    templates/scripts/commit_guardian/commit_guardian.json. The name is chosen to carry
+    the behaviour: it states the unit (lines) and the consequence (REPORTED above, not
+    refused above). Do NOT name it max_lines or limit — doc_length's existing max_lines is
+    the authored limit whose consequence IS a refusal, so reusing either word invites
+    exactly this record's first named mutation at the level of naming, and a later reader
+    skimming the declaration would read a refusal threshold."
+  - "ENRICHMENT DECISION — THE THREE CEILING VALUES, PER DOCUMENT, WITH THE EVIDENCE THAT
+    SETS EACH. Each applies to one document inside the location, not to the location's
+    total, per the criteria's wording 'a document inside that location standing above its
+    location's declared ceiling'.
+    (a) docs/agents/cards/ — report_above_lines: 10000. Present maximum is
+    python-coder.card.md at 2,809 lines, and the measurement that sets the shape is the
+    rate, not the maximum: one ORDINARY regeneration moved that same document from 2,525
+    to 2,809, a +284-line jump (+11.2%) carrying only unrelated records' assignment lines.
+    10,000 is 3.56x the present maximum and roughly 25 further regenerations at that
+    observed ordinary rate, so ordinary drift cannot reach it on any realistic horizon. It
+    also sits BELOW the runaway this record's own notes name ('a generated card can go from
+    2,809 lines to 28,000'), so the runaway is caught. Sanity check from the other side: a
+    single card at 10,000 lines would be about 87% of the entire present directory (11,526
+    lines across 64 documents), which is self-evidently a generator fault rather than
+    content.
+    (b) docs/roadmap.md — report_above_lines: 1500. It stands at 286 against the 300
+    authored limit; 1,500 is 5.2x that. Its length tracks the number of phases, outcomes
+    and tickets in docs/roadmap.json rather than anything a committing author writes, so
+    reaching 1,500 means the roadmap mirror has grown more than fivefold — a roadmap.json
+    problem, not drift.
+    (c) docs/INDEX.md — report_above_lines: 2000. It stands at 289 lines, of which 233 are
+    entry lines across 9 sections, so it grows at roughly ONE line per newly indexed
+    document and is driven entirely by unrelated work. 2,000 is 6.9x present and leaves
+    room for roughly 1,700 further indexed documents against about 233 today. NOTE THE
+    DELIBERATE ASYMMETRY: INDEX.md gets a HIGHER ceiling than roadmap.md despite being
+    almost the same size today, because its growth coupling is open-ended and roadmap.md's
+    is not. The ceiling is sized by growth rate, not by present length, and this pair is
+    the measured demonstration that per-location is right rather than global."
+  - "All three values are to be re-derived, not copied, if the populations have moved
+    materially by implementation time. The reasoning above is the deliverable; the numbers
+    are its output. What must be preserved is the PROPERTY: crossed only when something is
+    wrong with the source the location's ground identifies, never by ordinary
+    regeneration."
+  - "THE OVER-CEILING REPORT MUST NOT BE DERIVED FROM classify_dimension's VERDICT. Against
+    the declared ceiling, a document already above it that SHRANK classifies 'pass' — the
+    growth branch returns 'grew' only when current > previous. Verified against the real
+    function on 2026-10-09: classify_dimension(12500, 13000, 12000) returns 'pass'. So the
+    third arm's required statement cannot be triggered by a verdict word. The condition is a
+    direct comparison of the measured size against the entry's declared ceiling, evaluated
+    independently of the pass/grew/over classification."
+  - "THE OVER-CEILING STATEMENT IS A STATEMENT ABOUT A DOCUMENT ALREADY COUNTED AMONG THE
+    SET ASIDE. It must not create a third population, must not move the document into the
+    judged count, and must not remove it from the set-aside count — GE-127g-2 requires every
+    set-aside document to appear in exactly one of two counted populations. An implementation
+    that promotes over-ceiling documents into the judged population breaks GE-127g-2's first
+    arm and this record's first arm together, and converts this record's report into a
+    refusal through GE-127g-1's own judged path."
+  - "A MISSING CEILING AND A MISSING GROUND MUST BE SEPARATELY DIAGNOSABLE. The two
+    validations are one step in all likelihood — an entry is well-formed only with both —
+    but the refusal must say WHICH is absent and name the entry. A single message that
+    cannot distinguish them leaves the author of the declaration unable to act, which is
+    the diagnostic failure GE-127g-2-i's third arm exists to prevent one level up."
+  - "An entry with no declared ceiling must be REJECTED, never defaulted. Neither
+    'unbounded' nor 'fall back to the authored limit' is acceptable: the first leaves the
+    whole record satisfiable while changing nothing, the second re-breaks GE-127g-1. The
+    rejection is the one refusal this record admits, and it fires on the commit that edits
+    the DECLARATION, where the person at the keyboard can act in the next keystroke."
+  - "WHERE THE REPORTING LANDS, AND THE LINE BUDGET THAT FORCES IT.
+    templates/scripts/commit_guardian/check_doc_length.py measures 359 lines against the
+    400-line .py limit (measured 2026-10-09 with check_file_size's own measurement rule) —
+    41 lines of headroom, and GE-127g-2's reporting requirement already consumes it. The
+    over-ceiling statement plausibly belongs in the SAME helper module GE-127g-2 is already
+    required to create rather than in a second one; adding both to check_doc_length.py takes
+    it across its own limit and the commit is refused by a sibling of the gate being edited."
+  - "DEPLOY-MANIFEST CONCLUSION: no deploy-map entry is required, PROVIDED the helper lives
+    under templates/scripts/commit_guardian/. build_commit_guardian() in
+    scripts/build_phases_lifecycle.py rglobs that whole directory, so a module there deploys
+    with no manifest line. A module placed anywhere else — scripts/, scripts/ac_store/,
+    templates/scripts/ root — needs an explicit entry in its phase's deploy map in the SAME
+    change, or the deployed hook raises ModuleNotFoundError at hook runtime while the
+    source-tree unit tests stay green. This repository has shipped exactly that failure once
+    (done_proof.py). The config change needs no manifest work either: commit_guardian.json
+    is already deployed to both scripts/commit_guardian/ and config/commit_guardian/ by the
+    same phase."
+  - "templates/scripts/commit_guardian/ is the SOURCE. scripts/commit_guardian/ and
+    .leafcutter/scripts/commit_guardian/ are untracked build outputs in this checkout; an
+    edit to a deployed copy alone is reverted by the next build."
+  - "No clause here may be satisfied by raising max_lines, softening the blocking severity,
+    or widening which documents are set aside. The parent L1's it_requirements forbid
+    raising a limit for any document outside the declared locations."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_regeneration_below_the_ceiling_completes_and_stays_set_aside
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1, and the negative control against the cheapest possible 'bound'. A real
+      throwaway repo with a declared location carrying a ground and a report_above_lines
+      ceiling; a generated document committed above the authored limit and below the
+      ceiling, restaged longer but still below the ceiling. Assert the commit completes;
+      that the document is reported as SET ASIDE; and — separately — that it is NOT reported
+      as judged against the authored limit and NOT reported among those within their
+      permitted length. The separate assertions matter: this arm is what proves the record
+      has not reintroduced the defect the parent L1 removes. No build.py spawn and no layout
+      fixture, so no marker.
+    must_catch:
+      - "obtain the bound by judging documents in declared locations against the authored limit after all"
+      - "satisfy this record by moving over-ceiling documents out of the set-aside count and into the judged count"
+  - name: test_crossing_the_ceiling_reports_size_ceiling_and_source_and_still_completes
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: >-
+      Arm 2. Same location; the regeneration leaves the document ABOVE its declared ceiling.
+      Assert the commit COMPLETES — asserted first and on its own, because it is the clause
+      a reader's default assumption inverts — and that the outcome states the measured size,
+      states the ceiling it was measured against, and NAMES the source the location's ground
+      identifies. All three figures compared against values the fixture computed, never
+      against literals. No marker.
+    must_catch:
+      - "refuse the commit when a document in a declared location stands above its location's declared ceiling"
+      - "take the over-ceiling report from the refusal path, so the commit cannot complete"
+      - "report that the document is enormous without naming the source responsible for it"
+  - name: test_shrinking_while_still_above_the_ceiling_is_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3, THE LOAD-BEARING ENTRY AND THE ONE A TRANSPOSED READING DROPS. The document is
+      above its ceiling at the parent revision and the regeneration leaves it SHORTER but
+      still above. Against the ceiling this is classify_dimension's GROWTH branch returning
+      'pass' (verified: classify_dimension(12500, 13000, 12000) == 'pass'), so an
+      implementation that triggers the report from the verdict word says nothing at all
+      here. Assert the commit completes AND that the outcome still states the document
+      stands above its location's ceiling. No marker.
+    must_catch:
+      - "trigger the over-ceiling report from classify_dimension's verdict, so it is stated only when that verdict is 'over' or 'grew'"
+      - "report standing above the bound only on the commit that crossed it"
+      - "refuse the commit when a document stands above its location's declared ceiling"
+  - name: test_raising_the_declared_ceiling_makes_the_report_disappear
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 4 first half. The same staged content as the previous entry, with that location's
+      report_above_lines raised above the size the document measures. Assert the outcome does
+      NOT state the document stands above its ceiling and names NO document as standing above
+      any ceiling. The only entry a ceiling hardcoded in the gate's own code fails. FIXTURE
+      CONSTRAINT: raise the ceiling above BOTH the parent and the staged size — the notes
+      state this arm exercises the crossing branch, and a ceiling raised to sit between the
+      two values still classifies 'pass' but via the growth branch, so a half-raise would
+      pass while exercising a different branch than the record claims. No marker.
+    must_catch:
+      - "compare against a single ceiling written into the gate's own code instead of the one each entry declares"
+      - "read the ceiling from the declaration but cache it across runs"
+  - name: test_stated_size_and_headroom_follow_the_tree_when_the_ceiling_is_held
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 4 second half, the mirror of the entry above: hold report_above_lines where it was
+      and regenerate the document larger again. Assert the stated size equals the size newly
+      measured from the staged content, and that the stated headroom against the declared
+      ceiling is smaller than the previous run's by EXACTLY the number of lines the document
+      grew — both computed by the fixture from the tree, neither pinned. Together with the
+      previous entry this holds one thing fixed and moves the other in both directions, the
+      only shape no pair of literals satisfies. No marker.
+    must_catch:
+      - "state the measured size and the headroom as the numbers observed at implementation time"
+      - "derive the headroom from a cached or previous size rather than from the staged content"
+  - name: test_declaring_a_location_without_a_ceiling_is_refused_and_names_the_entry
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Arm 5, the clause with teeth and the one refusal this record admits. Stage a commit
+      that adds a set-aside entry carrying a stated ground and NO report_above_lines. Assert
+      the commit does NOT complete; that the report names that entry; and that it states a
+      location may be set aside only together with the size beyond which its documents are
+      reported. Then assert the DISTINGUISHABILITY requirement by also staging an entry with
+      a ceiling and a blank ground and confirming the two refusals say different things —
+      one validation step, two diagnosable causes. No marker.
+    must_catch:
+      - "honour an entry with no declared ceiling by treating its ceiling as unbounded"
+      - "honour an entry with no declared ceiling by treating its ceiling as the authored limit"
+      - "emit one message that cannot distinguish a missing ground from a missing ceiling"
+  - name: test_deployed_gate_reads_the_declared_ceilings_and_reports_above_them
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_doc_length.py
+    description: >-
+      The deploy-manifest arm, and the one that matters here because the over-ceiling
+      reporting is required to live in a helper module outside check_doc_length.py. Runs the
+      gate from the real DEPLOYED layout over a staged document above its declared ceiling
+      and asserts it produces the over-ceiling statement and a completing commit rather than
+      a ModuleNotFoundError — proving both that the helper deployed and that the deployed
+      copy of the declaration, carrying the ceilings, is the one in effect. Requests the
+      session-scoped shared_reference_layout fixture and declares
+      @pytest.mark.shared_layout_reader; it only reads the layout, so it must not spawn its
+      own build.py (one build costs 59.8s).
+    must_catch:
+      - "add the over-ceiling helper module outside templates/scripts/commit_guardian/ without a deploy-map entry, so the deployed hook crashes while source-tree tests stay green"
+      - "edit the deployed scripts/commit_guardian/ copy instead of the templates/ source"
+test_rationale: >-
+  Six entries, one per criteria block, plus one deployed-layout entry. Every one stages real
+  documents in a real git repository, invokes the gate as a subprocess and reads the verdict
+  and the figures out of the run's own output. A test asserting that a report_above_lines key
+  appears in commit_guardian.json satisfies nothing — it passes on a gate that never reads
+  the ceiling and on a gate that never runs — and CLAUDE.md's behavioural rule outranks any
+  test_spec that blessed that form.
+  THE BRANCH LABELLING IN THE RECORD'S NOTES WAS VERIFIED AGAINST THE REAL FUNCTION RATHER
+  THAN TRUSTED, because a sibling record (GE-127g-1-i) had its mutation arms transposed in
+  exactly this way. Executing classify_dimension on each arm's values confirms every claim
+  the notes make: arm 1 against the ceiling is the crossing branch returning 'pass' and the
+  same document against the authored limit is the growth branch returning 'grew'; arm 2 is
+  crossing/'over'; arm 3 is growth/'pass'; arm 4's first half is crossing/'pass' and its
+  second half growth/'grew'. The notes are correct as written and need no correction. One
+  detail they do not state, and which the fourth entry now carries as a fixture constraint:
+  a ceiling raised to sit BETWEEN the parent and the staged size also yields 'pass', but via
+  the growth branch rather than the crossing branch the notes name — so the fixture must
+  raise it above both values or the arm passes while exercising a different branch than the
+  record claims.
+  THE THIRD ENTRY IS THE LOAD-BEARING ONE and the reason the arm exists at all: against the
+  declared ceiling, a document that is already above it and SHRANK classifies 'pass', so any
+  implementation that triggers the report from the verdict word is silent precisely when the
+  document is most over its bound. It is the narrowest mutation in the record and no other
+  entry reaches it.
+  THE SECOND ENTRY ASSERTS THE COMPLETING COMMIT FIRST AND ON ITS OWN. A reader's — and a
+  coder's — default assumption about any threshold is that crossing it refuses, so this is
+  the clause most likely to be delivered backwards rather than omitted, and getting it wrong
+  reinstates the unactionable refusal the whole parent L1 exists to remove. Mutation (1)
+  leaves this record's first arm, arm 4's first half, arm 5 and every arm of five sibling
+  records green, which is the measure of how easily it could ship.
+  NO FIGURE IS PINNED ANYWHERE. Every expected value — sizes, ceilings, headroom, populations
+  — is computed by the fixture from the tree at run time. The record's notes are explicit that
+  pinning 64, 2,809, 286 or 289 goes red the next time an agent is added or a document is
+  written, which is the opposite of what the record says. The fifth entry states its
+  expectation as a RELATIONSHIP (headroom falls by exactly the growth) rather than as a pair
+  of numbers, which is what keeps it true as the population moves.
+  Markers: only the seventh entry requests shared_reference_layout and therefore carries
+  @pytest.mark.shared_layout_reader. The other six neither request the fixture nor build
+  anything, so they sit outside the marker-routing mechanism entirely and pay no build cost.
+  The deployed entry is not optional here even though three sibling records already have one:
+  this record's reporting is required to live in a helper module outside
+  check_doc_length.py, which has 41 lines of headroom, and an undeployed helper is invisible
+  to all six source-tree entries.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHAT THE GAP IS, AND WHY IT IS NOT A NEW PRINCIPLE. The parent L1 and its first four
+  children make a document inside a declared location exempt from the length standard
+  ENTIRELY AND FOREVER. A generated card can go from 2,809 lines to 28,000 and no record
+  in the subtree notices: GE-127g-1 only asks that such a commit complete, GE-127g-2 only
+  asks that the document be counted and named as set aside, GE-127g-3 bounds WHICH
+  documents are set aside and says in its own notes that it does not bound their size, and
+  GE-127g-4 publishes the mechanism. So the L1 breaks a promise this goal already made:
+  GE-127c's criteria state that holding work to a workable size means the project "does
+  not silently create a place where files can grow without limit", and a declared
+  set-aside location with no bound is precisely such a place. The user's words endorse the
+  exemption and not the unboundedness — "in the end we can also skip some files, but we
+  need to make sure that stuff does not grow indefinitely" — so what is missing is a
+  bound, not a narrower exemption.
+
+  THE BOUND, SETTLED: A PER-LOCATION DECLARED CEILING THAT IS REPORTED AND NEVER REFUSED,
+  PLUS AN ENTRY THAT IS INVALID WITHOUT ONE.
+
+  Three parts, and all three are load-bearing:
+    (a) Each declared entry carries a ceiling of its own, far above the authored limit,
+        chosen so that an ordinary regeneration does not reach it. The numeric values are
+        the IT PO's, per GE-127c's precedent of stating the principle and leaving the
+        enumeration to enrichment.
+    (b) Standing above that ceiling is REPORTED, with the measured size, the ceiling, and
+        the SOURCE the location's stated ground identifies — and the commit completes.
+    (c) An entry that declares no ceiling is REJECTED, so a location cannot be set aside
+        without a bound. This is the clause with teeth: it is the only one that makes the
+        bound impossible to omit, and it is the direct mechanical expression of GE-127c's
+        sentence.
+
+  WHY A REFUSAL IS NOT THE BOUND, STATED AS THE DECISION IT IS RATHER THAN AS CAUTION.
+  A refusal no human can act on is the entire defect this L1 exists to remove. If crossing
+  the ceiling refused the commit, the refusal would land on whoever next stages the
+  regenerated document — who did not write the growth, cannot shorten it, and whose only
+  remedies are to edit a file the next regeneration overwrites or to wait for someone else
+  to change a generator. That is the original defect reproduced at a larger number, and
+  the ceiling's height makes it worse rather than better: a ceiling high enough never to
+  fire on ordinary drift is also high enough that, when it does fire, the fix is a
+  generator change measured in days — and every commit in the repository that touches the
+  location would be blocked throughout. Part (c)'s refusal is a different animal and is
+  the one refusal this record does admit: it fires on the commit that EDITS THE
+  DECLARATION, where the person at the keyboard is the person who can act in the next
+  keystroke.
+
+  WHO THE SIGNAL REACHES, NAMED. Not the committing author — that is the point. The report
+  is addressed to the owner of the source the location's stated ground identifies: for the
+  cards, whoever maintains templates/agents/ and scripts/generate_agent_cards.py; for the
+  roadmap mirror, whoever maintains docs/roadmap.json and the regeneration step; for the
+  document index, whoever maintains the build's doc-index phase. That is why the second arm
+  requires the source to be NAMED rather than merely the document: a report that says only
+  "this file is enormous" is addressed to nobody. And because the only two ways to silence
+  an over-ceiling report are to change what the generator emits or to raise the ceiling in
+  the declaration, the second route lands as a diff hunk in commit_guardian.json carrying a
+  stated ground — which puts the decision in front of a pull-request reviewer rather than
+  letting it happen by nobody deciding anything. GE-127g-4's published text is what makes
+  the report legible to that reader, which is why the follow-up below is not cosmetic.
+
+  WHAT WAS REJECTED, AND ON WHAT GROUND.
+    - REFUSING ON CROSSING THE CEILING. Rejected on the ground above: it reintroduces the
+      unactionable refusal that is this L1's whole subject, and it is explicitly ruled out
+      by the requirement that a card which grew because a template legitimately gained
+      content must not block the commit that regenerates it.
+    - REFUSING ONLY THE COMMIT THAT EDITS THE GENERATOR OR ITS TEMPLATES. This was the
+      most attractive rival, because it routes the refusal to exactly the person who can
+      act on generator output. Rejected because that commit IS the ordinary-regeneration
+      case named above: a template legitimately gaining content is precisely a generator
+      edit, so the rule would block the one commit that must not be blocked.
+    - BOUNDING THE GENERATOR'S OUTPUT AT GENERATION TIME, so the build fails when a
+      generated document exceeds its ceiling. The strongest rival on the "reaches someone
+      who can act" axis, and rejected on three grounds rather than one. First, it leaves
+      the doc-length gate with no bound at all, so a document arriving in a declared
+      location by any other route — a hand-run script, a vendored mirror, a location
+      declared for a generator that no longer runs — is still unbounded; the bound would
+      attach to generators while GE-127g-1 declares LOCATIONS, and GE-127g-4's second
+      clause requires the ground to be the earning PROPERTY and not the generator's name.
+      Second, a failing build blocks every developer of the package, which is the
+      unactionable-refusal shape moved one level up rather than removed. Third, it cannot
+      be read out of a commit's outcome, which is this subtree's verification convention.
+      Recorded as a reasonable COMPLEMENT for a later record, not as a substitute.
+    - A REVIEW TRIGGER WITH NO DECLARED NUMBER — report the largest document in each
+      location and leave the judgement to a reader. Rejected because nothing ever changes
+      state: there is no point at which anything is required, the output is satisfiable by
+      a figure nobody reads, and an exemption that has quietly grown by a factor of ten
+      looks exactly like one that has not. The declared ceiling is what turns a figure
+      into a threshold, and part (c) is what stops the threshold being omitted.
+    - ONE GLOBAL CEILING FOR ALL SET-ASIDE DOCUMENTS, or simply a raised max_lines.
+      Rejected on two grounds. A single number cannot say anything useful about both a
+      2,809-line card and a 289-line index at once — set high enough for the former it is
+      vacuous for the latter. And the parent L1's it_requirements forbid raising a limit
+      for any document outside the declared locations, which a raised max_lines would do.
+
+  WHICH BRANCH OF classify_dimension EACH ARM EXERCISES — READ THE FUNCTION BEFORE
+  IMPLEMENTING, AND NOTE THAT A SIBLING RECORD'S ARMS WERE TRANSPOSED BY GETTING THIS
+  WRONG. classify_dimension(current, previous, limit) at
+  templates/scripts/commit_guardian/_doc_length_ratchet.py:293-314 routes
+  `previous is not None and previous > limit` to the GROWTH branch, returning "grew" only
+  when current > previous and "pass" otherwise; everything else goes to the CROSSING
+  branch, returning "over" only when current > limit.
+    - ARM 1 (ordinary regeneration below the ceiling): against the DECLARED CEILING the
+      previous value is below the ceiling, so this is the CROSSING branch and the current
+      value is below the ceiling, so it classifies "pass". Against the AUTHORED LIMIT the
+      very same document is in the GROWTH branch — it was already over 300 at the parent
+      revision and grew — and would classify "grew", which is the present-tense refusal
+      GE-127g-1 removes. One document, two limits, two different branches: this is the
+      pair that must not be collapsed.
+    - ARM 2 (crossing the ceiling): CROSSING branch against the ceiling — previous below
+      it, current above it — classifying "over". The verdict word is "over" and the
+      outcome is a REPORT with a completing commit, which is why the report must not be
+      taken from the refusal path.
+    - ARM 3 (already above the ceiling and shrinking): GROWTH branch against the ceiling —
+      previous above the ceiling — with current < previous, so the ratchet classifies
+      "pass". This is the arm a transposed reading loses, and it is the reason the arm
+      exists: an implementation that triggers the over-ceiling report from
+      classify_dimension's verdict says nothing at all here.
+    - ARM 4, FIRST HALF (ceiling raised above the document): CROSSING branch against the
+      raised ceiling, classifying "pass".
+    - ARM 4, SECOND HALF (ceiling held, document larger again): GROWTH branch against the
+      ceiling, classifying "grew". The two halves of arm 4 sit in different branches, which
+      is deliberate — the figures must be right in both.
+    - ARM 5 (entry with no ceiling): no branch at all. The entry is invalid before any
+      document is measured and classify_dimension is never reached.
+
+  HOW EACH ARM DEFEATS A LITERAL, AND WHY NO ARM IS SUFFICIENT ALONE. Arm 2 alone is
+  satisfied exactly by printing two numbers observed at implementation time, which is why
+  arm 4 exists in two halves: the first holds the document fixed and moves the ceiling,
+  requiring the report to DISAPPEAR; the second holds the ceiling fixed and moves the
+  document, requiring both the stated size and the stated headroom to follow. Holding one
+  thing fixed and moving the other in both directions is GE-127g-2's construction, reused
+  rather than reinvented, and it is the only shape no pair of literals satisfies. Arm 1 is
+  the negative control against the cheapest possible "bound" — disabling the exemption —
+  and it is also the arm that proves this record has not reintroduced the original defect.
+  No figure anywhere is pinned: the sizes, the headroom and the population must be computed
+  from the tree at run time, so none of these arms goes red the next time an agent is added.
+
+  MEASURED IN THIS WORKTREE ON 2026-10-09 — CARRY THESE INTO THE ENRICHMENT DECISION, NOT
+  INTO THE CRITERIA, AND DO NOT PIN ANY OF THEM AS AN EXPECTED VALUE. docs/agents/cards/
+  holds 64 documents, every one carrying card_version: generated; three stand above the
+  300-line limit and the longest is python-coder.card.md at 2,809 lines, up from 2,525 at
+  HEAD after one ORDINARY regeneration. That single figure — a 284-line jump from an
+  unremarkable regeneration — is the measurement that sets the shape of the ceiling
+  decision: a ceiling placed anywhere near the present maximum would fire on ordinary
+  drift within a handful of regenerations, so it must sit well clear of it, which is the
+  same conclusion as "crossed only when something is wrong with the generator".
+  docs/roadmap.md stands at 286 against 300 and is climbing; docs/INDEX.md stands at 289
+  against 300 and grows whenever any unrelated document is added. The three declared
+  locations the parent L1 pins therefore differ in scale by an order of magnitude, which is
+  the measured reason the ceiling is per location rather than global. Any test that pins
+  64, 2,809, 286 or 289 as an expected value goes red the next time an agent is added or a
+  document is written, which is the opposite of what this record says.
+
+  NO HEADROOM LEFT. With this record, GE-127g holds 5 of its 5 permitted L2 children, and
+  the parent's own notes record that GE-127 holds 7 of 7 L1 slots. Both follow-ups named
+  below therefore need a split or a new L0 rather than another sibling, and this paragraph
+  is the warning for whoever hits that.
+
+  FOLLOW-UPS, NAMED AND DELIBERATELY NOT AUTHORED HERE.
+    (1) DISCHARGED 2026-10-09 — KEPT RATHER THAN DELETED, BECAUSE A FOLLOW-UP THAT WAS
+        RAISED AND THEN CLOSED IS MORE USEFUL TO A LATER READER THAN ONE THAT VANISHED.
+        AS RAISED: GE-127g-4's published text must also state each declared location's
+        ceiling and what an over-ceiling report means, or the published description will
+        document an exemption without its bound; that record was already authored and
+        reviewed and its criteria were not this author's to change, so the gap was reported
+        here rather than fixed.
+        AS DISCHARGED: GE-127g-4 was amended the same day — not by this record — and now
+        carries a third criteria arm requiring the published description to state that a
+        bound applies to a set-aside location, that a document standing above it is
+        reported while the commit still completes, and that declaring a location requires
+        declaring the size as well as its ground. It also gained GE-127g-5 in depends_on
+        and a reciprocal doc_links entry stating the boundary in both directions. Nothing
+        in this record's criteria restates any clause of GE-127g-4, and the criteria were
+        not changed by the discharge; the boundary is stated in this record's doc_links
+        entry for GE-127g-4.
+    (2) A generation-time bound on the generator's own output, as a complement to this
+        record rather than a substitute — the rejected option whose ground for rejection
+        was sufficiency, not wrongness.
+
+  DOCUMENTATION-TRIGGER RATIONALE, REQUIRED BECAUSE THE PARENT L1 CARRIES A reference-doc
+  TRIGGER AND THIS RECORD ADDS NO DOCUMENTATION AC. The trigger is already discharged by
+  GE-127g-4, which owns the whole of the published surface for this mechanism; a second
+  documentation child would split one published description across two records, which is
+  the drift the parent's notes rule out for the declaration itself. There is also no slot:
+  GE-127g is at 5 of 5 after this record. The documentation obligation this record creates
+  is therefore recorded as follow-up (1) above, against GE-127g-4's deliverable, rather
+  than as a sixth child.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE REFUSAL. MUTATION: refuse the commit when a document in a declared location
+      stands above its location's declared ceiling.
+      MUST GO RED: the second and third arms, both of which require the commit to COMPLETE.
+      MUST STAY GREEN: the first arm, the first half of the fourth arm, the fifth arm, and
+      every arm of GE-127g-1, GE-127g-1-i, GE-127g-2, GE-127g-2-i and GE-127g-3 — all of
+      which run below the ceiling. That green half is the measure of how easily this record
+      could reintroduce the very defect the parent L1 exists to remove, and it is why the
+      completing commit is stated as a clause rather than assumed.
+
+  (2) THE RATCHET-DERIVED REPORT. MUTATION: trigger the over-ceiling report from
+      classify_dimension's verdict against the ceiling, so it is stated only when that
+      verdict is "over" or "grew".
+      MUST GO RED: the third arm only — the GROWTH branch returning "pass" for a document
+      that shrank while still standing above its ceiling.
+      MUST STAY GREEN: the first, second, fourth and fifth arms. This is the narrowest
+      mutation here and the whole reason the third arm exists. It is also the mutation a
+      transposed reading of classify_dimension conceals, because the third arm is the
+      GROWTH branch and the second is the CROSSING branch.
+
+  (3) THE LITERAL CEILING. MUTATION: compare against a single ceiling written into the
+      gate's own code instead of the one each entry declares.
+      MUST GO RED: the first half of the fourth arm, which raises one location's declared
+      ceiling and requires the report to disappear, and the fifth arm, which requires an
+      entry with no ceiling to be refused.
+      MUST STAY GREEN: the first, second and third arms, each of which a single built-in
+      number satisfies whenever it happens to sit between the fixture's sizes. This is the
+      BP-900g-7 shape — a declaration nothing consumes — and the fourth arm's first half is
+      the only clause that catches it.
+
+  (4) THE PINNED FIGURES. MUTATION: state the measured size and the headroom as the numbers
+      observed at implementation time.
+      MUST GO RED: the second half of the fourth arm, which regenerates the document larger
+      with the ceiling held fixed and requires both figures to follow.
+      MUST STAY GREEN: the first, second, third and fifth arms — the second arm is
+      satisfied exactly by two literals, which is why it is never sufficient on its own.
+      Construction reused from GE-127g-2's second and third arms.
+
+  (5) THE DISABLED EXEMPTION. MUTATION: obtain the bound by judging documents in declared
+      locations against the authored limit after all.
+      MUST GO RED: the first arm's final clause, and every arm of GE-127g-1 and
+      GE-127g-1-i.
+      MUST STAY GREEN: the second, third and fourth arms, if the ceiling report is kept
+      alongside. Recorded because it is the cheapest way to make growth look bounded and it
+      re-breaks the record this whole subtree was written for.
+
+  (6) THE DEFAULTED CEILING. MUTATION: honour an entry with no declared ceiling by treating
+      its ceiling as unbounded, or as the authored limit.
+      MUST GO RED: the fifth arm.
+      MUST STAY GREEN: every other arm here and every arm elsewhere in the subtree. This is
+      the omission GE-127c's sentence forbids, the fifth arm is the only clause in the tree
+      that reaches it, and the "unbounded" variant is the one that leaves the whole record
+      satisfiable while changing nothing.
+
+  (7) THE THIRD POPULATION. MUTATION: satisfy this record by moving over-ceiling documents
+      out of the set-aside count and into the judged count.
+      MUST GO RED: the first arm's final clause, and GE-127g-2's first arm, whose counts
+      and exactly-one-population requirement this would break.
+      MUST STAY GREEN: the second, third and fourth arms, whose statements an
+      implementation of this shape can still make correctly. Recorded because it is the
+      natural way to express "now we do care about this document" and because it quietly
+      converts a report into a refusal through GE-127g-1's own judged path.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's, as are the numeric
+  ceiling for each of the three declared locations, the key name the ceiling is declared
+  under, and where in the run's output the over-ceiling statement appears.

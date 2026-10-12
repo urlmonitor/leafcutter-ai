@@ -91,8 +91,15 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/workflows/test_inf_700a_5_ii.py
+- unit_tests/workflows/test_inf_700a_5_cli.py
+- unit_tests/workflows/test_inf_700a_5_ii_waiting.py
+- unit_tests/workflows/test_inf_700a_5_ii_case_with_waiting.py
 implemented_by:
 - scripts/knowledge/completion_routing.py
+- scripts/knowledge/completion_routing_cli.py
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/quick-fix.js
+- templates/workflows-js/build-epic.js
 test_spec:
   - name: test_a_record_emitted_after_the_routing_step_is_named_in_the_difference
     target_dir: unit_tests/workflows/

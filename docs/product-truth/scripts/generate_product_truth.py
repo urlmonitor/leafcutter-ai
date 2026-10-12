@@ -1,5 +1,10 @@
 """Generate every DERIVED field in the product-truth store — the SINGLE WRITER.
 
+MODULE: generate_product_truth
+GOAL: Regenerate the product-truth store's derived fields from authored sources.
+BUSINESS CONTEXT: Backlinks and implementation status must agree with their sources.
+ARCHITECTURE: Single-writer CLI sharing derivation helpers with the validator.
+
 This script is the only thing that writes the store's derived data. It:
 
   1. Builds one {ac_id -> {path, work_status}} map from the AC store (single pass,
@@ -50,12 +55,13 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import re
 import sys
 from datetime import date
 from pathlib import Path
 
 import yaml
+from product_truth_flow_fields import refresh_flow_fields
+from product_truth_text import _scalar, apply_product_truth_text, serialize_product_truth  # noqa: F401
 from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
 logger = logging.getLogger("generate_product_truth")
@@ -85,10 +91,6 @@ WORK_STATUS_TO_IMPL = {
     "todo": "not_started",
     None: "not_started",
 }
-
-# Matches a top-level `product_truth:` block (the key line plus its indented /
-# blank continuation lines) up to the next top-level key or end-of-file.
-_PRODUCT_TRUTH_BLOCK = re.compile(r"^product_truth:.*?(?=^\S|\Z)", re.MULTILINE | re.DOTALL)
 
 
 # --------------------------------------------------------------------------- #
@@ -285,46 +287,6 @@ def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | N
     return dict(sorted(result.items()))
 
 
-def serialize_product_truth(entries: list) -> str:
-    """Deterministically serialize a product_truth list as a YAML block.
-
-    Hand-rolled (not yaml.dump) to guarantee byte-stable, 2-space-indented output
-    that matches the surrounding AC store style and round-trips through
-    yaml.safe_load to exactly the input entries.
-    """
-    lines = ["product_truth:"]
-    for entry in entries:
-        lines.append(f"  - flow: {entry['flow']}")
-        lines.append(f"    node: {entry['node']}")
-        lines.append(f"    node_kind: {entry['node_kind']}")
-        lines.append(f"    flow_kind: {entry['flow_kind']}")
-        lines.append(f"    screen: {_scalar(entry['screen'])}")
-        lines.append(f"    mock_data: {_scalar(entry['mock_data'])}")
-        if entry["entities"]:
-            lines.append("    entities:")
-            lines.extend(f"      - {entity}" for entity in entry["entities"])
-        else:
-            lines.append("    entities: []")
-        lines.append(f"    source: {entry['source']}")
-        lines.append(f"    asof: '{entry['asof']}'")
-    return "\n".join(lines) + "\n"
-
-
-def _scalar(value) -> str:
-    """Render a controlled-vocabulary scalar (or None) as a YAML plain scalar."""
-    return "null" if value is None else str(value)
-
-
-def apply_product_truth_text(text: str, entries: list) -> str:
-    """Return AC file text with its product_truth block replaced (or removed)."""
-    stripped = _PRODUCT_TRUTH_BLOCK.sub("", text)
-    if entries:
-        return stripped.rstrip("\n") + "\n" + serialize_product_truth(entries)
-    if stripped and not stripped.endswith("\n"):
-        return stripped + "\n"
-    return stripped
-
-
 # --------------------------------------------------------------------------- #
 # I/O boundary (typed try/except, log + re-raise per repo error-handling policy)
 # --------------------------------------------------------------------------- #
@@ -412,6 +374,7 @@ def load_flows(unreadable: list[str] | None = None) -> tuple[dict, dict]:
 
 
 def load_mocks() -> dict:
+    """Load canonical mock-data artifacts by their declared identities."""
     mocks: dict[str, dict] = {}
     for path in sorted((STORE / "mock-data").rglob("*.mock.json")):
         mock = _load_json(path)
@@ -432,24 +395,7 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_da
     """
     changed = False
     for flow_id, flow in flows.items():
-        for node, _kind in iter_nodes(flow):
-            new_status = compute_node_status(node, ac_map, flows)
-            existing_status = node.get("impl_status")
-            existing_impl_asof = node.get("impl_asof")
-            # Preserve impl_asof when status has not changed.
-            if new_status == existing_status and existing_impl_asof is not None:
-                node["impl_asof"] = existing_impl_asof
-            else:
-                node["impl_asof"] = run_date
-            node["impl_status"] = new_status
-
-        # Preserve impl_summary.asof when the non-asof counts are unchanged.
-        existing_summary = flow.get("impl_summary", {})
-        new_summary = compute_flow_impl_summary(flow, ac_map, flows, run_date=run_date)
-        if _without_asof(existing_summary) == _without_asof(new_summary) and "asof" in existing_summary:
-            flow["impl_summary"] = {**_without_asof(new_summary), "asof": existing_summary["asof"]}
-        else:
-            flow["impl_summary"] = new_summary
+        refresh_flow_fields(flow, flows, ac_map, run_date, compute_node_status, compute_flow_impl_summary)
 
         path = STORE / flow_paths[flow_id]
         new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"
@@ -609,6 +555,7 @@ def generate(check: bool, run_date: str | None = None) -> bool:
 
 
 def main() -> int:
+    """Generate or check derived artifacts according to the CLI arguments."""
     parser = argparse.ArgumentParser(description="Generate the product-truth derived data (single writer).")
     parser.add_argument("--check", action="store_true", help="Compute only; exit non-zero if anything would change.")
     parser.add_argument("--quiet", action="store_true")
@@ -661,5 +608,9 @@ DECISION HISTORY
   expanding into several journeys combines their rollups with the same rule a
   node's own ACs use (combine_statuses); a dangling or cyclic child counts as
   not_started, as before. (#EPIC-TruthfulProjectRecord/44)
+- 2026-10-02 09:42 [python-coder]: UXP-300 regression: remove complete indentless
+  YAML backlink sequences while retaining standalone comments and neighbouring
+  metadata; default safe_dump output previously left orphan list entries.
+  (#TICKETLESS reason=supervised-uxp300-regression-repair)
 ====================================================================
 """

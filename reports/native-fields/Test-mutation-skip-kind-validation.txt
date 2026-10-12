@@ -1,0 +1,29 @@
+FFFF                                                                     [100%]
+================================== FAILURES ===================================
+_ test_test_reference_rejects_other_kinds_without_path_reclassification[SourceFile] _
+tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_rejects_other_kinds_without_path_reclassification[AcceptanceCriterion] _
+tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_rejects_other_kinds_without_path_reclassification[Component] _
+tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_test_reference_rejects_other_kinds_without_path_reclassification[test] _
+tests\knowledge\test_native_test.py:199: in test_test_reference_rejects_other_kinds_without_path_reclassification
+    with pytest.raises(ValueError, match="Test"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification[SourceFile]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification[AcceptanceCriterion]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification[Component]
+FAILED tests/knowledge/test_native_test.py::test_test_reference_rejects_other_kinds_without_path_reclassification[test]
+4 failed in 0.26s

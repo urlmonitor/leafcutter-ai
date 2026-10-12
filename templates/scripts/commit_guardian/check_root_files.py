@@ -47,8 +47,12 @@ def get_staged_new_files() -> list[str]:
         if len(parts) >= 2:
             status = parts[0]
             filepath = parts[-1]
-            # Only check formally added (A), or modified (M) files just in case
-            if status.startswith("A") or status.startswith("M") or status.startswith("R"):
+            # Only a genuinely new path can introduce a file to the root: an
+            # addition (A), or a rename (R) whose destination (parts[-1])
+            # was not already present there. A modification (M) to a path
+            # already tracked at the root cannot introduce a new root file,
+            # so it is deliberately excluded here.
+            if status.startswith("A") or status.startswith("R"):
                 staged_files.append(filepath)
 
     return staged_files

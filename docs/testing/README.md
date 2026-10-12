@@ -3,7 +3,7 @@ title: Portable Testing Conventions
 type: reference
 status: active
 created: 2026-05-13
-last_updated: 2026-08-14
+last_updated: 2026-09-28
 components:
 - infrastructure
 related_docs:
@@ -101,11 +101,18 @@ Run: `poetry run python -m unittest discover -s unit_tests/live_trader -t . -p "
 ```python
 import pytest
 import psycopg2
+from pathlib import Path
+from db_check.checker import resolve_test_db_address
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture
 def db_conn():
-    conn = psycopg2.connect("postgresql://trader:trader@localhost:5403/LIVE")
+    # Reads testing_context.db_connection_test from skills_config.json.
+    # Raises DbConnectionTestNotConfiguredError if the setting is unset,
+    # empty, or whitespace-only — see scripts/db_check/checker.py.
+    conn = psycopg2.connect(resolve_test_db_address(PROJECT_ROOT))
     conn.autocommit = False
     yield conn
     conn.rollback()
@@ -134,15 +141,35 @@ Tests that cannot meet this threshold must be marked manual by appending
 
 ```python
 def test_heavy_database_scan_MANUAL(self):
-    """Manual: requires full DB table scan (~30s). Run with pytest -k _MANUAL."""
+    """Manual: requires full DB table scan (~30s). Run with pytest -m manual."""
     ...
 ```
 
-The pre-commit suite excludes `_MANUAL` tests. They are invoked explicitly:
+The default pytest run deselects `_MANUAL` tests: a plugin
+(`scripts/suite_performance/pytest_manual_deselect.py`) auto-marks every test whose name
+ends in `_MANUAL` with the `manual` marker, and `pytest.ini` runs with
+`-m "not manual and not timing_ratio"`. Opt in explicitly with the marker (`-k "_MANUAL"`
+alone returns nothing, because the default `-m` selection still applies):
 
 ```bash
-python -m pytest unit_tests/ -k "_MANUAL"
+python -m pytest unit_tests/ -m manual
 ```
+
+### Post-merge lanes
+
+Tests excluded from the default run are not dropped; two post-merge workflows run them
+after every merge to main and on a 12-hour heartbeat. Both retry failing tests once on a
+fresh runner before reporting a verdict.
+
+| Lane | Workflow | Selects | On failure |
+|------|----------|---------|------------|
+| Correctness | `Post-merge suite` | `_MANUAL` tests (`-m "manual and not timing_ratio"`) | Opens or updates the `post-merge-red` issue. The `Post-merge suite status` check holds pull requests while the lane is red, did not complete, or is stale (over 30 hours). It is not a required check yet. |
+| Timing | `Post-merge timing suite` | `timing_ratio` tests (wall-clock ratio assertions) | Opens or updates the separate `post-merge-timing` issue, which names tests that newly entered the lane and the commit that touched them. It never holds a pull request. |
+
+Adding `@pytest.mark.timing_ratio` to a test moves it out of the default run and out of
+the holding correctness lane into the timing lane. That is a reviewed change: name the
+test in the PR. Opt in locally with `python -m pytest -m timing_ratio <path>` (or
+`-m manual` for the correctness lane).
 
 ---
 
@@ -211,7 +238,7 @@ Edit `testing_context` in your `.claude/skills_config.json`:
     },
     "max_test_duration_seconds": 5,
     "manual_test_suffix": "_MANUAL",
-    "db_connection_test": "postgresql://myuser:mypass@localhost:5432/mydb",
+    "db_connection_test": "postgresql://<user>:<password>@<host>:<port>/<database>",
     "naming_pattern": "test_*.py",
     "test_output_rules": "Never write to project dirs; use tmp_path or %TEMP%"
   }

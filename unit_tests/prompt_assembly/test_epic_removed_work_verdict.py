@@ -59,15 +59,15 @@ blind spot is fixed in `_driver_harness.py` as part of this record (see
 TestTheContradictionCheckItselfFires below asserts the extension actually FIRES
 on a contradictory payload. A check that never fires proves nothing.
 
-REACHABILITY — READ BEFORE ADDING A SCENARIO. At the FINAL completion return
-the driver's planned set and its completed set are necessarily equal: every
-planned ticket is driven, and any ticket that fails or cannot be confirmed exits
-through the halted / incomplete-member returns before the final one is reached.
-At the EARLY no-batches return `plannedTicketPaths` is built from `batches`, so
-it is empty and `removals` is therefore always empty there. Consequently the two
-cases involving a removal the drive did NOT complete are reachable only through
-the halted-member return — which is the third consumer of `epicRecheckReport`
-and carries the same `no_longer_present` field and the same "were not built"
+REACHABILITY — READ BEFORE ADDING A SCENARIO. A halted ticket no longer ends the
+run at its own batch (BO-100e-4): the drive continues, accumulates the halt and
+ends with the ONE final return, which then carries `halted_at_batch`. Every
+halted scenario below therefore scripts a terminating look before the
+completion-time re-read. At the EARLY no-batches return `plannedTicketPaths` is
+built from `batches`, so it is empty and `removals` is always empty there. The
+two cases involving a removal the drive did NOT complete are reachable only
+through the final return in its halted shape, which carries the same
+`no_longer_present` field and the same "were not built"
 suffix. Each scenario below asserts WHICH return produced its payload before
 asserting anything about it, so a fix applied to one site cannot be masked by a
 scenario that quietly exercised another.
@@ -204,9 +204,6 @@ class _RemovedWorkCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
-            # Terminating look (BO-100e-1): both tickets are already driven to
-            # completion by look 1, so look 2 must release nothing to end the
-            # search before the completion-time re-read below.
             {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, ["01_a.md"])},
         ]
@@ -232,6 +229,7 @@ class _RemovedWorkCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
+            {"batches": [], "present": self.present(paths, ["01_a.md"])},
             {"present": self.present(paths, ["01_a.md"])},
         ]
         tickets = {
@@ -271,6 +269,7 @@ class _RemovedWorkCase(unittest.TestCase):
                     },
                 ],
             },
+            {"batches": [], "present": []},
             {"present": []},
         ]
         tickets = {
@@ -292,7 +291,6 @@ class _RemovedWorkCase(unittest.TestCase):
         epic_path, paths = self.build_epic(worktree, planned)
         reads = [
             {"present": self.present(paths, planned)},
-            # Terminating look — nothing further is eligible.
             {"batches": [], "present": self.present(paths, planned)},
             {"present": self.present(paths, planned)},
         ]

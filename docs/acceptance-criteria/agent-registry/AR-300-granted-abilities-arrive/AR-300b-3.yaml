@@ -1,0 +1,105 @@
+id: AR-300b-3
+title: "A preparation that reaches some agents and not others is reported for each agent it missed"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a per-agent preparation that reaches the compiled prompts of some of the
+    agents it was prepared for and not the rest,
+  When the build finishes,
+  Then the build reports failure, naming each agent the preparation did not
+    reach,
+    And the presence of the preparation in the other agents' prompts does not
+      satisfy the guarantee for the agents that went without,
+    And the judgement is made once per agent rather than once per kind of
+      preparation, so a preparation is never reported as delivered on the
+      strength of a single example,
+  So a delivery that works for most of the tree cannot be reported as a
+    delivery that worked.
+depends_on:
+  - AR-300b
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Per-agent delivery is decided per agent today, so partial delivery is a reachable state of this step, not a hypothetical."
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500d-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The nearest existing statement of the same posture -- a result that is clean for the wrong reason must not be returned as clean."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+it_requirements:
+  - "The judgement is made once per (agent, preparation, platform root) triple, and the verdict for one agent is computed independently of every other. A preparation is never marked delivered on the strength of finding it in one prompt -- that implementation reports clean on a tree where 59 of 60 agents received nothing."
+  - "The findings list carries one entry per missed agent, all of them, not a summary. Present in some and absent in others is a failure, not a partial pass, and the agents that went without are named."
+  - "The per-agent iteration must be over the agents the preparation was PREPARED FOR (from AR-300b-2's registration), not over the agents it was found in -- iterating the found set can never discover an agent that was missed."
+  - "This granularity makes no observable difference to today's tree, where both preparations fail for all 60 agents at once. It is testable only against a tree where delivery is conditional per agent, so the test must construct that state deliberately rather than relying on the repository population."
+  - "Reuse AR-300b-1's single verdict object -- this AC constrains its granularity, it does not add a second report."
+test_spec:
+  - name: test_preparation_missing_from_a_subset_of_agents_reports_each_missed_agent
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "A preparation present in 58 of 60 compiled prompts produces two findings naming the two agents that went without, not one summary finding."
+  - name: test_presence_in_other_prompts_does_not_satisfy_the_missed_agents
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Finding the preparation in any number of other prompts does not clear the finding for an agent that lacks it."
+  - name: test_judgement_is_per_agent_not_per_preparation_kind
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "A single example of the preparation landing somewhere does not mark that preparation kind delivered."
+  - name: test_iteration_is_over_the_prepared_for_set_not_the_found_set
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An agent the preparation was registered for but never appears in is discovered; iterating only over prompts containing the preparation would miss it entirely."
+test_rationale: >-
+  Today both undelivered preparations fail for all 60 agents at once, so per-agent
+  granularity makes no observable difference to the current tree and cannot be
+  proved against it. Every descriptor therefore constructs the partial-delivery
+  state explicitly. The prepared-for-versus-found-set descriptor is the one that
+  catches the cheap implementation, because iterating the found set produces an
+  assertion that is vacuously true for exactly the agents it was meant to protect.
+delivers_to: null
+expects_from:
+  ac_id: AR-300b-1
+  contract: "The per-agent delivery judgement whose granularity this criterion fixes"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE PARTIAL CASE IS THE ONE THE MEASUREMENT COULD NOT SHOW. Today both
+  undelivered preparations fail for all 60 agents at once, so per-agent
+  granularity makes no observable difference to the current tree. It makes the
+  difference on the tree that exists the day after the repair, when delivery is
+  conditional on something per-agent -- a declaration, a flag -- and the
+  condition is mis-evaluated for a subset.
+
+  ONE SAMPLE IS HOW A CHECK GETS CHEAP. The cheapest implementation of
+  AR-300b-1 confirms each kind of preparation landed somewhere. That
+  implementation reports clean on a tree where 59 of 60 agents received
+  nothing.

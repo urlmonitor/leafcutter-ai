@@ -1,0 +1,122 @@
+id: ACS-400c-2-ii
+readiness: approved
+priority: high
+components:
+  - ac_store
+title: "A record taken verbatim from a merge parent is not treated as an amendment"
+component: ac-store
+level: L3
+status: active
+req_status: active
+work_status: done
+criteria: |
+  Given a merge is in progress,
+  And a staged AC YAML file's content is byte-identical to one of the merge parents'
+    committed version of that same path,
+  When the amended_by audit runs,
+  Then the commit is not blocked on that file,
+  And no new amended_by entry is demanded for it,
+  Because a commit that reproduces a parent's bytes exactly has authored no change
+    to that record.
+
+  Given a merge is in progress,
+  And a staged AC YAML file's criteria differs from every merge parent's version
+    of that path,
+  When the amended_by audit runs,
+  Then the commit is blocked exactly as it is outside a merge,
+  And the error names the file and the amended_by field.
+
+  Given no merge is in progress,
+  When an AC YAML file's criteria is changed without a new amended_by entry,
+  Then the commit is blocked,
+  And this record changes nothing about that path.
+depends_on: [ACS-400c-2]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_ac_governance.py
+    relationship: implements
+    status: exists
+    relevance: "The hook whose amended_by audit resolved its baseline from HEAD alone."
+  - path: templates/scripts/commit_guardian/_ac_governance_baseline.py
+    relationship: implements
+    status: exists
+    relevance: "Resolves the version the commit amends FROM: a matching merge parent, else HEAD."
+  - path: docs/reference/claude-code-hooks.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The baseline is a merge parent ONLY when that parent's committed blob is identical to the staged blob. Anything less exact would excuse a real edit."
+  - "Comparison is against the INDEX (git diff --cached), never the working tree, which may hold edits that are not part of this commit."
+  - "Outside a merge the parent list is [HEAD] alone, so the resolved baseline is HEAD and behaviour is unchanged. This record must not relax any ordinary commit."
+  - "A comparison that cannot be performed (subprocess failure, unreadable parent set) resolves to HEAD -- the strict answer. Never excuse a path because the check failed."
+  - "Merge-parent discovery reuses _file_size_ratchet.resolve_parent_revisions, which reads EVERY line of MERGE_HEAD (octopus-safe) and fails closed. A second implementation would be free to get both wrong."
+delivers_to: null
+expects_from:
+  ac_id: ACS-400c-2
+  contract: "The amended_by audit and the baseline version it diffs the staged record against."
+test_required: true
+test_spec:
+  - name: test_a_record_taken_from_the_other_parent_is_not_an_amendment
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    surface_invoked: scripts/commit_guardian/check_ac_governance.py
+    description: "A real git repo with a real id collision resolved in the other branch's favour; the hook must exit 0 rather than demand amended_by for criteria the committer did not write."
+  - name: test_a_real_criteria_edit_during_a_merge_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: scripts/commit_guardian/check_ac_governance.py
+    description: "Same merge, but the staged record matches NO parent. The refusal must still fire -- this is the anti-over-broadening guard that stops the fix becoming a merge-shaped hole."
+  - name: test_outside_a_merge_a_criteria_edit_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    surface_invoked: scripts/commit_guardian/check_ac_governance.py
+    description: "An ordinary commit on a real repo with no MERGE_HEAD. Proves the baseline resolver did not relax the gate for the overwhelmingly common case."
+test_rationale: |
+  The existing governance tests all run with HOOK_NO_GIT=1, which makes
+  _load_head_content return None before any git call. That simulation path cannot
+  reach the behaviour this record is about, so every one of them would stay green
+  through the defect and through a broken fix alike.
+
+  These tests therefore build a REAL temporary git repository, create a REAL id
+  collision on two branches, and leave a REAL merge in progress with MERGE_HEAD on
+  disk, then invoke the deployed hook as a subprocess. That is the only arrangement
+  in which the distinction under test -- "differs from HEAD" versus "authored by
+  this commit" -- physically exists.
+
+  The second and third cases carry as much weight as the first. The fix's whole
+  risk is that it excuses too much, and a suite containing only the positive case
+  would pass just as happily against a hook that skipped the amended_by audit
+  during any merge whatsoever.
+origin_agent: BrainCandy
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ac_governance_merge_baseline.py
+implemented_by:
+  - templates/scripts/commit_guardian/_ac_governance_baseline.py
+  - templates/scripts/commit_guardian/check_ac_governance.py
+change_target: code
+risk_surface: auth
+notes: |
+  FIELD EVIDENCE -- PR #862, merging origin/main into
+  EPIC-WorkIsOnlyEverMarkedFinishedThroughThe on 2026-09-28. Both branches had
+  independently minted BO-4000d for different behaviours. The collision was resolved
+  by taking main's record verbatim and renumbering the branch's own to BO-4000f.
+  `git diff MERGE_HEAD -- docs/acceptance-criteria/build-orchestration/BO-4000d.yaml`
+  was EMPTY -- the staged file was byte-identical to main's -- and the hook still
+  refused the commit with "criteria was modified but amended_by was not updated".
+
+  The two available responses were both wrong, which is what makes this a defect
+  rather than an inconvenience: appending an amended_by entry would have recorded
+  the merge author as having amended criteria written by someone else on another
+  branch, corrupting the audit trail the field exists to provide; and SKIP=
+  switched off a governance gate for the whole commit. The commit was made with
+  the skip, recorded in its message.

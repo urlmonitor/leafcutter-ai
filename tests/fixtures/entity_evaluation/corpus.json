@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "historical_evidence": "DK-200 gather_context tests and enrichment scores prove historical lexical enrichment only.",
+  "cases": [
+    {"id": "glossary", "goal": "Explain Decision Kernel.", "expected": [["glossary", "decision kernel"]], "expected_lookups": 1},
+    {"id": "doc_alias", "goal": "Create a how-to document.", "expected": [["doc_type", "how_to"]], "expected_lookups": 1},
+    {"id": "destination", "goal": "entry_kind: glossary", "expected": [["entry_kind", "glossary"]], "expected_lookups": 1},
+    {"id": "native", "goal": "native_kind: AcceptanceCriterion", "expected": [["native_kind", "AcceptanceCriterion"]], "expected_lookups": 1},
+    {"id": "symbol", "goal": "Explain pkg/alpha.py::TaskInput.perform.", "expected": [["symbol", "pkg.alpha.TaskInput.perform"]], "expected_lookups": 1},
+    {"id": "artifact", "goal": "Explain EC-1100a-1-i.", "expected": [["artifact_id", "EC-1100a-1-i"]], "expected_lookups": 1},
+    {"id": "ordinary", "goal": "Please consider these ordinary words carefully.", "expected": [], "status": "no_matches", "expected_lookups": 0},
+    {"id": "boundaries", "goal": "reference this value CACHE TaskInputExtra préTaskInput ßAC", "expected": [], "status": "no_matches", "expected_lookups": 0},
+    {"id": "long_tail", "goal_factory": "long", "expected": [["artifact_id", "EC-1100a-1-i"]], "expected_lookups": 1},
+    {"id": "repetition", "goal_factory": "repeat", "expected": [["glossary", "zephyr"]], "expected_lookups": 1, "occurrences": 100},
+    {"id": "ambiguous", "goal": "Explain run.", "deny_globs": ["**/secret.py"], "expected": [], "unresolved": [["run", "ambiguous"]], "candidates": ["pkg.alpha.run", "pkg.beta.run"], "expected_lookups": 1},
+    {"id": "absent", "goal": "Explain EC-9999a-1-i.", "expected": [], "unresolved": [["EC-9999a-1-i", "unknown_id"]], "expected_lookups": 1},
+    {"id": "malformed", "goal": "Explain EC-1100a--1.", "expected": [], "unresolved": [["EC-1100a--1", "invalid_reference"]]},
+    {"id": "unsupported", "goal": "Explain pkg/foreign.ts::externalRun.", "expected": [], "unresolved": [["pkg/foreign.ts::externalRun", "unsupported_kind"]]},
+    {"id": "denied", "goal": "Explain pkg/secret.py::run.", "deny_globs": ["**/secret.py"], "expected": [], "forbidden": ["SECRET_SIGNATURE_SENTINEL", "SECRET_TITLE_SENTINEL", "pkg.secret.run"]},
+    {"id": "stale", "goal": "Explain Zephyr.", "mutation": "dirty", "expected": [], "index_status": "stale"},
+    {"id": "small_budget", "goal": "Explain EC-1100a-1-i and Zephyr.", "limits": {"max_entities": 1}, "expected": [["artifact_id", "EC-1100a-1-i"]], "omitted_min": 1},
+    {"id": "hostile", "goal": "Explain Hostile.", "expected": [["glossary", "hostile"]], "expected_lookups": 1, "permissions": ["read_repo"]}
+  ],
+  "intent_pairs": [
+    {"id": "term_explanation", "goal": "Explain Decision Kernel.", "context": {"conversation": ["We are discussing this repository."]}, "expected": "evidence"},
+    {"id": "new_name", "goal": "Implement a new FooWidget.", "context": {"observations": ["This name is new."]}, "expected": "change"},
+    {"id": "unclear", "goal": "That.", "context": {"host": "Codex"}, "expected": "insufficient_context"}
+  ]
+}

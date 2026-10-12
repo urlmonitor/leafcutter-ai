@@ -1,0 +1,227 @@
+id: BP-1300e-1-iii
+components:
+  - precommit_hooks
+  - commit_guardian
+title: "When the linter cannot run, the commit is refused with the reason and how to fix it — it is never shown as passed"
+component: build-pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario: The linter is not installed
+    Given the linter is neither importable as a module nor available as a command,
+    And a staged change to an in-scope Python file,
+    When the commit is attempted,
+    Then the commit is refused,
+    And the refusal states that the lint check could not run because the linter
+      is not installed, and gives the install instruction,
+    And no output of the commit presents the lint check as passed.
+
+  Scenario: The linter is installed but cannot start
+    Given the linter is present but exits with a startup error before inspecting
+      any file,
+    When the commit is attempted with a staged in-scope Python file,
+    Then the commit is refused, naming the startup error.
+
+  Scenario: The lint configuration cannot be read
+    Given the repository lint configuration is present but malformed,
+    When the commit is attempted with a staged in-scope Python file,
+    Then the commit is refused, naming the configuration file and that it could
+      not be read,
+    And the check does not fall back to the linter's built-in default rules,
+      because a verdict under different rules is not CI's verdict.
+
+  Scenario: Nothing in scope is staged
+    Given a staged change that touches no in-scope Python file,
+    When the commit is attempted,
+    Then the commit completes,
+    And the check reports that it had nothing to inspect, never that it inspected
+      files and found them clean,
+    And this holds even when the linter is not installed, because there was
+      nothing for it to examine.
+
+  Scenario: An internal defect in the check itself is visible
+    Given the check's own logic fails for a reason unrelated to the linter (for
+      example, it cannot list the staged files),
+    When the commit is attempted,
+    Then the output states that the lint check could not check this commit and
+      why,
+    And it never states that the lint check passed.
+depends_on:
+  - BP-1300e-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1300-unmaskable-guardrails/BP-1300e-1.yaml
+    relationship: parent
+    status: exists
+  - path: docs/reference/false-green-mechanisms.md
+    relationship: related
+    status: exists
+    relevance: "A check that examined nothing must not look like a check that found nothing."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a.yaml
+    relationship: related
+    status: exists
+    relevance: "Source of the outcome vocabulary (nothing to inspect / could not check). Reuse it, do not invent a second name."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-108-exception-hook-hardening/GE-108e.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule for finding the linter (module form first, executable as fallback). 'Is the linter installed' must get the same answer here as in the edit-time hook."
+  - path: docs/acceptance-criteria/build-orchestration/BO-500-computed-quality-gates/BO-570-4-ii.yaml
+    relationship: related
+    status: exists
+    relevance: "Same principle on the sign-off side: tooling-unavailable is inconclusive and never a pass. Cited, not restated."
+  - path: templates/scripts/commit_guardian/check_outcome.py
+    relationship: related
+    status: exists
+    relevance: "THE vocabulary: OUTCOME_OK, OUTCOME_COULD_NOT_CHECK, OUTCOME_NOTHING_TO_INSPECT and emit_result() printing 'RESULT: <outcome>'. Reused, not re-declared."
+  - path: templates/hooks/check_exception_handling_hook.py
+    relationship: related
+    status: exists
+    relevance: "Where GE-108e's discovery rule is implemented today (_run_ruff / _run_ruff_subprocess, the 'No module named ruff' marker). Self-contained by its own header and by GE-108e's it_requirements, so it cannot import a shared helper."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Block-versus-announce is decided per check. This record decides BLOCK for every could-not-check cause, including internal defects."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - "ONE LOCATOR FOR THIS FAMILY: templates/scripts/commit_guardian/_ruff_locator.py, stdlib only, returning the argv prefix to run ruff or a typed not-installed result. Rule per GE-108e, in this order: module form [sys.executable, '-m', 'ruff'] first, bare executable (shutil.which('ruff')) as fallback. Module absence is detected by a non-zero exit WITH 'No module named ruff' on stderr -- never by non-zero exit alone, which a real violation also produces. Probe once per run with '<prefix> --version' and keep the version string for the output. check_lint_gate.py, run_ci_local.py (through the CLI) and BO-570-3 (through the CLI) all go through this one locator."
+  - "WHY THIS IS NOT LITERAL REUSE OF GE-108e's CODE, AND HOW PARITY IS HELD INSTEAD (substitution accepted by the user 2026-10-09). GE-108e's rule is implemented inline in templates/hooks/check_exception_handling_hook.py, a Claude Code PostToolUse hook deployed to .claude/hooks/ whose header and GE-108e's own it_requirements forbid importing any leafcutter module. It therefore cannot import _ruff_locator.py, and _ruff_locator.py must not import from .claude/hooks/. Do NOT relax the edit-time hook's self-containment to force reuse. Hold 'is ruff installed gets one answer' with a behavioural cross-check test that runs BOTH the edit-time hook and the lint gate as subprocesses in three real environments -- module importable with no executable on PATH, executable on PATH with the module unimportable, neither -- and asserts they agree on installed / not installed in each."
+  - "DECIDE NOTHING-TO-INSPECT BEFORE PROBING RUFF. Compute the in-scope staged set first using the declaration and git alone. If it is empty, emit RESULT: nothing_to_inspect, print a visible line of the form 'nothing to inspect: 0 of <N> staged files are in the declared lint scope', and exit 0 -- even when ruff is absent. Membership filtering that needs ruff (its include/exclude) happens only after at least one staged file falls under a declared step's paths; if ruff is then unavailable, that is could_not_check, not nothing_to_inspect."
+  - "EVERY CANNOT-RUN CAUSE BLOCKS, AND THE REASON IS NAMED. Emit RESULT: could_not_check and exit non-zero, with a reason line, for: ruff not installed (state both forms were tried; install instruction: `pip install -r requirements-dev.txt` where that file exists, otherwise `pip install ruff`); ruff present but exits before inspecting (name its stderr); ruff configuration unreadable (ruff exits 2 naming the file, e.g. 'Failed to parse'; name the file and that it could not be read); leafcutter-lint.json unreadable (BP-1300e-1-i); a governing ruff configuration with unstaged edits (BP-1300e-1-ii) or outside the project (BP-1300e-1-iv); a local ruff version different from the version CI installs, or a declared version source that cannot be read (BP-1300e-1-v); no repository (BP-1300e-1-iv); the check's own failure (cannot list staged files, cannot read a blob, unparseable ruff output, an unexpected exception). Never retry with --isolated, never retry without the configuration, never fall back to ruff's built-in defaults."
+  - "WHY INTERNAL DEFECTS ALSO BLOCK HERE, CONTRARY TO THE COMPONENT'S FAIL-OPEN CONVENTION. pre-commit prints 'Passed' beside any hook that exits 0, whatever the hook writes. An exit-0 fail-open on an internal defect is therefore a printed false green, which scenario 5 forbids. The only exit status for which pre-commit prints anything other than Passed is non-zero, so this check's GE-120a-2 disposition is BLOCK for every could_not_check cause. State this decision in the module's docstring DECISION HISTORY so a later 'consistency' refactor does not restore exit 0."
+  - "THE OUTERMOST GUARD EXITS NON-ZERO. main() catches the specific exceptions it expects (OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError, UnicodeDecodeError) and converts them to could_not_check. A last-resort guard for anything else is allowed ONLY at the outermost level, must log the exception type and message at WARNING to stderr, must emit RESULT: could_not_check, and must exit non-zero -- the opposite of the component's usual exit-0 tail. It must not print a Python traceback as the only explanation."
+  - "run_hook.py IS UNCHANGED BUT VERIFIED. Confirm the deployed run_hook.py wrapper propagates check_lint_gate.py's non-zero exit unchanged and that its own could_not_start path (check_outcome.emit_not_run) covers the case where the script cannot be launched. No edit to run_hook.py is expected; if one proves necessary it is a separate change."
+  - "ERROR-HANDLING POLICY (CLAUDE.md Rules 1-4) applies to the locator: each subprocess call in a specific except; no try/except around pure parsing of 'ruff --version'."
+test_spec:
+  - name: test_bp_1300e_1_iii_ruff_not_installed_refuses_with_install_instruction_and_no_passed_banner
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - "exits 0 with a warning when ruff is missing"
+    description: "Hook interpreter cannot import ruff and PATH has no ruff executable (the GE-108e test mechanism: PATH emptied to git's directory, module made unimportable for the child). A staged in-scope .py: commit refused; output states ruff is not installed with the install instruction; pre-commit's line for the hook ends 'Failed' and no line for it reads 'Passed'."
+  - name: test_bp_1300e_1_iii_ruff_that_cannot_start_refuses_naming_the_startup_error
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A stub 'ruff' module on the hook interpreter's path writes 'boom: cannot start' to stderr and exits 2 before reading input; commit refused and the output contains 'boom: cannot start'."
+  - name: test_bp_1300e_1_iii_malformed_ruff_config_refuses_and_never_uses_default_rules
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    must_catch:
+      - "retries with --isolated or without the configuration when it cannot be parsed"
+    description: "ruff.toml is invalid TOML and the staged file is clean under ruff's defaults; commit is still refused as could_not_check naming ruff.toml as unreadable."
+  - name: test_bp_1300e_1_iii_nothing_in_scope_commits_and_says_nothing_to_inspect_even_without_ruff
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Docs-only staged change, ruff absent: commit completes; visible output contains RESULT: nothing_to_inspect and the 'nothing to inspect' line, and never 'inspected' with a non-zero count."
+  - name: test_bp_1300e_1_iii_internal_defect_says_could_not_check_and_is_never_shown_as_passed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A `git` wrapper first on the hook's PATH delegates every subcommand to real git except `diff --cached`, which exits 128; real commit: output says the lint check could not check this commit and why, RESULT: could_not_check, and the pre-commit line for the hook is 'Failed', not 'Passed'."
+  - name: test_bp_1300e_1_iii_edit_time_hook_and_lint_gate_agree_on_whether_ruff_is_installed
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "In three environments (module only; executable only; neither) run the deployed check_exception_handling_hook.py and check_lint_gate.py as subprocesses; both report installed in the first two and not installed in the third."
+test_rationale: >-
+  The pre-commit banner is the load-bearing observable: an exit-0 fail-open
+  writes a perfectly honest stderr line beneath a 'Passed' banner, so every
+  cannot-run test asserts on pre-commit's own status line for the hook, not only
+  on the hook's text. Environments are manipulated for real (PATH, an
+  unimportable module, a stub module, a git wrapper) rather than by patching the
+  locator, because the defect class is about what the process discovers in the
+  environment it is given (GE-108e's rationale). The malformed-config arm uses a
+  file clean under ruff's defaults so a default-rules fallback would pass it. The
+  cross-hook test is what substitutes for code reuse with the self-contained
+  edit-time hook. Commit-path tests reuse _bp_1300e_lint_gate_fixture.py and
+  declare @pytest.mark.shared_layout_reader with
+  @pytest.mark.usefixtures("shared_reference_layout").
+delivers_to:
+  agent: python-coder
+  contract: >-
+    To BP-1300e-1 and BO-570-3 (via the CLI): _ruff_locator.locate() -> argv
+    prefix list[str] plus version str, or a NotInstalled result naming both
+    forms tried; and the could_not_check reason vocabulary
+    {ruff_not_installed, ruff_failed_to_start, ruff_config_unreadable,
+    declaration_unreadable, ruff_config_partially_staged,
+    ruff_config_outside_project, linter_version_mismatch,
+    linter_version_source_unreadable, no_repository, internal_error} carried
+    in --json 'reason' and in a human-readable reason line. Owners of the
+    reasons not raised here: ruff_config_partially_staged (BP-1300e-1-ii),
+    ruff_config_outside_project and no_repository (BP-1300e-1-iv),
+    declaration_unreadable (BP-1300e-1-i), linter_version_mismatch and
+    linter_version_source_unreadable (BP-1300e-1-v). Every reason carries the
+    same BLOCK disposition (non-zero exit). BO-570-3 maps every one of them to
+    tooling-unavailable.
+expects_from:
+  ac_id: GE-120a-1
+  contract: "templates/scripts/commit_guardian/check_outcome.py: OUTCOME_OK, OUTCOME_COULD_NOT_CHECK, OUTCOME_NOTHING_TO_INSPECT and emit_result() printing 'RESULT: <outcome>' on stdout (BP-1300e-1 adds OUTCOME_REFUSED there)."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION 2026-10-09: a missing linter, one that cannot start, or an
+  unreadable configuration REFUSES the commit with the reason and install
+  instruction. This is decided, not open.
+
+  SQUARED WITH THE COMPONENT'S FAIL-OPEN CONVENTION, FOLLOWING GE-120's LINE.
+  commit-guardian fails open on INTERNAL errors so a script bug never blocks an
+  unrelated commit. GE-120 does not repeal that. It draws the line at
+  visibility: fail-open on one bad input while the check still ran is fine, but
+  reporting SUCCESS for a check that never ran is not. Whether a cannot-run
+  condition also BLOCKS is a per-check decision. For this check:
+    - Linter absent / will not start / config unreadable: BLOCK. The check
+      examined nothing, the required CI gate would be the first examiner, and the
+      push fails there anyway, so blocking costs nothing that CI would not cost
+      later.
+    - The check's own internal defect (the fifth scenario): the component
+      convention may decide block or allow, but the output must say "could not
+      check". It must never say "passed".
+  PRE-COMMIT DETAIL THAT MAKES THIS LOAD-BEARING: the pre-commit framework prints
+  "Passed" beside any hook that exits 0, whatever the hook writes to stderr. An
+  exit-0 fail-open is therefore not merely quiet, it is a printed false green.
+  The IT PO must make the fifth scenario's "never states passed" hold against
+  that banner, not just in the hook's own text.
+
+  The "nothing to inspect" arm stops the opposite over-correction: refusing a
+  docs-only commit because the linter is missing would block work the check has
+  no subject in.
+
+  USER DECISION 2026-10-09 -- ACCEPTED: GE-108e's ruff-discovery rule cannot be
+  literally reused, because it is implemented inline in the edit-time hook
+  (templates/hooks/check_exception_handling_hook.py), which GE-108e requires to
+  be self-contained. The substitute recorded in it_requirements ("WHY THIS IS
+  NOT LITERAL REUSE OF GE-108e's CODE") -- one locator for this family plus a
+  behavioural cross-check test that runs BOTH hooks as subprocesses in three
+  real environments (module only, executable only, neither) and asserts they
+  agree on installed / not installed -- was accepted by the user on 2026-10-09
+  as satisfying "the same answer as the edit-time hook". Decided, not a caveat.
+  Criteria unchanged.
+
+  SAME DAY: the reason vocabulary in delivers_to was extended with
+  ruff_config_outside_project (BP-1300e-1-iv, user-accepted rule),
+  linter_version_mismatch and linter_version_source_unreadable (BP-1300e-1-v,
+  user decision that a differing linter version refuses).

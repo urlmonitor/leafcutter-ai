@@ -49,6 +49,7 @@ import yaml
 
 from _ac_components import components_field_errors, load_registry_ids  # noqa: E402
 from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
+from declared_files import declared_files_commit_messages  # noqa: E402
 
 # Same schema file the commit-time hook (templates/scripts/commit_guardian/
 # check_ac_schema.py, SCHEMA_PATH) validates staged ACs against. Resolving the
@@ -57,6 +58,33 @@ from _ac_schema_test_spec_validators import test_spec_entry_errors  # noqa: E402
 # repo_root) keeps both validators pinned to the one source-of-truth schema so
 # their verdicts cannot drift apart (ACS-200e).
 _SCHEMA_REL = Path("config") / "ac_store_schema.json"
+
+# Single-slot cache: (schema_object, compiled_validator). TQ-600a-11 measured
+# that once YAML parsing is no longer the bottleneck (the yaml_safe_loader
+# accessor above), *this* line's prior behaviour -- constructing a fresh
+# jsonschema.Draft7Validator(schema) on every one of 4,634 per-file calls --
+# became the new dominant cost (profiled at ~12s of a ~21s full-store run,
+# versus ~3s actually parsing YAML). main() loads the schema dict exactly
+# once and passes the SAME object through every _validate_file() call in its
+# loop, so keying on object IDENTITY (`is`, never `id()` as an integer -- an
+# id() can be recycled for an unrelated object once the original is garbage
+# collected, which would silently return a STALE validator for different
+# content) is sufficient and correct: a cache hit only fires for the exact
+# object main() is still holding a reference to.
+_schema_validator_cache: tuple[dict[str, Any], Any] | None = None
+
+
+def _cached_validator(schema: dict[str, Any]) -> Any:
+    """Return a ``jsonschema.Draft7Validator`` for `schema`, built at most once
+    per distinct schema object held in the single-slot cache above."""
+    global _schema_validator_cache  # noqa: PLW0603 -- single-slot process-local cache, no I/O
+    import jsonschema  # noqa: PLC0415
+
+    if _schema_validator_cache is not None and _schema_validator_cache[0] is schema:
+        return _schema_validator_cache[1]
+    validator = jsonschema.Draft7Validator(schema)
+    _schema_validator_cache = (schema, validator)
+    return validator
 
 
 def _default_schema_path() -> Path:
@@ -68,6 +96,21 @@ def _default_schema_path() -> Path:
     """
     repo_root = Path(__file__).resolve().parent.parent.parent
     return repo_root / _SCHEMA_REL
+
+
+def _infer_repo_root(ac_path: Path) -> Path:
+    """Repo root for an AC file: the ancestor of its docs/acceptance-criteria/.
+
+    Works for both this repo's own store and a fixture store under a temp
+    directory (declared_files existence checks must run against whichever
+    tree the AC actually lives in, never a fixed cwd). Falls back to cwd
+    when no such ancestor is found (e.g. a file passed outside any store).
+    """
+    parts = ac_path.resolve().parts
+    for i in range(len(parts) - 1):
+        if parts[i] == "docs" and parts[i + 1] == "acceptance-criteria":
+            return Path(*parts[:i])
+    return Path.cwd()
 
 
 # ---------------------------------------------------------------------------
@@ -153,14 +196,14 @@ def _schema_field_errors(path: Path, data: dict[str, Any], schema: dict[str, Any
         rather than silently treating the file as valid.
     """
     try:
-        import jsonschema
+        import jsonschema  # noqa: F401 -- import-availability probe; _cached_validator does the real import
     except ImportError as exc:
         return [
             f"{path}: jsonschema is not importable ({exc}) — schema-level "
             "validation was SKIPPED. Install jsonschema to enable it."
         ]
 
-    validator = jsonschema.Draft7Validator(schema)
+    validator = _cached_validator(schema)
     return [
         f"{path}: schema violation at "
         f"{'.'.join(str(part) for part in err.absolute_path) or '<root>'} — {err.message}"
@@ -172,6 +215,7 @@ def _validate_file(
     path: Path,
     registry_ids: set[str] | None = None,
     schema: dict[str, Any] | None = None,
+    declared_files_reports: list[str] | None = None,
 ) -> list[str]:
     """Validate a single YAML file for required readiness/priority/components fields.
 
@@ -187,6 +231,8 @@ def _validate_file(
             call — callers must surface that explicitly (see
             `load_ac_store_schema`'s warning return value) rather than let the
             skip look like a passing schema check.
+        declared_files_reports: Non-blocking declared_files (ACD-1600c-4)
+            reports appended to, when supplied.
 
     Returns a list of error strings. Empty list = valid.
     """
@@ -194,7 +240,20 @@ def _validate_file(
 
     try:
         content = path.read_text(encoding="utf-8")
-        data = yaml.safe_load(content)
+        # Deliberately yaml.SafeLoader, NOT the shared fast accessor
+        # (yaml_safe_loader.get_safe_yaml_loader) used elsewhere in this
+        # package (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): this
+        # except branch IS the required "AC store valid" gate's own
+        # malformed-YAML detector -- its entire job is to turn an unparseable
+        # file into the reported violation below. CSafeLoader accepts at
+        # least one input class (a tab adjacent to a colon/comma) that
+        # yaml.SafeLoader correctly rejects, so routing this one call through
+        # the fast accessor would silently narrow what this validator catches
+        # -- a malformed AC file that should fail this gate would instead
+        # parse "successfully" and be judged only on field presence, which it
+        # may pass by chance. See scripts/ac_store/yaml_safe_loader.py's own
+        # docstring for the measured divergence classes.
+        data = yaml.load(content, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         return [f"{path}: YAML parse error — {exc}"]
     except OSError as exc:
@@ -276,6 +335,13 @@ def _validate_file(
     # schema check having run).
     if schema is not None:
         errors.extend(_schema_field_errors(path, data, schema))
+
+    # declared_files (ACD-1600c-4): one seam call, unconditional — the JSON
+    # schema cannot express empty-list/path-form/existence rules at all.
+    refusals, reports = declared_files_commit_messages(data, _infer_repo_root(path))
+    errors.extend(refusals)
+    if declared_files_reports is not None:
+        declared_files_reports.extend(reports)
 
     return errors
 
@@ -409,10 +475,16 @@ def main(argv: list[str] | None = None) -> int:
     paths, resolve_errors = _resolve_ac_yaml_paths(args)
     all_errors.extend(resolve_errors)
 
+    declared_files_reports: list[str] = []
     for path in paths:
-        errors = _validate_file(path, registry_ids, schema)
+        errors = _validate_file(path, registry_ids, schema, declared_files_reports)
         all_errors.extend(errors)
         files_checked += 1
+
+    # declared_files reports are informational (ACD-1600c-4-i) — printed
+    # regardless of pass/fail, never affecting the exit code.
+    for report in declared_files_reports:
+        print(f"REPORT: {report}")
 
     if all_errors:
         print("AC schema validation FAILED:", file=sys.stderr)
@@ -473,3 +545,10 @@ if __name__ == "__main__":
 #   ordinary pass. Changed the empty-argv branch to return 0 while still
 #   printing the usage text to stderr for a human running it bare.
 #   (#GE-120a-4)
+# - 2026-09-28 [python-coder/ACD-1600c-4]: Wired the declared_files seam
+#   (scripts/ac_store/declared_files.py) into _validate_file() unconditionally
+#   (the JSON schema cannot express empty-list/path-form/existence rules), so
+#   this validator's verdict agrees with the commit-time hook's on declared
+#   files. Added _infer_repo_root() so existence checks run against whichever
+#   tree the AC file actually lives in (a fixture store under a temp
+#   directory, or this repo's own store), never a fixed cwd.

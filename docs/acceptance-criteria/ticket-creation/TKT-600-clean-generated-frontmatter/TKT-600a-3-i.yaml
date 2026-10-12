@@ -1,0 +1,110 @@
+id: TKT-600a-3-i
+components:
+  - ticket_creation_pipeline
+  - ac_store
+title: "A ticket generated from a requirement with no declared files says its files were derived, not declared, and generation leaves the hold to the readiness gate"
+component: ticket-creation
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given requirement L is in the "no declared files" state,
+    and L's documentation links name scripts/build.py as a file the work modifies
+    and docs/reference/ac-schema.md as describing the work,
+  When a ticket is generated from L,
+  Then the ticket's files-touched list is the one the existing derivation gives for L,
+    containing scripts/build.py and not docs/reference/ac-schema.md,
+  And the ticket states, next to that list, that its files were derived from documentation
+    links and technical requirements rather than declared, naming L,
+  And the ticket readiness report shows the surface as "derived, not declared" for L and does
+    not report it as passed,
+  And no derived path is described anywhere in the ticket or the report as a declared file,
+  And generation is not refused on this account; whether L is held back from builders is the
+    implementation-readiness gate's decision, which reports L with the reason
+    "missing file targets".
+depends_on:
+  - TKT-600a-3
+  - ACD-1600c-4-ii
+  - ACD-1600c-1
+doc_links:
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The fix direction asks that a check which cannot judge correctness report INFO, not PASS,
+      and that provenance be reported per path honestly. That is what this AC requires for the
+      legacy path.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4-ii.yaml
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The derivation used for a 'no declared files' record is the existing one (TKT-600a-1, TKT-600a-2, TKT-500f-8-i) with its selection rules unchanged; this AC only labels its output. The branch is chosen from the declared-files seam's named state, never from the emptiness of some list."
+  - "Frontmatter shape is unchanged (files_touched stays a flat list of path strings; no new key), so ticket_frontmatter_guard passes; the 'derived, not declared' statement naming the record is written in the ticket body next to the surface section TKT-600a-3 introduces."
+  - "Readiness report (--verify): the surface is shown as 'derived, not declared' for the record, at INFO level, never PASS; each derived path carries its true source (a doc_links entry or a prose it_requirements bullet), reported honestly per path (KI-ACS-002 fix direction)."
+  - "The word 'declared' is never applied to a derived path in the ticket or the report."
+  - "Generation exits 0 for such records; the generator neither consults nor duplicates the implementation-readiness gate's hold decision -- one gate holds (ACD-1600c-1)."
+test_spec:
+  - name: test_no_declared_files_record_uses_existing_derivation
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "For L, files_touched contains scripts/build.py and not docs/reference/ac-schema.md, matching the pre-existing derivation's output."
+  - name: test_ticket_states_files_derived_not_declared_naming_record
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "The ticket body, next to the surface, states the files were derived from documentation links and technical requirements rather than declared, naming L."
+  - name: test_readiness_report_shows_derived_not_declared_not_pass
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "--verify shows the surface as 'derived, not declared' for L with per-path source and no PASS for the surface."
+    angle: failure
+  - name: test_no_derived_path_described_as_declared
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "No line in the ticket or the report calls a derived path a declared file."
+  - name: test_generation_not_refused_for_no_declared_files_record
+    target_dir: tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Generation for L exits 0 and writes the ticket; the generated ticket passes ticket_frontmatter_guard."
+    angle: boundary
+delivers_to: null
+expects_from:
+  ac_id: TKT-600a-3
+  contract: "Generator path that reads the declared-files answer from scripts/ac_store/declared_files.py and the ticket-body surface section it introduces; this AC covers the 'no declared files' branch of the same answer."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (derivation unchanged and only labelled, branch chosen from the seam's named state, frontmatter unchanged, INFO not PASS with per-path source, one gate holds), test_spec, expects_from re-worded. Criteria unchanged."
+    date: '2026-09-27'
+    by: it-po
+    directed_by: user
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE FALLBACK STAYS, VISIBLY. Every record written before ACD-1600c-4 is in the
+  'no declared files' state. Refusing to generate for them would stop all existing work at
+  once; silently using the derivation would re-create KI-ACS-002 under a name that looks
+  fixed. So the old derivation keeps running for these records only, and is labelled as
+  derived everywhere it appears.
+
+  WHO HOLDS. The generator does not hold records -- one gate holds, and it is the
+  implementation-readiness gate (ACD-1600c-1, amended 2026-09-27 to key 'missing file
+  targets' on the 'no declared files' state). ACD-1600c-1 ships advisory first and
+  grandfathers older records (ADR-026 rules 3-4), so during the migration a legacy record
+  can still be built -- with the derived surface marked as such.

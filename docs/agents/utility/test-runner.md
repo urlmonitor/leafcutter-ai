@@ -3,7 +3,7 @@ title: 'Agent Reference: test-runner'
 type: reference
 status: active
 created: 2026-05-07
-last_updated: 2026-05-07
+last_updated: 2026-09-28
 components:
 - infrastructure
 - infrastructure
@@ -15,7 +15,6 @@ related_docs:
 related_code:
 - .claude/agents/test-runner.md
 - .claude/commands/test.md
-- .claude/skills/sql-test/SKILL.md
 description: 'Overview of Agent Reference: test-runner.'
 ---
 # Agent Reference: `test-runner`
@@ -82,21 +81,31 @@ agent does not invent new commands — it maps to the existing surface.
 ## 4. DB Pre-flight Check
 
 For any suite that touches the database (`sql-functions`, `all`, `manual`),
-the agent checks whether the local DB container is reachable on port 5403
-**before** invoking the suite. On failure it stops with:
+the agent runs the shipped checker (`scripts/db_check/checker.py
+--target-dir <project root>`) **before** invoking the suite. There is no
+fixed host, port, or container — the checker resolves
+`testing_context.db_connection_test` from the project's own
+`skills_config.json` (against the project root, not the `.leafcutter`
+install directory) and reports one of five statuses: `not_configured`,
+`invalid`, `config_error`, `unreachable`, or `reachable`. It never prints a
+password. On any status other than `reachable`, the test-runner stops before
+running the suite and relays the checker's own report rather than composing
+its own message, e.g.:
 
 ```
-## DB Not Running
+## DB Check Failed
 
-The SQL function test suite requires the local database container (port 5403).
-Start the container first, then re-invoke the test-runner.
+<checker's reported status and message, relayed verbatim — one of
+"not_configured", "invalid", "config_error", or "unreachable">
 
-Rerun command once the DB is up:
+Rerun command once testing_context.db_connection_test is fixed and reachable:
   /test sql-functions
 ```
 
 This satisfies the Gherkin AC: "on DB-not-running it stops with a clear
-'start the database first' message instead of running the wrong suite."
+'start the database first' message instead of running the wrong suite" —
+generalized to every non-`reachable` checker status, not only an unreachable
+database.
 
 ---
 

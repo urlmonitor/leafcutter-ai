@@ -1,0 +1,231 @@
+id: BO-2400f-5-i
+components:
+  - build_orchestration
+title: "Every step of the one-command arc is asked of an agent whose charter covers that step, so no step is refused as someone else's job"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run is started with one acceptance-criterion id, and its arc
+    contains steps that each run one repository command and hand back its result —
+    resolving the connected set, deciding producibility, claiming the set, assembling
+    the context bundle, releasing the claim on a halt, and, where the run asks an agent
+    to perform them, writing the changelog entry, committing, pushing and opening the
+    pull request,
+  When the run asks an agent to perform any one of those steps,
+  Then the agent it asks is the dedicated command-step-runner (BO-2400a-1-i), whose
+    registered role is running a given command in a named workspace and returning its
+    output, and whose registry entry declares permits_shell true,
+  And no command step is asked of status-checker, python-coder, worktree-agent or any
+    other agent, so the claim and release steps move off worktree-agent and
+    python-coder as well as resolve and producibility moving off status-checker,
+  And the request does not tell the command-step-runner to act as a role other than its
+    registered one, so that no step reaches an agent with the instruction to become
+    some other agent,
+  And an agent whose registry entry says it may not run repository-changing commands,
+    or says nothing about it, is asked to perform none of these steps.
+
+  Given the same run reaches its specialist phases,
+  When it asks for the tests to be written, the code to be written, and the change to
+    be reviewed,
+  Then those are still asked of the test-writer, the coder and the pr-reviewer
+    respectively, and none of them is asked of the command-step-runner.
+
+  Given the lane as it stands on 2026-09-25, in which the resolve and producibility
+    steps are asked of an agent whose registry entry declares that it may not run
+    commands, and the claim and release steps were moved to other agents only one at a
+    time,
+  When this criterion is met,
+  Then all of the steps above satisfy it together, and none is left on an agent whose
+    charter excludes it,
+  And a run started once from an unchanged store proceeds from resolve through claim
+    and context bundle without any step being declined as outside the asked agent's
+    role, so the operator does not have to drive any step by hand.
+depends_on: [BO-2400f-5, BO-2400a-1-i, BO-2400f-7-iii, BO-2400f-10-i, BO-2400f-3-ii, BO-2400f-5-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Holds every step dispatch this criterion governs. As of 2026-09-25 the resolve (about line 886) and producibility (about line 973) steps still name status-checker; claim and release were moved to worktree-agent and python-coder separately."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Where each agent's role and permits_shell are declared. The step-to-agent choice is judged against this file, not against what an agent happened to do on one run."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Open KI recording that three fast-lane dispatches still go to the agent that forbids shell, and that permits_shell has three states (true / false / absent) read as two."
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "The workflow engine has no command primitive; every side effect is an agent() dispatch, so this criterion can only be met by choosing who is asked."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: describes
+    status: exists
+    relevance: "Lists the fast-lane-ship.js shell dispatches to status-checker among about 40 across six workflows. Only the fast-lane rows are in scope here."
+  - path: docs/architecture/adrs/ADR-018-agent-isolation-topology.md
+    relationship: describes
+    status: exists
+    relevance: "Depth-1 dispatch topology; the command-step-runner is a depth-1 agent the depth-0 lane dispatches."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    The agent for command steps is declared once in the lane, and no command-step
+    dispatch carries its own agent literal. Retire CLAIM_EXECUTOR_AGENT_TYPE,
+    RELEASE_EXECUTOR_AGENT_TYPE and the status-checker and python-coder literals at
+    resolve, producibility and context-bundle. Do not leave any of them as aliases. A
+    duplicated per-step choice is how the claim and release steps drifted apart before.
+  - >-
+    Every dispatch in the lane must be identifiable as either a command step, with a
+    declared step kind (reads_store, changes_store, changes_repository or publishes), or
+    a specialist phase. BO-2400f-5-ii reads this declaration, so it must be readable
+    without running a model.
+  - >-
+    Command-step requests use the command-step-runner request shape from BO-2400a-1-i and carry
+    BO-2400f-3-ii's target block. The lane reads each step's outcome from the result's
+    exit_status and stdout, not from agent prose. The JSON a step previously parsed is
+    now the stdout field, parsed unchanged.
+  - >-
+    Each command step's declared kind uses the step_kinds vocabulary from
+    config/agent_registry.schema.json (BO-2400a-1-i). Push and pull-request steps are
+    publishes. Claim and release are changes_store. Resolve and producibility are
+    reads_store. Commit is changes_repository.
+  - >-
+    Moving the context-bundle step to the command-step-runner must not bypass
+    BO-2400c-1-viii (approved). The bundle command's producer-stated verification value
+    must reach the lane in the relayed stdout, and the lane's comparison stays in place.
+    A relay that alters the bundle is expected to halt the run under c-1-viii. That is
+    correct behaviour, not a regression.
+  - >-
+    No request contains a role reassignment. No 'You are the <x>-phase agent' framing is
+    sent to any agent. A request names the step and the command, not a persona.
+  - >-
+    Test-writer, coder and pr-reviewer dispatches keep their agents and prompts, apart
+    from the target block BO-2400f-3-ii adds.
+  - >-
+    Permission is not manufactured. Do not add or change permits_shell on an existing
+    agent. Remove any code comment that justifies a former executor with a permission
+    the registry does not grant (the KI-BO-020 comment KI-BO-20260901-1620 describes).
+    It must not survive next to the new routing.
+  - >-
+    Registry spawned_by lists stay consistent with the new routing, so
+    check-agent-spawn-consistency passes. The command-step-runner lists fast-lane-ship.js. An
+    agent that is no longer dispatched by the lane has the lane dropped from its
+    spawned_by only if the lane was listed there.
+  - >-
+    The template workflow is the edit site. The deployed .claude/workflows/fast-lane-ship.js
+    is regenerated by build.py, and test_fastlane_template_deploy_parity stays green.
+  - >-
+    Existing fast-lane workflow tests (BO-2400f-7-iii, f-10-i, f-10-ii, f-12, f-13,
+    f-3-i) that stub replies by agent type are re-keyed to the new agent and reply
+    shape. Their assertions may be re-keyed but not weakened or deleted.
+test_required: true
+test_spec:
+  - name: test_every_command_step_is_dispatched_to_the_command_step_runner
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Under the workflow engine harness, a stubbed run through resolve, producibility, claim, context bundle and a post-claim halt records every command-step dispatch with agentType command-step-runner. The assertion is on the dispatches actually made, not on a source constant."
+    must_catch:
+      - "resolve or producibility still dispatched to status-checker (today's state)"
+      - "claim still dispatched to worktree-agent"
+      - "release still dispatched to python-coder"
+      - "context bundle still dispatched to python-coder"
+  - name: test_specialist_phases_stay_on_their_specialist_agents
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "In the same run the test-writer, coder and pr-reviewer dispatches keep their specialist agent types, and none of them goes to the command-step-runner."
+    must_catch:
+      - "a blanket rewrite routes every dispatch, specialists included, to the command-step-runner"
+  - name: test_no_step_request_reassigns_the_asked_agent_role
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "No recorded request prompt instructs its agent to act as a named role other than its own ('You are the claim-phase agent' and similar)."
+  - name: test_lane_proceeds_resolve_through_context_bundle_on_command_step_runner_results
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "With the command-step-runner stubbed to return contract-shaped results (exit_status 0, stdout holding each step's JSON), a run from an unchanged fixture store reaches the context-bundle step's successor with no declined-step halt."
+  - name: test_command_step_runner_dispatches_do_not_count_toward_test_writer_plus_coder_total
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    covers: [BO-2400a-1-i, BO-2400f-5-i]
+    description: "In a full stubbed green run the test-writer plus coder dispatch count is exactly 2, while command-step-runner dispatches are several."
+test_rationale: |
+  The defect was a dispatch that looked right and went to the wrong agent, and the claim
+  and release fixes drifted apart inside the same file. So every assertion is made on the
+  dispatch records the harness captures from an executed run
+  (unit_tests/_workflow_engine_harness.py), as in the existing BO-2400f-7-iii and f-10-i
+  workflow tests. A test that greps the workflow for the agent name proves nothing about
+  which agent each step is actually asked.
+
+  The first and second tests are opposed. Routing nothing passes the second and fails the
+  first. Routing everything, specialists included, passes the first and fails the second.
+
+  The criteria's final clause ("no step declined as outside the asked agent's role") depends
+  on model judgement and cannot be proved deterministically. The reachability test shows
+  that the lane, given replies in the command-step-runner's contract, carries the run through
+  without a halt. Whether the real agent produces such replies is left to BO-2400a-1-i's
+  contract tests and a manual live smoke run.
+delivers_to:
+  agent: python-coder
+  contract: "templates/workflows-js/fast-lane-ship.js in which every dispatch is declared either as a command step {step: string, kind: 'reads_store'|'changes_store'|'changes_repository'|'publishes', agent: <single lane-level command-step-runner declaration>} or as a specialist phase, readable statically for BO-2400f-5-ii; every command step parses the BO-2400a-1-i reply shape, so BO-2400f-5-iii's decline classification and BO-2400f-10-iii's release routing apply to it."
+expects_from:
+  ac_id: BO-2400a-1-i
+  contract: "Agent command-step-runner registered with permits_shell: true and deployed to .claude/agents/. Request {step, command, target: {workspace, branch, ac_id}}; reply result {command, workspace, exit_status: int, stdout, stderr} or decline {declined: true, step, agent, reason} without exit_status. (Also requires BO-2400f-3-ii's target block and BO-2400f-5-iii's decline classification, both in depends_on.)"
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-09-25 in this repository. The workflow engine has no shell primitive, so
+  every command-running step is an agent() dispatch with a hard-coded agentType. Several
+  steps were sent to agents whose charter forbids that work; they declined and the run
+  halted. The orchestrator then drove the whole pipeline by hand, step by step.
+
+  WHY LANE-WIDE AND NOT ONE STEP AT A TIME. KI-BO-020 moved the release step. BO-2400f-7-iii
+  moved the claim step and said in its own it_requirements that "widening to [resolve and
+  producibility] is a separate change". This is that change, stated once for every step so
+  the next step added to the lane inherits it instead of waiting for its own incident.
+
+  OVERLAP. BO-2400f-7-iii (claim performer) and BO-2400f-10-i second scenario (release
+  performer) each already say this for one step. This record does not restate them; it adds
+  resolve, producibility, context bundle, changelog, commit, push and pull request, and the
+  requirement that no step's request reassigns the agent's role.
+
+  DECIDED BY THE USER 2026-09-27. (1) An agent whose registry entry says nothing about
+  permits_shell is NOT permitted, as the registry schema says (KI-BO-20260901-1620). (2) Every
+  command step goes to a new dedicated command-step-runner agent declaring permits_shell
+  true; its template and registry entry are BO-2400a-1-i (llm-expert's surface). This record
+  is the routing half (python-coder). Test-writer, coder and pr-reviewer stay on their
+  specialist agents. Do not meet this by adding permits_shell to an existing agent's entry
+  (BO-2400f-7-iii forbids manufacturing permission).
+
+  THE ID, USER DECISION 2026-09-27 (round 3): "command-step-runner", replacing
+  "fast-lane-step-runner". It is generic so the ~40 similar status-checker shell dispatches in
+  five other workflows (KI-BO-20260927) can reuse it later; this record still moves only the
+  fast lane.

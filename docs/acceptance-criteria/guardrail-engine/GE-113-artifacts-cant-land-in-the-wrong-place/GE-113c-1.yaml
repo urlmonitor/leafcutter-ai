@@ -36,6 +36,68 @@ it_requirements:
   - "In the deployed layout (project/.leafcutter/scripts/commit_guardian/...) the resolved root must equal the consumer project root, NOT the .leafcutter/ subdirectory — the exact false-fail class ACS-300g-6 fixed (a detail_ref existence check ran against <repo>/.leafcutter/docs/... and false-failed)."
   - "Must handle git-unavailable gracefully per the project error handling policy: wrap the git subprocess call (no bare except), warn, and fall back to a safe deterministic resolution (the ACS-300g-6 precedent: __file__-relative fallback)."
   - "Deployed/template parity (ADR-001): the canonical fix lives under templates/scripts/commit_guardian/ and the scripts/ copy is a build output (ACS-300g-6 edited the templates/ copy); any extension must follow the same build.py round-trip."
+test_required: true
+test_spec:
+  - name: test_shared_resolver_returns_consumer_root_from_deployed_leafcutter_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "In a temporary consumer git repository with the guard scripts deployed under .leafcutter/scripts/commit_guardian/, the shared project-root resolver, run from there as a subprocess, returns the consumer repository root and not the .leafcutter/ subdirectory."
+    must_catch:
+      - "a parents[N] resolution from __file__ that lands on .leafcutter/"
+  - name: test_components_integrity_guard_checks_against_consumer_root_in_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The original defect as a regression test. check_components_integrity, run from .leafcutter/ in a temporary consumer repository whose component detail_ref file exists under the consumer's docs/, passes. It would false-fail if the root resolved to <consumer>/.leafcutter/docs/."
+  - name: test_no_guard_derives_its_project_root_from_its_own_file_location
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    covers: [GE-113c-1, GE-113c-1-iv]
+    description: "No guard under templates/scripts/commit_guardian/ resolves the project root from Path(__file__) parents; every guard that needs the project root goes through the one shared resolver."
+    must_catch:
+      - "a second, per-guard root resolution that regresses in the deployed layout"
+  - name: test_same_guard_resolves_repository_root_in_source_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    covers: [GE-113c-1, GE-113c-1-i]
+    description: "The guard used in the first test, run from scripts/commit_guardian/ in a source-layout repository, resolves the repository root, so fixing the deployed layout does not break the home layout."
+  - name: test_check_secrets_runs_from_deployed_layout_in_a_fresh_worktree
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: reachability
+    covers: [GE-113c-1, GE-113c-1-iii]
+    description: "check_secrets, run from .leafcutter/ in a fresh temporary worktree, imports its scanner and scans the consumer's staged files, with the root resolved to the consumer project."
+  - name: test_agent_registry_guard_finds_package_from_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    covers: [GE-113c-1, GE-113c-1-vi]
+    description: "check_agent_registry, run from .leafcutter/ in a consumer project whose manifest records a package subdirectory, resolves the project root to the consumer root before locating the package, and blocks a staged invalid registry."
+test_rationale: |
+  This L2 promises one thing: in the deployed .leafcutter/ layout, a guard's project root is
+  the consumer project, not the directory the guard runs from. The first two tests prove it
+  directly by real subprocess runs from a deployed copy in a temporary consumer repository.
+  The second replays the defect that was actually observed (a detail_ref check run against
+  .leafcutter/docs/), so it is tied to a real failure and not only to the resolver's return
+  value.
+
+  The remaining tests are composite coverage through the children, marked with covers. -iv's
+  static test is the discrimination that keeps the bug class from recurring. -i's
+  source-layout test is the counterweight: a fix that hard-codes the deployed layout breaks
+  the home layout and fails it. -iii and -vi each prove that a specific guard with its own
+  root-dependent lookup reaches the consumer root.
+
+  Tests that fully exercise a child's own criteria stay in that child's test contract. Every
+  fixture is a temporary git repository, with no network and no model.
 delivers_to:
   agent: python-coder
   contract: "A single shared project-root resolver returning the consumer/repo top-level Path (via git rev-parse --show-toplevel with a safe fallback) used by every guard needing the project root, replacing per-guard Path(__file__).resolve().parents[N] literals."
@@ -45,12 +107,14 @@ created: 2026-06-23
 amended_by:
   - reason: "it-po-v3 technical enrichment: python-coder; recorded the ACS-300g-6 reconciliation (already-merged REPO_ROOT git-toplevel fix in check_components_integrity.py; GE-113c-1 = regression coverage + generalize to other guards via ONE shared resolver). Flagged the stale-branch + two-resolver divergence. Criteria unchanged."
   - reason: "it-po-v3 (technical route, 2026-07-08): extended covered_by with GE-113c-1-iii/-iv/-v — technical-constraint children bringing check_secrets (scripts_dir/import + .security-allowlist read-location) and the cross-guard shared-resolver consolidation under this mandate. A sibling GE-113c-1-ii for check_doc_frontmatter was intentionally NOT authored: that guard was already fixed on origin/main by GE-115/#235 (its _resolve_worktree_root now becomes a consolidation target in GE-113c-1-iv). Criteria and all other fields unchanged."
+  - reason: "it-po (2026-09-28): added the missing test contract (test_required, test_spec, test_rationale), approved by the user so the GE-113c-1-vi back-link commit passes check_ac_schema's approved-code-AC rule. Composite coverage through children marked with covers. Criteria, readiness and work_status unchanged."
 superseded_by: null
 covered_by:
   - GE-113c-1-i
   - GE-113c-1-iii
   - GE-113c-1-iv
   - GE-113c-1-v
+  - GE-113c-1-vi
 implemented_by: []
 notes: "Latent bug class: check-components-integrity resolved REPO_ROOT to the .leafcutter/ subdir in the deployed layout."
 change_target: code

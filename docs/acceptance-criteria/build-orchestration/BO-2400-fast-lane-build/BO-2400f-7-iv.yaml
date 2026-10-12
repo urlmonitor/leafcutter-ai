@@ -1,0 +1,149 @@
+id: BO-2400f-7-iv
+components:
+  - build_orchestration
+title: "A claim that succeeded is never reported as never attempted, and a reply is judged against the contract the run actually declared"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a run dispatches the claim and declares which fields the reply must carry,
+  When the reply satisfies that declared contract but omits a field the contract
+    itself marks optional,
+  Then the run treats the reply as usable and proceeds on the claim it obtained,
+  And a claim that was made and succeeded is never described as never attempted,
+  And an omitted optional collection is read as empty rather than as missing.
+depends_on: [BO-2400f-7-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The usability test must not require more of a reply than the dispatch's own
+     declared contract requires. The contract and the test that judges against it sit
+     in the same file a few lines apart; they must be read as one thing. Deriving the
+     test from the declared required list is preferable to restating it, because a
+     restatement can drift from the declaration silently and that is exactly the
+     defect."
+  - "An optional collection that is absent means empty. Absent and empty are the same
+     fact about a claim; only a reply that fails the declared contract is unusable."
+  - "Do NOT fix this by adding the omitted field to the dispatch's required list. That
+     inverts the dependency — it makes the contract serve the consumer's over-strict
+     test rather than the test serve the contract — and it would newly reject replies
+     that are valid today, converting a false halt into a different false halt."
+  - "The two BO-2400f-7-iii behaviours must survive unchanged: a performer that declines
+     still halts as not-attempted, and a claim that finds members already held still
+     reports contention naming them. This record loosens exactly one thing and must be
+     shown not to have loosened those."
+test_spec:
+  - name: test_a_successful_claim_omitting_the_optional_excluded_field_proceeds
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The observed 2026-09-23 shape: a reply carrying a populated claimed
+      list and target_refused false, with no excluded_claimed key at all. The run
+      proceeds past the claim step. Fails the behaviour that halts on it."
+  - name: test_a_claim_that_succeeded_is_never_reported_as_never_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "No reply carrying a non-empty claimed list can produce the
+      not-attempted halt. Asserted over the claim outcome rather than over one wording,
+      so a fix that only special-cases the missing key does not satisfy it."
+  - name: test_the_usability_test_requires_no_more_than_the_declared_contract
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "A reply carrying exactly the dispatch's declared required fields and
+      nothing else is usable. This is the descriptor that catches the class of defect
+      rather than the instance — it fails for any future field the test demands but the
+      contract does not."
+  - name: test_a_performer_that_declines_still_halts_as_not_attempted
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Non-regression arm over BO-2400f-7-iii. A decline — empty claimed,
+      target_refused true, nothing excluded — still takes the not-attempted branch.
+      Fails any fix that loosens the gate into accepting declines as claims."
+  - name: test_genuine_contention_is_still_reported_with_its_members
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The second non-regression arm over BO-2400f-7-iii: a claim that finds
+      members already held still reports contention and names them."
+test_rationale: |
+  The first and fourth descriptors are the opposed pair that makes this falsifiable. A
+  fix that simply stops checking the reply at all passes the first and fails the fourth;
+  the shipped behaviour passes the fourth and fails the first. Only a fix that judges the
+  reply against the declared contract — accepting a valid claim while still rejecting a
+  decline — passes both.
+
+  The third exists separately from the first because they fail differently. The first
+  pins one observed payload; the third pins the rule that produced it, and so fails for
+  the next optional field a future reader adds to the contract and forgets to make
+  optional in the test. Testing only the instance would let the same defect return under
+  a different field name.
+
+  These run through unit_tests/_workflow_engine_harness.py with stubbed responses, the
+  same vehicle as the sibling test_bo2400f_7_iii_claim_refusal_workflow.py. A test that
+  greps the workflow for the field name satisfies nothing here: the defect was a
+  condition that was present, correct-looking, and stricter than the contract beside it.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-7-iii
+  contract: "BO-2400f-7-iii established the three-way split between a decline, genuine
+    contention, and a usable claim. This record constrains how the third of those is
+    recognised, so it governs the same branch rather than a separate step."
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo2400f_7_iv_claim_reply_contract_workflow.py
+implemented_by:
+  - templates/workflows-js/fast-lane-ship.js
+change_target: pipeline
+risk_surface: safety
+notes: |
+  Observed 2026-09-23 on the first fast-lane run made after BO-2400f-7-iii shipped. The
+  run reached the claim step, claimed all 25 members of the connected set successfully,
+  and then halted saying "the claim was never attempted". The claim had in fact been
+  made: the payload carried all 25 ids in "claimed" and target_refused false.
+
+  WHAT ACTUALLY HAPPENED. BO-2400f-7-iii's usability gate tested that BOTH "claimed" and
+  "excluded_claimed" were arrays. The dispatch immediately above it declares only
+  ["claimed", "target_refused"] as required, leaving "excluded_claimed" optional. A
+  performer that claims everything and excludes nothing has no reason to send an empty
+  optional array, and did not. The gate therefore rejected a reply that satisfied the
+  contract the run itself had asked for, and routed it to the halt whose whole purpose is
+  to describe a claim that never happened.
+
+  WHY IT IS THE SAME FAMILY AS THE DEFECT IT FOLLOWS, INVERTED. BO-2400f-7-iii existed
+  because a decline was reported as contention: the run described a state that was not
+  the one it was in. This is that error mirrored — an attempt that succeeded reported as
+  an attempt never made. Both come from a consumer whose reading of a reply is not the
+  reading the contract specifies, and in both the operator is sent after a cause that
+  does not exist.
+
+  COST AND CONTAINMENT. The halt happens after the claim has already flipped 25 records
+  to in_progress in the run's own worktree, so a run that fails this way leaves its set
+  claimed and abandons it. In the observed instance nothing was stranded on the mainline,
+  because the claim is written inside the lane's worktree and that worktree was discarded
+  uncommitted. That containment is incidental to this defect rather than a defence
+  against it, and is the reason the observed blast radius was one wasted run.
+
+  THE NARROW FIX IS THE RIGHT ONE. Requiring less is safe here and requiring more is not:
+  the alternative — adding "excluded_claimed" to the dispatch's required list — would make
+  the contract conform to the over-strict consumer, and would begin rejecting replies that
+  are valid under today's contract. The record forbids that direction explicitly.

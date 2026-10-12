@@ -1,0 +1,116 @@
+id: AR-300b-2
+title: "The delivery guarantee covers a per-agent preparation added later, with nothing edited"
+component: agent-registry
+components:
+  - template_compiler
+  - build_pipeline
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a third kind of per-agent preparation, introduced after the delivery
+    guarantee is in place and not named anywhere in it,
+    And an agent for which that third preparation is computed but does not reach
+      the compiled prompt,
+  When the build finishes,
+  Then the build reports failure naming that third preparation and that agent,
+    without any change having been made to the guarantee itself,
+    And the set of preparations the guarantee covers is derived from the
+      preparations the build actually computed, rather than from a list of their
+      names,
+    And the guarantee states how many kinds of preparation it covered on that
+      run, so a run in which it recognised none is not read as a run in which
+      none failed,
+  So the mechanism is guaranteed rather than the two blocks that happen to be
+    broken today.
+depends_on:
+  - AR-300b
+doc_links:
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Where per-agent preparations are computed, and therefore the only place a derived-rather-than-enumerated set of them can be obtained."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b-1.yaml
+    relationship: related
+    status: exists
+    relevance: "Prior art for the derive-both-sides posture in this component: a derived rule found five violators where the incident report named three, and a rule naming the known instances passes forever."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "The covered set is DERIVED from the per-agent preparations the build actually computed on that run -- never a list of their names. This is the load-bearing constraint of the whole AC: a guarantee naming the two known-broken preparations is correct the day it ships and silent on the third."
+  - "Deriving the set requires the preparation step to REGISTER each per-agent preparation it computes (name, target agent, computed content, whether a destination was offered) into one structure the gate reads. There are 8 placeholder-guarded injection types in scripts/template_compiler.py sharing the failure mode today; all 8 must arrive through the same registration, so a ninth added later is covered by construction rather than by remembering."
+  - "A new preparation must become covered with NO edit to the gate. That is the acceptance condition -- if adding a preparation requires touching the gate, the registration is not the source of the set."
+  - "State how many kinds of preparation the guarantee covered on that run, so a run in which it recognised none is not read as a run in which none failed. AR-300b-4 owns the failing behaviour when that count is zero."
+  - "Do not add registration by making every preparation pass through a placeholder-token guard again -- that is the defect. Registration is a record of what was computed and where it was meant to go; it is independent of the placement mechanism, which AR-300d-4 requires to be declaration-driven."
+  - "File-size ratchet: the registration structure and the derivation live in a new module. scripts/template_compiler.py (496) and scripts/injection_builders.py (876) are already over the 400-content-line limit and may not grow."
+test_spec:
+  - name: test_a_third_preparation_added_later_is_reported_with_no_gate_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Register a synthetic third per-agent preparation that fails to reach one agent; the gate reports it by name without the gate's own code being modified."
+  - name: test_covered_set_is_derived_from_registered_preparations_not_a_name_list
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The covered set equals the set of preparations registered on the run; removing a registration removes it from coverage and adding one adds it, with no literal names in the gate."
+  - name: test_all_registered_preparation_kinds_are_counted_and_reported
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "The run states how many preparation kinds it covered; a run recognising zero is not reported as a run with no failures."
+  - name: test_every_placeholder_guarded_injection_type_registers_itself
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "After a real build, the registered preparation kinds include every per-agent injection the compiler computes -- not only the two known-dead ones."
+test_rationale: >-
+  Once the two known instances are repaired, a criterion written against them can
+  never fail again on the current tree: it degrades into proving that a loop runs.
+  The synthetic-third-preparation descriptor is the only honest evidence, and the
+  no-gate-edit condition is what it actually asserts. The whole-population
+  registration descriptor is included because the 8 injection types sharing this
+  failure mode are the real measure of whether the class, rather than the two
+  instances, is covered.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    A per-run registry of every per-agent preparation the compiler computed --
+    {preparation_name, agent, content, destination_offered: bool} per entry --
+    which is the sole source of the set AR-300b-1's gate iterates and whose
+    emptiness AR-300b-4 turns into a reported failure.
+expects_from:
+  ac_id: AR-300b-1
+  contract: "The per-agent delivery failure whose coverage this criterion generalises"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THIS IS WHERE AR-300b STOPS BEING AR-300a WITH EXTRA STEPS. AR-300b-1 can be
+  satisfied by a guarantee that names the two preparations known to be broken.
+  That guarantee is correct on the day it ships and silent on the third, which
+  is the exact failure shape measured: the second broken preparation had been
+  dead for as long as it existed and nothing noticed, because nothing was
+  looking at the class.
+
+  THE SYNTHETIC THIRD INSTANCE IS THE ONLY HONEST EVIDENCE. Once the two known
+  instances are repaired, a criterion written against them can never fail again
+  on the current tree -- it degrades into proving that a loop runs. The
+  after-the-fact addition is what keeps it falsifiable.

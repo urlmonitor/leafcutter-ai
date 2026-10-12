@@ -7,7 +7,7 @@ component: testing-quality
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -23,8 +23,29 @@ criteria: |
 depends_on:
   - TQ-600a
   - TQ-600a-1
-  - TQ-600a-2
 doc_links:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE EDIT SURFACE, added at this pass because the record had none and its
+      generated ticket would therefore have carried an EMPTY files_touched — the
+      documented phantom-done vector in this repository. The routing selector this AC
+      specifies is decided at fixture-request time, so it belongs in the plugin that
+      owns the `shared_reference_layout` fixture, alongside TQ-600a-2's unshared path.
+  - path: pytest.ini
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Where it_requirement 1 requires the marker to be REGISTERED. Declared
+      explicitly rather than left to prose harvesting: a bare filename carries no path
+      separator and is invisible to it, so "pytest.ini's `markers` section" in the
+      requirement text alone would never have reached the ticket. An unregistered
+      marker is silently ignored under some configurations, which makes a misspelled
+      reader declaration indistinguishable from an honest omission — and the omission
+      path is the unshared one, so the typo silently costs 59.8s rather than erroring.
+      TQ-600a-8's examination reads this marker, so its spelling must be registered
+      before that AC can pass.
   - path: CLAUDE.md
     relationship: describes
     status: exists
@@ -57,11 +78,18 @@ it_requirements:
     of how many such tests there were. Without the count the 77-site migration
     has no progress measure.
   - >-
-    UNDECLARED TESTS COUNT TOWARD THE MUTATOR TERM OF TQ-600a-6'S BOUND. Say so
-    explicitly in the implementation, or that bound silently tightens to exclude
-    them and starts failing for the wrong reason during the migration. The bound
-    lives on TQ-600a-6, not on TQ-600a-1, because it is an assertion over two
-    reported figures; this AC supplies part of the second one.
+    THE UNDECLARED COUNT IS REPORTED ALONGSIDE TQ-600a-6'S BOUND AND IS EXCLUDED
+    FROM IT. As of TQ-600a-6's 2026-09-28 amendment the second term of that bound
+    is DECLARED mutators only, so the undeclared figure this AC produces must be
+    emitted as a named field of its own in the run's record, beside the bound and
+    never folded into its allowance. Say so explicitly in the implementation:
+    adding it back into the second term restores exactly the defect the amendment
+    removed, in which the bound was loosest at the moment the migration was least
+    done. The consequence is intended and must not be read as a conflict with this
+    record — an undeclared test still runs, still passes and is still merely named
+    HERE, while the same test BREAKS the bound on TQ-600a-6 and is named as an
+    offender by TQ-600a-8's examination. Fail-safe at run time on this record,
+    fail-loud on the audit surface and at commit time.
   - >-
     THE ROUTE MUST BE DECIDABLE AT FIXTURE-REQUEST TIME from the test item's
     metadata, without importing or executing the test body.
@@ -81,15 +109,21 @@ delivers_to:
     contract: >-
       A per-test declaration — a registered pytest marker with reader and mutator
       values — readable at fixture-request time, which is the sole routing input
-      TQ-600a-2 permits, plus the undeclared-test count that feeds TQ-600a-6's
-      relational bound.
+      TQ-600a-2 permits, plus two separately named figures: the count of tests that
+      DECLARED they need their own copy, and the count of tests routed to the
+      unshared path without declaring why.
   - agent: python-coder
     ac_id: TQ-600a-6
     contract: >-
-      The count of tests that took the unshared path without declaring why, which
-      counts toward the second term of TQ-600a-6's bound
-      `reported_deploys <= 1 + unshared_routed` for as long as the migration of the
-      77 measured sites is incomplete.
+      Two distinct figures, and the distinction is the contract. (1) The count of
+      tests that DECLARED they must have a copy of their own — this and only this
+      is the second term of TQ-600a-6's bound
+      `reported_deploys <= 1 + declared_mutators`. (2) The count of tests that took
+      the unshared path WITHOUT declaring why — reported ALONGSIDE the bound as a
+      named field of its own and EXCLUDED from it, so an unconverted test breaks
+      the bound instead of widening it. Delivering these as one merged
+      "unshared_routed" figure silently reinstates the pre-2026-09-28 bound, under
+      which all 77 measured sites were absorbed into the allowance.
   - agent: documentation-expert
     ac_id: TQ-600a-7
     contract: >-
@@ -105,8 +139,14 @@ expects_from:
       fixture-request time, which this AC supplies the selector for.
   - ac_id: TQ-600a-2
     contract: >-
-      The unshared per-test package copy, which is the path an undeclared test is
-      routed to by default.
+      NOT A BUILD-ORDER EDGE — recorded as a relationship only, deliberately not
+      a depends_on. What this AC needs from a-2 is "an unshared path to route an
+      undeclared test to", and that path is the status quo: every test in the
+      suite builds its own copy today, which is the whole reason TQ-600 exists.
+      So the need is already met before a-2 is built. a-2's actual contribution
+      is downstream of this AC, not upstream of it: it GUARANTEES the declared
+      mutators keep their own copy and it DETECTS a mutator wrongly handed the
+      shared layout, both of which consume the selector this AC defines.
 test_spec:
   - name: test_tq600a_5_an_undeclared_test_receives_its_own_copy
     target_dir: unit_tests/suite_performance/
@@ -160,8 +200,20 @@ test_spec:
     angle: criterion
     description: >-
       The count appears in the run's record and equals the number of tests
-      actually routed undeclared, giving the migration a progress measure and
-      TQ-600a-6's bound part of its second term.
+      actually routed undeclared, giving the migration a progress measure.
+  - name: test_tq600a_5_the_declared_mutator_count_and_the_undeclared_count_are_two_separate_figures
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: >-
+      THE SEAM TQ-600a-6'S AMENDED BOUND READS. Over one run containing both a
+      declared mutator and an undeclared test, the record carries two distinct
+      named fields whose values are 1 and 1 — not one merged field of 2. NAMED
+      MUTATION: emit a single `unshared_routed` total; TQ-600a-6's bound then
+      absorbs the undeclared test into its allowance and this test must go RED.
+      This is the pre-2026-09-28 shape, under which all 77 measured sites widened
+      the bound instead of breaking it.
   - name: test_tq600a_5_an_undeclared_test_still_runs_and_still_passes
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -232,9 +284,57 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-09-21'
+- reason: >-
+    criteria UNTOUCHED, and deliberately so — but two it-po-owned fields are now
+    contradicted by TQ-600a-6's amended bound and need re-homing, recorded here in the
+    same way the 2026-09-21 rewire notes were. (1) it_requirement 3 says in capitals
+    "UNDECLARED TESTS COUNT TOWARD THE MUTATOR TERM OF TQ-600a-6'S BOUND". As of
+    2026-09-28 they explicitly do NOT: the bound's second term is declared mutators
+    only, precisely so that an unconverted test breaks the bound instead of widening it.
+    (2) The delivers_to entry naming TQ-600a-6 describes the undeclared count as feeding
+    that second term; it now feeds a figure reported ALONGSIDE the bound and excluded
+    from it. Both fields are the it-po's to rewrite. WHY THE CRITERIA HERE ARE RIGHT AS
+    THEY STAND: this record's fail-safe decision — an undeclared test runs, gets its own
+    copy, and is named rather than refused — was taken deliberately and is still
+    correct. It is about what happens to a running test, and a hard stop on a colleague's
+    first encounter with this machinery is a bad trade for one 59.8s deploy. What was
+    missing was never a refusal at run time; it was any record that made the undeclared
+    population shrink. That is TQ-600a-8, which fails over the repository while this
+    record keeps passing over the run. Fail-safe at run time, fail-loud at commit time —
+    the two are complementary, not in tension, and neither should be changed into the
+    other.
+  by: business-analyst
+  at: 2026-09-28
+- reason: technical-enrichment
+  by: it-po
+  at: 2026-09-28
+  note: >-
+    Acted on the BA's 2026-09-28 note, which named two it-po-owned fields contradicted
+    by TQ-600a-6's amended bound. (1) it_requirement 3 no longer says undeclared tests
+    count toward the mutator term; it now requires the undeclared figure to be emitted
+    as a named field of its own, reported ALONGSIDE the bound and excluded from it, and
+    states why (absorbing it restores the defect in which the bound was loosest when the
+    migration was least done). (2) The delivers_to entry for TQ-600a-6 now delivers TWO
+    figures — declared mutators (the bound's second term) and undeclared (reported
+    beside it) — and names the merged-figure delivery as the regression to avoid. (3) A
+    third field the BA did not flag carried the same stale fact and was re-homed with
+    them: the delivers_to entry for TQ-600a-2 described "the undeclared-test count that
+    feeds TQ-600a-6's relational bound". (4) test_spec entry 6 carried it too and was
+    corrected, and a new seam descriptor was added asserting the two figures are
+    distinct named fields rather than one merged total — the assertion TQ-600a-6's
+    amended bound actually reads. assigned_agent and estimated_complexity unchanged
+    (python-coder, M). test_spec target_dirs deliberately left at
+    unit_tests/suite_performance/: this record's subject is the routing mechanism for a
+    newly added test, not the existing deploy-site population, which is TQ-600a-8's.
+    criteria untouched.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_5.py
+- unit_tests/suite_performance/test_tq_600a_5_reporting.py
+implemented_by:
+- tickets/00_inbox/TICKET-20260929-TQ-600a-5.md
+- pytest.ini
+- scripts/suite_performance/pytest_shared_reference_layout.py
 change_target: pipeline
 risk_surface: internal
 notes: |

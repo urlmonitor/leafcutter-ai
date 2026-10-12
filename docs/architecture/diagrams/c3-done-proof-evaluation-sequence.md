@@ -1,22 +1,27 @@
 ---
 title: "Done-Proof Evaluation — Sequence Diagram"
-description: "L3 sequence diagram of verify_done_eligible — from collecting # covers tags and resolving them against the AC YAML store, through running pytest as a subprocess and classifying outcomes, to the final per-AC eligible/blocked verdict emitted by the mechanical gate."
+description: "L3 sequence diagram of verify_done_eligible — from collecting # covers tags and resolving them against the AC YAML store, through running pytest as a subprocess and classifying outcomes, to the incumbent per-AC eligible/blocked pass-fail verdict (BO-2500a-3). The two mechanical reachability gates evaluated after this pass/fail rule already returned eligible: True — the entry-point reachability gate (BO-2900a-1) and the sibling no-entry-point-anywhere gate (BO-2900a-3) — are diagrammed in the continuation, c3-011-done-proof-reachability-gates-sequence.md."
 type: architecture
 diagram_type: sequence
 flight_level: L3-Component
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-09-28
 components:
   - build_orchestration
   - testing_quality
+  - ac_store
 related_docs:
+  - docs/architecture/diagrams/c3-011-done-proof-reachability-gates-sequence.md
   - docs/architecture/components/build-orchestration.md
+  - docs/architecture/components/phantom-done-prevention.md
   - docs/how-to/prove-ac-done.md
   - docs/how-to/done-proof-enforcement.md
   - docs/architecture/diagrams/c2-fast-vs-heavy-lane-phases.md
+  - docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml
 related_code:
   - scripts/ac_store/done_proof.py
+  - scripts/ac_store/_done_proof_phase_helpers.py
   - templates/scripts/commit_guardian/check_done_proof.py
 ---
 
@@ -24,15 +29,27 @@ related_code:
 
 This diagram documents the message-level interaction of `verify_done_eligible()` in
 `scripts/ac_store/done_proof.py` — the authoritative eligibility oracle for the BO-2500
-done-proof gate. It covers the full evaluation path from the gate invoking the oracle,
-through AC-store resolution, test-tree scanning, pytest execution, outcome classification,
-and finally the per-AC eligible or blocked verdict returned to the caller.
+done-proof gate. It covers the evaluation path from the gate invoking the oracle,
+through AC-store resolution, test-tree scanning, pytest execution, and outcome
+classification, to the incumbent per-AC pass/fail verdict (`BO-2500a-3`). The two
+mechanical reachability gates that run after this pass/fail rule already returned
+`eligible: True` are diagrammed in the continuation,
+[c3-011-done-proof-reachability-gates-sequence.md](c3-011-done-proof-reachability-gates-sequence.md).
 
 > **The gate, not the caller, emits the verdict.** `verify_done_eligible()` is the
 > mechanical gate: it owns the evaluation logic and always returns a structured
-> `{eligible, reason, passing_tests, failing_tests, dangling_tags}` dict. The caller
-> (`check_done_proof.py` or `fast_lane.py`) decides what to do with that verdict — block
-> the commit, emit a warning, or proceed.
+> `{eligible, reason, passing_tests, failing_tests, dangling_tags, refusal_cause, unit,
+> entry_point, offending_test}` dict. The caller (`check_done_proof.py` or `fast_lane.py`)
+> decides what to do with that verdict — block the commit, emit a warning, or proceed.
+
+> **Scope of this diagram (Phases 1-5).** This diagram covers the incumbent pass/fail
+> rule only — collecting `# covers` tags, resolving them against the AC YAML store,
+> running pytest, and classifying outcomes. When every linked test PASSES, evaluation
+> continues into two further mechanical reachability gates — the entry-point
+> reachability gate (`BO-2900a-1`) and the sibling no-entry-point-anywhere gate
+> (`BO-2900a-3`) — diagrammed in full in
+> [c3-011-done-proof-reachability-gates-sequence.md](c3-011-done-proof-reachability-gates-sequence.md),
+> which begins from this diagram's own `eligible: True` output.
 
 ---
 
@@ -78,8 +95,7 @@ sequenceDiagram
             Note over VDE,Gate: BLOCKED — at least one covers-linked test did not PASS
             VDE-->>Gate: {eligible: False,<br/>reason: "linked test &lt;outcome&gt;: &lt;nodeid&gt;...",<br/>passing_tests: [...],<br/>failing_tests: [...],<br/>dangling_tags: [...]}
         else All covers-linked tests PASSED
-            Note over VDE,Gate: ELIGIBLE — every covers-linked test produced a PASSED outcome
-            VDE-->>Gate: {eligible: True,<br/>reason: "",<br/>passing_tests: [...],<br/>failing_tests: [],<br/>dangling_tags: [...]}
+            Note over VDE,Gate: All covers-linked tests PASSED. Evaluation continues into the<br/>two mechanical reachability gates (Phase 6 and Phase 6.5) — see the<br/>continuation diagram: c3-011-done-proof-reachability-gates-sequence.md
         end
     end
 ```
@@ -126,10 +142,13 @@ sequenceDiagram
    non-passing. This prevents xfail-masking: a test marked `@pytest.mark.xfail` that
    produces `XFAIL` does **not** satisfy the done gate.
 
-8. **Verdict emitted.** If any `failing_tests` exist, `eligible: False` is returned with
-   a reason naming each non-passing nodeid and its outcome. If all linked tests passed,
-   `eligible: True` is returned with an empty reason. In both cases `dangling_tags` is
-   included so the gate can surface stale cross-references to the developer.
+8. **Pass/fail verdict computed.** If any `failing_tests` exist, `eligible: False` is
+   returned immediately with a reason naming each non-passing nodeid and its outcome —
+   the reachability gates never run in that case. If all linked tests passed, evaluation
+   continues into the two reachability gates diagrammed in
+   [c3-011-done-proof-reachability-gates-sequence.md](c3-011-done-proof-reachability-gates-sequence.md)
+   rather than returning yet. In both branches `dangling_tags` is included so the gate
+   can surface stale cross-references to the developer.
 
 ## Key invariant: fail-closed on every ambiguity
 
@@ -145,9 +164,21 @@ sequenceDiagram
 
 ## Cross-References
 
+- [Done-Proof Reachability Gates — Sequence Diagram](c3-011-done-proof-reachability-gates-sequence.md) —
+  the continuation of this diagram: the entry-point reachability gate (`BO-2900a-1`) and
+  the no-entry-point-anywhere gate (`BO-2900a-3`), both evaluated after this diagram's own
+  `eligible: True` output.
 - [Build Orchestration — Component Overview](../components/build-orchestration.md) — the
   component that owns `done_proof.py` and the pre-commit gate that invokes it.
 - [Fast vs Heavy Lane Phases](c2-fast-vs-heavy-lane-phases.md) — the C2 container diagram
   showing where the done-proof gate sits in the overall build pipeline.
 - [AC-Driven Pipeline](c2-001-ac-driven-pipeline.md) — the broader context in which
   the done-proof verdict feeds the `mark_ac_done.py` and status-promotion flows.
+- [How to understand proof-of-done enforcement](../../how-to/done-proof-enforcement.md) —
+  the task-oriented explanation of the two-layer (pre-commit / CI) enforcement strategy
+  this diagram's Phases 1-5 implement.
+- [BO-2500a-3 acceptance criterion](../../acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-3.yaml) —
+  the incumbent pass/fail rule (Phases 1-5) that BO-2900a-1 and BO-2900a-3 both narrow,
+  not restate.
+- [Phantom-Done Prevention — Component Overview](../components/phantom-done-prevention.md) —
+  the L2 container page grouping this diagram alongside the related BP-1100f gates.

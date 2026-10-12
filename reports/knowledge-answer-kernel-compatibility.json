@@ -1,0 +1,143 @@
+{
+  "artifact_type": "terminal_test_run_receipt",
+  "status": "passed",
+  "date": "2026-10-01",
+  "repository_id": "leafcutter",
+  "base_source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "working_tree": "uncommitted implementation under review; not a committed release",
+  "tool_session_id": 57244,
+  "command": "AC_ENFORCE_STRICT=1 python -X utf8 -m pytest tests/kernel/contracts tests/kernel/persistence tests/kernel/capabilities/test_research_graph.py tests/kernel/grounding/test_research_targeting.py tests/kernel/adapters/test_service.py tests/kernel/scheduler/test_lifecycle.py -q -p no:cacheprovider",
+  "result": {
+    "tests_passed": 181,
+    "subtests_passed": 64,
+    "pytest_duration_seconds": 35.35,
+    "exit_code": 0
+  },
+  "observed_terminal_summary": "181 passed, 64 subtests passed in 35.35s",
+  "strict_ac_enforcement": true,
+  "scope": [
+    "opaque JSON transport compatibility",
+    "checkpoint persistence",
+    "generic research and best_effort semantics",
+    "canonical schema generation",
+    "existing service envelope and lifecycle behavior"
+  ],
+  "limitations": [
+    "This is a recorded terminal result, not JUnit XML or independent evaluation.",
+    "The new assessment public-flow evaluation is separately recorded in reports/knowledge-answer-research-tests.xml.",
+    "No real Jev provider or Langfuse delivery was exercised.",
+    "Later documentation-only edits do not constitute another test run."
+  ],
+  "source_quality_checks": {
+    "status": "passed",
+    "canonical_docstrings": true,
+    "max_complexity": 15,
+    "max_measured_lines": 400,
+    "ruff": "passed",
+    "files": [
+      {
+        "path": "integrations/knowledge_assessment.py",
+        "measured_lines": 53,
+        "maximum_complexity": 8,
+        "docstrings": "passed"
+      },
+      {
+        "path": "integrations/knowledge_execution.py",
+        "measured_lines": 386,
+        "maximum_complexity": 12,
+        "docstrings": "passed"
+      },
+      {
+        "path": "integrations/query_growth.py",
+        "measured_lines": 211,
+        "maximum_complexity": 15,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/assessments.py",
+        "measured_lines": 36,
+        "maximum_complexity": 6,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/collect.py",
+        "measured_lines": 216,
+        "maximum_complexity": 13,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/executor.py",
+        "measured_lines": 196,
+        "maximum_complexity": 11,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/planning.py",
+        "measured_lines": 211,
+        "maximum_complexity": 15,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/results.py",
+        "measured_lines": 77,
+        "maximum_complexity": 8,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/capabilities/research/state.py",
+        "measured_lines": 123,
+        "maximum_complexity": 4,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/evidence.py",
+        "measured_lines": 224,
+        "maximum_complexity": 5,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/payloads.py",
+        "measured_lines": 286,
+        "maximum_complexity": 9,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/verbatim.py",
+        "measured_lines": 13,
+        "maximum_complexity": 0,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/task.py",
+        "measured_lines": 133,
+        "maximum_complexity": 7,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/work.py",
+        "measured_lines": 138,
+        "maximum_complexity": 4,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/capability.py",
+        "measured_lines": 230,
+        "maximum_complexity": 6,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/contracts/run.py",
+        "measured_lines": 156,
+        "maximum_complexity": 11,
+        "docstrings": "passed"
+      },
+      {
+        "path": "kernel/service_envelope.py",
+        "measured_lines": 134,
+        "maximum_complexity": 10,
+        "docstrings": "passed"
+      }
+    ],
+    "scope_note": "nodes_lifecycle.py was inspected only, not changed; its existing tests ran in compatibility suite."
+  }
+}

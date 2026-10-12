@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - ac_driven_dev
 related_docs:
@@ -21,7 +21,23 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — live duplicate currently on `main`, see below
+- **Status:** **partially fixed, 2026-09-23.** No live duplicate is on `main` right now
+  (both instances below are resolved). The downstream "nothing catches it" half is also
+  fixed: `templates/hooks/check_identifier_uniqueness_authoring.py`, wired into
+  `templates/settings.json`'s `PostToolUse Edit|Write` (landed 2026-09-01, before and
+  independent of the ACD-2100 epic), now recursively walks the whole
+  `docs/acceptance-criteria/` tree via `scan_acceptance_criteria()`
+  (`templates/scripts/commit_guardian/_uniqueness_scanners.py:568-599`,
+  `ac_root.rglob("*.yaml")`) and fails closed (exit 2) the moment a colliding `id:` is
+  written, at authoring time — before commit, before CI. This directly closes the "why
+  nothing caught it" mechanism this entry blamed on `KI-ACS-001` ("the store validator
+  ... does not test id uniqueness" is no longer accurate). What is **not** fixed: the
+  id-**allocation** step itself — the PO/BA agent's own reasoning for picking a new id
+  — has no mechanical enumerate-then-refuse logic; `grep`s for id-allocation guidance in
+  `templates/agents/product-owner.md`, `templates/agents/business-analyst.md`, and
+  `templates/skills/plan-feature/SKILL.md` all return nothing. An agent can still
+  propose a colliding id; it is now blocked immediately after writing it rather than
+  reaching `main` clean. See "Re-verified 2026-09-23" below.
 - **Occurrences:** 2
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-25
 - **Where:** `/plan-feature` AC-authoring stages — the id-selection step
@@ -101,5 +117,27 @@ checkout the whole time. So this is not a stale-clone problem that fetching woul
 allocator simply did not look. Combined with KI-ACS-001 (the required `AC store valid`
 check does not test id uniqueness), a duplicate authored this way reaches `main` with every
 gate green.
+
+**Re-verified 2026-09-23.** Checked the store's actual factual claims, not the entry's
+narrative:
+
+- **`GE-120` — no live duplicate.** `grep -rl '^id: "GE-120"' docs/acceptance-criteria/`
+  now returns exactly one file:
+  `docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120.yaml`.
+  The loose L2 this entry's own "Update — the collision is resolved (2026-08-18)" note
+  describes was renamed to `GE-118c` and is no longer present under the old id — matches
+  what the entry itself already recorded.
+- **`BP-900h-4` — no live duplicate.** Only one `BP-900h-4.yaml` exists
+  (`docs/acceptance-criteria/build_pipeline/BP-900-deployment-completeness/`); the
+  colliding second claimant was renumbered to `BP-900h-6`, per this entry's own "Second
+  occurrence" note.
+- **The allocator mechanism itself — unfixed, but now caught mechanically.** No code
+  change addresses "enumerate every `id:` field ... walking the directory tree" at the
+  point an id is *chosen*. What changed instead is downstream: a duplicate can no longer
+  merge silently, because `check_identifier_uniqueness_authoring.py` +
+  `scan_acceptance_criteria()` block it at the first `Edit`/`Write` that creates it (see
+  Status line above). This is a real closure of the "merges clean" harm, not of the
+  "picks a bad id in the first place" defect — kept open and downgraded to partially
+  fixed for that reason.
 
 ---

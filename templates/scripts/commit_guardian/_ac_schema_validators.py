@@ -34,6 +34,47 @@ DECISION HISTORY:
     criteria text (a durable, observable effect asserted in its Then clause), never
     authored by opinion. Wired into check_ac_schema.py's per-file validation pass
     (staged files only — forward ratchet, same posture as validate_test_contract).
+  - 2026-10-07 [python-coder/TQ-600a-11 fix-pass]: Reverted load_yaml() from the
+    shared fast accessor (scripts/ac_store/yaml_safe_loader.get_safe_yaml_loader,
+    CSafeLoader-backed) back to the pure-Python yaml.SafeLoader. load_yaml() is
+    the parser behind _ac_store_index.py's _load_one_yaml_file(), whose fail-open
+    `except yaml.YAMLError` is the AC store's one guard against silently treating
+    a malformed AC file as valid. yaml_safe_loader's own docstring documents a
+    fifth divergence class found during this fix: CSafeLoader parses a tab inside
+    a flow sequence (e.g. "key: [\t]\n") permissively as {'key': []}, where the
+    pure-Python SafeLoader correctly raises ScannerError -- so with the fast
+    loader in place here, that fail-open path never fired and a malformed file
+    was silently accepted as valid. Error fidelity wins at THIS call site: this
+    is the AC store's phantom-done guardrail, and a guardrail going quiet on a
+    malformed input is precisely the failure class this repo exists to prevent.
+    Cost measured 2026-10-07 on the real on-disk store (4,765 files, a clean
+    run on an otherwise-idle host): CSafeLoader sweeps it in ~1.9s; pure-Python
+    SafeLoader takes ~22.4s (~11.7x, consistent with the module's own 13.25x
+    headline measurement within host-contention variance -- this is the SAME
+    shared, variably-loaded WSL host TQ-600a-11's own tests warn swings
+    3.8x-10.74x with zero code change; a loaded-host run of the same sweep was
+    separately observed as slow as 120s pure-Python / 12.6s CSafeLoader). Call
+    it a real double-digit-second-to-low-two-digit-second regression on the
+    rare full-store-rebuild path, not a sub-second one. This call site feeds
+    the fingerprint-cached shared index
+    (_ac_store_index.get_ac_index(), consumed by four commit-guardian hooks),
+    so the extra cost is paid once per commit that touches any AC YAML file
+    (whichever hook runs first triggers the rebuild; the other three hit the
+    disk cache), not four times.
+  - 2026-10-07 [SUPERSEDES the two sentences this entry replaces]: the entry
+    above originally went on to say that the required "AC store valid" gate
+    (scripts/ac_store/validate_ac_schema.py) still called the fast accessor
+    directly, was UNCHANGED by this revert, and that "every other call site in
+    this package stays on the fast accessor". All three claims are now FALSE
+    and are struck rather than left to mislead. A subsequent whole-PR narrowing
+    reverted 83 call sites across 61 files -- including validate_ac_schema.py
+    itself -- leaving exactly TWO accessor call sites in the entire package,
+    both in scripts/generate_agent_cards.py's whole-AC-store walk, which is the
+    only site that passed a measured-benefit test. So this file's revert is no
+    longer "the one intentional exception"; it is one of many, and the headline
+    13.25x figure no longer describes any gate. Recorded here because a
+    DECISION HISTORY that asserts a state the code has since left is the same
+    defect class this session spent the day removing elsewhere.
 """
 
 from __future__ import annotations
@@ -62,7 +103,18 @@ _CODE_CHANGE_TARGETS = {"code", "schema"}
 # ---------------------------------------------------------------------------
 
 def load_yaml(path: Path) -> Any:  # noqa: ANN401
-    """Load a YAML file using PyYAML; raises ImportError when absent.
+    """Load a YAML file using PyYAML's pure-Python SafeLoader; raises
+    ImportError when PyYAML is absent.
+
+    Deliberately pure-Python, NOT the shared fast accessor
+    (``yaml_safe_loader.get_safe_yaml_loader``, CSafeLoader-backed) used
+    elsewhere in this package: this is the parser behind the AC store's
+    fail-open malformed-file guard (``_ac_store_index._load_one_yaml_file``'s
+    ``except yaml.YAMLError``), and CSafeLoader parses at least one input
+    class permissively that the pure-Python loader correctly rejects (a tab
+    inside a flow sequence -- see ``yaml_safe_loader``'s own docstring).
+    Error fidelity wins at this one call site; see this module's DECISION
+    HISTORY for the full rationale and the measured cost of the trade-off.
 
     Args:
         path: Path to the YAML file to load.
@@ -78,7 +130,7 @@ def load_yaml(path: Path) -> Any:  # noqa: ANN401
 
     try:
         with open(path, encoding="utf-8") as fh:
-            return yaml.safe_load(fh)
+            return yaml.load(fh, Loader=yaml.SafeLoader)
     except OSError as exc:
         print(f"Warning: cannot read {path}: {exc}", file=sys.stderr)
         raise
@@ -112,6 +164,18 @@ def load_yaml_manual(path: Path) -> dict[str, Any]:
 def load_yaml_from_string(content: str, source_label: str) -> dict | None:
     """Parse a YAML string; returns dict or None on failure (fail-open).
 
+    Deliberately yaml.SafeLoader, NOT the shared fast accessor (loader-audit,
+    TQ-600a-11 fix-pass, 2026-10-07): this is a second, sibling call site in
+    the same module as `load_yaml` above, which was already reverted for
+    being "the parser behind the AC store's fail-open malformed-file guard."
+    This function feeds `check_ac_schema.py`'s HEAD-vs-staged
+    `implements_pattern` preservation check (the required `check-ac-schema`
+    gate) -- a parse failure on either side is fail-open ("nothing to compare
+    against, no violation"), so a tab-malformed HEAD or staged copy that
+    `yaml.SafeLoader` would correctly reject (forcing the comparison to run)
+    must not instead be silently accepted by a more permissive loader and
+    skip the comparison it exists to make.
+
     Args:
         content: Raw YAML string.
         source_label: Human-readable label for error messages.
@@ -123,7 +187,7 @@ def load_yaml_from_string(content: str, source_label: str) -> dict | None:
         import yaml  # type: ignore[import]
 
         try:
-            data = yaml.safe_load(content)
+            data = yaml.load(content, Loader=yaml.SafeLoader)
             return data if isinstance(data, dict) else None
         except yaml.YAMLError as exc:
             print(

@@ -16,7 +16,7 @@ related_docs:
 # KI-CG-021 — The whole-collection uniqueness pass is registered in no hook config and no CI workflow, and has never run
 
 > One known issue, split out of `docs/known-issues/commit-guardian.md` on
-> 2026-09-14. Index: [commit-guardian.md](../commit-guardian.md).
+> 2026-09-14. Index: [commit-guardian.md](../../commit-guardian.md).
 > Filename severity is the three-level index bucket (`blocker`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
@@ -24,9 +24,12 @@ related_docs:
 - **Status:** **RESOLVED** (registered by `243b6489` / PR #635, GE-122d-6; CI stage added by
   `8cc9fe3c` / PR #682, GE-122d-1; code itself merged via `e429421e` / PR #495; verified
   2026-09-25 by grepping the registry, pre-commit config and CI on `origin/main`, running the
-  deployed hook entry, and a green targeted pytest run — see Resolution)
-- **Original status (2026-08-18):** open — the code was not on `main`;
-  `check_identifier_uniqueness.py` lived only on the then-unmerged PR #495.
+  deployed hook entry, and a green targeted pytest run — see Resolution; independently
+  re-verified 2026-09-23, see "Also verified 2026-09-23" below)
+- **Original status (2026-08-18):** open — **the code was NOT on `main`**;
+  `check_identifier_uniqueness.py` and its four scanners lived only on the then-unmerged PR
+  #495 (`feat/ge-122-integrity-guard`). Filed at the time because it was the gating
+  precondition on landing that branch: the merge was not to be taken as "the gate now exists".
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** PR #495's `templates/scripts/commit_guardian/check_identifier_uniqueness.py`;
@@ -102,5 +105,34 @@ Verified 2026-09-25 against `origin/main` (`4b05997a`); every claim in the Sympt
 - **Tests.** `python -m pytest unit_tests/commit_guardian/test_ge_122d_6.py
   unit_tests/commit_guardian/test_ge_122d_1.py unit_tests/portability/test_ge_122d_6.py -q`
   passed with 7 tests in 48s.
+
+**Also verified 2026-09-23 (independent pass, before the above) — FIXED.** PR #495
+(`feat(guardrail-engine): whole-collection uniqueness pass for four numbered namespaces
+(GE-122)`) merged to `main`, and the follow-on registration commit `243b6489`
+(`feat(guardrail-engine): register the whole-collection numbering pass so it actually runs
+(GE-122d-6)`) landed the exact fix direction this entry prescribed ("do not register it in
+the same change that ships it"). Confirmed against the worktree at that time:
+
+```
+$ grep -n "check-identifier-uniqueness" templates/scripts/commit_guardian/commit_guardian.json
+578:        "id": "check-identifier-uniqueness",
+582:        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_identifier_uniqueness.py",
+590:        "_comment": "GE-122d-6: registers check_identifier_uniqueness.py (GE-122a-1) into the LIVE
+             commit-time registry -- verified 2026-08-25/2026-08-31 that this check was deployed,
+             tested to a green suite, and registered nowhere. ..."
+
+$ grep -n "check-identifier-uniqueness" .pre-commit-config.yaml
+112:      - id: check-identifier-uniqueness
+114:        entry: python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_identifier_uniqueness.py
+```
+
+`check_identifier_uniqueness.py` was present in both `templates/scripts/commit_guardian/` and
+the deployed `.leafcutter/scripts/commit_guardian/`, and was named by both the hook manifest
+and the generated `.pre-commit-config.yaml` — the two files this entry's own reproduction
+grepped and found empty. The registration's own `_comment` records that its dependencies
+(GE-122d-3-ii's namespace scaffolding and GE-122e-3's excuse-free collection pass) were
+confirmed landed first, per this entry's fix direction. This independently corroborates the
+2026-09-25 pass above, run against a slightly later `main` and with the addition of the CI
+stage (`8cc9fe3c`) this earlier pass did not check for.
 
 ---

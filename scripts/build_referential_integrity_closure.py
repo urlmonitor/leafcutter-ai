@@ -490,9 +490,12 @@ def _closure_walk(
     building a deploy-namespace string knows NOT to prepend a family prefix
     to it -- prepending one would land it at a path nothing deploys.
     """
-    if script in visited:
+    # Dedupe on the REAL file, but walk *script* as reached (see the recursion
+    # below): one file can be reached through two spellings across a symlink.
+    real_script = script.resolve()
+    if real_script in visited:
         return
-    visited.add(script)
+    visited.add(real_script)
 
     # KI-BP-022: both handlers used to log a WARNING and return, leaving the
     # closure empty. An empty closure means "nothing missing" to the caller, so
@@ -528,7 +531,11 @@ def _closure_walk(
             continue
         if rel not in closure:
             closure.add(rel)
-        _closure_walk(candidate.resolve(), root, visited, closure, deploy_root_relative, data_root)
+        # Recurse on the UNRESOLVED candidate: resolving it here crossed the
+        # scripts/commit_guardian -> .leafcutter/ symlink, so the recursed
+        # script's own sibling imports came back ``.leafcutter/``-prefixed and
+        # were reported undeployed (see DECISION HISTORY, BO-2900b-1).
+        _closure_walk(candidate, root, visited, closure, deploy_root_relative, data_root)
 
     # AC BP-900g-8-ii: non-code (data/config) reads, same terms as modules,
     # never recursed into (not parseable Python). See the DECISION note above
@@ -591,4 +598,17 @@ def _closure_walk(
 #   build-time-only tool with no consumer-facing agent invoking it directly.
 #   Confirmed by grep: no other sibling build_*.py helper module has a
 #   deploy_map or shim_map entry either. (#BP-100n-4)
+# - 2026-09-27 [smart-bug-resolver/BO-2900b-1]: _closure_walk now recurses
+#   on the candidate AS REACHED instead of candidate.resolve(), deduping on
+#   the resolved path. BO-2900b-1 made _reachability_inventory.py import its
+#   new sibling _reachability_invocation_collector.py -- the first
+#   second-level sibling import reached through done_proof.py's sys.path push
+#   into scripts/commit_guardian. In a tree where install_shims had made that
+#   directory a symlink into .leafcutter/ (CI, after an in-place build), the
+#   resolve() moved the recursion to .leafcutter/scripts/commit_guardian/, so
+#   the collector was reported under that prefix, which Set B never holds,
+#   and every later --target-dir build aborted. _relative_to_root_without_
+#   symlink_escape only fixed the first hop; this fixes every later one.
+#   The guard is not widened: the same Set B check runs, on the right path.
+#   (#BO-2900b-1)
 # ====================================================================

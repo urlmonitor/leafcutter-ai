@@ -1,0 +1,325 @@
+id: TQ-500f-3-iii
+components:
+  - testing_quality
+  - ac_store
+  - build_orchestration
+title: "A covering tag is matched to the one test it sits on, so two tests sharing a name never lend each other their result"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one test run whose results include four covering tests that share a
+    name with another covering test —
+      T1: unit_tests/ac_store/test_refresh.py, class TestRetryGate,
+          test_blocks_when_not_due, tagged as covering TQ-9001, fails,
+      T2: unit_tests/ac_store/test_refresh.py, class TestExportGate,
+          test_blocks_when_not_due, tagged as covering TQ-9002, passes,
+      T3: unit_tests/ac_store/test_config.py, test_loads_defaults, tagged as
+          covering TQ-9003, passes,
+      T4: unit_tests/build_orchestration/test_config.py, test_loads_defaults,
+          tagged as covering TQ-9004, fails,
+  When the proof-of-done check evaluates TQ-9001, TQ-9002, TQ-9003 and TQ-9004,
+    And the red-baseline check reads the same tags against the same run,
+  Then each tag is matched to the test at its full identity — its file path
+      within the test root, its class (when it has one) and its function name —
+      never by file name and function name alone,
+    And TQ-9001 is judged not eligible for done because T1 failed, and TQ-9002
+      is judged eligible because T2 passed, although T1 and T2 share a file and
+      a function name,
+    And TQ-9003 is judged eligible because T3 passed, and TQ-9004 is judged not
+      eligible because T4 failed, although T3 and T4 share a file name and a
+      function name,
+    And the red-baseline check attributes each of the four outcomes to the
+      same test the proof-of-done check did, and reports none of the four as
+      ambiguous,
+    And reversing the order in which the run reports the four tests changes
+      none of these verdicts,
+    And a parametrised covering test is still judged across all of its cases,
+      as ACS-200f-2 requires,
+    And a tag that still cannot be tied to exactly one test in the run's
+      results is never attributed to a guessed test: the red-baseline check
+      refuses it with the reason "ambiguous_test_identity" and the
+      proof-of-done check refuses the requirement it covers, naming the tag
+      and every candidate test.
+depends_on:
+  - TQ-500f-3
+  - TQ-500f-3-i
+  - ACS-200f-2
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The red-baseline reader whose fail-closed 'ambiguous_test_identity' refusal (added by the TQ-500f-3 build) this AC keeps as the safety net while removing its common cause."
+  - path: docs/acceptance-criteria/ac-store/ACS-200-automated-verification/ACS-200f-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prior fix to the same tag-to-test matching (parametrised cases). Its all-cases rule and its 'same-file matches beat name-only matches' ordering must survive this change."
+  - path: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+    relationship: describes
+    status: exists
+    relevance: "Shows the tag-to-test matching step (exact file+function match, then function-suffix fallback) that this AC replaces with full-identity matching."
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 — verify_red_baseline, the second consumer of the same matching."
+  - path: docs/architecture/components/phantom-done-prevention.md
+    relationship: describes
+    status: exists
+    relevance: "The proof-of-done gates whose covering-tag scanner and outcome classification this AC changes."
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+    relevance: "Angle taxonomy used for the test_spec; notes that done_proof's covers-tag scanner is the one to extend, not duplicate."
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500f-3-i
+    contract: "The red-baseline reader refuses, with the stable reason 'ambiguous_test_identity', a covering tag it cannot tie to exactly one test; this AC relies on that refusal remaining as the safety net."
+  - ac_id: ACS-200f-2
+    contract: "Tag-to-test matching considers every case of a parametrised test; any non-passing case makes the test non-passing."
+it_requirements:
+  - 'One matcher, two readers. The tag-to-test matching (today inside scripts/ac_store/done_proof.py)
+    moves OUT into its own new module under scripts/ac_store/. done_proof.py and the red-baseline
+    reader (scripts/build_orchestration/_fl_red_baseline_support.py and scripts/ac_store/done_proof_kind_support.py,
+    the latter merged by TQ-500f-3-i in #923) both call that module. No copy of the matching
+    logic stays in either reader, so a given run and tag set cannot be attributed differently
+    by the two lanes.'
+  - 'Full identity: a covering tag is matched on the tagged test''s path relative to the test
+    root, its class chain (when it has one) and its function name. The identity is compared
+    after normalising paths between the tag scanner''s view and pytest''s nodeid rootdir. Matching
+    on file basename + function name, or on function name alone, must not decide a verdict when
+    more than one test shares that name.'
+  - 'Order-independent and collision-safe. The verdict for each tag is a pure function of the
+    set of results. Reordering the run''s reported results changes nothing, and no
+    first-wins or last-wins rule decides between two tests that share a name.'
+  - 'ACS-200f-2 is preserved: every case of a parametrised covering test is considered, and
+    any non-passing case (FAILED, ERROR, SKIPPED, XFAIL, XPASS, or not found) makes that test
+    non-passing. Parametrised case ids are matched to their own test''s full identity, never
+    to a same-named test in another class or file.'
+  - 'Inherited tests (found in the final PR #923 review). A test method defined once in a mixin
+    or base class and inherited, not overridden, by two collected test classes carries ONE covers
+    tag but yields TWO pytest nodeids (for example TestA::test_shared and TestB::test_shared).
+    The tag resolves to the full set of nodeids that inherit that exact definition, and each is
+    judged. The tag counts as passing only if every inheriting nodeid (and every parametrised
+    case of each) passed. In the red-baseline reader, a declared test (must_catch or angle: discrimination)
+    whose inherited nodeids include any absence-only red is refused. The nodeids are never collapsed
+    onto one subclass, never picked by order, and never refused as ambiguous merely because
+    the one definition is collected more than once. A subclass that overrides the method is
+    a different definition and is not part of this set.'
+  - 'Fail closed, never guess. A tag that still cannot be tied to exactly one test is refused.
+    The red-baseline reader reports the stable reason ambiguous_test_identity, and the done-proof
+    check refuses the covered requirement and names the tag and every candidate nodeid. If the
+    TQ-500f-3 build has not landed that refusal, this AC adds it. Removing the refusal because
+    full identity makes collisions impossible violates this AC.'
+  - 'File-size ratchet (user direction): the counted length of scripts/ac_store/done_proof.py,
+    measured by scripts/commit_guardian/_file_size_ratchet.py measure_current_length (the
+    same function the GE-127 ratchet gate uses), must end strictly BELOW its value at the
+    merge base. At 10986ebf it is 1307 counted lines (2355 raw). The new module must be under
+    its own size cap, and _fl_red_baseline_support.py (185 counted lines at 10986ebf) must
+    not cross its cap.'
+  - 'Deploy: register the new module in the build deploy map (build_ac_store deploy_map in
+    scripts/build_phases_ac_store.py, next to done_proof.py and _done_proof_phase_helpers.py),
+    with a comment naming the two importers. The deployed check_done_proof hook and the deployed
+    fast_lane.py verify_red_baseline must both import it without ModuleNotFoundError (CLAUDE.md,
+    New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest).'
+  - 'Contracts kept: done_proof''s {nodeid: outcome} parsing contract, its CLI and hook output
+    shapes, and verify_red_baseline''s existing report keys (gate_passed, reason, red, green_at_baseline,
+    inconclusive, preexisting, plus TQ-500f-3-i''s refused list) keep their meaning. Both gates
+    still make a single pytest run each. Both stay read-only (no writes to the AC store).'
+  - 'Behaviour-preserving for unambiguous tags: moving the matcher must not change any verdict
+    for a tag that resolved to one test before. The existing done_proof and red-baseline suites
+    stay green without edits, except tests that asserted the collision behaviour this AC removes.'
+test_spec:
+  - name: test_full_identity_matching_separates_same_name_tests
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: criterion
+    must_catch:
+      - match by file basename + function name
+      - match by bare function name, ignoring the class
+      - last result wins on collision
+      - first result wins on collision
+    description: 'Feeding the shared matcher the T1..T4 results (T1/T2 same file, two classes,
+      same function; T3/T4 same basename test_config.py under unit_tests/ac_store/ and unit_tests/build_orchestration/)
+      gives TQ-9001 not eligible, TQ-9002 eligible, TQ-9003 eligible, TQ-9004 not eligible,
+      and none ambiguous.'
+  - name: test_done_proof_entry_point_judges_colliding_tags_by_full_identity
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: reachability
+    surface_invoked: done_proof's production entry point, as invoked by the check_done_proof commit-guardian
+      hook, run as a subprocess
+    must_catch:
+      - done_proof keeps its old in-file matcher and never calls the shared module
+      - match by file basename + function name
+    description: 'In a temp repo with real test files at the four Given paths (T1 and T4 failing,
+      T2 and T3 passing) and a temp AC store holding TQ-9001..TQ-9004, the real pytest run through
+      the done-proof entry point yields the four verdicts from the criteria. Also charges real_artifact:
+      the nodeids come from real pytest output, never a hand-typed dict.'
+  - name: test_red_baseline_reader_attributes_same_tests_as_done_proof
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: seam
+    surface_invoked: python scripts/build_orchestration/fast_lane.py verify_red_baseline (subprocess)
+      against the same fixture repo and run as the done-proof test
+    must_catch:
+      - red-baseline reader keeps its own copy of the matching
+      - red-baseline reader still matches by file basename + function name
+      - red-baseline reader reports a colliding pair as ambiguous_test_identity
+    description: Over the same T1..T4 fixture, the red-baseline reader attributes each of the
+      four outcomes to the same nodeid the done-proof check did (compare the attribution maps),
+      and none of the four carries reason ambiguous_test_identity.
+  - name: test_deployed_done_proof_and_fast_lane_import_shared_matcher
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: integration
+    angle: deployed
+    must_catch:
+      - new matcher module missing from the build deploy map
+    description: build.py into a temp target; in a fresh subprocess, the DEPLOYED done_proof
+      entry point and the DEPLOYED fast_lane.py verify_red_baseline both run over the T1..T4
+      fixture without ModuleNotFoundError and give the same verdicts as the source tree.
+  - name: test_verdicts_unchanged_when_run_reports_tests_in_reverse_order
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    must_catch:
+      - order-dependent verdict
+      - last result wins on collision
+      - first result wins on collision
+    description: The T1..T4 results fed in forward order, in reversed order, and with only T1/T2
+      swapped give identical verdicts and identical attributions for all four tags.
+  - name: test_parametrised_same_name_tests_judged_per_identity_across_all_cases
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    angle: boundary
+    must_catch:
+      - only the first reported parametrised case is read (ACS-200f-2 regression)
+      - cases of the same-named test in the other class are counted toward this tag
+    description: 'Two parametrised tests with the same function name in two classes of one file:
+      class A has one failing case among passing ones, class B''s cases all pass. Only A''s requirement
+      is refused, naming the failing case; B''s requirement is eligible.'
+  - name: test_inherited_test_judged_across_every_inheriting_class
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: boundary
+    must_catch:
+      - inherited test judged by only one subclass
+      - inherited nodeids collapsed onto one result (first or last wins)
+      - inherited test refused as ambiguous_test_identity although it has one definition
+      - absence-only red in one inheriting class ignored for a declared test
+    description: 'In a temp repo, test_shared is defined once in a mixin with one covers tag and
+      inherited (not overridden) by TestA and TestB, run through real pytest. (a) TestA passes
+      and TestB fails: the done-proof check judges the covered requirement not eligible, naming
+      TestB::test_shared. (b) Both pass: eligible. (c) The entry declares must_catch and TestB''s
+      only red is an ImportError while TestA''s is an AssertionError: verify_red_baseline refuses
+      it. In no case is the reason ambiguous_test_identity.'
+  - name: test_tag_without_unique_identity_is_refused_never_guessed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: failure
+    must_catch:
+      - guess instead of refusing an ambiguous tag
+      - remove the ambiguous_test_identity refusal
+      - refuse without naming every candidate test
+    description: 'A tag whose tagged test matches two result nodeids at full identity (for example
+      the same file collected under two roots) is refused by verify_red_baseline with reason
+      ambiguous_test_identity, and the done-proof check refuses the covered requirement, naming
+      the tag and both candidate nodeids (must_block: the gate does not pass).'
+test_rationale: 'This is a bug fix in a gate shared by two readers, so a unit test of the matcher
+  alone is not enough. The seam test runs both production CLIs over one real pytest run and
+  proves they attribute each outcome to the same test. The deployed test covers a failure
+  done_proof has already shipped once (missing from the deploy map). The collision fixtures
+  (two classes in one file, two same-named files in different packages) reproduce the exact
+  collapse. Each must_catch names a wrong version the test must go red under: basename matching,
+  first-wins/last-wins, order dependence, and guessing instead of refusing. The ratchet requirement
+  is enforced by the GE-127 commit gate itself, not by a test here.'
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE REAL FIX BEHIND THE TQ-500f-3 SAFETY NET (user decision 2026-09-27: defer
+  to its own AC). The proof-of-done check matches a covering tag to a test run
+  result by (file name, bare function name). Two tests with the same function
+  name in two classes of one file, or in same-named files under different
+  package directories, collapse onto one result, so one test's outcome is used
+  as the other's — for proof-of-done and for the red-baseline reader, which
+  shares the matching. The TQ-500f-3 build only makes the reader FAIL CLOSED
+  ("ambiguous_test_identity") when that happens. This AC removes the cause.
+
+  THE SAFETY NET STAYS. After this AC, the "ambiguous_test_identity" refusal
+  should become rare, but it is kept: any tag that still cannot be tied to
+  exactly one test (last Then clause) is refused, never guessed. A fix that
+  removes the refusal because "full identity makes collisions impossible" has
+  broken this AC. If the TQ-500f-3 build lands without that refusal, this AC's
+  last clause owns it.
+
+  The TQ-9001..TQ-9004 ids and the test paths in the Given are fixture values,
+  not real records.
+
+  SIZE CONSTRAINT FOR THE IMPLEMENTER (user direction): scripts/ac_store/done_proof.py
+  is over the file-size ratchet (2,355 lines on origin/main at 86bd630f). This fix
+  must not make it grow; the matching has to move out into its own module (the one
+  the red-baseline reader then also uses), so the net line count of done_proof.py
+  goes down. IT-PO: carry this into it_requirements.
+
+  PLACEMENT. L3 under TQ-500f-3 (the absence/assertion red-baseline behaviour, whose
+  build surfaced the defect). TQ-500f is at its 6-L2 override and TQ-500 at its
+  7-L1 cap, so a new L2/L1 was not possible without raising a cap; L3s have no
+  child cap. ACS-200f (the proof-of-done gate, work_status done) was the other
+  candidate home; it was not reopened.
+
+  IT-PO ENRICHMENT (2026-09-27)
+  AGENT: python-coder (every surface is .py, plus one deploy-map entry). Complexity L:
+  new module + done_proof.py + _fl_red_baseline_support.py (and
+  done_proof_kind_support.py) + scripts/build_phases_ac_store.py, plus
+  tests in two dirs.
+  SIZE BASELINE MEASURED: done_proof.py = 1307 counted lines (2355 raw) at 10986ebf,
+  via _file_size_ratchet.measure_current_length. The build must end strictly below
+  its merge-base value.
+  DOC LINK CHANGE: the BA's source-file doc_link (scripts/ac_store/done_proof.py) was
+  replaced by architecture docs, because IT-PO doc_links never point at source. The
+  file is named in it_requirements instead.
+  STALE DOC AFTER BUILD: docs/architecture/diagrams/c3-done-proof-evaluation-sequence.md
+  describes the matching as "exact file+function match, then function-suffix
+  fallback". Once this lands it is wrong, and needs an architecture-diagram-author
+  follow-up.
+  ANGLES: criterion, reachability (+real_artifact), seam and deployed take the 4 core
+  slots. The conditional discrimination, boundary and failure entries take no slot.
+
+  USER DECISION AT THE IT-PO GATE (2026-09-28): a UNIQUE name-only match is
+  allowed. Basename + function, or function-name-only, matching is refused only
+  when more than one test shares that name. The full-identity it_requirement is
+  worded that way on purpose, and it keeps ACS-200f-2's same-file-beats-name-only
+  ordering for the unique case.
+
+  INHERITED-TEST CASE (added 2026-09-28, from the final PR #923 review): one covers
+  tag on a mixin/base-class method inherited by two test classes yields two
+  nodeids. Both are judged (all must pass; an absence-only red on a declared test
+  refuses), never collapsed, never guessed, never refused as ambiguous. See the
+  inherited-tests it_requirement and test_inherited_test_judged_across_every_inheriting_class.
+
+  STATE OF TQ-500f-3-i AFTER #923 (merged at 141465d5): its reader already fails
+  closed with ambiguous_test_identity when two TAGS share (function name, file
+  basename). This AC keeps that refusal as the safety net while removing the
+  common cause. The red-baseline kind support module was renamed on merge to
+  scripts/ac_store/done_proof_kind_support.py (no leading underscore); earlier
+  mentions of _done_proof_kind_support.py mean this file.

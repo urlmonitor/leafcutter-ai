@@ -1,0 +1,91 @@
+id: DK-500g-1-ii
+title: A category is changed in its record, never in the graph, and the graph is rebuilt from Git
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given a published generation that shows cat-1dc11c5a2ffa7310,
+  When a person wants to change that category's preferred wording,
+  Then the graph offers no way to write the change,
+  And a change made in the category record through stage and publish appears only in the first generation built after it is published,
+  And two builds from the same commit give the same category nodes and links.
+depends_on:
+- DK-500g-1
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500g-1
+  contract: Generation build from one commit.
+change_target: code
+risk_surface: internal
+it_requirements:
+- 'No write operation for categories exists in the knowledge query surface: the registered category operations are read-only, and serving credentials cannot write.'
+- 'Generations are deterministic: two builds from the same commit produce identical category nodes and links (sync reuses the generation).'
+test_required: true
+test_spec:
+- name: test_graph_offers_no_category_write
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The registered operation catalog holds no operation that writes a category, and a write attempted with serving credentials is refused.
+- name: test_change_appears_only_after_publish_and_next_build
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: A wording change made through stage and publish appears only in the first generation built after it is committed.
+- name: test_same_commit_builds_identical_category_graph
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: Two builds from the same commit give the same category nodes and links.
+test_rationale: Build real generations through the knowledge sync and registered-operation entry points from a fixture commit (offline fixture backend), and assert node identities, links and answers against the category records of that commit; a live Neo4j test proves server compatibility. Unit tests of the reader alone would not prove that the Decision kind is unchanged in a full generation.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+- path: docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md
+  relationship: constrains
+  status: exists
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Flow branch: criteria-library change-in-record. Git stays canonical (ADR-059, ADR-060); ADR-062 allows only registered read queries and excludes arbitrary model-generated Cypher.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: change-in-record.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: change-in-record
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities: []
+    source: mock
+    asof: '2026-10-04'

@@ -1,0 +1,1229 @@
+{
+  "audit_version": 1,
+  "compiled_on": "2026-10-02",
+  "scope": "Consolidated native-type field review and reader implementation audit. All populations are from dated working-tree evidence; this artifact does not assert a newly published Aura generation.",
+  "source_inventory": {
+    "path": "reports/native-fields/inventory.json",
+    "observed_on": "2026-10-02",
+    "preserved_unchanged": true,
+    "interpretation": "Discovery evidence, including original candidate/manifest counts. Later reviewed canonical counts below supersede those count bases without rewriting that history."
+  },
+  "summary": {
+    "native_kinds": 17,
+    "reviewed_kinds": 17,
+    "reader_receipts_complete": 17,
+    "pending_reader_receipts": [],
+    "focused_tests_passed_reported": 374,
+    "focused_tests_skipped_reported": 1,
+    "test_total_scope": "Sum of each reader receipt, not an independently executed aggregate suite; shared integration/database tests are outside this total."
+  },
+  "population_corrections": [
+    {
+      "kind": "Mockup",
+      "discovery_manifest_count": 9,
+      "reviewed_canonical_count": 10,
+      "reason": "An unregistered canonical JSON source is still a Mockup."
+    },
+    {
+      "kind": "MockData",
+      "discovery_manifest_count": 1,
+      "reviewed_canonical_count": 2,
+      "reason": "Canonical dataset scan also includes an unregistered guardrails dataset."
+    },
+    {
+      "kind": "ChangelogEntry",
+      "discovery_current_store_count": 526,
+      "reviewed_canonical_count": 531,
+      "reason": "Five legacy docs/changelog entries are additional canonical sources."
+    },
+    {
+      "kind": "Ticket",
+      "discovery_markdown_candidates": 1533,
+      "reviewed_canonical_count": 1532,
+      "reason": "Exclude one README; epic records remain Ticket subtypes."
+    },
+    {
+      "kind": "Document",
+      "reviewed_canonical_count": 715,
+      "reason": "Apply source ownership/generated-view exclusions; include 34 component documents and 23 memory documents."
+    }
+  ],
+  "shared_representation_contract": {
+    "simple_values": "Authored scalar and homogeneous scalar-list values are ordinary Neo4j properties unless their names collide with graph bookkeeping.",
+    "nested_values": "Nested maps, mixed arrays and arrays of objects use escaped JSON Pointer property keys; indexes preserve list ordering and object association.",
+    "null_absence_empty": "Absent source keys stay absent. Explicit null paths and empty containers are recorded separately by _native_null_paths, _native_empty_paths and the shape manifest.",
+    "collisions": "Authored id, title, kind, current, components and other reserved names use pointer keys such as /id and /components. They cannot overwrite canonical graph identity, provenance or current-generation flags.",
+    "types": "The shape manifest preserves native scalar types, dates versus date-like strings, containers and typed YAML map keys. Unsupported values fail explicitly.",
+    "derived_and_supporting_sources": "Template fields, manifest context, body-derived metadata and presentation fallbacks remain separately namespaced with provenance; never overwrite the primary authored mapping.",
+    "schema_requirements": "Required-for-new-authoring fields and actually authored legacy fields are distinct. No defaults, inferred lifecycle, implicit ownership or successful execution claims are added.",
+    "source_authority": "Only records read from the selected immutable source may populate a published generation. Working-tree review counts and pending-merge parity checks do not establish published counts."
+  },
+  "aura_publication": {
+    "status": "not_established_by_this_audit",
+    "immutable_source_sha": null,
+    "published_counts": null,
+    "owner": "Root integration task must record the selected immutable SHA, apply result, readback verification and counts separately. No reader receipt is evidence of deployment."
+  },
+  "kinds": [
+    {
+      "kind": "AcceptanceCriterion",
+      "neo4j_label": "AC",
+      "classification": "canonical_structured_record",
+      "canonical_sources": [
+        "docs/acceptance-criteria/**/*.yaml"
+      ],
+      "schema_and_field_authorities": [
+        "config/ac_store_schema.json",
+        "scripts/ac_store/validate_ac_schema.py",
+        "scripts/ac_store/_ac_schema_test_spec_validators.py"
+      ],
+      "review": "reports/native-fields/review-AcceptanceCriterion.json",
+      "implementation": "knowledge/native_types/acceptance_criterion.py",
+      "tests": "tests/knowledge/test_native_acceptance_criterion.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-AcceptanceCriterion.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 4535,
+        "basis": "Review observed YAML records with an id; code proof exercises all 47 schema fields in a validated fixture. This count is not a fresh whole-corpus validation.",
+        "evidence": "reports/native-fields/review-AcceptanceCriterion.json#/corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 47,
+        "reviewed_fields": [
+          "id",
+          "title",
+          "component",
+          "components",
+          "status",
+          "criteria",
+          "created_by",
+          "created",
+          "created_by_ticket",
+          "superseded_by",
+          "amended_by",
+          "covered_by",
+          "implemented_by",
+          "origin_agent",
+          "readiness",
+          "priority",
+          "documentation_triggers",
+          "documentation_rationale",
+          "work_status",
+          "level",
+          "depends_on",
+          "implements_pattern",
+          "pattern_bindings",
+          "pattern_slots",
+          "assigned_agent",
+          "estimated_complexity",
+          "delivers_to",
+          "expects_from",
+          "package_surface",
+          "it_requirements",
+          "test_spec",
+          "test_required",
+          "test_rationale",
+          "doc_links",
+          "declared_files",
+          "req_status",
+          "roadmap_phase",
+          "target_epic",
+          "notes",
+          "parent",
+          "scope",
+          "example_product",
+          "child_limit_override",
+          "change_target",
+          "risk_surface",
+          "declares_side_effect",
+          "product_truth"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-AcceptanceCriterion.json",
+        "schema_fixture_parity": {
+          "schema_fields": 47,
+          "fixture_fields": 47,
+          "missing": [],
+          "extra": []
+        }
+      },
+      "compatibility_decisions": [
+        "Source component namespace and components registry membership remain separate.",
+        "Criteria and all nested test_spec/pattern/doc-link fields survive; full criteria does not become a disclosure-level summary."
+      ],
+      "verification": {
+        "focused_tests_passed": 10,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-AcceptanceCriterion.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "ADR",
+      "neo4j_label": "ADR",
+      "classification": "canonical_document_specialization",
+      "canonical_sources": [
+        "docs/architecture/adrs/ADR-*.md"
+      ],
+      "schema_and_field_authorities": [
+        "templates/docs/architecture/adrs/ADR-template.md",
+        "templates/scripts/commit_guardian/frontmatter_validators.py",
+        "templates/scripts/commit_guardian/config.py",
+        "templates/scripts/commit_guardian/commit_guardian.json",
+        "config/doc_types.json"
+      ],
+      "review": "reports/native-fields/review-ADR.json",
+      "implementation": "knowledge/native_types/adr.py",
+      "tests": "tests/knowledge/test_native_adr.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-ADR.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 56,
+        "basis": "Canonical ADR documents compared by the reader.",
+        "evidence": "reports/native-fields/code-ADR.json#/real_corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 17,
+        "reviewed_fields": [
+          "id",
+          "title",
+          "description",
+          "type",
+          "status",
+          "created",
+          "last_updated",
+          "components",
+          "deciders",
+          "affects_diagrams",
+          "related_docs",
+          "related_code",
+          "architecture_diagrams",
+          "amended",
+          "requires_ac",
+          "tags",
+          "other supplied frontmatter keys"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-ADR.json"
+      },
+      "compatibility_decisions": [
+        "Frontmatter document status remains distinct from decision status in body text/table.",
+        "Legacy missing frontmatter or noncurrent document type remains visible; identity is original id override or complete filename stem."
+      ],
+      "verification": {
+        "focused_tests_passed": 6,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-ADR.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Component",
+      "neo4j_label": "Component",
+      "classification": "canonical_registry_entry_with_document_reference",
+      "canonical_sources": [
+        "docs/components.json#/components"
+      ],
+      "schema_and_field_authorities": [
+        "templates/scripts/commit_guardian/check_components_integrity.py"
+      ],
+      "review": "reports/native-fields/review-Component.json",
+      "implementation": "knowledge/native_types/component.py",
+      "tests": "tests/knowledge/test_native_component.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Component.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 46,
+        "basis": "Registry entries; excludes existing legacy graph hubs and separate component documents.",
+        "evidence": "reports/native-fields/code-Component.json#/verification/real_registry_entries_compared"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 10,
+        "reviewed_fields": [
+          "id",
+          "name",
+          "type",
+          "description",
+          "status",
+          "primary_code",
+          "detail_ref",
+          "agent_affinity",
+          "exposed_interfaces",
+          "depends_on"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Component.json"
+      },
+      "compatibility_decisions": [
+        "Registry fields are not overwritten by component-document frontmatter; component Markdown is a Document.",
+        "Legacy graph hubs are not deleted by this reader; missing modern registry fields remain absent."
+      ],
+      "verification": {
+        "focused_tests_passed": 16,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Component.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Agent",
+      "neo4j_label": "Agent",
+      "classification": "canonical_registry_entry",
+      "canonical_sources": [
+        "config/agent_registry.json#/agents",
+        "templates/agents/*.md"
+      ],
+      "schema_and_field_authorities": [
+        "config/agent_registry.schema.json#/definitions/agent",
+        "scripts/registry_validator.py",
+        "scripts/step_kinds_validator.py",
+        "docs/reference/agent-template-frontmatter.md"
+      ],
+      "review": "reports/native-fields/review-Agent.json",
+      "implementation": "knowledge/native_types/agent.py",
+      "tests": "tests/knowledge/test_native_agent.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Agent.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 61,
+        "basis": "Registry entries, including 59 registered templates and two inline agents.",
+        "evidence": "reports/native-fields/code-Agent.json#/real_artifact_counts"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 35,
+        "reviewed_fields": [
+          "id",
+          "name",
+          "tier",
+          "role",
+          "portable",
+          "spawn_allowlist",
+          "spawned_by",
+          "is_ticket_phase",
+          "template_path",
+          "skills_used",
+          "description",
+          "category",
+          "components",
+          "domain",
+          "selection_criteria",
+          "model",
+          "skills_invoked",
+          "knowledge_channels",
+          "doc_links",
+          "behavioral_patterns",
+          "priority",
+          "priority_rationale",
+          "requires_ticket_section",
+          "conditional",
+          "conditional_field",
+          "conditional_field_legacy",
+          "deprecated",
+          "legacy_only",
+          "permits_shell",
+          "owns_file_extensions",
+          "owns_file_extensions_rationale",
+          "requires_verification",
+          "produces",
+          "llm_ambiguity_comment",
+          "step_kinds"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Agent.json",
+        "schema_fixture_field_count": 35
+      },
+      "compatibility_decisions": [
+        "Complete registry entry and template frontmatter/body retain separate source identities and hashes.",
+        "Template-less inline agents are retained; helper templates and generated cards do not create extra Agent records."
+      ],
+      "verification": {
+        "focused_tests_passed": 20,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Agent.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Skill",
+      "neo4j_label": "Skill",
+      "classification": "canonical_registry_entry",
+      "canonical_sources": [
+        "config/skill_registry.json#/skills",
+        "templates/skills/*/SKILL.md"
+      ],
+      "schema_and_field_authorities": [
+        "config/skill_registry.schema.json#/definitions/skill",
+        "docs/reference/skill-frontmatter.md"
+      ],
+      "review": "reports/native-fields/review-Skill.json",
+      "implementation": "knowledge/native_types/skill.py",
+      "tests": "tests/knowledge/test_native_skill.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Skill.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 42,
+        "basis": "Registry entries with their registered templates.",
+        "evidence": "reports/native-fields/code-Skill.json#/verification/real_records"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 11,
+        "reviewed_fields": [
+          "id",
+          "name",
+          "portable",
+          "domain",
+          "dependencies",
+          "template_path",
+          "internal",
+          "description",
+          "invocation_surface",
+          "workflow_script",
+          "components"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Skill.json"
+      },
+      "compatibility_decisions": [
+        "Registry and template frontmatter/body remain separately queryable; allowed-tools keeps string versus list shape.",
+        "Internal, deprecated and nonportable skills remain records; optional defaults are not manufactured."
+      ],
+      "verification": {
+        "focused_tests_passed": 22,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Skill.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Ticket",
+      "neo4j_label": "Ticket",
+      "classification": "canonical_document_record",
+      "canonical_sources": [
+        "tickets/**/*.md"
+      ],
+      "schema_and_field_authorities": [
+        "templates/scripts/commit_guardian/frontmatter_validators.py",
+        "templates/scripts/commit_guardian/config.py",
+        "templates/scripts/commit_guardian/commit_guardian.json",
+        "templates/hooks/ticket_frontmatter_guard.py",
+        "templates/rules/tickets.md",
+        "scripts/ac_store/generate_ticket_from_ac.py"
+      ],
+      "review": "reports/native-fields/review-Ticket.json",
+      "implementation": "knowledge/native_types/ticket.py",
+      "tests": "tests/knowledge/test_native_ticket.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Ticket.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 1532,
+        "basis": "Admitted ticket files after excluding README; includes 92 epic subtypes without duplicating them as a kind.",
+        "evidence": "reports/native-fields/code-Ticket.json#/source_fidelity"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 44,
+        "reviewed_fields": [
+          "title",
+          "status",
+          "components",
+          "created",
+          "depends_on",
+          "change_target",
+          "risk_surface",
+          "requires_diagram",
+          "requires_adr",
+          "type",
+          "priority",
+          "roadmap_phase",
+          "advances_current_outcome",
+          "files_touched",
+          "agents",
+          "ac_coverage",
+          "ac_traceability",
+          "complexity",
+          "documentation_required",
+          "source_ac",
+          "source_acs",
+          "epic_name",
+          "out_of_scope",
+          "last_updated",
+          "test_required",
+          "declares_side_effect",
+          "phase",
+          "requires_documentation",
+          "user_facing_surface",
+          "actuation_contract",
+          "blocks_finalization",
+          "tags",
+          "origin_agent",
+          "requires_documentation_verification",
+          "source_epic",
+          "affected_tests",
+          "date",
+          "test_requirements",
+          "epic",
+          "estimated_complexity",
+          "target_epic",
+          "ac_path",
+          "test_constraints",
+          "merged_pr"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Ticket.json"
+      },
+      "compatibility_decisions": [
+        "Epics are a Ticket subtype; path-derived subtype provenance remains outside raw frontmatter.",
+        "No status is inferred from directories or sign-offs; legacy status, ac_coverage and tri-state declarations remain exact."
+      ],
+      "verification": {
+        "focused_tests_passed": 9,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Ticket.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Document",
+      "neo4j_label": "Document",
+      "classification": "canonical_document_record",
+      "canonical_sources": [
+        "Configured docs/**/*.md excluding specialized/generated views",
+        "memory/*.md",
+        "docs/architecture/components/*.md"
+      ],
+      "schema_and_field_authorities": [
+        "config/doc_types.json",
+        "templates/scripts/commit_guardian/frontmatter_validators.py",
+        "templates/scripts/commit_guardian/commit_guardian.json",
+        "config/entry_kind_vocabulary.json"
+      ],
+      "review": "reports/native-fields/review-Document.json",
+      "implementation": "knowledge/native_types/document.py",
+      "tests": "tests/knowledge/test_native_document.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Document.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 715,
+        "basis": "715 authored documents: 34 component documents, 273 general documents, 385 known-issue files and 23 memory files; 41 have no frontmatter.",
+        "evidence": "reports/native-fields/code-Document.json#/corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 41,
+        "reviewed_fields": [
+          "title",
+          "type",
+          "status",
+          "created",
+          "last_updated",
+          "description",
+          "components",
+          "flight_level",
+          "diagram_type",
+          "parent",
+          "children",
+          "root",
+          "related_docs",
+          "related_code",
+          "architecture_diagrams",
+          "related_surfaces",
+          "related_agents",
+          "related_adrs",
+          "related_tickets",
+          "related_diagrams",
+          "tags",
+          "category",
+          "source_ticket",
+          "source_ac",
+          "audience",
+          "intent",
+          "date",
+          "epic",
+          "epic_branch",
+          "pr",
+          "epic_pr",
+          "squash_commit",
+          "filled",
+          "stack",
+          "stylesheets",
+          "component_library",
+          "fonts",
+          "design_principles",
+          "brand_links",
+          "data_layer",
+          "build_behavior"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Document.json"
+      },
+      "compatibility_decisions": [
+        "Known issues, memory and architecture documents are document families; legacy prose needs no invented frontmatter.",
+        "Generated cards/flow views/roadmap renderings and specialized ADR/glossary/changelog sources are not duplicated."
+      ],
+      "verification": {
+        "focused_tests_passed": 12,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Document.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "RoadmapPhase",
+      "neo4j_label": "RoadmapPhase",
+      "classification": "canonical_structured_record",
+      "canonical_sources": [
+        "docs/roadmap.json#/phases"
+      ],
+      "schema_and_field_authorities": [
+        "config/roadmap.schema.json",
+        "templates/scripts/commit_guardian/check_roadmap_schema.py"
+      ],
+      "review": "reports/native-fields/review-RoadmapPhase.json",
+      "implementation": "knowledge/native_types/roadmap_phase.py",
+      "tests": "tests/knowledge/test_native_roadmap_phase.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-RoadmapPhase.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 13,
+        "basis": "Phase entries, with root roadmap context stored separately.",
+        "evidence": "reports/native-fields/code-RoadmapPhase.json#/actual_source_count"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 7,
+        "reviewed_fields": [
+          "id",
+          "title",
+          "exit_criteria",
+          "tickets_advancing_outcome",
+          "description",
+          "status",
+          "components"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-RoadmapPhase.json"
+      },
+      "compatibility_decisions": [
+        "One phase per source entry with original array locator; root current_phase/current_outcome/last_updated remain separate roadmap context.",
+        "No inherited component ownership or phase status is inferred."
+      ],
+      "verification": {
+        "focused_tests_passed": 30,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-RoadmapPhase.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "GlossaryTerm",
+      "neo4j_label": "GlossaryTerm",
+      "classification": "canonical_document_section",
+      "canonical_sources": [
+        "docs/glossary.md#term-headings"
+      ],
+      "schema_and_field_authorities": [
+        "docs/glossary.md (authoring guide)",
+        "scripts/build_glossary.py",
+        "templates/scripts/commit_guardian/check_glossary_coverage.py"
+      ],
+      "review": "reports/native-fields/review-GlossaryTerm.json",
+      "implementation": "knowledge/native_types/glossary_term.py",
+      "tests": "tests/knowledge/test_native_glossary_term.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-GlossaryTerm.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 41,
+        "basis": "Term sections compared against exact definitions and source locators.",
+        "evidence": "reports/native-fields/code-GlossaryTerm.json#/real_corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 2,
+        "reviewed_fields": [
+          "term",
+          "definition"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-GlossaryTerm.json"
+      },
+      "compatibility_decisions": [
+        "Exact definition Markdown, newline sequences and nested blocks are retained; file frontmatter remains separate.",
+        "Term identity follows the existing normalized-term convention; duplicate identities fail rather than merge."
+      ],
+      "verification": {
+        "focused_tests_passed": 22,
+        "skipped": 1,
+        "evidence": "reports/native-fields/code-GlossaryTerm.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim.",
+        "skip_reason": "Host does not grant symlink creation privilege; actual glossary symlink escape case unverified. Lexical absolute/traversal rejection is tested."
+      }
+    },
+    {
+      "kind": "Flow",
+      "neo4j_label": "Flow",
+      "classification": "canonical_structured_record",
+      "canonical_sources": [
+        "docs/product-truth/flows/**/*.flow.json",
+        "docs/product-truth/index.json#/artifacts"
+      ],
+      "schema_and_field_authorities": [
+        "docs/product-truth/schemas/flow.schema.json",
+        "docs/product-truth/scripts/validate_product_truth.py",
+        "docs/how-to/product-truth-schema-reference.md"
+      ],
+      "review": "reports/native-fields/review-Flow.json",
+      "implementation": "knowledge/native_types/flow.py",
+      "tests": "tests/knowledge/test_native_flow.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Flow.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 14,
+        "basis": "Canonical flow JSON files; valid unregistered sources are admitted.",
+        "evidence": "reports/native-fields/code-Flow.json#/source_count"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 25,
+        "reviewed_fields": [
+          "id",
+          "component",
+          "product",
+          "example_product",
+          "name",
+          "level",
+          "kind",
+          "source",
+          "realization",
+          "summary",
+          "status",
+          "readiness",
+          "superseded_by",
+          "version",
+          "shape_version",
+          "tags",
+          "entities",
+          "mock_data_ref",
+          "steps",
+          "branches",
+          "impl_summary",
+          "acceptance_scenarios",
+          "provenance",
+          "behind",
+          "confirmed"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Flow.json"
+      },
+      "compatibility_decisions": [
+        "Steps and branches retain owner-local identity, index ordering, nested correlation and stored implementation indicators.",
+        "Manifest context cannot overwrite canonical source fields; generated views and example domain names are not native types."
+      ],
+      "verification": {
+        "focused_tests_passed": 35,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Flow.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Mockup",
+      "neo4j_label": "Mockup",
+      "classification": "canonical_structured_record",
+      "canonical_sources": [
+        "docs/product-truth/mockups/**/*.mockup.json"
+      ],
+      "schema_and_field_authorities": [
+        "docs/product-truth/schemas/mockup.schema.json",
+        "docs/product-truth/scripts/validate_product_truth.py"
+      ],
+      "review": "reports/native-fields/review-Mockup.json",
+      "implementation": "knowledge/native_types/mockup.py",
+      "tests": "tests/knowledge/test_native_mockup.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Mockup.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 10,
+        "basis": "Canonical mockup JSON files: nine registered and one unregistered; five supporting HTML attachments.",
+        "evidence": "reports/native-fields/code-Mockup.json#/verification/real_records_compared"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 18,
+        "reviewed_fields": [
+          "id",
+          "component",
+          "screen",
+          "title",
+          "summary",
+          "entities",
+          "source",
+          "example_product",
+          "realization",
+          "renders",
+          "status",
+          "superseded_by",
+          "readiness",
+          "version",
+          "shape_version",
+          "tags",
+          "mock_data_ref",
+          "provenance"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Mockup.json"
+      },
+      "compatibility_decisions": [
+        "Canonical files absent from the manifest still become records; manifest values remain separate.",
+        "Supporting HTML is preserved as source text/hash and never executed; a safe missing render has an explicit marker."
+      ],
+      "verification": {
+        "focused_tests_passed": 23,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Mockup.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "MockData",
+      "neo4j_label": "MockData",
+      "classification": "canonical_structured_record",
+      "canonical_sources": [
+        "docs/product-truth/mock-data/**/*.mock.json",
+        "docs/product-truth/index.json#/artifacts"
+      ],
+      "schema_and_field_authorities": [
+        "docs/product-truth/schemas/mock-data.schema.json",
+        "docs/product-truth/scripts/validate_product_truth.py"
+      ],
+      "review": "reports/native-fields/review-MockData.json",
+      "implementation": "knowledge/native_types/mock_data.py",
+      "tests": "tests/knowledge/test_native_mock_data.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-MockData.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 2,
+        "basis": "Canonical dataset files: one registered and one unregistered; eight nested entity specifications and 48 sample records remain owned data.",
+        "evidence": "reports/native-fields/code-MockData.json#/real_corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 15,
+        "reviewed_fields": [
+          "id",
+          "component",
+          "status",
+          "readiness",
+          "superseded_by",
+          "version",
+          "shape_version",
+          "reusable",
+          "example_product",
+          "realization",
+          "tags",
+          "invariants",
+          "entities",
+          "used_by",
+          "provenance"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-MockData.json"
+      },
+      "compatibility_decisions": [
+        "Discover every canonical dataset, including unregistered files; exclude prompt fixtures.",
+        "Nested Ac/Plant/Customer examples remain sample data, never actual AC, Component or Test nodes."
+      ],
+      "verification": {
+        "focused_tests_passed": 18,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-MockData.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "ChangelogEntry",
+      "neo4j_label": "ChangelogEntry",
+      "classification": "canonical_document_record",
+      "canonical_sources": [
+        "changelogs/*.md",
+        "docs/changelog/*.md (legacy)"
+      ],
+      "schema_and_field_authorities": [
+        "scripts/changelog/emit_entry.py#validate_payload",
+        "scripts/changelog/README.md",
+        "templates/scripts/commit_guardian/commit_guardian.json"
+      ],
+      "review": "reports/native-fields/review-ChangelogEntry.json",
+      "implementation": "knowledge/native_types/changelog_entry.py",
+      "tests": "tests/knowledge/test_native_changelog_entry.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-ChangelogEntry.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 531,
+        "basis": "526 current plus five legacy entries; 528 strict parses and three explicit compatibility parses.",
+        "evidence": "reports/native-fields/code-ChangelogEntry.json#/real_corpus"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 22,
+        "reviewed_fields": [
+          "title",
+          "date",
+          "time",
+          "type",
+          "components",
+          "summary",
+          "description",
+          "epic",
+          "ticket",
+          "pr",
+          "adrs",
+          "diagrams",
+          "tickets",
+          "commits",
+          "breaking",
+          "migration_steps",
+          "scope",
+          "merge_commit",
+          "acs",
+          "created",
+          "last_updated",
+          "status"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-ChangelogEntry.json"
+      },
+      "compatibility_decisions": [
+        "Historical omissions/enums are preserved; modern writer requirements do not rewrite old entries.",
+        "Only the two reviewed malformed writer shapes are recovered; retain original raw text and named recovery diagnostics."
+      ],
+      "verification": {
+        "focused_tests_passed": 20,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-ChangelogEntry.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Capability",
+      "neo4j_label": "Capability",
+      "classification": "canonical_registry_entry",
+      "canonical_sources": [
+        "config/capability_registry.json#/capabilities"
+      ],
+      "schema_and_field_authorities": [
+        "config/capability_registry.schema.json#/definitions/capability",
+        "kernel/contracts/capability.py",
+        "kernel/registry/adapter.py"
+      ],
+      "review": "reports/native-fields/review-Capability.json",
+      "implementation": "knowledge/native_types/capability.py",
+      "tests": "tests/knowledge/test_native_capability.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Capability.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 9,
+        "basis": "Actual registry entries; the root comment saying seven is retained as source text, not used as the count.",
+        "evidence": "reports/native-fields/code-Capability.json#/verification/real_registry_entries_compared"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 20,
+        "reviewed_fields": [
+          "id",
+          "name",
+          "description",
+          "version",
+          "request_kinds",
+          "accepts_schemas",
+          "produces_schemas",
+          "execution_mode",
+          "binding",
+          "side_effect_class",
+          "admission",
+          "operations",
+          "scope_tags",
+          "components",
+          "permissions_required",
+          "enabled",
+          "availability",
+          "routing",
+          "process_maturity",
+          "cost_hints"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Capability.json",
+        "schema_fixture_field_count": 20
+      },
+      "compatibility_decisions": [
+        "Keep all registry entries regardless of runtime eligibility; do not invoke bindings or import snapshot code.",
+        "Root registry context is separate; names resembling Agents or Skills do not merge identities."
+      ],
+      "verification": {
+        "focused_tests_passed": 30,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Capability.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Decision",
+      "neo4j_label": "Decision",
+      "classification": "canonical_structured_record_pending_merge",
+      "canonical_sources": [
+        "docs/decisions/dec-*.yaml"
+      ],
+      "schema_and_field_authorities": [
+        "config/decision_record.schema.json",
+        "kernel/memory/models.py",
+        "kernel/memory/validate.py",
+        "docs/architecture/adrs/ADR-059-decision-store-reviewable-yaml-records-now-graph-later.md",
+        "knowledge/native_types/decision_schema.json (trusted copied schema asset)"
+      ],
+      "review": "reports/native-fields/review-Decision.json",
+      "implementation": "knowledge/native_types/decision.py",
+      "tests": "tests/knowledge/test_native_decision.py",
+      "reader_api": "extract(root)",
+      "reader_receipt": "reports/native-fields/code-Decision.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": 0,
+        "basis": "No Decision records in the isolated checkout or active immutable source. One pending-merge record in the separate active checkout was used only for read-only parity proof and was not copied or published.",
+        "evidence": "reports/native-fields/code-Decision.json#/current_source",
+        "separate_pending_checkout_parity_records": 1
+      },
+      "field_coverage": {
+        "reviewed_field_count": 31,
+        "reviewed_fields": [
+          "approval",
+          "assessment",
+          "assumptions",
+          "change_target",
+          "components",
+          "corrections",
+          "criteria",
+          "decision_type",
+          "description",
+          "evidence",
+          "file_globs",
+          "final_outcome",
+          "id",
+          "kind",
+          "options",
+          "precedents_considered",
+          "provenance",
+          "question",
+          "rationale",
+          "related",
+          "repository_id",
+          "repository_wide",
+          "risk_surface",
+          "roadmap_phase",
+          "schema_version",
+          "selected_option_id",
+          "superseded_by",
+          "supersedes",
+          "task_context",
+          "title",
+          "unresolved_risks"
+        ],
+        "list_scope": "Named schema, writer or observed fields reviewed; not an ingestion allowlist.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Decision.json",
+        "nested_schema_definitions": 14
+      },
+      "compatibility_decisions": [
+        "Requires approved canonical metadata, filename identity, schema, vocabulary and cross-record relationship validation.",
+        "Trusted schema is pinned; pending source merge is not resolved or imported, and generated index freshness remains an upstream requirement."
+      ],
+      "verification": {
+        "focused_tests_passed": 61,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Decision.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "SourceFile",
+      "neo4j_label": "SourceFile",
+      "classification": "source_reference",
+      "canonical_sources": [
+        "Repository-relative paths explicitly referenced by canonical records"
+      ],
+      "schema_and_field_authorities": [
+        "knowledge/contracts.py#SourceReference",
+        "knowledge/contracts.py#Entity",
+        "scripts/knowledge_file_nodes.py",
+        "knowledge/projection/canonical_loader.py"
+      ],
+      "review": "reports/native-fields/review-SourceFile.json",
+      "implementation": "knowledge/native_types/source_file.py",
+      "tests": "tests/knowledge/test_native_source_file.py",
+      "reader_api": "from_entity(root, entity)",
+      "reader_receipt": "reports/native-fields/code-SourceFile.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": null,
+        "basis": "Exactly the supplied immutable SourceFile entities; no file enumeration or current existence observation.",
+        "evidence": "reports/native-fields/review-SourceFile.json#/count_basis"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 15,
+        "reviewed_fields": [
+          "/canonical_id",
+          "/kind",
+          "/title",
+          "/summary",
+          "/source",
+          "/source/repository_id",
+          "/source/source_sha",
+          "/source/path",
+          "/source/locator",
+          "/source/content_hash",
+          "/properties",
+          "/properties/surface",
+          "/properties/missing",
+          "/properties/canonical",
+          "/properties/registry_identity"
+        ],
+        "list_scope": "Named reference envelope and nested property paths; properties is open.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-SourceFile.json"
+      },
+      "compatibility_decisions": [
+        "Pinned existence flags, source hashes and canonical identities survive even if the current filesystem differs.",
+        "Remove only the three exact enrichment helper keys; retain future properties and avoid inferred ownership."
+      ],
+      "verification": {
+        "focused_tests_passed": 17,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-SourceFile.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    },
+    {
+      "kind": "Test",
+      "neo4j_label": "Test",
+      "classification": "source_reference_specialization",
+      "canonical_sources": [
+        "tests/**",
+        "unit_tests/** (when explicitly referenced)"
+      ],
+      "schema_and_field_authorities": [
+        "scripts/knowledge_file_nodes.py",
+        "knowledge/projection/canonical_loader.py",
+        "knowledge/contracts.py#SourceReference"
+      ],
+      "review": "reports/native-fields/review-Test.json",
+      "implementation": "knowledge/native_types/test.py",
+      "tests": "tests/knowledge/test_native_test.py",
+      "reader_api": "from_entity(root, entity)",
+      "reader_receipt": "reports/native-fields/code-Test.json",
+      "status": "reviewed_reader_verified",
+      "working_tree_population": {
+        "records": null,
+        "basis": "Exactly the supplied immutable Test entities; no test discovery, execution or current file observation.",
+        "evidence": "reports/native-fields/review-Test.json"
+      },
+      "field_coverage": {
+        "reviewed_field_count": 15,
+        "reviewed_fields": [
+          "/canonical_id",
+          "/kind",
+          "/title",
+          "/summary",
+          "/source",
+          "/source/repository_id",
+          "/source/source_sha",
+          "/source/path",
+          "/source/locator",
+          "/source/content_hash",
+          "/properties",
+          "/properties/surface",
+          "/properties/missing",
+          "/properties/canonical",
+          "/properties/registry_identity"
+        ],
+        "list_scope": "Named reference envelope and nested property paths; properties is open.",
+        "preservation": "Complete authored metadata including nested and extension values is preserved; source validation may reject invalid input but never silently drop fields.",
+        "detailed_nested_contracts": "reports/native-fields/review-Test.json"
+      },
+      "compatibility_decisions": [
+        "Reference metadata describes a pinned test file, not runtime results, coverage or pass/fail status.",
+        "Preserve source locators separately from per-relationship function anchors; no reclassification by filename."
+      ],
+      "verification": {
+        "focused_tests_passed": 23,
+        "skipped": 0,
+        "evidence": "reports/native-fields/code-Test.json",
+        "scope": "Focused reader tests and mutation proofs; no live Aura publication claim."
+      }
+    }
+  ],
+  "not_independent_types": [
+    {
+      "name": "Epic",
+      "handling": "Ticket subtype; same file/lifecycle contract."
+    },
+    {
+      "name": "KnownIssue, Retrospective, Memory, Architecture, HowTo, Reference, Explanation, Tutorial",
+      "handling": "Document subtypes or path families; retain source subtype/fields, do not duplicate same file under an extra canonical identity."
+    },
+    {
+      "name": "FlowNode / FlowStep / Branch",
+      "handling": "Nested Flow schema members with source-relative identities. Their detailed metadata may use owned subnodes if necessary, not independent top-level source artifacts."
+    },
+    {
+      "name": "Pattern",
+      "handling": "AC schema declares implements_pattern, pattern_bindings and pattern_slots, but no separate canonical Pattern store/schema was found in the scanned registries/components. Preserve declared fields and references without synthesizing a separate authority."
+    },
+    {
+      "name": "Lesson, Mistake, Observation, Policy",
+      "handling": "Concept proposal and/or synthetic example types exist, but no independently validated canonical store was found. Do not turn proposed concepts or arbitrary prose into records with invented fields."
+    },
+    {
+      "name": "Flow Markdown, AgentCard, product-truth derived indexes, decision index, roadmap renderings",
+      "handling": "Generated views of canonical records; avoid duplicate nodes."
+    },
+    {
+      "name": "FeedbackRecord",
+      "handling": "Runtime JSONL under debugging/logs/feedback.jsonl. Shape owned by templates/scripts/feedback/submit_feedback.py and resolve_feedback.py. Not an immutable Git snapshot source; inventory as a separately governed future runtime ingestion surface."
+    },
+    {
+      "name": "AgentTelemetry, KnowledgeEmission, RunEnvelope, EvidenceBundle, HumanInteraction, CapabilityGap, query activation receipts",
+      "handling": "Runtime events/transport/checkpoint contracts, not canonical repository record types. Their schema catalog must not be mistaken for Git record inventory."
+    },
+    {
+      "name": "Repository, Snapshot, query catalog indexes, vector labels",
+      "handling": "Projection/storage metadata, not user-domain canonical record kinds."
+    },
+    {
+      "name": "Configuration/schema definitions, hooks, workflow implementations",
+      "handling": "SourceFile or Document when referenced, unless a distinct registry record above supplies a native entity contract."
+    }
+  ],
+  "limitations": [
+    "Focused reader receipts establish extraction behavior; integration and real Neo4j readback evidence remain separate.",
+    "AcceptanceCriterion population is a dated structural review observation; the all-47-fields code fixture is not a whole-corpus validation receipt.",
+    "Decision support is implemented and tested, but the active immutable source has no canonical Decision record. The pending merge record was never imported.",
+    "One real filesystem symlink check for GlossaryTerm is skipped on this host because symlink privilege is unavailable."
+  ]
+}

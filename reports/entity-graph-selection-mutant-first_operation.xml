@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="28.696" timestamp="2026-10-03T22:39:33.914182+00:00" hostname="BrainDesk"><testcase classname="tests.kernel.entity_context.test_knowledge_operation_selection" name="test_entity_question_selects_bound_graph_operation_and_yields_evidence[relationship-paraphrase]" time="0.709"><failure message="AssertionError: assert ('get_entities' == 'get_related_tests'&#10;  &#10;  - get_related_tests&#10;  + get_entities)">tests\kernel\entity_context\test_knowledge_operation_selection.py:72: in test_entity_question_selects_bound_graph_operation_and_yields_evidence
+    assert first.operation == case["operation"] and first.mode == case["mode"]
+E   AssertionError: assert ('get_entities' == 'get_related_tests'
+E     
+E     - get_related_tests
+E     + get_entities)</failure></testcase></testsuite></testsuites>

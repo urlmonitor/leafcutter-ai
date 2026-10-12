@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-31 · **Last seen:** 2026-08-31
+- **Occurrences:** 2
+- **First seen:** 2026-08-31 · **Last seen:** 2026-10-05
 - **Where:** `scripts/commit_guardian/check_build_drift.py` — `_resolve_manifest_path()`
   (first-match return, no validation) and the `package_offset` read at
   `manifest.get("package_root", "") or ""`; same resolution shared by `check_output_drift`
@@ -121,5 +121,18 @@ key-namespace class of defect in the sibling hook.
 specific wrong value, in a resolver that had already picked the wrong input — so two
 independently-reasonable graceful degradations compose into a confident, precise, entirely
 false report.
+
+**Second occurrence (2026-10-05, PR #1013).** A different shape of the same first-match
+lookup. An untracked, gitignored `leafcutter-ai/.build_manifest.json` from a 2026-09-28
+build (run with `--target-dir` pointed at the repo itself) sat at git toplevel, so it won
+over the current workspace-root manifest. `check-build-drift` reported
+`verified=189 uncomparable=6 gaps=6 drifted=13` on a commit staging three unrelated files.
+`build.py` then reported `Up-to-date: 629 files (unchanged)` while the gate kept
+re-printing the identical failure. That pair of results is the tell: a build that changes
+nothing and a gate that still says "drifted" cannot both be describing one manifest. An
+md5 of a named "drifted" template matched its deployed copy byte-for-byte. Moving the
+stray aside gave `verified=195 uncomparable=0 gaps=0 drifted=0`. Unlike the first
+occurrence the stale manifest still had a valid `package_root`, so the offsets lined up
+and the report looked plausible (13 drifted, not 170), which made it harder to spot.
 
 ---

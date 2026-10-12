@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Plant illustrative mock-record design",
+  "description": "Transcribed from docs/product-truth/mock-data/fern-and-fig/catalog.mock.json entities.Plant.fields. All listed fields are present in the complete mock-record design. No production API, processor/auth request or runtime validation is implied; the canonical dataset remains unchanged.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string — stable slug"
+    },
+    "name": {
+      "type": "string",
+      "description": "string"
+    },
+    "price": {
+      "type": "number",
+      "description": "number — in euros"
+    },
+    "currency": {
+      "type": "string",
+      "description": "string"
+    },
+    "stock": {
+      "type": "integer",
+      "description": "integer — units on hand"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "in-stock",
+        "low-stock",
+        "out-of-stock"
+      ],
+      "description": "enum: in-stock | low-stock | out-of-stock (derived from stock)"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "price",
+    "currency",
+    "stock",
+    "status"
+  ]
+}

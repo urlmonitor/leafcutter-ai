@@ -1,0 +1,85 @@
+{
+  "run_id": "run-aae78c94e8464ebe",
+  "interaction_id": "int-2ffba6873f5143d1",
+  "expected_state_revision": 7,
+  "actor": {
+    "id": "host:blind-public-retrieval",
+    "kind": "host"
+  },
+  "response_schema_id": "leafcutter.findings.v1",
+  "response": {
+    "schema_version": "1.0",
+    "findings": [
+      {
+        "schema_version": "1.0",
+        "claim": "For KM-500c-2, tests must demonstrate that, after research obtains results from an existing or newly verified query, its existing evidence evaluation assesses answerability and the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied.",
+        "kind": "inference",
+        "supporting_evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "contradicting_evidence_ids": [],
+        "limitations": [
+          "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed."
+        ],
+        "producer": "host.synthesize",
+        "producer_version": "host.synthesize.task@1.0.0",
+        "id": "finding-06f6ebdfc4b8a921"
+      },
+      {
+        "schema_version": "1.0",
+        "claim": "Tests must demonstrate that successful build, successful query execution, and successful answer assessment remain separate recorded outcomes.",
+        "kind": "inference",
+        "supporting_evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "contradicting_evidence_ids": [],
+        "limitations": [
+          "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed."
+        ],
+        "producer": "host.synthesize",
+        "producer_version": "host.synthesize.task@1.0.0",
+        "id": "finding-a3b978ecd06a62d1"
+      },
+      {
+        "schema_version": "1.0",
+        "claim": "Tests must demonstrate that zero matches, contradictory evidence, and insufficient evidence remain distinguishable, with their limitations preserved.",
+        "kind": "inference",
+        "supporting_evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "contradicting_evidence_ids": [],
+        "limitations": [
+          "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed."
+        ],
+        "producer": "host.synthesize",
+        "producer_version": "host.synthesize.task@1.0.0",
+        "id": "finding-3eb0cfefa434cdb3"
+      },
+      {
+        "schema_version": "1.0",
+        "claim": "Tests must demonstrate that any bounded synthesis or follow-up uses the existing research policy and does not silently equate query availability with answer quality.",
+        "kind": "inference",
+        "supporting_evidence_ids": [
+          "ev-b680fc14fad3954a"
+        ],
+        "contradicting_evidence_ids": [],
+        "limitations": [
+          "Derived from the supplied acceptance clauses; this does not establish that any test has executed or passed."
+        ],
+        "producer": "host.synthesize",
+        "producer_version": "host.synthesize.task@1.0.0",
+        "id": "finding-73795ec6252f5a29"
+      }
+    ],
+    "agreements": [],
+    "disagreements": [],
+    "constraints": [
+      "The supplied criterion concerns the original research's answerability evaluation after results from an existing or newly verified query become available."
+    ],
+    "assumptions": [],
+    "unknowns": [
+      "The supplied excerpt does not identify concrete test implementations, fixtures, or execution results.",
+      "Only one source excerpt was supplied, so agreement or disagreement between independent sources cannot be established."
+    ]
+  }
+}

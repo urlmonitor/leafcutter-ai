@@ -106,8 +106,12 @@ def _load_phase_deferral(path: Path) -> dict[str, list[str]]:
             (TKT-600b-1's "must refuse rather than default" constraint).
     """
     try:
+        # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): already
+        # fail-closed (raises, never defaults internally per this function's
+        # own "must refuse rather than default" constraint); single config
+        # file read. No measured benefit (criterion 1).
         with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
     except (OSError, yaml.YAMLError) as exc:
         raise PhaseDeferralDeclarationError(
             f"could not load phase deferral declaration at {path}: {exc}"

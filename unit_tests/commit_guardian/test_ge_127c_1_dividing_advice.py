@@ -40,13 +40,23 @@ DECISION HISTORY
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _ge_127c_1_scope_fixture import CONFIG_PATH, refusal_advice_for_extension  # noqa: E402
+from _ge_127c_1_scope_fixture import (  # noqa: E402
+    CONFIG_PATH,
+    content,
+    copy_commit_guardian,
+    init_repo,
+    refusal_advice_for_extension,
+    run_direct,
+    stage_all,
+)
 
 # ---------------------------------------------------------------------------
 # 4. Every distinct form of dividing advice is producible by some measured kind
@@ -54,6 +64,33 @@ from _ge_127c_1_scope_fixture import CONFIG_PATH, refusal_advice_for_extension  
 
 
 class TestEveryFormOfDividingAdviceIsProducibleBySomeMeasuredKind(unittest.TestCase):
+    def _probe_produced_a_real_refusal(self, ext: str) -> bool:
+        """True if forcing *ext* alone into scope and refusing an over-limit
+        file of that kind produced a REAL refusal from the probing
+        machinery -- the unconditional "FILE TOO LARGE" marker
+        `_print_too_large_file` prints on every refusal, independent of
+        whether any dividing-advice sentence follows it.
+
+        This is the surviving teeth of the old "fixture sanity: probing must
+        produce at least one advice line" guard (see the comment in the test
+        below for why that guard's ORIGINAL form is now wrong). A probe whose
+        subprocess crashes, whose throwaway override config is malformed, or
+        whose target file is not actually refused at all, fails this check
+        and therefore still fails the test -- only the presence of an
+        advice *line* was ever the wrong thing to require.
+        """
+        root = Path(tempfile.mkdtemp(prefix="ge127c1_teeth_probe_"))
+        cg = copy_commit_guardian(file_size_overrides={"checked_extensions": [ext], "line_limits": {ext: 1}})
+        try:
+            init_repo(root)
+            (root / f"probe{ext}").write_text(content(5), encoding="utf-8")
+            stage_all(root)
+            result = run_direct(cg, root)
+            return "FILE TOO LARGE" in (result.stdout + result.stderr)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(cg, ignore_errors=True)
+
     def test_ge_127c_1_every_form_of_dividing_advice_is_producible_by_some_measured_kind(self):
         # covers: GE-127c-1
         # angle: seam
@@ -82,7 +119,54 @@ class TestEveryFormOfDividingAdviceIsProducibleBySomeMeasuredKind(unittest.TestC
         for ext in probe_extensions:
             capable_forms |= refusal_advice_for_extension(ext)
 
-        self.assertTrue(capable_forms, "fixture sanity: probing must produce at least one advice line")
+        # GE-127e-3 CROSS-AC ADJUDICATION (2026-09-23, settled by the ticket
+        # supervisor, implemented here by test-writer -- see ticket
+        # 04_TICKET-20260914-GE-127e-3.md's "THE CONFLICT" / "THE
+        # ADJUDICATION" comments for the full reasoning this summarizes):
+        #
+        # GE-127e-3 required deleting the `/code-refactoring-specialist`
+        # dividing-advice sentence from `_print_too_large_file` OUTRIGHT, with
+        # nothing substituted (its Implementation Notes item 6: "Deletion is
+        # the compliant move and must not be traded for substitution"). That
+        # correctly empties `capable_forms` for every probed extension --
+        # there is no longer any "Use the ..." line for ANY kind to produce.
+        #
+        # The `assertTrue(capable_forms, ...)` that used to sit here treated
+        # that empty result as a FIXTURE failure. It is not one: this AC's own
+        # criterion clause ("for every distinct form of dividing advice the
+        # standard is capable of producing there is a kind of file it
+        # measures that produces it") is guarded by "When the refusal offers
+        # advice on how to divide the file" -- with no such advice offered,
+        # the clause does not apply -- and its requirement is universally
+        # quantified over the forms the standard CAN produce, which is
+        # vacuously true over an empty set. The `unreachable = capable_forms -
+        # reachable_forms` assertion below (kept EXACTLY as it was -- that is
+        # the real AC and it must keep its teeth) is vacuously satisfied the
+        # same way. The test's own failure message even names this branch by
+        # name: "Either bring a kind capable of producing this advice into
+        # scope, or remove the advice." GE-127e-3 took the second branch, and
+        # this AC's closing phrase -- "the standard carries no advice for a
+        # kind it can never refuse" -- is trivially satisfied by carrying no
+        # advice at all.
+        #
+        # What must NOT be lost by relaxing this: the ORIGINAL guard's real
+        # purpose, which was to catch a probe that silently finds nothing
+        # because the probing machinery itself is broken (a crashed
+        # subprocess, a malformed throwaway config, a file that was never
+        # actually refused). `_probe_produced_a_real_refusal` below asserts
+        # exactly that -- that every probed extension produced a REAL refusal
+        # (the unconditional "FILE TOO LARGE" marker) -- without requiring
+        # that refusal to carry any dividing-advice sentence. A genuinely
+        # broken probe still fails this test.
+        for ext in probe_extensions:
+            self.assertTrue(
+                self._probe_produced_a_real_refusal(ext),
+                f"probe sanity: refusing an over-limit {ext!r} file must "
+                "produce a real refusal (the unconditional 'FILE TOO LARGE' "
+                "marker) even though it may carry no dividing-advice line -- "
+                "if this fails, the probing machinery itself is broken, not "
+                "merely empty of advice",
+            )
 
         real_config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         scope_in_force = set(real_config.get("file_size", {}).get("checked_extensions", []))

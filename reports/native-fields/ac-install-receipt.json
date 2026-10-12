@@ -1,0 +1,277 @@
+{
+  "destination": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+  "backup": "C:\\Users\\Hendrik\\Code\\leafcutter\\_backups\\native-ac-traceability-e2ec041237",
+  "files": [
+    {
+      "path": "tests/knowledge/test_native_acceptance_criterion.py",
+      "sha256": "0fc6ab8457e503170985e1a238480916ffc1569feb882873380920ad0bfc9d6a",
+      "previous_sha256": "5e75a6daf1e96fab3abf6fc2fbba7777d5613a25fa9622cef2a65d32defc1e57"
+    },
+    {
+      "path": "tests/knowledge/test_native_adr.py",
+      "sha256": "3324331b6b4a54657a8fcde767dbf150bf9b3380b5b235c3281187c3942ae7e8",
+      "previous_sha256": "78e4562d018b7f341d82ad48239cbd883efb29f1912bde9e1f01a31c9c7a3db5"
+    },
+    {
+      "path": "tests/knowledge/test_native_component.py",
+      "sha256": "df54286f084ada00c237189f042e3007dbb8e5813674fcfda67d398e8cbbdcb3",
+      "previous_sha256": "ce6ac9e60b74113889ac079b89164ac34b5f91c3834f27cae35ee781fd312956"
+    },
+    {
+      "path": "tests/knowledge/test_native_agent.py",
+      "sha256": "dc6cbb3791e4c915b174b85e70656a35c751fd3c0c274dc6fb26e84c76006608",
+      "previous_sha256": "e60ce22c6e5f698137e816cff1f50e037c3dc820eb8e14f30fa2021ee5753bb7"
+    },
+    {
+      "path": "tests/knowledge/test_native_skill.py",
+      "sha256": "ffc7b7eb8723d5236eee617cf21610b13e8c3303fc0104ca95fade951a8756b0",
+      "previous_sha256": "2f5cdaef11f4414609e492b38dfc636eba1421f7352497e603658d7e1c995799"
+    },
+    {
+      "path": "tests/knowledge/test_native_ticket.py",
+      "sha256": "f70de1a78239e7e36523b6578f0532d70701739be4a48ab1576ab480d588a792",
+      "previous_sha256": "08e7b4286b536341c841fa9e55bd6b2050b8a60936885937f221501e1907552f"
+    },
+    {
+      "path": "tests/knowledge/test_native_document.py",
+      "sha256": "3df8d8fadebb6fe0c1eaec9c79adeb5a5212258644e7c0fc4e69749e52767ae7",
+      "previous_sha256": "51431ff925a0bc64dbe28232f5991bb830ce86ec06cc98944546ceff832abd1b"
+    },
+    {
+      "path": "tests/knowledge/test_native_roadmap_phase.py",
+      "sha256": "b33f5219c05c2f635df0b0eb498a0e842bd36e5f4100929631a2db7fd86d222d",
+      "previous_sha256": "a4944651705caca098ddc150ae481a80a6cf2c2fc55e2862240ea3355ad0077e"
+    },
+    {
+      "path": "tests/knowledge/test_native_glossary_term.py",
+      "sha256": "b3d302168ffcbb3eb3217dbd0895ae082b9154c4d1c3b007adf2c83d8b72b3de",
+      "previous_sha256": "5a4f33d39cd02087c5d70648bf8ae2ffb7bd8baf9062b67f2acfc5c78768a7f9"
+    },
+    {
+      "path": "tests/knowledge/test_native_flow.py",
+      "sha256": "85d8e59586552a5b19db025964215102105f4991ba8b7abb9e9c1853db73f3e8",
+      "previous_sha256": "5f05a831e8e4a5ae9ba34eebae7f285ea7cbbfe03229570b0f211e2ab6d16924"
+    },
+    {
+      "path": "tests/knowledge/test_native_mockup.py",
+      "sha256": "b2f3560576ecea6c9676bb48536dc3b14d98f502fa250e7aad70e07b96651414",
+      "previous_sha256": "ce88851a7f01e58718ec2c33885bf55765fc6900a34bf7f2213a5f62f0cd8493"
+    },
+    {
+      "path": "tests/knowledge/test_native_mock_data.py",
+      "sha256": "b0e810641a8adcf0974ce3eea41b489a9a3c0afaf23a0c3fa15f9b27f088915c",
+      "previous_sha256": "c9ee9186d1d397c8d18974b405c219c1caceb798ac169d754d9f4b001affa1f3"
+    },
+    {
+      "path": "tests/knowledge/test_native_changelog_entry.py",
+      "sha256": "afaae28df20f50847f83f7b536e478e8ef64add081698211244afe258e7f47b5",
+      "previous_sha256": "8021bfd7f7ce9d9c43210eaaf02c176f1d1b0894464748858c23be958ff1412a"
+    },
+    {
+      "path": "tests/knowledge/test_native_capability.py",
+      "sha256": "6c8a1b537c768f00f906836f41385a4eb5a04c3097596bd7511be819230608c9",
+      "previous_sha256": "974403fc5721558e6db422ab393c2e42f277ba9a7bbbe826983cfa6ecb99bf37"
+    },
+    {
+      "path": "tests/knowledge/test_native_decision.py",
+      "sha256": "973ffd1463d08c2ebf497cebb17e3c0d2478f8b5319b8f3493f983288d4f14bf",
+      "previous_sha256": "8346345a9976500eaf2f4d9c28314bfb06e58aa2bdabec3e1a821aaf2c486694"
+    },
+    {
+      "path": "tests/knowledge/test_native_source_file.py",
+      "sha256": "1e0272dd58e2eb02c8b0224dd34671d556a97c518699d8bb4f1d76202b6c6890",
+      "previous_sha256": "a086e59087d8246b218c92eab6002e41203bea6c961d1d6cb5ef16405b442375"
+    },
+    {
+      "path": "tests/knowledge/test_native_test.py",
+      "sha256": "6c1b6b76d44d73e05db2d8a5c150a5278bce3206d02d8950e326ad4adcf252fa",
+      "previous_sha256": "de72b98e29886ff3b9768956d3d61bc863ab1958e0a452b3e5e503b8baafa784"
+    },
+    {
+      "path": "tests/knowledge/test_native_metadata_integration.py",
+      "sha256": "e56dfee0ba07d1c14fedf54ddcb8c9489aabd8b6bc9301d1766bf5e3d25129d1",
+      "previous_sha256": "df11ebef8393a55392f3e16808c5bc159dee7200ceb93c9b91a1a8341d9d1882"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1.yaml",
+      "sha256": "31d5032370eda46b34d1092081afd85889c30feb9115bbf1967e93f5a49d727d",
+      "previous_sha256": "9f493250e755eecdff30c91237367c609aa629905e0898db4f91ecf99f9b8a7c"
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-i.yaml",
+      "sha256": "14d17d68cc72bba028847af9b67d4ef4a9351b2cacbdc37c5cb7b2bc5a13a59c",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ii.yaml",
+      "sha256": "adc2c243fa66dfd33f4ed257af3a18551290f2016528d602b0f1e0c4764da159",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iii.yaml",
+      "sha256": "5154101bfa9af81d68c1477368720c3c85fc96e472f48379e5741bc16c531e39",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iv.yaml",
+      "sha256": "34f93132a9d7744dfd5934557dd422d086a19fe763c7f6141c8410b147eea1f3",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-v.yaml",
+      "sha256": "9a0032c8c8a370ff4eb0be22be5450e24518f3174358c019bf4c04e3a1cb4df8",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vi.yaml",
+      "sha256": "54d1e6f00e8ebe4b6c35a6d9fec4bc8a591a322c4132be25bfa4fe8ce4d63133",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vii.yaml",
+      "sha256": "cd320b9ff6f07ea2e6c8c9b982792f946e1db326e54cfab7e2601bd6d4436a0f",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-viii.yaml",
+      "sha256": "4a60e256ad1f2a338110edf9f08f0e370c3713ef2dec03c0b0921b95003bfd55",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+      "sha256": "b136ccfae6c18b7f5390d64634dabbe1301bc7eaa01000c19270cf7d7e5abbe4",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-x.yaml",
+      "sha256": "b374011ca05f165262ef23057f712fb99d48f0268ca32ce8077971e3f83a89ae",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xi.yaml",
+      "sha256": "f38bbffc857cab861938a297e31e6a46ad378f44f62f5af5c97704fd731c3d00",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xii.yaml",
+      "sha256": "948eabacc8b079b9785f46bf9e02a7d5faa13d307117484560e90b821471e577",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiii.yaml",
+      "sha256": "d26ee631e7b288e21b8af2601f7ca92a7bbf15ca8e28d9154809e0ec9d452c27",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiv.yaml",
+      "sha256": "c751e10cc0f007691b07f1d43498575de1036b8ed537e8d5868902d7dd36263d",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xv.yaml",
+      "sha256": "0f091a051da3b27a363144af8435e523e88f532a908595e25ad05e3bd7900cf5",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvi.yaml",
+      "sha256": "22b240af112a5e6618a66002ccd743678b34cf827dfc57324ef22bf7703c16db",
+      "previous_sha256": null
+    },
+    {
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvii.yaml",
+      "sha256": "f72d52a17c79ca1d4d1e9f2c0db49192f2028db058fd7c46190f04e0ac022262",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-test-catalog.json",
+      "sha256": "2594c5e1bd3e8427f113460f8d880135e31e788b8b89dbcc7321d4483e630a3c",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-test-annotation-receipt.json",
+      "sha256": "8970fed86c7e06cec723696279d175f9e70c60c331d7ff8daa849cfd005969c2",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-pattern-standing-review.json",
+      "sha256": "272de080ceae18b1bad8bbed72f4e4a4f85d07daee4a9ff19b3c4c258adb6c4d",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-linked-strict.xml",
+      "sha256": "863bbb807504fbe40056dd4636f3b82fc3ac0216b94dcdc612fb76affd9c85b9",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-linked-strict.log",
+      "sha256": "2f4a7396fbcb5f782a114f21bccb319eee4a0a37f0139ae3c68159307e54d2a5",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/itpo-ac-enrichment.json",
+      "sha256": "af6bac848e0931f2b4042b5a8a984ca166b50a7f33d27a1052c4185f690cec5e",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-validation.json",
+      "sha256": "0484c089d4165290b5416c1a3c2e61f02735cc4f1e3bd28bb05d6fb64cf3a714",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-schema-validation.log",
+      "sha256": "cb99bf0d94e9637eedbf6ef367d904325bef8ef63b370cfd4efcede1fa629af1",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-tree-validation.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-final-schema-validation.log",
+      "sha256": "cb99bf0d94e9637eedbf6ef367d904325bef8ef63b370cfd4efcede1fa629af1",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-traceability.json",
+      "sha256": "f26aa4c3793764eaaacdd8eb495e657b6881d0760a406b2c2e84f2674a344136",
+      "previous_sha256": null
+    },
+    {
+      "path": "reports/native-fields/ac-install-baseline.json",
+      "sha256": "8bb8c614afb6c17a2043f1a5b04ed4fab74702f13e114be2ca7dd32cb07f8c92",
+      "previous_sha256": null
+    }
+  ],
+  "git_metadata_before": {
+    "index": "8451cac369467ea70b75bfa76565d61ac2217ad4842c55128385833c61438d83",
+    "HEAD": "b51da8f87641d681ee1deecfaf5a9f2fae2d2908369187391393a40d61ad30d2",
+    "MERGE_HEAD": "a39e0d512bd6a39cdd56998f0012c2ee1d88358c3acfcf927e411dc5fee03ef2",
+    "MERGE_MSG": "343b78b2782b9061b81ab74035f4956d13874a46deea178b3d735718bc8c2384",
+    "MERGE_MODE": "5940fba849655f7fd20878b451607d8f40866326bde6753ac71ebc855b646a55",
+    "ORIG_HEAD": "06d3cfe76f199608464187e6a33f0034c050368e7d08d46c9ea8f0bf1512c7d8"
+  },
+  "git_metadata_after": {
+    "index": "8451cac369467ea70b75bfa76565d61ac2217ad4842c55128385833c61438d83",
+    "HEAD": "b51da8f87641d681ee1deecfaf5a9f2fae2d2908369187391393a40d61ad30d2",
+    "MERGE_HEAD": "a39e0d512bd6a39cdd56998f0012c2ee1d88358c3acfcf927e411dc5fee03ef2",
+    "MERGE_MSG": "343b78b2782b9061b81ab74035f4956d13874a46deea178b3d735718bc8c2384",
+    "MERGE_MODE": "5940fba849655f7fd20878b451607d8f40866326bde6753ac71ebc855b646a55",
+    "ORIG_HEAD": "06d3cfe76f199608464187e6a33f0034c050368e7d08d46c9ea8f0bf1512c7d8"
+  },
+  "git_index_and_merge_state_unchanged": true,
+  "files_verified_identical": true,
+  "new_ac_count": 17,
+  "unique_linked_test_functions": 160,
+  "test_links": 162,
+  "tests": {
+    "passed": 388,
+    "skipped": 1
+  },
+  "readiness": "reviewed",
+  "work_status": {
+    "done": 16,
+    "in_progress": 1
+  },
+  "new_aura_publication": false
+}

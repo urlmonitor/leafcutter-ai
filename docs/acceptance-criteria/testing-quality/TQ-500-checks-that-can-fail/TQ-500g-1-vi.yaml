@@ -1,0 +1,180 @@
+id: TQ-500g-1-vi
+components:
+  - testing_quality
+  - build_orchestration
+title: "/build-feature and the single-ticket route make the same wrong-version runs before commit, and a resumed ticket makes them again"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three tickets, each driven once through /build-feature and once as a
+    single ticket —
+      K1: its guarding test names must_catch ["drop the retry_due condition"]
+          and fails under it,
+      K2: its guarding test names the same wrong version and still passes
+          under it,
+      K3: it has no source requirement,
+    and a fourth ticket K4, like K1, whose drive is resumed after its coder
+    and review have already signed off,
+  When each ticket's code is green and it reaches the step before commit,
+  Then the route makes the wrong-version runs through the one shared runner,
+      with the same inputs the fast lane passes,
+    And K1 goes on to commit,
+    And K2 does not reach commit: the drive stops that ticket with the
+      runner's report naming the test and the surviving wrong version,
+    And K3 records "wrong-version runs not applicable: no source requirement"
+      and goes on, never recorded as verified,
+    And K4's resumed drive makes the runs again before commit rather than
+      relying on any earlier sign-off,
+    And /build-feature and the single-ticket route reach the same verdict for
+      each ticket, and it matches the fast lane's for the same tests and
+      outcomes.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Per-ticket phase driver (driveTicketPhases). Its header declares build-ticket.js as a TWIN that must change with it."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: describes
+    status: exists
+    relevance: "The single-ticket twin."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Precedent wiring of a shared gate (verify_red_baseline) into both twins: shared command constructor, depth-1 executor agent, resume safety, K3 not-applicable outcome."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner's CLI and its machine-readable stop/continue verdict."
+it_requirements:
+- 'Placement: immediately before the commit dispatch. This is after every pre-commit phase, so no later
+  step can change the code the runs judged. It runs on every drive that reaches that point, whatever earlier
+  sign-offs say. It is not a phase in the agents map, so there is no sign-off to trust.'
+- 'Sequence: (1) dispatch the preparer (TQ-500g-1-iv), passing the ids, the base ref and the manifest
+  path; (2) dispatch the shared runner CLI (TQ-500g-1-i) with the same ids, test root, AC store root,
+  base ref and manifest path as every other route. A preparer that fails or returns nothing is not a halt
+  by itself: the runner reports the missing entries as unfinished.'
+- 'Dispatch the command through an executor agent registered with permits_shell: true in config/agent_registry.json
+  (for example command-step-runner). Never use status-checker: it is registered read-only and has refused
+  shell steps (KI-BO-20260927, KI-BO-20260901-1620).'
+- Fail closed on the reply. A null, refused or unparseable reply, or one without a boolean gate_passed,
+  halts the work as blocked and never counts as a pass. The commit dispatch is unreachable on any path
+  that has not read gate_passed true from the runner's own JSON.
+- 'gate_passed false: halt before commit, carrying the runner''s JSON verbatim (survivors or unfinished)
+  in the halt payload. applicable false: record the runner''s outcome string and continue. Never record
+  ''verified'' for it.'
+- 'Resume: on a resumed drive, call the runner''s recovery step (TQ-500g-1-iii) before any other dispatch
+  that touches the worktree.'
+- Once TQ-500g-3-i and -3-ii exist, the same single before-commit CLI call also carries them. Do not add
+  a second dispatch for them.
+- 'Edit only templates/workflows-js/ sources. Deployed mirrors regenerate through build.py. Respect the
+  E2 leaf invariant and ADR-006: no workflow() call inside the workflow.'
+- Change build-feature.js (driveTicketPhases) and its declared twin build-ticket.js together, as the TWIN
+  rule in the build-feature.js header requires. Place the call in the per-ticket loop right before the
+  commit phase is dispatched, the mirror image of the TQ-500f-3-ii red-baseline block before the first
+  coder.
+- 'K4: the call runs whenever the commit phase is about to be dispatched, including on resume when every
+  earlier phase is already signed_off. The resume recovery call sits at the head of the per-ticket driver.'
+- 'K3 (no source_ac): call the runner with no ids, so the runner itself returns the not-applicable outcome.
+  Record it on the ticket outcome (as red_baseline_gate is recorded) and continue.'
+- 'JS growth: build-feature.js (2816 counted lines) and build-ticket.js (1525) are both over the 1000-line
+  .js ratchet. Expected growth is about 35 to 50 lines each. This needs an offsetting shrink or a recorded
+  ratchet decision by the user before commit.'
+test_spec:
+- name: test_build_feature_runs_runner_right_before_commit_dispatch
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: templates/workflows-js/build-feature.js under unit_tests/_workflow_engine_harness.py
+  description: Drives build-feature.js under the workflow-engine harness. For K1, the runner execution
+    is recorded after the last pre-commit phase and before the commit agent, with the ticket's source_ac,
+    worktree, AC root and base ref.
+  must_catch:
+  - runner placed after the commit phase
+- name: test_k2_survivor_never_reaches_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'K2: gate_passed false with a survivor. No commit dispatch, and a blocked result naming
+    the test and the wrong version.'
+  must_catch:
+  - runner verdict ignored
+  - a refused reply read as a pass
+- name: test_k4_resumed_ticket_reruns_runner_before_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: 'K4: every phase before commit is already signed_off. The resumed drive calls recovery,
+    then the runner, and only then commit.'
+  must_catch:
+  - resumed drive trusts earlier sign-offs and skips the runs
+- name: test_k3_records_not_applicable_never_verified
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'K3 (no source_ac): the outcome ''wrong-version runs not applicable: no source requirement''
+    is recorded, commit is dispatched, and nothing says verified.'
+  must_catch:
+  - K3 recorded as verified
+  - K3 halted
+- name: test_build_ticket_twin_gates_commit_identically
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: deployed
+  description: build-ticket.js, driven with the same K1, K2 and K4 responses, gives the same dispatch
+    decisions as build-feature.js. So the twin cannot drift.
+  must_catch:
+  - build-ticket.js twin not updated
+test_rationale: 'Same method as TQ-500f-3-ii, the wiring precedent: drive both twins under the harness
+  and assert on the recorded dispatches. K4 is the case a phase-map-based wiring would miss. Verdict identity
+  across routes is the TQ-500g-1 seam test, which executes the recorded commands for real.'
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  WIRING ONLY — the rule lives in TQ-500g-1-i. Mirrors TQ-500f-3-ii for the
+  later gate: /build-feature does not dispatch ticket-supervisor; its per-ticket
+  driver is inlined JS and twinned in build-ticket.js, so this is a workflow-JS
+  change. Respect the E2 leaf invariant and ADR-006 (no workflow() call from
+  inside the workflow; run the runner through a depth-1 executor agent, as
+  fast-lane-ship.js does).
+
+  K4 (RESUME) IS THE NON-OBVIOUS CASE. A resumed ticket whose later phases are
+  already signed off would otherwise skip straight to commit. The runs guard the
+  code on disk now, not the code as it was when someone last signed off.
+
+  PLACEMENT: after the coder's code is green and before commit. The exact phase
+  position relative to review is IT-PO's call; never after commit.
+
+  TESTABILITY: drive both twins under the workflow-engine harness with the K1
+  to K4 responses and assert on the recorded dispatches; one seam test executes
+  the recorded runner commands from this route and from the fast lane against
+  the same fixture repo and asserts identical verdicts.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  PLACEMENT DECIDED: right before the commit dispatch, after review. The BA
+  left this to IT-PO.
+  Lane: fast lane (python-coder) after -1-i..-iv. Can share a build with
+  -1-v, but each AC keeps its own tests. The JS ratchet decision is open.

@@ -1,0 +1,95 @@
+id: DK-400c-3-i
+title: "Fewer than two parts left after setting aside unquoted ones also means one question"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given the decision-records goal offered for a split with trigger bundled_accepted,
+  When the host proposes three parts and two of them quote words the goal does not contain,
+  Then only one part would remain, so no split gate is shown and no part is created,
+  And the goal goes ahead as one decision from the precedent step,
+  And the two set-aside proposals are not offered for approval.
+depends_on:
+  - DK-400c-3
+  - DK-400c-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+    relevance: "Flow v5 node(s) split-dropped, split-too-few-parts, with their acceptance scenarios."
+  - path: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md
+    relationship: describes
+    status: exists
+    relevance: Jev template rules, host operations and their conversion, capability gaps, the precedent node.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400c-2
+  contract: "The quote check, applied before the part count is taken."
+it_requirements:
+  - 'The count is taken after the quote check: three proposals with two set aside leave one part, so no gate.'
+  - The two set-aside proposals appear only in the run's limitations and events, never as offered parts.
+  - 'Tests enable splitting explicitly: split.enabled true through a config override (false only where a test compares
+    with the off switch). None relies on the shipped default, which stays false until E3 merges (dec-9925ebf1895222f4,
+    see DK-400a-1). A test asserting that no split starts must run with splitting on, or it passes for the wrong
+    reason.'
+change_target: code
+risk_surface: contract_boundary
+test_required: true
+test_spec:
+  - name: test_two_of_three_set_aside_means_one_question
+    target_dir: tests/kernel/split/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: For the bundled_accepted decision-records goal, a proposal of three with two unquoted goes ahead
+      as one decision from the precedent step with no gate and no part.
+test_rationale: Pins the ordering of the two conversion steps through the real conversion path.
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: it-po-build-slice-amendment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
+      ships false in E1 and E2.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Confirms the DK-400c note "fewer than 2 parts left AFTER dropping: the same rule as fewer
+  than 2 should apply". The count is taken after the quote check.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: split-dropped
+    node_kind: branch
+    flow_kind: data
+    screen: decision-split-approve
+    mock_data: leafcutter/decisions
+    entities:
+      - Decomposition
+    source: real
+    asof: '2026-10-05'
+  - flow: leafcutter/decision-forming
+    node: split-too-few-parts
+    node_kind: branch
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-05'

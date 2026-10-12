@@ -1,0 +1,271 @@
+id: BO-2400f-5-ii
+components:
+  - build_orchestration
+title: "A lane step that names an agent not chartered for it fails a structural check before any run can reach it"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane declares, for every command-running step, the agent it asks and
+    the step's kind — one of reads_store, changes_store, changes_repository or publishes,
+  And the agent registry declares, for each agent, whether it may run
+    repository-changing commands and, in its optional step-kinds field (BO-2400a-1-iii),
+    which kinds of step it may run,
+  When the structural check runs over the lane,
+  Then it fails when any step names an agent whose registry entry declares that it may
+    not run commands, and the failure names the step, the agent, and the registry
+    declaration that forbids it,
+  And it fails when a command step of kind K names an agent whose step-kinds field does
+    not list K, and the failure names the step, the agent, K, and the kinds that agent
+    does declare,
+  And an agent whose registry entry has no step-kinds field is read as covering no kind,
+    so every command step naming it fails on this clause,
+  And it fails, reported as undeclared rather than as forbidden, when a step that changes
+    the store or the repository names an agent whose registry entry says nothing either
+    way about running commands — an undeclared permission is not treated as granted,
+  And it passes when every step names an agent whose registry entry declares
+    permits_shell true and lists that step's kind.
+
+  Given the lane as it stood on 2026-09-25, whose resolve and producibility steps name
+    status-checker, which declares permits_shell false,
+  When the check runs over that lane,
+  Then it fails and names both steps.
+
+  Given the lane as it stood on 2026-09-27, whose release step names python-coder, whose
+    registry entry says nothing about running commands,
+  When the check runs over that lane,
+  Then it fails and reports the release step as undeclared.
+
+  Given a lane whose every command-running step names the command-step-runner
+    (BO-2400a-1-i), whose registry entry declares permits_shell true and lists all four
+    step kinds,
+  When the check runs,
+  Then it passes,
+  And if that registry entry is changed to declare permits_shell false, or to drop the
+    declaration, the same lane fails on every command-running step — the pass comes from
+    the registry entry, not from the agent's name,
+  And if instead publishes is removed from that entry's step kinds, the same lane fails
+    on its publishes-kind steps (push and pull request) and on no other step.
+
+  Given one further command-running step is added to the lane naming status-checker,
+  When the check runs,
+  Then it fails naming the added step, without the check itself having been edited to
+    list that step — the check covers every step the lane dispatches, not a list of the
+    steps known when it was written.
+
+  Given the check's verdict about an agent,
+  When that agent's registry entry changes,
+  Then the verdict follows the registry: the check reads the registry each time it runs
+    and holds no copy of which agents are permitted.
+depends_on: [BO-2400f-5, BO-2400f-5-i, BO-2400a-1-i, BO-2400a-1-iii]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The lane the check walks. Every agent() dispatch that runs a command is in scope."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "Source of each agent's role and permits_shell. The check must read it at run time."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Suggested fix step 2 is exactly this check: 'Without this, step 1 is another field nobody reads.' The KI is recorded as 'open — no AC'; this record is that AC."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+    relevance: "classifyWorkspaceSetupPermission() is the one existing reader that tells undeclared from declared-none; reuse its reading rather than invent a second one."
+  - path: config/agent_registry.schema.json
+    relationship: describes
+    status: exists
+    relevance: "Normative three-state reading of permits_shell (true / false / absent; false or absent is read-only)."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-constraints.md
+    relationship: describes
+    status: exists
+    relevance: "Every side effect in a workflow is an agent() dispatch, which is why the check enumerates dispatches."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    The check reads config/agent_registry.json each time it runs and holds no agent id.
+    No agent id literal (command-step-runner, status-checker or any other) may appear in the
+    check's implementation. Agent ids appear only in test fixtures.
+  - >-
+    permits_shell is read as three states, declared-true, declared-false and undeclared,
+    the same reading classifyWorkspaceSetupPermission() in plan-feature.js uses.
+    Undeclared is never treated as granted. Forbidden and undeclared are reported
+    differently.
+  - >-
+    The check enumerates every agent() dispatch the lane makes, not a list of known
+    steps. A dispatch the lane does not classify as a command step or a specialist phase
+    fails as unclassified, so a new dispatch cannot escape the check by being left out
+    of the declaration.
+  - >-
+    The permits_shell rules apply only to dispatches the lane classifies as command
+    steps. Specialist phases (test-writer, coder, pr-reviewer) are out of scope because
+    of that classification, not because of their agent ids.
+  - >-
+    Role coverage is read from the agent's step_kinds registry field. The field and its
+    schema come from BO-2400a-1-iii, which is in depends_on. The command-step-runner's
+    entry comes from BO-2400a-1-i. A command step of kind K fails when its agent's
+    step_kinds does not list K. An absent or empty step_kinds covers no kind. The kind
+    vocabulary comes from config/agent_registry.schema.json, not from a list inside the
+    check. Free-text role prose and agent ids are never used.
+  - >-
+    The check gets each agent's kind set from BO-2400a-1-iii's shared kind-set reader,
+    which returns an empty set for an absent step_kinds and for []. The check does not
+    parse or interpret the raw step_kinds field itself, so the reading of absent and
+    empty cannot drift between the registry gate and this check.
+  - >-
+    Each failure line names the step, the agent and the governing registry declaration
+    or role, plus what the step needed. Output order is deterministic, and the check
+    exits non-zero on any failure.
+  - >-
+    The lane path and registry path are inputs, so fixture lanes and registries can be
+    checked. The default target is the template lane templates/workflows-js/fast-lane-ship.js.
+  - >-
+    The check runs in the unit suite over the shipped lane and registry on every run, so
+    a regression fails CI and the finalize gate before any run can reach it. A pre-commit
+    hook registration is a separate follow-up and not required here.
+  - >-
+    The check needs no model, network or git state and finishes in under 2 seconds on
+    the shipped lane.
+test_required: true
+test_spec:
+  - name: test_check_fails_on_2026_09_25_lane_naming_both_status_checker_steps
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: failure
+    description: "A fixture lane with resolve and producibility on status-checker (permits_shell false) fails, and the failure names both steps, status-checker and the permits_shell false declaration."
+  - name: test_check_reports_undeclared_permits_shell_as_undeclared_not_forbidden
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A fixture lane whose release step names python-coder (permits_shell absent) fails with the release step reported as undeclared, a verdict distinct from the forbidden one."
+    must_catch:
+      - "undeclared read as permitted (the KI-BO-020 predicate)"
+      - "undeclared reported with the same wording as forbidden"
+  - name: test_check_fails_step_whose_kind_is_missing_from_agent_step_kinds
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "In a fixture where the named agent has permits_shell true but step_kinds lacks the step's kind, the check fails naming the step, the agent, its declared step_kinds and the missing kind."
+  - name: test_removing_publishes_fails_only_the_push_and_pr_steps
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "In the passing fixture lane, dropping publishes from the fixture command-step-runner's step_kinds makes the check fail on exactly the push and pull-request steps. Every reads_store, changes_store and changes_repository step still passes."
+    must_catch:
+      - "a check that treats any missing kind as failing the whole agent on every step"
+      - "a check that ignores step_kinds and passes on permits_shell alone"
+  - name: test_absent_step_kinds_covers_no_step
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A fixture agent with permits_shell true and no step_kinds field fails on every command step it is named for, reported as not covering the step's kind."
+    must_catch:
+      - "absent step_kinds read as covering every kind"
+  - name: test_check_passes_when_every_command_step_names_a_permitted_chartered_agent
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A fixture lane whose every command step names a fixture command-step-runner with permits_shell true and step_kinds listing all four kinds passes."
+    must_catch:
+      - "a check that fails every input"
+  - name: test_check_verdict_follows_the_registry_not_the_agent_name
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The passing lane from the previous test fails on every command step when the fixture registry entry is changed to permits_shell false, and again when the field is removed."
+    must_catch:
+      - "an allow-list containing command-step-runner"
+  - name: test_check_catches_an_added_step_without_being_edited
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A fixture lane with one extra command-step dispatch naming status-checker fails naming that added step. A dispatch left unclassified also fails."
+    must_catch:
+      - "a check that iterates a hard-coded list of resolve, producibility, claim, release"
+  - name: test_check_source_names_no_agent_id
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "No agent id from config/agent_registry.json appears as a literal in the check's implementation source."
+  - name: test_shipped_lane_passes_the_check_against_the_shipped_registry
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The check run over templates/workflows-js/fast-lane-ship.js and config/agent_registry.json passes. It fails today because resolve and producibility name status-checker."
+test_rationale: |
+  The check is only worth something if it cannot pass by construction, so its tests come in
+  opposed pairs. Fail on the 2026-09-25 lane and pass on a chartered lane: a check that
+  refuses everything is the guard's off switch. Pass on the command-step-runner and fail when that
+  same entry loses permits_shell: this is what separates reading the registry from an
+  allow-list by name. The source-literal test backs that up mechanically. The added-step
+  fixture separates enumerating the lane's dispatches from iterating the steps known when
+  the check was written.
+
+  Fixture lanes and registries keep the verdict tests deterministic and independent of the
+  current lane. The single real-artifact test is the one that gates the shipped lane. It is
+  also the test that fails against today's code.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-5-i
+  contract: "A lane in which every agent() dispatch is statically classified as a command step {step, kind in reads_store|changes_store|changes_repository|publishes, agent} or a specialist phase, with the command-step agent declared once; plus, from BO-2400a-1-iii, the registry field step_kinds and its schema (optional unique array over that vocabulary; absent or [] = no kinds) and the shared kind-set reader this check must use; and, from BO-2400a-1-i, the command-step-runner registry entry that declares permits_shell: true and lists all four step_kinds."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The IT PO chooses the mechanism (a unit test over the lane under the workflow harness, a
+  pre-commit hook, or both). The criterion only requires that it fails on the named inputs
+  and passes on a lane whose agents are chartered.
+
+  The paired pass case matters. A check that fails on everything also fails on the
+  2026-09-25 lane (see memory note on guard liveness: "refuses everything is the regime's
+  off switch"). The pass clause stops that from counting as success.
+
+  The added-step scenario is the clause that separates a real check from a list. A check
+  that hard-codes "resolve, producibility, claim, release" passes the second scenario and
+  fails the third.
+
+  THE UNDECLARED CLAUSE WAS CONFIRMED BY THE USER 2026-09-27. The registry schema says
+  "false or absent means read-only", and that reading stands. The release step on
+  python-coder (permits_shell absent) fails this check until BO-2400f-5-i moves it to the
+  command-step-runner (BO-2400a-1-i).
+
+  ROLE COVERAGE MADE CONCRETE, USER DECISION 2026-09-27 (round 3): "role covers the step" now
+  means "the agent's registry step-kinds field lists the step's kind". The field and its
+  schema are delivered by BO-2400a-1-iii. A missing field covers nothing, mirroring the
+  undeclared reading of permits_shell. The remove-publishes clause proves the check reads the
+  kinds per step and not as an all-or-nothing flag.
+
+  THE COMMAND-STEP-RUNNER IS NAMED ONLY IN A TEST INPUT, NEVER IN THE CHECK. The check must not carry
+  an allow-list containing "command-step-runner" or any other agent id. The registry-change
+  clause is what proves this: a check that allows the command-step-runner by name still passes after
+  its permits_shell is removed, and fails that clause.

@@ -1,0 +1,87 @@
+id: KM-400b-5
+title: "Rebuild rollback and cleanup preserve only owned history"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: done
+parent: KM-400b
+criteria: |
+  Given a source revision, mapping version and graph evidence baseline
+  When an empty database is rebuilt from that revision
+  Then graph results have equivalent canonical identities, relationships and source provenance to the baseline
+  When a retained generation is selected for rollback or an expired generation is cleaned up
+  Then only the selected repository's projector-owned generation is affected
+  And foreign repository data is unchanged
+  And continuations for removed generations receive an explicit expiration result
+depends_on: [KM-400b]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-KGS-100-knowledge-graph-surfaces/KM-KGS-100a-3.yaml
+    relationship: context
+    status: exists
+    relevance: Preserve approved canonical field relations and path-keyed targets with separate anchors; verify shipped behavior during Stage 0.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest coverage and method for every count; unknown totals remain unknown.
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  agent: python-coder
+  contract: KM-400e-5 consumes the behavior and attributable outputs specified by
+    this AC.
+expects_from:
+  ac_id: KM-400a-1
+  contract: Approved source mapping and current kernel compatibility from Stage 0;
+    preserve canonical identities and declared ownership.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge_live/neo4j_checks.py::test_live_idempotence_scope_metadata_and_rebuild
+- tests/knowledge_live/neo4j_checks.py::test_live_retention_starts_when_generation_is_retired
+implemented_by:
+- tickets/00_inbox/TICKET-20261001-KM-400b-5.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  User-authorized Knowledge Retrieval guide stages 0-4. Approval records delegated
+  behavioral authoring, not implementation completion. Stage 0 source alignment
+  gates mappings and shared contracts. IT PO adds technical constraints and test_spec.
+
+it_requirements:
+- Rollback/cleanup target only projector-owned repository generations; retention protects unexpired continuations
+  and cleanup refuses broad database deletion.
+- Follow ADR-062; preserve canonical sources and current kernel contracts. Report unexecuted real-server
+  or real-model validation as not run, never passing.
+test_required: true
+test_spec:
+- name: test_km400_b_5_behavior
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Rebuild an empty real database, compare canonical graph evidence, rollback a retained generation,
+    clean an expired one and prove foreign sentinel data and retained sessions survive.
+  covers:
+  - KM-400b-5
+  requires_db: true
+- name: test_km400_b_5_public_reachability
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Exercise immutable source or real database artifacts through the intended projection/reader
+    caller with real-format inputs; prove the result is observable outside the internal helper and optional
+    prerequisites are honestly reported.
+  covers:
+  - KM-400b-5
+test_rationale: Behavioral proof uses the public caller and source-format fixture so internal helper tests
+  cannot mask missing wiring. Live server gates remain distinct from deterministic fake-provider tests.

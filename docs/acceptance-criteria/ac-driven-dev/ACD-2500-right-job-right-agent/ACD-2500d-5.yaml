@@ -72,8 +72,9 @@ it_requirements:
     card match its frontmatter (profile honesty, ACD-2500e-1-i).
   - 'Structural pattern to follow: templates/agents/test-writer.md (Sonnet, reads code, internal).'
   - Model tier Sonnet (ADR-033 §2.1); tools Bash, Read, Write, Edit (tier floor), no Agent, no Grep/Glob/MCP
-    search (§2.6). The optional Opus sub-call for must_catch is deferred until must_catch exists; when
-    added it takes the §2.3 Sonnet-gatekeeper route.
+    search (§2.6). must_catch now exists (merged PR 911, TQ-500f-2) and this agent is
+    its only writer; the optional Opus sub-call for must_catch was DECLINED by the user on 2026-09-28
+    (Sonnet-only; revisit on evidence Sonnet misses mutants). If added later, it takes the §2.3 Sonnet-gatekeeper route.
   - 'Visibility internal: spawned only by the plan-feature workflow and the single-record redesign path
     (ACD-2500b-3); never user-invoked.'
   - 'Returns one machine-parseable JSON value: Agent id ''test-designer'' (working name, user to
@@ -125,7 +126,11 @@ test_spec:
   angle: seam
 origin_agent: it-po
 created: '2026-09-25'
-amended_by: []
+amended_by:
+- reason: "reconcile with main: must_catch exists (PR 911, TQ-500f-2). The 'Opus sub-call deferred until must_catch exists' constraint now records that the condition is met, that this agent is must_catch's only writer, and that the Opus sub-call is an open user decision (Sonnet-only until decided). Criteria unchanged."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
 - ACD-2500d-5-i

@@ -1,0 +1,178 @@
+{
+  "kind": "SourceFile",
+  "status": "reader_implemented_and_verified",
+  "review": "reports/native-fields/review-SourceFile.json",
+  "module": "knowledge/native_types/source_file.py",
+  "test_file": "tests/knowledge/test_native_source_file.py",
+  "contract": "from_entity(root: pathlib.Path, entity: Entity) -> NativeRecord",
+  "implemented": [
+    "Complete Python-mode Entity envelope and SourceReference fields copied without renaming identity, source path or locator.",
+    "Nested unknown properties, authored null/empty/false values and absent flags retain their original distinctions and round-trip through native property encoding.",
+    "No source I/O, current existence check, hash recomputation, enumeration, inferred component, or derived status.",
+    "Pinned missing/present observation and hash retained even when current filesystem disagrees.",
+    "Exactly _native_projection, _native_identity and _native_source_path excluded at the top level of copied properties; all other authored names survive.",
+    "Strict reference validation rejects malformed paths/revisions and non-SourceFile kinds, including assignment bypasses.",
+    "Deep-copy isolation protects both source entity and record from subsequent nested mutation."
+  ],
+  "verification": {
+    "red": {
+      "tests_failed": 17,
+      "reason": "ModuleNotFoundError before reader creation",
+      "exit_code": 1,
+      "receipt": "reports/native-fields/source-file-red.xml"
+    },
+    "green": {
+      "tests_passed": 17,
+      "tests_failed": 0,
+      "exit_code": 0,
+      "receipt": "reports/native-fields/source-file-green.xml"
+    },
+    "command": "AC_ENFORCE_STRICT=1 python -m pytest tests/knowledge/test_native_source_file.py -q -p no:cacheprovider --tb=short",
+    "lint": "ruff format and ruff check --no-cache passed for both owned Python files",
+    "mutation_method": "Process-local replacements of the actual imported from_entity function; each test used a fresh temporary fixture. Every injected fault was caught; original function restored after each mutation.",
+    "mutation_proofs": [
+      {
+        "test": "test_source_file_complete_contract_and_nested_future_fields",
+        "input": [],
+        "alteration": "Drop unknown nested field",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_never_refreshes_pinned_existence_or_hash",
+        "input": [
+          true,
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        ],
+        "alteration": "Inspect current filesystem while enriching a pinned reference",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_never_refreshes_pinned_existence_or_hash",
+        "input": [
+          false,
+          "older-hash"
+        ],
+        "alteration": "Inspect current filesystem while enriching a pinned reference",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_never_refreshes_pinned_existence_or_hash",
+        "input": [
+          true,
+          ""
+        ],
+        "alteration": "Inspect current filesystem while enriching a pinned reference",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_absence_empty_and_false_are_distinct",
+        "input": [],
+        "alteration": "Invent absent missing flag",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_repeat_enrichment_removes_only_exact_internal_keys",
+        "input": [],
+        "alteration": "Strip unrelated future _native_ field",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_repeat_enrichment_removes_only_exact_internal_keys",
+        "input": [],
+        "alteration": "Retain injected old native projection recursively",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_nested_values_are_independent_copies",
+        "input": [],
+        "alteration": "Share mutable original properties in output",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_other_entity_kinds",
+        "input": [
+          "Test"
+        ],
+        "alteration": "Swallow wrong-kind rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_other_entity_kinds",
+        "input": [
+          "Component"
+        ],
+        "alteration": "Swallow wrong-kind rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_other_entity_kinds",
+        "input": [
+          "Document"
+        ],
+        "alteration": "Swallow wrong-kind rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_other_entity_kinds",
+        "input": [
+          "AcceptanceCriterion"
+        ],
+        "alteration": "Swallow wrong-kind rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_revalidates_invalid_source_path",
+        "input": [
+          "../outside.py"
+        ],
+        "alteration": "Swallow invalid-path rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_revalidates_invalid_source_path",
+        "input": [
+          "src/../../outside.py"
+        ],
+        "alteration": "Swallow invalid-path rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_revalidates_invalid_source_path",
+        "input": [
+          "/outside.py"
+        ],
+        "alteration": "Swallow invalid-path rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_revalidates_invalid_source_path",
+        "input": [
+          "C:/outside.py"
+        ],
+        "alteration": "Swallow invalid-path rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_revalidates_invalid_source_path",
+        "input": [
+          "src\\file.py"
+        ],
+        "alteration": "Swallow invalid-path rejection",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_non_entity_and_invalid_reference",
+        "input": [],
+        "alteration": "Accept dictionary instead of required Entity",
+        "outcome": "caught"
+      },
+      {
+        "test": "test_source_file_rejects_non_entity_and_invalid_reference",
+        "input": [],
+        "alteration": "Swallow malformed immutable SHA rejection",
+        "outcome": "caught"
+      }
+    ]
+  },
+  "integration_boundary": "The coordinator dispatches this reader for existing supplied SourceFile nodes only and owns Neo4j publication. No source inventory count or live Aura deployment is claimed."
+}

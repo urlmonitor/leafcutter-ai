@@ -1,0 +1,167 @@
+id: BO-2400f-10-iii
+components:
+  - build_orchestration
+title: "A declined step leaves nothing claimed: before the claim the store is untouched, after it the claim is released, and a retry is not blocked"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a fast-lane run whose agent declines a step before the claim — the worktree
+    location probe, resolve, or producibility,
+  When the run ends,
+  Then every acceptance criterion in the store carries the work_status it carried before
+    the run, none reads in_progress because of this run, and no release step is asked
+    for.
+
+  Given a fast-lane run that has claimed its connected set,
+  And the agent asked to perform a later step declines it — context bundle, test-writer,
+    coder, review, changelog, commit, push or pull request — including a step whose
+    decline returns no readable result at all,
+  When the run ends,
+  Then the decline is handled as a halt after the claim, and every acceptance criterion
+    the run claimed and did not carry through to done reads todo in the store the run
+    claimed in (BO-2400f-10-i),
+  And the release is asked of the command-step-runner (BO-2400f-5-i, BO-2400a-1-i),
+    whose registry entry declares permits_shell true,
+  And this holds for a step added to the lane after this record was written, as well as
+    for the steps listed above.
+
+  Given a run of five claimed acceptance criteria whose context-bundle step was declined,
+  When the operator starts a new run for the same acceptance criterion from an unchanged
+    store,
+  Then the new run is not refused or narrowed on the ground that those five are already
+    claimed (BO-2400f-8), because none of them is still in_progress from the first run.
+depends_on: [BO-2400f-10, BO-2400f-10-i, BO-2400f-5-iii, BO-2400f-5-i]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+    relevance: "Each step's decline branch must reach the release path when the run holds a claim, and must not reach it when it does not."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Lists the halting paths known on 2026-08-25, all of them gate or agent failures. This record adds a declined step as a halting cause, on every step, before and after the claim."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-12-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The same rule for a producibility refusal: nothing claimed, nothing released. This record applies it to a declined step."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-1620.md
+    relationship: describes
+    status: exists
+    relevance: "Release was moved to python-coder (permits_shell absent) by KI-BO-020; this record's release routing ends that."
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    Whether a halt releases is decided from the run's own record that a claim succeeded,
+    in the one halt path every halt passes through, including declined steps and any step
+    added later. It is never decided per step.
+  - >-
+    A decline before the claim (worktree probe, resolve, producibility) performs no store
+    write and dispatches no release. Releasing on a run that never claimed would return
+    ACs a concurrent run holds to todo (BO-2400f-8, same rule as BO-2400f-12-i).
+  - >-
+    A decline after the claim, including an empty or unreadable reply, releases every
+    claimed AC that did not reach done. The release is dispatched to the lane's
+    command-step agent (command-step-runner via BO-2400f-5-i), not to python-coder.
+  - >-
+    Release outcome reporting, including partial release, follows BO-2400f-10-ii
+    unchanged.
+  - >-
+    Store assertions are made against a real on-disk fixture store before and after the
+    run, not against the run's own report.
+  - >-
+    Edit the template lane and regenerate the deployed copy through build.py. Template
+    and deployed copies stay in parity.
+test_required: true
+test_spec:
+  - name: test_pre_claim_decline_dispatches_no_release
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "Parametrised over the worktree probe, resolve and producibility, a declining reply halts the run and the harness records neither a claim nor a release dispatch."
+  - name: test_pre_claim_decline_leaves_store_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "An on-disk fixture store is snapshotted, and after a run declined at resolve every AC file is byte-identical and none reads in_progress."
+  - name: test_post_claim_decline_dispatches_release_to_the_command_step_runner
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "For every dispatch the harness records after a successful claim (discovered from the run, not a hand list), a declining reply at that dispatch halts the run and the release is dispatched with agentType command-step-runner."
+    must_catch:
+      - "release still dispatched to python-coder (today's state)"
+      - "a declined context-bundle step halts without any release dispatch"
+      - "only the steps listed in 2026-09 release; a later-added step does not"
+  - name: test_post_claim_decline_with_empty_reply_still_releases
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "An empty reply at the context-bundle step after the claim is handled as a decline and triggers the release dispatch."
+  - name: test_declined_context_bundle_returns_five_claimed_acs_to_todo_on_disk
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Against an on-disk fixture store with a five-AC connected set, a run whose context-bundle step is declined leaves all five reading todo in the store it claimed in."
+  - name: test_retry_after_declined_context_bundle_is_not_refused_as_already_claimed
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "After the declined run above, a new claim for the same AC against the same on-disk store is neither refused nor narrowed on the ground that members are already claimed."
+test_rationale: |
+  The claim that matters here is about the store, not the run's report. The incident run
+  reported a release and left five ACs in_progress. So the state assertions (byte-identical
+  before the claim, todo after the claim, retry not blocked) run against a real on-disk
+  fixture store, as in BO-2400f-12-i. The dispatch assertions (release asked or not, and of
+  whom) come from runs executed under the workflow engine harness.
+
+  The pre-claim tests guard the opposite mistake, the one BO-2400f-12-i names: copying the
+  post-claim release into every halt branch. The per-dispatch release test discovers the
+  post-claim dispatches from the run itself, so "a step added later" is covered without a
+  hand-maintained list. It fails against today's code because the release goes to
+  python-coder.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-5-iii
+  contract: "A terminal halt {halt_kind: 'declined_step', step: string, agent: string, reason: string, target: object | null} produced through the lane's single halt path, so this record can release iff the run recorded a successful claim; the release agent is the command-step agent declared by BO-2400f-5-i."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Observed 2026-09-25: the context-bundle step was declined by python-coder as misrouted. The
+  release then only partly ran, and five acceptance criteria were left in_progress. The retry
+  was blocked by those claims.
+
+  OVERLAP. BO-2400f-10-i already requires that every halting path after the claim releases, and
+  BO-2400f-10-ii requires that an unreleased claim is named in the halt. BO-2400f-12-i covers the
+  pre-claim case for a producibility refusal only. What is new here: (1) a declined step is a
+  halting cause, on every step, and a decline with no readable reply counts; (2) the pre-claim
+  arm for declines at probe, resolve and producibility; (3) the retry clause, which is the
+  operator-visible consequence the incident produced. A partial release is reported under
+  BO-2400f-10-ii and is not restated here.
+
+  The retry clause reads the store, not the run's report. A run that says it released and left
+  five records in_progress fails this record.

@@ -1,0 +1,82 @@
+[
+  {
+    "iteration": 1,
+    "wall_seconds": 1.780834,
+    "cpu_seconds": 1.78125,
+    "phase_ms": {
+      "load": 97.946,
+      "freshness": 251.774,
+      "projection": 13.448,
+      "trie": 61.687,
+      "scan": 0.214
+    },
+    "gc_ms": 42.922,
+    "gc_cycles": 117,
+    "other_ms": 1355.765,
+    "status": "recognized",
+    "scan_complete": true,
+    "cards": 4,
+    "lookups": 4,
+    "limitations": []
+  },
+  {
+    "iteration": 2,
+    "wall_seconds": 1.521358,
+    "cpu_seconds": 1.53125,
+    "phase_ms": {
+      "load": 64.355,
+      "freshness": 259.045,
+      "projection": 14.245,
+      "trie": 56.405,
+      "scan": 0.117
+    },
+    "gc_ms": 25.277,
+    "gc_cycles": 117,
+    "other_ms": 1127.189,
+    "status": "recognized",
+    "scan_complete": true,
+    "cards": 4,
+    "lookups": 4,
+    "limitations": []
+  },
+  {
+    "iteration": 3,
+    "wall_seconds": 1.69637,
+    "cpu_seconds": 1.671875,
+    "phase_ms": {
+      "load": 67.989,
+      "freshness": 257.178,
+      "projection": 16.362,
+      "trie": 75.787,
+      "scan": 0.117
+    },
+    "gc_ms": 40.651,
+    "gc_cycles": 117,
+    "other_ms": 1278.937,
+    "status": "recognized",
+    "scan_complete": true,
+    "cards": 4,
+    "lookups": 4,
+    "limitations": []
+  },
+  {
+    "iteration": 4,
+    "wall_seconds": 1.72172,
+    "cpu_seconds": 1.71875,
+    "phase_ms": {
+      "load": 68.687,
+      "freshness": 270.146,
+      "projection": 14.473,
+      "trie": 78.212,
+      "scan": 0.186
+    },
+    "gc_ms": 35.744,
+    "gc_cycles": 117,
+    "other_ms": 1290.015,
+    "status": "recognized",
+    "scan_complete": true,
+    "cards": 4,
+    "lookups": 4,
+    "limitations": []
+  }
+]

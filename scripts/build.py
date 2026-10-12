@@ -112,6 +112,7 @@ from build_referential_integrity import (
 from build_config_scaffolds import build_config_scaffolds
 from build_ac_store_scaffold import build_ac_store_scaffold
 from build_architecture_scaffold import build_architecture_namespace_scaffolds
+from build_phases_doc_index import build_doc_index  # noqa: F401 -- phase table entry (BP-1500a-1)
 from build_colors import (
     BOLD,
     RESET,
@@ -234,7 +235,7 @@ def write_file(target: Path, content: str, dry_run: bool, force: bool) -> bool:
             pass  # Binary or unreadable file — fall through to write.
         announce_if_local_change_replaced(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
     return True
 
 
@@ -377,12 +378,6 @@ def _validate_all(config: dict, package_root: Path, validate_only: bool, dry_run
 
 # _manifest_ac_store_scripts moved to build_deploy_manifest_helpers.py
 # (BP-1500g-1 headroom pass); imported above, unchanged in behaviour.
-
-
-# _manifest_commit_guardian_scripts moved to build_deploy_manifest_helpers.py.
-
-
-# _manifest_feedback_scripts moved to build_deploy_manifest_helpers.py.
 
 
 # _manifest_build_orchestration_scripts moved to build_deploy_manifest_helpers.py.
@@ -711,28 +706,19 @@ def _guard_source_paths_workflow_tools(package_root: Path) -> set[str]:
 def _guard_source_paths_knowledge(package_root: Path) -> set[str]:
     """Return SOURCE paths for knowledge scripts (BP-100n-4 split).
 
-    Source namespace equals deploy namespace. Must stay in lockstep with
-    _manifest_knowledge_scripts (AC INF-400c-5, H-1 fix) —
-    test_guard_source_paths_match_deployable_set asserts the two sets are 1:1.
-    harvest_result.py / sink_resolution.py / capture_write.py / harvest_cli.py
-    were added alongside the GE-127b-1 file-size fix that split
-    harvest_learnings.py into these sibling modules — mirrors the same four
-    additions in _manifest_knowledge_scripts (build_phases_knowledge.py).
+    Source namespace equals deploy namespace. Delegates to
+    _manifest_knowledge_scripts (build_phases_knowledge.py), already
+    imported above, instead of re-listing the identical script-name tuple a
+    second time here -- this file is already over its GE-127b-1
+    check-file-size ratchet limit with zero growth budget (see the identical
+    reasoning on _guard_source_paths_workflow_tools just above), so a new
+    scripts/knowledge/*.py module (e.g. INF-700a-2's harvest_status.py) is
+    registered once, in _manifest_knowledge_scripts's own tuple, and read
+    from here rather than needing a second edit in this file too.
+    test_guard_source_paths_match_deployable_set still asserts the two sets
+    are 1:1 -- trivially true now that this IS that set.
     """
-    source_paths: set[str] = set()
-    knowledge_src = package_root / "scripts" / "knowledge"
-    for fname in (
-        "harvest_learnings.py",
-        "emit_knowledge.py",
-        "entry_kind_vocabulary.py",
-        "harvest_result.py",
-        "sink_resolution.py",
-        "capture_write.py",
-        "harvest_cli.py",
-    ):
-        if (knowledge_src / fname).is_file():
-            source_paths.add(f"scripts/knowledge/{fname}")
-    return source_paths
+    return _manifest_knowledge_scripts(package_root)
 
 
 def _guard_source_paths_build_orchestration(package_root: Path) -> set[str]:
@@ -1328,53 +1314,6 @@ def _compute_version_str(package_root: Path) -> str:
     return _bump_version(baseline, bump)
 
 
-def build_doc_index(target_root: Path, config: dict, dry_run: bool, force: bool) -> int:  # noqa: ARG001
-    """Generate docs/INDEX.md by walking the docs tree.
-
-    The index is regenerated on every build run (not write-if-absent) because
-    it is fully derived from the existing docs tree and must stay current.
-    Idempotent: if the content is byte-identical to what is already on disk,
-    no write is performed and 0 is returned.
-
-    Args:
-        target_root: Absolute path to the target project root directory.
-        config: Merged config dictionary (unused — index generation is
-            self-contained; kept for API parity with other phase functions).
-        dry_run: When True, logs intent but writes nothing.
-        force: Ignored — index is always regenerated (content-addressed write).
-
-    Returns:
-        1 if the file was written; 0 if the content was already up-to-date.
-    """
-    from generate_doc_index import generate_index
-
-    docs_dir = config.get("docs_root", "docs/").rstrip("/")
-    output_path = target_root / docs_dir / "INDEX.md"
-    content = generate_index(target_root, output_path.parent)
-
-    if dry_run:
-        _dry_run_msg(f"would write {output_path}")
-        return 1
-
-    if output_path.exists():
-        try:
-            existing = output_path.read_text(encoding="utf-8")
-            if existing == content:
-                return 0
-        except OSError:
-            pass
-
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(content, encoding="utf-8")
-    except OSError as exc:
-        _warn(f"Failed to write {output_path}: {exc}")
-        return 0
-    else:
-        _success(f"wrote {output_path.relative_to(target_root)}")
-        return 1
-
-
 def _check_deploy_collision_guard(output_root: Path, config: dict) -> int:
     """Preflight guard: abort the build when deploy-path collisions are detected (BP-100m).
 
@@ -1777,7 +1716,7 @@ def _write_migrated_skills_config(
         return
 
     try:
-        resolved.write_text(new_raw, encoding="utf-8")
+        resolved.write_text(new_raw, encoding="utf-8", newline="\n")
     except OSError as exc:
         _warn(f"Could not write {resolved}: {exc} — migration skipped.")
         return
@@ -2271,4 +2210,14 @@ if __name__ == "__main__":
 #   _manifest_workflow_tool_scripts instead of re-listing its script tuple,
 #   funding knowledge_frontmatter_reader.py's addition with zero net growth
 #   on this over-limit file. (#TICKETLESS reason=km-kgs-100a-3-xi-fastlane)
+# - 2026-09-23 [python-coder/INF-700a-2]: Applied the identical
+#   KM-KGS-100a-3-xi delegation pattern to _guard_source_paths_knowledge (now
+#   just `return _manifest_knowledge_scripts(package_root)`), funding
+#   harvest_status.py's registration (INF-700a-2's --status/marker sibling
+#   module) with net negative growth on this over-limit file instead of a
+#   second, duplicated tuple edit.
+# - 2026-09-28 12:00 [python-coder/quick-fix]: build_doc_index scans the repo holding docs_root
+#   (was target_root: self-host builds wrote a "No docs found." stub) and refuses to
+#   replace a populated map with an empty one (KI-BP-016). Zero net growth.
+#   (#TICKETLESS reason=quick-fix-BP-1500a-1)
 # ====================================================================

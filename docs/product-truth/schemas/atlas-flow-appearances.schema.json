@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source-reviewed AC-to-flow appearance map",
+  "description": "Reviewed against leafcutter-web/lib/data/flows.ts flowAppearancesByAc and types.ts FlowAppearance. Keys are AC IDs; entries include both step and branch IDs despite the historical stepId name. This is an internal map, not an HTTP endpoint.",
+  "type": "object",
+  "additionalProperties": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flowId": {
+          "type": "string"
+        },
+        "flowName": {
+          "type": "string"
+        },
+        "stepId": {
+          "type": "string"
+        },
+        "stepLabel": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "flowId",
+        "flowName",
+        "stepId",
+        "stepLabel"
+      ]
+    }
+  }
+}

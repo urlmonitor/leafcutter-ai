@@ -1,0 +1,87 @@
+id: DK-300d-4-i
+title: "Untrusted selections and exhausted classification budgets cannot execute graph reads"
+component: decision-kernel
+components: [decision_kernel, knowledge_management]
+level: L3
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the operation assessment has low confidence, names an unoffered choice, fails, or has no remaining model-call or request-size allowance,
+  When the kernel validates the proposed read selection,
+  Then no graph read executes from that rejected selection,
+  And the outcome records the applicable uncertainty, unsupported choice, failure or exhausted bound,
+  And only an already permitted repository fallback may continue within the remaining run budget,
+  And incurred selection usage remains recorded even when later selection or execution fails.
+depends_on: ["DK-300d-4"]
+covered_by:
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_selector_low_confidence_unknown_choice_and_budget_fail_closed"
+  - "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_selector_usage_is_preserved_on_execution_failure"
+implemented_by:
+  - "integrations/graph_selection.py"
+  - "integrations/knowledge_execution.py"
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "Selection uses existing routing confidence/probability thresholds and cumulative Jev/run budgets, including exact provider serialization limits; at most one operation assessment and one necessary target assessment occur per attempt."
+  - "Reject unoffered or malformed operation/target identities before constructing or executing a graph request. A low-confidence result cannot silently select the first offered operation."
+  - "Preserve paid/attempted usage through validation and downstream failure; no automatic repeated selector loop or budget reset is introduced."
+delivers_to:
+  agent: python-coder
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+expects_from:
+  ac_id: DK-300d-4
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+test_required: true
+test_spec:
+  - name: "test_selector_low_confidence_unknown_choice_and_budget_fail_closed"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "failure"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_selector_low_confidence_unknown_choice_and_budget_fail_closed: Inject below-threshold, unoffered, failed, exhausted-call and oversized-payload selector outcomes; assert zero graph execution, explicit reasons and no reset or hidden repeat."
+    must_catch: ["Executing the first offered operation after a low-confidence or unknown selection.","Calling the selector after its remaining Jev budget is exhausted."]
+  - name: "test_selector_usage_is_preserved_on_execution_failure"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_knowledge_operation_selection.py::test_selector_usage_is_preserved_on_execution_failure: Allow a paid selector response then reject its target or fail execution; assert recorded usage remains attributable and counts against the existing run budget."
+test_rationale: "Exercise the existing registered capability and real research path with recording Jev and knowledge ports; a direct helper or source-string test cannot prove selection is consumed. Controlled-port proof does not establish live Jev quality or Neo4j publication readiness."
+doc_links:
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO added bounded selector contracts and behavioral test specifications under the user's explicit wire-it-up authorization."
+superseded_by: null
+notes: |
+  Focused extension of DK-300d-3 and existing KM-400e-2, KM-400e-3 and KM-400e-4.
+  Independently verified on 2026-10-03: 148 strict deterministic cases passed, including 51 selector cases, 84 existing entity cases and 13 bridge cases; no failures, errors or skips.
+  Verification evidence: reports/entity-graph-selection-independent-green.xml and reports/entity-graph-selection-evaluation.md. Controlled ports do not establish live Jev quality or Neo4j publication readiness; no new query implementation or admission is claimed.
+  No matching reusable pattern was found in the 4620-file AC inventory.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

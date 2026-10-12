@@ -1,0 +1,65 @@
+id: DK-500g-5
+title: 'Reference: the criterion category kind in the knowledge graph and its two queries'
+component: decision-kernel
+components:
+- decision_kernel
+- knowledge_management
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the import (DK-500g-1) and the two registered queries (DK-500g-2, DK-500g-3),
+  When a reader opens the reference,
+  Then it states the identity of a category node, the properties it carries and its links (membership through a criterion, replaced by, broader),
+  And it states each query's parameter, its answer fields and its distinct non-answers (disabled, unavailable, unknown category),
+  And it states that the decision kind is read exactly as before and that the graph is rebuilt from Git and never edited.
+depends_on:
+- DK-500g
+- DK-500g-1
+- DK-500g-2
+- DK-500g-3
+covered_by: []
+implemented_by: []
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- Extend docs/reference/knowledge-retrieval-answers.md, or add a sibling reference page. Field names, link types and non-answers exactly as built; state that the Decision kind is read unchanged.
+test_required: false
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
+- path: docs/reference/knowledge-retrieval-answers.md
+  relationship: describes
+  status: exists
+  relevance: Answer fields, completeness and the distinct non-answers the two category queries reuse.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Documentation AC answering DK-500g's reference-doc trigger. Its deliverable is the document only.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

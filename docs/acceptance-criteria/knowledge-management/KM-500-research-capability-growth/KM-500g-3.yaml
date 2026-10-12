@@ -1,0 +1,117 @@
+id: KM-500g-3
+title: Demonstrate how agents ask and inspect bounded research answers
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+work_status: in_progress
+readiness: approved
+priority: medium
+parent: KM-500g
+criteria: 'Given an agent has a repository question and can discover the supported research entry points
+
+  When it follows the shared research-answer how-to
+
+  Then the walkthrough starts from an explicit question and scope and shows how to inspect required fields, source
+  revision, completeness and question fulfillment in the actual returned evidence
+
+  And examples distinguish a root-excluded AC count, an incomplete status answer, a declared-test answer without
+  execution proof, a missing query and an unsupported source mapping
+
+  And an observation example shows how to follow a verified trace reference or recognize that no remote trace was
+  established
+
+  And it explains when to clarify, request further evidence, propose a governed query build or stop with an unresolved
+  answer
+
+  And canonical source inspection used to design an expected answer is identified separately from an actual tool
+  demonstration
+
+  And disabled services, missing authorization and unavailable real-provider or deployment proof remain visible
+  rather than being presented as passing examples
+
+  And the walkthrough uses the shared reference definitions and states each example''s actual verification status.
+
+  '
+depends_on:
+- KM-500g
+- KM-500e-5
+- KM-500g-1
+- KM-500g-2
+- KM-500d-1
+doc_links:
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: implements
+  status: exists
+  relevance: Canonical documentation deliverable for this leaf; related catalog and evaluations remain context.
+- path: docs/analysis/2026-10-01-repository-query-catalog.md
+  relationship: context
+  status: exists
+  relevance: RQ8 observability and diagnosis consumers; no historical trace is fabricated.
+- path: docs/analysis/2026-10-01-repository-query-evaluation-cases.json
+  relationship: context
+  status: exists
+  relevance: RQE-06 planned diagnosis and unavailable-evidence controls.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Use existing observability ownership and sanitized correlation, preserving optional operation.
+- path: docs/testing/test-angles.md
+  relationship: context
+  status: exists
+  relevance: Planned public reachability, producer-consumer and discriminating proof expectations.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Existing projection, observation and kernel ownership boundaries.
+assigned_agent: documentation-expert
+estimated_complexity: M
+delivers_to:
+  agent: documentation-expert
+  contract: 'Shared walkthrough: explicit question/scope, actual evidence checks and verification labels, incomplete/unsupported
+    examples, proof distinctions, verified trace or untraced handling and bounded next steps using the e-5 reference.'
+expects_from:
+- ac_id: KM-500e-5
+  contract: One shared answer-reference document with separate status/proof meanings, eight query families and twenty-five
+    origin IDs, supported versus pending contracts, source limitations, revision/completeness examples and explicit
+    verification labels.
+- ac_id: KM-500g-1
+  contract: 'Observation envelope: request/attempt IDs, original question and required fields, execution separately
+    from fulfillment and gaps, repository/source SHA/generation/query identity, evidence IDs, finalization state,
+    delivery state, trace ID and verified trace reference only when established.'
+- ac_id: KM-500g-2
+  contract: 'Diagnosis: matching request/attempt, evidenced limitation, known expected/observed scope with governing
+    contract, source/publication/tested revision distinction, missing diagnostics and justified bounded next step
+    within existing permissions.'
+origin_agent: business-analyst
+created: '2026-10-01'
+created_by: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500g.yaml
+amended_by:
+- '2026-10-01: User explicitly approved the new ACs and directed implementation with agents and an independent evaluator.
+  Approval records authorization, not implementation or execution proof.'
+- '2026-10-01: Scoped documentation target repair; actual deliverable precedes contextual links. Approved behavior
+  unchanged; specialist work remains subject to independent verification.'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RepositoryResearchAnswers/TICKET-20261001-KM-500g-3.md
+change_target: docs
+risk_surface: internal
+notes: Shared how-to deliverable for KM-500e, KM-500f and KM-500g. Documentation only; no behavioral AC may be closed
+  by this walkthrough. No new network API is implied. Draft authored from the user-requested BA template pass; no
+  real provider, database or tracing call was performed.
+test_required: false
+test_rationale: Documentation review verifies each worked example and limitation against the shared behavioral criteria.
+  A written walkthrough is not execution proof.
+it_requirements:
+- Extend the existing knowledge-retrieval how-to and link the shared e-5 reference rather than defining competing
+  semantics or implying a new API.
+- Examples show original question/scope, actual entry point, returned required fields, source pin, completeness,
+  fulfillment and provenance. Label static source-oracle inspection and planned examples separately from real tool
+  runs.
+- Include root-only versus leaf-only counts, missing work status, declarations without execution proof, eligible
+  missing query, unsupported mapping and verified trace versus untraced handling.
+- State verification limits for disabled services, absent provider/data-transfer permission, scripted actors and
+  missing deployment proof. A walkthrough cannot close behavior ACs or grant authorization.

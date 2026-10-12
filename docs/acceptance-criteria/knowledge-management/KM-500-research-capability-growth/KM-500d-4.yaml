@@ -1,0 +1,139 @@
+id: KM-500d-4
+title: Retrieve long approved material through attributable bounded chunks
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500d
+criteria: 'Given approved source material exceeds the supported unchunked embedding size and its source mapping
+  permits semantic retrieval
+
+  When the supported chunking process prepares that material at an immutable source revision
+
+  Then bounded chunks are reproducible from the same content and chunking policy and retain the canonical parent
+  identity, source revision and exact supporting locator
+
+  And only approved source fields are included rather than complete traces, secrets or unrelated code
+
+  And cache reuse distinguishes changed content, chunking policy and embedding model so old vectors cannot
+  stand in for changed text
+
+  When several chunks from one entity match a bounded semantic or hybrid request
+
+  Then they collapse to one canonical entity result while retaining the supporting chunk locators and revision
+
+  And repeated chunks do not inflate entity counts, evidence relevance or downstream expansion budgets
+
+  And deeper disclosure returns the selected source material within its content budget
+
+  And missing chunking support or incompatible vectors remains an explicit limitation rather than silently
+  omitting the long record or claiming semantic readiness
+
+  And fixture-only proof remains labeled synthetic until an approved real corpus and authorized model evaluation
+  substantiate broader usefulness.'
+depends_on:
+- KM-500d
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400c-2.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse canonical identity, source locators, embedding compatibility and bounded retrieval; current
+    oversized-input rejection is not chunking implementation.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400c-4.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse canonical identity, source locators, embedding compatibility and bounded retrieval; current
+    oversized-input rejection is not chunking implementation.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-2.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse canonical identity, source locators, embedding compatibility and bounded retrieval; current
+    oversized-input rejection is not chunking implementation.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-4.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse canonical identity, source locators, embedding compatibility and bounded retrieval; current
+    oversized-input rejection is not chunking implementation.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: Original user guide section 8 explicitly requires deterministic source-attributed chunking and collapsing
+  chunk hits to entities. Current implementation rejects approved input above the unchunked 32 KiB bound; that
+  safe rejection does not satisfy this pending capability. Captured as todo during the user-authorized coverage
+  audit, without authorizing implementation or external model calls in this turn.
+assigned_agent: python-coder
+estimated_complexity: L
+test_required: true
+test_rationale: Oversized-input rejection is current safe behavior, not chunking proof. Verify deterministic
+  ingestion, vector eligibility, public semantic/hybrid entity collapse and pinned-source disclosure together,
+  with honest real-model prerequisites.
+it_requirements:
+- Implement chunking in neutral knowledge ingestion/retrieval adapters; preserve canonical parent IDs and existing
+  Evidence/SourceVersion mapping. Each derived chunk has deterministic identity including parent source SHA,
+  content hash, chunk-policy/text-normalization version and supporting locator.
+- Only approved semantic source fields may be normalized/chunked. Define versioned normalization separately
+  from exact source excerpts, which remain verbatim and hashable; never embed raw traces, secrets or arbitrary
+  repository content.
+- Cache keys bind normalized approved text/version, chunking policy, provider model and dimensions. Changed
+  fields, normalization, boundary policy or model invalidate only incompatible vectors; unchanged inputs reuse
+  identical chunk/cache identities.
+- Collapse chunk candidates by canonical entity and generation before entity result limits and graph expansion;
+  retain bounded supporting chunk locators and ranking signals without treating repeated chunk matches as independent
+  confidence votes.
+- Enforce request-wide candidate work, bytes/tokens, fanout and deadlines including chunk lookup and collapse.
+  Continuation and source disclosure remain pinned and bounded; repeated chunks cannot bypass quotas.
+- Keep graph and semantic readiness separate until required chunks/vectors are complete. Report unsupported
+  long material explicitly, and retain old published readiness on failed ingestion; approved synthetic memory
+  fixtures do not authorize production history mapping.
+expects_from:
+  ac_id: KM-400c-4
+  contract: Reuse vector compatibility/readiness and canonical source/provenance with existing cumulative disclosure
+    budgets.
+delivers_to:
+  agent: python-coder
+  contract: Provide deterministic attributed chunks and public entity-collapsed semantic/hybrid results, with
+    explicit readiness and source-version evidence.
+test_spec:
+- name: test_long_material_chunk_ingestion_contract
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: Run ingestion twice with long approved Unicode content, overlap and boundary cases; assert byte-stable
+    chunk IDs/locators and cache reuse. Change content, normalization, chunk policy and model independently;
+    only compatible vectors remain eligible and forbidden fields never enter provider input.
+  covers:
+  - KM-500d-4
+  requires_db: false
+- name: test_chunk_collapse_public_retrieval
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Invoke public semantic/hybrid retrieval and deeper disclosure on repeated matching chunks across
+    entities and generations. Assert canonical entity collapse, supporting locators, no inflated confidence/counts,
+    shared budgets and pinned exact source excerpts; incomplete chunk vectors remain explicit not-ready.
+  covers:
+  - KM-500d-4
+  requires_db: false
+- name: test_chunk_vectors_actual_backend
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: In an isolated actual Neo4j generation ingest attributed long-material chunks with labeled deterministic
+    vectors and verify vector selection, entity collapse and source disclosure. Separately record approved
+    real-corpus/model evaluation or not_run; deterministic vectors prove mechanics only.
+  covers:
+  - KM-500d-4
+  requires_db: true

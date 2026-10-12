@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="15" skipped="0" tests="15" time="0.326" timestamp="2026-10-02T09:27:10.024421+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_inspection_retains_partial_stages_without_weakening_ready_evidence[building]" time="0.002"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">status = 'building'
+
+    @pytest.mark.parametrize("status", ["building", "failed", "validated"])
+    def test_inspection_retains_partial_stages_without_weakening_ready_evidence(status):
+        # covers: KM-400a-3-i
+        # angle: seam
+        old, target = _snapshot("old"), _snapshot("new")
+        ready = _group(old, current=True)
+        stage = _group(target, status, partial=True)
+        db = _DB([ready, stage], ready["metadata"]["key"])
+&gt;       plan = asyncio.run(native_refresh._inspect_refresh(db, "repo"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:91: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_inspection_retains_partial_stages_without_weakening_ready_evidence[failed]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">status = 'failed'
+
+    @pytest.mark.parametrize("status", ["building", "failed", "validated"])
+    def test_inspection_retains_partial_stages_without_weakening_ready_evidence(status):
+        # covers: KM-400a-3-i
+        # angle: seam
+        old, target = _snapshot("old"), _snapshot("new")
+        ready = _group(old, current=True)
+        stage = _group(target, status, partial=True)
+        db = _DB([ready, stage], ready["metadata"]["key"])
+&gt;       plan = asyncio.run(native_refresh._inspect_refresh(db, "repo"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:91: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_inspection_retains_partial_stages_without_weakening_ready_evidence[validated]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">status = 'validated'
+
+    @pytest.mark.parametrize("status", ["building", "failed", "validated"])
+    def test_inspection_retains_partial_stages_without_weakening_ready_evidence(status):
+        # covers: KM-400a-3-i
+        # angle: seam
+        old, target = _snapshot("old"), _snapshot("new")
+        ready = _group(old, current=True)
+        stage = _group(target, status, partial=True)
+        db = _DB([ready, stage], ready["metadata"]["key"])
+&gt;       plan = asyncio.run(native_refresh._inspect_refresh(db, "repo"))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:91: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[payload]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'payload'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[count]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'count'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[active_stage]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'active_stage'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[current_stage]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'current_stage'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[foreign_stage]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'foreign_stage'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_recovery_rejects_invalid_ready_data_and_unsafe_stages[unknown_status]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'">fault = 'unknown_status'
+
+    @pytest.mark.parametrize("fault", ["payload", "count", "active_stage", "current_stage", "foreign_stage", "unknown_status"])
+    def test_recovery_rejects_invalid_ready_data_and_unsafe_stages(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        ready = _group(_snapshot("old"), current=True)
+        stage = _group(_snapshot("new"), "failed", partial=True)
+        active = ready["metadata"]["key"]
+        if fault == "payload":
+            ready["nodes"][0]["props"]["canonical_id"] = "wrong"
+        elif fault == "count":
+            ready["metadata"]["node_count"] += 1
+        elif fault == "active_stage":
+            active = stage["metadata"]["key"]
+        elif fault == "current_stage":
+            stage["nodes"][0]["props"]["current"] = True
+        elif fault == "foreign_stage":
+            stage["metadata"]["key"] = scope_key("foreign", "new")
+        else:
+            stage["metadata"]["status"] = "unexpected"
+        with pytest.raises(ValueError):
+&gt;           asyncio.run(native_refresh._inspect_refresh(_DB([ready, stage], active), "repo"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_inspect_refresh'
+
+tests\knowledge\test_native_refresh_recovery.py:119: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_resume_requires_the_exact_same_snapshot_and_partial_contents[digest]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">fault = 'digest'
+
+    @pytest.mark.parametrize("fault", ["digest", "source_sha", "mapper_version", "node_count", "node_payload"])
+    def test_resume_requires_the_exact_same_snapshot_and_partial_contents(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        target = _snapshot("new")
+        stage = _group(target, "failed", partial=True)
+        if fault == "node_payload":
+            node = target.nodes[0].model_copy(update={"title": "Different content"})
+            stage["nodes"][0]["props"]["payload"] = node.model_dump_json()
+        else:
+            stage["metadata"][fault] = "different" if fault != "node_count" else 999
+        with pytest.raises(ValueError, match="staging"):
+&gt;           native_refresh._validate_resume({"staged_generations": [stage]}, target)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:134: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_resume_requires_the_exact_same_snapshot_and_partial_contents[source_sha]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">fault = 'source_sha'
+
+    @pytest.mark.parametrize("fault", ["digest", "source_sha", "mapper_version", "node_count", "node_payload"])
+    def test_resume_requires_the_exact_same_snapshot_and_partial_contents(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        target = _snapshot("new")
+        stage = _group(target, "failed", partial=True)
+        if fault == "node_payload":
+            node = target.nodes[0].model_copy(update={"title": "Different content"})
+            stage["nodes"][0]["props"]["payload"] = node.model_dump_json()
+        else:
+            stage["metadata"][fault] = "different" if fault != "node_count" else 999
+        with pytest.raises(ValueError, match="staging"):
+&gt;           native_refresh._validate_resume({"staged_generations": [stage]}, target)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:134: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_resume_requires_the_exact_same_snapshot_and_partial_contents[mapper_version]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">fault = 'mapper_version'
+
+    @pytest.mark.parametrize("fault", ["digest", "source_sha", "mapper_version", "node_count", "node_payload"])
+    def test_resume_requires_the_exact_same_snapshot_and_partial_contents(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        target = _snapshot("new")
+        stage = _group(target, "failed", partial=True)
+        if fault == "node_payload":
+            node = target.nodes[0].model_copy(update={"title": "Different content"})
+            stage["nodes"][0]["props"]["payload"] = node.model_dump_json()
+        else:
+            stage["metadata"][fault] = "different" if fault != "node_count" else 999
+        with pytest.raises(ValueError, match="staging"):
+&gt;           native_refresh._validate_resume({"staged_generations": [stage]}, target)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:134: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_resume_requires_the_exact_same_snapshot_and_partial_contents[node_count]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">fault = 'node_count'
+
+    @pytest.mark.parametrize("fault", ["digest", "source_sha", "mapper_version", "node_count", "node_payload"])
+    def test_resume_requires_the_exact_same_snapshot_and_partial_contents(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        target = _snapshot("new")
+        stage = _group(target, "failed", partial=True)
+        if fault == "node_payload":
+            node = target.nodes[0].model_copy(update={"title": "Different content"})
+            stage["nodes"][0]["props"]["payload"] = node.model_dump_json()
+        else:
+            stage["metadata"][fault] = "different" if fault != "node_count" else 999
+        with pytest.raises(ValueError, match="staging"):
+&gt;           native_refresh._validate_resume({"staged_generations": [stage]}, target)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:134: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_resume_requires_the_exact_same_snapshot_and_partial_contents[node_payload]" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">fault = 'node_payload'
+
+    @pytest.mark.parametrize("fault", ["digest", "source_sha", "mapper_version", "node_count", "node_payload"])
+    def test_resume_requires_the_exact_same_snapshot_and_partial_contents(fault):
+        # covers: KM-400a-3-i
+        # angle: failure
+        target = _snapshot("new")
+        stage = _group(target, "failed", partial=True)
+        if fault == "node_payload":
+            node = target.nodes[0].model_copy(update={"title": "Different content"})
+            stage["nodes"][0]["props"]["payload"] = node.model_dump_json()
+        else:
+            stage["metadata"][fault] = "different" if fault != "node_count" else 999
+        with pytest.raises(ValueError, match="staging"):
+&gt;           native_refresh._validate_resume({"staged_generations": [stage]}, target)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:134: AttributeError</failure></testcase><testcase classname="tests.knowledge.test_native_refresh_recovery" name="test_unrelated_failed_stage_does_not_become_the_resume_target" time="0.001"><failure message="AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'">def test_unrelated_failed_stage_does_not_become_the_resume_target():
+        # covers: KM-400a-3-i
+        # angle: boundary
+        stage = _group(_snapshot("unrelated"), "failed", partial=True)
+&gt;       assert native_refresh._validate_resume({"staged_generations": [stage]}, _snapshot("new")) is False
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: module 'knowledge.native_refresh' has no attribute '_validate_resume'
+
+tests\knowledge\test_native_refresh_recovery.py:141: AttributeError</failure></testcase></testsuite></testsuites>

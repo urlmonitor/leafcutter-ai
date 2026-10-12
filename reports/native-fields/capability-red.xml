@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="30" skipped="0" tests="30" time="0.759" timestamp="2026-10-02T09:10:16.360432+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_capability" name="test_capability_all_fields_and_nested_extensions_round_trip" time="0.024"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:74: in test_capability_all_fields_and_nested_extensions_round_trip
+    (record,) = _extract(tmp_path)
+                ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_real_registry_exact_fields_and_no_defaults" time="0.002"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:96: in test_capability_real_registry_exact_fields_and_no_defaults
+    records = _extract(root)
+              ^^^^^^^^^^^^^^
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_legacy_admission_does_not_read_references" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:115: in test_capability_legacy_admission_does_not_read_references
+    (record,) = _extract(tmp_path)
+                ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_source_order_and_changed_values_are_visible" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:128: in test_capability_source_order_and_changed_values_are_visible
+    before = _extract(tmp_path)
+             ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_absent_and_empty_registry_do_not_invent_records" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:146: in test_capability_absent_and_empty_registry_do_not_invent_records
+    assert _extract(tmp_path) == []
+           ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_envelope_fails_explicitly[{]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:161: in test_capability_malformed_envelope_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_envelope_fails_explicitly[[]]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:161: in test_capability_malformed_envelope_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_envelope_fails_explicitly[{}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:161: in test_capability_malformed_envelope_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_envelope_fails_explicitly[{&quot;registry_id&quot;:&quot;x&quot;,&quot;registry_version&quot;:1,&quot;capabilities&quot;:{}}]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:161: in test_capability_malformed_envelope_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_invalid_registry_identity_fails[registry_id-]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:171: in test_capability_invalid_registry_identity_fails
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_invalid_registry_identity_fails[registry_version-0]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:171: in test_capability_invalid_registry_identity_fails
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_invalid_registry_identity_fails[registry_version-True]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:171: in test_capability_invalid_registry_identity_fails
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[id-Bad Id]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[id-None]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[name-]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[version-1]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[request_kinds-value4]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[accepts_schemas-value5]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[execution_mode-unknown]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[binding-]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[enabled-1]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[process_maturity-True]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[process_maturity-5]" time="0.006"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[cost_hints-value11]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[availability-value12]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[admission-value13]" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_malformed_entry_fails_explicitly[admission-value14]" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:183: in test_capability_malformed_entry_fails_explicitly
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_duplicate_ids_fail_without_source_changes" time="0.013"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:193: in test_capability_duplicate_ids_fail_without_source_changes
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_resolved_source_cannot_escape_snapshot" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:206: in test_capability_resolved_source_cannot_escape_snapshot
+    _extract(tmp_path)
+tests\knowledge\test_native_capability.py:15: in _extract
+    return importlib.import_module("knowledge.native_types.capability").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase><testcase classname="tests.knowledge.test_native_capability" name="test_capability_metadata_and_context_are_independent_copies" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.capability'">tests\knowledge\test_native_capability.py:214: in test_capability_metadata_and_context_are_independent_copies
+    module = importlib.import_module("knowledge.native_types.capability")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.capability'</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A source-grounded walkthrough of current Leafcutter retrieval, its decision branches and evidence limits.">
+<title>Leafcutter · Retrieval, step by step</title>
+<style>
+/* Atlas botanical tokens are read from the actual design source at render time. Offline fonts use explicit local fallbacks. */
+:root{__ATLAS_TOKENS__;color-scheme:dark;--sans:"IBM Plex Sans","Segoe UI",Arial,sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:5rem}
+body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));font-family:var(--sans);font-size:16px;line-height:1.65}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(900px 600px at 95% 0,hsl(var(--primary)/.07),transparent 70%)}
+a{color:hsl(var(--primary));text-underline-offset:4px;overflow-wrap:anywhere}a:hover{color:white}a:active{opacity:.75}
+button,summary{font:inherit;cursor:pointer}button{border:1px solid hsl(var(--border));border-radius:99px;padding:.5rem 1rem;color:inherit;background:hsl(var(--card))}
+button:hover,summary:hover{background:hsl(var(--secondary))}button:active{transform:translateY(1px)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid hsl(var(--ring));outline-offset:4px}
+.top{position:sticky;top:0;z-index:3;border-bottom:1px solid hsl(var(--border));background:hsl(var(--background)/.96);backdrop-filter:blur(14px);padding:.7rem max(1.25rem,calc((100vw - 1280px)/2));display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{font-weight:700;letter-spacing:.06em;white-space:nowrap}.brand span{color:hsl(var(--primary));margin-right:.55rem}
+.top small{color:hsl(var(--muted-foreground))}.wrap{max-width:1280px;margin:auto;padding:2.5rem 1.5rem 4rem;position:relative}
+.hero{max-width:1000px;margin-bottom:2rem}.eyebrow{font-family:var(--mono);font-size:.73rem;letter-spacing:.16em;text-transform:uppercase;color:hsl(var(--primary))}
+h1{font-size:clamp(2.4rem,5vw,4.1rem);line-height:1.05;letter-spacing:-.045em;max-width:850px;margin:.6rem 0 1.4rem;font-weight:600}
+.lead{font-size:1.17rem;color:hsl(var(--muted-foreground));max-width:850px}h2{font-size:1.75rem;letter-spacing:-.025em;line-height:1.2;margin:.4rem 0 1rem}h3{line-height:1.3;margin:0;font-size:1.25rem}
+p{margin:.7rem 0}.meta{display:flex;gap:.6rem;flex-wrap:wrap;margin:1.3rem 0}.badge{font-size:.72rem;font-family:var(--mono);padding:.25rem .6rem;border-radius:99px;border:1px solid hsl(var(--border));display:inline-block;background:hsl(var(--muted)/.55)}
+.badge.green{color:hsl(var(--primary));border-color:hsl(var(--primary)/.4)}.badge.amber{color:hsl(var(--warning));border-color:hsl(var(--warning)/.4)}
+.notice{border-left:3px solid hsl(var(--warning));background:hsl(var(--warning)/.06);padding:1rem 1.3rem;border-radius:0 12px 12px 0;margin:1.5rem 0;color:hsl(var(--muted-foreground))}
+.layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:2.5rem;align-items:start}
+aside{position:sticky;top:5.5rem}.navtitle{font-size:.75rem;color:hsl(var(--muted-foreground));text-transform:uppercase;letter-spacing:.12em}
+nav a{display:flex;gap:.7rem;align-items:baseline;padding:.55rem .65rem;text-decoration:none;color:hsl(var(--muted-foreground));border-radius:8px;font-size:.88rem}
+nav a:hover{background:hsl(var(--card));color:hsl(var(--foreground))}nav b{flex:0 0 1.6rem;white-space:nowrap;font-family:var(--mono);color:hsl(var(--primary));font-size:.72rem}
+nav .last{margin-top:.9rem;border-top:1px solid hsl(var(--border));border-radius:0;padding-top:1rem}
+.tools{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0 2rem}.tools button{font-size:.78rem}
+.timeline{position:relative}.step{position:relative;background:hsl(var(--card));border:1px solid hsl(var(--border));border-radius:16px;padding:1.75rem;margin-bottom:1.6rem;scroll-margin-top:5.5rem}
+.step:not(:last-child):after{content:"↓";position:absolute;bottom:-1.6rem;left:2.1rem;height:1.6rem;font-size:1.3rem;color:hsl(var(--primary))}
+.stephead{display:grid;grid-template-columns:2.8rem 1fr;gap:1rem;align-items:start}.number{display:grid;place-items:center;width:2.8rem;height:2.8rem;border-radius:50%;background:hsl(var(--primary)/.13);color:hsl(var(--primary));font:500 1rem var(--mono);border:1px solid hsl(var(--primary)/.35)}
+.owner{font-family:var(--mono);font-size:.72rem;color:hsl(var(--muted-foreground));margin-bottom:.3rem}.human{font-size:1.05rem;margin:1.1rem 0}
+.output{display:flex;gap:.6rem;align-items:baseline;color:hsl(var(--primary));font-size:.87rem}.output b{font-size:.65rem;letter-spacing:.12em;white-space:nowrap}
+details{border-top:1px solid hsl(var(--border));margin-top:1rem;padding-top:.5rem}summary{padding:.45rem .35rem;border-radius:6px;font-size:.87rem;color:hsl(var(--muted-foreground))}
+.detail{font-size:.9rem;color:hsl(var(--muted-foreground));padding:.2rem .35rem .4rem}.detail p:first-child{margin-top:.5rem}.small{font-size:.8rem;color:hsl(var(--muted-foreground))}
+.branches{display:grid;gap:.65rem;margin-top:1.2rem}.branch{border:1px solid hsl(var(--warning)/.3);background:hsl(var(--warning)/.04);border-radius:10px;padding:.1rem .8rem}
+.branch summary{color:hsl(var(--foreground));font-weight:500}.branch details{border:0;margin:0;padding:0}
+.condition{color:hsl(var(--warning));font-size:.81rem;margin:.2rem 0 .5rem}.condition:before{content:"IF ";font:600 .68rem var(--mono);letter-spacing:.06em}
+.proof{margin-top:3rem}.proofgrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.proofcard{border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));padding:1.4rem;min-width:0}
+.proofcard h3{font-size:1rem}.proofcard p{font-size:.88rem;color:hsl(var(--muted-foreground))}
+.proposal{margin-top:2.5rem;padding:2rem;border:1px dashed hsl(var(--warning)/.7);border-radius:16px;background:hsl(var(--warning)/.04)}.proposal .eyebrow{color:hsl(var(--warning))}
+.acs{display:flex;gap:.4rem;flex-wrap:wrap;margin:.7rem 0}.acs a{font-family:var(--mono);font-size:.72rem;border:1px solid hsl(var(--border));border-radius:5px;padding:.2rem .45rem;text-decoration:none}
+.scenario{border-left:2px solid hsl(var(--border));padding-left:1rem;font-size:.83rem;margin:1rem 0}
+footer{margin-top:2.5rem;border-top:1px solid hsl(var(--border));padding-top:1rem;font-size:.78rem;color:hsl(var(--muted-foreground))}code{font-family:var(--mono);font-size:.82em;overflow-wrap:anywhere}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.top small{display:none}aside{position:static}nav{display:flex;overflow:auto;gap:.3rem;padding-bottom:.5rem}nav a{min-width:150px}nav .last{margin:0;border:0;padding:.55rem}.tools{margin:.8rem 0 1rem}.step{padding:1.2rem}.proofgrid{grid-template-columns:1fr}.wrap{padding:1.5rem 1rem}.proposal{padding:1.3rem}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media print{.top,aside,.tools{display:none}.layout{display:block}body{background:white;color:#17241e}.wrap{max-width:none}.step,.proofcard,.proposal{break-inside:avoid;background:white;color:#17241e;border-color:#aaa}.detail,.small,.owner,.proofcard p,footer{color:#333}a{color:#155e3e}details{display:block}h1{font-size:32pt}}
+.childflow{border:1px solid hsl(var(--border));border-radius:14px;padding:1rem;margin:1rem 0}.childflow>summary{font-size:1.05rem}.childflow .step{margin-top:1rem}.childflow .step:after{display:none}#examples{margin:1.4rem 0 2rem}.overview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.65rem;margin:1.25rem 0}.overview a{display:flex;gap:.55rem;align-items:center;padding:.75rem;border:1px solid hsl(var(--primary)/.35);border-radius:10px;text-decoration:none;font-size:.85rem;line-height:1.35;background:hsl(var(--card))}.overview b{flex:none;font-family:var(--mono)}@media(max-width:700px){.overview{grid-template-columns:1fr 1fr}}</style>
+</head>
+<body>
+<header class="top"><div class="brand"><span>◈</span>LEAFCUTTER</div><small>Product truth · question-first retrieval</small><button id="print">Print / PDF</button></header>
+<div class="wrap">
+<section class="hero"><div class="eyebrow">Retrieval, step by step</div><h1 id="title"></h1><p id="lead" class="lead"></p><div id="overview" class="overview" aria-label="Whole retrieval journey"></div><p id="overview-outcomes" class="small"></p><div id="meta" class="meta"></div><div id="boundary" class="notice"></div></section>
+<div class="layout">
+<aside><div class="navtitle">Follow the question</div><nav id="nav" aria-label="Journey sections"></nav><div class="tools"><button id="expand">Expand details</button><button id="collapse">Collapse details</button></div><p class="small">Target design opens first. Expand a child flow for detail, or compare the current implementation separately. No target step is presented as delivered proof.</p></aside>
+<main><section aria-labelledby="route-title"><div class="eyebrow">Target design · not yet the full delivered interface</div><h2 id="route-title">One question in. An evidenced answer out.</h2><div id="examples" class="proofgrid"></div><div id="journey" class="timeline"></div></section>
+<section id="subflows" class="proof"><div class="eyebrow">Open only the detail you need</div><h2>Linked subflows</h2><div id="child-flows"></div></section><section id="baseline" class="proof"><div class="eyebrow">Separate reference · not a mandatory runtime step</div><h2>What is implemented today?</h2><div id="current-flow"></div></section><section id="evidence" class="proof"><div class="eyebrow">What the labels mean</div><h2>Design scope and evidence</h2><div id="proof" class="proofgrid"></div></section>
+<section id="future" class="proposal"><div class="eyebrow">Separate proposal · not on the current route</div><h2 id="future-title"></h2><div id="future-body"></div></section>
+<footer id="footer"></footer></main>
+</div></div>
+<script id="flow-data" type="application/json">__FLOW_DATA__</script>
+<script>
+"use strict";
+const data=JSON.parse(document.getElementById("flow-data").textContent),flow=data.flow,children=data.children||{};
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const anchor=f=>"flow-"+f.id.replaceAll("/","-");
+function href(path){const m=path.match(/docs\/product-truth\/flows\/(.+)\.flow\.json(?:#([a-z0-9-]+))?$/);if(m){const target=m[1]===flow.id?flow:children[m[1]];if(target)return "#"+anchor(target)+(m[2]?"-"+m[2]:(target===flow?"-assess":""));}return data.repoHref+path.split("/").map(encodeURIComponent).join("/");}
+function text(s){return esc(s).replace(/\[([^\]]+)\]\(([^)]+)\)/g,(_,label,path)=>'<a href="'+esc(href(path))+'">'+label+'</a>');}
+function paragraphs(s){return String(s).split("\n\n").map(p=>"<p>"+text(p)+"</p>").join("");}
+function acLinks(n){return(n.implements||[]).map(id=>{const a=data.acs[id];return a?'<a href="'+esc(href(a.path))+'">'+esc(id)+" · "+esc(a.status)+"</a>":"";}).join("");}
+function scenario(f,id){const s=f.acceptance_scenarios.find(s=>s.for===id);return s?'<div class="scenario"><b>Given</b> '+text(s.given)+'<br><b>When</b> '+text(s.when)+'<br><b>Then</b> '+text(s.then)+"</div>":"";}
+function branch(f,b){return '<div class="branch"><details><summary>↳ '+esc(b.label)+'</summary><div class="detail"><div class="owner">'+esc(b.agent)+'</div><div class="condition">'+text(b.condition)+'</div>'+paragraphs(b.human)+scenario(f,b.id)+"</div></details></div>";}
+function step(f,s){const bits=s.human.split("\n\n"),links=(s.expands_to||[]).map(id=>children[id]?'<a class="badge" href="#'+anchor(children[id])+'">Open: '+esc(children[id].name)+' ↗</a>':"").join(" ");return '<article class="step" id="'+anchor(f)+'-'+esc(s.id)+'"><div class="stephead"><span class="number">'+String(s.order).padStart(2,"0")+'</span><div><div class="owner">'+esc(s.agent)+'</div><h3>'+esc(s.label)+'</h3></div></div><p class="human">'+text(bits[0])+'</p><div class="output"><b>LEAVES WITH</b><span>'+text((s.produces||[]).join("; "))+'</span></div><p>'+links+'</p><div class="branches">'+f.branches.filter(b=>b.from===s.id).map(b=>branch(f,b)).join("")+'</div><details><summary>Context, constraints and acceptance mapping</summary><div class="detail">'+paragraphs(bits.slice(1).join("\n\n"))+'<p class="small">'+(f.realization==='spec'?'Proposed behavior. Existing AC context is not implementation proof.':'Current-reference AC rollup: '+esc(s.impl_status)+'. This is not a live verification verdict.')+'</p><div class="acs">'+acLinks(s)+'</div>'+scenario(f,s.id)+"</div></details></article>";}
+function child(f){return '<details class="childflow" id="'+anchor(f)+'"><summary><b>'+esc(f.name)+'</b> <span class="badge">'+esc(f.realization)+' · '+esc(f.readiness)+'</span></summary><p>'+text(f.summary)+'</p>'+f.steps.map(s=>step(f,s)).join("")+f.provenance.map(p=>paragraphs(p.note)).join("")+'<a href="#title">Back to the main question journey ↑</a></details>';}
+const notes=flow.provenance.map(p=>({title:p.note.split("\n")[0],body:p.note.split("\n").slice(1).join("\n")}));
+document.getElementById("title").textContent=flow.name;document.getElementById("lead").textContent=flow.summary;
+document.getElementById("meta").innerHTML='<span class="badge amber">Target design · specification</span><span class="badge">Review: '+esc(flow.readiness)+'</span><span class="badge">Question is the only required caller input</span>';
+document.getElementById("boundary").innerHTML=paragraphs(notes[0].body);
+document.getElementById("overview").innerHTML=flow.steps.map(s=>'<a href="#'+anchor(flow)+'-'+esc(s.id)+'"><b>'+s.order+'</b><span>'+esc(s.label)+'</span></a>').join('');
+document.getElementById("overview-outcomes").textContent='After checking evidence: '+flow.branches.filter(b=>b.from==='assess').map(b=>b.label).join(' · ')+'.';
+document.getElementById("examples").innerHTML=notes.filter(n=>n.title.startsWith('Input example')||n.title.startsWith('Output example')).map(n=>'<article class="proofcard"><h3>'+esc(n.title)+'</h3>'+paragraphs(n.body)+'</article>').join('');
+document.getElementById("nav").innerHTML=flow.steps.map(s=>'<a href="#'+anchor(flow)+'-'+esc(s.id)+'"><b>'+String(s.order).padStart(2,"0")+'</b>'+esc(s.label)+'</a>').join("")+'<a class="last" href="#subflows">Linked subflows</a><a href="#baseline">Current implementation</a><a href="#future">Draft acceptance mapping</a>';
+document.getElementById("journey").innerHTML=flow.steps.map(s=>step(flow,s)).join("");
+document.getElementById("child-flows").innerHTML=Object.values(children).filter(f=>f.realization==='spec').map(child).join('');
+document.getElementById("current-flow").innerHTML=Object.values(children).filter(f=>f.realization!=='spec').map(child).join('');
+document.getElementById("proof").innerHTML=notes.slice(1,-1).filter(n=>!n.title.startsWith('Input example')&&!n.title.startsWith('Output example')).map(n=>'<article class="proofcard"><h3>'+esc(n.title)+'</h3>'+paragraphs(n.body)+'</article>').join('');
+document.getElementById("future-title").textContent=notes.at(-1).title;document.getElementById("future-body").innerHTML=paragraphs(notes.at(-1).body);
+document.getElementById("footer").innerHTML='Rendered from canonical flow <code>'+esc(flow.id)+'</code> and linked canonical children. Source hash <code>'+esc(data.flowHash.slice(0,16))+'</code>.<br>Internal subflow links work offline. Source-file links require this HTML beside its checkout and are unavailable on an isolated preview server. No remote assets or provider calls.';
+function reveal(){const el=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(!el)return;if(el.tagName==='DETAILS')el.open=true;let p=el.parentElement;while(p){if(p.tagName==='DETAILS')p.open=true;p=p.parentElement;}}
+window.addEventListener('hashchange',reveal);reveal();
+document.getElementById("expand").onclick=()=>document.querySelectorAll("details").forEach(d=>d.open=true);
+document.getElementById("collapse").onclick=()=>document.querySelectorAll("details").forEach(d=>d.open=false);
+document.getElementById("print").onclick=()=>{document.querySelectorAll("details").forEach(d=>d.open=true);window.print();};
+</script>
+</body>
+</html>

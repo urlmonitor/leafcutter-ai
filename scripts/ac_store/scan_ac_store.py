@@ -123,7 +123,15 @@ def _load_ac(path: Path) -> AcRecord | None:
     """
     try:
         with open(path, encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
+            # Reverted (loader-audit, TQ-600a-11 fix-pass, 2026-10-07): no
+            # measured benefit established for this call site today
+            # (criterion 1), though it is a plausible candidate for a future
+            # measurement-based keep -- this is the whole-store scan behind
+            # the /build-ac ac-scanner skill, run routinely rather than as a
+            # one-off. Left reverted per the audit's default-revert rule
+            # until someone actually measures it; see
+            # /home/henzeh/tq600a1-backup/narrow_report.md.
+            data = yaml.load(fh, Loader=yaml.SafeLoader)
         if not isinstance(data, dict):
             print(f"ERROR: {path}: expected a YAML mapping, got {type(data).__name__}", file=sys.stderr)
             return None

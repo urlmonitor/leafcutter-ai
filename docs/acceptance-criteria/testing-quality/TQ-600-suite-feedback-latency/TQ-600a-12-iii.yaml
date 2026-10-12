@@ -1,0 +1,171 @@
+id: TQ-600a-12-iii
+components:
+  - testing_quality
+  - build_pipeline
+title: "A deploy-count test handed a pre-warmed layout is caught, not quietly green"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given one of the deploy-count tests of TQ-600a-12-ii and a layout that already
+    exists, so the number of deploy signals that test would observe is zero,
+  And the specific hazard this record exists for, which is that such a test does not
+    merely fail — the one asserting "a worker with no scheduled consumer produces
+    nothing" PASSES on zero deploys while having tested nothing at all,
+  When that test is deliberately run against the pre-warmed layout, bypassing the
+    ineligibility list,
+  Then the run exits non-zero and names that test,
+  And the diagnosis distinguishes the two cases rather than conflating them: a
+    deploy count of zero observed where the test's subject is the deploy count is
+    reported as a test that was handed a pre-warmed layout, not merely as an
+    assertion that did not hold,
+  And the case in which the vacuous outcome is a PASS is covered as well as the case
+    in which it is a failure, since a detector that only inspects failing tests
+    cannot see the pass,
+  And the same test run without the pre-warmed layout passes, so the non-zero
+    outcome is attributable to the seeding rather than to the bypass or to the
+    harness,
+  And this demonstration lives in the suite, so a later change that leaves the
+    ineligibility list in place but inert turns a test red instead of leaving a
+    report clean.
+depends_on:
+  - TQ-600a-12-ii
+doc_links:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. The ineligibility list this record bypasses on purpose, and the
+      place the detector reads from.
+  - path: scripts/suite_performance/_shared_layout_coordination.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      Defines the execution-signal log keyed by LEAFCUTTER_SHARED_LAYOUT_EXECUTION_LOG,
+      which is how a deploy count of zero is observed independently of what any test
+      asserts about itself. That independence is what lets the detector see a vacuous
+      PASS.
+  - path: unit_tests/suite_performance/test_tq_600a_1_i.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      THE WORST CASE AND THEREFORE THE ONE TO USE. Its subject is "a worker with no
+      scheduled consumer produces nothing". Seeded, it observes nothing, and passes —
+      green, fast, and empty. Build the demonstration around this file, not around
+      one whose vacuous outcome is conveniently red.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Three documented precedents of a check that examined nothing looking like a
+      check that found nothing. This record is the standing answer for the fourth
+      candidate.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    BUILD THE DEMONSTRATION AROUND THE TEST WHOSE VACUOUS OUTCOME IS A PASS. Using
+    one of the "exactly one deploy" tests is easier — it goes red by itself — and it
+    proves the weaker thing. The "produces nothing" test is the one that stays green
+    while testing nothing, and a detector built only against the red case will not
+    see it.
+  - >-
+    THE DETECTOR READS THE EXECUTION LOG, NOT THE TEST OUTCOME. Compare the observed
+    deploy count against whether the test's root came from a seed. Deriving the
+    verdict from pass/fail is exactly the blindness the third clause forbids.
+  - >-
+    THE BYPASS IS A TEST AFFORDANCE, NOT A PRODUCTION ONE. Provide a way to force a
+    seed past the ineligibility list that is reachable from the test harness and
+    inert in a normal run — and assert that it is inert in a normal run. A bypass
+    that an ordinary invocation can reach re-creates the hazard it exists to
+    demonstrate.
+  - >-
+    THE PAIRED CLEAN RUN IS NOT OPTIONAL. Run the same test unseeded in the same
+    test method. Without it, a red caused by the bypass machinery is
+    indistinguishable from a red caused by the seeding.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-12-ii
+    contract: >-
+      The ineligibility list, the per-test seed request, and a harness-only way to
+      force a seed past the list so the detector has something to detect.
+test_spec:
+  - name: test_tq600a_12_iii_a_seeded_deploy_count_test_that_would_pass_vacuously_is_detected
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE LOAD-BEARING DESCRIPTOR. Force a seed onto the "produces nothing" test. It
+      passes on its own terms; the run still exits non-zero and names it. NAMED
+      MUTATION: derive the detector's verdict from the test's pass/fail outcome; this
+      test must go RED.
+  - name: test_tq600a_12_iii_the_diagnosis_says_seeded_not_merely_assertion_failed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Assert on the message text: it identifies the cause as a deploy-count test
+      handed a pre-warmed layout, and names both the test and the seed. A bare
+      assertion-error message does not satisfy this.
+  - name: test_tq600a_12_iii_the_same_test_unseeded_passes_in_the_same_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      The paired control, in the same test method as the red case, so the red is
+      attributable to the seeding and not to the bypass.
+  - name: test_tq600a_12_iii_the_bypass_is_unreachable_from_an_ordinary_run
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Start a child session with no harness affordance set and confirm no seed can be
+      forced past the ineligibility list. The demonstration must not leave a hole
+      behind it.
+test_rationale: |
+  An opt-in seeding mechanism with an exclusion list is a decision, and decisions
+  rot. The exclusion list can stay in the file, correctly spelled, and stop being
+  consulted — and nothing about the suite's output would change, because the tests it
+  protects would be green and fast.
+
+  The first descriptor is built on the worst case rather than the convenient one. The
+  "exactly one deploy" tests go red by themselves when seeded, so a detector tested
+  only against them can be a pass/fail observer and still look correct. The "produces
+  nothing" test stays green. That is the whole hazard, and it is the only case worth
+  building the demonstration around.
+
+  The bypass-containment descriptor is included because this record necessarily adds
+  a way to defeat the protection TQ-600a-12-ii installs. Leaving that reachable from
+  an ordinary run would hand the next author exactly the foot-gun this pair exists to
+  remove.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  A seeding option that cannot detect a vacuous pass, and an agreement check that
+  cannot fail, are precisely the two ways this pair of levers ships broken. This is
+  the second of those, stated as its own record so it cannot be absorbed into a
+  clause of the mechanism it checks.
+
+  The asymmetry is worth restating because it is counter-intuitive: the dangerous
+  outcome of mis-seeding is not a failing test. It is a passing one. "A worker with
+  no scheduled consumer produces nothing" is satisfied trivially by a run in which
+  nothing could have been produced, and it would then be green, fast, and completely
+  empty — indefinitely.

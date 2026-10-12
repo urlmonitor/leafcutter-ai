@@ -1,0 +1,225 @@
+id: TQ-600a-12-ii
+components:
+  - testing_quality
+  - build_pipeline
+title: "Seeding is asked for per test, and the tests whose subject is the deploy count can never be given it"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the three files whose subject is how many real deploys a run performs —
+    unit_tests/suite_performance/test_tq_600a_1.py,
+    unit_tests/suite_performance/test_tq_600a_1_i.py and
+    unit_tests/suite_performance/test_tq_600a_1_multiworker.py, 10 tests, 465 s
+    measured — each of which asserts on a count of deploy signals: that a selection
+    of consumers deploys once, that a worker with no scheduled consumer produces
+    nothing, that several workers still execute exactly one deploy,
+  And the three files whose subject is routing, reporting, and layout-integrity
+    comparison — unit_tests/suite_performance/test_tq_600a_5.py,
+    unit_tests/suite_performance/test_tq_600a_5_reporting.py and
+    unit_tests/suite_performance/test_tq_600a_3_integration.py, 17 tests, 1,069 s
+    measured — none of which asserts anything about how its layout came to exist,
+  And the distinction that governs eligibility, which is not readers versus mutators
+    but whether the number of real deploys is the subject of the assertion,
+  When a test makes no request for a seed,
+  Then it receives a layout produced exactly as it is produced today, observing the
+    same number of deploys it observes today,
+  And a test receives a seeded layout only where that test itself requests one, by a
+    declaration on the test rather than by its file name, its directory, a
+    configuration default, or an environment variable set for the whole run,
+  And the three deploy-count files are named by path in the implementation as
+    ineligible, so a seed request originating from any test in any of them is
+    refused,
+  And the refusal names the requesting test and states the reason, rather than
+    quietly granting the seed or quietly ignoring the request,
+  And a test added to one of those three files later inherits the ineligibility
+    without anyone having to remember, because the ineligibility attaches to the file
+    and not to a list of test names.
+depends_on:
+  - TQ-600a-12
+doc_links:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. `_select_route` reads markers and nothing else; the seed request
+      is a second, independent per-test declaration and must not be folded into
+      routing. The ineligibility list belongs here, next to the route it governs.
+  - path: unit_tests/suite_performance/test_tq_600a_1.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      INELIGIBLE. Subject: a selection of consumers deploys the package once. Handed
+      a pre-warmed layout it observes zero deploys and passes vacuously.
+  - path: unit_tests/suite_performance/test_tq_600a_1_i.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      INELIGIBLE. Subject: a worker with no scheduled consumer produces nothing.
+  - path: unit_tests/suite_performance/test_tq_600a_1_multiworker.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      INELIGIBLE. Subject: several workers still execute exactly one deploy.
+  - path: unit_tests/suite_performance/test_tq_600a_5.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      ELIGIBLE. Subject: which root a marker routes to. 423 s, 5 tests.
+  - path: unit_tests/suite_performance/test_tq_600a_5_reporting.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      ELIGIBLE. Subject: routing counts and node-id reporting. 303 s, 5 tests.
+  - path: unit_tests/suite_performance/test_tq_600a_3_integration.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      ELIGIBLE. Subject: layout-integrity comparison before and after. 344 s, 7 tests.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep": an ineligibility list
+      asserted by grepping for the three paths passes on a list that is never
+      consulted.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+  - path: unit_tests/suite_performance/test_tq_600a_5.py
+    state: existing
+  - path: unit_tests/suite_performance/test_tq_600a_5_reporting.py
+    state: existing
+  - path: unit_tests/suite_performance/test_tq_600a_3_integration.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    OPT-IN, NEVER A DEFAULT, AND NEVER A RUN-WIDE SWITCH. An environment variable or
+    configuration key that enables seeding for the whole run reaches the three
+    ineligible files too, and they go green while asserting nothing. The request must
+    originate at the test.
+  - >-
+    DO NOT REUSE OR EXTEND THE ROUTING MARKERS. shared_layout_reader and
+    shared_layout_mutator decide which ROUTE a test takes. A seed decides how a root
+    on the private route is PRODUCED. Folding the two together makes the seed visible
+    to `_select_route` and puts TQ-600a-5's undeclared-test safety net and
+    TQ-600a-2's mutator carve-out at risk for no gain.
+  - >-
+    INELIGIBILITY ATTACHES TO THE FILE, NOT TO A LIST OF TEST NAMES. The last clause
+    is the maintenance clause: a list of 10 test names goes stale the first time
+    somebody adds an eleventh, and the staleness is silent.
+  - >-
+    THE THREE PATHS ARE THE POPULATION AS MEASURED ON 2026-10-05; RE-DERIVE BEFORE
+    RELYING ON IT. The eligibility test is whether a deploy COUNT is the subject of
+    the assertion. If a fourth file acquires such an assertion, it belongs on the
+    list. Record the test in the implementation, not only the three paths, so the
+    next author can apply it.
+  - >-
+    REFUSE LOUDLY, DO NOT SILENTLY IGNORE. A request that is dropped on the floor
+    reads to the requesting author as "seeding did not help", and the next step is
+    someone widening the mechanism to make it work.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-12-iii
+    contract: >-
+      The ineligibility list and the refusal path, which TQ-600a-12-iii bypasses on
+      purpose in order to show that a seeded deploy-count test is detected rather
+      than quietly green.
+expects_from:
+  - ac_id: TQ-600a-12
+    contract: >-
+      The seed-directory option on the private-copy route, which this record gates
+      with a per-test request and an exclusion list.
+test_spec:
+  - name: test_tq600a_12_ii_a_test_that_does_not_request_a_seed_observes_the_same_deploy_count_as_today
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      Baseline preservation. With seeding available but unrequested, a child session
+      records the same number of deploy signals it recorded before the seed option
+      existed.
+  - name: test_tq600a_12_ii_a_seed_request_from_a_deploy_count_file_is_refused_and_named
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      A test inside one of the three named files requests a seed. The request is
+      refused, the refusal names that test and the reason, and the test still gets a
+      real build.
+  - name: test_tq600a_12_ii_seeding_is_decided_by_the_tests_own_request_not_by_its_location
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      A test in an eligible file that does NOT request a seed gets an unseeded root;
+      a requesting test in a directory nobody listed gets a seeded one. NAMED
+      MUTATION: key the decision on the directory; this test must go RED.
+  - name: test_tq600a_12_ii_a_newly_added_test_in_a_deploy_count_file_is_ineligible_without_being_listed
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      Add a test to one of the three files at runtime, have it request a seed, and
+      assert it is refused. NAMED MUTATION: implement the ineligibility as a list of
+      the 10 current test names; this test must go RED.
+  - name: test_tq600a_12_ii_a_run_wide_seed_switch_does_not_reach_the_ineligible_files
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      If any run-wide enabling mechanism exists at all, a test in a deploy-count file
+      is still unseeded under it. If no such mechanism exists, assert that:
+      enumerate the seed decision's inputs and assert none of them is an environment
+      variable or configuration key.
+test_rationale: |
+  The failure this record prevents is not a red test. It is a GREEN test that has
+  stopped testing anything, which is the hardest defect in this repository to notice
+  because every signal says the suite is healthy and faster.
+
+  Three of the five descriptors name their injection, and the three injections are
+  the three plausible implementations: keying on the directory, listing test names
+  instead of files, and providing a run-wide switch because it is convenient. Each
+  satisfies the remaining descriptors. The run-wide-switch descriptor is written to
+  be satisfiable either way, because the right answer may be that no such mechanism
+  exists — in which case the test should prove its absence rather than be deleted.
+
+  The baseline-preservation descriptor comes first deliberately: the large majority
+  of the suite never requests a seed, and a change that altered their behaviour would
+  be a far larger problem than the 950 s it saves.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE SPLIT IS THE SINGLE MOST IMPORTANT THING IN THIS PAIR OF RECORDS, and the line
+  it falls on is not the obvious one. It is NOT readers versus mutators — the routing
+  markers already draw that line and it is a different question. It is whether the
+  NUMBER OF REAL DEPLOYS is the subject of the assertion.
+
+  The three deploy-count files count deploy signals. Hand them a pre-warmed layout
+  and they observe zero deploys. They would not go red; the ones that assert "exactly
+  one deploy" would go red and be "fixed", and the one that asserts "produces
+  nothing" would go green and stay green while testing nothing at all. Either way the
+  465 s they cost is the test, and it is correctly spent.
+
+  The other 17 assert which root a marker routes to, what the run reports, and
+  whether a layout survives comparison. None of them can observe how the layout came
+  to exist. For them a byte-identical seed is invisible, and 1,069 s becomes about
+  120 s.

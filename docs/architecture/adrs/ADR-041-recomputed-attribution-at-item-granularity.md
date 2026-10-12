@@ -33,13 +33,13 @@ related_code:
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
-| Date | 2026-09-08 |
+| Status | Accepted |
+| Date | 2026-09-08 (§5 added and status moved Proposed → Accepted 2026-09-23, once BP-1500g-1 and BP-1500g-2 had shipped against it; the frontmatter had read `active` since authoring, so the two now agree) |
 | Deciders | BrainCandy |
 | Author | Recorded during the BP-1500g ownership-boundary pass of 2026-09-08 |
 | Supersedes | None |
 | Context ADRs | [ADR-001](ADR-001-self-hosting-boundary.md) establishes the shared occupancy this decision governs; [ADR-004](ADR-004-consolidated-output-root.md) introduced the shim layer whose link-ness is rejected here as an ownership signal. Neither is superseded. |
-| Specification served | [`BP-1500g`](../../acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g.yaml) and its children `BP-1500g-1`, `BP-1500g-1-i`, `BP-1500g-1-ii`, `BP-1500g-2`, `BP-1500g-3` |
+| Specification served | [`BP-1500g`](../../acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500g.yaml) and its children `BP-1500g-1`, `BP-1500g-1-i`, `BP-1500g-1-ii`, `BP-1500g-2`, `BP-1500g-2-i` (§5), `BP-1500g-3` |
 
 ## Context
 
@@ -190,6 +190,51 @@ point. It is the absence of one, and it is the state that produced this defect.
 `_run_migration_report` in `scripts/build.py` MUST NOT name an `adopter_owned` or
 `unattributable` path in its printed `rm -rf` / `rm` advice. It MUST derive what it names from
 the same §1 attribution the removal path uses.
+
+### 5. A name claimed by both sides resolves to the adopter's item
+
+When a capability the package ships and one the adopter owns answer to the same name, **the
+adopter's item is what the project runs**. The package's item stays present in the output
+root, unreachable under that name, and the run names the collision every run — not only the
+first.
+
+This is fixed, not configurable and not per-item. The escape hatch is an input change the
+adopter makes — rename or remove their item — never a switch the build reads.
+
+**Why it is not a preference between two workable conventions.** Package-wins has no
+implementation that does not violate something already decided here. The contested name lives
+inside the single discoverable container (§ Consequences/Positive: `.claude/skills` is *the
+only directory Claude Code discovers project skills from*), so for the package's item to
+answer to that name it must occupy that path — which requires overwriting or moving the
+adopter's item. `BP-1500g-2-i`'s first Then clause forbids both, unconditionally and by name:
+*not overwritten, not emptied, not moved and not removed*. One option is workable; the other
+cannot be built.
+
+`BP-1500g-2-i`'s it_requirement 4 contemplates package-wins with the adopter's content
+preserved elsewhere. That is satisfiable only in a layered discovery path where the adopter's
+copy sits at a lower-precedence location it already occupies. There is no such layer. The
+requirement is right about the obligation and wrong about the option set.
+
+**Two consequences that follow and must not be traded away.**
+
+The convention must be true on **every** active discovery surface, not just the one the
+adopter edited. The build writes more than one (`claude` → `skills`, `antigravity` →
+`gemini/skills`, both active by default), each a distinct physical path with its own
+local-change check. Declaring a single winner while one surface still resolves to the package
+is the honest-report failure with the report itself wrong — worse than saying nothing. Once a
+name is contested anywhere, every active surface resolves to the adopter's version.
+
+A contested name is **sticky across upgrades**: no later package version reclaims it,
+including one shipping a fix under that name. That is the accepted cost of this convention,
+and it is why the collision is declared on every run rather than once. `BP-1500g-3-i`'s
+"the package's copy is brought up to current" carries a permanent, principled exception here.
+
+**What would reopen this.** The single-namespace premise above is load-bearing and is not
+verified anywhere against the consuming tool. If a second build-controlled, lower-precedence
+discovery source exists, package-wins becomes implementable and this section must be
+revisited — though even then it would only make the package's item reachable under a
+*qualified* name, which `BP-1500g-2`'s "discovers each of them **by name**" would have to be
+read against. Treat the premise as the thing to check first, not as settled.
 
 ## Consequences
 

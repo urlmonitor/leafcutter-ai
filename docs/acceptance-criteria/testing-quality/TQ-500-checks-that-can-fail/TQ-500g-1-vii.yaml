@@ -1,0 +1,111 @@
+id: TQ-500g-1-vii
+components:
+  - testing_quality
+  - build_orchestration
+title: "The /build-epic route makes the same wrong-version runs before each ticket is committed"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given an epic driven through /build-epic that holds three tickets —
+      K1: its guarding test names must_catch ["drop the retry_due condition"]
+          and fails under it,
+      K2: its guarding test names the same wrong version and still passes
+          under it,
+      K3: it has no source requirement,
+  When each ticket's code is green and the ticket reaches the step before
+    commit,
+  Then the /build-epic route makes the wrong-version runs through the one
+      shared runner, with the same inputs the fast lane and /build-feature
+      pass,
+    And K1 goes on to commit,
+    And K2 does not reach commit: its drive stops with the runner's report
+      naming the test and the surviving wrong version, and the ticket is
+      reported as blocked, not done,
+    And K3 records "wrong-version runs not applicable: no source requirement"
+      and goes on, never recorded as verified,
+    And for the same tests and outcomes the /build-epic verdict is identical
+      to the fast lane's and /build-feature's,
+    And the verdict is the runner's own; the supervisor's summary of it never
+      stands in for it.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "ticket-supervisor's runbook: the per-ticket phase sequence where the runner call is added, before the commit phase."
+  - path: docs/architecture/components/build-epic-workflow-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "build-epic.js hands each ticket to ticket-supervisor; nothing in build-feature.js or build-ticket.js reaches this route."
+  - path: docs/architecture/adrs/ADR-040-knowledge-write-publication-rides-completion-commit.md
+    relationship: relates-to
+    status: exists
+    relevance: "Precedent: build-epic.js inherits none of build-ticket.js's wiring; the change goes into building-epics SKILL.md."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+- ac_id: TQ-500g-1-i
+  contract: The shared runner CLI and its JSON verdict (shape in TQ-500g-1-i delivers_to).
+- ac_id: TQ-500g-1-viii
+  contract: 'The runner''s record option: given a ticket, the runner writes its own verdict record.'
+it_requirements:
+- Edit the ticket-level phase algorithm in templates/skills/building-epics/SKILL.md. Change templates/agents/ticket-supervisor.md
+  only where it restates that algorithm. Make this one llm-expert change with TQ-500f-3-iv.
+- 'Instruction: immediately before dispatching the commit phase, every time, including on resume, dispatch
+  the preparer and then the shared runner CLI. Use the same inputs as the other routes: the ticket''s
+  source_ac ids, the worktree as test root, the AC store root, the base ref and the manifest path. On
+  gate_passed false, report the ticket as blocked with the runner''s JSON verbatim, and do not dispatch
+  commit.'
+- Call the gate CLI with the record option TQ-500g-1-viii adds, naming this ticket. The CLI ITSELF then
+  writes its verdict to the ticket's record under the worktree's git directory. The supervisor never writes,
+  edits, paraphrases or summarises that record, and never substitutes its own account of the verdict.
+- 'K3 (no source_ac): still call the runner, with no ids, so it writes the not-applicable record the backstop
+  requires.'
+- Ship in ONE change together with TQ-500f-3-iv / TQ-500g-1-vii (the paired prompt) and TQ-500g-1-viii
+  (the backstop). Without -1-viii the instruction names a record option that does not exist. Without the
+  instruction, -1-viii blocks every /build-epic commit.
+- 'The edit passes prompt-audit: no compound bash, and the spawn_allowlist covers any new dispatch.'
+test_required: false
+test_rationale: 'Prompt-only. Whether the supervisor follows a runbook instruction cannot be unit-tested
+  without a template text search (forbidden). The rule is tested in TQ-500g-1-i. Mechanical backstop:
+  TQ-500g-1-viii blocks the commit when this runner''s record is missing, unreadable, stop or out of date,
+  so a skipped instruction is visible and blocking. Substitutes: pr-reviewer against the Then clauses,
+  and a live /build-epic drive of a fixture epic with K1 to K3.'
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: prompt
+risk_surface: contract_boundary
+notes: |
+  PROMPT-ONLY. /build-epic dispatches ticket-supervisor, which follows the
+  building-epics skill (prompt text), so the wiring is an instruction, not code.
+  It cannot be unit-tested without a template text search (forbidden). The rule
+  itself is deterministic and tested in TQ-500g-1-i; this AC only makes the
+  supervisor call it and act on its verdict. Substitute: pr-reviewer against the
+  Then clauses, and a live /build-epic drive of a fixture epic with K1 to K3.
+  MECHANICAL BACKSTOP (user decision Q3 at the BA gate): TQ-500g-1-viii stops
+  the commit of any /build-epic ticket for which this runner's verdict is
+  missing, unreadable, stop, or older than the code. This AC must therefore
+  leave the runner's own verdict on record in a form that check can read.
+
+  PAIR WITH TQ-500f-3-iv. Both add a shared gate call to the same
+  ticket-supervisor phase sequence (the red-baseline reader between the test
+  writer and the coder; the wrong-version runs before commit). They may be built
+  together in one llm-expert change, but each keeps its own AC and can pass or
+  fail on its own.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  llm-expert lane. Ship in one PR with TQ-500f-3-iv and TQ-500g-1-viii (see
+  it_requirements).

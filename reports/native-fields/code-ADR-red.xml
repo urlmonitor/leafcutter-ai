@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="6" time="0.278" timestamp="2026-10-02T08:14:17.514994+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_preserves_all_frontmatter_types_without_defaults" time="0.010"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:46: in test_native_adr_preserves_all_frontmatter_types_without_defaults
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_legacy_missing_frontmatter_remains_a_record" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:67: in test_native_adr_legacy_missing_frontmatter_remains_a_record
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_distinguishes_document_status_and_guide_disagreements" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:87: in test_native_adr_distinguishes_document_status_and_guide_disagreements
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows" time="0.003"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:126: in test_native_adr_only_reads_first_direct_status_table_and_keeps_unknown_rows
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_respects_configured_surface_and_existing_id_override" time="0.004"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:149: in test_native_adr_respects_configured_surface_and_existing_id_override
+    record, = _extract(tmp_path)
+              ^^^^^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase><testcase classname="tests.knowledge.test_native_adr" name="test_native_adr_real_sources_retain_complete_fields_and_legacy_body" time="0.001"><failure message="ModuleNotFoundError: No module named 'knowledge.native_types.adr'">tests\knowledge\test_native_adr.py:159: in test_native_adr_real_sources_retain_complete_fields_and_legacy_body
+    records = {record.native_id: record for record in _extract(root)}
+                                                      ^^^^^^^^^^^^^^
+tests\knowledge\test_native_adr.py:19: in _extract
+    return import_module("knowledge.native_types.adr").extract(root)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Python314\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen importlib._bootstrap&gt;:1398: in _gcd_import
+    ???
+&lt;frozen importlib._bootstrap&gt;:1371: in _find_and_load
+    ???
+&lt;frozen importlib._bootstrap&gt;:1335: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'knowledge.native_types.adr'</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,9 @@
+{
+  "case_id": "P04",
+  "step": "started",
+  "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\packets\\P04.started.json",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\kernel\\P04\\runs\\run-89feafb061a94fc2\\artifacts\\input-int-3d99ae181d174a36.json"
+  ],
+  "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-host-dg5b4rp0\\responses\\P04.started.json"
+}

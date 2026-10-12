@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "classification": {
+      "type": "string",
+      "enum": [
+        "mechanical",
+        "cross_agent",
+        "design",
+        "halt"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "classification"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed CLASSIFY_SCHEMA",
+  "description": "Documentation transcription of templates/workflows-js/build-ticket.js::CLASSIFY_SCHEMA. This is the existing source shape, not a new runtime registration; automatic source/schema parity is not asserted."
+}

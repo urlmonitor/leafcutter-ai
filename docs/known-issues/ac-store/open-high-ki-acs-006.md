@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-28'
 components:
   - ac_store
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** high
 - **Status:** open
-- **Occurrences:** 1
-- **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
+- **Occurrences:** 2 (D-1 again on 2026-09-28, `INF-1100d`; see the end of this entry)
+- **First seen:** 2026-08-18 · **Last seen:** 2026-09-28
 - **Where:** `scripts/ac_store/done_proof.py` (`_verify_composite_eligible`,
   `_resolve_all_child_ids`); `scripts/ac_store/test_enforcement.py` (`COVERS_TAG_RE`)
 
@@ -84,3 +84,13 @@ things of the same record (observed on `BO-1500a-1`, `BO-1500b-1`, `BO-1500c-1`)
 live one layer lower, in how the oracle maps a tag to a test at all — see KI-ACS-008.
 
 ---
+
+**D-1, occurrence 2 — 2026-09-28, still live on main `8ed47463`, and one line of D-1 is out of date.**
+Reported by session leafcutter-6d (closed PR #928; carried over to main with its user's approval); line numbers re-checked on `ae85a2a1`.
+`_build_ac_status_map` now **does** carry `test_required` and `test_rationale`
+(`scripts/ac_store/_done_proof_phase_helpers.py:120-125`), so "structurally cannot" no longer holds.
+`_verify_composite_eligible` (`scripts/ac_store/done_proof.py:1729`, `:1774-1790`) still ignores
+them and refuses any leaf descendant with no linked test. Hit while closing `INF-1100d`: its children
+`INF-1100d-2` and `INF-1100d-5` are `test_required: false` with a rationale. The pre-commit twin
+refused the commit first. Full write-up and the shared fix are in
+`KI-CG-20260914-done-proof-precommit-ignores-test-required` Occurrence 2.

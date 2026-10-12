@@ -11,7 +11,8 @@ ARCHITECTURE: Standalone CLI script. Reads the YAML frontmatter block (between
     the first and second --- delimiters), performs targeted line-replacement to
     update the status: field, and writes the file back. Uses targeted replacement
     (not yaml.dump round-trip) to preserve field order and exact formatting.
-    After a successful write, stages the file via git add for the next commit.
+    After a successful write, stages the file via git add for the next commit
+    (unless --no-stage is given, which skips only that staging step).
     Validates transitions against an explicit allow-list. Checks agents: map parity
     before permitting done transitions (unless --force is set).
     Also exposes scan_epic_archive_readiness() as a library function, and a
@@ -28,7 +29,7 @@ Exit Codes:
         --scan-epic pointed at a directory that does not exist)
 
 Usage:
-    python scripts/set_ticket_status.py --ticket <path> --status <todo|in_progress|done> [--force]
+    python scripts/set_ticket_status.py --ticket <path> --status <todo|in_progress|done> [--force] [--no-stage]
     python scripts/set_ticket_status.py --scan-epic <epic_dir>
 """
 
@@ -46,9 +47,22 @@ from typing import TypedDict
 # ---------------------------------------------------------------------------
 
 # Transitions allowed without --force
+#
+# ADR-047 Decision 4 / architect-review Risk 2 (BO-400e-3): ("todo", "done")
+# is included here rather than left force-only. Once the drivers' completion
+# write routes through this script instead of an unguarded direct frontmatter
+# edit, an ordinary ticket that never visited "in_progress" (the common case)
+# must still close without --force -- otherwise every such close would fail
+# for a lifecycle-allow-list reason having nothing to do with the parity
+# check, manufacturing pressure to reach for --force just to get an ordinary
+# close through. --force also disables the parity check, so leaning on it for
+# this case would recreate the lenient direct-edit branch behind a flag. This
+# is a data-table widening only; it must not be accompanied by a change to
+# the parity check below.
 ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
         ("todo", "in_progress"),
+        ("todo", "done"),
         ("in_progress", "done"),
         ("in_progress", "todo"),
     }
@@ -57,7 +71,6 @@ ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
 # Additional transitions allowed only with --force
 FORCE_ALLOWED_TRANSITIONS: frozenset[tuple[str, str]] = frozenset(
     {
-        ("todo", "done"),
         ("done", "todo"),
         ("done", "in_progress"),
         ("inbox", "todo"),
@@ -88,8 +101,9 @@ def _extract_frontmatter_block(content: str) -> tuple[str, str, str] | None:
 
     Returns:
         A tuple of (pre_yaml, yaml_block, post_yaml) where pre_yaml is the
-        leading '---' line, yaml_block is the content between delimiters, and
-        post_yaml is everything from the closing '---' onward.
+        leading '---' line (with its own LF or CRLF ending), yaml_block is
+        the content between delimiters, and post_yaml is everything from the
+        closing '---' onward.
         Returns None if no frontmatter block is detected.
     """
     if not content.startswith("---"):
@@ -97,9 +111,10 @@ def _extract_frontmatter_block(content: str) -> tuple[str, str, str] | None:
     end_idx = content.find("\n---", 3)
     if end_idx == -1:
         return None
-    pre_yaml = content[: 4]  # "---\n"
-    yaml_block = content[4 : end_idx + 1]  # YAML content (includes trailing newline)
-    post_yaml = content[end_idx + 1:]  # "---\n..." onward
+    open_end = content.find("\n") + 1  # opening line whole, keeps its own ending
+    pre_yaml = content[:open_end]
+    yaml_block = content[open_end : end_idx + 1]
+    post_yaml = content[end_idx + 1:]
     return (pre_yaml, yaml_block, post_yaml)
 
 
@@ -120,6 +135,17 @@ def _get_current_status(yaml_block: str) -> str | None:
 
 def _get_needed_agents(yaml_block: str) -> list[str]:
     """Extract agent names that have status 'needed' from the agents: map.
+
+    BO-400e-1 / ADR-046: this is deliberately the ONLY source this module reads
+    for the demanded-step set, and this function deliberately takes no
+    exclusion/skip parameter. See
+    docs/architecture/adrs/ADR-046-completion-demanded-set-is-record-only.md
+    Decision (2) and docs/known-issues/build-orchestration.md's
+    `KI-BO-20260831-1932` for why: a caller-trusted exclusion list here would
+    reopen, one layer below the workflow drivers, the exact caller-controlled
+    channel those drivers' twin `requiredPhasesForCompletion` functions were
+    changed to remove. The absence of such a parameter is load-bearing, not an
+    oversight — do not add one.
 
     Args:
         yaml_block: The raw YAML content between frontmatter delimiters.
@@ -160,20 +186,21 @@ def _replace_status_line(yaml_block: str, new_status: str) -> str:
         The updated YAML block with the status: field replaced or inserted.
     """
     if re.search(r"^status:\s*.+$", yaml_block, re.MULTILINE):
-        return re.sub(r"^(status:\s*)(.+)$", rf"\g<1>{new_status}", yaml_block, flags=re.MULTILINE)
+        return re.sub(r"^(status:\s*)[^\r\n]+", rf"\g<1>{new_status}", yaml_block, flags=re.MULTILINE)
 
     # Insert status: after title: if present
     if re.search(r"^title:", yaml_block, re.MULTILINE):
         return re.sub(
-            r"^(title:.+\n)",
-            rf"\g<1>status: {new_status}\n",
+            r"^(title:[^\r\n]+)(\r?\n)",
+            rf"\g<1>\g<2>status: {new_status}\g<2>",
             yaml_block,
             count=1,
             flags=re.MULTILINE,
         )
 
     # Fallback: prepend
-    return f"status: {new_status}\n{yaml_block}"
+    eol = "\r\n" if "\r\n" in yaml_block else "\n"
+    return f"status: {new_status}{eol}{yaml_block}"
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +369,7 @@ def set_ticket_status(
     ticket_path: Path,
     new_status: str,
     force: bool = False,
+    stage: bool = True,
 ) -> int:
     """Perform the status transition for a single ticket file.
 
@@ -349,6 +377,7 @@ def set_ticket_status(
         ticket_path: Absolute or relative path to the ticket markdown file.
         new_status: Target status value (one of VALID_STATUSES).
         force: When True, bypasses parity check and allows force-allowed transitions.
+        stage: When False, skip the git add step (the write itself is unchanged).
 
     Returns:
         Exit code: 0 on success (including no-op), 1 on validation failure,
@@ -356,7 +385,8 @@ def set_ticket_status(
     """
     # --- Read ---
     try:
-        content = ticket_path.read_text(encoding="utf-8")
+        with open(ticket_path, encoding="utf-8", newline="") as fh:
+            content = fh.read()
     except OSError as exc:
         print(f"Error: cannot read ticket file: {exc}", file=sys.stderr)
         return 2
@@ -414,13 +444,14 @@ def set_ticket_status(
     new_content = pre_yaml + updated_yaml + post_yaml
 
     try:
-        ticket_path.write_text(new_content, encoding="utf-8")
+        ticket_path.write_text(new_content, encoding="utf-8", newline="")
     except OSError as exc:
         print(f"Error: cannot write ticket file: {exc}", file=sys.stderr)
         return 2
 
     # --- Stage ---
-    _stage_file(ticket_path)
+    if stage:
+        _stage_file(ticket_path)
 
     # --- Report ---
     force_note = " (forced, parity check skipped)" if force and new_status == "done" else ""
@@ -468,6 +499,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--no-stage",
+        action="store_true",
+        default=False,
+        help="Write the status but skip the git add step; all checks are unchanged.",
+    )
+    parser.add_argument(
         "--scan-epic",
         metavar="EPIC_DIR",
         default=None,
@@ -500,7 +537,9 @@ def main() -> int:
         print(f"Error: ticket file not found: {ticket_path}", file=sys.stderr)
         return 2
 
-    return set_ticket_status(ticket_path, args.status, force=args.force)
+    return set_ticket_status(
+        ticket_path, args.status, force=args.force, stage=not args.no_stage
+    )
 
 
 if __name__ == "__main__":
@@ -531,5 +570,9 @@ DECISION HISTORY
   status: deferred counts as ready, and a legacy done/ ticket with no status:
   field is treated as done. Return type tightened to the ArchiveReadiness
   TypedDict (review finding L-3).
+- 2026-10-08 [python-coder/TICKET-20261008-CompletionWriteLeavesDoneUnstaged]: Added
+  --no-stage (skips only the git add step) so the driver's completion write records
+  status: done without staging it; the epic loop's staged-leftovers stop and the next
+  ticket's commit sweep then never see a done ticket. Default behaviour is unchanged.
 ====================================================================
 """

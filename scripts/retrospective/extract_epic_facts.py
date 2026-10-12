@@ -87,7 +87,10 @@ def _parse_frontmatter(content: str) -> dict | None:
         print(f"WARNING: PyYAML not available, cannot parse frontmatter: {exc}", file=sys.stderr)
         return None
     try:
-        parsed = yaml.safe_load(raw)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): one-off retrospective tooling, run once per
+        # epic close -- no speed case for the fast loader here.
+        parsed = yaml.load(raw, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         print(f"WARNING: could not parse frontmatter YAML: {exc}", file=sys.stderr)
         return None

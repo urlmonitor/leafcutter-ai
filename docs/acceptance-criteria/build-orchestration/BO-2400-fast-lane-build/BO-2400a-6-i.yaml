@@ -1,0 +1,102 @@
+id: BO-2400a-6-i
+components:
+  - build_orchestration
+title: "How-to update: the command-step-runner, the declined-step halt and its remedy, and launching from any checkout"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane how-to after BO-2400f-5-i, BO-2400f-5-iii and BO-2400f-3-ii are
+    built,
+  When an operator reads it,
+  Then it says that every command step of a run — resolve, producibility, claim, context
+    bundle, release, and any changelog, commit, push or pull-request step an agent is
+    asked to do — is run by the command-step-runner agent, and that test-writer, coder
+    and pr-reviewer stay on their own agents,
+  And it describes the declined-step halt: what the operator sees (the step, the agent
+    asked, and the agent's quoted reason), how it differs from a claim-contention halt
+    and from a refusal to build an unproducible set, and that a command which ran and
+    failed is reported as that step's failure and not as a decline,
+  And it gives the remedy for a declined step — check which agent the step was asked of
+    and that its registry entry permits the step — and states that a declined step never
+    means another run holds the set, so the operator does not go looking for one,
+  And it says what happens to claims when a step is declined: nothing is claimed if the
+    decline comes before the claim, and the claim is released if it comes after, so a
+    retry for the same criterion is not blocked,
+  And it says a run may be launched from any checkout of the repository, including the
+    main checkout and a sibling worktree, and that every step is told the run's own
+    workspace by location, branch and criterion id.
+
+  Given the same how-to,
+  When it is compared with the run's actual halt kinds,
+  Then every halt kind the how-to names exists in the lane, and the declined-step halt is
+    among them.
+depends_on: [BO-2400a-6, BO-2400f-5-i, BO-2400f-5-iii, BO-2400f-3-ii]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Defines the declined-step halt the how-to must explain."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-3-ii.yaml
+    relationship: describes
+    status: exists
+    relevance: "Launching from any checkout."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-10-iii.yaml
+    relationship: describes
+    status: exists
+    relevance: "What a declined step leaves claimed."
+assigned_agent: documentation-expert
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take agent ids, halt-kind names and field names (command-step-runner, declined_step,
+    step_kinds) verbatim from the built lane and registry, never from these ACs' drafts.
+  - >-
+    The doc's frontmatter last_updated is refreshed and the doc stays within the
+    doc-length and doc-compliance hooks. An over-long doc is split by section, not
+    trimmed of required content.
+  - >-
+    The how-to keeps its existing genre and structure. The new material goes in as
+    sections (who runs each step; the declined-step halt, how it differs from contention
+    and unproducible, and its remedy; claims after a decline; launching from any
+    checkout). The rest of the page is not rewritten.
+  - >-
+    Every halt kind the how-to names must exist in the lane as built. The author checks
+    each named halt_kind against the lane before sign-off and lists them in the sign-off
+    comment.
+test_required: false
+test_rationale: |
+  Prose documentation. The store's convention for this tree is test_required: false, as on
+  the parent BO-2400a-6 and its siblings BO-2400a-7 and BO-2400a-8. The one mechanically
+  checkable clause (every halt kind named exists in the lane) is verified by the author at
+  sign-off and by review, not by a unit test. A text-match test on a how-to would pin
+  wording, not correctness.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400f-5-iii
+  contract: "The declined-step halt as built: its classification, the fields it names, and its wording."
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Requested by the user 2026-09-27 (round 3). Placed as an L3 under BO-2400a-6, the existing
+  (done) how-to AC for the same document; BO-2400a is at its child override (9 with 8 used)
+  and L2s carry no child cap. Depends on BO-2400f-3-ii as well as the two requested
+  dependencies because the launch-location section documents that record.

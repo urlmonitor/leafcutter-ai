@@ -1,7 +1,7 @@
 id: ACD-1700b-1
 components:
   - ac_driven_dev
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "An assigned_agent that mismatches the deliverable surface is flagged"
 component: ac-driven-dev

@@ -243,7 +243,7 @@ class TestLifecycleWiringInWorkflow(unittest.TestCase):
         return content  # type: ignore[return-value]
 
     def test_ac7_claim_invoked_after_resolve_before_test_writer(self) -> None:
-        # covers: BO-2400f-7
+        # No covers tag: textual/grep assertion on fast-lane-ship.js, can never enter a Python entry point — see BO-2400f-7.yaml notes.
         """The `claim` CLI subcommand is invoked after Resolve and before test-writer dispatch.
 
         After the resolver returns the build set, the workflow must claim all ACs

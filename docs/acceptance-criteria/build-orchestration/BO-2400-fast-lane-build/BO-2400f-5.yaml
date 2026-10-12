@@ -6,7 +6,7 @@ component: build-orchestration
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -25,7 +25,15 @@ origin_agent: BrainCandy
 created: 2026-07-23
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [BO-2400f-5-i, BO-2400f-5-ii, BO-2400f-5-iii]
 implemented_by: [templates/commands/fast-lane-build.md]
 change_target: pipeline
 risk_surface: internal
+notes: |
+  2026-09-27: reset from done to in_progress (user-approved). On 2026-09-25 a
+  one-command fast-lane run could not complete without hand-driving: resolve and
+  producibility are dispatched to status-checker (permits_shell: false), the claim
+  step was refused as off-role and reported as a concurrent claim, and the
+  context-bundle step was refused as misrouted when launched from a sibling
+  worktree. New children BO-2400f-5-i, -ii and -iii specify the fix. Return this
+  criterion to done once they are built and covered.

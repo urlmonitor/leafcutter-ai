@@ -1,0 +1,384 @@
+id: GE-127g
+title: "A document nobody writes by hand is not judged by a limit written for one, and you can see that it was set aside"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+  - agent_registry
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  The size standard protects a reader. Where there is no author to protect it
+  from, it does not apply — and where it does not apply, that is said out loud.
+
+  A document a generator rewrites whole has no human author deciding how long it
+  is, and no reader working through it from end to end. Holding it to a limit
+  written for prose stops work on everything else: the generator's output grows
+  because unrelated work landed elsewhere, so the next person to commit anything
+  is refused for length they did not write and cannot shorten, and the advice
+  they are given — move a section out and leave a link — is advice nobody can
+  act on, because the next regeneration overwrites it.
+
+  After this, whether a document is held to the standard is a stated, reviewable
+  property of the kind of document it is, in the same way the sibling standard
+  for code already states which kinds of file it does not cover and why. A
+  document set aside is reported as set aside and for which stated reason, so a
+  run that judged nothing can never be read as a run that found nothing — and so
+  an exclusion that has grown too wide is visible rather than silent. Nothing
+  about this makes a document a person actually writes any easier to grow.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE MIRROR, AND THE RECORD THIS ONE WOULD HAVE BEEN A CHILD OF IF IT COULD BE.
+      GE-127c owns REACH — the standard follows the project rather than a list someone
+      wrote once, and which kinds of file are in scope is "a stated, reviewable decision
+      rather than an accident of what happened to be listed first". This L1 owns the
+      same sentence read in the other direction: which kinds are OUT of scope, and on
+      what stated ground. The two must not be merged and neither may be closed as a
+      duplicate of the other: widening coverage and bounding it are different
+      decisions, and GE-127c is already done. See notes for the mechanical reason this
+      is a sibling L1 and not a GE-127c child.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE IN-TREE PRECEDENT FOR THE SECOND HALF OF THIS PROMISE, AND THE BOUNDARY WITH
+      IT. "The outcome states which kinds of file it measured, so a kind that was never
+      measured is not read as having passed" is the same principle for the code-side
+      gate, and it settles the reported-versus-silent question inside this goal rather
+      than by appeal to a general rule. The boundary: that record states which kinds
+      were MEASURED; this L1's reporting clause states which individual documents were
+      SET ASIDE and on which declared ground. Do not restate its clause here and do not
+      satisfy this L1 by pointing at it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. GE-127e owns what a refusal SAYS and how useful it is. The complaint
+      that the gate's remedy text is meaningless for a generated file is real, and it is
+      NOT answered here by rewriting the remedy — it is answered by the file not being
+      refused. No criterion in this subtree may be discharged by improving a message,
+      and none takes any position on wording.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE OTHER ARM AN EXCLUSION MUST COVER. GE-127b is the growth ratchet; GE-127a is
+      the crossing refusal. The doc-side gate's own configuration comment states it
+      ratchets exactly as those two do. An exclusion that short-circuits one arm and not
+      the other leaves three of the generated documents measured here still unable to be
+      regenerated. That is GE-127g-1-i's subject.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      WHERE BOTH THE DECISION AND THE PRECEDENT LIVE. The doc-length section carries
+      max_lines, the blocking severity, and the current exclusion list. The sibling
+      file-size section is the precedent this L1 builds on: it declares whole kinds out
+      of scope "each for a stated reason, not by omission", including machine-authored
+      registry-shaped files on the stated ground that length carries no comprehension
+      cost. The question this L1 settles is not WHETHER machine-authored files may be
+      set aside but HOW that is expressed for documents.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE MECHANISM GAP. Its exclusion test compares a document's bare filename against
+      the declared list, so it can name individual files and cannot name a class. This
+      is the SOURCE; scripts/commit_guardian/ and .leafcutter/scripts/commit_guardian/
+      are build outputs regenerated from it.
+  - path: templates/scripts/commit_guardian/check_doc_length.py
+    relationship: modifies
+    status: exists
+  - path: scripts/generate_agent_cards.py
+    relationship: related
+    status: exists
+    relevance: >-
+      THE GENERATOR WHOSE OUTPUT THIS IS ABOUT. Cited so the population is identifiable
+      and so the "no per-document edit when an agent is added" property has a concrete
+      referent. This L1 does not change it and no criterion here is about it.
+  - path: docs/pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The published surface for this gate, and the target of this L1's reference-doc
+      obligation.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1600-counted-from-reality/BP-1600a-2.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      PRECONDITION, NOT SCOPE — INHERITED FROM THE WHOLE TREE AND NOT RESTATED. Unlike
+      the rest of this goal, note that the doc-side gate IS registered and blocking
+      today, which is why this L1's symptom is observed rather than latent.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Two passages bind. "Gate / Workflow ACs — Verify Behaviorally, Not by Grep": every
+      criterion in this subtree is an ordinary commit in a real repository with the
+      verdict read out of the commit's own outcome, and a test that greps a
+      configuration file for a path pattern satisfies nothing. And the paragraph ending
+      "a check that examined nothing must not look like a check that found nothing",
+      with its three recorded instances, is the recorded ground for the reporting half of
+      this promise.
+delivers_to: null
+expects_from: null
+estimated_complexity: L
+it_requirements:
+  - "ENRICHMENT DECISION 1 — WHERE THE DECLARATION LIVES. In the doc_length section of
+    templates/scripts/commit_guardian/commit_guardian.json, beside max_lines,
+    max_lines_adr, max_sections and the blocking severity, and mirroring the file_size
+    section in the same file which already declares whole kinds out of scope 'each for a
+    stated reason, not by omission'. Not a new configuration file: two sections of one
+    file expressing the same decision two different ways is the drift the parent's notes
+    rule out, and a third file would add a third."
+  - "ENRICHMENT DECISION 1 — THE SHAPE. The recommended key is set_aside_locations: a
+    list of objects, each carrying a repo-relative `path` and a `ground` string. An
+    object per entry rather than a bare path list, so a ground cannot be omitted by
+    construction; an entry whose ground is absent, empty or whitespace-only must be
+    REJECTED rather than honoured silently, reusing the vocabulary the drift-gate and
+    hook-trigger exemption registries in this same file already established for a
+    blank ground."
+  - "ENRICHMENT DECISION 1 — MATCHING. A declared path is matched against the document's
+    repo-relative path. A path ending in / matches every document beneath it at any
+    depth; a path not ending in / matches that one document exactly. Basename matching
+    must be gone, not merely supplemented — it is the mechanism that today exempts all
+    12 hand-authored README.md files under docs/ from one entry intended for one file."
+  - "ENRICHMENT DECISION 1 — THE THREE ENTRIES, each with its ground stated as the
+    PROPERTY that earns the exemption rather than as the name of the generator (GE-127g-4's
+    second clause depends on this wording):
+    (a) path: docs/agents/cards/ — ground: 'Regenerated whole from templates/agents/ by
+    the build''s agent-card phase. No human author decides the length of any document
+    here and no hand edit survives the next regeneration, so a length refusal names work
+    nobody wrote and prescribes a remedy nobody can apply.'
+    (b) path: docs/roadmap.md — ground: 'Regenerated whole from docs/roadmap.json. The
+    document carries its own do-not-edit-by-hand marker and names its source; its length
+    is a function of the roadmap''s size, which no author of this file controls.'
+    (c) path: docs/INDEX.md — ground: 'Regenerated whole by the build''s doc-index phase
+    from the contents of docs/. Its length is a function of how many documents the
+    project has, so it grows whenever an unrelated document is added.'"
+  - "THE EVIDENCE FOR EACH ENTRY, measured in this worktree 2026-10-09, so none is
+    declared on assertion alone: (a) 64 documents under docs/agents/cards/, every one
+    carrying card_version: generated in its frontmatter — including README.card.md,
+    which is generated from templates/agents/README.md and is not a hand-authored index;
+    3 stand above the 300-line limit, the longest at 2,809. (b) docs/roadmap.md stands at
+    286 against 300 and carries an explicit AUTO-GENERATED marker naming
+    regenerate_roadmap_mirror.py. (c) docs/INDEX.md stands at 289 against 300 — ELEVEN
+    lines of headroom — and is the third generated surface; it was not named in the BA's
+    record because it had not been found. It is the strongest available evidence that a
+    one-off for the cards directory produces a third discussion rather than a fix."
+  - "THE PRICE OF REMOVING BASENAME MATCHING, stated so it is not mistaken for a
+    regression later: 12 hand-authored README.md documents under docs/ become judged.
+    Two are already over the limit — docs/agents/README.md at 569 and docs/testing/README.md
+    at 342 — so both are grandfathered by the growth ratchet (shrinking or holding steady
+    passes) but neither may ever grow again. That is the intended effect of GE-127g-3,
+    not a side effect, and the change must not be softened by adding basename-shaped
+    entries for them."
+  - "Any new helper module must live in templates/scripts/commit_guardian/, which
+    build_commit_guardian() in scripts/build_phases_lifecycle.py deploys WHOLESALE by
+    rglobbing the directory — so no deploy-map line is needed there. A module placed
+    anywhere else needs an explicit deploy-map entry in the SAME change, or the deployed
+    hook raises ModuleNotFoundError at hook runtime while the source-tree unit tests stay
+    green. This repository has shipped exactly that failure once (done_proof.py)."
+  - "The two deployed copies — scripts/commit_guardian/commit_guardian.json and
+    config/commit_guardian/commit_guardian.json — are build outputs of the templates/
+    source and must not be hand-edited; build_commit_guardian() writes both."
+  - "Nothing in this subtree may raise a limit, soften the blocking severity, or change
+    the ratchet rule for any document outside the declared locations."
+test_spec: null
+test_rationale: >-
+  No test contract at this level: the promise is held by the four children's contracts,
+  and every one of them is specified as an ordinary commit in a real repository with the
+  verdict read out of the commit's own outcome. The reason not to add an L1-level test is
+  specific rather than procedural — the obvious candidate would assert that the declared
+  patterns are present in commit_guardian.json, which is exactly the shape GE-127g-1's
+  own doc_links warn against: it passes on a gate that never reads the declaration
+  (GE-127g-1's third named mutation, the BP-900g-7 shape) and on a gate that never runs.
+  The declaration's content is proved by GE-127g-1's third arm, which empties it and
+  requires the three over-limit documents to be named by the refusal.
+declares_side_effect: false
+documentation_triggers:
+  - reference-doc
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- reason: gap-closure-child-adopted
+  by: business-analyst
+  at: '2026-10-09'
+  note: 'GE-127g-5 adopted as this L1''s fifth and final L2 child, closing a gap the
+    user found after the first four were authored: once a location is set aside, a
+    document inside it was exempt from the length standard ENTIRELY AND FOREVER, so
+    this L1 created exactly what GE-127c''s own criteria forbid — "a place where files
+    can grow without limit". GE-127g-5 bounds that place with a ceiling declared per
+    location, REPORTED rather than refused (a refusal on ordinary regeneration would
+    reinstate the unactionable refusal this L1 exists to remove), addressed to the
+    owner of the source the location''s stated ground names, and makes an entry carrying
+    no ceiling invalid — so setting a location aside cannot create an unbounded place.
+    ADDITIVE ONLY: no criteria, readiness, it_requirement or test_spec of this record
+    or of GE-127g-1/-2/-3/-4 was changed by this amendment. covered_by now holds 5
+    of this L1''s 5 permitted L2 children, so THERE IS NO L2 HEADROOM LEFT UNDER GE-127g,
+    and this record''s notes already record GE-127 at 7 of 7 L1 slots. Two follow-ups
+    are named in GE-127g-5''s notes and are deliberately NOT authored: GE-127g-4''s
+    published text must also state each location''s declared ceiling and what an over-ceiling
+    report means (this addition leaves that deliverable incomplete), and the three
+    declared entries pinned in this record''s it_requirements will each need a numeric
+    ceiling pinned at enrichment.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - GE-127g-1
+  - GE-127g-2
+  - GE-127g-3
+  - GE-127g-4
+  - GE-127g-5
+implemented_by: []
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+notes: |
+  WHY A SIBLING L1 AND NOT A CHILD OF GE-127c, WHICH IS THE SEMANTICALLY RIGHT PARENT.
+  GE-127c owns the scope decision and holds one L2 against a cap of five, so on
+  structure alone it is the obvious host and on meaning it is the right one. It is ruled
+  out mechanically, and the reasoning is recorded here so it is not re-litigated:
+
+    - GE-127c is work_status: done. check_done_proof proves a done L0/L1 composite by its
+      covered_by children being themselves done-and-covered. Adding a todo child makes it
+      a done composite with an unfinished child — the ACD-400a defect class this
+      repository found twenty live instances of in one sweep — and the AC-store rule
+      requires the parent to be staged in the same commit as the child, so the violation
+      would be staged with it rather than lying latent.
+    - The same objection rules out GE-127a, GE-127b, GE-127d and GE-127e: all five
+      non-f L1s are done.
+    - GE-127f is todo and holds four of five, but its subject is the two-for-one removal
+      obligation on an addition, not which documents are in scope at all. Filing a scope
+      decision there would misfile it as precisely as filing it under check-secrets
+      would have — the mistake that left BP-600f in the wrong component for six weeks.
+
+  So the L0's last free L1 slot is the correct home, not the residual one. Arithmetic
+  measured over the whole store on 2026-10-09 by id-derived parent attribution, not by
+  listing folders: GE-127 held 6 of 7 L1 children before this record and holds 7 of 7
+  after it, with no child_limit_override. THERE IS NOW NO L1 HEADROOM UNDER GE-127. The
+  next scope-shaped record in this family needs a new L0 or a split, and this paragraph
+  is the warning for whoever hits that.
+
+  THE TWO DESIGN QUESTIONS, SETTLED HERE RATHER THAN LEFT TO THE IMPLEMENTER.
+
+  (1) DIRECTORY, SUFFIX, OR A GENERAL CONCEPT? ANSWER: the general concept, expressed as
+  declared path patterns each carrying its own stated reason; and for the agent cards the
+  pattern is the DIRECTORY they are written into, not the .card.md suffix. Four grounds,
+  in order of weight:
+    - THERE ARE ALREADY TWO INSTANCES, SO A ONE-OFF IS ALREADY WRONG. The cards are one.
+      docs/roadmap.md is a generated mirror and stood at 286 lines against a 300-line
+      limit when this was authored — under the limit, and climbing, with the same
+      unactionable refusal waiting at the end of it. A mechanism that names one
+      generated surface produces a third discussion the next time.
+    - THE SIBLING GATE ALREADY EXPRESSES OUT-OF-SCOPE AS A CLASS WITH A REASON, not as a
+      list of individual files, and the reason it gives for machine-authored files is the
+      reason that applies here. Expressing the same decision two different ways in two
+      sections of one configuration file is drift by construction.
+    - A DIRECTORY CANNOT BE DODGED BY A RENAME AND HAS NO FALSE-EXEMPT SURFACE. Every
+      document in the cards directory is generated, so a directory rule exempts exactly
+      the generated population. A suffix rule additionally exempts any hand-authored
+      document anywhere under docs/ that happens to carry that suffix, which widens the
+      exemption past the population it was written for — and a suffix is a naming
+      convention, which a generator change can break while the directory stays.
+    - THE DECIDING PROPERTY IS WHETHER ADDING AN AGENT REQUIRES AN EDIT. The current
+      mechanism matches a document's bare filename against a declared list, so each new
+      agent's card is a new unexempt document until someone edits the list. That is why
+      this recurred four times in one session rather than once. "No edit to the
+      declaration when a new document of the same generated kind appears" is stated as a
+      criterion in GE-127g-1 precisely because it is the property that distinguishes the
+      fix from the symptom.
+  MEASURED EVIDENCE FOR THE "TOO NARROW AND ALSO TOO BROAD" CLAIM, 2026-10-09, raw line
+  counts with no exclusions: the doc-length exclusion list holds two bare filenames,
+  README.md and CHANGELOG.md. There are 12 files named README.md under docs/, all
+  hand-authored, and all of them are exempt from that single entry at any depth. So the
+  present mechanism simultaneously cannot express the class that needs exempting and
+  silently exempts a dozen documents that do not. Both halves are fixed by the same
+  change of shape.
+
+  (2) SILENT OR REPORTED? ANSWER: reported, and the counts must move with the
+  populations. Three grounds:
+    - THE RECORDED HOUSE FAILURE. "A check that examined nothing must not look like a
+      check that found nothing" is in CLAUDE.md with three instances behind it, one of
+      which is this very store's validator exiting zero for eight days having checked
+      zero files while the instruction that prescribed it was itself the no-op.
+    - THE IN-TREE PRECEDENT. GE-127c-1 already requires the code-side gate to state
+      which kinds of file it measured, "so a kind that was never measured is not read as
+      having passed". Reporting is this goal's established convention and a silent skip
+      would be the inconsistent choice, not the conservative one.
+    - A SILENT EXCLUSION MAKES AN OVER-BROAD EXCLUSION UNFINDABLE. This is the argument
+      that is specific to this record rather than inherited. The failure mode of a
+      pattern-shaped exclusion is that it matches more than intended; under a silent skip
+      nothing in the output distinguishes "no document is over its limit" from "every
+      document was set aside", so the widening is invisible until a document grows
+      unchecked for months. That is why GE-127g-2 requires the two counts to MOVE when
+      the populations move, and not merely to be stated: a stated count is satisfiable by
+      a literal.
+
+  MEASURED IN THIS WORKTREE ON 2026-10-09, WITH METHOD, CARRY THE CONFIDENCE LABELS AND
+  DO NOT UPGRADE THEM.
+    - READ FROM CONFIGURATION, NOT DISPUTED: the doc-length limit is 300 lines, 400 for
+      a decision record, with a blocking severity and a two-entry exclusion list of bare
+      filenames.
+    - MEASURED, RAW LINE COUNTS WITH NO EXCLUSIONS: 65 documents under docs/agents/cards/
+      totalling 11,526 lines in the working tree; 3 of the 65 stand above 300 — 2,809, 639
+      and 355 — and the next three stand at 276, 235 and 207. 901 markdown documents under
+      docs/ in total.
+    - THE SYMPTOM WAS OBSERVED HAPPENING, INDEPENDENTLY, DURING THIS AUTHORING PASS, AND
+      IT RECONCILES THE TWO SETS OF FIGURES EXACTLY. This worktree was provisioned fresh
+      from origin/main. Before any record here was written, six of the generated cards were
+      ALREADY modified in the working tree — timestamps show them all rewritten in the same
+      instant, eight minutes before the first file in this subtree was created — and none of
+      the added lines belongs to any record authored here. python-coder's card is +287/-3,
+      documentation-expert's +15, architecture-diagram-author's +8, test-writer's +8,
+      frontend-coder's +4, llm-expert's +4; the added lines are assignment entries for
+      unrelated decision-kernel records that accumulated on main. The committed lengths at
+      HEAD are 2,525, 340, 635 and 268 — which are precisely the figures the report that
+      prompted this record cites. So the earlier-recorded divergence was not a divergence
+      at all and no counting-rule explanation is needed: the report states the COMMITTED
+      lengths and the measurement above states the WORKING-TREE lengths after a
+      regeneration the provisioning step performed. Both are correct and they differ by
+      exactly the regeneration.
+    - CONSEQUENTLY, THE LIVE ARM IS THE GROWTH ARM AND NOT THE CROSSING ARM. Three cards
+      were already over the 300-line limit when committed — 2,525, 635 and 340 — and the
+      regeneration left all three longer: 2,809, 639 and 355. Those are three present-tense
+      ratchet refusals waiting on the next commit that stages them. The crossing arm is
+      prospective rather than live: architecture-diagram-author's card went 268 to 276, still
+      under the limit, and the generated roadmap mirror stands at 286. This is the measured
+      reason GE-127g-1-i exists and why its growth arm is stated first.
+    - ONE FIGURE REMAINS UNRECONCILED AND IS NOT ADOPTED EITHER WAY: the report counts
+      eleven cards, three of them over the limit; this worktree holds 65 card documents, three
+      of them over the limit. The over-limit count agrees; the population count does not, and
+      no explanation for the difference was established. No criterion in this subtree asserts
+      a card count or a line count as a fixed fact, and any that did would be at the wrong
+      altitude — the population is expected to move, which is the subject of GE-127g-1's
+      second arm.
+    - NOT MEASURED AND NOT TO BE ASSERTED: how many documents in total would change
+      verdict once the declared patterns are pinned. That number cannot exist until
+      enrichment pins them.
+
+  WHAT IS LEFT TO ENRICHMENT, FOLLOWING GE-127c's PRECEDENT. The concrete set of declared
+  patterns and the exact wording of each stated reason are the IT PO's to pin, exactly as
+  GE-127c states the principle and leaves the extension list to enrichment. The criteria
+  below fix what must be true of any such set: it is declared rather than built in, each
+  entry carries a reason, a new document of an already-declared generated kind joins
+  without an edit, the set is reported, and a hand-authored document is still judged.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.

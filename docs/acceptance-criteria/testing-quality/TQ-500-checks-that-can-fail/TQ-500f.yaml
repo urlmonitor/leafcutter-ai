@@ -43,6 +43,13 @@ origin_agent: product-owner
 created: 2026-09-25
 amended_by:
   - reason: "Authored by product-owner from BrainCandy's /plan-feature request 'Tests must prove they can tell right from wrong' (Phase A: request items 1, 2, 4, 5)."
+  - reason: "Notes only: must_catch authoring retargeted from IT-PO to the code-aware test designer (ACD-2500c / ACD-2500d-5), aligning with amended TQ-500f-2-ii"
+    by: product-owner
+    at: 2026-09-27
+    note: >-
+      User-approved PO touch-up at the BA gate for
+      KI-ACD-20260927-tq-500f-2-ii-contradicts-acd-2500. Only the notes item 2
+      sentence changed; title, criteria and depends_on are untouched.
 superseded_by: null
 covered_by:
   - TQ-500f-1
@@ -74,8 +81,10 @@ notes: |
     2. A requirement's test entries may carry an optional list of named wrong
        versions the test must catch ("must_catch"). User decision (Q4): that list
        is carried verbatim onto the generated work's test requirements so the
-       test writer sees exactly what the requirement author named. IT-PO is
-       expected to fill it for bug-fix and gate requirements.
+       test writer sees exactly what the requirement author named. The
+       code-aware test designer (ACD-2500c / ACD-2500d-5) fills it for bug-fix
+       and gate requirements — not IT-PO, which may not read source. See
+       docs/known-issues/ac-driven-dev/open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md.
     4. Failing because a name or symbol does not exist yet is evidence of absence
        only; it does not satisfy a regression test for code that already exists.
        The instruction to make a passing-too-early test fail "with a TODO comment"

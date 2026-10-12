@@ -39,6 +39,14 @@ wraps the `plan-feature.js` workflow script, which:
 5. **Writes exclusively to the AC store and the product-truth store** — no ticket
    files are produced.
 
+## Consumer discovery policy
+
+Before designing ACs for new or materially changed agent-facing behavior, consult
+[ADR-064: Persona Discovery Before Feature Planning](../../../docs/architecture/adrs/ADR-064-persona-discovery-before-feature-planning.md).
+It records the required consumer interviews, traceable usage catalog and proportionate
+applicability decision. This reference does not add an automated workflow check or configure Jev;
+the enforcement implementation remains subject to the normal AC process.
+
 ## Invocation
 
 ```

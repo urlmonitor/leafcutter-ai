@@ -1,0 +1,44 @@
+"""
+MODULE: kernel.contracts.schema_ids
+GOAL: The stable protocol ids of the registered payload schemas.
+BUSINESS CONTEXT: Named payloads must have registered schemas (Rev 3 section 7.11); capability
+    descriptors, requests and submissions refer to them only by these ids.
+ARCHITECTURE: Leaf module with no imports so registry and contract models can validate schema
+    ids without importing the payload models (which would create import cycles).
+"""
+
+GOAL_REQUEST = "leafcutter.goal_request.v1"
+DECISION_REQUEST = "leafcutter.decision_request.v1"
+DECISION_REPORT = "leafcutter.decision_report.v1"
+RESEARCH_REQUEST = "leafcutter.research_request.v1"
+RETRIEVAL_REQUEST = "leafcutter.retrieval_request.v1"
+EVIDENCE_BUNDLE = "leafcutter.evidence_bundle.v1"
+OPTIONS_REQUEST = "leafcutter.options_request.v1"
+OPTIONS = "leafcutter.options.v1"
+SYNTHESIS_REQUEST = "leafcutter.synthesis_request.v1"
+FINDINGS = "leafcutter.findings.v1"
+HUMAN_QUESTION_REQUEST = "leafcutter.human_question_request.v1"
+HUMAN_ANSWER = "leafcutter.human_answer.v1"
+
+QUERY_BUILD_REQUEST = "leafcutter.query_build_request.v1"
+QUERY_CANDIDATE = "leafcutter.query_candidate.v1"
+QUERY_ACTIVATION_REQUEST = "leafcutter.query_activation_request.v1"
+QUERY_ACTIVATION_RECEIPT = "leafcutter.query_activation_receipt.v1"
+RETRIEVAL_NEEDS_REQUEST = "leafcutter.retrieval_needs_request.v1"
+RETRIEVAL_NEEDS_OUTPUT = "leafcutter.retrieval_needs_output.v1"
+
+KNOWN_SCHEMA_IDS: frozenset[str] = frozenset({
+    GOAL_REQUEST, DECISION_REQUEST, DECISION_REPORT, RESEARCH_REQUEST, RETRIEVAL_REQUEST,
+    EVIDENCE_BUNDLE, OPTIONS_REQUEST, OPTIONS, SYNTHESIS_REQUEST, FINDINGS,
+    HUMAN_QUESTION_REQUEST, HUMAN_ANSWER,
+    QUERY_BUILD_REQUEST, QUERY_CANDIDATE, QUERY_ACTIVATION_REQUEST, QUERY_ACTIVATION_RECEIPT,
+    RETRIEVAL_NEEDS_REQUEST, RETRIEVAL_NEEDS_OUTPUT,
+})
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-09-30 22:00 [python-coder]: Split from schema_catalog to break the models-import cycle;
+#   a test asserts the catalog keys equal KNOWN_SCHEMA_IDS. (#KernelBootstrapV0/P1)
+# ====================================================================
+# - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)

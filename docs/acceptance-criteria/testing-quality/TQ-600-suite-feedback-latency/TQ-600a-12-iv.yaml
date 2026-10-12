@@ -1,0 +1,199 @@
+id: TQ-600a-12-iv
+components:
+  - testing_quality
+  - build_pipeline
+title: "No test is made slower by being moved onto the private-copy route"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the two shapes a test can pay for a package copy: the shape roughly 20
+    existing test files already use, a build into an empty temporary directory,
+    measured at 14.81 s; and the shape the private-copy route uses, a copy of the
+    whole source tree followed by a self-targeting build against that copy, measured
+    at 48.94 s,
+  And the private-copy route's own stated account of its cost, which describes
+    itself as mirroring the status quo every non-migrated test already pays — a
+    description that is wrong by a factor of 3.3 and is currently the only thing an
+    author has to go on,
+  And the consequence, which is that routing the roughly 20 existing files of the
+    cheaper shape onto the private-copy route would add about 680 s to the suite as
+    part of a change undertaken to make it faster,
+  When the private-copy route produces a root,
+  Then the run reports how long that production took and which of the two shapes it
+    used,
+  And the route's own stated account of its cost agrees with the measured figures,
+    naming both shapes and the difference between them, so the next author reads a
+    description that matches the behaviour,
+  And moving an existing test onto the route is gated by a comparison against that
+    test's own prior cost: a move that makes a test slower is reported as a failure
+    naming the test and both figures, rather than accepted as part of a speed change,
+  And the gate is shown to fire on a test deliberately moved from the cheaper shape
+    onto the more expensive one, so it is distinguishable from a gate that never
+    examines anything.
+depends_on:
+  - TQ-600a-12
+doc_links:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      EDIT SURFACE. `_produce_private_copy()` at line 224 is both the route whose
+      cost must be reported and the function whose stated account of that cost is
+      wrong. Verified at source: it copytree's the worktree root, then runs build.py
+      with --target-dir pointed at that same populated copy.
+  - path: unit_tests/test_bp_900g_8_ii.py
+    relationship: constrains
+    status: exists
+    relevance: >-
+      The canonical cheaper-shape test and the one its own docstring cites as the
+      thing it mirrors. Roughly 10.5 minutes across four tests, each running a
+      three-state build. A regression here is large and would be attributed to the
+      wrong change.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-8.yaml
+    relationship: constrains
+    status: exists
+    relevance: >-
+      TQ-600a-8 is the migration of the existing deploy-site population onto these
+      routes. This record is the bound that migration has to satisfy, and the two
+      must be read together before any file is moved.
+  - path: docs/analysis/2026-10-05-slowest-tests-and-what-to-do-about-them-2-the-speed-programmes-own-tests.md
+    relationship: describes
+    status: planned
+    relevance: >-
+      Section 3 is this trap in full, including both measurements and the 680 s
+      figure. Marked planned because it lives on branch ci/shard-pytest-suite.
+declared_files:
+  - path: scripts/suite_performance/pytest_shared_reference_layout.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    THE TWO SHAPES ARE NOT THE SAME OPERATION AND THE CURRENT DESCRIPTION SAYS THEY
+    ARE. Cheaper shape: build into an empty directory, 14.81 s. Private-copy route:
+    copy 11,651 entries and 96 MB, then build against that populated copy, 48.94 s.
+    Correcting the stated account is part of this record's deliverable, not a
+    nicety — it is the only warning the next author will see.
+  - >-
+    THE GATE COMPARES AGAINST THE TEST'S OWN PRIOR COST, NOT AGAINST A FIXED CEILING.
+    A fixed threshold is either so loose it never fires or so tight it fires on load
+    noise. Record what the test cost before the move and compare the move against
+    that figure, with a tolerance wide enough to survive a shared host.
+  - >-
+    SEEDING MAKES THE ROUTE CHEAP, SO THE GATE MUST DISTINGUISH SEEDED FROM UNSEEDED.
+    A seeded private copy is about 2.07 s and is cheaper than the cheaper shape. An
+    unseeded one is 48.94 s. Reporting which shape was used is what makes the figure
+    interpretable; a bare duration is not.
+  - >-
+    DO NOT BLOCK THE MOVE OUTRIGHT — REPORT IT AS A FAILURE WITH BOTH FIGURES. The
+    route is sometimes the correct destination even at higher cost, for instance for
+    a test that genuinely mutates the package. The requirement is that the cost is
+    seen and named, not that it is forbidden.
+  - >-
+    THIS RECORD IS INDEPENDENT OF THE SEED OPTION AND SHOULD NOT WAIT FOR IT. The
+    cost bound is worth having whether or not seeding lands, because TQ-600a-8's
+    migration can start moving files at any time.
+delivers_to:
+  - agent: python-coder
+    ac_id: TQ-600a-8
+    contract: >-
+      The per-move cost comparison and its failure report, as the bound TQ-600a-8's
+      migration of the existing deploy-site population must satisfy for every file it
+      moves.
+expects_from:
+  - ac_id: TQ-600a-12
+    contract: >-
+      The private-copy route's production path, instrumented with the elapsed time
+      and the shape used, which this record's gate reads.
+test_spec:
+  - name: test_tq600a_12_iv_the_route_reports_its_production_time_and_which_shape_it_used
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: >-
+      After a private-copy production, the run's record contains an elapsed figure
+      and an identification of the shape — copy-then-build, or copy-a-seed.
+  - name: test_tq600a_12_iv_the_routes_stated_cost_matches_the_measured_cost
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      Measure both shapes on this machine in one sitting and assert the ratio is
+      greater than 2. This is the claim the current description denies, so this
+      descriptor is what makes the correction evidence-backed rather than a reworded
+      comment.
+  - name: test_tq600a_12_iv_moving_a_cheaper_shape_test_onto_the_route_is_reported_as_a_failure
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: >-
+      THE CAN-FAIL DESCRIPTOR. Take a test paying the cheaper shape, move it onto the
+      unseeded private-copy route, and assert the gate reports a failure naming the
+      test and both figures.
+  - name: test_tq600a_12_iv_moving_a_test_onto_the_seeded_route_is_not_reported_as_a_regression
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: >-
+      The paired control. The same move with seeding on is cheaper than the prior
+      cost and the gate stays quiet. Without this the record is satisfied by a gate
+      that fires on every move.
+  - name: test_tq600a_12_iv_the_gate_compares_against_the_tests_own_prior_cost
+    target_dir: unit_tests/suite_performance/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: >-
+      NAMED MUTATION: replace the per-test prior cost with a fixed ceiling; this test
+      must go RED. A fixed ceiling passes every other descriptor here and is silent
+      on exactly the regression this record exists to catch.
+test_rationale: |
+  This is a trap that a speed migration walks into while believing it is going the
+  other way, and the only thing standing in front of it today is a sentence in the
+  route that is wrong by a factor of 3.3.
+
+  The can-fail descriptor is mandatory for the same reason it is mandatory on the
+  parser agreement check: a cost gate over a population nobody has moved yet reports
+  clean forever, and clean is what it will report on the day it is written. So the
+  gate is exercised against a real move in the wrong direction, and paired with a
+  move in the right direction so the gate is not simply hostile to all movement.
+
+  The fixed-ceiling injection is named because it is the implementation a coder
+  reaches for first, it satisfies every other descriptor, and it is specifically
+  blind to a 14.81 s test becoming a 48.94 s test if the ceiling sits anywhere above
+  49 s — which, with 60 s builds elsewhere in this suite, it very plausibly would.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THE DEFECT CLASS IS "THE ROUTE LOOKS LIKE THE THING IT REPLACES AND IS NOT." The
+  private-copy route's own description says it mirrors the status quo every
+  non-migrated test already pays. It does not: the status quo is a build into an
+  empty directory at 14.81 s, and the route is a whole-tree copy plus a self-targeting
+  build at 48.94 s. Nobody has noticed because the route has, so far, only ever been
+  taken by tests that had no cheaper alternative.
+
+  The moment TQ-600a-8 starts moving the existing population, that stops being true.
+  Twenty files of the cheaper shape routed onto the mutator marker is about 680 s
+  added by a change whose entire purpose is to remove time — and it would be
+  invisible, because the migration would report a successful move and the suite would
+  simply be slower.
+
+  This record is deliberately not coupled to the seed option. It is worth building on
+  its own and on the earliest possible date, because its value is entirely in being
+  in place BEFORE the first file moves.

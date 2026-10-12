@@ -1,0 +1,360 @@
+{
+  "$defs": {
+    "ApprovalStatus": {
+      "description": "Approval state of a decision, criterion or constraint.",
+      "enum": [
+        "not_required",
+        "proposed",
+        "approved",
+        "rejected"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "CriterionAssessment": {
+      "additionalProperties": false,
+      "description": "Outcome of assessing one option (or the evidence) against one criterion.",
+      "properties": {
+        "criterion_id": {
+          "description": "The criterion that was assessed.",
+          "title": "Criterion Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "description": "Evidence the verdict rests on, so the reader can check it.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "description": "Caveats on this verdict (thin evidence, cut-off retrieval) that the reader should weigh.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "option_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The option assessed against the criterion; null when the evidence as a whole was assessed.",
+          "title": "Option Id"
+        },
+        "outcome": {
+          "description": "Verdict for this pair: pass, fail, or uncertain when the evidence does not settle it.",
+          "enum": [
+            "pass",
+            "fail",
+            "uncertain"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "provider_answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProviderAnswer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The raw provider distribution behind the verdict, kept for audit."
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion_id",
+        "outcome"
+      ],
+      "title": "CriterionAssessment",
+      "type": "object"
+    },
+    "DecisionStatus": {
+      "description": "Assessment status of a Decision.",
+      "enum": [
+        "resolved",
+        "needs_evidence",
+        "needs_options",
+        "needs_synthesis",
+        "needs_human",
+        "blocked"
+      ],
+      "title": "DecisionStatus",
+      "type": "string"
+    },
+    "ObservabilityStatus": {
+      "description": "Whether telemetry export is healthy.",
+      "enum": [
+        "ok",
+        "degraded"
+      ],
+      "title": "ObservabilityStatus",
+      "type": "string"
+    },
+    "ProviderAnswer": {
+      "additionalProperties": false,
+      "description": "Raw provider distribution kept next to the derived outcome.",
+      "properties": {
+        "choice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The answer label the provider picked.",
+          "title": "Choice"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The provider's own confidence in its answer (0 to 1), compared with the routing and decision thresholds.",
+          "title": "Confidence"
+        },
+        "probabilities": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "The provider's probability for each answer label, kept so the derived outcome can be audited.",
+          "title": "Probabilities",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "ProviderAnswer",
+      "type": "object"
+    },
+    "Rationale": {
+      "additionalProperties": false,
+      "description": "Concise explanation; origin labels who wrote it (never Jev hidden reasoning).",
+      "properties": {
+        "origin": {
+          "description": "Who wrote the text: a kernel template or the host, never the provider's hidden reasoning.",
+          "enum": [
+            "template",
+            "host"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "description": "The explanation of why the option was chosen, short enough to read in a report.",
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "origin"
+      ],
+      "title": "Rationale",
+      "type": "object"
+    },
+    "TraceRefs": {
+      "additionalProperties": false,
+      "description": "Where to inspect the run's trace and whether export is healthy.",
+      "properties": {
+        "observability": {
+          "$ref": "#/$defs/ObservabilityStatus",
+          "default": "ok",
+          "description": "Whether trace export is healthy, so a missing trace can be told from a failed export."
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "trace_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Id of the run's trace in the observability backend, for looking it up.",
+          "title": "Trace Id"
+        },
+        "trace_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Link to the run's trace, when the backend provides one.",
+          "title": "Trace Url"
+        }
+      },
+      "title": "TraceRefs",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.decision_report.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.decision_report.v1.",
+  "properties": {
+    "approval_status": {
+      "$ref": "#/$defs/ApprovalStatus",
+      "default": "not_required",
+      "description": "Whether a human has approved the outcome, for decisions that require approval."
+    },
+    "contradicting_evidence_ids": {
+      "description": "Evidence that argues against the recommendation, kept visible rather than dropped.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Contradicting Evidence Ids",
+      "type": "array"
+    },
+    "criterion_assessments": {
+      "description": "How options fared against each criterion, so the choice can be audited.",
+      "items": {
+        "$ref": "#/$defs/CriterionAssessment"
+      },
+      "title": "Criterion Assessments",
+      "type": "array"
+    },
+    "limitations": {
+      "description": "Known weaknesses of the result (cut-off retrieval, missing sources) the reader should weigh.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "open_questions": {
+      "description": "What is still unanswered; an unresolved report lists what would settle it.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Open Questions",
+      "type": "array"
+    },
+    "rationale": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Rationale"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Short explanation of why the option was chosen, with who wrote it."
+    },
+    "recommendation": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The plain-language answer to the question, shown to the caller when there is one.",
+      "title": "Recommendation"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "selected_option_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Id of the option the decision picked; set only on a resolved report.",
+      "title": "Selected Option Id"
+    },
+    "status": {
+      "$ref": "#/$defs/DecisionStatus",
+      "description": "Where the decision stands, so the caller knows whether to act, supply more, or wait for a human."
+    },
+    "supporting_evidence_ids": {
+      "description": "Evidence that backs the recommendation, for the caller to inspect.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Supporting Evidence Ids",
+      "type": "array"
+    },
+    "trace_refs": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TraceRefs"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Where to inspect this run's trace, for finding out how the result came about."
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "DecisionReportPayload",
+  "type": "object"
+}

@@ -11,7 +11,20 @@ ARCHITECTURE: Single public entry point `generate_card()` returns a complete
     card markdown string for one agent. Section-rendering helpers (one per
     card section) encapsulate the rendering logic for each block. A top-level
     `build_agent_cards()` function drives the full-tree pass for `build.py`.
-    YAML frontmatter is parsed with `yaml.safe_load()`. All file I/O is
+    YAML parsing is split (loader-audit, TQ-600a-11 fix-pass, 2026-10-07):
+    `_parse_frontmatter` (one small agent-template frontmatter block at a
+    time, dozens of files) uses the pure-Python `yaml.SafeLoader` directly --
+    no speed case at that volume. `_scan_ac_assignments` /
+    `_scan_all_ac_assignments` (a single whole-AC-store walk per build,
+    thousands of files) keep the shared fast accessor
+    (scripts/ac_store/yaml_safe_loader.py): measured on the real store,
+    ~1.7-2.1s via the accessor vs ~20.6-22.7s forced pure-Python across two
+    sittings (~10-13x, consistent with this file's own 2026-08-12 DECISION
+    HISTORY entry sizing the walk at "~16s vs ~775s" before the accessor
+    existed), output is byte-identical on the real store in every run, this
+    path never gates a commit or CI check (pure documentation generation),
+    and nothing asserts its parse must agree with `yaml.safe_load` as a
+    reference implementation. All file I/O is
     wrapped in `try/except OSError`. Hyperlink helpers convert doc_links and
     knowledge_channel sources that resolve to real files into relative Markdown
     links from the card output path. doc_links entries that reference files not
@@ -25,11 +38,17 @@ import datetime
 import json
 import logging
 import os
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent / "ac_store"))
+from yaml_safe_loader import get_safe_yaml_loader  # noqa: E402
+
+from agent_card_source_resolver import _is_git_ignored, _resolve_source_to_path  # noqa: E402, F401
 
 _log = logging.getLogger(__name__)
 
@@ -37,12 +56,6 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATES_DIR = _PACKAGE_ROOT / "templates"
 _REGISTRY_PATH = _PACKAGE_ROOT / "config" / "agent_registry.json"
 
-# File extensions and path patterns considered "file-like" sources in
-# knowledge_channels.  A source string matching any of these is a candidate
-# for hyperlink conversion when the file exists on disk.
-_FILE_EXTENSIONS = frozenset(
-    {".md", ".py", ".yaml", ".yml", ".json", ".sh", ".toml", ".txt"}
-)
 
 
 # ---------------------------------------------------------------------------
@@ -90,7 +103,18 @@ def _parse_frontmatter(template_text: str) -> dict[str, Any]:
         return {}
     fm_text = "\n".join(lines[1:end_idx])
     try:
-        parsed = yaml.safe_load(fm_text)
+        # Reverted to the pure-Python loader (loader-audit, TQ-600a-11
+        # fix-pass, 2026-10-07): a parse failure here degrades to {} for
+        # this one agent template, the same KI-BP-019 "silent degrade"
+        # shape documented in template_compiler.py (already reverted). One
+        # small frontmatter block per agent template (dozens of files, not
+        # thousands) -- no speed case for the fast loader at this volume.
+        # NOTE: this file's OTHER two call sites
+        # (_scan_ac_assignments/_scan_all_ac_assignments below) DO keep the
+        # fast accessor -- see their own docstrings for the measured,
+        # whole-AC-store justification. See this module's own docstring for
+        # the split.
+        parsed = yaml.load(fm_text, Loader=yaml.SafeLoader)
     except yaml.YAMLError as exc:
         _log.warning("YAML parse error in frontmatter: %s", exc)
         return {}
@@ -184,88 +208,6 @@ def make_relative_link(
     # Normalise path separators to POSIX forward-slashes for Markdown.
     rel_posix = Path(rel).as_posix()
     return f"[{label}]({rel_posix})"
-
-
-def _resolve_source_to_path(
-    source: str,
-    package_root: Path,
-) -> Path | None:
-    """Attempt to resolve a knowledge-channel source string to a real file.
-
-    Tries the following strategies in order and returns the first match:
-
-    1. Treat *source* as a path relative to *package_root*.
-    2. When the source token has a directory-hinting prefix word (e.g.
-       ``"signoff SKILL.md"``), look for a file at
-       ``<any-dir-containing-prefix-word>/<filename>`` within the package tree.
-    3. Walk the package tree looking for any file whose name matches the
-       filename component of *source* (shallow search — only 4 levels deep).
-
-    Args:
-        source: Raw source string from a knowledge_channels entry, e.g.
-            ``"Root CLAUDE.md"`` or ``"signoff SKILL.md"``.
-        package_root: Absolute path to the package root (repo root).
-
-    Returns:
-        Resolved :class:`~pathlib.Path` if found on disk, else ``None``.
-    """
-    # Strategy 1: direct relative path.
-    candidate = package_root / source
-    if candidate.exists():
-        return candidate
-
-    # Extract filename token (last word that carries a known extension).
-    tokens = source.split()
-    filename: str | None = None
-    filename_idx: int = -1
-    for i, token in reversed(list(enumerate(tokens))):
-        if Path(token).suffix in _FILE_EXTENSIONS:
-            filename = token
-            filename_idx = i
-            break
-
-    if filename is None:
-        return None
-
-    # Strategy 2: directory-hint match.  When there is a word before the
-    # filename token, treat that word as a hint for the parent directory name.
-    if filename_idx > 0:
-        hint = tokens[filename_idx - 1].lower()
-        for root_dir, _dirs, files in os.walk(package_root):
-            root_path = Path(root_dir)
-            try:
-                rel_depth = len(root_path.relative_to(package_root).parts)
-            except ValueError:
-                continue
-            if rel_depth > 5:
-                _dirs.clear()
-                continue
-            # Parent directory name must contain the hint word.
-            if hint in root_path.name.lower() and filename in files:
-                return root_path / filename
-
-    # Strategy 3: filename-only match (up to 4 levels deep).
-    # Collect ALL matches; resolve only when exactly one unique path is found.
-    # An ambiguous match (multiple locations share the same basename) returns None
-    # so that the caller's missing-doc / plain-text fallback applies rather than
-    # producing a non-deterministic hyperlink.
-    matches: list[Path] = []
-    for root_dir, _dirs, files in os.walk(package_root):
-        root_path = Path(root_dir)
-        try:
-            rel_depth = len(root_path.relative_to(package_root).parts)
-        except ValueError:
-            continue
-        if rel_depth > 4:
-            _dirs.clear()  # prune deeper subtrees
-            continue
-        if filename in files:
-            matches.append(root_path / filename)
-
-    unique_matches = sorted(set(matches))
-    if len(unique_matches) == 1:
-        return unique_matches[0]
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -679,6 +621,10 @@ def _scan_ac_assignments(
         List of ``{"id": ..., "title": ..., "assigned_agent": ...}`` dicts
         for each matching active AC, sorted by AC ``id``.  Empty list when
         the AC store directory does not exist or no matching ACs are found.
+
+    KEPT on the fast accessor (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07) -- see this module's own docstring for the measured
+    whole-AC-store justification shared with :func:`_scan_all_ac_assignments`.
     """
     ac_dir = docs_root / "docs" / "acceptance-criteria"
     if not ac_dir.exists():
@@ -696,7 +642,7 @@ def _scan_ac_assignments(
                 _log.warning("Cannot read AC file %s: %s", filepath, exc)
                 continue
             try:
-                data = yaml.safe_load(text)
+                data = yaml.load(text, Loader=get_safe_yaml_loader())
             except yaml.YAMLError as exc:
                 _log.warning("YAML parse error in %s: %s", filepath, exc)
                 continue
@@ -736,6 +682,18 @@ def _scan_all_ac_assignments(
     Returns:
         Mapping of agent id to its list of matching active AC dicts.  Empty
         mapping when the AC store directory does not exist.
+
+    KEPT on the fast accessor (loader-audit, TQ-600a-11 fix-pass,
+    2026-10-07). This is the one call site in this file where the fast
+    accessor earns its keep: a single whole-AC-store walk, run once per
+    `build.py` invocation. Measured on the real on-disk store (two sittings,
+    this host): fast-accessor ~1.7-2.1s vs forced-pure-Python ~20.6-22.7s
+    (~10-13x), output byte-identical both times. A parse failure here
+    degrades a single AC out of one agent's "AC Assignments" documentation
+    section -- it never gates a commit-guardian hook or CI check, and
+    nothing asserts this parse must agree with `yaml.safe_load` as a
+    reference implementation, so none of the three disqualifying criteria
+    from the loader audit apply.
     """
     ac_dir = docs_root / "docs" / "acceptance-criteria"
     grouped: dict[str, list[dict[str, Any]]] = {}
@@ -753,7 +711,7 @@ def _scan_all_ac_assignments(
                 _log.warning("Cannot read AC file %s: %s", filepath, exc)
                 continue
             try:
-                data = yaml.safe_load(text)
+                data = yaml.load(text, Loader=get_safe_yaml_loader())
             except yaml.YAMLError as exc:
                 _log.warning("YAML parse error in %s: %s", filepath, exc)
                 continue
@@ -1139,7 +1097,7 @@ def build_agent_cards(
 
         try:
             cards_dir.mkdir(parents=True, exist_ok=True)
-            card_path.write_text(card_content, encoding="utf-8")
+            card_path.write_text(card_content, encoding="utf-8", newline="\n")
             print(f"  docs/agents/cards/{agent_id}.card.md")
             written += 1
         except OSError as exc:

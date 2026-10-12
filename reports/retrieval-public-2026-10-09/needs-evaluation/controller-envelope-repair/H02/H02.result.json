@@ -1,0 +1,278 @@
+{
+  "case_id": "H02",
+  "original_rejected_receipt": "../H02.result.json",
+  "response_sha256": "84cbf85c1c0edf5db88946b1213a314c6b25149b96caa32e5a51dbd017e8fc76",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-69950e147f6449c9",
+    "root_task_id": "task-3da64db494aa4194",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "criteria"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "children_direct"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "exclude_root",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "List the immediate child requirements of the named root with their defining clauses. The one-hop relationship excludes grandchildren, while no explicit level filter is imposed.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-69950e147f6449c9\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-b96dbec21d47795c",
+        "created_at": "2026-10-09T15:35:06.329095Z",
+        "updated_at": "2026-10-09T15:35:06.329095Z",
+        "created_seq": 0,
+        "gap_key": "e9f618d2726ed80792ccee5254338c4dc2e79bdf31fcb8615d6ac76470f86417",
+        "gap_type": "host_only",
+        "goal": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+        "normalized_need": "500f child don grandchildren immediate include list only requirements t tq",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "List only the immediate child requirements of TQ-500f; don't include grandchi...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-69950e147f6449c9"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: List only the immediate child requirements of TQ-500f; don't include grandchi...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/e9f618d2726ed80792ccee5254338c4dc2e79bdf31fcb8615d6ac76470f86417.md"
+        },
+        "first_seen": "2026-10-09T15:35:06.329095Z",
+        "last_seen": "2026-10-09T15:35:06.329095Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 449837,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "361abc3026914066e3956528733c8a66",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "TQ-500f"
+      ],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "children_direct"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "exclude_root",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "List the immediate child requirements of the named root with their defining clauses. The one-hop relationship excludes grandchildren, while no explicit level filter is imposed.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "List only the immediate child requirements of TQ-500f; don't include grandchildren.",
+        "expected": "List only the immediate child requirements of TQ-500f; don't include grandchildren."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "TQ-500f"
+        ],
+        "expected": [
+          "TQ-500f"
+        ]
+      },
+      {
+        "name": "include.relationships",
+        "passed": true,
+        "actual": [
+          "children_direct"
+        ],
+        "expected": [
+          "children_direct"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "exclude.relationships",
+        "passed": true,
+        "actual": [
+          "children_direct"
+        ],
+        "expected": {
+          "forbidden": [
+            "all_descendants",
+            "parent_direct"
+          ]
+        }
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_set",
+        "expected": [
+          "exhaustive_set"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

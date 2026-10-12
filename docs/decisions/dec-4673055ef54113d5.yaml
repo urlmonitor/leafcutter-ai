@@ -1,0 +1,341 @@
+schema_version: '1.0'
+kind: decision
+id: dec-4673055ef54113d5
+repository_id: leafcutter-ai
+title: Native read-only GitHub source for facts that feed decisions, with host handoff only for ...
+description: Decide how the Leafcutter decision kernel should get read access to GitHub (pull ...
+decision_type: design
+question: 'Decide how the Leafcutter decision kernel should get read access to GitHub (pull requests, CI check results and
+  run times, issues) so it can answer questions such as whether CI is green or whether open pull requests should be combined.
+  Options: a native read-only retrieval source inside the kernel that pulls from the GitHub API into evidence; a host tool,
+  where the kernel hands GitHub lookups to the host LLM (Claude Code or Codex) which runs gh; or another option grounded in
+  the repository.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.hybrid
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'Decide how the Leafcutter decision kernel should get read access to GitHub (pull requests, CI check results and run
+    times, issues) so it can answer questions such as whether CI is green or whether open pull requests should be combined.
+    Options: a native read-only retrieval source inside the kernel that pulls from the GitHub API into evidence; a host tool,
+    where the kernel hands GitHub lookups to the host LLM (Claude Code or Codex) which runs gh; or another option grounded
+    in the repository.'
+  component_ids: []
+  technologies: []
+  constraints: []
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.hybrid] Native read-only GitHub source for facts
+    that feed decisions, with host handoff only for anything beyond reading (required mean 0.82, 2/3 passed); 2. [opt.native_source]
+    a native read-only retrieval source inside the kernel that pulls from the GitHub API into evidence (required mean 0.61,
+    1/3 passed); 3. [opt.host_tool] a host tool, where the kernel hands GitHub lookups to the host LLM (Claude Code or Codex)
+    which runs gh (required mean 0.39, 0/3 passed). human:user chose option [opt.hybrid] Native read-only GitHub source for
+    facts that feed decisions, with host handoff only for anything beyond reading (kernel rank 1 of 3).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.8167
+  selected_rank: 1
+  ranking:
+    - option_id: opt.hybrid
+      rank: 1
+      required_passed: 2
+      required_total: 3
+      required_mean: 0.8167
+      scores:
+        crit.both_hosts: 0.78
+        crit.no_token_in_kernel: 0.69
+        crit.read_only: 0.9
+        crit.small_slice: 0.48
+        crit.verifiable: 0.86
+    - option_id: opt.native_source
+      rank: 2
+      required_passed: 1
+      required_total: 3
+      required_mean: 0.6067
+      scores:
+        crit.both_hosts: 0.75
+        crit.no_token_in_kernel: 0.24
+        crit.read_only: 0.83
+        crit.small_slice: 0.28
+        crit.verifiable: 0.75
+    - option_id: opt.host_tool
+      rank: 3
+      required_passed: 0
+      required_total: 3
+      required_mean: 0.3867
+      scores:
+        crit.both_hosts: 0.65
+        crit.no_token_in_kernel: 0.75
+        crit.read_only: 0.32
+        crit.small_slice: 0.51
+        crit.verifiable: 0.09
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.native_source
+    title: a native read-only retrieval source inside the kernel that pulls from the GitHub API into evidence
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-c1e8e36ab14fcd65
+      - ev-b58b1f0bb6ce45c2
+      - ev-9b9cbd349b1d85f2
+      - ev-7d52ac2252c2b970
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.host_tool
+    title: a host tool, where the kernel hands GitHub lookups to the host LLM (Claude Code or Codex) which runs gh
+    description: ''
+    assumptions: []
+    evidence_ids:
+      - ev-7d52ac2252c2b970
+      - ev-8b2f85a6c069b93b
+    proposed_by: caller_goal
+    approved_by: null
+  - id: opt.hybrid
+    title: Native read-only GitHub source for facts that feed decisions, with host handoff only for anything beyond reading
+    description: Facts the kernel decides on (is CI green, how long checks take, which PRs are open and what they touch) come
+      from a native read-only GitHub source as verifiable evidence; anything that is not a read (merging, commenting, re-running
+      CI) stays outside the kernel and goes to the host as host work or is reported as a capability gap.
+    assumptions: []
+    evidence_ids:
+      - ev-c1e8e36ab14fcd65
+      - ev-7d52ac2252c2b970
+      - ev-a1e174078aa01f85
+      - ev-9b9cbd349b1d85f2
+    proposed_by: host.generate_options
+    approved_by: human:user
+criteria:
+  - id: crit.verifiable
+    question: Do GitHub facts enter the kernel's decisions as inspectable evidence (identity, URL, revision such as head SHA
+      or updated time, content hash) rather than as host-reported text?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-c1e8e36ab14fcd65
+      - ev-b58b1f0bb6ce45c2
+      - ev-6542a2a0c3320d28
+      - ev-747d06cf41128bd5
+      - ev-da230cf13dd4fa0d
+  - id: crit.read_only
+    question: Does the kernel stay read-only toward GitHub, with no path to merge, comment, push or re-run anything?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-f4ce8d94878044c8
+      - ev-8b2f85a6c069b93b
+      - ev-b58b1f0bb6ce45c2
+      - ev-7d52ac2252c2b970
+      - ev-9d6905dabce07c17
+  - id: crit.no_token_in_kernel
+    question: Does it avoid storing a GitHub token in kernel config, run artifacts or traces (for example by using the existing
+      authenticated gh login)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-f4ce8d94878044c8
+      - ev-8b2f85a6c069b93b
+      - ev-9d6905dabce07c17
+      - ev-6542a2a0c3320d28
+      - ev-aa3c21363f04ffa5
+  - id: crit.both_hosts
+    question: Does it work the same whether the host is Claude Code or Codex?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-8b2f85a6c069b93b
+      - ev-9d6905dabce07c17
+      - ev-6542a2a0c3320d28
+      - ev-7d52ac2252c2b970
+      - ev-f4ce8d94878044c8
+  - id: crit.small_slice
+    question: Can it be built and verified as one ticket without new infrastructure?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-747d06cf41128bd5
+      - ev-da230cf13dd4fa0d
+      - ev-f4ce8d94878044c8
+      - ev-6542a2a0c3320d28
+evidence:
+  - id: ev-da230cf13dd4fa0d
+    locator: docs/analysis/2026-09-30-decision-kernel-design-4-jev-and-capabilities.md#L218-L221 (§As built (grounding))
+    category: task_context
+    content_hash: d727587db7394d549e0fd42102e1bc141a22bd141681cf5ced6e309c963dd221
+    verification: source_verified
+    relevance: 0.76
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-c1e8e36ab14fcd65
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-4-scheduler-jev-capabilities.md#L240-L249 (§10. Generic
+      decision and research capabilities [MVP] > 10.3 Source resolution and retrieval)
+    category: task_context
+    content_hash: c6a914d008161375777c3d47fae9d5e54787b9ab86a2f76049f76d50550c787c
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-9b9cbd349b1d85f2
+    locator: config/capability_registry.json#L98-L122 (capabilities)
+    category: task_context
+    content_hash: e872bc04a6bfcd4991084d2f1777df3d60c207e25f2ebe6c8f254fd889db2a89
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-f4ce8d94878044c8
+    locator: 'docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md#L162-L183 (§4. Exact MVP: what to build now [STAGE 1]
+      > 4.2 Minimum included functionality)'
+    category: task_context
+    content_hash: 4f6c92a3346ee316bbcab9c0d2a0a2b1d2aa966d2ca0082d89751fd0a7bbf7d2
+    verification: source_verified
+    relevance: 0.71
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-8b2f85a6c069b93b
+    locator: docs/how-to/run-the-decision-kernel.md#L238-L264 (§Steps > Step 7 — Install the `/leafcutter` skill for Claude
+      Code)
+    category: task_context
+    content_hash: fb52522ca71397faa7d4a00a3793f0e247edb94461146102b26422f63672eb9e
+    verification: source_verified
+    relevance: 0.57
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-6542a2a0c3320d28
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-8-audit-links-handoff.md#L207-L222 (§24. Ready-to-use coding-agent
+      instruction [MVP HANDOFF])
+    category: task_context
+    content_hash: d2ab89e438cdf7d1444d56c28f513754c702b8fa17b794c628021c84ecdedf6a
+    verification: source_verified
+    relevance: 0.5
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-747d06cf41128bd5
+    locator: kernel/capabilities/host/generate_options.py#L193-L213 (module level)
+    category: existing_patterns
+    content_hash: 75c9a9951a8892dc192d404d169bb4a09ff6a0a7add235ea56e1e12470bb2e5d
+    verification: source_verified
+    relevance: 0.78
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-b58b1f0bb6ce45c2
+    locator: kernel/capabilities/retrieval/executor.py#L1-L43 (module level)
+    category: existing_patterns
+    content_hash: de5c3882d28889911fad47aee2cd02ec00cff78702d88b4cb28e90bacd4afd54
+    verification: source_verified
+    relevance: 0.59
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-7d52ac2252c2b970
+    locator: docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3-2-runtime-and-registry.md#L14-L50 (§5. Runtime architecture
+      and invocation boundary [MVP])
+    category: prior_decisions
+    content_hash: 956c6fce68c5288766375742e5575c3fb99121b62c9f9ba2c40ebbb659a40f62
+    verification: source_verified
+    relevance: 0.8
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-a1e174078aa01f85
+    locator: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md#L179-L203 (§Decision > 8.
+      How the kernel's outcomes map to the mechanisms)
+    category: prior_decisions
+    content_hash: b390587e01e49823186ce7828c1983ffce57f853e9ca3a3dff4d970caf6529b1
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: 1bb99d5dcbc42e1dc60677126c195434ef3ceaf1
+      dirty: false
+  - id: ev-9d6905dabce07c17
+    locator: docs/how-to/run-the-decision-kernel.md#L241-L267 (§Steps > Step 7 — Install the `/leafcutter` skill for Claude
+      Code)
+    category: existing_patterns
+    content_hash: fb52522ca71397faa7d4a00a3793f0e247edb94461146102b26422f63672eb9e
+    verification: source_verified
+    relevance: 0.74
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-4ff490a333a635de
+    locator: kernel/capabilities/retrieval/repository.py#L1-L38 (module level)
+    category: existing_patterns
+    content_hash: 0ab12e9ae10d9797d4b81f4534e0badb83669e53eb9758a466c24fb7c8a459cd
+    verification: source_verified
+    relevance: 0.68
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-1ba439bc370ddfde
+    locator: config/capability_registry.json#L74-L98 (capabilities)
+    category: existing_patterns
+    content_hash: 2dcdd18c39d0911acfbd0db5d9b3d8852426a3b0f444c0fbe6fbe7d1e9484c41
+    verification: source_verified
+    relevance: 0.66
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-e532e7ced6d6a577
+    locator: kernel/adapters/__init__.py#L1-L15
+    category: existing_patterns
+    content_hash: 25abcdaffece67b5d6489b439ac370abb3d434bead6d8a2d9a5fa976e69e344d
+    verification: source_verified
+    relevance: 0.54
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+  - id: ev-aa3c21363f04ffa5
+    locator: 'docs/analysis/2026-09-30-leafcutter-kernel-spec-rev3.md#L14-L25 (§Leafcutter: Decision Kernel and Engineering
+      Runtime)'
+    category: existing_patterns
+    content_hash: 76b7b1585bfbb8a05f2b2bb9d73b020986255d89ca1ced3a0a2b3233bf809df6
+    verification: source_verified
+    relevance: 0.51
+    source_version:
+      commit: d50c0dc48a0feecbbfbba87400e024c87dd3f245
+      dirty: false
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-02T13:01:32Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-02T13:01:32Z'
+  run_id: run-9921881bfaa342ef
+  root_task_id: task-31e45497ad5b42cb
+  langfuse_trace_id: 4ffc49151294407f990941f5ef319bc4
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: 226533a24a6c
+    criteria: 0a629e48fb95
+    templates: decision.assess@1
+corrections: []

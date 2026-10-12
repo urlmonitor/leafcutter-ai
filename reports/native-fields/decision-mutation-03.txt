@@ -1,0 +1,9 @@
+FFFFF                                                                    [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected[components]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected[change_target]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected[risk_surface]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected[roadmap_phase]
+FAILED tests/knowledge/test_native_decision.py::test_decision_unknown_filter_value_rejected[file_globs]
+5 failed in 0.21s

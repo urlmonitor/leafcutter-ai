@@ -1,0 +1,136 @@
+id: BO-4400f-1
+title: "Every piece of scratch lands in the one scratch location, labelled with its owner and age"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target:
+  - code
+  - config
+risk_surface: safety
+criteria: |
+  Given a record is taken of the entries in the system temporary folder, in the
+    project's durable log folders, and in the project root,
+  And the build of a single ticket, the quick fix and the fast lane are each run on a
+    test project, each creating throwaway files while it works,
+  When the same places are recorded again while each run is still active,
+  Then every throwaway item each run created is inside the one designated scratch
+    location, and none of the recorded places contains a new entry,
+  And every item in the scratch location carries the identity of the run that owns it
+    and the time it was created,
+  And an item is expired under the scratch age and ownership rule when its owning run
+    has ended and it is older than the configured age limit (default 24 hours), or
+    when its owner cannot be identified and it is older than that limit; no other
+    item is expired.
+depends_on: [BO-4400f, TQ-600b-2]
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600b-2.yaml
+    relationship: related
+    status: exists
+    relevance: Each test's scratch is unique to it (parallel safety); this record adds the home and lifetime, not uniqueness.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400f.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      A stdlib-only scratch module (source under templates/scripts/, named deploy-manifest entry)
+      exposing: scratch_root() -> absolute path; new_item(owner_run_id: str, route: str) -> absolute
+      path of a fresh item folder whose label file records {owner_run_id, route, pid, host,
+      created_at (UTC ISO-8601)}; classify(item, now, age_limit_hours) -> {expired: bool, reason:
+      "owner_active" | "within_age" | "owner_ended_and_old" | "owner_unknown_and_old"}; and
+      durable_paths() -> the declared list of durable folders. Consumed by the sweep (BO-4400d-1),
+      route-end scratch removal (BO-4400f-3), the test-runner plugin (BO-4400f-2) and
+      BO-4400f-1-i / -1-ii.
+  - agent: documentation-expert
+    contract: "Scratch location, label fields, the rule and its config keys, and the durable-path list, for BO-4400f-4 and BO-4400f-5."
+expects_from: null
+package_surface: false
+it_requirements:
+  - >-
+    ONE LOCATION, from config: worktree_cleanup.scratch_root and worktree_cleanup.scratch_max_age_hours
+    (default 24) in config/skills_config.default.json with schema entries in
+    config/skills_config.schema.json. Proposed default root: <user cache dir>/leafcutter/scratch/
+    (outside the project root, outside the system temp folder, outside every durable folder) -- for
+    user confirmation. The existing test_output_dir key (default %TEMP%/leafcutter-tests/) points
+    into the system temp folder and must be re-pointed under the scratch root or retired in the same
+    change.
+  - >-
+    ROUTES: build-ticket.js / build-feature.js, quick-fix.js (its qf-*-tmp folders in the project
+    root) and fast-lane-ship.js obtain their scratch from new_item() and export TMPDIR / TEMP / TMP
+    pointing into that item for every process they start, so third-party temp writes land there
+    too. E2 workflow bodies cannot touch the filesystem (ADR-030): the item is created by the same
+    shell-agent dispatch pattern used for the maker, and its path passed on as an argument.
+  - >-
+    THE RULE is defined once in classify(): an item whose owner is active never expires; expired iff
+    (owner ended AND older than the limit) OR (owner unidentifiable AND older than the limit).
+    "Active" uses the same in-use signal as BO-1800d / BO-4400d-1 (process liveness of the recorded
+    owner), not a second definition.
+  - >-
+    Durable folders (debugging/logs/, test-logs/ and any configured addition) are a declared list in
+    the same config section; classify() never treats anything under them as scratch.
+  - >-
+    TQ-600b-2 (per-test uniqueness for parallel workers) is cited, not duplicated: per-test
+    scratch is a unique folder inside a run's item.
+  - >-
+    Must handle errors per the project error handling policy (CLAUDE.md Rules 1-4); an unreadable
+    label means owner unknown, never owner active and never expired-now.
+  - >-
+    PROOF: the three routes run under unit_tests/_workflow_engine_harness.py on the deployed
+    workflows with scripted steps that create throwaway files through the normal tooling; the test
+    redirects HOME / XDG_CACHE_HOME and points TMPDIR at a watched folder, snapshots the system temp
+    stand-in, durable folders and project root while each run is active, and calls the deployed
+    module's classify() as a separate process over labelled items with controlled ages and owners.
+test_required: true
+test_spec:
+  - name: test_route_throwaway_files_land_only_in_scratch_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "While each of the three runs is active, every throwaway item is inside the scratch root and the temp stand-in, durable folders and project root have no new entry."
+    must_catch:
+      - "quick fix still writes qf-*-tmp into the project root"
+      - "subprocess temp writes go to the system temp folder"
+  - name: test_every_scratch_item_carries_owner_and_creation_time
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Each item's label names the owning run and its UTC creation time."
+  - name: test_expiry_rule_truth_table
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      Items for each combination of owner active / ended / unknown and age below / above the
+      limit: only ended-and-old and unknown-and-old are expired.
+    must_catch:
+      - "age-only expiry"
+      - "unknown owner never expires"
+test_rationale: >-
+  "Every throwaway file is in one place" is a claim about everything a run writes, including what
+  its subprocesses write, so it must be measured around real runs; the rule itself is a small truth
+  table that a deployed-module call covers exhaustively.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400f-1-i, BO-4400f-1-ii]
+implemented_by: []
+notes: |
+  Gap G7. Evidence: test-logs/wire-700a5-tmp reached 3.4 GB (scratch inside a durable log
+  folder) and qf-*-tmp directories were left behind in the project. "Owner" is the run's
+  identity; "ended" is decided by the same in-use signal BO-1800d / BO-4400d-1 use. The rule is
+  defined here once; the sweep and the route end only consume it.
+  The default 24-hour age limit is a BA proposal for the IT PO / user to confirm.

@@ -103,6 +103,21 @@ REACHABILITY ENTRY-POINT RESOLUTION (per the test-writer skill's Step 1,
         resolved and proved; this test proves it again for this AC's two new
         stdout-contract fields."
 
+DECISION HISTORY:
+    2026-10-02 (PR #980, decision-lifecycle product truth): the checked-in
+    store gained its FIRST project-owned mockups (five leafcutter/decision-*
+    screens). The tests above used the live store as their fixture and
+    assumed every mockup belongs to fern-and-fig, so three of them went red
+    in CI (precondition drift, 16 != 11, example_only_types=[]). Fix: the
+    example-only tests now run against a FIXTURE store -- the real store
+    narrowed to its example-only mockups (the in-process tests filter the
+    loaded mockups; the CLI test runs the real script via
+    _EXAMPLE_ONLY_RUNNER with that one seam narrowed) -- and the counts test derives its expectations from the store itself
+    instead of hard-coding 11. No assertion was weakened; the AC's intent
+    ("a store whose screens are all example content reports screens as
+    example-only") is unchanged, and adding project artifacts can no longer
+    break it.
+
 NOTE ON RED BASELINE: compute_type_population and compute_example_only_types
     do not exist in product_truth_outcome.py yet, so every in-process test
     below fails on import with ImportError. The reachability (CLI subprocess)
@@ -114,6 +129,7 @@ NOTE ON RED BASELINE: compute_type_population and compute_example_only_types
 """
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import unittest
@@ -155,6 +171,36 @@ def _load_real_populations() -> tuple[dict, dict, dict]:
     return flows, mocks, mockups
 
 
+def _example_only_mockups(mockups: dict) -> dict:
+    """Fixture view of a store whose screens are all example content: the
+    real store's mockups minus every project-owned one (PR #980 added the
+    first project mockups; this test's assumption is now explicit)."""
+    return {mid: m for mid, m in mockups.items() if po.is_example_artifact_id(mid)}
+
+
+# Runs the REAL validate_product_truth.py script file as __main__ (runpy), with
+# ONE seam narrowed: the mockups handed to compute_type_population are the real
+# store's mockups minus every project-owned one. Everything else -- the real
+# store, real AC store, real consistency checks, real stdout contract line and
+# exit code -- is untouched. (A copied store with the project mockups deleted
+# is NOT a usable fixture: the index, flows and impl-status checks are all
+# coupled to those mockups and the 33 MB AC store, so the CLI would fail for
+# reasons unrelated to this AC.)
+_EXAMPLE_ONLY_RUNNER = """
+import runpy, sys
+sys.path.insert(0, sys.argv[1])
+import product_ownership as po
+import product_truth_outcome as pto
+_orig = pto.compute_type_population
+def _example_only(flows, mocks, mockups):
+    kept = {k: v for k, v in mockups.items() if po.is_example_artifact_id(k)}
+    return _orig(flows, mocks, kept)
+pto.compute_type_population = _example_only
+sys.argv = [sys.argv[2]]
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+
+
 class TestExampleOnlyTypeReportedByName(unittest.TestCase):
     """AC-2 / AC-3: a type whose whole population is example content is
     reported BY NAME, and an example artifact is never counted toward the
@@ -162,6 +208,7 @@ class TestExampleOnlyTypeReportedByName(unittest.TestCase):
 
     def setUp(self) -> None:
         self.flows, self.mocks, self.mockups = _load_real_populations()
+        self.mockups = _example_only_mockups(self.mockups)
 
     def test_type_with_only_example_artifacts_is_reported_by_name(self) -> None:
         # covers: UXP-700d-4
@@ -170,11 +217,10 @@ class TestExampleOnlyTypeReportedByName(unittest.TestCase):
         # VERIFIED (2026-09-16, direct execution) to be entirely fern-and-fig --
         # zero project artifacts of either type exist anywhere in the record.
         # Both must be named by the check as example-only.
-        self.assertTrue(self.mockups, "expected at least one mockup in the real store")
+        self.assertTrue(self.mockups, "expected at least one example mockup in the real store")
         self.assertTrue(
             all(po.is_example_artifact_id(mockup_id) for mockup_id in self.mockups),
-            "test precondition drifted: the real store now has a project mockup -- "
-            "update this test's fixture assumption rather than weakening the assertion",
+            "fixture precondition broken: the example-only fixture still holds a project mockup",
         )
 
         type_population = pto.compute_type_population(self.flows, self.mocks, self.mockups)
@@ -247,11 +293,12 @@ class TestPerTypeCountsBothStated(unittest.TestCase):
                 "from product_ownership.is_example_artifact_id",
             )
 
-        # Concrete, VERIFIED (2026-09-16) real-store figures for the mixed
-        # type, so this test cannot pass on an implementation that reports
-        # e.g. (0, 0) or a constant for every type.
-        self.assertEqual(type_population["flows"]["project"], 11)
-        self.assertEqual(type_population["flows"]["example"], 3)
+        # Guard against an implementation reporting (0, 0) or a constant for
+        # every type: flows is a mixed type in the real store, so BOTH of its
+        # counts must be nonzero. Expected values are derived from the store
+        # itself above, never hard-coded (PR #980 changed the project counts).
+        self.assertGreater(type_population["flows"]["project"], 0)
+        self.assertGreater(type_population["flows"]["example"], 0)
 
 
 class TestBothZeroTypeReportedEmptyNotExampleOnly(unittest.TestCase):
@@ -310,7 +357,7 @@ class TestExampleOnlyTypesReachableFromEntryPoint(unittest.TestCase):
         # real caller (a human running the checker, or a future CI gate) can
         # reach this behaviour through the actual command line.
         result = subprocess.run(
-            [sys.executable, str(_REAL_ENTRY_SCRIPT)],
+            [sys.executable, "-c", _EXAMPLE_ONLY_RUNNER, str(_SCRIPTS_DIR), str(_REAL_ENTRY_SCRIPT)],
             cwd=str(_REPO_ROOT),
             capture_output=True,
             text=True,
@@ -325,9 +372,7 @@ class TestExampleOnlyTypesReachableFromEntryPoint(unittest.TestCase):
 
         json_lines = [line for line in result.stdout.splitlines() if line.strip().startswith("{")]
         self.assertTrue(json_lines, f"expected a JSON outcome line on stdout; stdout={result.stdout!r}")
-        import json as _json
-
-        payload = _json.loads(json_lines[-1])
+        payload = json.loads(json_lines[-1])
 
         self.assertIn(
             "type_population",
@@ -348,8 +393,8 @@ class TestExampleOnlyTypesReachableFromEntryPoint(unittest.TestCase):
         self.assertIn(
             "mockups",
             payload["example_only_types"],
-            "the real CLI must report 'mockups' as example-only against the real, "
-            f"checked-in store; got example_only_types={payload['example_only_types']!r}",
+            "the real CLI must report 'mockups' as example-only against the "
+            f"checked-in store narrowed to its example-only mockups; got example_only_types={payload['example_only_types']!r}",
         )
         mockups_entry = payload["type_population"]["mockups"]
         self.assertEqual(

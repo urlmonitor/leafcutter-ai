@@ -1,0 +1,267 @@
+{
+  "canary_source_policy": [
+    {
+      "id": "knowledge.graph",
+      "kind": "graph_query",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "prior_decisions",
+        "internal_principles"
+      ],
+      "roots": [],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    }
+  ],
+  "default_source_policy": [
+    {
+      "id": "repo.principles",
+      "kind": "repo_text",
+      "categories": [
+        "internal_principles",
+        "authoritative_guidance"
+      ],
+      "roots": [
+        "CLAUDE.md",
+        "docs/conventions",
+        "docs/vision.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.decisions",
+      "kind": "repo_text",
+      "categories": [
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/architecture/adrs"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "knowledge.decisions",
+      "kind": "knowledge_map",
+      "categories": [
+        "prior_decisions"
+      ],
+      "roots": [],
+      "surfaces": [
+        "adrs"
+      ],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.patterns",
+      "kind": "repo_text",
+      "categories": [
+        "existing_patterns"
+      ],
+      "roots": [
+        "kernel",
+        "scripts",
+        "docs/architecture"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.docs",
+      "kind": "repo_text",
+      "categories": [
+        "internal_principles",
+        "task_context",
+        "existing_patterns",
+        "authoritative_guidance"
+      ],
+      "roots": [
+        "README.md",
+        "docs/how-to",
+        "docs/explanation",
+        "docs/reference",
+        "docs/testing",
+        "docs/workflows",
+        "docs/known-issues",
+        "docs/INDEX.md",
+        "docs/glossary.md",
+        "docs/ticket-lifecycle.md",
+        "docs/build-pipeline.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.analysis",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/analysis"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.components",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/architecture/components"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.acceptance_criteria",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/acceptance-criteria"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.roadmap",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions"
+      ],
+      "roots": [
+        "docs/roadmap.json",
+        "docs/roadmap.md",
+        "docs/vision.md"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.registries",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "docs/components.json",
+        "docs/build-dataflow.json"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": 1000000
+    },
+    {
+      "id": "repo.tickets",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "prior_decisions"
+      ],
+      "roots": [
+        "tickets"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.config",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns"
+      ],
+      "roots": [
+        "config"
+      ],
+      "surfaces": [],
+      "deny_globs": [
+        "config/*.env",
+        "config/*secret*",
+        "config/*credential*",
+        "config/*token*",
+        "config/*password*",
+        "config/*id_rsa*",
+        "config/*.p12",
+        "config/*.pfx"
+      ],
+      "max_file_bytes": null
+    },
+    {
+      "id": "repo.tests",
+      "kind": "repo_text",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "internal_principles"
+      ],
+      "roots": [
+        "tests/README.md",
+        "unit_tests/README.md",
+        "pytest.ini"
+      ],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "knowledge.components",
+      "kind": "knowledge_map",
+      "categories": [
+        "existing_patterns",
+        "task_context"
+      ],
+      "roots": [],
+      "surfaces": [
+        "components",
+        "skills",
+        "agents"
+      ],
+      "deny_globs": [],
+      "max_file_bytes": null
+    },
+    {
+      "id": "host.research",
+      "kind": "host_research",
+      "categories": [
+        "authoritative_guidance",
+        "external_practices"
+      ],
+      "roots": [],
+      "surfaces": [],
+      "deny_globs": [],
+      "max_file_bytes": null
+    }
+  ],
+  "default_knowledge_backend": "none",
+  "context_enrichment_enabled": true,
+  "actual_enrichment_files_scanned": {
+    "RS-02": 0,
+    "RS-03": 0
+  },
+  "limitation": "These are graph-only canaries. Default configured sources differ; no all-source/default-entry quality claim. Another separately authorized test of the real adapter default is needed for that question."
+}

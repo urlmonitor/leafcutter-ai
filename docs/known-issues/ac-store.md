@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 24** (1 blocker, 14 high, 9 low) · **Resolved: 3**
+**Open: 25** (1 blocker, 14 high, 10 low) · **Resolved: 3**
 
 ## Open
 
@@ -86,6 +86,7 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `low` | KI-ACS-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it — the generated ticket tells the test author the AC declared nothing, six paragraphs below the six things it declared | [open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md](ac-store/open-low-ki-acs-20260907-reachability-boilerplate-denies-the-test_spec-printed-above-it.md) |
 | `low` | KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect — `validate_ac_schema.py` passes records the commit hook then rejects, so a clean bulk run is not evidence on every field | [open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md](ac-store/open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md) |
 | `low` | KI-ACS-20260923-doc-links-status-not-reconciled — an AC's `doc_links[].status` field is never reconciled against whether its target document actually exists or shipped | [open-low-ki-acs-20260923-doc-links-status-not-reconciled.md](ac-store/open-low-ki-acs-20260923-doc-links-status-not-reconciled.md) |
+| `low` | KI-ACS-20260928 — the done-proof pytest rootdir walk has no upper bound, so a config file above the project can become the test run's cwd | [open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md](ac-store/open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md) |
 
 ## Resolved
 

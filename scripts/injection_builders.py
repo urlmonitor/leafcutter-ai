@@ -152,6 +152,7 @@ def _parse_frontmatter_description(text: str) -> str:
     fm_text = text[3:end].strip()
     try:
         import yaml  # noqa: PLC0415
+
         fm = yaml.safe_load(fm_text) or {}
         return fm.get("description", "") or ""
     except Exception:  # noqa: BLE001

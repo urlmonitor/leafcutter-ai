@@ -1,0 +1,151 @@
+id: BO-400e-1-i
+components:
+  - build_orchestration
+  - supervisor_system
+title: "A phase that finished by handing work on has finished, provided the work was actually picked up"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a ticket whose record shows a phase that completed by handing its work to a
+    named sibling rather than by finishing outright,
+    And the sibling it named subsequently recorded a passing outcome of its own,
+    And nothing afterwards returned work to the first phase,
+  When the close of that ticket is decided,
+  Then the handing phase counts as accounted for,
+    And it is not reported as outstanding merely because the last thing it recorded
+      was a handover rather than a completion,
+  And given a second ticket whose record shows the same kind of handover but where
+    the named sibling recorded nothing afterwards, or recorded a failure,
+  When its close is decided,
+  Then the handing phase IS reported as outstanding, and the refusal names it,
+  And given a third ticket in which a phase handed work on and was later handed work
+    back by a reviewer, and has recorded nothing since,
+  When its close is decided,
+  Then that phase is outstanding too, because the last thing the record says about it
+    is that somebody wanted more from it,
+  So a handover is read as what the sign-off protocol says it is -- a phase that
+    completed and passed the baton -- while a baton nobody picked up still stops the
+    close, and neither case depends on the handing phase being asked to speak again.
+depends_on:
+  - BO-400e-1
+doc_links:
+  - path: templates/workflows-js/build-feature.js
+    relationship: modifies
+    status: exists
+    relevance: "Carries POSITIVE_SIGNOFF_STATUSES = ['ok', 'signed_off'] and isPassingSignoff(), consumed by the completion write's outstanding-phase loop. This is where a handover is currently read as a non-completion. TWIN of build-ticket.js."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: modifies
+    status: exists
+    relevance: "The single-ticket twin, carrying the same constant and the same check. Both must change together or epic drives and single-ticket drives disagree about whether a handover finished a phase."
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The authority being contradicted. Its routing table defines handoff as 'Phase completed and explicitly hands to a named sibling'. Read it before widening the status set -- the fix is to agree with this document, not to invent a new rule."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The parent behaviour this constrains. BO-400e-1 fixes WHICH steps the close is checked against; this record fixes what the close accepts as one of those steps having been met. A ticket satisfying BO-400e-1 can still be unclosable under this defect -- which is exactly what happened to BO-400e-1's own ticket."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment: null
+  reference_file_path: templates/workflows-js/build-feature.js
+  n_location_rule: "2 -- the passing-outcome decision in build-feature.js and its twin in build-ticket.js. BO-400a-2-ii's standing twin constraint applies: a landing in one alone produces a store where an epic drive and a single-ticket drive disagree about whether a handover finished a phase, which is the same defect relocated."
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python -m pytest unit_tests/prompt_assembly/ -v"
+  constraints:
+    - "DO NOT SIMPLY ADD 'handoff' TO THE POSITIVE SET. That one-line change makes a DANGLING handover pass -- a phase that handed work to a sibling that never ran would be read as accounted for, and the close would succeed with real work missing. That is a phantom-done vector, and a worse defect than the deadlock it fixes. The status is conditional on the named recipient having recorded a passing outcome afterwards."
+    - "THE RECIPIENT IS NAMED IN THE RECORD, NOT SUPPLIED BY THE CALLER. Resolve the handover's target from the handing phase's own entry, consistent with BO-400e-1: the close reads the ticket's record and takes nothing about the demanded set from the party asking for the close."
+    - "ORDER MATTERS. The recipient's passing entry must come AFTER the handover, not merely exist. A sibling that passed earlier and was then handed fresh work has not discharged it. The third scenario -- a reviewer handing work BACK, with nothing recorded since -- must stay outstanding for the same reason."
+    - "VERIFY BY EXECUTION, NEVER BY GREP. The constant, the predicate and the outstanding loop are all already present in the source, so a test that finds any of them passes on the broken driver. Drive real records through the real workflow scripts via unit_tests/prompt_assembly/harness_build_ticket_guard.mjs and assert on the close decision."
+    - "BOTH TWINS IN ONE CHANGE, per BO-400a-2-ii."
+    - "TEMPLATES ARE BUILD SOURCES. Keep the deployed copies in step (check-build-drift is the gate) and confirm the behaviour through the deployed layout before sign-off."
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-1
+  contract: "The demanded-step set derived from the ticket's own record -- the set whose members this record decides have or have not been met"
+test_spec:
+  - name: test_resolved_handoff_counts_as_accounted_for
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Drive a close where a phase's last entry is a handover and the named sibling recorded a passing entry afterwards. Assert the handing phase is NOT reported outstanding and the close proceeds. Both twins via subTest."
+  - name: test_dangling_handoff_still_blocks_the_close
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "REQUIRED counter-case. Same record shape, but the named sibling recorded nothing after the handover. Assert the handing phase IS reported outstanding and the close is refused naming it. Without this the fix is indistinguishable from blanket-accepting handoff, which would be a phantom-done vector."
+  - name: test_handoff_whose_recipient_failed_still_blocks_the_close
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The named sibling recorded a blocker or failure after the handover. Assert the close is still refused -- a baton picked up and dropped is not a baton delivered."
+  - name: test_work_handed_back_leaves_the_phase_outstanding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A phase handed work on, a reviewer later handed work BACK to it by name, and it has recorded nothing since. Assert it is outstanding. Guards against an implementation that looks only for any later passing entry by the recipient and ignores what happened afterwards."
+  - name: test_both_drivers_decide_a_resolved_handoff_identically
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Run the same record through the epic driver and the single-ticket driver and assert identical decisions across all the cases above -- the twin seam BO-400a-2-ii exists to hold closed."
+origin_agent: BrainCandy
+created: 2026-09-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_bo_400e_1_i_handoff_resolution.py
+  - unit_tests/prompt_assembly/test_bo_400e_1_i_handoff_seam_and_unrelated_pass.py
+implemented_by:
+  - templates/workflows-js/build-feature.js
+  - templates/workflows-js/build-ticket.js
+change_target: pipeline
+risk_surface: contract_boundary
+notes: |
+  OBSERVED AS A HARD DEADLOCK, NOT A HYPOTHETICAL. On 2026-09-14 the completion write
+  refused ticket 01 of EPIC-WorkIsOnlyEverMarkedFinishedThroughThe with: "the latest
+  sign-off entry for 'python-coder' in the record reads status 'handoff', not a passing
+  outcome."
+
+  Every other surface agreed the phase was finished. python-coder's frontmatter read
+  signed_off, its Sign-offs checkbox was ticked, the sibling it handed to (test-writer)
+  completed at 13:40, and pr-reviewer independently re-verified the work at 14:20. The
+  only dissenting surface was the comment's status tag.
+
+  WHY IT CANNOT RESOLVE ITSELF. `POSITIVE_SIGNOFF_STATUSES = ["ok", "signed_off"]`
+  excludes handoff, so the phase is permanently outstanding. Nothing can clear it:
+  selectDispatchableByStatus dispatches only `needed` and `failed` phases, and this one is
+  `signed_off`, so it is never re-dispatched and can never append the `ok` the check wants.
+  Any ticket whose agent's last action was a handover is therefore unclosable, forever, by
+  any number of re-runs. Three consecutive /build-feature runs each refused the same ticket.
+
+  THE DRIVER CONTRADICTS THE PROTOCOL IT ENFORCES. The signoff skill's routing table
+  defines handoff as "Phase completed and explicitly hands to a named sibling" and routes
+  it to "Spawns the named agent next". It is a completion status by that document's own
+  words. The drivers disagree, and the drivers win at the close.
+
+  WHY CONDITIONAL AND NOT BLANKET. Accepting handoff unconditionally would let a DANGLING
+  handover pass -- work handed to a sibling that never ran, recorded as accounted for. That
+  trades a visible deadlock for a silent phantom-done, which is strictly worse and is the
+  precise failure this whole BO-400e family exists to prevent. The counter-cases in
+  test_spec are not thoroughness; they are the difference between the two fixes.
+
+  PLACEMENT. BO-400e is at its five-child cap, and this is a technical constraint on an
+  existing L2 behaviour rather than a new one, so it is a Roman-suffix L3 on BO-400e-1 --
+  the criterion whose own ticket the defect blocked. BO-400e-1 governs which steps a close
+  is checked against; this record governs what the close accepts as one of them having been
+  met. A ticket can satisfy BO-400e-1 perfectly and still be unclosable under this defect.

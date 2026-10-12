@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-25'
-last_updated: '2026-09-25'
+last_updated: '2026-09-27'
 components:
   - ac_store
 related_docs:
@@ -17,7 +17,7 @@ related_docs:
 # KI-ACS-20260925-validate-ac-bare-directory-exits-0 — validate_ac.py still has the KI-ACS-001 no-op: given a directory it validates nothing and exits 0
 
 - **Severity:** high. A validator that checked zero files reports success — the exact failure CLAUDE.md's "AC-store hygiene" section records as fixed.
-- **Status:** open — no AC. Reproduced 2026-09-25 (sub-agent probe: exit 0 on a directory).
+- **Status:** open — **partially fixed**. The bare-directory no-op is fixed by PR #914 (merged as 2bf8cbae, AC ACS-100i-7-ii): a directory argument is walked recursively and a zero-file run exits non-zero, verified 2026-09-25 by a red/green/mutation-proof run. Still open (not re-verified 2026-09-27): `validate_ac.py` is in no deploy map, so the `it-po.md:359` call cannot find it in an adopter, and `backfill_readiness.py` still exits 0 on zero files.
 - **Where:** `scripts/ac_store/validate_ac.py:338-353`; weaker form in `scripts/ac_store/backfill_readiness.py:156-158` (exits 0 on zero files).
 
 ## Symptom

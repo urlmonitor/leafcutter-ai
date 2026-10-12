@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="23.150" timestamp="2026-10-02T09:13:15.294531+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_native_changelog_entry" name="test_changelog_absent_stores_and_overlapping_configuration" time="0.022"><failure message="AssertionError: assert 2 == 1&#10; +  where 2 = len([NativeRecord(kind='ChangelogEntry', native_id='docs/changelog/one.md', source_path='docs/changelog/one.md', metadata=...', description='', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: One\n', 'parsing': {'mode': 'strict'}})])&#10; +    where [NativeRecord(kind='ChangelogEntry', native_id='docs/changelog/one.md', source_path='docs/changelog/one.md', metadata=...', description='', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: One\n', 'parsing': {'mode': 'strict'}})] = _extract(WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3063/test_changelog_absent_stores_a0'))">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3063/test_changelog_absent_stores_a0')
+
+    def test_changelog_absent_stores_and_overlapping_configuration(tmp_path):
+        # covers: KM-400a-3-i
+        # angle: boundary
+        assert _extract(tmp_path) == []
+        config = tmp_path / "templates/scripts/commit_guardian/commit_guardian.json"
+        config.parent.mkdir(parents=True)
+        config.write_text('{"changelogs_dir":"docs/changelog"}', encoding="utf-8")
+        _write(tmp_path, "docs/changelog/one.md", "title: One\n")
+&gt;       assert len(_extract(tmp_path)) == 1
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len([NativeRecord(kind='ChangelogEntry', native_id='docs/changelog/one.md', source_path='docs/changelog/one.md', metadata=...', description='', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: One\n', 'parsing': {'mode': 'strict'}})])
+E        +    where [NativeRecord(kind='ChangelogEntry', native_id='docs/changelog/one.md', source_path='docs/changelog/one.md', metadata=...', description='', derived={'body': '\n## Entry\n', 'frontmatter_raw': 'title: One\n', 'parsing': {'mode': 'strict'}})] = _extract(WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/pytest-of-Hendrik/pytest-3063/test_changelog_absent_stores_a0'))
+
+tests\knowledge\test_native_changelog_entry.py:122: AssertionError</failure></testcase></testsuite></testsuites>

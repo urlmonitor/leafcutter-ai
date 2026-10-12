@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leafcutter decision lifecycle - Split progress and report</title>
+  <!--
+    MOCKUP. Populated from docs/product-truth/mock-data/leafcutter/decisions.mock.json (entity Decomposition).
+    Styled from the Atlas design system via docs/ui-context.md pointers (globals.css, tailwind.config.ts, layout.tsx).
+    Self-contained, no external assets. Ids are shortened with an ellipsis for display.
+  -->
+  <style>
+    /* Tokens read live from leafcutter-web/app/globals.css (:root); fonts from app/layout.tsx (IBM Plex Sans / Mono). */
+    :root {
+      --background: 158 16% 7%; --foreground: 150 6% 98%;
+      --card: 158 12% 13%; --primary: 150 64% 56%; --primary-foreground: 160 40% 6%;
+      --secondary: 156 12% 19%; --muted: 156 12% 18%; --muted-foreground: 155 7% 80%;
+      --accent: 168 55% 46%; --destructive: 356 78% 64%; --warning: 38 94% 60%;
+      --success: 150 62% 52%; --info: 205 82% 64%;
+      --border: 155 10% 30%; --input: 155 10% 32%; --ring: 150 64% 56%;
+      --radius: 0.75rem;
+      --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; border-color: hsl(var(--border)); }
+    body { margin: 0; font-family: var(--font-sans); background-color: hsl(var(--background)); color: hsl(var(--foreground));
+      -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
+      background-image: radial-gradient(1200px 800px at 85% -10%, hsl(150 64% 52% / 0.06), transparent 60%), radial-gradient(900px 700px at -10% 110%, hsl(168 60% 46% / 0.05), transparent 55%);
+      background-attachment: fixed; }
+    ::selection { background: hsl(var(--primary) / 0.28); }
+    main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
+    .panel { border-radius: calc(var(--radius) + 0.25rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card) / 0.95); padding: 20px; margin-bottom: 16px;
+      box-shadow: 0 1px 0 0 hsl(150 40% 90% / 0.04) inset, 0 20px 40px -24px hsl(0 0% 0% / 0.6); }
+    .panel.pick { border-color: hsl(var(--primary) / 0.6); }
+    .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: hsl(var(--muted-foreground)); margin-bottom: 6px; }
+    h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; text-wrap: balance; }
+    h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 4px; }
+    h3 { font-size: 15px; font-weight: 600; margin: 0; }
+    p { margin: 4px 0; }
+    .sub { font-size: 14px; color: hsl(var(--muted-foreground)); max-width: 46rem; }
+    .small { font-size: 12px; color: hsl(var(--muted-foreground)); }
+    .mono { font-family: var(--font-mono); font-size: 12.5px; }
+    code.mono { background: hsl(var(--muted) / 0.6); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 4px); padding: 1px 6px; word-break: break-all; }
+    pre.mono { background: hsl(var(--background)); border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px 14px; overflow-x: auto; margin: 8px 0; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; border: 1px solid hsl(var(--border)); background: hsl(var(--muted) / 0.4); color: hsl(var(--muted-foreground)); padding: 2px 8px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .badge.success { color: hsl(var(--success)); background: hsl(var(--success) / 0.1); border-color: hsl(var(--success) / 0.3); }
+    .badge.warning { color: hsl(var(--warning)); background: hsl(var(--warning) / 0.1); border-color: hsl(var(--warning) / 0.3); }
+    .badge.destructive { color: hsl(var(--destructive)); background: hsl(var(--destructive) / 0.1); border-color: hsl(var(--destructive) / 0.3); }
+    .badge.info { color: hsl(var(--info)); background: hsl(var(--info) / 0.1); border-color: hsl(var(--info) / 0.3); }
+    .badge.plain::before { display: none; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .between { justify-content: space-between; align-items: flex-start; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    ul.list { list-style: none; margin: 10px 0 0; padding: 0; }
+    ul.list li { border-top: 1px solid hsl(var(--border) / 0.6); padding: 10px 0; }
+    ul.list li:first-child { border-top: 0; }
+    .btn { font: inherit; font-size: 14px; font-weight: 500; border-radius: calc(var(--radius) - 2px); border: 1px solid hsl(var(--input)); background: hsl(var(--secondary)); color: hsl(var(--foreground)); padding: 8px 14px; cursor: pointer; }
+    .btn.primary { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); border-color: hsl(var(--primary)); }
+    .btn:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .note { border-left: 3px solid hsl(var(--warning)); background: hsl(var(--warning) / 0.08); border-radius: 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0; padding: 10px 14px; font-size: 14px; }
+    .note.info { border-left-color: hsl(var(--info)); background: hsl(var(--info) / 0.08); }
+    .note.ok { border-left-color: hsl(var(--success)); background: hsl(var(--success) / 0.08); }
+    dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 8px 16px; margin: 12px 0 0; font-size: 14px; }
+    dl.kv dt { color: hsl(var(--muted-foreground)); } dl.kv dd { margin: 0; word-break: break-word; }
+    .opt { display: flex; gap: 12px; align-items: flex-start; }
+    .rank { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 1px solid hsl(var(--border)); display: grid; place-items: center; font-weight: 600; background: hsl(var(--muted) / 0.5); }
+    .pick .rank { border-color: hsl(var(--primary)); color: hsl(var(--primary)); }
+    .bar { height: 6px; border-radius: 999px; background: hsl(var(--muted)); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; }
+    .bar > i { display: block; height: 100%; background: hsl(var(--primary)); }
+    .crit { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed hsl(var(--border) / 0.7); }
+    .crit .ev { grid-column: 1 / -1; }
+    .choice { display: flex; gap: 10px; align-items: flex-start; border: 1px solid hsl(var(--border)); border-radius: calc(var(--radius) - 2px); padding: 12px; margin-bottom: 10px; background: hsl(var(--background) / 0.4); }
+    .choice .dot { flex: none; width: 16px; height: 16px; border-radius: 999px; border: 2px solid hsl(var(--input)); margin-top: 3px; }
+    .choice.sel .dot { border-color: hsl(var(--primary)); background: radial-gradient(hsl(var(--primary)) 40%, transparent 45%); }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: hsl(var(--muted-foreground)); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid hsl(var(--border)); }
+    td { padding: 8px; border-bottom: 1px solid hsl(var(--border) / 0.5); vertical-align: top; }
+    .ill { font-size: 11px; color: hsl(var(--warning)); border: 1px solid hsl(var(--warning) / 0.4); border-radius: 999px; padding: 0 6px; margin-left: 6px; white-space: nowrap; }
+  .span { font-family: var(--font-mono); font-size: 12.5px; border-left: 3px solid hsl(var(--primary) / 0.7); background: hsl(var(--primary) / 0.08); padding: 4px 10px; border-radius: 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0; margin: 6px 0; }
+    mark { background: hsl(var(--primary) / 0.28); color: inherit; border-radius: 3px; padding: 0 2px; }
+    .part { display: grid; grid-template-columns: 38px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid hsl(var(--border) / 0.6); }
+    .part.off { opacity: 0.65; }
+    .dim { text-decoration: line-through; color: hsl(var(--muted-foreground)); }
+    textarea.edit { width: 100%; font: inherit; font-size: 14px; color: hsl(var(--foreground)); background: hsl(var(--background)); border: 1px solid hsl(var(--input)); border-radius: calc(var(--radius) - 2px); padding: 8px 10px; min-height: 52px; margin-top: 6px; }
+    textarea.edit:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+    .trace { font-size: 12.5px; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="topbar"><span class="eyebrow" style="margin:0">Decision kernel / Split progress and report</span><span class="badge warning">mock mode</span></div>
+<div class="panel"><div class="eyebrow">After the gate</div><h1>Where each part of the split stands</h1>
+<p class="sub">Each approved part runs as a child of its run, in dependency order. Every part shows its outcome and links to its child decision record. A rejected split gets a plain report, and what follows depends on the trigger: the run ends blocked when no capability matched (jev_none); the request falls back to today&#x27;s clarification question and the run waits for your answer when routing could not choose one capability (ambiguous); the request is kept whole and the run goes on for bundled_accepted or a mid-run item.</p>
+<div class="row" style="margin-top:8px"><span class="badge success">decided</span><span class="badge success">answered</span><span class="badge warning">pending</span><span class="badge info">settled by a human</span><span class="badge plain">not run</span></div></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-40d2…48bd</div><h2>Reusable decision criteria: a goal split by hand</h2></div><div class="row"><span class="badge warning">in progress</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">claude_code</span>; answered by <span class="mono">human:user</span> (time not recorded: a hand split).</p>
+<p class="small">Gate note: &ldquo;picked &quot;format first&quot;&rdquo;</p>
+<div class="part"><div class="rank">G1</div><div>
+<div class="row between"><h3>Decide the storage format for reusable decision criteria (the decision basis the kernel reuses across decisions). Today each run&#x27;s criteria are generated per decision and stored only inside docs/decisions/dec-*.yaml records. The format must be Git-reviewable, projectable into Neo4j, and carry what clustering and reuse need.</h3><span class="badge success">decided</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; settled 1</p>
+<div class="span">&ldquo;we can should put them into a new file type (needs evaluation)&rdquo;</div><p class="trace">Child decision record: <a class="mono" href="#" style="color:hsl(var(--primary))">dec-93c1…1f3c</a> <span class="small">(staged in run-3bba…48ce, awaiting publish)</span></p></div></div>
+<div class="part"><div class="rank">G3</div><div>
+<div class="row between"><h3>Decide the mining source for reusable criteria: Langfuse traces, published decision records, or both</h3><span class="badge info">settled by a human</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; settled 2</p>
+<div class="span">&ldquo;As a start we can probably mine them from langfuse&rdquo;</div><p class="trace">Your answer, given outside any run: &ldquo;we mine from both langfuse and records&rdquo; <span class="small">(no decision record exists)</span></p></div></div>
+<div class="part"><div class="rank">G2</div><div>
+<div class="row between"><h3>Decide the clustering method for reusable criteria</h3><span class="badge warning">pending</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;we must make sure that we are able to cluster them somehow&rdquo;</div><p class="small">Approved, not settled yet.</p></div></div>
+<div class="note info">The run report knows nothing of a split made outside the kernel, so it has no split lines for this one. &ldquo;and then also into neo4j&rdquo; got no part of its own: G1 carries it as a constraint.</div></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">multi-part decision question / run-1d9c…4f83</div><h2>Bounds for a split: a multi-part decision question</h2></div><div class="row"><span class="badge success">completed</span></div></div>
+<p class="small">Split found mid-run at depth 1; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-02T15:41:07Z.</p>
+<p class="small">Gate note: &ldquo;p2: count every split in the run. p3 left out: parallel children are out of scope; children run one after another.&rdquo;</p>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide how many sub-questions one split may propose</h3><span class="badge success">decided</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; settled 1</p>
+<div class="span">&ldquo;how many sub-questions one split may propose&rdquo;</div><p class="trace">Child decision record: <a class="mono" href="#" style="color:hsl(var(--primary))">dec-2c8e…4b36</a> <span class="small">(staged in run-1d9c…4f83, awaiting publish)</span></p></div></div>
+<div class="part"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide how many child decisions one run may start, counting every split in the run</h3><span class="badge success">decided</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; settled 2</p>
+<div class="span">&ldquo;how many child decisions one run may start&rdquo;</div><p class="small">Edited at the gate. Proposed as: <span class="dim">Decide how many child decisions one run may start</span></p><p class="trace">Child decision record: <a class="mono" href="#" style="color:hsl(var(--primary))">dec-6f31…2c95</a> <span class="small">(staged in run-1d9c…4f83, awaiting publish)</span></p></div></div>
+<div class="part off"><div class="rank">p3</div><div>
+<div class="row between"><h3>Decide whether children may run in parallel</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;whether children may run in parallel&rdquo;</div><p class="small">Left out at the gate.</p></div></div>
+<h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 decided: Two to five sub-questions per split (dec-2c8e5a7f19d04b36, staged)
+p2 decided: At most five child decisions per run (dec-6f31b0d84ae72c95, staged; p1&#x27;s record cited as precedent)
+p3 not run: left out at the split</pre></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">research request / run-c47a…2f65</div><h2>Reuse threshold: a research request with three needs</h2></div><div class="row"><span class="badge success">completed</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-02T16:20:45Z.</p>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><h3>Find where the kernel reads memory.reuse_threshold</h3><span class="badge success">answered</span></div>
+<p class="small"><span class="badge plain">research capability</span> no dependency &middot; settled 1</p>
+<div class="span">&ldquo;where the kernel reads memory.reuse_threshold&rdquo;</div><p class="trace">Result <span class="mono">inv-4b9e…5f68</span> in run-c47a…2f65</p><div class="note ok" style="margin-top:6px">kernel/config_memory.py loads memory.reuse_threshold and rejects a value below applies_threshold; kernel/memory/precedent.py offers reuse at that value or above; the default 0.8 is set in config/kernel_config.default.json</div></div></div>
+<div class="part"><div class="rank">p2</div><div>
+<div class="row between"><h3>Find which tests cover the reuse offer</h3><span class="badge success">answered</span></div>
+<p class="small"><span class="badge plain">research capability</span> after p1 &middot; settled 2</p>
+<div class="span">&ldquo;which tests cover the reuse offer&rdquo;</div><p class="trace">Result <span class="mono">inv-91c6…7b34</span> in run-c47a…2f65</p><div class="note ok" style="margin-top:6px">tests/kernel/memory/test_precedent_units.py pins the thresholds at 0.5 and 0.8 and checks that a precedent at the reuse threshold is offered; tests/kernel/memory/test_decision_precedent.py checks that one below it is evidence only</div></div></div>
+<div class="part"><div class="rank">p3</div><div>
+<div class="row between"><h3>Find whether an ADR fixes the 0.8 value</h3><span class="badge success">answered</span></div>
+<p class="small"><span class="badge plain">research capability</span> no dependency &middot; settled 3</p>
+<div class="span">&ldquo;whether an ADR fixes the 0.8 value&rdquo;</div><p class="trace">Result <span class="mono">inv-d27a…9046</span> in run-c47a…2f65</p><div class="note ok" style="margin-top:6px">No ADR fixes 0.8: ADR-060 names the reuse threshold as configuration (memory.reuse_threshold) without giving a value</div></div></div>
+<h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 answered: kernel/config_memory.py loads memory.reuse_threshold; kernel/memory/precedent.py offers reuse at that value or above
+p2 answered: tests/kernel/memory/test_precedent_units.py and tests/kernel/memory/test_decision_precedent.py cover the reuse offer
+p3 answered: no ADR fixes 0.8; ADR-060 leaves the value to configuration</pre></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-9c40…93e0</div><h2>Reusable criteria: one part hit its budget stop</h2></div><div class="row"><span class="badge warning">ended partial</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T10:05:51Z.</p>
+<div class="note"><strong>The run ended partial, not completed.</strong> p1 did not settle (budget stop). p2 and p3 waited for it and were not run. p4 waited for nothing, so it still ran and was decided.</div><div class="part"><div class="rank">p4</div><div>
+<div class="row between"><h3>Decide whether to mine the reusable categories from Langfuse as a start</h3><span class="badge success">decided</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; settled 1</p>
+<div class="span">&ldquo;As a start we can probably mine them from langfuse&rdquo;</div><p class="trace">Child decision record: <a class="mono" href="#" style="color:hsl(var(--primary))">dec-a41c…1d62</a> <span class="small">(staged in run-9c40…93e0, awaiting publish)</span></p></div></div>
+<div class="part"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide which new file type the reusable categories are put into (needs evaluation)</h3><span class="badge destructive">not settled</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;we can should put them into a new file type (needs evaluation)&rdquo;</div><p class="small">Not settled. Reason: <strong>budget stop</strong>. Parts that waited for it were not run.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide how the reusable categories are then also put into Neo4j</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;and then also into neo4j&rdquo;</div><p class="small">Not run: waited for p1, which was not settled.</p></div></div>
+<div class="part off"><div class="rank">p3</div><div>
+<div class="row between"><h3>Decide how the reusable categories are clustered</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;we must make sure that we are able to cluster them somehow&rdquo;</div><p class="small">Not run: waited for p1, which was not settled.</p></div></div>
+<h3 style="margin-top:12px">Run report: split section</h3><pre class="mono">p1 not settled: its decision reached its budget stop
+p2 not run: waits for p1, which was not settled (budget stop)
+p3 not run: waits for p1, which was not settled (budget stop)
+p4 decided: Mine from both Langfuse traces and published decision records (dec-a41c07e9b35a1d62, staged)</pre></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-3e8a…9a40</div><h2>Decision records: split rejected, goal kept whole</h2></div><div class="row"><span class="badge info">rejected, kept whole</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T09:14:26Z.</p>
+<p class="small">Gate note: &ldquo;Keep it whole: one record format covers all five, so decide it as one.&rdquo;</p>
+<div class="note ok"><strong>Kept whole. The goal goes ahead as one decision and the run is not blocked.</strong> Routing would have accepted it as one (trigger <span class="mono">bundled_accepted</span>), so rejecting the split did not stop it. No decision is staged yet: the run is still waiting for the host.</div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; the goal is kept whole and runs as one decision.</pre><details style="margin-top:8px"><summary class="small">Parts that were proposed (none ran)</summary><div class="part off"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide which fields a decision record needs</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;which fields a record needs&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide which classification filters a record carries (component, file type or language, repository-wide, roadmap phase)</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;which classification filters it carries (component, file type or language, repository-wide, roadmap phase)&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p3</div><div>
+<div class="row between"><h3>Decide the folder layout for decision records under docs/</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;the folder layout&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p4</div><div>
+<div class="row between"><h3>Decide how decision record files are named</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p3 &middot; not settled</p>
+<div class="span">&ldquo;file naming&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p5</div><div>
+<div class="row between"><h3>Decide how human approval and later corrections are recorded</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;how human approval and later corrections are recorded&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+</details></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-2d7f…4b68</div><h2>Decision criteria format: split rejected, clarification asked</h2></div><div class="row"><span class="badge warning">rejected, asks to clarify</span><span class="badge warning">waiting for you</span></div></div>
+<p class="small">Split found at routing (trigger <span class="mono">ambiguous</span>); proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-05T11:20:37Z.<span class="ill">illustrative</span></p>
+<p class="small">Gate note: &ldquo;Not two requests: I only need the format decided; the repeated criteria are context for it.&rdquo;</p>
+<div class="span">&ldquo;Decide the storage format for reusable decision criteria, and find which published decision records already repeat the same criteria&rdquo;</div>
+<div class="note"><strong>Waiting for your answer. The run is not blocked and nothing is decided yet.</strong> Routing could not choose one capability (decision and research fit equally), so rejecting the split falls back to today&#x27;s clarification question. No capability gap is recorded unless the request later ends unresolved.</div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; the request falls back to today&#x27;s clarification question, and nothing is decided yet.
+Question asked: I am not sure how to handle this request: &quot;Decide the storage format for reusable decision criteria, and find which published decision records already repeat the same criteria&quot;. Which of these fits best? You can also say it in your own words.</pre><dl class="kv"><dt>Run status</dt><dd>waiting_human</dd><dt>Capability gap recorded</dt><dd>no (only if the request later ends unresolved)</dd></dl><details style="margin-top:8px"><summary class="small">Parts that were proposed (none ran)</summary><div class="part off"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide the storage format for reusable decision criteria</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;Decide the storage format for reusable decision criteria&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Find which published decision records already repeat the same criteria</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">research capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;find which published decision records already repeat the same criteria&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+</details></div>
+<div class="panel"><div class="row between"><div><div class="eyebrow">goal / run-5f08…c714</div><h2>Trace analyzers: split rejected</h2></div><div class="row"><span class="badge destructive">rejected, run blocked</span></div></div>
+<p class="small">Split found at routing; proposed by <span class="mono">host.decompose_goal</span>; answered by <span class="mono">human:user</span> at 2026-10-02T16:33:10Z.</p>
+<p class="small">Gate note: &ldquo;One question, not two: how often they run follows from which traces they read. I will ask it again as one question.&rdquo;</p>
+<div class="note"><strong>The run ended blocked. Nothing was decided.</strong></div><h3 style="margin-top:12px">Run report</h3><pre class="mono">The proposed split was rejected by human:user; nothing was decided.
+Try rephrasing as one bounded question, for example: &quot;Decide which recent kernel traces the trace analyzers read and on what schedule.&quot;</pre><details style="margin-top:8px"><summary class="small">Parts that were proposed (none ran)</summary><div class="part off"><div class="rank">p1</div><div>
+<div class="row between"><h3>Decide which recent kernel traces the trace analyzers read</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> no dependency &middot; not settled</p>
+<div class="span">&ldquo;which recent kernel traces the trace analyzers read&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+<div class="part off"><div class="rank">p2</div><div>
+<div class="row between"><h3>Decide how often the trace analyzers run</h3><span class="badge plain">not run</span></div>
+<p class="small"><span class="badge plain">decision capability</span> after p1 &middot; not settled</p>
+<div class="span">&ldquo;how often they run&rdquo;</div><p class="small">Rejected with the split.</p></div></div>
+</details></div>
+</main>
+</body>
+</html>

@@ -1,0 +1,175 @@
+id: UXP-591-4
+title: "Opening a step's or branch's drawer puts its step address in the address bar without adding a Back entry"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given the tab has one history entry showing leafcutter/deliver-a-feature with no drawer open,
+    either at /flows/leafcutter/deliver-a-feature or at the bare /flows,
+  When the person clicks the 'Plan' step,
+  Then the 'Plan' drawer opens,
+  And the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan in both cases, the
+    bare /flows being replaced by the default flow's canonical address,
+  And the tab still has one history entry, because the current entry was replaced rather than a
+    new one added,
+  And opening the address now in the address bar in a new tab shows the same flow with the same
+    'Plan' drawer open.
+depends_on:
+  - UXP-591
+  - UXP-591-1
+  - UXP-591-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: M
+change_target:
+  - code
+  - ui
+risk_surface: internal
+it_requirements:
+  - Drawer open writes ?step=<id> with window.history.replaceState, replacing the current history entry
+    and never adding one (owner decision 2026-10-09). The Next.js 14 App Router (14.1+) integrates replaceState
+    with usePathname/useSearchParams without a server round-trip. router.push, pushState and router.replace
+    (which re-runs the server route for the new search params) are not used for drawer actions; the explorer
+    does not remount or refetch on one.
+  - Drawer open, switch and close (UXP-591-4-i, -ii) call one replace-entry function owned by leafcutter-web/components/flows/flows-view.tsx
+    or a module it uses; flow-explorer.tsx and flow-drawer.tsx only report the intent.
+  - 'Each replace writes the entry''s view state {crumbs: string[] (Flow ids, entry flow first), filters:
+    {source: ''real'' | ''mock'', kind: ''user'' | ''data'' | ''architecture'', realization: ''all'' |
+    ''built'' | ''spec'' | ''mock''}} together with the URL, kept in history.state under one namespaced
+    key, merged into, never overwriting, the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE);
+    not sessionStorage (owner decision 2026-10-09), so Back/Forward can restore it (UXP-591-5-ii). Overwriting
+    the App Router''s keys makes Back trigger a full reload.'
+  - On the bare /flows entry the replaced URL is flowHref(defaultEntryFlowId, stepId) from the single
+    default-entry constant (owner ruling 1); the default flow keeps rendering with no remount.
+  - 'The push/replace decision lives in one pure function shared with UXP-591-5 (proposed leafcutter-web/components/flows/flow-navigation.ts:
+    entry state + action -> {op: ''push'' | ''replace'', url, state}), so the dataset''s FlowNavigation
+    sessions can be replayed against it as unit tests.'
+  - jsdom does not run the App Router's history integration, so the real-browser behaviour (history length
+    under the App Router, Back/Forward without a page reload) is proven by this AC's Playwright spec in
+    leafcutter-web/e2e/, run in CI against `next build` + `next start` (owner decision 2026-10-09; harness
+    set up under UXP-591-1).
+delivers_to:
+  agent: frontend-coder
+  contract: 'Replace-entry path: replaceEntry(url: string, state: {crumbs: string[] (Flow ids, entry flow
+    first), filters: {source: ''real'' | ''mock'', kind: ''user'' | ''data'' | ''architecture'', realization:
+    ''all'' | ''built'' | ''spec'' | ''mock''}}) rewrites the current history entry with window.history.replaceState:
+    its URL, and its view state kept in history.state under one namespaced key, merged into, never overwriting,
+    the App Router''s own keys (__NA, __PRIVATE_NEXTJS_INTERNALS_TREE); not sessionStorage (owner decision
+    2026-10-09); history.length never changes. url = flowHref(flowId, stepId | null). Used by UXP-591-4-i
+    (switch), UXP-591-4-ii (close), UXP-591-2-ii (clearing the step notice) and UXP-591-5-iii, -iv and
+    -v (filter changes).'
+expects_from:
+  - ac_id: UXP-591-1
+    contract: The flow's canonical address /flows/<flow id>, onto which the open drawer's ?step=<id> is
+      appended.
+  - ac_id: UXP-591-2
+    contract: A step address reopened in a new tab opens the same drawer through leafcutter-web/app/flows/[...id]/page.tsx.
+  - ac_id: UXP-591-1
+    contract: 'Playwright harness in leafcutter-web: @playwright/test devDependency, leafcutter-web/playwright.config.ts
+      (testDir ./e2e, Chromium, webServer running `next start` on a production build), `npm run e2e`,
+      and the CI steps that run it after `npm ci`.'
+test_spec:
+  - name: clicking Plan on /flows/leafcutter/deliver-a-feature opens its drawer and replaces the address
+      with ?step=plan at unchanged history length
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    must_catch:
+      - the drawer open uses pushState or router.push and history.length grows
+      - the drawer opens but the address is not updated
+  - name: clicking Plan on the bare /flows replaces /flows with /flows/leafcutter/deliver-a-feature?step=plan
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: component
+    angle: boundary
+  - name: the replaced address reopened through the catch-all route shows the same Plan drawer
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: window.location after the click, then the default export of leafcutter-web/app/flows/[...id]/page.tsx
+      with that path and query
+  - name: flow-navigation replays the nav-drawer-replace and nav-drawer-on-bare-flows sessions of atlas-flows.mock.json
+    target_dir: leafcutter-web/components/flows/__tests__/
+    framework: vitest
+    type: unit
+    angle: real_artifact
+    description: Each record's history_op, history_stack, history_index, address_bar and drawer match
+      the navigation function's output.
+  - name: under next start opening, switching and closing a drawer leaves history.length unchanged
+    target_dir: leafcutter-web/e2e/
+    framework: playwright
+    type: e2e
+    angle: deployed
+    surface_invoked: real clicks on the Plan and Build nodes and the drawer's X button in Chromium against
+      `next start` of a production build
+    description: history.length read with page.evaluate stays the same across open (?step=plan), switch
+      (?step=build) and close (no query), under the real App Router. No `// covers:` tag until the done-proof
+      gate can run Playwright specs (see UXP-591-1).
+    must_catch:
+      - the App Router turns replaceState into a navigation that adds an entry
+      - a drawer action falls back to router.push
+test_rationale: jsdom observes window.history directly, so history.length is asserted, not a mocked router
+  call; the reopen test proves the written address is a working step link, and the dataset replay covers
+  the approved sessions record by record. Only the Playwright spec runs the real App Router's history
+  integration.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by:
+  - UXP-591-4-i
+  - UXP-591-4-ii
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'drawerUrl' (FlowNavigation
+  nav-drawer-replace-2 and nav-drawer-on-bare-flows-1 to -3). Owner ruling 1 (2026-10-09):
+  a drawer opened on the bare /flows entry replaces /flows with the default flow's canonical
+  address plus ?step=. Owner decision at the mockup gate (2026-10-09): drawer actions replace
+  the current history entry; they never add a Back entry. Branch 'drawerSwitch' and the
+  closing step 'drawerClose' are the L3 children (closing sits here as the inverse of opening
+  because UXP-591 is at its five-L2 cap).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerUrl
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+    source: real
+    asof: '2026-10-09'

@@ -1,0 +1,40 @@
+id: DK-103
+title: "Missing facts and preferences remain explicit after bounded enrichment"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: superseded_by
+superseded_by: [DK-200c-1, DK-200c-1-i, DK-200c-1-ii, DK-200c-2-i, DK-200c-2-ii]
+amended_by:
+  - reason: "2026-10-02 BA decomposition: replaced the broad preliminary requirement with focused L2/L3 successors under DK-200; historical criteria and evidence links are retained."
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given missing, unreadable or irrelevant sources, disabled enrichment, or a request needing a user preference,
+  When the initial enrichment pass ends,
+  Then its outcome distinguishes gathered context, no evidence, partial context, unavailable context and disabled gathering,
+  And limitations preserve unknown facts instead of inventing answers,
+  And gathering never opens a human interaction or escalates its own permissions,
+  And retrieved instructions cannot authorize actions or choose a user's preference,
+  And intent may still ask a specific human question after consuming the available context.
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implemented-by-step
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+origin_agent: Codex (user-requested context enrichment)
+created: 2026-10-02
+covered_by:
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentEvaluation::test_each_labelled_case_meets_the_context_contract
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_disabled_step_does_not_claim_to_have_examined_the_repository
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_expired_budget_prevents_search_and_reports_what_was_not_examined
+  - tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_failed_source_is_reported_as_unavailable_not_as_a_successful_empty_search
+implemented_by:
+  - kernel/contracts/context.py
+  - kernel/context_enrichment.py
+  - kernel/enrichment_projection.py
+change_target: code
+risk_surface: internal

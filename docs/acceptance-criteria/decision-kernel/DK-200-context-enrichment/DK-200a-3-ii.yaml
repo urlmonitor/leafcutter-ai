@@ -1,0 +1,56 @@
+id: DK-200a-3-ii
+title: "A shortened excerpt remains verifiable against its retained text"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a matching document exceeds the allowed excerpt length,
+  And shortening the excerpt ends at whitespace,
+  When enrichment retains the shortened excerpt,
+  Then its content hash identifies exactly the text retained in the result,
+  And the result indicates that the excerpt was shortened.
+depends_on: [DK-200a-3]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_excerpt_cut_at_whitespace_hashes_the_retained_text"
+implemented_by:
+  - "kernel/context_enrichment.py"
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "An excerpt's content hash must be computed over the exact final retained text after shortening and whitespace normalization."
+  - "Shortening must remain visible through the excerpt and enrichment truncation indicators."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_excerpt_cut_at_whitespace_hashes_the_retained_text
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A four-character excerpt allowance retains ZTC after whitespace normalization; its hash matches exactly ZTC and shortening is reported."
+test_rationale: "The whitespace cutoff reproduces the normalization boundary where hashing an earlier text representation would disagree with the returned excerpt."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

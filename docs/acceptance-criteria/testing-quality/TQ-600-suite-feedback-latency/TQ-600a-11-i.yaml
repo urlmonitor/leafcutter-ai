@@ -1,0 +1,129 @@
+id: TQ-600a-11-i
+components:
+  - testing_quality
+  - ac_store
+title: "An installation whose YAML library lacks the C extension still works, just slower"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a Python environment whose installed YAML library was built without the
+    libyaml C extension, so the C safe parser class is absent from the module
+    namespace — the configuration an adopter of this package can legitimately have,
+    and which this development workspace does not have, since the library here
+    reports the C extension as present,
+  When any store-reading entry point in the package is invoked in that environment,
+  Then it runs to completion and yields results equal to the ones it yields where
+    the C extension is available,
+  And it raises no import error at module load, and no attribute error at the point
+    the parser is chosen,
+  And the shared accessor picks the pure-Python safe parser in that environment and
+    the C-backed one where the extension is available, having made the choice by
+    handling the class's absence rather than by inspecting a version string or a
+    platform name,
+  And the absence case is exercised by a check that simulates it — the class removed
+    from the module namespace for the duration of the check — rather than by reading
+    the accessor's source and agreeing that it looks safe.
+depends_on:
+  - TQ-600a-11
+doc_links:
+  - path: scripts/render_effective_prompt.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The in-repo precedent already uses the guarded form
+      `getattr(yaml, "CSafeLoader", yaml.SafeLoader)`. This record makes that guard a
+      tested behaviour rather than an idiom nobody has ever exercised.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" is the rule the last
+      clause applies: a test that greps the accessor's source for `getattr` passes on
+      a guard that was never taken.
+declared_files:
+  - path: scripts/ac_store/validate_ac_schema.py
+    state: existing
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - >-
+    SIMULATE THE ABSENCE, DO NOT ASSUME IT. `yaml.__with_libyaml__` is True in this
+    workspace and the C class is importable, so the fallback branch is unreachable
+    here by ordinary means. Exercise it by deleting the attribute from the module
+    object for the duration of the check (restoring it afterwards) or by an
+    equivalent patch, and re-resolve the accessor inside that window. An accessor
+    that caches its choice at module import must be re-imported inside the window, or
+    the check silently measures the cached C choice.
+  - >-
+    RESULT EQUALITY, NOT MERELY "IT RAN". The first clause is about the values, not
+    the exit status. Parse the same input both ways within the simulated-absence
+    check and compare the objects.
+  - >-
+    NO VERSION SNIFFING. `yaml.__with_libyaml__` and PyYAML version strings are both
+    forbidden as the decision input: a library can report the flag and still not
+    expose the class under some packaging, and the version string tells you nothing
+    about how the wheel was built. Handle the absence directly.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-11
+    contract: >-
+      The shared parser accessor, which is the single place the fallback decision is
+      made and therefore the only place this record has to check.
+test_spec:
+  - name: test_tq600a_11_i_accessor_falls_back_when_the_c_parser_class_is_absent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: >-
+      With the C safe parser class removed from the yaml module namespace, resolving
+      the accessor yields the pure-Python safe parser and raises nothing. Restore the
+      attribute afterwards so the removal cannot leak into other tests.
+  - name: test_tq600a_11_i_results_are_equal_with_and_without_the_c_extension
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: >-
+      Parse a real store record both ways inside the simulated-absence window and
+      assert the two objects are equal.
+  - name: test_tq600a_11_i_a_store_entry_point_completes_with_the_c_parser_absent
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: >-
+      Run the store-wide schema validation entry point in a FRESH subprocess with the
+      C class made absent, and assert it exits zero and names a non-zero file count.
+      A fresh process is required: an in-process patch after the module cached its
+      choice proves nothing.
+test_rationale: |
+  The whole value of this record is that it covers a branch nobody in this workspace
+  can take by accident. That makes the ordinary failure mode specific: a test is
+  written, it never enters the fallback, and it passes for the wrong reason — the same
+  shape as a check that examined nothing.
+
+  So the simulation is named as the mechanism, the restore is named so the removal
+  cannot leak, and the end-to-end descriptor insists on a fresh subprocess because an
+  accessor that resolves at module import will have cached the C choice before any
+  in-process patch lands.
+origin_agent: BrainCandy
+created: 2026-10-05
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Why this is a separate record rather than a clause of TQ-600a-11: the parent is
+  measured in this environment, where the C extension is present and the fallback is
+  dead code. A record that bundles "it is faster here" with "it still works there"
+  is satisfiable by proving only the first, and the second is the one that decides
+  whether the package remains installable for adopters.

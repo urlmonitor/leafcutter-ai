@@ -1,0 +1,6 @@
+AC-ENFORCEMENT [STRICT]: tests/knowledge/test_native_decision.py::test_decision_minimal_retains_omission_null_and_empty covers not-done AC KM-400a-3-i — NOT masked (AC_ENFORCE_STRICT=1); reported as a real failure.
+F                                                                        [100%]
+shared-layout-routing: declared_mutators=0 undeclared=0
+=========================== short test summary info ===========================
+FAILED tests/knowledge/test_native_decision.py::test_decision_minimal_retains_omission_null_and_empty
+1 failed in 0.19s

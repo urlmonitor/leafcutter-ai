@@ -1,0 +1,146 @@
+id: AR-300c-2
+title: "The consolidation carries the union of both rival ability records, and says what it did with each"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the two central fields that record ability grants today, holding
+    different populations -- 32 agents in the older field, 40 in the newer, and
+    12 present only in the newer,
+  When the grants are consolidated into each agent's own declaration,
+  Then every agent named in either field has a declaration afterwards, so the
+    population consolidated is the union of the two and not either one alone,
+    And for each such agent the abilities declared are the union of the abilities
+      the two fields recorded for it, so no grant is dropped,
+    And no agent has a declared ability that neither field recorded for it, so no
+      grant is invented,
+    And the consolidation accounts for every agent in both fields by name,
+      reporting for each which side or sides its abilities came from, and
+      reporting the three counts it worked from,
+    And an agent named in neither field ends with no declaration, rather than an
+      empty one,
+  So the twelve agents that exist in only one of the two records are carried
+    across, and a reader can check the migration rather than trust it.
+depends_on:
+  - AR-300c
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "The two rival fields and their three populations -- 32, 40, and the 12 in the newer only -- are the input this criterion constrains."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The destination the consolidated grant lands in, beside the tools declaration."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+it_requirements:
+  - "This is a one-shot BACKFILL and must obey the repository's backfill discipline: the second run is byte-stable (verify by running twice and diffing); infer-then-VALIDATE before any write; insert ONLY the new frontmatter key into each template, never rewrite the whole file or reformat unrelated keys; and any agent whose grant cannot be derived unambiguously goes into a review report rather than receiving a guessed value."
+  - "The source population is the UNION of the two rival registry fields (`skills_used` and `skills_invoked`), keyed by agent, and the per-agent ability set is the union of what the two recorded. Consolidating onto either field's population alone silently drops or invents grants -- the 12 agents present only in the newer field are the test of this."
+  - "Report per agent which side or sides its abilities came from, plus the three counts the migration worked from. A total alone cannot be checked: union arithmetic on 32 and 40 with an overlap of 28 is easy to get wrong in the direction that looks right (40 rather than 44)."
+  - "An agent named in NEITHER field ends with no declaration key at all, not an empty one. An empty declaration produces the bare-heading state AR-300a-3 forbids downstream and destroys the distinction between granted-nothing and lost-in-migration."
+  - "The migration writes into the YAML frontmatter of templates/agents/*.md (the tracked source) and nothing else. It must not touch the template bodies -- body prose is a different surface with a different owner -- and it must not write compiled prompts, which are gitignored build outputs."
+  - "After the migration the registry's ability fields become derived. Do not delete them in this AC (AR-300c-3 depends on their continued presence to detect a hand edit); regenerate them from the declarations so the derived copy is correct on day one."
+  - "The mode/condition structure recorded on each grant must survive the union unchanged. Where the two fields disagree on an ability's mode or condition for the same agent, that is a conflict to report, not to silently resolve by picking a side."
+  - "The migration script itself is a one-shot tool -- place it where a one-shot migration belongs in this repository rather than in the build's hot path, and do not leave it wired into every build."
+test_spec:
+  - name: test_every_agent_named_in_either_field_has_a_declaration_afterwards
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Run against the real registry, the consolidated population is the union of both fields -- neither field's population alone."
+  - name: test_each_agents_declared_abilities_are_the_union_of_both_records
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "For an agent present in both fields with differing ability sets, the declaration holds the union; no grant is dropped."
+  - name: test_no_agent_gains_an_ability_neither_field_recorded
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "No declared ability appears that neither source field recorded for that agent; no grant is invented."
+  - name: test_migration_reports_each_agent_by_name_with_its_provenance_and_the_three_counts
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The report names every agent in either field, states which side or sides its abilities came from, and states the three population counts it worked from."
+  - name: test_agent_in_neither_field_ends_with_no_declaration_key
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "An ungranted agent's frontmatter gains no declaration key at all, not an empty list."
+  - name: test_running_the_migration_twice_is_byte_stable
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "A second run over an already-migrated tree produces a byte-identical result; the backfill is idempotent."
+  - name: test_migration_inserts_only_the_new_key_and_leaves_other_frontmatter_untouched
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Unrelated frontmatter keys, including the comma-separated `tools:` string, survive byte-identical; only the new key is added."
+test_rationale: >-
+  Two failure modes drive this shape. First, a migration that reports only a total
+  cannot be checked at all, so the per-agent provenance descriptor is the criterion
+  rather than a nicety. Second, the repository's backfill hazard is the whole-file
+  rewrite: 60 tracked templates reformatted in one pass is an unreviewable diff and
+  an unrecoverable mistake. The byte-stability and insert-only descriptors exist to
+  make that failure visible in a test rather than in a merge.
+delivers_to:
+  agent: python-coder
+  contract: >-
+    The migrated per-agent frontmatter declarations across templates/agents/*.md
+    (the union of both registry ability fields, mode and condition preserved),
+    plus a per-agent provenance report naming every agent in either field, the
+    side or sides its abilities came from, and the three population counts.
+expects_from:
+  ac_id: AR-300c-1
+  contract: "The per-agent declaration that is the destination of this consolidation"
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-01'
+superseded_by: null
+covered_by:
+  - AR-300c-2-i
+implemented_by: []
+notes: |
+  THE TWELVE ARE THE TEST OF THIS CRITERION. Twelve agents appear only in the
+  newer field: research-agent, adr-author, how-to-author, explanation-author,
+  brainstorm-lead, brainstorm-worker, worktree-agent, and the five sql creator
+  agents. A consolidation onto either field's population alone silently drops or
+  invents grants, and those twelve would still receive nothing even after
+  delivery is repaired. That is why repairing delivery is not sufficient and this
+  is not a tidy-up.
+
+  WHY THE PER-AGENT ACCOUNT IS PART OF THE CRITERION AND NOT A NICETY. Union
+  arithmetic on 32 and 40 with an overlap of 28 is easy to state and easy to get
+  wrong in exactly the direction that looks right -- a total of 40 rather than
+  44. A migration that reports only a total cannot be checked; one that names
+  each agent and its provenance can be.
+
+  THE EMPTY-DECLARATION CLAUSE IS DELIBERATE. The cheapest consolidation writes a
+  declaration for all 60 agents, empty where there was no grant. That produces
+  the empty-section state AR-300a-3 forbids downstream, and it destroys the
+  distinction between 'granted nothing' and 'grant lost in migration'.

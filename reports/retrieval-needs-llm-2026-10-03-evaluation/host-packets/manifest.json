@@ -1,0 +1,98 @@
+[
+  {
+    "case_id": "N01",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N01.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-4ce64e8163e74db8\\artifacts\\input-int-116b2e156388441a.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N01.json"
+  },
+  {
+    "case_id": "N02",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N02.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-271cfa3bcfd64928\\artifacts\\input-int-3f6ea15614a64877.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N02.json"
+  },
+  {
+    "case_id": "N03",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N03.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-b8e03912ebc8474b\\artifacts\\input-int-e409b90b61ab4aeb.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N03.json"
+  },
+  {
+    "case_id": "N04",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N04.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-cf7dcd7269414194\\artifacts\\input-int-6c643fb1aa8b4225.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N04.json"
+  },
+  {
+    "case_id": "N05",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N05.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-4e1d3c5394f44084\\artifacts\\input-int-faca89fa9bd041f7.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N05.json"
+  },
+  {
+    "case_id": "N06",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N06.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-d60045f603aa4a91\\artifacts\\input-int-073de493a6f746a4.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N06.json"
+  },
+  {
+    "case_id": "N07",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N07.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-8048ece7b25f428a\\artifacts\\input-int-832d63ce1e4d448f.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N07.json"
+  },
+  {
+    "case_id": "N08",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N08.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-fb1dbac8ed7d4d76\\artifacts\\input-int-f4f9ea73f84d4a9f.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N08.json"
+  },
+  {
+    "case_id": "N09",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N09.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-be1b78c7b929407c\\artifacts\\input-int-ca4359d1c16445bf.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N09.json"
+  },
+  {
+    "case_id": "N10",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N10.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-83eba873e4ae424b\\artifacts\\input-int-37a1da87200a4860.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N10.json"
+  },
+  {
+    "case_id": "N11",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N11.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-0d18418bd3bb430d\\artifacts\\input-int-43c96ddd4d7248e3.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N11.json"
+  },
+  {
+    "case_id": "N12",
+    "packet_path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\packets\\N12.packet.json",
+    "input_artifact_refs": [
+      "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-a472ae6b468148e2\\artifacts\\input-int-83cbeee2f9574563.json"
+    ],
+    "response_destination": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\responses\\N12.json"
+  }
+]

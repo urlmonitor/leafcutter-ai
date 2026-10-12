@@ -1,0 +1,35 @@
+{
+  "expected": {
+    "include": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-1",
+        "KM-500c-2"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ]
+    },
+    "exclude": {
+      "relationships": [
+        "all_descendants",
+        "children_direct"
+      ]
+    },
+    "required_fields_if_fields": [
+      "criteria"
+    ],
+    "completeness": [
+      "selected_entities"
+    ],
+    "hierarchy_scope": [
+      "not_applicable"
+    ],
+    "status": [
+      "decided"
+    ]
+  },
+  "human_gold": "Retain both literal targets independently and retrieve comparable criteria with provenance. No topic-wide enumeration or count is implied. selected_entities must not collapse to single_entity."
+}

@@ -1,0 +1,1248 @@
+{
+  "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+  "repository_id": "leafcutter",
+  "credential_scope": "explicit same-principal process-local writer binding",
+  "resets_or_deletions": false,
+  "migrations": "001 additive constraints and indexes applied",
+  "runner_correction": "Initial runner rejected an unregistered operation name after successful sync; this run uses registered get_acceptance_criteria.",
+  "repeat_sync": {
+    "status": "ok",
+    "published": true,
+    "repository_id": "leafcutter",
+    "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+    "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+    "mapper_version": "3",
+    "node_count": 5992,
+    "edge_count": 19365,
+    "semantic_ready": false
+  },
+  "diagnostic_count": 92,
+  "idempotent": true,
+  "manifest": {
+    "repository_id": "leafcutter",
+    "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+    "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+    "nodes": [],
+    "edges": [],
+    "mapper_version": "3",
+    "status": "ready",
+    "node_count": 5992,
+    "edge_count": 19365,
+    "supported_kinds": [
+      "ADR",
+      "AcceptanceCriterion",
+      "Component",
+      "SourceFile",
+      "Test"
+    ],
+    "semantic_ready": false,
+    "embedding_model": null,
+    "embedding_dimensions": null
+  },
+  "retrieval": [
+    {
+      "contract_version": "1",
+      "request_id": "aura-level-0",
+      "retrieval_id": "dfb4c795-5f3f-4edd-88f2-ffb7b8fbe9a4",
+      "status": "ok",
+      "requested_mode": "exact",
+      "executed_mode": "exact",
+      "operation": "get_entities",
+      "operation_version": "1",
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "KM-400e-1",
+            "kind": "AcceptanceCriterion",
+            "title": "Disabled knowledge needs no optional services",
+            "summary": "",
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+              "locator": "/criteria",
+              "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+            },
+            "properties": {
+              "status": "active"
+            }
+          },
+          "evidence_id": "knowledge-28fd2d0667171ceb026822927626689166d125d788f2d2a111e048a48944571f",
+          "content": null,
+          "disclosure_level": 0,
+          "signals": {},
+          "seed_id": null,
+          "path": [],
+          "limitations": [],
+          "relationships": [],
+          "related": []
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": null,
+      "truncated": false,
+      "stats": {
+        "candidates": 1,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 1,
+        "candidate_work": 1,
+        "duration_ms": 573.333,
+        "estimated_tokens": 312
+      }
+    },
+    {
+      "contract_version": "1",
+      "request_id": "aura-level-1",
+      "retrieval_id": "72206e48-0027-4f40-8da5-afcb3ef6cd2b",
+      "status": "ok",
+      "requested_mode": "exact",
+      "executed_mode": "exact",
+      "operation": "get_entities",
+      "operation_version": "1",
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "KM-400e-1",
+            "kind": "AcceptanceCriterion",
+            "title": "Disabled knowledge needs no optional services",
+            "summary": "",
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+              "locator": "/criteria",
+              "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+            },
+            "properties": {
+              "status": "active"
+            }
+          },
+          "evidence_id": "knowledge-9b6fe6b09edf7fa02c15fbbe5758427bb42265acdb8d55eb308e5689a75d6224",
+          "content": null,
+          "disclosure_level": 1,
+          "signals": {},
+          "seed_id": null,
+          "path": [],
+          "limitations": [],
+          "relationships": [
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/depends_on",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "KM-400e",
+              "edge_type": "depends_on",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e.yaml",
+                "locator": "/covered_by",
+                "content_hash": "39325ecc202eab38488d362d70c58a60c888ce9cf16432f56a3e2329831f2eb9"
+              },
+              "source_id": "KM-400e",
+              "target_id": "KM-400e-1",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/components",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "knowledge_management",
+              "edge_type": "component_membership",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_no_match_is_distinct_from_disabled"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_import_does_not_load_kernel_or_optional_sdks_in_fresh_process"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_environment.py",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_http_embeddings.py",
+              "edge_type": "covered_by",
+              "locator": "test_configured_provider_executes_model_bound_embedding_over_http"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_integration.py",
+              "edge_type": "covered_by",
+              "locator": "test_disabled_cli_is_reachable_without_kernel_bootstrap"
+            }
+          ],
+          "related": [
+            {
+              "canonical_id": "KM-400e",
+              "title": "Use project knowledge when it helps and continue honestly when it cannot",
+              "kind": "AcceptanceCriterion"
+            },
+            {
+              "canonical_id": "knowledge_management",
+              "title": "Knowledge Management",
+              "kind": "Component"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_core.py",
+              "title": "test_core.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_environment.py",
+              "title": "test_environment.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_http_embeddings.py",
+              "title": "test_http_embeddings.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_integration.py",
+              "title": "test_integration.py",
+              "kind": "Test"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": null,
+      "truncated": false,
+      "stats": {
+        "candidates": 1,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 1,
+        "candidate_work": 9,
+        "duration_ms": 467.468,
+        "estimated_tokens": 1350
+      }
+    },
+    {
+      "contract_version": "1",
+      "request_id": "aura-level-2",
+      "retrieval_id": "13247fa6-669e-40ff-b8a4-5da505c52fc8",
+      "status": "ok",
+      "requested_mode": "exact",
+      "executed_mode": "exact",
+      "operation": "get_entities",
+      "operation_version": "1",
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "KM-400e-1",
+            "kind": "AcceptanceCriterion",
+            "title": "Disabled knowledge needs no optional services",
+            "summary": "",
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+              "locator": "/criteria",
+              "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+            },
+            "properties": {
+              "status": "active"
+            }
+          },
+          "evidence_id": "knowledge-db639accb0aacc299822f026081c2cb9e85d2ce280681f33c38c5ae1a0a037ba",
+          "content": "",
+          "disclosure_level": 2,
+          "signals": {},
+          "seed_id": null,
+          "path": [],
+          "limitations": [],
+          "relationships": [
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/depends_on",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "KM-400e",
+              "edge_type": "depends_on",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e.yaml",
+                "locator": "/covered_by",
+                "content_hash": "39325ecc202eab38488d362d70c58a60c888ce9cf16432f56a3e2329831f2eb9"
+              },
+              "source_id": "KM-400e",
+              "target_id": "KM-400e-1",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/components",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "knowledge_management",
+              "edge_type": "component_membership",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_no_match_is_distinct_from_disabled"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_import_does_not_load_kernel_or_optional_sdks_in_fresh_process"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_environment.py",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_http_embeddings.py",
+              "edge_type": "covered_by",
+              "locator": "test_configured_provider_executes_model_bound_embedding_over_http"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_integration.py",
+              "edge_type": "covered_by",
+              "locator": "test_disabled_cli_is_reachable_without_kernel_bootstrap"
+            }
+          ],
+          "related": [
+            {
+              "canonical_id": "KM-400e",
+              "title": "Use project knowledge when it helps and continue honestly when it cannot",
+              "kind": "AcceptanceCriterion"
+            },
+            {
+              "canonical_id": "knowledge_management",
+              "title": "Knowledge Management",
+              "kind": "Component"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_core.py",
+              "title": "test_core.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_environment.py",
+              "title": "test_environment.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_http_embeddings.py",
+              "title": "test_http_embeddings.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_integration.py",
+              "title": "test_integration.py",
+              "kind": "Test"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": null,
+      "truncated": false,
+      "stats": {
+        "candidates": 1,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 1,
+        "candidate_work": 9,
+        "duration_ms": 404.293,
+        "estimated_tokens": 1349
+      }
+    },
+    {
+      "contract_version": "1",
+      "request_id": "aura-level-3",
+      "retrieval_id": "b643eaeb-744b-4768-9972-fa8b52962461",
+      "status": "ok",
+      "requested_mode": "exact",
+      "executed_mode": "exact",
+      "operation": "get_entities",
+      "operation_version": "1",
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+      "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+      "evidence": [
+        {
+          "entity": {
+            "canonical_id": "KM-400e-1",
+            "kind": "AcceptanceCriterion",
+            "title": "Disabled knowledge needs no optional services",
+            "summary": "",
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+              "locator": "/criteria",
+              "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+            },
+            "properties": {
+              "status": "active"
+            }
+          },
+          "evidence_id": "knowledge-a2f6f1911b82258def1fa8dca304095cbec611213a61b8ace663944e906f639c",
+          "content": "|\n  Given knowledge is disabled and Neo4j, embedding and telemetry SDKs and credentials are absent\n  When Leafcutter starts and the standalone retrieval interface is invoked\n  Then normal startup succeeds and retrieval returns disabled\n  And no network connection is attempted\n  When Neo4j is explicitly enabled with incomplete configuration\n  Then a clear configuration error names the missing setting without revealing secrets\n",
+          "disclosure_level": 3,
+          "signals": {},
+          "seed_id": null,
+          "path": [],
+          "limitations": [],
+          "relationships": [
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/depends_on",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "KM-400e",
+              "edge_type": "depends_on",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e.yaml",
+                "locator": "/covered_by",
+                "content_hash": "39325ecc202eab38488d362d70c58a60c888ce9cf16432f56a3e2329831f2eb9"
+              },
+              "source_id": "KM-400e",
+              "target_id": "KM-400e-1",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/components",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "knowledge_management",
+              "edge_type": "component_membership",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_no_match_is_distinct_from_disabled"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_core.py",
+              "edge_type": "covered_by",
+              "locator": "test_import_does_not_load_kernel_or_optional_sdks_in_fresh_process"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_environment.py",
+              "edge_type": "covered_by",
+              "locator": ""
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_http_embeddings.py",
+              "edge_type": "covered_by",
+              "locator": "test_configured_provider_executes_model_bound_embedding_over_http"
+            },
+            {
+              "source": {
+                "repository_id": "leafcutter",
+                "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+                "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-1.yaml",
+                "locator": "/covered_by",
+                "content_hash": "b5b94ed418bdaa784bf34911178907941d3d7eb9dc2a4c13320939e9a99f7e60"
+              },
+              "source_id": "KM-400e-1",
+              "target_id": "tests/knowledge/test_integration.py",
+              "edge_type": "covered_by",
+              "locator": "test_disabled_cli_is_reachable_without_kernel_bootstrap"
+            }
+          ],
+          "related": [
+            {
+              "canonical_id": "KM-400e",
+              "title": "Use project knowledge when it helps and continue honestly when it cannot",
+              "kind": "AcceptanceCriterion"
+            },
+            {
+              "canonical_id": "knowledge_management",
+              "title": "Knowledge Management",
+              "kind": "Component"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_core.py",
+              "title": "test_core.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_environment.py",
+              "title": "test_environment.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_http_embeddings.py",
+              "title": "test_http_embeddings.py",
+              "kind": "Test"
+            },
+            {
+              "canonical_id": "tests/knowledge/test_integration.py",
+              "title": "test_integration.py",
+              "kind": "Test"
+            }
+          ]
+        }
+      ],
+      "warnings": [],
+      "errors": [],
+      "continuation": null,
+      "truncated": false,
+      "stats": {
+        "candidates": 1,
+        "estimator_version": "utf8-bytes-div4-v1",
+        "round": 1,
+        "candidate_work": 9,
+        "duration_ms": 463.54,
+        "estimated_tokens": 1458
+      }
+    }
+  ],
+  "component_graph": {
+    "contract_version": "1",
+    "request_id": "aura-component",
+    "retrieval_id": "9c68095d-a71e-4a77-badf-0cac61c34be7",
+    "status": "partial",
+    "requested_mode": "graph",
+    "executed_mode": "graph",
+    "operation": "get_acceptance_criteria",
+    "operation_version": "1",
+    "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+    "generation_id": "544f2e466c1a27166e6d9d24e81cc69d8fcc7ec1c8579a254f290f15f175fca0",
+    "evidence": [
+      {
+        "entity": {
+          "canonical_id": "GE-124g-3",
+          "kind": "AcceptanceCriterion",
+          "title": "Declarations are counted on their own axis and never added into a coverage figure",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+            "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml",
+            "locator": "/criteria",
+            "content_hash": "177fcf3e62f7f129d88edb99233ef2bc88d4b85e122ef4a1df2473e917024d51"
+          },
+          "properties": {
+            "status": "active"
+          }
+        },
+        "evidence_id": "knowledge-5deca45ef1dfe87e3b7ed586818661b165d795d49eab9ce1d95d3e7967d9893f",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g.yaml",
+              "locator": "/covered_by",
+              "content_hash": "31c3403d299962cc4614f104d091687d857a1a71de5e16b9ff88cf6398044617"
+            },
+            "source_id": "GE-124g",
+            "target_id": "GE-124g-3",
+            "edge_type": "covered_by",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml",
+              "locator": "/depends_on",
+              "content_hash": "177fcf3e62f7f129d88edb99233ef2bc88d4b85e122ef4a1df2473e917024d51"
+            },
+            "source_id": "GE-124g-3",
+            "target_id": "GE-124g",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml",
+              "locator": "/depends_on",
+              "content_hash": "177fcf3e62f7f129d88edb99233ef2bc88d4b85e122ef4a1df2473e917024d51"
+            },
+            "source_id": "GE-124g-3",
+            "target_id": "GE-124g-1",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-5.yaml",
+              "locator": "/depends_on",
+              "content_hash": "72066f1066fad8d696756cffa250ae6485e2de297ff5ce036eb94c171d94b942"
+            },
+            "source_id": "GE-124g-5",
+            "target_id": "GE-124g-3",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml",
+              "locator": "/components",
+              "content_hash": "177fcf3e62f7f129d88edb99233ef2bc88d4b85e122ef4a1df2473e917024d51"
+            },
+            "source_id": "GE-124g-3",
+            "target_id": "ac_store",
+            "edge_type": "component_membership",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/guardrail-engine/GE-124-frontend-declares-what-it-renders/GE-124g-3.yaml",
+              "locator": "/components",
+              "content_hash": "177fcf3e62f7f129d88edb99233ef2bc88d4b85e122ef4a1df2473e917024d51"
+            },
+            "source_id": "GE-124g-3",
+            "target_id": "knowledge_management",
+            "edge_type": "component_membership",
+            "locator": ""
+          }
+        ],
+        "related": [
+          {
+            "canonical_id": "GE-124g",
+            "title": "A screen saying it serves a requirement is never proof the requirement works",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "GE-124g-1",
+            "title": "A declaration is never written into a criterion's covered_by",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "GE-124g-5",
+            "title": "A reference doc states what each kind of evidence is worth, for every future check",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "ac_store",
+            "title": "Ac Store",
+            "kind": "Component"
+          },
+          {
+            "canonical_id": "knowledge_management",
+            "title": "Knowledge Management",
+            "kind": "Component"
+          }
+        ]
+      },
+      {
+        "entity": {
+          "canonical_id": "KM-200",
+          "kind": "AcceptanceCriterion",
+          "title": "Know whether you are finishing things as fast as you are starting them",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+            "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml",
+            "locator": "/criteria",
+            "content_hash": "85d4b096088c224e8afd225a0a48302037dacbf1c7a95f27a76502b34ec7058e"
+          },
+          "properties": {
+            "status": "active"
+          }
+        },
+        "evidence_id": "knowledge-f81e813deb265d83e2f9a7370e7ede33c00dd44b3e821b6c3bd153283ea6225e",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200a.yaml",
+              "locator": "/depends_on",
+              "content_hash": "65478a72cad03f707124a4b7b6acdd236e595854c0832b0be170533499d2edb9"
+            },
+            "source_id": "KM-200a",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200b.yaml",
+              "locator": "/depends_on",
+              "content_hash": "8b4bdeb7530a552714ab4c34ddeec636381826ef49d00b6792a3370c073cd22d"
+            },
+            "source_id": "KM-200b",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200c.yaml",
+              "locator": "/depends_on",
+              "content_hash": "e8464d1011c50dce52e223fb40ef5c240b6b7b88b668909089b3611c259bf6ff"
+            },
+            "source_id": "KM-200c",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200d.yaml",
+              "locator": "/depends_on",
+              "content_hash": "9e03477c5c232be96e9b2ca4add0270e8a8961abe5b8e48cb950d084ff402d6d"
+            },
+            "source_id": "KM-200d",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200e.yaml",
+              "locator": "/depends_on",
+              "content_hash": "e9214bae6bbc141d4db8e10478d8241cfcffa4c89c12fcd466cbc7becea1ca83"
+            },
+            "source_id": "KM-200e",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200f.yaml",
+              "locator": "/depends_on",
+              "content_hash": "1f7a42ecb6ce213ec526b261b7774108948149c9cdcbfa6ddae0a1d0833aa428"
+            },
+            "source_id": "KM-200f",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml",
+              "locator": "/components",
+              "content_hash": "85d4b096088c224e8afd225a0a48302037dacbf1c7a95f27a76502b34ec7058e"
+            },
+            "source_id": "KM-200",
+            "target_id": "knowledge_management",
+            "edge_type": "component_membership",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200.yaml",
+              "locator": "/components",
+              "content_hash": "85d4b096088c224e8afd225a0a48302037dacbf1c7a95f27a76502b34ec7058e"
+            },
+            "source_id": "KM-200",
+            "target_id": "ux_prototyping",
+            "edge_type": "component_membership",
+            "locator": ""
+          }
+        ],
+        "related": [
+          {
+            "canonical_id": "KM-200a",
+            "title": "Nothing the project produces is left out of the count",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "KM-200b",
+            "title": "See what came in and what was worked off, side by side",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "KM-200c",
+            "title": "Tell a parked idea apart from work that is actually queued",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "KM-200d",
+            "title": "Spot what is piling up faster than you can clear it",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "KM-200e",
+            "title": "The numbers are already there, not written up by hand once a week",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "KM-200f",
+            "title": "Open any number and see the things behind it",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "knowledge_management",
+            "title": "Knowledge Management",
+            "kind": "Component"
+          },
+          {
+            "canonical_id": "ux_prototyping",
+            "title": "Ux Prototyping",
+            "kind": "Component"
+          }
+        ]
+      },
+      {
+        "entity": {
+          "canonical_id": "KM-200a",
+          "kind": "AcceptanceCriterion",
+          "title": "Nothing the project produces is left out of the count",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+            "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200a.yaml",
+            "locator": "/criteria",
+            "content_hash": "65478a72cad03f707124a4b7b6acdd236e595854c0832b0be170533499d2edb9"
+          },
+          "properties": {
+            "status": "active"
+          }
+        },
+        "evidence_id": "knowledge-57e10dd642183d0b201fc5aa8bd5039c92ba635bd490f5fd0c659c0c2bc02e41",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200a.yaml",
+              "locator": "/depends_on",
+              "content_hash": "65478a72cad03f707124a4b7b6acdd236e595854c0832b0be170533499d2edb9"
+            },
+            "source_id": "KM-200a",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200a.yaml",
+              "locator": "/components",
+              "content_hash": "65478a72cad03f707124a4b7b6acdd236e595854c0832b0be170533499d2edb9"
+            },
+            "source_id": "KM-200a",
+            "target_id": "knowledge_management",
+            "edge_type": "component_membership",
+            "locator": ""
+          }
+        ],
+        "related": [
+          {
+            "canonical_id": "KM-200",
+            "title": "Know whether you are finishing things as fast as you are starting them",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "knowledge_management",
+            "title": "Knowledge Management",
+            "kind": "Component"
+          }
+        ]
+      },
+      {
+        "entity": {
+          "canonical_id": "KM-200b",
+          "kind": "AcceptanceCriterion",
+          "title": "See what came in and what was worked off, side by side",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+            "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200b.yaml",
+            "locator": "/criteria",
+            "content_hash": "8b4bdeb7530a552714ab4c34ddeec636381826ef49d00b6792a3370c073cd22d"
+          },
+          "properties": {
+            "status": "active"
+          }
+        },
+        "evidence_id": "knowledge-c6819c9f558c541572f73cd15caac96652b57b9c3da9c377d559b00ea27936a9",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200b.yaml",
+              "locator": "/depends_on",
+              "content_hash": "8b4bdeb7530a552714ab4c34ddeec636381826ef49d00b6792a3370c073cd22d"
+            },
+            "source_id": "KM-200b",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200b.yaml",
+              "locator": "/components",
+              "content_hash": "8b4bdeb7530a552714ab4c34ddeec636381826ef49d00b6792a3370c073cd22d"
+            },
+            "source_id": "KM-200b",
+            "target_id": "knowledge_management",
+            "edge_type": "component_membership",
+            "locator": ""
+          }
+        ],
+        "related": [
+          {
+            "canonical_id": "KM-200",
+            "title": "Know whether you are finishing things as fast as you are starting them",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "knowledge_management",
+            "title": "Knowledge Management",
+            "kind": "Component"
+          }
+        ]
+      },
+      {
+        "entity": {
+          "canonical_id": "KM-200c",
+          "kind": "AcceptanceCriterion",
+          "title": "Tell a parked idea apart from work that is actually queued",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+            "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200c.yaml",
+            "locator": "/criteria",
+            "content_hash": "e8464d1011c50dce52e223fb40ef5c240b6b7b88b668909089b3611c259bf6ff"
+          },
+          "properties": {
+            "status": "active"
+          }
+        },
+        "evidence_id": "knowledge-b962d5b7e138b9c81dafcaa25de1d3a3fa597871fa1764b78420101676db7ad1",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200c.yaml",
+              "locator": "/depends_on",
+              "content_hash": "e8464d1011c50dce52e223fb40ef5c240b6b7b88b668909089b3611c259bf6ff"
+            },
+            "source_id": "KM-200c",
+            "target_id": "KM-200",
+            "edge_type": "depends_on",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200c.yaml",
+              "locator": "/components",
+              "content_hash": "e8464d1011c50dce52e223fb40ef5c240b6b7b88b668909089b3611c259bf6ff"
+            },
+            "source_id": "KM-200c",
+            "target_id": "ac_store",
+            "edge_type": "component_membership",
+            "locator": ""
+          },
+          {
+            "source": {
+              "repository_id": "leafcutter",
+              "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-200-artifact-analytics/KM-200c.yaml",
+              "locator": "/components",
+              "content_hash": "e8464d1011c50dce52e223fb40ef5c240b6b7b88b668909089b3611c259bf6ff"
+            },
+            "source_id": "KM-200c",
+            "target_id": "knowledge_management",
+            "edge_type": "component_membership",
+            "locator": ""
+          }
+        ],
+        "related": [
+          {
+            "canonical_id": "KM-200",
+            "title": "Know whether you are finishing things as fast as you are starting them",
+            "kind": "AcceptanceCriterion"
+          },
+          {
+            "canonical_id": "ac_store",
+            "title": "Ac Store",
+            "kind": "Component"
+          },
+          {
+            "canonical_id": "knowledge_management",
+            "title": "Knowledge Management",
+            "kind": "Component"
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      "candidate budget reached; completeness not established"
+    ],
+    "errors": [],
+    "continuation": null,
+    "truncated": true,
+    "stats": {
+      "candidates": 21,
+      "estimator_version": "utf8-bytes-div4-v1",
+      "round": 1,
+      "candidate_work": 50,
+      "duration_ms": 1644.343,
+      "estimated_tokens": 3641
+    }
+  },
+  "additional_reads": [
+    {
+      "operation": "get_entities",
+      "status": "ok",
+      "evidence_count": 0,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    },
+    {
+      "operation": "get_component_context",
+      "status": "partial",
+      "evidence_count": 5,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    },
+    {
+      "operation": "get_related_tests",
+      "status": "ok",
+      "evidence_count": 4,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    },
+    {
+      "operation": "get_relevant_adrs",
+      "status": "ok",
+      "evidence_count": 1,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    },
+    {
+      "operation": "get_previous_decisions",
+      "status": "unsupported",
+      "evidence_count": 0,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    },
+    {
+      "operation": "get_related_policies",
+      "status": "unsupported",
+      "evidence_count": 0,
+      "source_sha": "c2ddb6f126e5b8539f217836f67decba5e91eca4"
+    }
+  ]
+}

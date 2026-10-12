@@ -1,0 +1,217 @@
+id: KM-400a-1-xiv
+title: Capability properties expose registry declarations independently of runtime eligibility
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: reviewed
+work_status: done
+priority: medium
+parent: KM-400a-1
+criteria: |
+  Given a capability registry includes an enabled native entry and a disabled host-handoff entry with availability, admission and cost declarations
+  When their native fields are exposed in the repository graph
+  Then both entries retain their authored id, name, description, version, request_kinds, accepts_schemas, produces_schemas, execution_mode, binding, side_effect_class and admission
+  And authored operations, scope_tags, components, permissions_required, enabled, availability, routing, process_maturity and cost_hints remain queryable
+  And nested admission kind, decision reference, admission date, author and any legacy source remain associated with their entry, along with each availability and cost value
+  And absent optional values remain absent while false, zero, null, empty arrays and future nested fields remain distinguishable
+  And root registry identity, version and commentary remain separate supporting context, with each entry retaining its original source position
+  And disabled, unavailable, experimental, fixed and legacy-admitted entries are not omitted because of runtime eligibility
+  And bindings, schema references, permission declarations and admission references are exposed as data without executing or following them
+  And capabilities with names matching Agents or Skills retain distinct identities, and component membership is not guessed from names or bindings
+  And an absent registry yields no capability records, while malformed present entries, duplicate identities and invalid registry envelopes fail explicitly
+depends_on: [KM-400a-1]
+doc_links:
+- path: reports/native-fields/review-Capability.json
+  relationship: describes
+  status: exists
+  relevance: Twenty entry fields, root context and distinction from runtime descriptors.
+- path: reports/native-fields/code-Capability.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+- path: reports/native-fields/ac-linked-strict.xml
+  relationship: verifies
+  status: exists
+  relevance: 'Fresh strict execution after criterion-specific test tags: 388 passed and one Windows symlink-privilege
+    skip across 19 focused modules. Per-type cases resolve through the test catalog; no live database rerun is implied.'
+- path: reports/native-fields/review-Capability.json
+  relationship: describes
+  status: exists
+  relevance: Twenty entry fields, root context and distinction from runtime descriptors.
+- path: reports/native-fields/code-Capability.json
+  relationship: verifies
+  status: exists
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Canonical Git authority, immutable repository generations and unchanged retrieval ownership.
+- path: docs/how-to/run-knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Existing Aura native-property inspection and declared-component filtering guide.
+- path: reports/native-fields/field-coverage.json
+  relationship: describes
+  status: exists
+  relevance: Dated per-type field inventory and shared representation contract; not a deployment claim.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-3-i.yaml
+  relationship: context
+  status: exists
+  relevance: Approved shared field-exposure and documented-nested-leaf requirement. Existing guide, field reference
+    inventory and component diagram cover this retrospective type refinement.
+assigned_agent: python-coder
+origin_agent: business-analyst
+created: '2026-10-02'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_native_capability.py::test_capability_all_fields_and_nested_extensions_round_trip
+- tests/knowledge/test_native_capability.py::test_capability_real_registry_exact_fields_and_no_defaults
+- tests/knowledge/test_native_capability.py::test_capability_legacy_admission_does_not_read_references
+- tests/knowledge/test_native_capability.py::test_capability_source_order_and_changed_values_are_visible
+- tests/knowledge/test_native_capability.py::test_capability_absent_and_empty_registry_do_not_invent_records
+- tests/knowledge/test_native_capability.py::test_capability_malformed_envelope_fails_explicitly
+- tests/knowledge/test_native_capability.py::test_capability_invalid_registry_identity_fails
+- tests/knowledge/test_native_capability.py::test_capability_malformed_entry_fails_explicitly
+- tests/knowledge/test_native_capability.py::test_capability_duplicate_ids_fail_without_source_changes
+- tests/knowledge/test_native_capability.py::test_capability_resolved_source_cannot_escape_snapshot
+- tests/knowledge/test_native_capability.py::test_capability_metadata_and_context_are_independent_copies
+implemented_by:
+  - knowledge/native_types/capability.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Retrospective refinement of KM-400a-3-i. The reader receipt reports 30 passing
+  cases, 32 caught mutation pairs and equality with all nine actual registry
+  entries. The root comment's older population claim is source text, not a
+  count authority. This reviewed specification does not change capability admission or execution.
+  Final bidirectional traceability and strict test evidence: reports/native-fields/ac-traceability.json.
+  Work status reflects linked test outcomes; reviewed readiness does not assert user approval.
+estimated_complexity: M
+it_requirements:
+- Validation uses the trusted reader's capability contract; schemas, bindings, permissions and legacy-admission
+  references in source data are not executed or followed.
+- 'The immutable registry is the extraction authority: runtime eligibility and legacy registry discovery cannot
+  remove entries or inject runtime defaults.'
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+- name: test_capability_all_fields_and_nested_extensions_round_trip
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Capability all fields and nested extensions round trip.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_real_registry_exact_fields_and_no_defaults
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: real_artifact
+  description: Capability real registry exact fields and no defaults.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_legacy_admission_does_not_read_references
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Capability legacy admission does not read references.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_source_order_and_changed_values_are_visible
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: Capability source order and changed values are visible.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_absent_and_empty_registry_do_not_invent_records
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Capability absent and empty registry do not invent records.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_malformed_envelope_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Capability malformed envelope fails explicitly.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_invalid_registry_identity_fails
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Capability invalid registry identity fails.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_malformed_entry_fails_explicitly
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Capability malformed entry fails explicitly.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_duplicate_ids_fail_without_source_changes
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: failure
+  description: Capability duplicate ids fail without source changes.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_resolved_source_cannot_escape_snapshot
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Capability resolved source cannot escape snapshot.
+  covers:
+  - KM-400a-1-xiv
+- name: test_capability_metadata_and_context_are_independent_copies
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: unit
+  angle: boundary
+  description: Capability metadata and context are independent copies.
+  covers:
+  - KM-400a-1-xiv
+test_rationale: The verified catalog supplies exact existing reader-function anchors, including source-fixture,
+  boundary and failure checks. Only catalog-confirmed type-specific integration links are added. Shared lossless
+  property encoding, physical Neo4j publication, readback and retained-generation behavior remain covered by KM-400a-3-i;
+  these focused tests do not claim 17 independent live database journeys. This is retrospective traceability over
+  dated implementation receipts, not a newly performed TDD sequence. Subsequent strict execution is separately recorded
+  in reports/native-fields/ac-linked-strict.xml (388 passed, one skipped); no database test was rerun for these
+  annotation-only changes.

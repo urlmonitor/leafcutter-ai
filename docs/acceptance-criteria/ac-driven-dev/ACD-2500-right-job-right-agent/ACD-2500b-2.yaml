@@ -48,6 +48,9 @@ it_requirements:
   ''reference file pending'' (ACD-2500d-2-i), ''file finding undecided'' (ACD-2500d-3-i). Approval report
   shape: {approved: [id], held: [{id: str, file: str, reason: <vocabulary value>}]}. Every gate that emits
   a hold reason reads that one vocabulary.'
+- 'Trigger for ''missing file targets'' (amended 2026-09-27): the record is in the ''no declared files'' state
+  (ACD-1600c-4-ii); paths named in it_requirements or doc_links do not satisfy it (ACD-1600c-1 as amended).
+  The vocabulary values and the contract text above are unchanged.'
 - The rule 'an approved leaf code AC carries a test contract' (ACD-1600c-1/-2, check-ac-schema) is not
   weakened; test_intent alone is never accepted as that contract.
 - Held records keep every field byte-identical; records outside the batch are not touched.
@@ -92,6 +95,10 @@ amended_by:
   date: '2026-09-25'
   by: it-po
   directed_by: user
+- reason: "amend: the hold-reason list's 'missing file targets' value is now raised for a record in the 'no declared files' state (ACD-1600c-4-ii), per ACD-1600c-1 as amended 2026-09-27; one it_requirements bullet added. Reason names, criteria, readiness and the delivers_to contract text are unchanged, so the five consumers' byte-identical expects_from copies stay in step."
+  date: '2026-09-27'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500b-2-i
@@ -111,3 +118,11 @@ notes: |
   reported under their own names. ACD-1600c-1 may build first (this AC depends_on it and
   extends the list). ACD-1600c-3 (reference doc) amended to list all five reasons and now
   depends_on this AC, ACD-2500d-2-i and ACD-2500d-3-i.
+
+  AMENDMENT (2026-09-27, BA, user-directed): "missing file targets" is keyed on the
+  declared-files list -- raised when a record is in the "no declared files" state
+  (ACD-1600c-4-ii). No depends_on edge was added here: this AC already depends on
+  ACD-1600c-1, which now depends on ACD-1600c-4-ii, so the ordering is transitive and adds no
+  cycle. The delivers_to contract string was deliberately left as it is, because ACD-2500b-2-i,
+  ACD-2500b-4, ACD-2500c-2, ACD-2500d-2-i and ACD-2500d-3-i carry it byte-for-byte in their
+  expects_from.

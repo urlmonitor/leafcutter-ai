@@ -1,0 +1,65 @@
+id: DK-500e-4
+title: 'Sequence diagram: reuse-first framing, gap judgement and gap-only drafting in a decision run'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given reuse (DK-500d-1), the gap verdict (DK-500e-1), gap drafting (DK-500e-2), in-run grouping (DK-500b-4) and the empty-library branch (DK-500e-3),
+  When a reader opens the sequence diagram of framing a decision with the criteria library,
+  Then it shows, in order, the reuse of published categories, Jev's gap judgement, drafting by the host for the gap only, the grouping of drafted criteria, and the person's approval of proposals with the reused marks and the verdict,
+  And it shows the empty-library branch, in which nothing is reused and no gap is judged,
+  And it shows that the categories are read from the reviewed records and never from the run history.
+depends_on:
+- DK-500e
+- DK-500d-1
+- DK-500e-1
+- DK-500e-2
+- DK-500e-3
+- DK-500b-4
+covered_by: []
+implemented_by: []
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- 'A Mermaid sequenceDiagram page in docs/architecture/diagrams/ beside c3-013 to c3-022, linked from docs/architecture/components/decision-kernel.md. Participants as built: the decision capability, the category index docs/criteria/index.json, Jev, host generate_options, the budget gate and the person at the approval.'
+- Show in-run grouping as dec-a070edfb6465bced decided it (exact matches by code, one Jev choice per drafted question within the run's budget, no LLM), plus the budget-skip and empty-library alt branches.
+test_required: false
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+  relationship: constrains
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Documentation AC answering the sequence-diagram triggers of BOTH DK-500e and DK-500d: the two L1s describe consecutive steps of one run, and two diagrams of the same sequence would drift.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

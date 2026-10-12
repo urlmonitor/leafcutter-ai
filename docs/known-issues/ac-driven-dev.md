@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-27'
+last_updated: '2026-10-09'
 components:
   - ac_driven_dev
 related_docs:
@@ -69,7 +69,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 30** (0 blocker, 23 high, 7 low) · **Resolved: 6**
+**Open: 32** (0 blocker, 25 high, 7 low) · **Resolved: 7** (recounted from the directory 2026-10-09)
 
 ## Open
 
@@ -78,8 +78,6 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 | `high` | KI-ACD-001 — `ac_prioritizer` discards each AC's `priority` field, so `critical` never surfaces | [open-high-ki-acd-001.md](ac-driven-dev/open-high-ki-acd-001.md) |
 | `high` | KI-ACD-002 — Generated Agent Contracts lines have no pipe delimiters, so documentation-verifier fail-closes on every generated ticket | [open-high-ki-acd-002.md](ac-driven-dev/open-high-ki-acd-002.md) |
 | `high` | KI-ACD-003 — `ac-fulfillment-gate` returns `ok` on an AC it left with `covered_by: []` | [open-high-ki-acd-003.md](ac-driven-dev/open-high-ki-acd-003.md) |
-| `high` | KI-ACD-006 — A run that authors zero ACs reports `status: "ok"` | [resolved-high-ki-acd-006.md](ac-driven-dev/resolved/resolved-high-ki-acd-006.md) |
-| `high` | KI-ACD-007 — Product-truth artifacts are written to the user's main checkout, not the authoring worktree | [open-high-ki-acd-007.md](ac-driven-dev/open-high-ki-acd-007.md) |
 | `high` | KI-ACD-008 — AC id allocation misses ids owned by feature folders, and has already minted a live duplicate on main | [open-high-ki-acd-008.md](ac-driven-dev/open-high-ki-acd-008.md) |
 | `high` | KI-ACD-010 — An ASCII comma in an AC title survives every normalisation step and lands in the epic folder name, the AC store, and Master_Plan | [open-high-ki-acd-010.md](ac-driven-dev/open-high-ki-acd-010.md) |
 | `high` | KI-ACD-012 — The generated `Master_Plan.md` is missing six fields the repo's own ticket guard requires | [open-high-ki-acd-012.md](ac-driven-dev/open-high-ki-acd-012.md) |
@@ -102,6 +100,9 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 | `low` | KI-ACD-20260925-contract-target-is-parent-link — generated tickets name the parent AC as the documentation-expert's target document | [open-low-ki-acd-20260925-contract-target-is-parent-link.md](ac-driven-dev/open-low-ki-acd-20260925-contract-target-is-parent-link.md) |
 | `high` | KI-ACD-20260927-tq-500f-2-ii-contradicts-acd-2500 — an approved, unbuilt AC makes the IT PO write must_catch, which the approved ACD-2500 tree assigns to a code-aware test-designer | [open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md](ac-driven-dev/open-high-ki-acd-20260927-tq-500f-2-ii-contradicts-acd-2500.md) |
 | `high` | KI-ACD-20260927-repo-anchor-picks-the-in-repo-install-copy — in the self-hosting layout, repository-anchored resolution runs the gitignored in-repo .leafcutter/ copy, not the install the session runs | [open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md](ac-driven-dev/open-high-ki-acd-20260927-repo-anchor-picks-the-in-repo-install-copy.md) |
+| `high` | KI-ACD-20260929-cross-field-dependency-cycle-is-invisible-to-both-tools — a cycle spanning `depends_on` and `expects_from` is unrepresentable in the cycle gate's graph, and the generator resolves it by dropping the edge and reporting READY | [open-high-ki-acd-20260929-cross-field-dependency-cycle-is-invisible-to-both-tools.md](ac-driven-dev/open-high-ki-acd-20260929-cross-field-dependency-cycle-is-invisible-to-both-tools.md) |
+| `high` | KI-ACD-20261009-resume-reclassifies — a resumed /plan-feature run asks the product-truth classifier again, gets a different answer, and silently drops the owner's answer at the product-truth gate it was paused at | [open-high-ki-acd-20261009-resume-reclassifies.md](ac-driven-dev/open-high-ki-acd-20261009-resume-reclassifies.md) |
+| `high` | KI-ACD-20261009-resume-reads-own-drafts-as-orphans — a resumed /plan-feature run stops at the partial-run recovery prompt and offers the paused run's own reviewed drafts as orphans; every answer undoes the review | [open-high-ki-acd-20261009-resume-reads-own-drafts-as-orphans.md](ac-driven-dev/open-high-ki-acd-20261009-resume-reads-own-drafts-as-orphans.md) |
 | `low` | KI-ACD-011 — Epic-name truncation has no phrase awareness, so names end on a dangling preposition or article | [open-low-ki-acd-011.md](ac-driven-dev/open-low-ki-acd-011.md) |
 | `low` | KI-ACD-014 — `goal_to_epic.py` writes absolute filesystem paths into `implemented_by` | [open-low-ki-acd-014.md](ac-driven-dev/open-low-ki-acd-014.md) |
 | `low` | KI-ACD-015 — Epic ordering reads `depends_on` only, so `expects_from` contract edges are invisible to the build sequencer | [open-low-ki-acd-015.md](ac-driven-dev/open-low-ki-acd-015.md) |
@@ -115,4 +116,6 @@ Fixed issues move to [`ac-driven-dev/resolved/`](ac-driven-dev/resolved/) and ar
 | `blocker` | KI-ACD-004 — `/plan-feature` cannot start in the self-hosting layout: worktree setup resolves git from the untracked workspace | [resolved-blocker-ki-acd-004.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-004.md) |
 | `blocker` | KI-ACD-005 — User approval gates are dispatched to a `status-checker` agent, whose out-of-scope refusal is parsed as "the user chose cancel" | [resolved-blocker-ki-acd-005.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-005.md) |
 | `blocker` | KI-ACD-009 — `/plan-feature` halts before any authoring agent and blames a registry field that is correct | [resolved-blocker-ki-acd-009.md](ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md) |
+| `high` | KI-ACD-006 — A run that authors zero ACs reports `status: "ok"` | [resolved-high-ki-acd-006.md](ac-driven-dev/resolved/resolved-high-ki-acd-006.md) |
+| `high` | KI-ACD-007 — Product-truth artifacts are written to the user's main checkout, not the authoring worktree | [resolved-high-ki-acd-007.md](ac-driven-dev/resolved/resolved-high-ki-acd-007.md) |
 | `high` | KI-ACD-013 — `goal_to_epic.py` writes a `target_epic` field the AC schema rejects, so every epic it generates fails the required store gate | [resolved-high-ki-acd-013.md](ac-driven-dev/resolved/resolved-high-ki-acd-013.md) |

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-09-23'
 components:
   - ac_driven_dev
 related_docs:
@@ -21,7 +21,14 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — handover ticket raised for the falsified ACs; the missing records are being authored separately
+- **Status:** **partially fixed, 2026-09-23.** The falsified-`done`-ACs half is resolved:
+  all six records named below have been reconciled against the store (five reopened to
+  `work_status: todo`, one — `BO-1500f-1` — legitimately re-verified and re-marked
+  `done` under `AC_ENFORCE_STRICT=1`). The other half — `goal_to_epic.py` and
+  `epic_naming.py` citing `ACD-1200a-6`/`-7`, which still do not exist in the store — is
+  unchanged and still reproduces; a commit as recent as 2026-09-21 touched these exact
+  lines without correcting the citation. See "Re-verified 2026-09-23" below. Kept open
+  for the citation half.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/ac_store/epic_naming.py` (`:9`, `:24`, `:178`, `:186`, `:305`, `:351`) plus `scripts/goal_to_epic.py` (`:59`, `:321`) citing `ACD-1200a-6`; three further sites citing `ACD-1200a-7`
@@ -81,5 +88,34 @@ were filed after it ran and are **not** triaged.
 **Pattern:** `docs/reference/false-green-mechanisms.md` → M1 for the tests that let these read
 `done`; the missing-citation half is its own shape — a reference that resolves to nothing reads
 as coverage to everyone who checks for one.
+
+**Re-verified 2026-09-23.** Checked both checkable factual claims against the current
+store and current code, not the entry's own narrative.
+
+**Citation half — still true.** `grep -rn "ACD-1200a-6\|ACD-1200a-7"
+scripts/goal_to_epic.py scripts/ac_store/epic_naming.py` still returns the citations
+(`goal_to_epic.py:59-60,321,329`; `epic_naming.py:9,24,178,186,305,351`). A store-wide
+search for `^id: "ACD-1200a-6"` / `^id: "ACD-1200a-7"` still returns nothing — neither
+id exists. `git log -L` on `goal_to_epic.py:59,60` shows the block was rewritten as
+recently as `fb07b48d` ("refactor(ac-store): split goal_to_epic.py into 14 modules,
+and cover 8 previously-untested ACs", PR #844, 2026-09-21) — the citations were kept
+and given bracket annotations (`[epic_naming]`, `[epic_master_plan, epic_phases]`)
+rather than corrected. The code still asserts it is governed by criteria that do not
+exist.
+
+**Falsified-ACs half — resolved.** Checked `work_status` on all six named records
+directly:
+
+| AC | `work_status` now | Note |
+|---|---|---|
+| `BO-2200c-5` | `todo` | reopened |
+| `BO-202` | `todo` | reopened |
+| `BO-2300a-1` | `todo` | reopened |
+| `BO-2300a-2` | `todo` | reopened — its own notes narrate the `KI-ACD-006` reopening and record (as of 2026-09-08) that the PT-gate fix was "observed... incidentally" but "unverified" against the mid-gate site; `KI-ACD-006`'s own 2026-09-23 closure independently confirms the code now satisfies this AC at all three sites, but the store has not been flipped back — a separate, not-yet-done step |
+| `ACD-1200a-3-iii` | `todo` | reopened (this component's own) |
+| `BO-1500f-1` | **`done`** | re-marked `done` on 2026-09-23 via commit `9f783a26` (part of PR #865, closing `KI-ACD-009`), using `scripts/ac_store/mark_ac_done.py` after re-running `AC_ENFORCE_STRICT=1 python -m pytest unit_tests/workflows/test_bo_1500f_1.py unit_tests/workflows/test_bo_1500f_1_real_registry_read.py -q` → **8 passed** with the xfail mask off. This is a legitimate, rigorously re-verified `done`, not a repeat of the falsification — see `docs/known-issues/ac-driven-dev/resolved/resolved-blocker-ki-acd-009.md`'s own 2026-09-23 closure note for the full chain of evidence. |
+
+None of the six is currently a falsified `done`. The falsified-ACs half of this entry
+is resolved; only the missing-citation half keeps it open.
 
 ---

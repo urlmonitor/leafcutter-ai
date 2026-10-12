@@ -219,7 +219,7 @@ def _legacy_agents_map(assigned_agent: str) -> dict[str, str]:
 
 
 def _build_agents_map(
-    assigned_agent: str,
+    assigned_agent: str | None,
     change_targets: list[str] | None = None,
     risk_surface: str | None = None,
     not_needed_overrides: dict[str, str] | None = None,
@@ -266,9 +266,12 @@ def _build_agents_map(
 
     Args:
         assigned_agent: The agent name from the AC's assigned_agent field.
-            None is a real, common runtime value here despite the ``str``
-            annotation — see the Raises entry below, and the note under
-            ``_require_work_agent`` on why the annotation cannot yet say so.
+            None is a real and common runtime value here — several hundred
+            store records carry an explicit null — and the annotation now
+            says so. It is refused immediately by ``_require_work_agent``
+            (see the Raises entry below), which returns the value narrowed
+            to ``str``; everything downstream takes that narrowed binding,
+            never this parameter.
         change_targets: List of change target categories (e.g. ['python_code', 'config']).
         risk_surface: Risk surface label (e.g. 'low', 'high', 'production').
         not_needed_overrides: Map of agent → 'not_needed' that must be preserved.
@@ -317,12 +320,16 @@ def _build_agents_map(
             requested, the declaration is location-dependent, and
             *resolved_destination* is None.
     """
-    _require_work_agent(assigned_agent)
+    # Binds the narrowed value rather than discarding it: past this line the
+    # work agent is a ``str``, which is what lets this function's own
+    # parameter carry the truthful ``str | None`` while _legacy_agents_map
+    # and _collect_needed_agents keep their honest ``str``.
+    work_agent = _require_work_agent(assigned_agent)
 
     overrides: dict[str, str] = not_needed_overrides or {}
 
     if change_targets is None or risk_surface is None:
-        return _legacy_agents_map(assigned_agent)
+        return _legacy_agents_map(work_agent)
 
     # --- Computed path ---
     # Location-keyed deferral (TKT-600b-1). Resolved only in the computed
@@ -353,7 +360,7 @@ def _build_agents_map(
 
     all_needed = _collect_needed_agents(
         guardrail_set,
-        assigned_agent,
+        work_agent,
         prod_code_agents,
         files_touched,
         declares_side_effect,

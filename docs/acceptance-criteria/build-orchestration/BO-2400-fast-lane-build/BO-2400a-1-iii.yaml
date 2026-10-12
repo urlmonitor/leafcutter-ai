@@ -1,0 +1,235 @@
+id: BO-2400a-1-iii
+components:
+  - build_orchestration
+title: "The registry schema defines step_kinds once, and the registry gate that actually runs rejects an unknown kind by name"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the agent registry schema after this criterion is met,
+  When it is read,
+  Then it defines an optional step_kinds field on an agent entry: an array of unique
+    strings, each one of reads_store, changes_store, changes_repository or publishes,
+  And the schema is the only place that list of four kinds is written down: the registry
+    gate and every other reader take the allowed kinds from the schema.
+
+  Given a registry whose agent entry "fixture-agent" lists step_kinds ["reads_store",
+    "deploys"],
+  When the registry gate runs — at commit time, and when the build validates the
+    package without building it,
+  Then the gate rejects the registry,
+  And the rejection names the unknown kind "deploys" and the agent id "fixture-agent".
+
+  Given the schema's list of kinds gains a fifth kind "fixture_kind",
+  When the gate runs over an entry listing step_kinds ["fixture_kind"],
+  Then the entry is accepted without the gate itself being edited.
+
+  Given an entry that lists the same kind twice, for example ["publishes", "publishes"],
+  When the gate runs,
+  Then the gate rejects it and names the repeated kind and the agent id.
+
+  Given an entry with no step_kinds field, and another entry with step_kinds [],
+  When the gate runs,
+  Then both are accepted,
+  And both are read as declaring no step kind at all.
+
+  Given a registry that is valid apart from fields other than step_kinds,
+  When the gate runs,
+  Then its verdict on those other fields is the same as before this criterion: only
+    step_kinds gains schema-based checking, and the registry is not newly validated
+    against the whole schema.
+depends_on: [BO-2400a-1]
+doc_links:
+  - path: config/agent_registry.schema.json
+    relationship: modifies
+    status: exists
+    relevance: "Gains the optional step_kinds definition, the single home of the four kinds."
+  - path: scripts/commit_guardian/check_agent_registry.py
+    relationship: modifies
+    status: exists
+    relevance: "The registry gate that runs at commit time (check-agent-registry)."
+  - path: templates/scripts/commit_guardian/check_agent_registry.py
+    relationship: modifies
+    status: exists
+    relevance: "Packaged copy of the gate; must carry the same change."
+  - path: scripts/build.py
+    relationship: describes
+    status: exists
+    relevance: "build.py --validate-only is the second path on which the gate must run."
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The registry the gate validates. This record adds no entry to it; BO-2400a-1-i adds the command-step-runner entry."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    config/agent_registry.schema.json defines step_kinds on an agent entry as an
+    optional array of unique strings whose values are an enum of reads_store,
+    changes_store, changes_repository and publishes. The schema is the only place
+    those values are written. The gate, BO-2400f-5-ii's check and any other reader
+    load them from the schema at run time, so adding a kind to the schema needs no
+    code change.
+  - >-
+    Enforce at the gates that actually run. Today no script validates
+    config/agent_registry.json against the schema (the only link is the $schema editor
+    hint), so a schema-only change is inert. The step_kinds check must live in the
+    registry gate and run on both paths. The commit-time path is
+    scripts/commit_guardian/check_agent_registry.py (hook check-agent-registry). The
+    build path is build.py --validate-only, which must invoke the same check and not a
+    second implementation. The packaged copy
+    templates/scripts/commit_guardian/check_agent_registry.py carries the same change
+    and stays byte-identical or build-parity-equal to the live copy.
+  - >-
+    Each rejection names the offending kind and the agent id, whether the kind is
+    unknown or repeated. A bare JSON-path or jsonschema message is not enough. When
+    several violations exist, all are reported in a deterministic order, and the gate
+    exits non-zero.
+  - >-
+    Absent step_kinds and [] are both valid and both mean no kinds. The one shared
+    reader that returns an agent's kind set returns empty for both, and BO-2400f-5-ii
+    uses that reader rather than re-reading the raw field.
+  - >-
+    Scope. Only step_kinds is validated against the schema. The gate's verdicts on
+    every other field are unchanged, and switching on whole-registry schema validation
+    is out of scope.
+  - >-
+    The gate does not fail open on a step_kinds violation. If the schema itself cannot
+    be read or has no step_kinds definition, the gate reports that as an error. It
+    never silently treats every kind as allowed.
+  - >-
+    docs/architecture/components/agent-registry.md lists step_kinds under Key Fields
+    next to permits_shell, including the absent-means-none reading and the fact that
+    the schema is the single source of the kinds.
+  - >-
+    Nothing in this record adds or edits an agent entry in config/agent_registry.json.
+    BO-2400a-1-i adds the command-step-runner entry.
+test_required: true
+test_spec:
+  - name: test_schema_defines_step_kinds_as_optional_unique_enum_array
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "config/agent_registry.schema.json defines step_kinds on the agent definition as an array with uniqueItems true and an enum of exactly the four kinds, and step_kinds is not in the agent's required list."
+    must_catch:
+      - "step_kinds made required, which would reject every existing entry"
+  - name: test_registry_gate_accepts_each_known_step_kind
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "A fixture registry whose entry lists any one of the four kinds, and one listing all four, passes the registry gate."
+  - name: test_unknown_step_kind_is_rejected_by_the_registry_gate_naming_kind_and_agent
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A fixture registry whose entry 'fixture-agent' lists step_kinds ['reads_store', 'deploys'] is rejected by the commit-time registry gate, and the message contains both 'deploys' and 'fixture-agent'."
+    must_catch:
+      - "the enum is added to the schema file only, and no running gate reads it (today's gap)"
+      - "the rejection names only a JSON path such as agents/12/step_kinds/0 and not the agent id"
+      - "the gate keeps its own copy of the kind list, so it drifts from the schema"
+  - name: test_unknown_step_kind_is_rejected_by_build_validate_only
+    target_dir: unit_tests/
+    framework: pytest
+    type: integration
+    angle: reachability
+    description: "The same fixture registry makes build.py --validate-only (pointed at a temporary fixture package) exit non-zero with 'deploys' and 'fixture-agent' in its output."
+    must_catch:
+      - "the check is wired into the commit hook only, and the build validation path never runs it"
+  - name: test_duplicate_step_kind_is_rejected_naming_kind_and_agent
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An entry listing step_kinds ['publishes', 'publishes'] is rejected, and the message names 'publishes' and the agent id."
+    must_catch:
+      - "the gate checks membership only and ignores uniqueItems"
+  - name: test_fifth_kind_added_to_schema_is_accepted_without_gate_edit
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "The gate runs against a temporary copy of the schema whose step_kinds enum has 'fixture_kind' added, over an entry listing ['fixture_kind'], and accepts it. The gate's source is not touched, and the same entry is rejected against the shipped schema."
+    must_catch:
+      - "the gate holds its own list of four kinds (passes the rejection test, fails this one)"
+  - name: test_absent_and_empty_step_kinds_are_valid_and_read_as_no_kinds
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "An entry without step_kinds and an entry with step_kinds [] both pass the gate, and the shared kind-set reader returns an empty set for both."
+    must_catch:
+      - "absent read as all kinds"
+      - "[] rejected as invalid"
+  - name: test_gate_verdict_on_other_fields_is_unchanged
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: discrimination
+    description: "A fixture registry with a field the full schema would reject but the existing gate tolerates, and no step_kinds, gets the same gate verdict before and after this change. The shipped registry still passes."
+    must_catch:
+      - "whole-registry schema validation switched on as a side effect"
+  - name: test_live_and_packaged_registry_gate_copies_are_in_parity
+    target_dir: unit_tests/
+    framework: pytest
+    type: unit
+    angle: deployed
+    description: "scripts/commit_guardian/check_agent_registry.py and templates/scripts/commit_guardian/check_agent_registry.py are identical, or equal after the build's normal transform, so installed projects get the step_kinds check."
+test_rationale: |
+  Today's defect is that nothing reads the schema, so the tests aim at the gates that
+  actually run. The rejection test drives the commit-time gate, and a separate test drives
+  build.py --validate-only, so wiring the check into only one path is caught. Every
+  rejection test requires both the kind and the agent id in the message, which a bare
+  jsonschema error does not give.
+
+  The fifth-kind test is the one that separates reading the schema from copying it. A gate
+  with a hard-coded list of four passes the unknown-kind and duplicate tests and fails this
+  one. It runs against a temporary schema copy, so the shipped schema never changes.
+
+  The absent-versus-[] test and the other-fields test guard the two scope edges: absent
+  must never widen to all kinds, and adding step_kinds validation must not quietly start
+  validating the rest of the schema. The parity test guards the packaged copy, since an
+  installed project runs templates/scripts and not scripts/.
+delivers_to:
+  agent: python-coder
+  contract: "config/agent_registry.schema.json definitions.agent.properties.step_kinds = {type: array, uniqueItems: true, items: {enum: [reads_store, changes_store, changes_repository, publishes]}} (not required); a registry gate (scripts/commit_guardian/check_agent_registry.py and its templates/scripts copy, also run by build.py --validate-only) that rejects unknown or repeated kinds with messages naming kind and agent id; and one shared reader returning an agent's kind set (empty for absent or []). Consumers: BO-2400a-1-i (llm-expert) whose command-step-runner entry must pass the gate, and BO-2400f-5-ii (python-coder) which uses the shared reader and the schema's enum."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-09-27
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-09-27'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: schema
+risk_surface: internal
+notes: |
+  SPLIT 2026-09-27 (round 4, requested by the IT PO) out of BO-2400a-1-i to clear an approval
+  blocker. Nothing validates config/agent_registry.json against its schema today; the only
+  link is the $schema editor hint. A schema-only enum would therefore reject nothing. Making
+  the running gate reject an unknown kind is .py work (python-coder), while the agent template
+  and registry entry stay with llm-expert in BO-2400a-1-i.
+
+  USER DECISION 2026-09-27 (round 3): the four kinds are reads_store, changes_store,
+  changes_repository, publishes. Absent means no kinds, mirroring the undeclared reading of
+  permits_shell, which BO-2400f-5-ii relies on.
+
+  SCOPE. Only step_kinds is validated against the schema. Whole-schema validation is out of
+  scope because switching it on may reject existing entries for unrelated reasons; that would
+  be its own change.
+
+  The added-kind scenario is the clause that separates reading the schema from a copied list:
+  a gate holding its own list of four kinds passes the rejection scenario and fails this one.
+  The duplicate-kind scenario follows from "array of unique strings".

@@ -1,0 +1,104 @@
+id: DK-400d-5
+title: "State diagram: the states of a split and the answers that move it"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_1_founding
+criteria: |
+  Given a reader who wants to know which states a split can be in,
+  When they open the split state diagram,
+  Then it shows eight states, proposed, approved, in progress, completed, ended partial, rejected,
+    rejected and back to clarification, and kept whole after rejection, with the event that causes
+    each transition,
+  And it shows that only a person's answer leaves proposed: approve leads to approved; reject leads
+    to rejected, with the run ending blocked, when no capability could meet the request; to rejected
+    and back to clarification, with the run waiting for the person's answer to today's
+    clarification question, when routing found it ambiguous; and to kept whole when routing would
+    have accepted it or it was found mid-run,
+  And it shows approved moving to in progress when the first part has an outcome, and to completed
+    when every approved part has settled,
+  And it shows the split ending in ended partial, with the run partial, when no approved part is
+    still pending and at least one did not settle.
+depends_on:
+  - DK-400d
+  - DK-400d-1
+  - DK-400d-3
+  - DK-400e-4
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/decisions.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: 'v5 Decomposition.state: proposed | approved | in_progress | completed | ended_partial | rejected
+      | rejected_kept_whole.'
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+    relevance: 'Kernel containers: routing, scheduler, host handoffs, run root.'
+  - path: docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
+    relationship: describes
+    status: exists
+    relevance: 'ADR-067 (Accepted): the kernel splits a bundled request into parts a person approves; binding source
+      for the four schema ids (goal_decomposition_request.v1, goal_decomposition.v1, split_answer.v1, decomposition.v1).'
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-400d-3
+  contract: "The rejection transitions keyed on the trigger."
+change_target: docs
+it_requirements:
+  - Authored with the write-c4-diagram skill; the file number comes from the diagram sequence tool; parent docs/architecture/diagrams/c2-007-decision-kernel-flows-overview.md,
+    whose child list gains the new diagram in the same change.
+  - Every container shown matches a container of docs/architecture/components/decision-kernel.md; split pieces are
+    drawn inside existing containers (kernel scheduler, host handoffs, run root, RunService and CLI, host skill),
+    never as new containers.
+  - 'Uses the names of the built code and of ADR-067: host.decompose_goal, leafcutter.goal_decomposition_request.v1,
+    leafcutter.goal_decomposition.v1, leafcutter.split_answer.v1, leafcutter.decomposition.v1, the split record
+    and its states, and the run statuses waiting_host and waiting_human.'
+  - 'Shows exactly the eight product states of Decomposition.state (mock-data v6: proposed, approved, in_progress,
+    completed, ended_partial, rejected, rejected_clarify, rejected_kept_whole) and the events that move them; the
+    transitions out of proposed are keyed on trigger and found_at as built (jev_none -> rejected, run blocked; ambiguous
+    -> rejected_clarify, run waiting_human on today''s clarification question; bundled_accepted or mid_run -> rejected_kept_whole).
+    The phase before the host''s proposal arrives is shown only if product truth gains a state for it.'
+risk_surface: internal
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-05
+amended_by:
+  - reason: "2026-10-05 BA, consequence of the user answer to BA open question Q3 (the run ends partial) and mock-data v5 state ended_partial; not in the coordinator's edit list, made so that this AC does not contradict the amended DK-400e-4. Withdrawn wording: 'Then it shows six states, proposed, approved, in progress, completed, rejected, and kept whole after rejection, with the event that causes each transition,' and 'And it shows approved moving to in progress when the first part settles, and to completed when every approved part has settled.' Replaced by seven states including ended partial, 'when the first part has an outcome' (the v5 meaning of in_progress), and a new clause for the ended-partial ending. depends_on gains DK-400e-4; doc_links relevance refreshed to mock data v5."
+  - reason: it-po-technical-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface,
+      it_requirements, delivers_to/expects_from contracts, doc_links and the test contract set; readiness draft
+      -> reviewed. BA criteria and product_truth unchanged.'
+  - reason: ba-user-gate-amendment
+    date: '2026-10-05'
+    by: business-analyst
+    summary: "User rule at the final gate: a rejected split of an ambiguous request falls back to today's clarification question. Withdrawn wording: 'Then it shows seven states, proposed, approved, in progress, completed, ended partial, rejected, and kept whole after rejection,' and 'reject leads to rejected when routing had turned the request away, and to kept whole when routing would have accepted it or it was found mid-run,'. Replaced by eight states, adding rejected and back to clarification (mock-data v6 state rejected_clarify, uncommitted in this worktree): reject leads to rejected (run blocked) for jev_none, to rejected and back to clarification (run waiting for the clarification answer) for ambiguous, and to kept whole for bundled_accepted or mid-run. IT PO fields were not edited; its it_requirements entry still says 'exactly the seven product states'."
+  - reason: it-po-final-gate-re-enrichment
+    date: '2026-10-05'
+    by: it-po
+    summary: Seven product states became eight (rejected_clarify added) with the v6 transitions.
+  - reason: it-po-adr067-alignment
+    date: '2026-10-05'
+    by: it-po
+    summary: 'Aligned with ADR-067 (Accepted, docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md):
+      named leafcutter.split_answer.v1 and leafcutter.decomposition.v1; ADR-067 doc_link set to exists.'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Documentation AC for DK-400d documentation_triggers [state-diagram]. The DK-400d DOCS note
+  says five states; mock data v5 has seven (it adds rejected_kept_whole and ended_partial).
+  The v4 gap this AC recorded (no state for a split that ends with an approved part unsettled)
+  is closed by the v5 state ended_partial (DK-400e-4).

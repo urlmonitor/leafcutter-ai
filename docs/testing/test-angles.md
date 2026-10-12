@@ -3,15 +3,16 @@ title: "Test Angles — A Set-Cover Taxonomy for Proof of Done"
 type: reference
 status: active
 created: 2026-08-14
-last_updated: 2026-08-14
+last_updated: 2026-10-07
 components:
 - testing_quality
 - build_orchestration
 related_docs:
 - docs/testing/README.md
+- docs/testing/test-angles-failure-catalogue.md
 - docs/architecture/components/phantom-done-prevention.md
 - docs/reference/ac-schema.md
-description: "The five core + two conditional test angles required per acceptance criterion, the observed repo incidents that justify each, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
+description: "The eight test angles (five core + three conditional) required per acceptance criterion, the wiring-shaped and discrimination-shaped failure families they target, the observed incidents that justify them, the literature behind them, and the failure classes this taxonomy explicitly does not fix."
 ---
 # Test Angles — A Set-Cover Taxonomy for Proof of Done
 
@@ -43,7 +44,7 @@ At HEAD, the ticket generator's fallback path (`_derive_tests_from_criteria` in
 `scripts/ac_store/generate_ticket_from_ac.py`, selected by
 `_build_test_requirements_section` when the AC carries no `test_spec`) emits one test
 descriptor per Gherkin `Then` clause and nothing else. That is the `criterion` angle
-alone — one of seven.
+alone — one of eight.
 
 That fallback is the common case, not the edge case: **1,509 of the 1,886 ACs assigned to
 a coder agent (80%) carry no `test_spec`** and so take it. (Store-wide the share is
@@ -54,23 +55,21 @@ population is the one that matters here.)
 > `angle: criterion` and appends a mandatory `angle: reachability` descriptor — the
 > reachability floor — via `TEST_ANGLE_CRITERION` / `TEST_ANGLE_REACHABILITY`
 > (`generate_ticket_from_ac.py:67-68`). The floor implements the first two rows of the
-> table below. The remaining five angles are still unrepresented in generated tickets.
+> table below. The remaining six angles are still unrepresented in generated tickets.
 >
 > **Known weakness of the floor at that scale.** For the 80% with no `test_spec`, the
 > appended reachability descriptor cannot name an entry point — it says so in its own
-> text ("the entry point is not declared: resolve it before writing this test"). It hands
-> the hardest judgement, *what IS the production entry point*, to `test-writer` — which,
-> as of BP-1100g-1 (2026-08-25), now carries a machine-extractable taught set of all
-> seven angle names and their distinguishing rules (`templates/agents/test-writer.md`
+> text ("the entry point is not declared: resolve it before writing this test"), leaving
+> *what IS the production entry point* to `test-writer`. As of BP-1100g-1 (2026-08-25),
+> `test-writer` carries a machine-extractable taught set of all eight angle names and
+> their distinguishing rules (`templates/agents/test-writer.md`
 > `<!-- TAUGHT-TEST-ANGLES:START/END -->` anchor), kept in cross-source lockstep with
 > `config/ac_store_schema.json`'s `test_spec[].angle` enum by
-> `unit_tests/prompt_assembly/test_bp_1100g_1.py`. That closes the *vocabulary* gap —
-> `test-writer` can no longer be ignorant of the word "angle" or of what separates each
-> kind from a proof of the behaviour alone. It does not by itself close the *judgement*
-> gap this paragraph is about: knowing the seven names and their rules is not the same
-> as knowing which concrete function, script, or command is *this* AC's production entry
-> point. Until that seam is closed, a reachability mandate can still quietly be satisfied
-> by a renamed `criterion` test if the writer picks the wrong entry point.
+> `unit_tests/prompt_assembly/test_bp_1100g_1.py` — closing the *vocabulary* gap only.
+> It does not close the *judgement* gap: knowing the angle names is not knowing which
+> concrete function, script, or command is *this* AC's production entry point. Until
+> that seam closes, a reachability mandate can still be satisfied by a renamed
+> `criterion` test that picks the wrong one.
 
 ## The taxonomy
 
@@ -87,6 +86,7 @@ population is the one that matters here.)
 | `deployed` | the file ships through `build.py`: a hook, a gate, an agent template, a workflow, or anything they import | Does it work in the deployed layout, not just the source tree? |
 | `boundary` | the AC names a range, a limit, a count, or a shape that can be empty / one / many | empty / one / many / limit / malformed-but-parseable |
 | `failure` | the AC names an error path, a fallback, or a fail-open/fail-closed contract | the error path — and does it fail *closed*? |
+| `discrimination` | **conditional, trigger-fired:** the work fixes a bug, or adds or changes a condition of a gate or guard, or a `test_spec` entry carries `must_catch` | Would this test go red under a named plausible wrong version of the code, not only when the code is absent? Incident catalogue: [failure catalogue](test-angles-failure-catalogue.md#discrimination-shaped-failure-family). |
 
 **How to select, given the cap of 4.** `criterion` + `reachability` are the **floor** —
 always both, never negotiable; that pair is what the generator's reachability floor now
@@ -95,9 +95,8 @@ their trigger*, not that all five are always charged. Where a trigger in column 
 that angle is mandatory. Floor (2) + at most two more = the cap of 4. When three or more
 triggers fire, **cover two with one test** rather than dropping one: a subprocess test
 that runs the deployed copy against a real on-disk artifact charges `reachability`,
-`real_artifact` and `deployed` at once. Count angles covered, not tests written. The two
-conditional angles never consume a slot by default — see "the two conditional angles"
-below for why.
+`real_artifact` and `deployed` at once. Count angles covered, not tests written. The three
+conditional angles never take a slot by default; `discrimination` may share one with `criterion`.
 
 **`criterion`** — the AC-literal happy path, asserted on the unit that implements it.
 
@@ -110,12 +109,11 @@ dispatch topology, not execution).
 
 > **Modifier — `must_block`.** For any gate / guard / validator AC: a second test feeds
 > known-bad input through the *same* entry point and asserts it **blocks** (non-zero exit,
-> or the blocker string in the payload). A gate that cannot block is inert, and a
-> positive-path test alone cannot tell the difference. It normally rides the
-> `reachability` entry, because that is where a gate's production entry point lives — but
-> it attaches to whichever angle carries that entry point. When the gate *is* a schema
-> validator the entry point is `real_artifact`; when it is a routing branch, `seam`. The
-> modifier is about what is being guarded, not which slot it occupies.
+> or the blocker string in the payload) — a gate that cannot block is inert, and a
+> positive-path test alone can't tell the difference. It normally rides `reachability`,
+> since that is usually where a gate's entry point lives, but it attaches to whichever
+> angle carries that entry point: `real_artifact` for a schema validator, `seam` for a
+> routing branch. The modifier is about what is being guarded, not which slot it occupies.
 
 **`seam`** — pipe the REAL producer's actual output into the REAL consumer and assert the
 consumer's observable behaviour. Not satisfied by calling an extended function with the
@@ -129,87 +127,22 @@ re-executes in an already-populated namespace and masks cold-import errors.
 **`deployed`** — run `build.py` into a temp target, then exercise the DEPLOYED copy.
 Source-tree imports are structurally blind to deploy-manifest gaps.
 
+**`failure`** — the can-fail proof. A check that only ever reports "clean" licenses the
+assumption it exists to falsify, so the obligation is not "does the error path exist" but
+"can this check observe and report the bad state" — proved by deliberately inducing that
+state via a **named mutation** and asserting the check catches it **by name**, not just
+that something failed (the same discipline as the zero-file incident under "Existing
+machinery" below). [TQ-600a-3](../acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-3.yaml)
+is the worked example: it dirties the TQ-600a-1 shared layout inside one consuming test and
+requires the comparison to name both the altered file and the offending test by node id —
+which separates `failure` coverage from a `criterion` test asserting an error message exists.
+
 ## Failure catalogue — the evidence base
 
-Grouped by mechanism. Every core angle below is justified by incidents observed *in this
-repository*.
-
-### Reachability gap — never invoked from a production entry point
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| BO-2400f-7..10 (`8f0c55c2b` #411 → `9c58f4550` #422) | lifecycle functions had no CLI subcommand and no workflow call | tests imported the functions directly |
-| fast lane, 2026-07-22 (CLAUDE.md "Gate / Workflow ACs") | `fast-lane-build.js` never executed its red/green gates; `fast_lane.py` had no CLI, so the runner's `select_batch` call was a silent no-op | grep-only structural tests assert a string is *present* — they pass on dead code |
-| BO-1700, EPIC-BOPhantomDoneRemediation T02 (2026-07-15, `50e28cc1`) | `check_hook_freshness()`'s return value silently discarded; `resolve_hooks_path(cwd)` re-resolved internally and ignored | tests called the helpers directly, never via `run_checks()` |
-| BO-2300 Interactive Pause/Resume — phantom-built **twice** | dispatch happened; the instruction payload and the on-disk effect did not | tests keyed on dispatch topology — presence, labels, counts of dispatched helpers that a mock controls (`docs/architecture/components/phantom-done-prevention.md`) |
-| `finalize-feature.js` (EPIC-FinalizeFeatureHardening F2, 2026-06-24; EPIC-PrecommitSafetyNet KI-3) | legacy `async function run({...})` wrapper with no top-level body — the Workflow tool **never invokes it**; the agent fallback was dead, all 6 finalize steps done by hand | nothing executed the script through the real Workflow tool; a never-called entry function looks fine statically |
-| TQ-100 collection isolation, `2a377f91` (2026-07-08) | CI's `-x` aborted at the first failure; the guarantee was inert in real CI | per-ticket tests built their own subprocess calls *without* `-x` — never the production invocation |
-
-### Seam gap — both sides tested, never wired together
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| EPIC-ComputedQualityGates FP-1 layer 1 (2026-07-08, PR #201) | all three real call sites invoked `_build_agents_map(assigned_agent)` with no axes, so the computed path was dead code | tests called the function with the new kwargs; no test ran the generator end-to-end |
-| BO-400c-3-i, EPIC-BOPhantomDoneRemediation T04 (2026-07-15) | the sole production call site (in `check_ticket_signoff_parity.py`) still passed one argument | all unit tests called the extended function correctly |
-| EPIC-ComputedQualityGates FP-1 layer 3 | hook's `ALLOWED_CHANGE_TARGETS` and `guardrail_gates.yaml` keys were **disjoint** vocabularies | each side was tested against its own copy; no cross-source set-equality contract test existed |
-| EPIC-PrecommitSafetyNet FP-1 (2026-06-17, `656b6d6`, PR #89) | tier lookup read a field from a file the re-dispatch path never opened; 4 of 7 `blocking_hook_ids` had no manifest entry, so lookup returned `null` and judgment-tier failures never routed | producer and consumer each green in isolation; the cross-ticket `delivers_to`/`expects_from` contract was never traced, and the consumer mocked the dependency |
-| EPIC-AcPipelineDeployGaps inbound gap 4 (2026-06-17) | finalize step 3's output schema did not match step 6a's reader — the whole failure-tracking loop was dead code | writer and reader covered in isolation; no test round-tripped a real artifact between them |
-
-### Authenticity gap — the fixture was not the real artifact
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| EPIC-PhantomDoneFilesTouched KI-1 (2026-07-07, PR #209 / `17c538fe`) | `files_touched` parser was a **complete no-op on every real ticket** — PyYAML emits list items at column 0; the regex required indented dashes | every fixture was hand-typed with indentation, reproducing the exact bias that hid the bug. The *first* remediation spot-check reused indented fixtures and missed it again |
-| EPIC-ComputedQualityGates FP-1 layer 2 (2026-07-08) | **no AC in the 1,802-record store carried `change_target`/`risk_surface`** — the computed path returned `None` for every real AC even after the call sites were wired | every test fed hand-built AC dicts that already contained the axes; no test loaded a real on-disk AC |
-| GenReviewFixes H-2 (2026-07-21, PR #372 / `439b74007`) | forward-reference `NameError` in `_load_migration_map`'s cold-import fallback — fires only in a genuinely fresh process | tests used `importlib.reload()`, which re-executes in an already-populated namespace, so names that would raise on true first import were already bound |
-| GenReviewFixes root `conftest.py` (2026-07-21) | a repo-root `conftest.py` silently hijacked `from conftest import load_fixture` in an unrelated test tree | per-file runs resolve conftest relative to that file and passed; only the full strict suite reproduced real collection order |
-| EPIC-ComputedQualityGates FP-7 (2026-07-07) | the `[NO-FEEDBACK-CHECK]` bypass reads `GIT_COMMIT_MSG`, which git only writes *after* the pre-commit stage — the bypass never fires | the tests set the env var themselves, reproducing a state git never produces at pre-commit time |
-| EPIC-InFlightVisibility FP-1 / FP-7, `BO-1000b-1-i` (2026-07-23, fix `17735a2ed`) | every skipped step double-recorded in `stepOutcomes[]` | the count-guard regex matched only quoted-string first args and was blind to the template-literal calls it was meant to catch |
-
-### Deployment gap — source tree green, deployed copy broken
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| `done_proof.py`, 2026-07-22 (CLAUDE.md "New Hook / Gate Dependencies") | omitted from `build_ac_store`'s `deploy_map`; the deployed hook raised `ModuleNotFoundError` — would have blocked **every** merge once required | unit tests import from the source tree; caught only when the hook fired on its own commit |
-| BP-811, EPIC-AcPipelineDeployGaps Finding #3 (2026-06-17) | the shim wrote workflows to `output_root/workflows/`, not `.claude/workflows/` — the deployed file was unreachable at the invocation path | **the AC asserted the copy tier ("file present in build output"), never the reachability tier ("the command resolves and executes")**. This is the cleanest statement in the corpus of why `deployed` and `reachability` are separate angles |
-| EPIC-AcPipelineDeployGaps inbound gap 2 | `plan-feature.js` was absent from `templates/workflows-js/`, so `build.py` never deployed it to any consumer | all tests ran the workflow from the source tree; nothing asserted the build manifest contained it |
-| EPIC-FinalizeFeatureHardening F4-2 (2026-06-24) | the committed deployed mirror `scripts/workflows/plan-feature.js` diverged from its template source | the mirror relationship is codified nowhere an agent can check; the only detecting test lives in main's CI |
-| EPIC-DocumentationCoverageGuarantee FP-2 (2026-08-10) | missing `requires_verification: true` failed `install_shims`, blocking the pytest gate *before any test ran* | the failure is in the build step, which no unit test exercises |
-
-### Negative-control gap — the guard could not actually block
-
-| Incident | What was actually broken | Why the suite missed it |
-|---|---|---|
-| BO-1700, EPIC-BOPhantomDoneRemediation (2026-07-15) | the gate was **fail-open**; had to be flipped to fail-closed | no test fed known-bad input through the gate and asserted a block |
-| FIN-100h, `a0bcb8a6c` (#437) | finalize Step 2's final `else` was the *success* path, so an observed `{"status":"refused"}` recorded a clean merge that never happened — directly upstream of merge-to-main | no test fed a refusal or unrecognised status through the branch |
-| EPIC-InFlightVisibility FP-5 (2026-07-23) | merging origin/main silently deleted main's H-1/H-2 deploy-parity guards from `finalize-feature.js`; a malformed test run could then merge to main | the guards had no test feeding a failing/contradictory post-merge state, so deleting them broke nothing observable. All 353 tests stayed green |
-| TQ-100 L-4 / BP-1200b (2026-07-08) | the CI pytest job is `continue-on-error: true` — the gate fires and merges proceed anyway | the plugin's own tests pass; nothing asserts the verdict is *consumed* by CI |
-
-### The two conditional angles: real but concentrated evidence
-
-Evidence for `boundary` and `failure` exists, but it comes from **two sources only** —
-GenReviewFixes (PR #372) and EPIC-PhantomDoneFilesTouched rounds 1-2. Five other
-retrospectives mined contribute none.
-
-- `boundary` — TKT-500f-15: a scalar-string `components` value was iterated
-  per-character instead of wrapped in a single-element list (the one-vs-many shape
-  boundary). PhantomDone round-1 defects #3-#6: quoted paths, multi-ticket union, flow-list
-  YAML (`[a, b]`) vs block list, `lstrip` path mangling. EPIC-BOPhantomDoneRemediation
-  T03: `_check_change_target` had an empty-list guard, the identically structured
-  `_check_risk_surface` did not, and all 22 tests passed because none exercised
-  `risk_surface: []`.
-- `failure` — PhantomDone round-1 #2: an `OSError` path did not honour the hook's
-  fail-open contract. Round 2 then inverted it: a wrong-shape `commit_guardian.json`
-  raised an uncaught exception and **blocked commits**. TKT-500f-18-i and ACD-1200a-14-i:
-  malformed/unavailable mapping source and `git rev-parse` fallback both had to be made to
-  degrade without raising.
-
-**Two honest caveats.** Nearly every one of these was found by post-merge adversarial
-review, not by a boundary test someone had identified in advance — the AC simply never
-specified the edge case, so the fix is AC-authoring coverage at least as much as a test
-angle. And both angles were caught by `pr-reviewer`, which already exists. That is why
-they are **conditional and trigger-fired**: never mandatory, and never worth one of the
-four angle slots by default.
+> See [test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) for the full
+> incident-by-incident evidence base — reachability, seam, authenticity, deployment, and
+> negative-control gaps, plus the conditional angles' concentrated evidence and the discrimination-shaped family — that
+> justifies every core angle in the taxonomy above.
 
 ## Literature grounding
 
@@ -279,19 +212,20 @@ ungated drive is indistinguishable from a gated one in the commit log.
 
 ## Existing machinery — reuse, do not rebuild
 
-All four claims verified against the working tree on 2026-08-14.
+All four claims verified against the working tree on 2026-08-14; a fifth was added and
+verified on 2026-09-21 (TQ-600a-1), and extended on 2026-09-28 (TQ-600a-1-i).
 
 - **`user-surface-smoker` already implements the reachability angle** for user-facing
-  surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature` —
-  a regex the output must NOT match). Routing is data-driven off `declares_side_effect`
-  (`_build_agents_map` in `generate_ticket_from_ac.py`, BP-1100f-5). **It fires on 0 of the
-  2,888 records in the AC store** (every `.yaml` under `docs/acceptance-criteria/`; all 2,888
-  parse). `declares_side_effect` is absent from `config/ac_store_schema.json` at HEAD,
-  whose root is `additionalProperties: false` (`:15`), so no AC can legally carry it. A
-  sibling change adding the property is in the working tree, uncommitted — but even once it
-  lands, zero AC records carry the field, so authoring is the second half of the fix. This
-  is EPIC-ComputedQualityGates FP-1 layer 2 repeating exactly: the mechanism shipped, the
-  store never carried the data.
+  surfaces, at priority 11.5, with a built-in negative control (`placeholder_signature`
+  — a regex the output must NOT match), routed off `declares_side_effect`
+  (`_build_agents_map` in `generate_ticket_from_ac.py`, BP-1100f-5). **It fires on 0 of
+  the 2,888 records in the AC store** (every `.yaml` under `docs/acceptance-criteria/`,
+  all of which parse). `declares_side_effect` is absent from `config/ac_store_schema.json` at
+  HEAD, whose root is `additionalProperties: false` (`:15`), so no AC can legally carry
+  it — a sibling change adding the property sits uncommitted, and even once it lands,
+  zero records carry the field, so authoring is the second half of the fix. This is
+  EPIC-ComputedQualityGates FP-1 layer 2 repeating: the mechanism shipped, the store
+  never carried the data.
 - **`test_requirements.schema.json` v1.1.0 already defines the vocabulary**:
   `type: live_dispatch` plus the required-when-`live_dispatch` field `surface_invoked`
   (`config/test_requirements.schema.json:48-71`). Outside `docs/`, the string
@@ -310,6 +244,40 @@ All four claims verified against the working tree on 2026-08-14.
   `_classify_outcomes()` treats `XFAIL`, `XPASS`, `SKIPPED`, `FAILED`, `ERROR` and
   "nodeid not found" as non-passing (fail-closed) — which is what defeats xfail-masking.
   An angle gate should extend this scanner with a second tag axis, not duplicate it.
+- **`shared_reference_layout` (TQ-600a-1) gives the "deployed exactly once" criterion
+  test a fixture to request instead of a harness to invent**: a session-scoped pytest
+  fixture in `scripts/suite_performance/pytest_shared_reference_layout.py`, registered
+  whole-suite via `pytest.ini`'s `-p scripts.suite_performance.pytest_shared_reference_layout`
+  (mirroring `-p scripts.ac_store.pytest_ac_enforcement` above). The underlying
+  `get_or_produce_shared_layout()` (`scripts/suite_performance/_shared_layout_producer.py`)
+  is lazy and cross-process-lock-safe, handing every requester — including different
+  xdist workers — the identical, fully-produced root path exactly once per run, so a
+  criterion-angle test can request it directly instead of inventing its own
+  deploy-counting harness.
+  **Existence is a `reachability`-angle fact, not a `criterion`-angle one**: being real
+  doesn't prove any given test is routed onto it — the same `user-surface-smoker` gap
+  above. A test that never requests `shared_reference_layout` still deploys its own copy.
+  The boundary is read-only: a test that mutates the package before building (e.g.
+  `unit_tests/test_bp_900g_8*.py`) must keep building its own copy, or it corrupts the
+  shared copy for every consumer. See CLAUDE.md "Tests must not spawn their own
+  `build.py` — reuse a shared deployed layout" for the standing rule, and TQ-600a-1 for
+  the full contract.
+  **TQ-600a-1-i pins the cheapest boundary case, no production code changed** — merged
+  under TQ-600a-1 (PR #941): a zero-consumer selection must never enter
+  `get_or_produce_shared_layout()` (no deploy subprocess, laziness holds per xdist
+  worker), while one consumer must trigger exactly one deploy. Three tests in
+  `unit_tests/suite_performance/test_tq_600a_1_i.py` pin this, green on first run: no
+  subprocess for zero consumers, an idle worker produces nothing, and the fixture is
+  reached only through the real `pytest.ini` `-p` entry point, not an import-only path.
+  The mutations these tests catch both live in `pytest_shared_reference_layout.py`:
+  `autouse=True`, or producing the layout at plugin-import/worker-startup time instead of
+  on first request. Non-entry is observed independently via `emit_execution_signal()` /
+  `EXECUTION_LOG_ENV_VAR` (`scripts/suite_performance/_shared_layout_coordination.py`);
+  the reported-deploy-count half is deferred to TQ-600a-6, which has no reporting
+  surface yet.
+  **TQ-600a-5 (PR #957) made the route a declaration: THREE cases, not two — reader, mutator,
+  and UNDECLARED, whose two-branch default corrupts by routing it to the shared layout. The
+  marker decides, nothing else; CLAUDE.md carries the rule and the exact spellings.**
 
 ## Relationship to BO-2900
 
@@ -326,6 +294,9 @@ and `declares_side_effect`.
 
 ## Cross-links
 
+- [docs/testing/test-angles-failure-catalogue.md](test-angles-failure-catalogue.md) — the
+  per-mechanism incident evidence base extracted from this doc: reachability, seam,
+  authenticity, deployment, and negative-control gaps, plus the conditional angles.
 - [docs/testing/test-angles.verification.flow.json](test-angles.verification.flow.json) —
   the machine-readable companion to this doc: 16 falsifiable checks, each with a runnable
   command, a negative control, and an observed state, that answer "is this taxonomy live
@@ -338,3 +309,4 @@ and `declares_side_effect`.
 - `config/test_requirements.schema.json` — the `live_dispatch` / `surface_invoked` vocabulary to reuse
 - `templates/agents/test-writer.md` — Rule 3 (cross-layer seam) and the skip rule
 - `scripts/ac_store/done_proof.py` — the fail-closed `# covers:` scanner to extend
+- [TQ-600a-3.yaml](../acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-3.yaml) — worked example of the `failure`-angle can-fail-proof pattern

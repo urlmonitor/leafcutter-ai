@@ -1,0 +1,117 @@
+id: BO-4400e-1
+title: "A new workspace is refused with a plain reason when free space is below the firm limit"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Given the refusal limit is set to 5 GB and the warning level to 20 GB, and the volume
+    where workspaces are created has 3 GB free, and existing workspaces together occupy
+    41 GB,
+  When a workspace is requested from the one workspace maker,
+  Then the answer is a refusal that states the free space (3 GB), the refusal limit
+    (5 GB), the volume it measured, and the space existing workspaces occupy (41 GB),
+  And the refusal carries no workspace location,
+  And no folder, branch or registration for the requested workspace exists afterwards,
+  And the route that asked halts with the refusal rather than continuing without a
+    workspace.
+depends_on: [BO-4400e, BO-4400e-4, BO-4300c-1, BO-4100e]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c.yaml
+    relationship: constrains
+    status: exists
+    relevance: A clear no that callers halt on; never a quiet substitute.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4100-sound-workspace-by-construction/BO-4100e.yaml
+    relationship: related
+    status: exists
+    relevance: The complete listing the occupied-space figure is summed over.
+  - path: docs/architecture/components/worktree-manager.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4400e-4
+  contract: "Total space occupied by all listed workspaces."
+package_surface: false
+it_requirements:
+  - >-
+    SURFACE: a free-space check as the FIRST step of the one maker's ensure verb
+    (templates/scripts/worktree.py per BO-4300a-1; not yet on disk), before any clone, branch or
+    marker exists, so a refusal leaves nothing behind (BO-4100a-3-i).
+  - >-
+    Thresholds are read from config, never hard-coded: a workspace_disk section in
+    config/skills_config.default.json (refuse_free_gb, warn_free_gb) with schema entries in
+    config/skills_config.schema.json. Proposed defaults refuse 10 GB / warn 25 GB (the 5 / 20 GB in
+    the criteria are test values) -- for user confirmation at the gate.
+  - >-
+    The refusal follows the BO-4300c-2 result contract (code provisional, e.g. DISK_SPACE_LOW) with
+    {free_bytes, refuse_limit_bytes, volume: absolute mount path measured, workspaces_bytes} and no
+    workspace_path; every route that calls ensure already halts on a non-ok answer (BO-4300c), so no
+    route-side change is needed beyond relaying it.
+  - >-
+    The occupied-space figure (expects_from BO-4400e-4) is computed only on the warn and refuse
+    paths, so an ok-path ensure pays only the free-space probe (under 1 s).
+  - >-
+    Free space is measured on the volume of the landing folder (nearest existing ancestor),
+    reported in bytes in the JSON answer and rendered in GB only in human text.
+  - >-
+    PROOF: the DEPLOYED maker runs as a separate process; free space and the volume are supplied
+    through a documented test seam (an override honoured only when an explicit test environment
+    variable is set) because a test cannot make a real disk 3 GB free; occupied space comes from
+    real fixture folders of known size, scaled down by a constant factor as in BO-4400e-4 (the
+    threshold seam scales with it). The calling route's halt is shown by one
+    workflow run under unit_tests/_workflow_engine_harness.py.
+test_required: true
+test_spec:
+  - name: test_low_free_space_refuses_with_figures_and_volume
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With 3 GB free and a 5 GB limit, the answer is a refusal stating free space, the limit, the volume and the 41 GB occupied."
+  - name: test_space_refusal_carries_no_workspace_location
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The refusal has no workspace_path."
+  - name: test_space_refusal_leaves_no_folder_branch_or_registration
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "No folder, branch or registration exists for the requested workspace afterwards."
+    must_catch:
+      - "space check placed after the clone"
+  - name: test_route_halts_on_space_refusal
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "A route whose ensure is refused for space dispatches no later step and returns the refusal."
+test_rationale: >-
+  The refusal is only useful if it happens before anything is made and the caller halts. The seam
+  supplies the free-space figure; everything else -- the answer, the disk afterwards, the route's
+  halt -- is observed for real.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400e-1-i]
+implemented_by: []
+notes: |
+  Gap G5 (refuse half). The check runs BEFORE anything is created, so the refusal leaves
+  nothing behind (BO-4100a-3-i). Thresholds are configurable; the 5 GB / 20 GB here are test
+  values, not defaults -- defaults are the IT PO's call. Reporting the 41 GB alongside the
+  refusal tells the person the sweep is the likely remedy.

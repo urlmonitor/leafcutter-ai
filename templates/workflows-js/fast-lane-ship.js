@@ -46,15 +46,11 @@ export const meta = {
     { title: "Coder", detail: "make green + verify_green_and_coverage" },
     { title: "Review", detail: "pr-reviewer over the uncommitted working diff (BO-2400f-11)" },
     { title: "Changelog", detail: "emit_entry.py when the change owes one (BO-2400f-4/KI-BO-001)" },
-    { title: "Knowledge Routing", detail: "route emitted learnings to their surfaces before commit (INF-700a-1, fail-open)" },
+    { title: "Knowledge Routing", detail: "stage learnings into the worktree for the commit; observe what it carried (INF-700a-5, fail-open)" },
     { title: "Commit", detail: "mark ACs done + commit on the worktree branch" },
     { title: "Pull Request", detail: "open the PR against main (gh + EMU fallback)" },
   ],
 };
-
-// ---------------------------------------------------------------------------
-// JSON Schemas
-// ---------------------------------------------------------------------------
 
 // BO-2400f-13: worktree_path is no longer required — a refusal payload
 // (outcome: "refused") legitimately carries no worktree_path at all. The
@@ -178,27 +174,6 @@ const CONTEXT_BUNDLE_SCHEMA = {
 // future consumer cannot drift from the CLI's own default.
 const CACHE_BREAKPOINT_MARKER = "<!-- CACHE_BREAKPOINT -->";
 
-// ---------------------------------------------------------------------------
-// BO-2400c-1-iii (2026-08-25 amendment) — the four-state classification of
-// the context-bundle-assembling dispatch's reply. Location 2 of 3 (the other
-// two are the dispatch prompt above the "Context Bundle" phase and the halt
-// payload that consumes this classification's `.message`).
-//
-// KI-BO-019: run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte
-// bundle and returned `obtained: true` with a truncated preview plus a path
-// because the full text was too large to inline. The pre-amendment gate
-// folded "obtained falsy", "bundle empty", and "marker absent" into a single
-// boolean, so that reply took the same branch as a genuinely-absent bundle
-// and halted saying "the context bundle was not obtained" — wrong, and
-// actively misleading given the assembly had, in fact, succeeded.
-//
-// Reference-rejection MUST be evaluated BEFORE the marker/incompleteness
-// check (it-po enrichment note): a locator that happens to contain the
-// marker substring, or that merely MENTIONS the marker while describing
-// itself, must still be refused as a reference — never reclassified as
-// incomplete content because a naive marker-first check found the substring.
-// ---------------------------------------------------------------------------
-
 const CONTEXT_BUNDLE_STATE_NOT_OBTAINED = "not_obtained";
 const CONTEXT_BUNDLE_STATE_REFERENCE = "reference";
 const CONTEXT_BUNDLE_STATE_INCOMPLETE = "incomplete";
@@ -296,7 +271,32 @@ function findTruncatedPreviewLocation(text) {
  * `bundle` string; either one is sufficient, and this check runs BEFORE the
  * marker/incompleteness check so a locator that also contains (or merely
  * mentions) the marker substring is still refused as a reference rather than
- * being reclassified as incomplete content.
+ * being reclassified as incomplete content (it-po enrichment note).
+ *
+ * BO-2400c-1-iii (2026-08-25 amendment): this four-state classification is
+ * location 2 of 3 — the other two are the dispatch prompt above the "Context
+ * Bundle" phase and the halt payload that consumes its `.message`. KI-BO-019:
+ * run wf_bd4984e8-438 assembled a real, well-formed 141,933-byte bundle and
+ * returned `obtained: true` with a truncated preview plus a path because the
+ * full text was too large to inline. The pre-amendment gate folded "obtained
+ * falsy", "bundle empty", and "marker absent" into a single boolean, so that
+ * reply took the same branch as a genuinely-absent bundle and halted saying
+ * "the context bundle was not obtained" — wrong, and actively misleading given
+ * the assembly had, in fact, succeeded.
+ *
+ * The incompleteness check on real content is deliberately only a TRANSPORT
+ * check. Whether a layer was EMPTY is an assembly-time fact, now refused at
+ * assembly time by injection_builders.py, the only place the layer boundaries
+ * still exist. It used to also test /\n{4,}/, on the theory that an empty
+ * layer collapses two "\n\n" joins into a run of 4+ newlines "that never
+ * occurs when every layer is non-empty". That premise is false: a layer whose
+ * own content ends in a blank line produces the same run. It cost a real run —
+ * the architecture layer (a markdown document ending in an HTML comment and a
+ * trailing blank line) yielded five consecutive newlines, and a complete
+ * 16,442-byte bundle with its marker present exactly once was refused as
+ * incomplete. The signal is genuinely ambiguous in this direction, so no
+ * textual rule here can be sound; the check belongs upstream and now lives
+ * there.
  *
  * Pure function: no agent(), no I/O — safe to extract and execute directly.
  *
@@ -344,22 +344,6 @@ function classifyContextBundle(bundleResult, marker) {
     };
   }
 
-  // Real content, not a locator — but still incomplete when it did not
-  // survive the crossing intact. What remains here is deliberately only a
-  // TRANSPORT check. Whether a layer was EMPTY is an assembly-time fact, and
-  // it is now refused at assembly time by injection_builders.py, which is the
-  // only place the layer boundaries still exist.
-  //
-  // This used to also test /\n{4,}/, on the theory that an empty layer
-  // collapses two "\n\n" joins into a run of 4+ newlines "that never occurs
-  // when every layer is non-empty". That premise is false: a layer whose own
-  // content ends in a blank line produces the same run. It cost a real run —
-  // the architecture layer (a markdown document ending in an HTML comment and
-  // a trailing blank line) yielded five consecutive newlines, and a complete
-  // 16,442-byte bundle with its marker present exactly once was refused as
-  // incomplete. The signal is genuinely ambiguous in this direction, so no
-  // textual rule here can be sound; the check belongs upstream and now lives
-  // there.
   var markerIndex = bundleText.indexOf(marker);
 
   // Truncation after the marker. This is NOT the empty-layer rule wearing a
@@ -429,7 +413,6 @@ const RELEASE_SCHEMA = {
   },
 };
 
-// ---------------------------------------------------------------------------
 // KI-BO-001 / BO-2400f-4-i: mirror of the CI changelog-presence gate module's
 // EXEMPT_PREFIXES (check_changelog_presence.py, under scripts). The SINGLE
 // SOURCE OF TRUTH for this rule is that Python module — fast_lane.py's
@@ -487,7 +470,6 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // buildReleaseOutcomeFields — the SINGLE construction site for the
 // release-outcome fields merged into every one of the nine halting payloads
 // (BO-2400f-10-ii). Fails CLOSED: only a reply shaped like
@@ -500,7 +482,6 @@ function buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks) {
 // unreleased_ac_ids — never inferred from the mere fact that the dispatch ran.
 //
 // Pure function: no agent(), no I/O — safe to extract and execute directly.
-// ---------------------------------------------------------------------------
 
 // Shape (a) per BO-2400f-10-i's it_requirements: dispatch an executor whose
 // declared config/agent_registry.json entry does not explicitly forbid
@@ -587,19 +568,18 @@ function buildReleaseOutcomeFields(releaseReply, claimedIds, executorAgentType) 
   };
 }
 
-// BO-2400f-4-vi-adjacent: the routing dispatch's expected reply shape
-// (INF-700a-1). `case` is the only required field — `read`/`written`/
-// `unwritten`/`detail` are read defensively by classifyKnowledgeRouting()
-// below, never trusted as present just because the schema names them.
 const KNOWLEDGE_ROUTING_SCHEMA = {
   type: "object",
   required: ["case"],
   properties: {
-    case: { type: "string", enum: ["completed", "could_not_complete", "did_not_run"] },
+    case: { type: "string", enum: ["completed", "completed_with_waiting", "could_not_complete", "did_not_run"] },
     read: { type: "integer" },
     written: { type: "integer" },
     unwritten: { type: "integer" },
     detail: { type: ["string", "null"] },
+    manifest: { type: "array", items: { type: "string" } },
+    unwritten_records: { type: "array" },
+    waiting: { type: ["object", "null"] },
   },
 };
 
@@ -608,8 +588,11 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * `knowledge_routing` figures consumed into a completion path's terminal
  * payload (INF-700a-1 / INF-700a-1-ii). Fails CLOSED, the same pattern used
  * throughout this file for the review verdict and red-baseline gate_passed
- * checks: only a reply carrying a RECOGNISED `case` value ("completed" or
- * "could_not_complete") is trusted as having actually run. Anything else —
+ * checks: only a reply carrying a RECOGNISED `case` value ("completed",
+ * "completed_with_waiting" or "could_not_complete": the schema's enum) is
+ * trusted as having actually run. "completed_with_waiting" (INF-700a-5-ii)
+ * is a completed run that left a late-emitted record waiting; it is passed
+ * through as its own value, never folded into "completed". Anything else —
  * a missing case, an unparseable reply, or the harness's own unlabelled
  * default stub — is reported as the third, distinct "did_not_run" case
  * (INF-700a-1-ii), never rendered as "completed" with zero figures, which is
@@ -626,28 +609,43 @@ const KNOWLEDGE_ROUTING_SCHEMA = {
  * @returns {{case: string, read: number, written: number, unwritten: number, detail: (string|null)}}
  */
 function classifyKnowledgeRouting(reply) {
-  var recognisedCase =
-    reply && (reply.case === "completed" || reply.case === "could_not_complete")
-      ? reply.case
-      : "did_not_run";
+  var recognisedCase = reply && KNOWLEDGE_ROUTING_SCHEMA.properties.case.enum.includes(reply.case) ? reply.case : "did_not_run";
+  var ran = recognisedCase !== "did_not_run";
   var asInt = function (value) {
-    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    return ran && typeof value === "number" && Number.isFinite(value) ? value : 0;
   };
+  var asList = function (value) { return ran && Array.isArray(value) ? value : []; };
   return {
     case: recognisedCase,
-    read: recognisedCase === "did_not_run" ? 0 : asInt(reply.read),
-    written: recognisedCase === "did_not_run" ? 0 : asInt(reply.written),
-    unwritten: recognisedCase === "did_not_run" ? 0 : asInt(reply.unwritten),
-    detail:
-      recognisedCase === "could_not_complete" && typeof reply.detail === "string"
-        ? reply.detail
-        : null,
+    read: asInt(reply && reply.read),
+    written: asInt(reply && reply.written),
+    unwritten: asInt(reply && reply.unwritten),
+    detail: recognisedCase === "could_not_complete" && typeof reply.detail === "string" ? reply.detail : null,
+    manifest: asList(reply && reply.manifest).filter((p) => /^[\w.\/-]+$/.test(p) && !p.includes("..")),
+    unwritten_records: asList(reply && reply.unwritten_records),
+    waiting: ran && reply.waiting && typeof reply.waiting === "object" ? reply.waiting : null,
   };
 }
 
-// ---------------------------------------------------------------------------
+/**
+ * settleKnowledgeRouting — the routing step's FINAL report (INF-700a-5 /
+ * INF-700a-5-i). A learning counts as written only once the unit of work's
+ * own commit is observed to carry it, so the post-commit observation is what
+ * the terminal payload reports. If that observation cannot be obtained while
+ * the stage did run, nothing staged is counted as written: every staged
+ * write is reported unwritten (still eligible -- nothing was marked), never
+ * the stage's own optimistic figure. Pure; never throws (fail-open).
+ */
+function settleKnowledgeRouting(staged, observedReply) {
+  var observed = classifyKnowledgeRouting(observedReply);
+  if (observed.case !== "did_not_run" || staged.case === "did_not_run") return observed;
+  return Object.assign({}, staged, {
+    case: "could_not_complete", written: 0, manifest: [], unwritten: staged.written + staged.unwritten,
+    detail: "the commit's contents could not be observed, so no staged write is counted as written",
+  });
+}
+
 // Phase 0 — Argument validation
-// ---------------------------------------------------------------------------
 
 const acId = (args && args.ac) || null;
 
@@ -665,9 +663,7 @@ const targetAc = acId.trim();
 const slug = targetAc.toLowerCase().replace(/[^a-z0-9._-]/g, "-");
 const acStoreRel = "docs/acceptance-criteria";
 
-// ---------------------------------------------------------------------------
 // Phase 1 — Worktree: auto-create off origin/main (BO-2400f-3)
-// ---------------------------------------------------------------------------
 
 phase("Worktree");
 
@@ -764,20 +760,9 @@ const baseMatchesOriginMain =
     ? worktreeResult.base_matches_origin_main
     : null;
 
-// Remove the LLM from the trust path for worktree_path, exactly as the comment
-// below already does for ac_store_path. The worktree phase agent has been
-// observed to echo a fabricated path instead of create-fastlane-worktree's real
-// JSON: 2026-08-11 on BO-2400f (<worktree>/tickets/00_inbox), and again
-// 2026-09-07 on UXP-700d, where it returned <repo_root>/worktrees/<slug> while
-// git had actually placed the worktree at <workspace>/worktrees/<slug>.
-//
-// The location is NOT a fixed convention that could simply be recomputed here.
-// setup_ticket_worktree.py's _resolve_installed_layout() deliberately differs by
-// layout: in the dev layout worktrees_base is the workspace PARENT of the repo,
-// while in a consumer/installed layout it is the consumer project root. Deriving
-// a path here would therefore be correct in one layout and wrong in the other.
-// git is the only authority that knows where the worktree really is in both, so
-// ask git and require the answer to be quoted from its raw output.
+// Remove the LLM from the trust path for worktree_path, as for ac_store_path below: the worktree agent has echoed
+// fabricated paths (BO-2400f 2026-08-11, UXP-700d 2026-09-07), and the location differs by layout (dev vs consumer,
+// setup_ticket_worktree.py _resolve_installed_layout), so git is the only authority — its raw output is quoted.
 const worktreeVerify = await agent(
   `Report where git says the fast-lane worktree actually is. Do NOT compute, ` +
   `infer, guess or normalise a path — only quote what git prints.
@@ -850,9 +835,7 @@ const worktreePath = gitReportedPath || claimedWorktreePath;
 const acStoreRoot = `${worktreePath}/${acStoreRel}`;
 const gateScript = `${worktreePath}/{{config.output_root}}/scripts/build_orchestration/fast_lane.py`;
 
-// ---------------------------------------------------------------------------
 // Phase 2 — Resolve the connected build set (BO-2400f-1/f-2)
-// ---------------------------------------------------------------------------
 
 phase("Resolve");
 
@@ -862,7 +845,7 @@ phase("Resolve");
 // it: aim at the branch (BO-2600b-1-i) — the exclusion only prunes the
 // depends_on walk, never the subtree gathered beneath the aimed-at criterion.
 const selectConnectedInvocation =
-  `python3 ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
+  `python ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
   `--exclude-structural-parent`;
 
 // Derived from the command actually composed above, never asserted independently.
@@ -943,7 +926,6 @@ if (acIds.length === 0) {
 const batchIds = acIds.join(" ");
 const batchIdsCsv = acIds.join(",");
 
-// ---------------------------------------------------------------------------
 // Producibility guard (BO-2400f-12 / -i / -ii) — consulted BEFORE any claim
 // or build-agent dispatch. An unproducible (or unreadable) verdict ends the
 // run in a distinct "refused" terminal outcome naming every unproducible
@@ -952,10 +934,9 @@ const batchIdsCsv = acIds.join(",");
 // this resolution. This dispatch fires on EVERY resolved (non-empty) set,
 // including a fully producible one, so the guard is provably consulted even
 // when it never blocks (BO-2400f-12-ii).
-// ---------------------------------------------------------------------------
 
 const producibilityInvocation =
-  `python3 ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} check_producibility --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
 
 const producibilityResult = await agent(
   `You are the producibility-guard phase agent for a fast-lane build. Before ` +
@@ -1035,84 +1016,178 @@ if (producibilityResult.producible !== true) {
 /**
  * Lifecycle: claim the connected set (flip todo → in_progress).
  *
- * Performer (BO-2400f-7-iii): the claim command MUTATES the store, so per
+ * Performer (BO-2400f-7-iii; rewired to the chartered executor 2026-09-30):
+ * the claim command MUTATES the store, so per
  * config/agent_registry.schema.json the dispatched agent needs
  * `permits_shell: true` — not merely "does not explicitly forbid it", the
  * wrong reading KI-BO-20260901-1620 documents for python-coder above.
- * `worktree-agent` is the ONLY registry entry declaring `permits_shell:
- * true`; that is the sole (real) reason it is picked here. Honest
- * weakness: its charter is worktree lifecycle, not AC-store claims, so it
- * may still decline on role grounds exactly as status-checker did — a
- * dedicated chartered executor for this dispatch class remains out of
- * scope (KI-BO-20260901-1620, item 4). A decline is handled below as
- * "not attempted", never as contention.
+ *
+ * This used to be `worktree-agent`, chosen when it was the only registry
+ * entry declaring `permits_shell: true`. That choice carried a stated
+ * weakness: its own template says it has "exactly two actions: create and
+ * remove", so an AC-store claim is outside its charter and it could decline
+ * on role grounds exactly as `status-checker` did. `command-step-runner`
+ * is the dedicated chartered executor those notes called for
+ * (KI-BO-20260901-1620 item 4, and the "Suggested fix" of
+ * KI-BO-20260927-status-checker-runs-workflow-shell-commands): its whole
+ * role is to run one given command in one named workspace, so there is no
+ * longer a charter for it to decline on.
+ *
+ * Its contract is NOT the old one, and the difference is the point. It runs
+ * the command and hands back {command, workspace, exit_status, stdout,
+ * stderr} — it does not read, reshape, or interpret what the command
+ * printed. The previous prompt asked the performer to BOTH run the command
+ * and, on failure, synthesise `{"target_refused": true}` — the gate script's
+ * own vocabulary — which made "the agent would not run it" and "the store
+ * says someone else holds these" the same token, distinguishable only by
+ * whether the agent had also remembered to leave `excluded_claimed` empty.
+ * That is what BO-2400f-7-iii had to repair in prose.
+ *
+ * Now the split is STRUCTURAL: a decline is a reply with no `exit_status`
+ * key at all, and `target_refused` can only ever come from `_fl_lifecycle.py`
+ * via parsed stdout. No cooperation from the agent is required for the two
+ * to stay distinct, and no reply it can produce can forge a claim that the
+ * store did not make.
  */
-const CLAIM_EXECUTOR_AGENT_TYPE = "worktree-agent";
-const claimResult = await agent(
-  `You are the claim-phase agent for a fast-lane build.\n\n` +
-  `Run this single Bash command and parse its JSON stdout:\n` +
-  `   python3 ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}\n\n` +
-  `Returns {"claimed":[...],"excluded_claimed":[...],"target_refused":<bool>}. Return that JSON verbatim. If you cannot run this command at all, do NOT report contention — return ` +
-  `{"claimed":[],"excluded_claimed":[],"target_refused":true,"message":"<why>"}, leaving excluded_claimed EMPTY. If it DOES run and finds members already in_progress, put those ids in "excluded_claimed" — that is genuine contention.`,
+const CLAIM_EXECUTOR_AGENT_TYPE = "command-step-runner";
+const claimInvocation =
+  `python ${gateScript} claim --ac-ids ${batchIdsCsv} --ac-root ${acStoreRoot}`;
+
+/**
+ * The runner answers with one of two shapes that share NO mandatory key: a
+ * result carries `exit_status`, a decline carries `declined` and omits it.
+ * So this schema requires nothing — demanding a field of either shape would
+ * reject the other outright, which is the exact failure BO-2400f-7-iii's
+ * `claimUsable` note below warns about, one level up in the stack.
+ */
+const CLAIM_RUNNER_SCHEMA = {
+  type: "object",
+  properties: {
+    command: { type: "string" },
+    workspace: { type: "string" },
+    exit_status: { type: "integer" },
+    stdout: { type: "string" },
+    stderr: { type: "string" },
+    declined: { type: "boolean" },
+    step: { type: "string" },
+    agent: { type: "string" },
+    reason: { type: "string" },
+  },
+};
+
+/**
+ * Reduce the runner's reply to the lifecycle payload the rest of this phase
+ * already speaks, or to `null` meaning "the store was never reached".
+ *
+ * Every `null` path below is a NOT-ATTEMPTED, never contention: a decline
+ * (no `exit_status`), a non-zero exit, stdout that is not JSON, or JSON
+ * without the `claimed` array the gate always emits on a successful run. A
+ * non-zero exit is a genuine result as far as the runner is concerned — the
+ * command ran — but for THIS phase it still means no AC was flipped, so it
+ * belongs with the declines and not with the holds.
+ *
+ * Returning the parsed gate payload unchanged is deliberate: `claimed`,
+ * `excluded_claimed` and `target_refused` keep coming from `_fl_lifecycle.py`
+ * exactly as before, so the three-way decision below is untouched by this
+ * rewiring.
+ */
+function interpretClaimRunnerReply(reply) {
+  if (!reply || typeof reply !== "object") return null;
+  if (!Object.prototype.hasOwnProperty.call(reply, "exit_status")) return null;
+  if (reply.exit_status !== 0) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(reply.stdout);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.claimed)) return null;
+  return parsed;
+}
+
+const claimRunnerReply = await agent(
+  JSON.stringify({
+    step: "claim-connected",
+    command: claimInvocation,
+    target: { workspace: worktreePath, branch, ac_id: targetAc },
+  }),
   {
     agentType: CLAIM_EXECUTOR_AGENT_TYPE,
-    schema: {
-      type: "object",
-      required: ["claimed", "target_refused"],
-      properties: {
-        claimed: { type: "array", items: { type: "string" } },
-        excluded_claimed: { type: "array", items: { type: "string" } },
-        target_refused: { type: "boolean" },
-        message: { type: "string" },
-      },
-    },
+    schema: CLAIM_RUNNER_SCHEMA,
     label: "claim-connected",
     phase: "Resolve",
   }
 );
+const claimResult = interpretClaimRunnerReply(claimRunnerReply);
 /**
- * A decline and genuine contention are different facts (BO-2400f-7-iii): the
- * first means nothing was checked against the store, the second means it was
- * checked and found held. `claimUsable` gates on the two arrays the engine's
- * schema does not actually enforce — a real refusal-shaped reply (or the
- * harness) can hand back an object missing them, or null. `claimUsable`
- * short-circuits before `.excluded_claimed` is ever read on an unusable
- * reply. A `target_refused` with nothing in `excluded_claimed` is a decline,
- * not a report of a hold — contention wording there would send an operator
- * looking for a concurrent run that does not exist.
+ * Three different facts have to be told apart here, and each has a different
+ * remedy. A DECLINE means nothing was ever checked against the store — fixed by
+ * changing who attempts the claim. CONTENTION means it was checked and found
+ * held — fixed by waiting or releasing a stale hold. A SUCCESSFUL CLAIM means
+ * the store now holds this run's ids and the lane should proceed. Conflating
+ * any two of them sends an operator after a cause that does not exist
+ * (BO-2400f-7-iii, BO-2400f-7-iv).
+ *
+ * `claimUsable` must mirror what `interpretClaimRunnerReply` above already
+ * guarantees — a `claimed` array — and must NOT demand more. Since the
+ * rewiring to `command-step-runner` the fields read here come from
+ * `_fl_lifecycle.py`'s stdout rather than from an agent's own reply, so the
+ * contract to mirror is the GATE's, not the dispatch schema's (which now
+ * requires nothing, because a result and a decline share no mandatory key).
+ *
+ * `excluded_claimed` is OPTIONAL in that contract, and a run that claims
+ * everything and excludes nothing has no reason to emit an empty array. On
+ * 2026-09-23 one did not, this gate demanded it anyway, and a fully successful
+ * 25-AC claim was reported as never attempted. If you change either contract,
+ * change this line with it; requiring a field the producer leaves optional
+ * turns a valid reply into a halt.
+ *
+ * An absent optional collection means empty, so `excludedClaimed` normalises it
+ * once and every read below goes through that rather than the raw reply. A
+ * `target_refused` carrying nothing excluded is therefore a decline, not a
+ * report of a hold.
  */
-const claimUsable = !!claimResult && Array.isArray(claimResult.claimed) && Array.isArray(claimResult.excluded_claimed);
+const claimUsable = !!claimResult && Array.isArray(claimResult.claimed);
+const excludedClaimed = (claimUsable && Array.isArray(claimResult.excluded_claimed)) ? claimResult.excluded_claimed : [];
 const claimHaltFields = { worktree_path: worktreePath, branch, ac_ids: acIds };
-if (!claimUsable || (claimResult.target_refused && claimResult.excluded_claimed.length === 0)) {
+if (!claimUsable || (claimResult.target_refused && excludedClaimed.length === 0)) {
   return {
     status: "halt", classification: "halt",
-    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command or returned no usable result, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimResult)}`,
+    message: `The claim was never attempted: the dispatched performer either declined to run the repository-mutating claim command, exited non-zero, or returned output the gate contract does not recognise, so no AC was flipped to in_progress — this is not a report of another run's ownership. Detail: ${JSON.stringify(claimRunnerReply)}`,
     ...claimHaltFields,
   };
 }
 if (claimResult.target_refused) {
   return {
     status: "halt", classification: "halt",
-    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${claimResult.excluded_claimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
+    message: `connected set already claimed / in progress — a concurrent fast-lane run owns these ACs: ${excludedClaimed.join(", ")}. Wait for that run to complete or release stuck claims. Detail: ${JSON.stringify(claimResult)}`,
     ...claimHaltFields,
   };
 }
 
-// Only the ACs THIS run actually flipped to in_progress may be released on a
-// later failure. Releasing the full resolved set would reset a concurrent run's
-// claims (its ACs land in excluded_claimed here, NOT in claimResult.claimed).
+/**
+ * Only the ACs THIS run actually flipped to in_progress may be released on a
+ * later failure. Releasing the full resolved set would reset a concurrent run's
+ * claims (its ACs land in excludedClaimed above, NOT in claimResult.claimed).
+ *
+ * The split of the two branches above rests on a producer invariant, cited here
+ * because nothing in this file enforces it: `_fl_lifecycle.py` sets
+ * `target_refused = len(to_build) == 0 and len(excluded_claimed) > 0`. So the
+ * gate can only ever raise the flag alongside a non-empty excluded set, which
+ * is what makes "refused with nothing excluded" mean a performer decline rather
+ * than a gate refusal. If that line changes, the decline/contention split here
+ * silently starts misclassifying — change them together.
+ */
 const claimedIdsCsv = (claimResult.claimed || []).join(",");
 const releaseInvocation =
-  `python3 ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
+  `python ${gateScript} release --ac-ids ${claimedIdsCsv} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
 // Context Bundle — assemble the prompt-caching layer ONCE per run
 // (BO-2400c-1-ii/-iii/-iv). Obtained exactly once here and threaded verbatim,
 // unaltered, as the prefix of every later build-context-carrying dispatch
 // (Test Writer, Coder) — never re-assembled per phase, which is precisely how
 // a mid-run re-read of a stable source would bust the cache anchor without
 // anyone noticing.
-// ---------------------------------------------------------------------------
 
 const bundleScript = `${worktreePath}/{{config.output_root}}/scripts/injection_builders.py`;
 
@@ -1158,9 +1233,6 @@ const bundleResult = await agent(
   }
 );
 
-// Four-state classification (BO-2400c-1-iii, 2026-08-25 amendment) — see
-// classifyContextBundle()'s own doc comment for the fail-closed reasoning and
-// why reference-rejection runs before the marker/incompleteness check.
 const contextBundleClassification = classifyContextBundle(
   bundleResult, CACHE_BREAKPOINT_MARKER
 );
@@ -1195,20 +1267,22 @@ if (!contextBundleUsable) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Gate invocations (inlined lean loop — scoped to the resolved ids)
-// ---------------------------------------------------------------------------
 
+// TQ-500f-3-i: --ac-root opts the ONE shared verify_red_baseline reader into
+// its declared-absence-only-red refusal rule. The AC store root is threaded
+// through unchanged (acStoreRoot, the same value every other gate/lifecycle
+// invocation in this file already passes) — never a second, independently
+// resolved path.
 const redBaselineInvocation =
-  `python3 ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}`;
+  `python ${gateScript} verify_red_baseline --ac-ids ${batchIds} --test-root ${worktreePath}` +
+  ` --ac-root ${acStoreRoot}`;
 
 const greenCoverageInvocation =
-  `python3 ${gateScript} verify_green_and_coverage` +
+  `python ${gateScript} verify_green_and_coverage` +
   ` --ac-ids ${batchIds} --test-root ${worktreePath} --ac-root ${acStoreRoot}`;
 
-// ---------------------------------------------------------------------------
 // Phase 3 — test-writer: red stubs for the resolved ids + red-baseline gate
-// ---------------------------------------------------------------------------
 
 phase("Test Writer");
 
@@ -1218,10 +1292,9 @@ const testWriterResult = await agent(
   `Worktree: ${worktreePath}\n` +
   `AC store: ${acStoreRoot}\n` +
   `Connected build set (dependency order): ${batchIds}\n\n` +
-  `Step 1 — Write failing stubs:\n` +
-  `For each AC id above, read its YAML from ${acStoreRoot} and write a minimal ` +
-  `failing test that asserts the AC behavior. Tag each test with a '# covers: <AC-id>' ` +
-  `comment. All stubs MUST be RED — do NOT write production code.\n\n` +
+  `Step 1 — Write the failing tests each criterion is owed:\nFor each AC id above, read its YAML from ${acStoreRoot}. If it declares a "test_spec", write ONE test per declared descriptor, using that descriptor's own name and honouring its "angle" — the declared set is the deliverable, not a representative sample of it. If it declares no test_spec, write the floor: a "criterion" test for the Gherkin Then clause, AND a "reachability" test.\n` +
+  `REACHABILITY means: start at the PRODUCTION entry point (CLI via subprocess, hook via its real runner, slash command, workflow dispatch, or main() with real argv) and assert both that the new behaviour occurs AND that its result is consumed in control flow. Importing the module, asserting a symbol exists, or asserting a value was merely passed as an argument does NOT satisfy it. This angle is not optional bookkeeping: the coder's contract is to make your red baseline green, so whatever you leave out is what they are free to skip — a criterion-only test makes "a function nothing calls" the cheapest way to pass.\n` +
+  `Cap: at most 4 angles per AC (docs/testing/test-angles.md); where three or more triggers fire, cover two with one test rather than dropping one — count angles covered, not tests written. Tag each test with a '# covers: <AC-id>' comment. All stubs MUST be RED — do NOT write production code.\n\n` +
   `Step 2 — Run the red-baseline gate (single Bash command):\n` +
   `   ${redBaselineInvocation}\n` +
   `Parse the JSON: { "gate_passed": <bool>, "reason": <string|null>, "red": [...], ` +
@@ -1293,9 +1366,7 @@ if (!testWriterResult.gate_passed) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 4 — python-coder: make green + green+coverage gate
-// ---------------------------------------------------------------------------
 
 phase("Coder");
 
@@ -1380,14 +1451,12 @@ if (!coderResult.green || !coderResult.coverage_ok) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 4.5 — Review: pr-reviewer over the uncommitted working diff (BO-2400f-11)
 //
 // Runs BEFORE commit so a finding is a correction to the change about to be
 // delivered, never a follow-up commit stacked on a defect already in the
 // delivered history. The commit dispatch below is unreachable on any path
 // that has not first read a usable verdict from this dispatch.
-// ---------------------------------------------------------------------------
 
 phase("Review");
 
@@ -1502,13 +1571,11 @@ const reviewMediumFindings =
 const reviewLowSuppressedCount =
   (reviewResult && reviewResult.low_suppressed_count) || 0;
 
-// ---------------------------------------------------------------------------
 // Phase 4.6 — Changelog: emit_entry.py when the change owes one (KI-BO-001 /
 // BO-2400f-4-i..v). Runs BEFORE Commit so an emitted entry is written to disk
 // while still uncommitted and is picked up by the Commit phase's own
 // `git add -A`, landing inside the pull request's own diff rather than a
 // follow-up commit.
-// ---------------------------------------------------------------------------
 
 phase("Changelog");
 
@@ -1522,7 +1589,7 @@ let changelogResult = null;
 
 if (changelogRequired) {
   const changelogPayloadInvocation =
-    `python3 ${gateScript} changelog_payload --target-ac ${targetAc} ` +
+    `python ${gateScript} changelog_payload --target-ac ${targetAc} ` +
     `--built-ac-ids ${batchIdsCsv} --files-modified "${filesModified.join(",")}" ` +
     `--branch ${branch} --ac-root ${acStoreRoot}`;
 
@@ -1605,57 +1672,34 @@ if (changelogRequired) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Knowledge Routing — dispatched once the phases that perform the work
-// (test-writer, coder, review, changelog) have returned, and BEFORE the
-// phase that publishes the unit of work's own output ("fastlane-commit"),
-// so its writes can ride the commit this path already makes (INF-700a-1's
-// ordering clause). Fail-open (INF-700a-1-ii): there is deliberately no halt
-// branch below — whatever this dispatch reports, the run's own outcome and
-// exit status proceed unaffected, and the figures are merged into the
-// terminal payload rather than discarded (INF-700a-1's anti-fire-and-forget
-// requirement).
-// ---------------------------------------------------------------------------
-
+// Knowledge Routing (INF-700a-1 ordering, INF-700a-5 durability), BEFORE "fastlane-commit": `stage`
+// writes learnings INTO THE WORKTREE and marks nothing routed; its manifest is staged by name below and
+// the post-commit `observe` decides the report. Fail-open: no halt branch on either step.
 phase("Knowledge Routing");
 
+const knowledgeRoutingCli = `python3 {{config.output_root}}/scripts/knowledge/completion_routing_cli.py`;
 const knowledgeRoutingReply = await agent(
-  `You are the knowledge-routing phase agent for a fast-lane build. Route any ` +
-  `knowledge records the phases that just ran emitted to the surface each one ` +
-  `names — nobody runs this by hand.\n\n` +
-  `Run this single Bash command from the repository root and read its JSON ` +
-  `summary and exit code:\n` +
-  `   python3 {{config.output_root}}/scripts/knowledge/harvest_learnings.py\n\n` +
-  `Classify the outcome as exactly one of three cases:\n` +
-  `  - "completed": the harvester ran to completion (exit 0 or 3 — some ` +
-  `records left unroutable is still a completed run).\n` +
-  `  - "could_not_complete": the declared sink could not be read, or a ` +
-  `destination file could not be written (exit 1, 2, or 4).\n` +
-  `  - "did_not_run": the command itself could not be run at all.\n\n` +
-  `Return JSON: { "case": "completed"|"could_not_complete"|"did_not_run", ` +
-  `"read": <records read>, "written": <records written to a surface>, ` +
-  `"unwritten": <records left unwritten>, "detail": "<what could not be done, ` +
-  `or null>" }.\n\n` +
-  `This step must never block, retry, or fail the build — always return a ` +
-  `best-effort classification, even on an unreadable sink or a failed write.`,
-  {
-    agentType: "python-coder",
-    schema: KNOWLEDGE_ROUTING_SCHEMA,
-    label: "knowledge-routing-step",
-    phase: "Knowledge Routing",
-  }
+  `You are the knowledge-routing phase agent for a fast-lane build. Stage the ` +
+  `knowledge records the phases that just ran emitted into this worktree, so the ` +
+  `commit that follows carries them — nobody runs this by hand.\n\n` +
+  `Run this single Bash command and return the ONE line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} stage --working-dir ${worktreePath}\n\n` +
+  `It always exits 0; its "case" says how the step went. If the command itself ` +
+  `cannot be run, return { "case": "did_not_run", "detail": "<why>" }. This step ` +
+  `must never block, retry, or fail the build.`,
+  { agentType: "python-coder", schema: KNOWLEDGE_ROUTING_SCHEMA, label: "knowledge-routing-step", phase: "Knowledge Routing" }
 );
+const knowledgeStaged = classifyKnowledgeRouting(knowledgeRoutingReply);
+const knowledgeStageStep = knowledgeStaged.manifest.length
+  ? `   git -C "${worktreePath}" add -- ${knowledgeStaged.manifest.map((p) => `"${p}"`).join(" ")}\n` +
+    `   (knowledge-routing writes: stage these BY NAME — they must ride this commit)\n`
+  : "";
 
-const knowledgeRouting = classifyKnowledgeRouting(knowledgeRoutingReply);
-
-// ---------------------------------------------------------------------------
 // Phase 5 — Commit: mark ACs done + commit on the worktree branch (BO-2400f-4)
-// ---------------------------------------------------------------------------
-
 phase("Commit");
 
 const markDoneInvocation =
-  `python3 ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
+  `python ${gateScript} mark_done --ac-ids ${batchIdsCsv}` +
   ` --ac-root ${acStoreRoot} --test-root ${worktreePath}`;
 
 const commitResult = await agent(
@@ -1670,7 +1714,7 @@ const commitResult = await agent(
   `Parse the JSON: { "marked_done": [...], "all_done": <bool>, "stale": [...] }.\n` +
   `If it exits non-zero or all_done is false, STOP and return ` +
   `{ "status": "error", "message": "mark_done stale: <stale ids>" }.\n\n` +
-  `Step 2 — Stage everything on the worktree:\n` +
+  `Step 2 — Stage everything on the worktree:\n` + knowledgeStageStep +
   `   git -C "${worktreePath}" add -A\n\n` +
   `Step 3 — Commit (set the COMMIT_AGENT_MODE token so the guardian allows it):\n` +
   `   COMMIT_AGENT_MODE=1 git -C "${worktreePath}" commit -m "feat: fast-lane build of ${targetAc} connected set (${acIds.length} ACs)" -m "Built via /fast-lane-build: ${batchIds}. Gates: verify_red_baseline + verify_green_and_coverage green."\n` +
@@ -1686,11 +1730,21 @@ const commitResult = await agent(
   }
 );
 
-if (!commitResult || commitResult.status !== "ok") {
-  // The commit phase can fail AFTER mark_done flipped some/all claimed ACs to
-  // done on disk (e.g. a stale-todo mark_done, or a pre-commit hook rejecting
-  // the commit). Nothing was committed, so roll the whole run's claims back to
-  // todo — releasing done_ids=[] resets even already-done claims (BO-2400f-10).
+// One observation per path, success AND failure: publication is observed, never inferred (INF-700a-5-i).
+const commitOk = Boolean(commitResult && commitResult.status === "ok");
+const knowledgeObserveReply = await agent(
+  `You are the knowledge-routing observer for a fast-lane build. Report, read-only, what ` +
+  `the commit phase actually carried. Run this single Bash command and return the ONE ` +
+  `line of JSON it prints, verbatim:\n` +
+  `   ${knowledgeRoutingCli} observe --working-dir ${worktreePath} --commit-status ${commitOk ? "ok" : "failed"}\n\n` +
+  `If it cannot be run, return { "case": "did_not_run", "detail": "<why>" }. Never block, retry, or fail the build.`,
+  { agentType: "python-coder", schema: KNOWLEDGE_ROUTING_SCHEMA, label: "knowledge-routing-observe", phase: "Commit" }
+);
+const knowledgeRouting = settleKnowledgeRouting(knowledgeStaged, knowledgeObserveReply);
+
+if (!commitOk) {
+  // The commit can fail AFTER mark_done flipped claims to done; nothing was committed, so roll
+  // every claim back to todo (done_ids=[] resets even already-done claims, BO-2400f-10).
   const releaseReplyCommit = await agent(
     `You are the release-phase agent. The commit phase failed after claiming and ` +
     `marking done, but nothing was committed.\n\n` +
@@ -1711,13 +1765,12 @@ if (!commitResult || commitResult.status !== "ok") {
     failing_phase: "commit",
     worktree_path: worktreePath,
     classification: "halt",
+    knowledge_routing: knowledgeRouting,
     ...releaseOutcomeCommit.fields,
   };
 }
 
-// ---------------------------------------------------------------------------
 // Phase 6 — Pull Request: open against main (gh + EMU fallback) (BO-2400f-4)
-// ---------------------------------------------------------------------------
 
 phase("Pull Request");
 
@@ -1791,10 +1844,10 @@ if (!prResult || prResult.status !== "ok") {
     worktree_path: worktreePath,
     branch,
     ac_ids: acIds,
+    knowledge_routing: knowledgeRouting,
   };
 }
 
-// ---------------------------------------------------------------------------
 // Done — BO-2400f-4-vi: the terminal payload is built at the ONE site
 // (buildFastLaneDeliveryOutcome) that enforces "ok is reachable only when no
 // known required check is unsatisfied". Every required check this run can
@@ -1803,7 +1856,6 @@ if (!prResult || prResult.status !== "ok") {
 // here — but a future step that discovers another unsatisfied check reports
 // it through this same list rather than bypassing the invariant with its own
 // success payload.
-// ---------------------------------------------------------------------------
 
 const deliveryOutcome = buildFastLaneDeliveryOutcome(prResult.pr_url || null, []);
 

@@ -60,6 +60,7 @@ change and the claim path was left on the wrong one, undetected).
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -72,6 +73,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
+
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
 
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 
@@ -166,16 +169,9 @@ class TestPerformerThatDeclinesToAttemptTheClaimHaltsAsNotAttempted(
     ) -> None:
         # covers: BO-2400f-7-iii
         # angle: failure
-        decline_reply = {
-            "claimed": [],
-            "excluded_claimed": [],
-            "target_refused": True,
-            "message": (
-                "status-checker cannot run commands that mutate the AC "
-                "store; declining to run "
-                "'python3 fast_lane.py claim --ac-ids BO-STUB-1'."
-            ),
-        }
+        decline_reply = _claim_fx.claim_declined(
+            "no workspace was named in the request, so the command was not run"
+        )
         result = _run_lane(decline_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
@@ -208,12 +204,9 @@ class TestHaltDoesNotClaimTheSetIsHeldByAnotherRun(unittest.TestCase):
     ) -> None:
         # covers: BO-2400f-7-iii
         # angle: criterion
-        decline_reply = {
-            "claimed": [],
-            "excluded_claimed": [],
-            "target_refused": True,
-            "message": "role declined to run the claim command",
-        }
+        decline_reply = _claim_fx.claim_declined(
+            "role declined to run the claim command"
+        )
         result = _run_lane(decline_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
@@ -242,6 +235,24 @@ class TestGenuineContentionStillReportsContentionAndNamesTheMembers(
     A claim that IS attempted (the CLI ran) and genuinely finds members
     already held must still report contention, naming the held members.
     Fails any fix that turns EVERY claim failure into "not attempted".
+
+    Two things about this test are deliberate, because without them it does
+    not do the job its own description claims.
+
+    First, the stub's gate message is NEUTRAL — it carries no contention
+    vocabulary. The lane echoes the reply into the halt's `Detail:` field, so
+    a stub that said "already in_progress, held by run wf_abc123" would put
+    the very words this test looks for into the payload no matter which
+    branch the lane took. Until 2026-09-30 it did say exactly that, and the
+    test consequently passed against a lane that had stopped classifying
+    contention at all: every marker it found had come from its own fixture.
+
+    Second, the markers checked are `_CONTENTION_MARKERS`, the same strict
+    tuple the not-attempted tests above use, rather than a looser inline
+    list. The loose list included "in_progress", which the not-attempted halt
+    also contains ("no AC was flipped to in_progress") — so it could not tell
+    the two halts apart even with a neutral fixture. One shared vocabulary,
+    asserted present here and absent there, is what makes the pair meaningful.
     """
 
     def test_genuine_contention_still_reports_contention_and_names_the_members(
@@ -249,12 +260,12 @@ class TestGenuineContentionStillReportsContentionAndNamesTheMembers(
     ) -> None:
         # covers: BO-2400f-7-iii
         # angle: criterion
-        contention_reply = {
-            "claimed": [],
-            "excluded_claimed": [_AC_ID],
-            "target_refused": True,
-            "message": f"{_AC_ID} is already in_progress, held by run wf_abc123.",
-        }
+        contention_reply = _claim_fx.claim_ran(
+            [],
+            excluded_claimed=[_AC_ID],
+            target_refused=True,
+            message="the gate returned a non-empty excluded set",
+        )
         result = _run_lane(contention_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
@@ -274,18 +285,17 @@ class TestGenuineContentionStillReportsContentionAndNamesTheMembers(
         )
         as_text_lower = as_text.lower()
         self.assertTrue(
-            any(
-                marker in as_text_lower
-                for marker in (
-                    "held",
-                    "in_progress",
-                    "in progress",
-                    "concurrent",
-                    "owned by",
-                )
-            ),
+            any(marker in as_text_lower for marker in _CONTENTION_MARKERS),
             f"Genuine contention must still be reported as contention "
-            f"(not silently relabelled as 'not attempted'). Got: {payload}",
+            f"(not silently relabelled as 'not attempted'). None of "
+            f"{_CONTENTION_MARKERS} appeared, and the fixture supplies none "
+            f"of them, so this wording could only have come from the lane. "
+            f"Got: {payload}",
+        )
+        self.assertFalse(
+            any(marker in as_text_lower for marker in _NOT_ATTEMPTED_MARKERS),
+            f"A claim that WAS attempted and found members held must not "
+            f"also be described as never attempted. Got: {payload}",
         )
 
 
@@ -320,22 +330,57 @@ class TestContentionReportNamingNoHeldMemberIsImpossible(unittest.TestCase):
         # covers: BO-2400f-7-iii
         # angle: boundary
         cases: list[tuple[str, Any]] = [
+            # A real decline under the command-step-runner contract: no
+            # exit_status key at all, because nothing was run.
             (
-                "exact-2026-09-23-shape",
+                "runner-decline",
+                _claim_fx.claim_declined(
+                    "declining to run a repository-mutating command"
+                ),
+            ),
+            # The command ran and the GATE itself reported refused while
+            # naming nothing held. `_fl_lifecycle.py` cannot currently emit
+            # this (it sets target_refused only alongside a non-empty excluded
+            # set), so this case pins the lane's behaviour if that invariant
+            # is ever broken upstream: still no contention, because there is
+            # no held member to name.
+            (
+                "gate-refused-with-empty-excluded",
+                _claim_fx.claim_ran([], target_refused=True),
+            ),
+            # The command ran and failed. A non-zero exit is a genuine result
+            # to the runner, but for this phase it still means nothing was
+            # flipped — and emphatically not that someone else holds the set.
+            (
+                "runner-nonzero-exit",
+                _claim_fx.claim_ran([], target_refused=True, exit_status=1),
+            ),
+            # stdout that is not JSON at all — a traceback, a usage banner.
+            (
+                "runner-unparseable-stdout",
+                {
+                    "exit_status": 0,
+                    "stdout": "Traceback (most recent call last): ...",
+                    "stderr": "",
+                },
+            ),
+            (
+                "null-claim-result",
+                None,
+            ),
+            # Legacy shapes, retained deliberately. These are what a performer
+            # asked to reshape the result used to send, and under the current
+            # contract they are unparseable rather than authoritative. Keeping
+            # them asserts that an agent CANNOT hand the lane a claim the gate
+            # never made, which is the forgery path the rewiring closed.
+            (
+                "legacy-agent-synthesised-refusal",
                 {
                     "claimed": [],
                     "excluded_claimed": [],
                     "target_refused": True,
                     "message": "declining to run a repository-mutating command",
                 },
-            ),
-            (
-                "target-refused-with-no-message",
-                {"claimed": [], "excluded_claimed": [], "target_refused": True},
-            ),
-            (
-                "null-claim-result",
-                None,
             ),
             (
                 "refusal-shaped-reply-missing-required-fields",
@@ -369,12 +414,7 @@ class TestTheClaimIsAttemptedByAPerformerPermittedToChangeTheStore(
     ) -> None:
         # covers: BO-2400f-7-iii
         # angle: seam
-        success_reply = {
-            "claimed": [_AC_ID],
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": "claimed 1 ACs",
-        }
+        success_reply = _claim_fx.claim_ran([_AC_ID], message="claimed 1 ACs")
         result = _run_lane(success_reply)
 
         claim_calls = _calls_with_label(result, "claim-connected")
@@ -385,14 +425,37 @@ class TestTheClaimIsAttemptedByAPerformerPermittedToChangeTheStore(
             f"stderr={result.stderr!r}",
         )
         dispatched_agent_type = claim_calls[0].agent_type
-        self.assertNotEqual(
+
+        # Asserted against the registry rather than against a deny-list of one
+        # name. Naming `status-checker` alone only ever excluded the agent
+        # that had already failed; any other read-only agent would have
+        # passed this test while being just as unable to run the command.
+        # `permits_shell` is three-state and read as two: absent means
+        # read-only, exactly as an explicit false does (KI-BO-20260901-1620),
+        # so the default below is `False` and not `True`.
+        registry = json.loads(
+            (_REPO_ROOT / "config" / "agent_registry.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        entries = {
+            entry["id"]: entry
+            for entry in registry.get("agents", [])
+            if isinstance(entry, dict) and "id" in entry
+        }
+        self.assertIn(
             dispatched_agent_type,
-            "status-checker",
-            f"The claim step is a repository-mutating command. Its declared "
-            f"charter (config/agent_registry.json: status-checker declares "
-            f"permits_shell: false) forbids changing the store, so it must "
-            f"not be the performer dispatched for 'claim-connected'. "
-            f"Actual dispatched agentType: {dispatched_agent_type!r}",
+            entries,
+            f"The claim step dispatched {dispatched_agent_type!r}, which is "
+            f"not a registered agent at all.",
+        )
+        self.assertTrue(
+            entries[dispatched_agent_type].get("permits_shell", False),
+            f"The claim step is a repository-mutating command, so its "
+            f"performer must declare permits_shell: true in "
+            f"config/agent_registry.json. {dispatched_agent_type!r} does "
+            f"not — an absent field means read-only just as an explicit "
+            f"false does.",
         )
 
 

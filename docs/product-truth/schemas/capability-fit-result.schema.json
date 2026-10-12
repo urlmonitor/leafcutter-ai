@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Source-reviewed retrieval capability-fit result",
+  "description": "Documentation transcription of knowledge/capability_fit.py assess_capability_fit return and integrations/query_graph.py _capability_fit status transformation; not an executable runtime validator or automatic source parity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "query_build_eligible",
+    "matching_operation",
+    "source_sha",
+    "generation_id",
+    "missing_kinds",
+    "missing_relationships",
+    "missing_fields",
+    "limitations",
+    "authorization"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "unsupported_mapping",
+        "field_availability_gap",
+        "supported",
+        "missing_query",
+        "supported_data_pending_selection"
+      ]
+    },
+    "query_build_eligible": {
+      "type": "boolean"
+    },
+    "matching_operation": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_sha": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "generation_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "missing_kinds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_relationships": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "missing_fields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "authorization": {
+      "type": "string"
+    }
+  }
+}

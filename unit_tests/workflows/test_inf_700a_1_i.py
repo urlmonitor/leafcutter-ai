@@ -48,6 +48,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _FAST_LANE_SHIP_JS = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _QUICK_FIX_JS = _REPO_ROOT / "templates" / "workflows-js" / "quick-fix.js"
 _TIMEOUT = 30
@@ -74,12 +76,7 @@ def _fast_lane_ship_full_success(ac_id: str) -> tuple[Path, dict[str, Any], dict
             "created": True,
         },
         "resolve-connected": {"ac_ids": [ac_id], "message": "1 to build"},
-        "claim-connected": {
-            "claimed": [ac_id],
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": "claimed 1 AC",
-        },
+        "claim-connected": _claim_fx.claim_ran([ac_id], message="claimed 1 AC"),
         "test-writer-connected": {
             "status": "ok",
             "tests_written": ["unit_tests/x/test_stub.py"],

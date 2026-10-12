@@ -374,7 +374,7 @@ def build_precommit_config(target_root: Path, config: dict[str, Any],
         return 1
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(content, encoding="utf-8")
+    output_path.write_text(content, encoding="utf-8", newline="\n")
     print(f"  .pre-commit-config.yaml ({len(hooks)} package hooks merged)")
     return 1
 

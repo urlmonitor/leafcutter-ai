@@ -1,0 +1,1469 @@
+{
+  "requests": {
+    "req-6f6fceb1eda441a9": {
+      "schema_version": "1.0",
+      "kind": "evidence",
+      "goal": null,
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "payload_schema": "leafcutter.retrieval_request.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "TQ-500f"
+            ],
+            "required_fields": [
+              "level",
+              "work_status"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": [
+              "all_descendants"
+            ]
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_root",
+          "hierarchy_levels": [
+            "L2",
+            "L3"
+          ],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "knowledge": null,
+        "answer_requirements": {
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "require_complete": true
+        },
+        "assessment": null,
+        "need": {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        },
+        "source_ids": [
+          "knowledge.graph"
+        ],
+        "detail": "excerpt",
+        "limits": {
+          "schema_version": "1.0",
+          "top_k": null,
+          "max_chars": null
+        },
+        "explicit_locators": [],
+        "query_hints": [
+          "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+        ],
+        "max_rerank_batches": 11,
+        "jev_reserve": 0
+      },
+      "requested_output_schema": "leafcutter.evidence_bundle.v1",
+      "evidence_needs": [
+        {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        }
+      ],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": "retrieve",
+      "id": "req-6f6fceb1eda441a9",
+      "created_at": "2026-10-09T15:51:02.520167Z",
+      "updated_at": "2026-10-09T15:51:02.520167Z",
+      "created_seq": 2,
+      "origin_work_item_id": "work-92abaa5c10db4333",
+      "dedup_key": "12654f6def8591fd40b059461aba9bfc193ebb92e0098e15d786754eee67fb7a"
+    },
+    "req-aa893e48c8ff4f34": {
+      "schema_version": "1.0",
+      "kind": "capability",
+      "goal": null,
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "payload_schema": "leafcutter.retrieval_needs_request.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "context": [],
+        "known_ids": [],
+        "source_scope": {
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ],
+          "read_roots": [
+            "docs"
+          ]
+        },
+        "catalog": {
+          "entity_types": {
+            "ac": "Acceptance criterion or requirement",
+            "adr": "Architecture decision record",
+            "ticket": "Work ticket",
+            "component": "Registered component",
+            "flow": "Product Truth flow",
+            "decision": "Recorded decision",
+            "test": "Test source",
+            "document": "Repository document"
+          },
+          "target_ids": {
+            "TQ-500f": "Literal identifier in the original question; assess its requested role."
+          },
+          "required_fields": {
+            "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+            "kind": "The canonical entity type of each returned item.",
+            "title": "The source-backed human-readable name of each returned item.",
+            "source_sha": "The immutable source revision supporting each entity.",
+            "source_locator": "The exact source location supporting each entity.",
+            "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+            "level": "The canonical requirement hierarchy level.",
+            "test_required": "The explicit source test requirement, not evidence of execution.",
+            "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+            "status": "Canonical lifecycle status, such as active; not delivery completion.",
+            "criteria": "Exact source acceptance clauses.",
+            "req_status": "Requirement governance state.",
+            "readiness": "Planning approval readiness, not implementation proof.",
+            "covered_by": "Declared test references, not evidence of a test run.",
+            "implemented_by": "Declared implementation references, not a complete call graph.",
+            "depends_on": "Declared requirement dependencies, not inferred code impact.",
+            "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+          },
+          "document_types": {
+            "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+            "adr": "Architecture decision document",
+            "ticket": "Ticket document",
+            "flow": "Product Truth JSON",
+            "decision": "Recorded decision YAML",
+            "code": "Implementation or test source",
+            "documentation": "Repository documentation",
+            "component": "Component definition"
+          },
+          "relationships": {
+            "parent_direct": "Immediate parent only",
+            "children_direct": "Immediate children only",
+            "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+            "declared_dependents": "Records directly declaring a dependency on the target",
+            "covered_by": "Tests declared to cover an acceptance criterion",
+            "implemented_by": "Declared implementation references",
+            "related_docs": "Declared document references"
+          }
+        }
+      },
+      "requested_output_schema": "leafcutter.retrieval_needs_output.v1",
+      "evidence_needs": [],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": "interpret_retrieval_needs",
+      "id": "req-aa893e48c8ff4f34",
+      "created_at": "2026-10-09T15:47:59.614184Z",
+      "updated_at": "2026-10-09T15:47:59.614184Z",
+      "created_seq": 1,
+      "origin_work_item_id": "work-92abaa5c10db4333",
+      "dedup_key": "4f9fb41b1f442f436238913fc301c3a31854fced8bc160de7a5a8e1fdf4a5ffd"
+    },
+    "req-be020e2427554b64": {
+      "schema_version": "1.0",
+      "kind": "capability",
+      "goal": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "question": null,
+      "payload_schema": "leafcutter.research_request.v1",
+      "payload": {
+        "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+          }
+        ]
+      },
+      "requested_output_schema": "leafcutter.evidence_bundle.v1",
+      "evidence_needs": [],
+      "priority": "required",
+      "context_refs": [],
+      "depends_on": [],
+      "operation": null,
+      "id": "req-be020e2427554b64",
+      "created_at": "2026-10-09T15:47:59.573590Z",
+      "updated_at": "2026-10-09T15:47:59.573590Z",
+      "created_seq": 0,
+      "origin_work_item_id": null,
+      "dedup_key": "635a79f8f26691ffd54710936d866fa1486e71bd211a13b68b853d4455779a85"
+    }
+  },
+  "results": {
+    "inv-44d9b196a06b4e25": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-44d9b196a06b4e25",
+      "work_item_id": "work-824f4d6ec6e84109",
+      "status": "completed",
+      "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "source_scope": {
+          "read_roots": [
+            "docs"
+          ],
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ]
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "all_descendants"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_root",
+        "hierarchy_levels": [
+          "L2",
+          "L3"
+        ],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      },
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 182782,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [
+        "host-reported; not verified by the kernel",
+        "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+      ],
+      "diagnostics": {
+        "host_elapsed_ms": 182782,
+        "host_usage": "unavailable",
+        "host_template": "host.retrieval_needs.task@1.0.0",
+        "prompt_fingerprint": "552d6bce6b6abd10"
+      }
+    },
+    "inv-907e5e4770754de2": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-907e5e4770754de2",
+      "work_item_id": "work-92abaa5c10db4333",
+      "status": "waiting",
+      "output_schema_id": null,
+      "output_payload": null,
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [
+        {
+          "schema_version": "1.0",
+          "kind": "evidence",
+          "goal": null,
+          "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "payload_schema": "leafcutter.retrieval_request.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "retrieval_needs": {
+              "schema_version": "1.0",
+              "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+              "source_scope": {
+                "read_roots": [
+                  "docs"
+                ],
+                "repository_id": "public-needs-acceptance",
+                "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+                "source_ids": [
+                  "knowledge.graph"
+                ]
+              },
+              "selections": {
+                "entity_types": [
+                  "ac"
+                ],
+                "target_ids": [
+                  "TQ-500f"
+                ],
+                "required_fields": [
+                  "level",
+                  "work_status"
+                ],
+                "document_types": [
+                  "ac_yaml"
+                ],
+                "relationships": [
+                  "all_descendants"
+                ]
+              },
+              "uncertain": {
+                "entity_types": [],
+                "target_ids": [],
+                "required_fields": [],
+                "document_types": [],
+                "relationships": []
+              },
+              "detail_mode": "fields",
+              "completeness": "exhaustive_count",
+              "hierarchy_scope": "exclude_root",
+              "hierarchy_levels": [
+                "L2",
+                "L3"
+              ],
+              "scope_resolution": "sufficient",
+              "unresolved": [],
+              "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+              "engine": "host_llm",
+              "status": "decided",
+              "model_id": null
+            },
+            "knowledge": null,
+            "answer_requirements": {
+              "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+              "required_fields": [
+                "level",
+                "work_status"
+              ],
+              "scope": {
+                "population": "ac_descendants",
+                "root_id": "TQ-500f",
+                "levels": [
+                  "L2",
+                  "L3"
+                ],
+                "inclusion": "root_excluded"
+              },
+              "require_complete": true
+            },
+            "assessment": null,
+            "need": {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            },
+            "source_ids": [
+              "knowledge.graph"
+            ],
+            "detail": "excerpt",
+            "limits": {
+              "schema_version": "1.0",
+              "top_k": null,
+              "max_chars": null
+            },
+            "explicit_locators": [],
+            "query_hints": [
+              "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+            ],
+            "max_rerank_batches": 11,
+            "jev_reserve": 0
+          },
+          "requested_output_schema": "leafcutter.evidence_bundle.v1",
+          "evidence_needs": [
+            {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            }
+          ],
+          "priority": "required",
+          "context_refs": [],
+          "depends_on": [],
+          "operation": "retrieve"
+        }
+      ],
+      "continuation_state": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "TQ-500f"
+            ],
+            "required_fields": [
+              "level",
+              "work_status"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": [
+              "all_descendants"
+            ]
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_root",
+          "hierarchy_levels": [
+            "L2",
+            "L3"
+          ],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "phase": "planned",
+        "needs": [
+          {
+            "schema_version": "1.0",
+            "id": "need.question",
+            "category": "task_context",
+            "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+            "priority": "required",
+            "acceptable_source_kinds": [],
+            "resolution": [],
+            "status": "open"
+          }
+        ],
+        "child_map": {
+          "need.question": [
+            "knowledge.graph"
+          ]
+        },
+        "unavailable": [],
+        "attempted": [
+          "knowledge.graph"
+        ],
+        "evidence": [],
+        "coverage": {},
+        "assessments": {},
+        "contradictions": [],
+        "limitations": [],
+        "truncated": false,
+        "synthesized": false,
+        "deferred": [],
+        "deferred_dispatched": false,
+        "unanswered": []
+      },
+      "usage": [],
+      "error": null,
+      "limitations": [],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.028297599987126887,
+        "kernel.jev_reserved": 0
+      }
+    },
+    "inv-a0f3eeb235a649ea": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-a0f3eeb235a649ea",
+      "work_item_id": "work-92abaa5c10db4333",
+      "status": "waiting",
+      "output_schema_id": null,
+      "output_payload": null,
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [
+        {
+          "schema_version": "1.0",
+          "kind": "capability",
+          "goal": null,
+          "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "payload_schema": "leafcutter.retrieval_needs_request.v1",
+          "payload": {
+            "schema_version": "1.0",
+            "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+            "context": [],
+            "known_ids": [],
+            "source_scope": {
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ],
+              "read_roots": [
+                "docs"
+              ]
+            },
+            "catalog": {
+              "entity_types": {
+                "ac": "Acceptance criterion or requirement",
+                "adr": "Architecture decision record",
+                "ticket": "Work ticket",
+                "component": "Registered component",
+                "flow": "Product Truth flow",
+                "decision": "Recorded decision",
+                "test": "Test source",
+                "document": "Repository document"
+              },
+              "target_ids": {
+                "TQ-500f": "Literal identifier in the original question; assess its requested role."
+              },
+              "required_fields": {
+                "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+                "kind": "The canonical entity type of each returned item.",
+                "title": "The source-backed human-readable name of each returned item.",
+                "source_sha": "The immutable source revision supporting each entity.",
+                "source_locator": "The exact source location supporting each entity.",
+                "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+                "level": "The canonical requirement hierarchy level.",
+                "test_required": "The explicit source test requirement, not evidence of execution.",
+                "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+                "status": "Canonical lifecycle status, such as active; not delivery completion.",
+                "criteria": "Exact source acceptance clauses.",
+                "req_status": "Requirement governance state.",
+                "readiness": "Planning approval readiness, not implementation proof.",
+                "covered_by": "Declared test references, not evidence of a test run.",
+                "implemented_by": "Declared implementation references, not a complete call graph.",
+                "depends_on": "Declared requirement dependencies, not inferred code impact.",
+                "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+              },
+              "document_types": {
+                "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+                "adr": "Architecture decision document",
+                "ticket": "Ticket document",
+                "flow": "Product Truth JSON",
+                "decision": "Recorded decision YAML",
+                "code": "Implementation or test source",
+                "documentation": "Repository documentation",
+                "component": "Component definition"
+              },
+              "relationships": {
+                "parent_direct": "Immediate parent only",
+                "children_direct": "Immediate children only",
+                "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+                "declared_dependents": "Records directly declaring a dependency on the target",
+                "covered_by": "Tests declared to cover an acceptance criterion",
+                "implemented_by": "Declared implementation references",
+                "related_docs": "Declared document references"
+              }
+            }
+          },
+          "requested_output_schema": "leafcutter.retrieval_needs_output.v1",
+          "evidence_needs": [],
+          "priority": "required",
+          "context_refs": [],
+          "depends_on": [],
+          "operation": "interpret_retrieval_needs"
+        }
+      ],
+      "continuation_state": {
+        "schema_version": "1.0",
+        "phase": "interpreting_needs",
+        "request": {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "context": [],
+          "known_ids": [],
+          "source_scope": {
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ],
+            "read_roots": [
+              "docs"
+            ]
+          },
+          "catalog": {
+            "entity_types": {
+              "ac": "Acceptance criterion or requirement",
+              "adr": "Architecture decision record",
+              "ticket": "Work ticket",
+              "component": "Registered component",
+              "flow": "Product Truth flow",
+              "decision": "Recorded decision",
+              "test": "Test source",
+              "document": "Repository document"
+            },
+            "target_ids": {
+              "TQ-500f": "Literal identifier in the original question; assess its requested role."
+            },
+            "required_fields": {
+              "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+              "kind": "The canonical entity type of each returned item.",
+              "title": "The source-backed human-readable name of each returned item.",
+              "source_sha": "The immutable source revision supporting each entity.",
+              "source_locator": "The exact source location supporting each entity.",
+              "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+              "level": "The canonical requirement hierarchy level.",
+              "test_required": "The explicit source test requirement, not evidence of execution.",
+              "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+              "status": "Canonical lifecycle status, such as active; not delivery completion.",
+              "criteria": "Exact source acceptance clauses.",
+              "req_status": "Requirement governance state.",
+              "readiness": "Planning approval readiness, not implementation proof.",
+              "covered_by": "Declared test references, not evidence of a test run.",
+              "implemented_by": "Declared implementation references, not a complete call graph.",
+              "depends_on": "Declared requirement dependencies, not inferred code impact.",
+              "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+            },
+            "document_types": {
+              "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+              "adr": "Architecture decision document",
+              "ticket": "Ticket document",
+              "flow": "Product Truth JSON",
+              "decision": "Recorded decision YAML",
+              "code": "Implementation or test source",
+              "documentation": "Repository documentation",
+              "component": "Component definition"
+            },
+            "relationships": {
+              "parent_direct": "Immediate parent only",
+              "children_direct": "Immediate children only",
+              "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+              "declared_dependents": "Records directly declaring a dependency on the target",
+              "covered_by": "Tests declared to cover an acceptance criterion",
+              "implemented_by": "Declared implementation references",
+              "related_docs": "Declared document references"
+            }
+          }
+        },
+        "clarifications": []
+      },
+      "usage": [],
+      "error": null,
+      "limitations": [],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.01232979993801564,
+        "kernel.jev_reserved": 0
+      }
+    },
+    "inv-a1699b4050944db2": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-a1699b4050944db2",
+      "work_item_id": "work-92abaa5c10db4333",
+      "status": "partial",
+      "output_schema_id": "leafcutter.evidence_bundle.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "request_id": null,
+        "evidence_ids": [],
+        "finding_ids": [],
+        "coverage": {
+          "need.question": "unavailable"
+        },
+        "assessments": {},
+        "attempted_sources": [
+          "knowledge.graph"
+        ],
+        "unavailable_sources": [],
+        "contradictions": [],
+        "limitations": [
+          "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}",
+          "required need need.question is unavailable"
+        ],
+        "truncated": false,
+        "evidence": [],
+        "findings": [],
+        "unknowns": [],
+        "need_evidence": {},
+        "need_limitations": {}
+      },
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [],
+      "error": null,
+      "limitations": [
+        "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}",
+        "required need need.question is unavailable"
+      ],
+      "diagnostics": {
+        "kernel.elapsed_s": 0.024199999985285103,
+        "kernel.jev_reserved": 0
+      }
+    },
+    "inv-e5f682554f884ddd": {
+      "schema_version": "1.0",
+      "invocation_id": "inv-e5f682554f884ddd",
+      "work_item_id": "work-453ce805351a4f3d",
+      "status": "partial",
+      "output_schema_id": "leafcutter.evidence_bundle.v1",
+      "output_payload": {
+        "schema_version": "1.0",
+        "request_id": "inv-e5f682554f884ddd",
+        "evidence_ids": [],
+        "finding_ids": [],
+        "coverage": {
+          "need.question": "unavailable"
+        },
+        "assessments": {},
+        "attempted_sources": [],
+        "unavailable_sources": [],
+        "contradictions": [],
+        "limitations": [
+          "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}"
+        ],
+        "truncated": false,
+        "evidence": [],
+        "findings": [],
+        "unknowns": [],
+        "need_evidence": {},
+        "need_limitations": {}
+      },
+      "evidence": [],
+      "findings": [],
+      "decisions": [],
+      "requests": [],
+      "continuation_state": null,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "jev",
+          "model_id": "jev-1.13.0",
+          "input_tokens": 1813,
+          "output_tokens": 76,
+          "duration_ms": 337,
+          "cost_usd": 7.6146e-05,
+          "cost_provenance": "estimated",
+          "calls": 1
+        }
+      ],
+      "error": null,
+      "limitations": [
+        "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}"
+      ],
+      "diagnostics": {
+        "knowledge_selection": "uncertain",
+        "knowledge_status": "unsupported",
+        "knowledge_reason": "operation selection confidence is uncertain; assessment={\"confidence\":0.71,\"minimum_confidence\":0.5,\"minimum_selected_probability\":0.8,\"selected_probability\":0.76,\"selected_value\":\"get_ac_descendants\"}",
+        "kernel.elapsed_s": 0.3541472000069916,
+        "kernel.jev_reserved": 1
+      }
+    }
+  },
+  "evidence": {},
+  "findings": {},
+  "invocations": {
+    "inv-44d9b196a06b4e25": {
+      "schema_version": "1.0",
+      "id": "inv-44d9b196a06b4e25",
+      "created_at": "2026-10-09T15:47:59.636021Z",
+      "updated_at": "2026-10-09T15:47:59.636021Z",
+      "created_seq": 1,
+      "work_item_id": "work-824f4d6ec6e84109",
+      "capability_id": "host.retrieval_needs",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.retrieval_needs_request.v1",
+      "input_payload": {
+        "schema_version": "1.0",
+        "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "context": [],
+        "known_ids": [],
+        "source_scope": {
+          "repository_id": "public-needs-acceptance",
+          "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+          "source_ids": [
+            "knowledge.graph"
+          ],
+          "read_roots": [
+            "docs"
+          ]
+        },
+        "catalog": {
+          "entity_types": {
+            "ac": "Acceptance criterion or requirement",
+            "adr": "Architecture decision record",
+            "ticket": "Work ticket",
+            "component": "Registered component",
+            "flow": "Product Truth flow",
+            "decision": "Recorded decision",
+            "test": "Test source",
+            "document": "Repository document"
+          },
+          "target_ids": {
+            "TQ-500f": "Literal identifier in the original question; assess its requested role."
+          },
+          "required_fields": {
+            "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+            "kind": "The canonical entity type of each returned item.",
+            "title": "The source-backed human-readable name of each returned item.",
+            "source_sha": "The immutable source revision supporting each entity.",
+            "source_locator": "The exact source location supporting each entity.",
+            "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+            "level": "The canonical requirement hierarchy level.",
+            "test_required": "The explicit source test requirement, not evidence of execution.",
+            "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+            "status": "Canonical lifecycle status, such as active; not delivery completion.",
+            "criteria": "Exact source acceptance clauses.",
+            "req_status": "Requirement governance state.",
+            "readiness": "Planning approval readiness, not implementation proof.",
+            "covered_by": "Declared test references, not evidence of a test run.",
+            "implemented_by": "Declared implementation references, not a complete call graph.",
+            "depends_on": "Declared requirement dependencies, not inferred code impact.",
+            "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+          },
+          "document_types": {
+            "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+            "adr": "Architecture decision document",
+            "ticket": "Ticket document",
+            "flow": "Product Truth JSON",
+            "decision": "Recorded decision YAML",
+            "code": "Implementation or test source",
+            "documentation": "Repository documentation",
+            "component": "Component definition"
+          },
+          "relationships": {
+            "parent_direct": "Immediate parent only",
+            "children_direct": "Immediate children only",
+            "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+            "declared_dependents": "Records directly declaring a dependency on the target",
+            "covered_by": "Tests declared to cover an acceptance criterion",
+            "implemented_by": "Declared implementation references",
+            "related_docs": "Declared document references"
+          }
+        }
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "567549ed62e5836d5f478577eeff9215973b754cf1e95a8a81bbb5a9d59ad678",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0",
+        "host_template": "host.retrieval_needs.task@1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "17b8e6be3fa1e2bae13165c097030ee9",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-4bb96701d21c4863",
+          "root_task_id": "task-49be98f7e90443ba",
+          "task_id": "task-49be98f7e90443ba",
+          "work_item_id": "work-824f4d6ec6e84109",
+          "request_id": "req-aa893e48c8ff4f34",
+          "invocation_id": "inv-44d9b196a06b4e25",
+          "decision_id": null,
+          "capability_id": "host.retrieval_needs",
+          "interaction_id": null,
+          "parent_work_item_id": "work-92abaa5c10db4333",
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-907e5e4770754de2": {
+      "schema_version": "1.0",
+      "id": "inv-907e5e4770754de2",
+      "created_at": "2026-10-09T15:51:02.479003Z",
+      "updated_at": "2026-10-09T15:51:02.479003Z",
+      "created_seq": 2,
+      "work_item_id": "work-92abaa5c10db4333",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": {
+        "schema_version": "1.0",
+        "capability_id": "research",
+        "capability_version": "1.0.0",
+        "state": {
+          "schema_version": "1.0",
+          "phase": "interpreting_needs",
+          "request": {
+            "schema_version": "1.0",
+            "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+            "context": [],
+            "known_ids": [],
+            "source_scope": {
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ],
+              "read_roots": [
+                "docs"
+              ]
+            },
+            "catalog": {
+              "entity_types": {
+                "ac": "Acceptance criterion or requirement",
+                "adr": "Architecture decision record",
+                "ticket": "Work ticket",
+                "component": "Registered component",
+                "flow": "Product Truth flow",
+                "decision": "Recorded decision",
+                "test": "Test source",
+                "document": "Repository document"
+              },
+              "target_ids": {
+                "TQ-500f": "Literal identifier in the original question; assess its requested role."
+              },
+              "required_fields": {
+                "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+                "kind": "The canonical entity type of each returned item.",
+                "title": "The source-backed human-readable name of each returned item.",
+                "source_sha": "The immutable source revision supporting each entity.",
+                "source_locator": "The exact source location supporting each entity.",
+                "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+                "level": "The canonical requirement hierarchy level.",
+                "test_required": "The explicit source test requirement, not evidence of execution.",
+                "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+                "status": "Canonical lifecycle status, such as active; not delivery completion.",
+                "criteria": "Exact source acceptance clauses.",
+                "req_status": "Requirement governance state.",
+                "readiness": "Planning approval readiness, not implementation proof.",
+                "covered_by": "Declared test references, not evidence of a test run.",
+                "implemented_by": "Declared implementation references, not a complete call graph.",
+                "depends_on": "Declared requirement dependencies, not inferred code impact.",
+                "test_spec": "Declared test cases and expected assertions; supplements acceptance criteria"
+              },
+              "document_types": {
+                "ac_yaml": "Canonical acceptance criterion definition including acceptance clauses",
+                "adr": "Architecture decision document",
+                "ticket": "Ticket document",
+                "flow": "Product Truth JSON",
+                "decision": "Recorded decision YAML",
+                "code": "Implementation or test source",
+                "documentation": "Repository documentation",
+                "component": "Component definition"
+              },
+              "relationships": {
+                "parent_direct": "Immediate parent only",
+                "children_direct": "Immediate children only",
+                "all_descendants": "Entire declared hierarchy below the target, not only direct children",
+                "declared_dependents": "Records directly declaring a dependency on the target",
+                "covered_by": "Tests declared to cover an acceptance criterion",
+                "implemented_by": "Declared implementation references",
+                "related_docs": "Declared document references"
+              }
+            }
+          },
+          "clarifications": []
+        },
+        "resume_reason": "children_done",
+        "wait_child_ids": [
+          "work-824f4d6ec6e84109"
+        ]
+      },
+      "child_outcomes": [
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-824f4d6ec6e84109",
+          "request_kind": "capability",
+          "status": "completed",
+          "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+          "result_ref": "result-inv-44d9b196a06b4e25.json",
+          "priority": "required",
+          "current_wait": true,
+          "actor_id": null
+        }
+      ],
+      "input_fingerprint": "213b28f0e4a82acd16c883ef07fbb5d1b8adbda1391a7b9696c9ec4fd69ad508",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 2,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "17b8e6be3fa1e2bae13165c097030ee9",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-4bb96701d21c4863",
+          "root_task_id": "task-49be98f7e90443ba",
+          "task_id": "task-49be98f7e90443ba",
+          "work_item_id": "work-92abaa5c10db4333",
+          "request_id": "req-be020e2427554b64",
+          "invocation_id": "inv-907e5e4770754de2",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-a0f3eeb235a649ea": {
+      "schema_version": "1.0",
+      "id": "inv-a0f3eeb235a649ea",
+      "created_at": "2026-10-09T15:47:59.595056Z",
+      "updated_at": "2026-10-09T15:47:59.595056Z",
+      "created_seq": 0,
+      "work_item_id": "work-92abaa5c10db4333",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "7924df9f4c55e255054c6a7e6ac3bfe7b0e4f12fcc287dfaa3cdcdd5636cd834",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "17b8e6be3fa1e2bae13165c097030ee9",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-4bb96701d21c4863",
+          "root_task_id": "task-49be98f7e90443ba",
+          "task_id": "task-49be98f7e90443ba",
+          "work_item_id": "work-92abaa5c10db4333",
+          "request_id": "req-be020e2427554b64",
+          "invocation_id": "inv-a0f3eeb235a649ea",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-a1699b4050944db2": {
+      "schema_version": "1.0",
+      "id": "inv-a1699b4050944db2",
+      "created_at": "2026-10-09T15:51:02.948819Z",
+      "updated_at": "2026-10-09T15:51:02.948819Z",
+      "created_seq": 4,
+      "work_item_id": "work-92abaa5c10db4333",
+      "capability_id": "research",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.research_request.v1",
+      "input_payload": {
+        "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "evidence_needs_only": true,
+        "evidence_needs": [
+          {
+            "id": "need.question",
+            "category": "task_context",
+            "priority": "required",
+            "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+          }
+        ]
+      },
+      "context_refs": [],
+      "continuation": {
+        "schema_version": "1.0",
+        "capability_id": "research",
+        "capability_version": "1.0.0",
+        "state": {
+          "schema_version": "1.0",
+          "retrieval_needs": {
+            "schema_version": "1.0",
+            "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+            "source_scope": {
+              "read_roots": [
+                "docs"
+              ],
+              "repository_id": "public-needs-acceptance",
+              "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "source_ids": [
+                "knowledge.graph"
+              ]
+            },
+            "selections": {
+              "entity_types": [
+                "ac"
+              ],
+              "target_ids": [
+                "TQ-500f"
+              ],
+              "required_fields": [
+                "level",
+                "work_status"
+              ],
+              "document_types": [
+                "ac_yaml"
+              ],
+              "relationships": [
+                "all_descendants"
+              ]
+            },
+            "uncertain": {
+              "entity_types": [],
+              "target_ids": [],
+              "required_fields": [],
+              "document_types": [],
+              "relationships": []
+            },
+            "detail_mode": "fields",
+            "completeness": "exhaustive_count",
+            "hierarchy_scope": "exclude_root",
+            "hierarchy_levels": [
+              "L2",
+              "L3"
+            ],
+            "scope_resolution": "sufficient",
+            "unresolved": [],
+            "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+            "engine": "host_llm",
+            "status": "decided",
+            "model_id": null
+          },
+          "phase": "planned",
+          "needs": [
+            {
+              "schema_version": "1.0",
+              "id": "need.question",
+              "category": "task_context",
+              "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+              "priority": "required",
+              "acceptable_source_kinds": [],
+              "resolution": [],
+              "status": "open"
+            }
+          ],
+          "child_map": {
+            "need.question": [
+              "knowledge.graph"
+            ]
+          },
+          "unavailable": [],
+          "attempted": [
+            "knowledge.graph"
+          ],
+          "evidence": [],
+          "coverage": {},
+          "assessments": {},
+          "contradictions": [],
+          "limitations": [],
+          "truncated": false,
+          "synthesized": false,
+          "deferred": [],
+          "deferred_dispatched": false,
+          "unanswered": []
+        },
+        "resume_reason": "children_done",
+        "wait_child_ids": [
+          "work-453ce805351a4f3d"
+        ]
+      },
+      "child_outcomes": [
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-824f4d6ec6e84109",
+          "request_kind": "capability",
+          "status": "completed",
+          "output_schema_id": "leafcutter.retrieval_needs_output.v1",
+          "result_ref": "result-inv-44d9b196a06b4e25.json",
+          "priority": "required",
+          "current_wait": false,
+          "actor_id": null
+        },
+        {
+          "schema_version": "1.0",
+          "work_item_id": "work-453ce805351a4f3d",
+          "request_kind": "evidence",
+          "status": "partial",
+          "output_schema_id": "leafcutter.evidence_bundle.v1",
+          "result_ref": "result-inv-e5f682554f884ddd.json",
+          "priority": "required",
+          "current_wait": true,
+          "actor_id": null
+        }
+      ],
+      "input_fingerprint": "3420e0e1ba355803e5601d7041dd9d3d8be01ddf37c932c8b598d09a57a50e21",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 3,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "17b8e6be3fa1e2bae13165c097030ee9",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-4bb96701d21c4863",
+          "root_task_id": "task-49be98f7e90443ba",
+          "task_id": "task-49be98f7e90443ba",
+          "work_item_id": "work-92abaa5c10db4333",
+          "request_id": "req-be020e2427554b64",
+          "invocation_id": "inv-a1699b4050944db2",
+          "decision_id": null,
+          "capability_id": "research",
+          "interaction_id": null,
+          "parent_work_item_id": null,
+          "causation_seq": null
+        }
+      }
+    },
+    "inv-e5f682554f884ddd": {
+      "schema_version": "1.0",
+      "id": "inv-e5f682554f884ddd",
+      "created_at": "2026-10-09T15:51:02.549015Z",
+      "updated_at": "2026-10-09T15:51:02.549015Z",
+      "created_seq": 3,
+      "work_item_id": "work-453ce805351a4f3d",
+      "capability_id": "retrieve.repository",
+      "capability_version": "1.0.0",
+      "input_payload_schema": "leafcutter.retrieval_request.v1",
+      "input_payload": {
+        "schema_version": "1.0",
+        "retrieval_needs": {
+          "schema_version": "1.0",
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "source_scope": {
+            "read_roots": [
+              "docs"
+            ],
+            "repository_id": "public-needs-acceptance",
+            "revision": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+            "source_ids": [
+              "knowledge.graph"
+            ]
+          },
+          "selections": {
+            "entity_types": [
+              "ac"
+            ],
+            "target_ids": [
+              "TQ-500f"
+            ],
+            "required_fields": [
+              "level",
+              "work_status"
+            ],
+            "document_types": [
+              "ac_yaml"
+            ],
+            "relationships": [
+              "all_descendants"
+            ]
+          },
+          "uncertain": {
+            "entity_types": [],
+            "target_ids": [],
+            "required_fields": [],
+            "document_types": [],
+            "relationships": []
+          },
+          "detail_mode": "fields",
+          "completeness": "exhaustive_count",
+          "hierarchy_scope": "exclude_root",
+          "hierarchy_levels": [
+            "L2",
+            "L3"
+          ],
+          "scope_resolution": "sufficient",
+          "unresolved": [],
+          "rationale": "Count every qualifying L2 and L3 AC in the named root's full descendant population, grouped by implementation progress. Only the root is excluded; intermediate parent ACs remain eligible.",
+          "engine": "host_llm",
+          "status": "decided",
+          "model_id": null
+        },
+        "knowledge": null,
+        "answer_requirements": {
+          "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "scope": {
+            "population": "ac_descendants",
+            "root_id": "TQ-500f",
+            "levels": [
+              "L2",
+              "L3"
+            ],
+            "inclusion": "root_excluded"
+          },
+          "require_complete": true
+        },
+        "assessment": null,
+        "need": {
+          "schema_version": "1.0",
+          "id": "need.question",
+          "category": "task_context",
+          "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+          "priority": "required",
+          "acceptable_source_kinds": [],
+          "resolution": [],
+          "status": "open"
+        },
+        "source_ids": [
+          "knowledge.graph"
+        ],
+        "detail": "excerpt",
+        "limits": {
+          "schema_version": "1.0",
+          "top_k": null,
+          "max_chars": null
+        },
+        "explicit_locators": [],
+        "query_hints": [
+          "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status."
+        ],
+        "max_rerank_batches": 11,
+        "jev_reserve": 0
+      },
+      "context_refs": [],
+      "continuation": null,
+      "child_outcomes": [],
+      "input_fingerprint": "b21943f8cfc170a50148935a999df8ef2ceffe21df5a167feb58eea715ae8b67",
+      "versions": {
+        "registry_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+        "capability": "1.0.0"
+      },
+      "attempt": 1,
+      "trace": {
+        "schema_version": "1.0",
+        "trace_id": "17b8e6be3fa1e2bae13165c097030ee9",
+        "parent_observation_id": null,
+        "correlation": {
+          "schema_version": "1.0",
+          "run_id": "run-4bb96701d21c4863",
+          "root_task_id": "task-49be98f7e90443ba",
+          "task_id": "task-49be98f7e90443ba",
+          "work_item_id": "work-453ce805351a4f3d",
+          "request_id": "req-6f6fceb1eda441a9",
+          "invocation_id": "inv-e5f682554f884ddd",
+          "decision_id": null,
+          "capability_id": "retrieve.repository",
+          "interaction_id": null,
+          "parent_work_item_id": "work-92abaa5c10db4333",
+          "causation_seq": null
+        }
+      }
+    }
+  }
+}

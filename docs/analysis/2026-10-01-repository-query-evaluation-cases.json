@@ -1,0 +1,1045 @@
+{
+  "schema_version": "draft-repository-query-evaluation-spec/1",
+  "title": "First independently anchored repository-query evaluation cases",
+  "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+  "catalog_path": "docs/analysis/2026-10-01-repository-query-catalog.md",
+  "status": "planning artifact only; no new ACs, implementation or runnable tests",
+  "case_count": 12,
+  "pair_count": 6,
+  "scope_notes": [
+    "Source expectations were derived independently from immutable Git content, not from Neo4j output or the query compiler.",
+    "4503 canonical ID-bearing AC YAML records exist at the pinned source. Uncommitted AC-audit additions are excluded from this baseline.",
+    "Each negative/control case specifies an evidence-pack transformation for a future harness; no source, index, catalog or runtime was changed.",
+    "Expected answer_state labels are evaluation vocabulary, not currently implemented API enum claims.",
+    "This first batch samples 6 of 8 families and is not a representative benchmark of all 25 role questions. RQ3 and RQ5 remain future cases.",
+    "The current entity-ID evaluator cannot directly execute these required-field, completeness, routing and tracing assertions; harness/AC design comes later.",
+    "No live Jev, Neo4j, Langfuse, embedding or other network request was made. Prior local observations are labeled separately."
+  ],
+  "shared_answer_rules": [
+    "Pin and cite repository source revision; distinguish that revision from a historical report tested_revision.",
+    "State scope and counting policy, deduplicate canonical IDs, and do not convert partial results into exact totals.",
+    "Missing required fields mean an unresolved answer; never silently substitute a similarly named field.",
+    "Declared tests, recorded work status, historical execution evidence and actual question satisfaction are different facts.",
+    "Unsupported sources, missing query capabilities, completed empty results, outages, denied access and budget exhaustion remain distinct.",
+    "No evidence of a trace is not permission to invent a trace; runtime diagnosis requires corresponding runtime evidence."
+  ],
+  "evidence_anchors": {
+    "TQ-500f": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "f40607e4b000142cf233c12f47995ded1aaed589cc55d8248c2e75697f59c959"
+    },
+    "TQ-500f-1": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "7d0479fc40c2a16cc2f3a1758163fe587bd5665135cd5c2ecb8a354e43da546e"
+    },
+    "TQ-500f-1-i": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1-i.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "9bf022807769361d8629224c848c371d6b8a8660b91939554b23bc9afde2fb37"
+    },
+    "TQ-500f-2": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "c29fe38077176f0dccdd8d5ebc9c30a21658b81182c81cdc10312e4ec5da0f94"
+    },
+    "TQ-500f-2-i": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status",
+        "/depends_on"
+      ],
+      "sha256": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+    },
+    "TQ-500f-2-ii": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status",
+        "/depends_on"
+      ],
+      "sha256": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+    },
+    "TQ-500f-3": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "7fd54dd1212e05d91c2e6dc07d45e5039a73b01c1d022eb98d5f4edac7880a57"
+    },
+    "TQ-500f-3-i": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status",
+        "/depends_on"
+      ],
+      "sha256": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+    },
+    "TQ-500f-3-ii": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "011f72dcda2fc9fba449e5a8d2aa2875fac5cf0833b5184eab6caf0e8c92a2d5"
+    },
+    "TQ-500f-3-iii": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iii.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "6a08f63d69b52350f2b2a536fdf9049611c0caf4dc8714676675dd1743eac9bf"
+    },
+    "TQ-500f-3-iv": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iv.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "6434fbe21e66f0a539b1e6a2764448faaa6a923672b2195f66105ad98a44b03b"
+    },
+    "TQ-500f-4": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "3618fe0b5fd3eafc1f239696cd623460944651ade6f047e75e989ac204b1af73"
+    },
+    "TQ-500f-4-i": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "ac7c0bd5dc6f646e5a9901988df3ca9e8e927b95b78ec3245bd3644082a632a2"
+    },
+    "TQ-500f-4-ii": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-ii.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status"
+      ],
+      "sha256": "ad6209a1f1bfd76d7bda22171718d8f31920969c9b0072dbb0af2d8ce755b904"
+    },
+    "TQ-500f-5": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status",
+        "/depends_on"
+      ],
+      "sha256": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+    },
+    "TQ-500f-6": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+      "locators": [
+        "/id",
+        "/level",
+        "/covered_by",
+        "/work_status",
+        "/status",
+        "/depends_on"
+      ],
+      "sha256": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+    },
+    "KM-500c-2": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+      "locators": [
+        "/id",
+        "/criteria",
+        "/covered_by",
+        "/notes",
+        "/work_status"
+      ],
+      "sha256": "cb60eb902205c4ec5fbb884ad5dac7540944eb04ea3cf7ec4702e561a6d48d43"
+    },
+    "KM-500a-3": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500a-3.yaml",
+      "locators": [
+        "/id",
+        "/criteria",
+        "/covered_by",
+        "/notes",
+        "/work_status"
+      ],
+      "sha256": "ee4acfd007b44c4278630afa8219ca9063c039534b407d083888f40d2391bb16"
+    },
+    "KM-400e-5": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-5.yaml",
+      "locators": [
+        "/id",
+        "/criteria",
+        "/covered_by",
+        "/notes",
+        "/work_status"
+      ],
+      "sha256": "fb377a0fb0520c7c7582a4411c2d623a8ed22ce0a9c2a48c2a27c1e96cc992b1"
+    },
+    "acceptance-report": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "docs/analysis/2026-10-01-query-growth-acceptance.md",
+      "locators": [
+        "Measured evidence",
+        "Evaluation limits"
+      ],
+      "sha256": "869adf3d04e3692933f829d3d493d0b842f522d1f56ad80a12ce9fd9229b6a2b",
+      "verified_source_quote": "Live external Jev validation remains **not run**"
+    },
+    "query-candidate": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "knowledge/examples/component_tests_candidate.json",
+      "locators": [
+        "/descriptor",
+        "/cases"
+      ],
+      "sha256": "d4a89c418a9e699051c8a906d9d390e8c45d6337ef5cfb2cbf18698bf0f442f4"
+    },
+    "boundary-tests": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "tests/knowledge/test_query_growth_boundaries.py",
+      "locators": [
+        "test_unmapped_memory_relation_cannot_masquerade_as_empty",
+        "test_backend_outage_cannot_activate_or_replace_catalog"
+      ],
+      "sha256": "ba2cee35118573d6fcb43698fdd9df48c08e0fb57dff7e39948f898f121583c0",
+      "verified_source_quote": "assert failure.value.code == \"unsupported\""
+    },
+    "retrieval-service": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "knowledge/service.py",
+      "locators": [
+        "KnowledgeService.retrieve"
+      ],
+      "sha256": "a0f9f999bad8a7bd115eca53da568fdba844e4082b1eb56759198c0b5ef18d24",
+      "verified_source_quote": "out.warnings.append(\"telemetry unavailable\")"
+    },
+    "retriever-composition": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "knowledge/config.py",
+      "locators": [
+        "build_retriever"
+      ],
+      "sha256": "079ceabea5fb9e863fad5b9303c049c707b5af243259d21d053307322e6ef8a6"
+    },
+    "retrieval-contract": {
+      "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "path": "knowledge/contracts.py",
+      "locators": [
+        "KnowledgeRetrievalResult",
+        "KnowledgeEvidence",
+        "KnowledgeRetrievalRequest"
+      ],
+      "sha256": "5d3e88fdf0b9fe13bd7d4f64130780a6ac6c60ffa3721b0326d8730f857addc5"
+    }
+  },
+  "external_observations": {
+    "tq-demo-receipt": {
+      "path": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-test-writing-demo-summary.json",
+      "sha256": "62c450eceb34d49010373cf19da22ae6a794c42898313b4dcb3644ff04853c2f",
+      "kind": "prior local observation, not Git-tracked or immutable by location",
+      "source_revision_reported": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+      "locators": [
+        "/route",
+        "/generation_id",
+        "/retrieval_requests",
+        "/descendant_count",
+        "/all_requests_ok_untruncated",
+        "/work_status_counts",
+        "/limitation"
+      ],
+      "snapshot": {
+        "scope": "TQ-500f declared covered_by AC family only; not all repository test-writing requirements",
+        "route": "knowledge.__main__.run retrieve; recursive discovery starts only with TQ-500f",
+        "source_sha": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+        "generation_id": "763ef2c72f13330c002212ad3c1b1b41fb9e53683fbe440569fa260227d29e45",
+        "retrieval_requests": 16,
+        "descendant_count": 15,
+        "all_requests_ok_untruncated": true,
+        "work_status_counts": null,
+        "limitation": "Tool exposes legacy status=active; work_status is absent. Level-three AC disclosure exposes /criteria only, not work_status. Cannot report done/todo counts from this tool.",
+        "external_jev_calls": 0,
+        "database_writes": 0,
+        "catalog_writes": 0
+      },
+      "trace_receipt_provided": false
+    }
+  },
+  "pairs": [
+    {
+      "id": "RQE-01",
+      "family_id": "RQ1",
+      "source_query_ids": [
+        "BA-01"
+      ],
+      "question": "At the pinned source revision, how many ACs are reachable through TQ-500f covered_by links, excluding only TQ-500f itself, including both L2 and L3 descendants, grouped by work_status?",
+      "scope": {
+        "root": "TQ-500f",
+        "relation": "covered_by",
+        "include": "all recursively reachable canonical L2/L3 AC IDs; unique IDs",
+        "exclude": [
+          "TQ-500f"
+        ],
+        "not_repository_wide": true
+      },
+      "required_fields": [
+        "canonical_id",
+        "level",
+        "work_status",
+        "source_revision",
+        "enumeration_complete"
+      ],
+      "oracle": {
+        "records": [
+          {
+            "id": "TQ-500f-1",
+            "level": "L2",
+            "work_status": "done"
+          },
+          {
+            "id": "TQ-500f-1-i",
+            "level": "L3",
+            "work_status": "done"
+          },
+          {
+            "id": "TQ-500f-2",
+            "level": "L2",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-2-i",
+            "level": "L3",
+            "work_status": "done"
+          },
+          {
+            "id": "TQ-500f-2-ii",
+            "level": "L3",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-3",
+            "level": "L2",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-3-i",
+            "level": "L3",
+            "work_status": "done"
+          },
+          {
+            "id": "TQ-500f-3-ii",
+            "level": "L3",
+            "work_status": "done"
+          },
+          {
+            "id": "TQ-500f-3-iii",
+            "level": "L3",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-3-iv",
+            "level": "L3",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-4",
+            "level": "L2",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-4-i",
+            "level": "L3",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-4-ii",
+            "level": "L3",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-5",
+            "level": "L2",
+            "work_status": "todo"
+          },
+          {
+            "id": "TQ-500f-6",
+            "level": "L2",
+            "work_status": "todo"
+          }
+        ],
+        "count": 15,
+        "work_status_counts": {
+          "done": 5,
+          "todo": 10,
+          "in_progress": 0
+        },
+        "terminal_leaf_only_count_for_scope_warning": 11,
+        "evidence": [
+          "TQ-500f",
+          "TQ-500f-1",
+          "TQ-500f-1-i",
+          "TQ-500f-2",
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3",
+          "TQ-500f-3-i",
+          "TQ-500f-3-ii",
+          "TQ-500f-3-iii",
+          "TQ-500f-3-iv",
+          "TQ-500f-4",
+          "TQ-500f-4-i",
+          "TQ-500f-4-ii",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ]
+      },
+      "clarification_rule": "If the request instead says exclude parents or detailed ACs, clarify root-only exclusion versus terminal leaves before reporting this total. Do not reuse 15 for terminal-leaf-only scope.",
+      "cases": [
+        {
+          "id": "RQE-01-P",
+          "variant": "complete canonical evidence",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "oracle.records",
+            "enumeration_complete": true
+          },
+          "expected": {
+            "answer_state": "answered",
+            "count": 15,
+            "work_status_counts": {
+              "done": 5,
+              "todo": 10,
+              "in_progress": 0
+            },
+            "must_state": "Counts concern this declared family and source revision, not every repository test-writing requirement."
+          },
+          "forbidden_claims": [
+            "Treat lifecycle status=active as work_status.",
+            "Report 15 terminal leaf ACs.",
+            "Infer test passes from work_status=done."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        },
+        {
+          "id": "RQE-01-N",
+          "variant": "required field missing",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-01-P",
+            "controlled_transform": "Remove work_status from every exposed record; retain lifecycle status=active, IDs, levels, source revision and complete enumeration."
+          },
+          "expected": {
+            "answer_state": "cannot_answer_status_breakdown",
+            "known_descendant_count": 15,
+            "work_status_counts": null,
+            "missing_fields": [
+              "work_status"
+            ],
+            "must_state": "Successful complete entity retrieval did not supply the field required for the status question."
+          },
+          "forbidden_claims": [
+            "Substitute active for done/todo.",
+            "Use the hidden oracle to fill missing evidence.",
+            "Report zero done or zero todo."
+          ],
+          "baseline": {
+            "status": "historical_field_gap_observed; this planned case not executed",
+            "observation_ref": "tq-demo-receipt",
+            "observed": "16 requests including the root were ok and untruncated; 15 descendants; work_status absent. The prior receipt did not prove a machine-readable answerability failure."
+          }
+        }
+      ]
+    },
+    {
+      "id": "RQE-02",
+      "family_id": "RQ2",
+      "source_query_ids": [
+        "BA-02",
+        "BA-05",
+        "ITPO-01",
+        "QA-01"
+      ],
+      "question": "Which exact obligations in KM-500c-2 prevent us from treating successful query execution as a successfully answered research question? Return the canonical criterion and its source.",
+      "scope": {
+        "ac_id": "KM-500c-2",
+        "field": "criteria",
+        "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac"
+      },
+      "required_fields": [
+        "canonical_id",
+        "criteria",
+        "source_path",
+        "source_locator",
+        "source_revision",
+        "content_complete"
+      ],
+      "oracle": {
+        "ac_id": "KM-500c-2",
+        "criteria_sha256": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+        "verified_quote": "And a successful build, successful query execution and successful answer assessment remain separate recorded outcomes",
+        "evidence": [
+          "KM-500c-2"
+        ],
+        "must_cover": [
+          "actual source revision and retrieved items",
+          "required needs remain unsatisfied",
+          "separate build, execution and answer assessment outcomes",
+          "zero matches, contradiction and insufficiency remain distinguishable"
+        ]
+      },
+      "cases": [
+        {
+          "id": "RQE-02-P",
+          "variant": "complete exact criterion",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "KM-500c-2 at /criteria",
+            "content_complete": true
+          },
+          "expected": {
+            "answer_state": "answered",
+            "required_id": "KM-500c-2",
+            "criterion_content": "Must match canonical parsed /criteria; the hash above uses UTF-8 of the YAML scalar without further whitespace normalization.",
+            "citation_locator": "/criteria",
+            "reuse": "Point to existing criterion before suggesting a duplicate."
+          },
+          "forbidden_claims": [
+            "Invent an additional accepted criterion.",
+            "Claim this source text proves the complete production flow passed."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        },
+        {
+          "id": "RQE-02-N",
+          "variant": "criterion excerpt cut before required distinction",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-02-P",
+            "controlled_transform": "Keep the criterion only through the first Then clause; omit the three following And clauses; set content_complete=false and truncated=true."
+          },
+          "expected": {
+            "answer_state": "incomplete_evidence",
+            "missing_information": "The supplied excerpt does not establish the exact separate-outcomes or zero/contradictory/insufficient clauses.",
+            "next_action": "Request the remaining immutable /criteria content or report the limitation."
+          },
+          "forbidden_claims": [
+            "Present the shortened text as the complete canonical criterion.",
+            "Reconstruct missing accepted obligations from the title or hidden oracle."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        }
+      ]
+    },
+    {
+      "id": "RQE-03",
+      "family_id": "RQ4",
+      "source_query_ids": [
+        "BA-03",
+        "ITPO-02",
+        "CODER-03"
+      ],
+      "question": "Which canonical AC records at this revision directly declare depends_on: TQ-500f-2? Give only one-hop incoming declared dependencies, not all potentially affected code.",
+      "scope": {
+        "target_ac": "TQ-500f-2",
+        "relation": "depends_on",
+        "direction": "incoming",
+        "depth": 1,
+        "corpus": "All canonical AC YAML records in docs/acceptance-criteria at source_revision"
+      },
+      "required_fields": [
+        "canonical_id",
+        "depends_on",
+        "source_revision",
+        "enumeration_complete",
+        "relation_direction"
+      ],
+      "oracle": {
+        "expected_ids": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ],
+        "count": 5,
+        "canonical_ac_record_count": 4503,
+        "method": "Independently parse all ID-bearing AC YAML files from git archive; select exact membership of TQ-500f-2 in depends_on; sort distinct IDs.",
+        "evidence": [
+          "TQ-500f-2-i",
+          "TQ-500f-2-ii",
+          "TQ-500f-3-i",
+          "TQ-500f-5",
+          "TQ-500f-6"
+        ]
+      },
+      "cases": [
+        {
+          "id": "RQE-03-P",
+          "variant": "complete declared relation scan",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "oracle.expected_ids with their depends_on fields",
+            "enumeration_complete": true
+          },
+          "expected": {
+            "answer_state": "answered",
+            "expected_ids": [
+              "TQ-500f-2-i",
+              "TQ-500f-2-ii",
+              "TQ-500f-3-i",
+              "TQ-500f-5",
+              "TQ-500f-6"
+            ],
+            "count": 5,
+            "must_state": "Declared one-hop AC dependencies only; this is not exhaustive runtime or code impact."
+          },
+          "forbidden_claims": [
+            "Treat covered_by as depends_on.",
+            "Reverse the edge direction.",
+            "Claim all affected code or all transitive dependents."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        },
+        {
+          "id": "RQE-03-N",
+          "variant": "bounded response omitted a dependent",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-03-P",
+            "controlled_transform": "Omit TQ-500f-6; set truncated=true and enumeration_complete=false; do not supply the oracle total."
+          },
+          "expected": {
+            "answer_state": "partial",
+            "known_ids": [
+              "TQ-500f-2-i",
+              "TQ-500f-2-ii",
+              "TQ-500f-3-i",
+              "TQ-500f-5"
+            ],
+            "known_count": 4,
+            "exact_total": null,
+            "next_action": "Continue the same pinned enumeration if possible, otherwise report an unknown total."
+          },
+          "forbidden_claims": [
+            "Report four as the exact complete count.",
+            "Fill the omitted ID from the hidden oracle.",
+            "Assume no further dependents."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        }
+      ]
+    },
+    {
+      "id": "RQE-04",
+      "family_id": "RQ6",
+      "source_query_ids": [
+        "BA-04",
+        "QA-02"
+      ],
+      "question": "Which tests are declared for KM-500c-2, and what does the recorded acceptance evidence actually establish about real Neo4j, Aura and live Jev execution?",
+      "scope": {
+        "ac_id": "KM-500c-2",
+        "declaration_relation": "covered_by",
+        "execution_evidence": "Only explicitly supplied historical reports; no assumption of a current run"
+      },
+      "required_fields": [
+        "declared_test_reference",
+        "source_revision",
+        "proof_kind",
+        "report_path",
+        "tested_revision_if_recorded",
+        "mocked_boundaries",
+        "execution_status"
+      ],
+      "oracle": {
+        "declared_test_references": [
+          "tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog",
+          "tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct",
+          "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded",
+          "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial",
+          "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result",
+          "tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls",
+          "tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof"
+        ],
+        "declared_reference_count": 7,
+        "evidence": [
+          "KM-500c-2",
+          "acceptance-report"
+        ],
+        "note": "A report stored at source_revision can describe an earlier tested revision. Preserve that distinction."
+      },
+      "cases": [
+        {
+          "id": "RQE-04-P",
+          "variant": "declarations plus explicitly scoped historical report",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": [
+              "KM-500c-2 /covered_by",
+              "acceptance-report Measured evidence and Evaluation limits"
+            ]
+          },
+          "expected": {
+            "answer_state": "answered_with_limits",
+            "declared_references": [
+              "tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog",
+              "tests/knowledge_live/query_catalog_checks.py::test_real_high_fanout_and_completed_empty_are_distinct",
+              "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_conflict_recorded",
+              "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_unsatisfied_required_need_makes_the_bundle_partial",
+              "tests/kernel/capabilities/test_research_graph.py::TestCollect::test_failed_child_is_a_limitation_never_an_empty_result",
+              "tests/kernel/capabilities/test_research_graph.py::TestSynthesisAndStop::test_synthesis_resume_finishes_without_replanning_or_more_jev_calls",
+              "tests/knowledge_live/query_growth_checks.py::test_aura_query_growth_public_proof"
+            ],
+            "report_findings": {
+              "local_neo4j": "Report records two passing checks with synthetic scoped fixtures.",
+              "aura": "Report records one passing public proof at 9f70de80ebcafe59ff55cce6732deb92069f9541, scripted Jev and BA-authored candidate; both research runs remained partial.",
+              "live_external_jev": "not_run; pending explicit provider approval"
+            },
+            "must_state": "These are historical report claims with named boundaries, not fresh execution results and not evidence of real model-authored query selection/build."
+          },
+          "forbidden_claims": [
+            "All seven tests just passed.",
+            "Aura proof used live Jev.",
+            "The source_revision is automatically the revision exercised by every report.",
+            "All research needs were answered."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        },
+        {
+          "id": "RQE-04-N",
+          "variant": "declarations without execution evidence",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-04-P",
+            "controlled_transform": "Provide only /covered_by test references and /work_status; withhold /notes, report contents and runtime receipts."
+          },
+          "expected": {
+            "answer_state": "partial",
+            "declared_reference_count": 7,
+            "execution_status": "unverified_from_supplied_evidence",
+            "must_state": "Declared coverage and work_status=done do not establish a successful run."
+          },
+          "forbidden_claims": [
+            "Turn linked test names into passing results.",
+            "Conclude tests failed because the execution evidence is missing."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        }
+      ]
+    },
+    {
+      "id": "RQE-05",
+      "family_id": "RQ7",
+      "source_query_ids": [
+        "ITPO-03"
+      ],
+      "question": "An agent needs the directly declared test files for git_vcs_operations, but no offered registered operation answers it. Should Jev request query creation or report missing source data?",
+      "scope": {
+        "component_id": "git_vcs_operations",
+        "desired_path": "Component <- component_membership - AcceptanceCriterion - covered_by -> Test",
+        "scenario_type": "controlled catalog/manifest evidence; not a claim about the deployed catalog"
+      },
+      "required_fields": [
+        "offered_query_descriptors",
+        "supported_source_kinds",
+        "supported_relationships",
+        "required_result_fields",
+        "repository_id",
+        "source_revision",
+        "generation_id"
+      ],
+      "oracle": {
+        "evidence": [
+          "KM-500a-3",
+          "query-candidate",
+          "boundary-tests"
+        ],
+        "rule": "Only established absence of a suitable query over supported data permits a bounded build handoff; missing mapping, outage, denial and empty results are distinct."
+      },
+      "cases": [
+        {
+          "id": "RQE-05-P",
+          "variant": "missing operation over supported evidence",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "controlled_setup": "Supply a complete offered catalog with the get_component_tests capability withheld; a pinned healthy manifest supports Component, AcceptanceCriterion, Test, component_membership and covered_by; required Test identities/locators are available. No existing descriptor meets the requested relation path.",
+            "not_observed_runtime": true
+          },
+          "expected": {
+            "answer_state": "missing_query_capability",
+            "next_action": "Request the governed query-build handoff preserving original question and pinned scope, then require independent verification and registration before reuse.",
+            "query_build_allowed": true
+          },
+          "forbidden_claims": [
+            "Say no test data exists.",
+            "Invent a registered endpoint.",
+            "Claim the hypothetical build has run or been activated."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        },
+        {
+          "id": "RQE-05-N",
+          "variant": "same missing operation with unsupported source mapping",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-05-P",
+            "controlled_transform": "Remove Test and covered_by from the trusted supported-source manifest; keep the question and missing operation unchanged."
+          },
+          "expected": {
+            "answer_state": "unsupported_source_mapping",
+            "missing_kinds": [
+              "Test"
+            ],
+            "missing_relationships": [
+              "covered_by"
+            ],
+            "query_build_allowed": false,
+            "next_action": "Report the source/indexing limitation for a separate change; a new query alone cannot supply this evidence."
+          },
+          "forbidden_claims": [
+            "Treat unsupported mapping as an empty result.",
+            "Dispatch a query-only build as though the data were present.",
+            "Conclude the canonical repository contains no tests."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        }
+      ]
+    },
+    {
+      "id": "RQE-06",
+      "family_id": "RQ8",
+      "source_query_ids": [
+        "ITPO-04",
+        "ITPO-05",
+        "QA-05"
+      ],
+      "question": "Why could the standalone TQ-500f retrieval not answer the done/todo breakdown, and what evidence lets me inspect that limitation in Langfuse?",
+      "scope": {
+        "run_evidence": "Prior local TQ demo summary, explicitly distinguished from the immutable source oracle",
+        "no_new_remote_lookup": true
+      },
+      "required_fields": [
+        "execution_status",
+        "required_field_availability",
+        "source_revision",
+        "generation_id",
+        "request_or_retrieval_correlation_if_available",
+        "answer_limitations",
+        "verified_trace_reference_or_explicit_absence"
+      ],
+      "oracle": {
+        "evidence": [
+          "KM-400e-5",
+          "KM-500c-2",
+          "retrieval-service",
+          "retriever-composition",
+          "retrieval-contract"
+        ],
+        "external_observation_ref": "tq-demo-receipt",
+        "rule": "Successful transport does not imply answerability. A local receipt or retrieval ID does not prove Langfuse ingestion or supply a trace URL."
+      },
+      "cases": [
+        {
+          "id": "RQE-06-P",
+          "variant": "available local failure-of-answer evidence",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "tq-demo-receipt snapshot plus pinned source composition/contract",
+            "runtime_trace_receipt": "not supplied"
+          },
+          "expected": {
+            "answer_state": "diagnosed_missing_answer_field; trace_unverified",
+            "execution": "The prior summary records 16 ok/untruncated requests and 15 descendants.",
+            "answer_failure": "work_status was not exposed; lifecycle status was insufficient.",
+            "source_revision": "9d11594782abfb417d0f3a826bfb1f91f3a523ac",
+            "generation_id": "763ef2c72f13330c002212ad3c1b1b41fb9e53683fbe440569fa260227d29e45",
+            "langfuse_trace_url": null,
+            "trace_claim": "No verified Langfuse trace evidence was supplied. The standalone composition does not inject a telemetry owner; do not invent a link or claim remote ingestion."
+          },
+          "forbidden_claims": [
+            "Call this a Neo4j outage.",
+            "Claim all requests failed.",
+            "Report an observed automatic answerability warning the receipt does not contain.",
+            "Invent a Langfuse URL or evidence of successful remote trace ingestion."
+          ],
+          "baseline": {
+            "status": "historical_local_receipt_inspected; this planned case not executed",
+            "observation_ref": "tq-demo-receipt",
+            "observed": "The field gap is recorded locally. No Langfuse service lookup or new retrieval occurred while constructing these cases."
+          }
+        },
+        {
+          "id": "RQE-06-N",
+          "variant": "controlled backend failure with no trace proof",
+          "evaluation_status": "planned_not_run",
+          "implemented_test": false,
+          "current_runner_compatible": false,
+          "evidence_input": {
+            "base": "RQE-06-P",
+            "controlled_transform": "Withhold the historical summary. Instead provide a controlled retrieval envelope: status=unavailable, errors code=unavailable, no evidence, no source/generation pin and no verified trace reference. This envelope is a planned fixture, not a real incident."
+          },
+          "expected": {
+            "answer_state": "retrieval_unavailable; actual_root_cause_unknown; trace_unverified",
+            "answer_count": null,
+            "source_revision_used": null,
+            "langfuse_trace_url": null,
+            "next_action": "Report retrieval failure and absent correlation evidence; request the actual run/diagnostic artifact before attributing a cause or promising a trace."
+          },
+          "forbidden_claims": [
+            "Say zero ACs exist.",
+            "Reuse the hidden source-oracle status counts as retrieved evidence.",
+            "Attribute outage to credentials, provider or network without diagnostics.",
+            "Assert a Langfuse trace exists from a retrieval ID alone."
+          ],
+          "baseline": {
+            "status": "not_run",
+            "note": "Independently source-checked expectation; no tool, model, database or provider execution performed for this case."
+          }
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "performed": "JSON serialization and independent immutable-source checks only; no evaluation run",
+    "source_record_count": 4503,
+    "source_quote_checks": 4,
+    "expected_family_descendants": 15,
+    "expected_family_counts": {
+      "done": 5,
+      "todo": 10,
+      "in_progress": 0
+    },
+    "expected_direct_dependents": 5,
+    "expected_declared_test_references": 7
+  }
+}

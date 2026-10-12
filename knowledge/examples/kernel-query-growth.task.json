@@ -1,0 +1,30 @@
+{
+  "goal": "Which directly declared test files cover acceptance criteria belonging to the selected project component?",
+  "caller": {
+    "id": "coding-host",
+    "kind": "host"
+  },
+  "scope": {
+    "workspace_id": "leafcutter",
+    "repository_root": "REPLACE_WITH_ABSOLUTE_REPOSITORY_ROOT",
+    "component_ids": []
+  },
+  "permissions": [
+    "read_repo",
+    "write_query_catalog"
+  ],
+  "requested_output_schema": "leafcutter.evidence_bundle.v1",
+  "input_payload_schema": "leafcutter.research_request.v1",
+  "input_payload": {
+    "question": "Which directly declared test files cover acceptance criteria belonging to the selected project component?",
+    "evidence_needs_only": true,
+    "evidence_needs": [
+      {
+        "id": "need.tests",
+        "category": "task_context",
+        "priority": "required",
+        "question": "Which directly declared test files cover acceptance criteria belonging to the selected project component?"
+      }
+    ]
+  }
+}

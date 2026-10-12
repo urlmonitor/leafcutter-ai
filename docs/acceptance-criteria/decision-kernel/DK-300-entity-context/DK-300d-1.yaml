@@ -1,0 +1,110 @@
+id: DK-300d-1
+title: "New runs checkpoint versioned interpretation context before intent"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given a new run with or without an explicit output contract and a current permitted entity index,
+  When intake prepares the first intent assessment,
+  Then exactly one recognition pass completes and its versioned interpretation context is checkpointed before classification,
+  And the classifier receives the unchanged goal, compact permitted meanings, unresolved references and separately typed caller claims,
+  And registered capability IDs remain a separate configuration channel,
+  And recognized, no_matches, partial, unavailable and disabled describe the actual pass outcome,
+  And an explicit output contract still determines routing,
+  And no repository-body evidence is placed in the initial meaning channel.
+depends_on: [DK-300d]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"EntityContext (kernel.contracts.entity_context): schema_version='1.0', kind='entity_context'; entities:list[EntityCard] with family:glossary|doc_type|entry_kind|native_kind|symbol|artifact_id, identity:string, native_kind:string|null, meaning:string, signature:string|null, resolution:resolved|ambiguous, matches:list[{channel:string,record_index:int|null,start:int,end:int,surface:string}], provenance:{source_id:string,locator:string,snapshot:string,source_hash:string,projection_hash:string}. Offsets are half-open Unicode code-point positions in original channel text. Original goal and caller claims are separate from meaning projection. Context has original_goal:string (verbatim), caller_context, workspace_id, repository_root, registered_capabilities:string[], status:recognized|no_matches|partial|unavailable|disabled, unresolved:list[{family,reference,state,matches,candidates}], coverage:{scan_complete:bool,index_status,index_fingerprint:string|null,families,counts,by_family}, budgets:{lookups:int,serialized_chars:int,elapsed_ms:number,jev_calls:0}, limitations:string[]. Counts contain detected,resolved,returned,omitted,unknown,ambiguous. No evidence field."}
+expects_from: {"ac_id":"DK-300c-1","contract":"kernel.entity_index.build_entity_index(repository_root,config,*,output_path=None)->EntityIndex and python -m kernel entities build --repository-root ABS [--config PATH] [--output PATH] prepare the local derived index outside a run. Runtime kernel.entity_context.recognize_entities(task_input,config,registry=None,*,redactor=None)->EntityContext consumes this index without rebuilding. Physical workspace identity is the canonical resolved checkout root plus manifest; arbitrary Scope.workspace_id labels need not equal a directory name."}
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'DK-300d-1-i'
+  - 'tests/kernel/entity_context/test_wiring.py::test_service_checkpoints_entity_context_before_classifier_consumes_it'
+  - 'tests/kernel/entity_context/test_wiring.py::test_explicit_output_contract_retains_routing_with_entity_context'
+  - 'tests/kernel/entity_context/test_wiring.py::test_pass_statuses_are_versioned_and_truthful'
+implemented_by:
+  - "kernel/scheduler/nodes_enrichment.py"
+  - "kernel/scheduler/state.py"
+  - "kernel/intent/classify.py"
+  - "kernel/intent/step.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "New runs use state.entity_context with EntityContext kind/schema discriminator, never reinterpret legacy EnrichedContext status values as recognition."
+  - "Record exactly one context.recognized event after checkpoint creation and before first intent.assessed; an existing entity or legacy interpretation checkpoint prevents repeated initial enrichment."
+  - "Keep old gather_context/EnrichedContext public behavior available for historical direct consumers and saved runs; new scheduler runs call recognize_entities."
+  - "Classifier construction keeps caller_context and registered_capabilities typed separately from compact entity_context; explicit output schema routing remains authoritative."
+test_required: true
+test_spec:
+  - name: "test_service_checkpoints_entity_context_before_classifier_consumes_it"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_wiring.py::test_service_checkpoints_entity_context_before_classifier_consumes_it: Drive RunService with a recording classifier whose response depends on real retained identity; assert saved EntityContext and context.recognized precede intent, exactly one recognition and unchanged goal."
+  - name: "test_explicit_output_contract_retains_routing_with_entity_context"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_wiring.py::test_explicit_output_contract_retains_routing_with_entity_context: Run with explicit output contract, capture separately typed entity/caller/registry inputs and assert contract controls routing without initial body evidence."
+  - name: "test_pass_statuses_are_versioned_and_truthful"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_wiring.py::test_pass_statuses_are_versioned_and_truthful: Exercise recognized/no_matches/partial/unavailable/disabled outcomes through new model serde and verify none masquerades as gathered/no_evidence or vice versa."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: classify
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'
+  - flow: leafcutter/decision-lifecycle
+    node: form
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities:
+      - Decision
+    source: real
+    asof: '2026-10-03'

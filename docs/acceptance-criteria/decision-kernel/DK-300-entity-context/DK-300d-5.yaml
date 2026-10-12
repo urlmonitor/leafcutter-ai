@@ -1,0 +1,99 @@
+id: DK-300d-5
+title: "Explicit retrieval contracts and ordinary repository fallback remain usable"
+component: decision-kernel
+components: [decision_kernel, knowledge_management]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given one retrieval request explicitly specifies an existing operation and another asks an ordinary repository question,
+  When the kernel routes and executes those requests,
+  Then the explicit request retains its declared operation and arguments without an additional operation-selection judgment,
+  And ordinary repository retrieval remains usable when knowledge is disabled, unavailable or not selected,
+  And selecting an offered repository fallback executes the permitted repository search with the original question and existing bounds,
+  And choosing unsupported without a permitted fallback produces an explicit limitation rather than an empty successful answer,
+  And a completed empty graph read remains distinguishable from an unavailable backend.
+depends_on: ["DK-300d","DK-300d-4","KM-400e-1","KM-400e-2","KM-400e-4"]
+covered_by:
+  - "DK-300d-5-i"
+  - "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_explicit_graph_request_bypasses_operation_selection"
+  - "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_repository_fallback_executes_native_retrieval_with_same_scope"
+  - "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ordinary_repository_request_keeps_legacy_path"
+implemented_by:
+  - "integrations/knowledge_capability.py"
+  - "integrations/graph_selection_result.py"
+  - "kernel/capabilities/research/planning.py"
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+it_requirements:
+  - "Preserve explicit payload.knowledge and registered exact-operation behavior, including deterministic zero-selector-call paths; no free-form selector override is allowed."
+  - "The repository-fallback outcome must be consumed by actual native repository retrieval where the selected source policy permits it, not merely included as unused metadata."
+  - "Knowledge-disabled or ordinary repo_text requests retain existing behavior and do not require Neo4j availability, graph credentials or an extra selector call."
+  - "Fallback respects the same original question, source/read policy and cumulative remaining budget; unavailable, unsupported and successful empty results retain their distinct diagnostics."
+  - "A configured query_catalog_root retains its existing governed query-planning workflow. Built-in selection neither overrides that path nor creates or admits a new query."
+delivers_to:
+  agent: python-coder
+  contract: "Existing registered retrieve.repository binding / KnowledgeRetrievalExecutor.ainvoke is the integration boundary. integrations.graph_selection.assess_graph_operation(ctx,invocation,payload,capabilities) returns (RetrievalChoice,list[Usage]). Jev purpose knowledge.operation_select, question id operation, offers only executable bounded operation identities plus unsupported and an authorized repository-fallback outcome; optional purpose knowledge.target_select, question id target, selects a finite trusted target. Python constructs arguments from resolved permitted entity IDs and trusted component scope. Explicit payload.knowledge bypasses this selector."
+expects_from:
+  ac_id: DK-300d-3
+  contract: "Checkpointed EntityContext supplies resolved permitted canonical references as optional retrieval hints; caller claims and meanings remain distinct from task evidence and authority."
+test_required: true
+test_spec:
+  - name: "test_explicit_graph_request_bypasses_operation_selection"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "seam"
+    description: "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_explicit_graph_request_bypasses_operation_selection: Invoke existing explicit known-operation payloads through the registered binding and assert unchanged arguments and zero new selector calls."
+  - name: "test_repository_fallback_executes_native_retrieval_with_same_scope"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_repository_fallback_executes_native_retrieval_with_same_scope: Have Jev choose offered repository fallback and assert actual native file retrieval, original question, unchanged source restrictions and no graph execution."
+    must_catch: ["Returning a fallback label that is never consumed by native retrieval.","Broadening selected source IDs when graph selection is unsupported."]
+  - name: "test_ordinary_repository_request_keeps_legacy_path"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "boundary"
+    description: "tests/kernel/entity_context/test_knowledge_selection_fallback.py::test_ordinary_repository_request_keeps_legacy_path: Run repo_text requests with disabled/unavailable/unselected knowledge and compare actual evidence path; assert no graph dependency, while empty graph success and backend failure stay distinct."
+test_rationale: "Exercise the existing registered capability and real research path with recording Jev and knowledge ports; a direct helper or source-string test cannot prove selection is consumed. Controlled-port proof does not establish live Jev quality or Neo4j publication readiness."
+doc_links:
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO added bounded selector contracts and behavioral test specifications under the user's explicit wire-it-up authorization."
+superseded_by: null
+notes: |
+  Focused extension of DK-300d-3 and existing KM-400e-2, KM-400e-3 and KM-400e-4.
+  Independently verified on 2026-10-03: 148 strict deterministic cases passed, including 51 selector cases, 84 existing entity cases and 13 bridge cases; no failures, errors or skips.
+  Verification evidence: reports/entity-graph-selection-independent-green.xml and reports/entity-graph-selection-evaluation.md. Controlled ports do not establish live Jev quality or Neo4j publication readiness; no new query implementation or admission is claimed.
+  No matching reusable pattern was found in the 4620-file AC inventory.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: ground
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

@@ -1,0 +1,1372 @@
+{
+  "cases": [
+    {
+      "scenario_id": "RS-03",
+      "request": {
+        "schema_version": "1.0",
+        "goal": "For KM-500c-2, what must tests demonstrate?",
+        "caller": {
+          "schema_version": "1.0",
+          "id": "scenario-evaluator",
+          "kind": "host"
+        },
+        "scope": {
+          "schema_version": "1.0",
+          "workspace_id": "leafcutter",
+          "repository_root": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+          "revision": {
+            "schema_version": "1.0",
+            "commit": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "dirty": false,
+            "tree_fingerprint": null
+          },
+          "component_ids": [],
+          "read_roots": [
+            "docs"
+          ],
+          "source_ids": [],
+          "technologies": []
+        },
+        "requested_output_schema": "leafcutter.evidence_bundle.v1",
+        "input_payload_schema": "leafcutter.research_request.v1",
+        "input_payload": {
+          "question": "For KM-500c-2, what must tests demonstrate?"
+        },
+        "initial_evidence": [],
+        "constraints": [],
+        "permissions": [
+          "read_repo"
+        ]
+      },
+      "actual_response": {
+        "schema_version": "1.0",
+        "run_id": "run-d5e448f001fd4821",
+        "root_task_id": "task-4f633fa8d47e4035",
+        "state_revision": 3,
+        "status": "waiting_human",
+        "output": null,
+        "report_ref": null,
+        "decision_ids": [],
+        "evidence_ids": [],
+        "open_questions": [],
+        "pending_interaction": {
+          "schema_version": "1.0",
+          "id": "int-e9a6cf11a11d4b10",
+          "created_at": "2026-10-02T13:25:25.329847Z",
+          "updated_at": "2026-10-02T13:25:25.329847Z",
+          "created_seq": 0,
+          "work_item_id": "work-8714f13ae6d249af",
+          "decision_id": null,
+          "subject_ids": [
+            "need.task_context"
+          ],
+          "question": "Which project component should I research? Give its component ID, or several IDs separated by commas. Current question: Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+          "relevant_evidence_ids": [],
+          "choices": [],
+          "free_text_allowed": true,
+          "structured_allowed": false,
+          "why_research_cannot_settle": "The intended component scope or question is not clear.",
+          "required_actor_kind": "human",
+          "state_revision": 3
+        },
+        "limitations": [],
+        "gaps": [],
+        "usage_summary": {
+          "schema_version": "1.0",
+          "jev_calls": 6,
+          "host_operations": 0,
+          "input_tokens": null,
+          "output_tokens": null,
+          "cost_usd_known": null,
+          "cost_unknown_calls": 6,
+          "usage": [
+            {
+              "schema_version": "1.0",
+              "provider": "jev",
+              "model_id": "jev-scripted",
+              "input_tokens": null,
+              "output_tokens": null,
+              "duration_ms": null,
+              "cost_usd": null,
+              "cost_provenance": "unavailable",
+              "calls": 6
+            }
+          ]
+        },
+        "trace_refs": {
+          "schema_version": "1.0",
+          "trace_id": "47945dd3b4b468f45ab7139ca4dbfd7e",
+          "trace_url": null,
+          "observability": "ok"
+        },
+        "errors": []
+      },
+      "seconds": 0.749,
+      "entry_point": "KernelService.start_run via actual build_environment",
+      "actors": {
+        "Jev": "ScriptedJev; fixed finite interpretations/choices, not live quality",
+        "database": "actual Aura immutable generation",
+        "host": "none",
+        "human": "none",
+        "tracer": "local RecordingTracer"
+      },
+      "jev_batches": [
+        {
+          "schema_version": "1.0",
+          "purpose": "kernel.route",
+          "state": {
+            "task": {
+              "goal": "For KM-500c-2, what must tests demonstrate?",
+              "component_ids": []
+            },
+            "requests": {
+              "work-9df4f5d3b07d4968": {
+                "kind": "capability",
+                "goal": "For KM-500c-2, what must tests demonstrate?",
+                "question": "",
+                "payload_schema": "leafcutter.research_request.v1",
+                "payload_keys": [
+                  "question"
+                ],
+                "clarifications": []
+              }
+            }
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "route.work-9df4f5d3b07d4968",
+              "kind": "choice",
+              "template_id": "kernel.route",
+              "template_version": "1",
+              "instructions": "Which capability should handle `requests.work-9df4f5d3b07d4968`? Choose exactly one listed capability, __NONE__ if none fits, or __NEEDS_CONTEXT__ if the request lacks information to decide.",
+              "criteria": {
+                "research": "Gathers inspectable evidence for a question: selects needed evidence categories, retrieves from available sources, and reports coverage, unavailable sources and contradictions.",
+                "__NONE__": "None of the listed capabilities can handle the request.",
+                "__NEEDS_CONTEXT__": "The request lacks the information needed to choose a capability."
+              }
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "purpose": "research.plan_needs",
+          "state": {
+            "question": "For KM-500c-2, what must tests demonstrate?",
+            "categories": {
+              "authoritative_guidance": "Official documentation or specifications that define how a technology is meant to be used.",
+              "internal_principles": "The project's own stated rules, conventions and principles.",
+              "prior_decisions": "Earlier recorded decisions and their rationale, such as architecture decision records.",
+              "existing_patterns": "How the existing code or documents already solve a similar problem.",
+              "task_context": "Facts about the task itself that the requester supplied or that the workspace shows.",
+              "external_practices": "Widely used practices and experience reports from outside the project."
+            }
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "need.authoritative_guidance",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.authoritative_guidance` evidence needed to answer `question`?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "need.internal_principles",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.internal_principles` evidence needed to answer `question`?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "need.prior_decisions",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.prior_decisions` evidence needed to answer `question`?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "need.existing_patterns",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.existing_patterns` evidence needed to answer `question`?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "need.task_context",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.task_context` evidence needed to answer `question`?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "need.external_practices",
+              "kind": "noul",
+              "template_id": "research.need",
+              "template_version": "1",
+              "instructions": "Is `categories.external_practices` evidence needed to answer `question`?",
+              "criteria": null
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-9df4f5d3b07d4968",
+            "request_id": null,
+            "invocation_id": "inv-4eef0b4f9543498e",
+            "decision_id": null,
+            "capability_id": "research",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "purpose": "knowledge.answer_contract",
+          "state": {
+            "original_question": "Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "field_meanings": {
+              "canonical_id": "The stable identities of the requested entities, such as which tests or ACs.",
+              "kind": "The canonical entity type of each returned item.",
+              "title": "The source-backed human-readable name of each returned item.",
+              "source_sha": "The immutable source revision supporting each entity.",
+              "source_locator": "The exact source location supporting each entity.",
+              "priority": "Declared source priority, not an inferred business ranking or dependency count.",
+              "level": "The canonical requirement hierarchy level.",
+              "test_required": "The explicit source test requirement, not evidence of execution.",
+              "work_status": "Implementation progress, such as done or todo; distinct from lifecycle status.",
+              "status": "Canonical lifecycle status, such as active; not delivery completion.",
+              "criteria": "Exact source acceptance clauses.",
+              "req_status": "Requirement governance state.",
+              "readiness": "Planning approval readiness, not implementation proof.",
+              "covered_by": "Declared test references, not evidence of a test run.",
+              "implemented_by": "Declared implementation references, not a complete call graph.",
+              "depends_on": "Declared requirement dependencies, not inferred code impact."
+            }
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "field.canonical_id",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The stable identities of the requested entities, such as which tests or ACs.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.kind",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The canonical entity type of each returned item.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.title",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The source-backed human-readable name of each returned item.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.source_sha",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The immutable source revision supporting each entity.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.source_locator",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The exact source location supporting each entity.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.priority",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Declared source priority, not an inferred business ranking or dependency count.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.level",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The canonical requirement hierarchy level.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.test_required",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? The explicit source test requirement, not evidence of execution.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.work_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Implementation progress, such as done or todo; distinct from lifecycle status.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Canonical lifecycle status, such as active; not delivery completion.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.criteria",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Exact source acceptance clauses.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.req_status",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Requirement governance state.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.readiness",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Planning approval readiness, not implementation proof.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.covered_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Declared test references, not evidence of a test run.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.implemented_by",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Declared implementation references, not a complete call graph.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "field.depends_on",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does answering the original question require this fact? Declared requirement dependencies, not inferred code impact.",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "population",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Which population does the caller require?",
+              "criteria": {
+                "returned_entities": "Facts about the selected returned entities, without a global count.",
+                "ac_descendants": "Requirements in a caller-defined canonical parent hierarchy.",
+                "declared_dependents": "Requirements directly declaring dependency on the selected root.",
+                "clarify": "The required population is unclear."
+              }
+            },
+            {
+              "schema_version": "1.0",
+              "id": "inclusion",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Which explicit inclusion rule did the caller establish?",
+              "criteria": {
+                "root_excluded": "Exclude only the selected family root, including nonterminal descendants.",
+                "terminal_leaves": "Exclude every requirement with children.",
+                "include_root": "Include the selected root as well as descendants.",
+                "clarify": "The caller has not resolved these materially different choices."
+              }
+            },
+            {
+              "schema_version": "1.0",
+              "id": "root",
+              "kind": "choice",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Which literal supplied ID is the intended population root?",
+              "criteria": {
+                "KM-500c-2": "Literal caller-supplied candidate root KM-500c-2",
+                "clarify": "No caller-supplied root can be selected with confidence."
+              }
+            },
+            {
+              "schema_version": "1.0",
+              "id": "level.L0",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does the caller explicitly include hierarchy level L0?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "level.L1",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does the caller explicitly include hierarchy level L1?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "level.L2",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does the caller explicitly include hierarchy level L2?",
+              "criteria": null
+            },
+            {
+              "schema_version": "1.0",
+              "id": "level.L3",
+              "kind": "noul",
+              "template_id": "knowledge.answer_contract.v1",
+              "template_version": "1",
+              "instructions": "Does the caller explicitly include hierarchy level L3?",
+              "criteria": null
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": null,
+            "invocation_id": "inv-bb8e74b2521e42c8",
+            "decision_id": null,
+            "capability_id": "retrieve.repository",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "purpose": "knowledge.query_readiness",
+          "state": {
+            "question": "Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+            "component_ids": []
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "readiness",
+              "kind": "choice",
+              "template_id": "knowledge.query_readiness.v1",
+              "template_version": "1",
+              "instructions": "Select only a supported option; missing facts require clarification.",
+              "criteria": {
+                "ready": "The question and intended scope are clear.",
+                "clarify": "Ask for missing scope or intent."
+              }
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": null,
+            "invocation_id": "inv-bb8e74b2521e42c8",
+            "decision_id": null,
+            "capability_id": "retrieve.repository",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "purpose": "knowledge.query_target",
+          "state": {
+            "question": "Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+            "supported_source_kinds": [
+              "ADR",
+              "AcceptanceCriterion",
+              "Agent",
+              "Capability",
+              "ChangelogEntry",
+              "Component",
+              "Decision",
+              "Document",
+              "Flow",
+              "GlossaryTerm",
+              "MockData",
+              "Mockup",
+              "RoadmapPhase",
+              "Skill",
+              "SourceFile",
+              "Test",
+              "Ticket"
+            ]
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "kind",
+              "kind": "choice",
+              "template_id": "knowledge.query_target.v1",
+              "template_version": "1",
+              "instructions": "Select only a supported option; missing facts require clarification.",
+              "criteria": {
+                "ADR": "The requested answer consists of ADR entities.",
+                "AcceptanceCriterion": "The requested answer consists of AcceptanceCriterion entities.",
+                "Component": "The requested answer consists of Component entities.",
+                "Decision": "The requested answer consists of Decision entities.",
+                "Lesson": "The requested answer consists of Lesson entities.",
+                "SourceFile": "The requested answer consists of SourceFile entities.",
+                "Test": "The requested answer consists of Test entities.",
+                "clarify": "The requested result kind is unclear."
+              }
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": null,
+            "invocation_id": "inv-bb8e74b2521e42c8",
+            "decision_id": null,
+            "capability_id": "retrieve.repository",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        },
+        {
+          "schema_version": "1.0",
+          "purpose": "knowledge.query_select",
+          "state": {
+            "question": "Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+            "component_ids": [],
+            "answer_requirements": {
+              "original_question": "Facts about the task itself that the requester supplied or that the workspace shows. Question: For KM-500c-2, what must tests demonstrate?",
+              "required_fields": [
+                "criteria"
+              ],
+              "scope": {
+                "population": "returned_entities",
+                "root_id": "KM-500c-2",
+                "levels": null,
+                "inclusion": null
+              },
+              "require_complete": true
+            },
+            "capability_fit": {
+              "status": "supported_data_pending_selection",
+              "query_build_eligible": true,
+              "matching_operation": null,
+              "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+              "generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+              "missing_kinds": [],
+              "missing_relationships": [],
+              "missing_fields": {},
+              "limitations": [
+                "No missing operation is established until catalog selection."
+              ],
+              "authorization": "query build and activation require existing separate authorization"
+            },
+            "catalog": [
+              {
+                "operation": "get_ac_descendants",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Enumerate acceptance criteria under the supplied root_id using declared or canonically derived structural parents. Requires answer_requirements.scope with matching root_id, explicit levels (empty means all levels), and inclusion policy; completeness is bounded and may be partial.",
+                "questions": [
+                  "Enumerate acceptance criteria under the supplied root_id using declared or canonically derived structural parents. Requires answer_requirements.scope with matching root_id, explicit levels (empty means all levels), and inclusion policy; completeness is bounded and may be partial."
+                ],
+                "parameters": {
+                  "root_id": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Enumerate acceptance criteria under the supplied root_id using declared or canonically derived structural parents. Requires answer_requirements.scope with matching root_id, explicit levels (empty means all levels), and inclusion policy; completeness is bounded and may be partial."
+              },
+              {
+                "operation": "get_declared_dependents",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return acceptance criteria whose canonical depends_on directly references the supplied entity_ids; this is declared incoming dependency impact only, not transitive or code impact.",
+                "questions": [
+                  "Return acceptance criteria whose canonical depends_on directly references the supplied entity_ids; this is declared incoming dependency impact only, not transitive or code impact."
+                ],
+                "parameters": {
+                  "entity_ids": {
+                    "type": "string_list",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return acceptance criteria whose canonical depends_on directly references the supplied entity_ids; this is declared incoming dependency impact only, not transitive or code impact."
+              },
+              {
+                "operation": "get_component_context",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return a component and its directly linked neighbors; does not traverse from its acceptance criteria to their tests.",
+                "questions": [
+                  "Return a component and its directly linked neighbors; does not traverse from its acceptance criteria to their tests."
+                ],
+                "parameters": {
+                  "component_id": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return a component and its directly linked neighbors; does not traverse from its acceptance criteria to their tests."
+              },
+              {
+                "operation": "get_acceptance_criteria",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return acceptance criteria directly declaring membership in the supplied component; does not return their tests.",
+                "questions": [
+                  "Return acceptance criteria directly declaring membership in the supplied component; does not return their tests."
+                ],
+                "parameters": {
+                  "component_id": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return acceptance criteria directly declaring membership in the supplied component; does not return their tests."
+              },
+              {
+                "operation": "get_related_tests",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return tests directly referenced by covered_by on the supplied acceptance-criterion entity IDs; component IDs are not acceptance-criterion seeds and no component-to-AC traversal occurs.",
+                "questions": [
+                  "Return tests directly referenced by covered_by on the supplied acceptance-criterion entity IDs; component IDs are not acceptance-criterion seeds and no component-to-AC traversal occurs."
+                ],
+                "parameters": {
+                  "entity_ids": {
+                    "type": "string_list",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return tests directly referenced by covered_by on the supplied acceptance-criterion entity IDs; component IDs are not acceptance-criterion seeds and no component-to-AC traversal occurs."
+              },
+              {
+                "operation": "get_relevant_adrs",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return ADRs directly declaring membership in the supplied component.",
+                "questions": [
+                  "Return ADRs directly declaring membership in the supplied component."
+                ],
+                "parameters": {
+                  "component_id": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return ADRs directly declaring membership in the supplied component."
+              },
+              {
+                "operation": "get_related_policies",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Request policies governing a component; unsupported unless approved Policy source mapping exists.",
+                "questions": [
+                  "Request policies governing a component; unsupported unless approved Policy source mapping exists."
+                ],
+                "parameters": {
+                  "component_id": {
+                    "type": "string",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Request policies governing a component; unsupported unless approved Policy source mapping exists."
+              },
+              {
+                "operation": "get_previous_decisions",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Return reviewed decisions directly ABOUT the supplied component, optionally filtered by status or decision type; requires approved Decision mapping.",
+                "questions": [
+                  "Return reviewed decisions directly ABOUT the supplied component, optionally filtered by status or decision type; requires approved Decision mapping."
+                ],
+                "parameters": {
+                  "component_id": {
+                    "type": "string",
+                    "required": true
+                  },
+                  "status": {
+                    "type": "string",
+                    "required": false
+                  },
+                  "decision_type": {
+                    "type": "string",
+                    "required": false
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Return reviewed decisions directly ABOUT the supplied component, optionally filtered by status or decision type; requires approved Decision mapping."
+              },
+              {
+                "operation": "get_corrected_decisions",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Follow outgoing CORRECTED_BY links from the supplied decision IDs to corrective decisions.",
+                "questions": [
+                  "Follow outgoing CORRECTED_BY links from the supplied decision IDs to corrective decisions."
+                ],
+                "parameters": {
+                  "entity_ids": {
+                    "type": "string_list",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Follow outgoing CORRECTED_BY links from the supplied decision IDs to corrective decisions."
+              },
+              {
+                "operation": "get_related_lessons",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Follow outgoing TAUGHT links from the supplied decision IDs to their lessons.",
+                "questions": [
+                  "Follow outgoing TAUGHT links from the supplied decision IDs to their lessons."
+                ],
+                "parameters": {
+                  "entity_ids": {
+                    "type": "string_list",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Follow outgoing TAUGHT links from the supplied decision IDs to their lessons."
+              },
+              {
+                "operation": "get_decision_evidence",
+                "version": "1",
+                "digest": "builtin:1",
+                "description": "Follow outgoing USED_EVIDENCE links from the supplied decision IDs to supporting evidence entities.",
+                "questions": [
+                  "Follow outgoing USED_EVIDENCE links from the supplied decision IDs to supporting evidence entities."
+                ],
+                "parameters": {
+                  "entity_ids": {
+                    "type": "string_list",
+                    "required": true
+                  }
+                },
+                "modes": [
+                  "graph",
+                  "precedent"
+                ],
+                "result_meaning": "Attributable canonical entities for Follow outgoing USED_EVIDENCE links from the supplied decision IDs to supporting evidence entities."
+              }
+            ]
+          },
+          "questions": [
+            {
+              "schema_version": "1.0",
+              "id": "query",
+              "kind": "choice",
+              "template_id": "knowledge.query_select.v1",
+              "template_version": "1",
+              "instructions": "Select only a supported option; missing facts require clarification.",
+              "criteria": {
+                "get_ac_descendants": "Enumerate acceptance criteria under the supplied root_id using declared or canonically derived structural parents. Requires answer_requirements.scope with matching root_id, explicit levels (empty means all levels), and inclusion policy; completeness is bounded and may be partial.",
+                "get_declared_dependents": "Return acceptance criteria whose canonical depends_on directly references the supplied entity_ids; this is declared incoming dependency impact only, not transitive or code impact.",
+                "get_component_context": "Return a component and its directly linked neighbors; does not traverse from its acceptance criteria to their tests.",
+                "get_acceptance_criteria": "Return acceptance criteria directly declaring membership in the supplied component; does not return their tests.",
+                "get_related_tests": "Return tests directly referenced by covered_by on the supplied acceptance-criterion entity IDs; component IDs are not acceptance-criterion seeds and no component-to-AC traversal occurs.",
+                "get_relevant_adrs": "Return ADRs directly declaring membership in the supplied component.",
+                "get_related_policies": "Request policies governing a component; unsupported unless approved Policy source mapping exists.",
+                "get_previous_decisions": "Return reviewed decisions directly ABOUT the supplied component, optionally filtered by status or decision type; requires approved Decision mapping.",
+                "get_corrected_decisions": "Follow outgoing CORRECTED_BY links from the supplied decision IDs to corrective decisions.",
+                "get_related_lessons": "Follow outgoing TAUGHT links from the supplied decision IDs to their lessons.",
+                "get_decision_evidence": "Follow outgoing USED_EVIDENCE links from the supplied decision IDs to supporting evidence entities.",
+                "build": "None of these queries can answer; build a bounded reusable query.",
+                "clarify": "The question or required arguments remain unclear.",
+                "skip": "Existing evidence is sufficient; no retrieval needed."
+              }
+            }
+          ],
+          "correlation": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": null,
+            "invocation_id": "inv-bb8e74b2521e42c8",
+            "decision_id": null,
+            "capability_id": "retrieve.repository",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          }
+        }
+      ],
+      "trace": [
+        {
+          "index": 0,
+          "kind": "segment",
+          "name": "leafcutter.run.start",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "pending",
+            "task_id": null,
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {},
+          "closed": false
+        },
+        {
+          "index": 1,
+          "kind": "span",
+          "name": "kernel.intake",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": null,
+            "task_id": null,
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 2,
+          "kind": "span",
+          "name": "kernel.schedule",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 3,
+          "kind": "span",
+          "name": "kernel.route",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 4,
+          "kind": "event",
+          "name": "routing.assessed",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-9df4f5d3b07d4968",
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": 3,
+          "data": {
+            "level": "DEFAULT",
+            "payload": {
+              "outcome": "selected",
+              "selected": "research",
+              "reason_codes": [
+                "jev_selected"
+              ]
+            }
+          },
+          "closed": false
+        },
+        {
+          "index": 5,
+          "kind": "span",
+          "name": "capability.research",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-9df4f5d3b07d4968",
+            "request_id": "req-98bc80d40a4f4ecc",
+            "invocation_id": "inv-4eef0b4f9543498e",
+            "decision_id": null,
+            "capability_id": "research",
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "capability",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 6,
+          "kind": "span",
+          "name": "kernel.integrate",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 7,
+          "kind": "span",
+          "name": "kernel.schedule",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 8,
+          "kind": "span",
+          "name": "kernel.route",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 9,
+          "kind": "event",
+          "name": "routing.assessed",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": 8,
+          "data": {
+            "level": "DEFAULT",
+            "payload": {
+              "outcome": "selected",
+              "selected": "retrieve.repository",
+              "reason_codes": [
+                "deterministic"
+              ]
+            }
+          },
+          "closed": false
+        },
+        {
+          "index": 10,
+          "kind": "span",
+          "name": "capability.retrieve.repository",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-4c33a8f987c9468b",
+            "request_id": "req-8a770361c4614f68",
+            "invocation_id": "inv-bb8e74b2521e42c8",
+            "decision_id": null,
+            "capability_id": "retrieve.repository",
+            "interaction_id": null,
+            "parent_work_item_id": "work-9df4f5d3b07d4968",
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "capability",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 11,
+          "kind": "span",
+          "name": "kernel.integrate",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 12,
+          "kind": "span",
+          "name": "kernel.schedule",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 13,
+          "kind": "span",
+          "name": "kernel.route",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 14,
+          "kind": "event",
+          "name": "interaction.opened",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": "work-8714f13ae6d249af",
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": "int-e9a6cf11a11d4b10",
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "level": "DEFAULT",
+            "payload": {
+              "kind": "human",
+              "state_revision": 2
+            }
+          },
+          "closed": false
+        },
+        {
+          "index": 15,
+          "kind": "span",
+          "name": "kernel.integrate",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        },
+        {
+          "index": 16,
+          "kind": "span",
+          "name": "kernel.schedule",
+          "corr": {
+            "schema_version": "1.0",
+            "run_id": "run-d5e448f001fd4821",
+            "root_task_id": "task-4f633fa8d47e4035",
+            "task_id": "task-4f633fa8d47e4035",
+            "work_item_id": null,
+            "request_id": null,
+            "invocation_id": null,
+            "decision_id": null,
+            "capability_id": null,
+            "interaction_id": null,
+            "parent_work_item_id": null,
+            "causation_seq": null
+          },
+          "parent": null,
+          "data": {
+            "span_kind": "node",
+            "input": null,
+            "metadata": {}
+          },
+          "closed": true
+        }
+      ],
+      "independent_verdict": "pending review"
+    }
+  ],
+  "limitations": [
+    "Scripted judgments prove mechanism behavior only; not question understanding or semantic sufficiency."
+  ]
+}

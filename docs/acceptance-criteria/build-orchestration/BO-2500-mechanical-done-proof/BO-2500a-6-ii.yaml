@@ -1,0 +1,118 @@
+id: BO-2500a-6-ii
+title: "The leaf-or-composite classification is applied at every level of the tree, not only the top"
+component: build-orchestration
+components:
+  - build_orchestration
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+package_surface: false
+criteria: |
+  Given a composite acceptance criterion
+    And its children record their proof as test-file paths in covered_by, the convention
+      a leaf uses
+  When the done-proof oracle flattens that composite to its leaf descendants
+  Then each such child is classified as a leaf and returned
+  And the composite is not reported as having no coverable children.
+
+  Given a composite whose child is itself a genuine composite — its covered_by naming
+    further acceptance criteria that resolve in the store
+  When the same flattening runs
+  Then that child is expanded rather than treated as a leaf
+  And the leaves returned are its descendants.
+
+  Given a child that resolves to no acceptance criterion at all
+  When the flattening runs
+  Then it contributes nothing, as before.
+depends_on:
+  - BO-2500a-6
+doc_links:
+  - path: scripts/ac_store/done_proof.py
+    relationship: implements
+    status: exists
+    relevance: "_resolve_all_child_ids, whose recursive step tested covered_by for non-emptiness instead of for resolvability."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2500-mechanical-done-proof/BO-2500a-6.yaml
+    relationship: related
+    status: exists
+    relevance: "The record whose M-2 remediation introduced _has_resolvable_child; this applies that same rule one level down."
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The recursive step classifies a child with _has_resolvable_child, the same helper the top-level caller already uses. Testing covered_by for non-emptiness misclassifies a leaf that records test-file paths as a composite."
+  - "No change to what counts as resolvable, to the leaf requirement for a covers-tagged test, or to the cycle guard. This is the existing classification rule applied consistently, not a new rule."
+delivers_to: null
+expects_from:
+  ac_id: BO-2500a-6
+  contract: "_has_resolvable_child's data-driven leaf-vs-composite classification, and the rule that an entry resolving to no AC record contributes nothing."
+test_required: true
+test_spec:
+  - name: test_children_recording_test_paths_are_leaves_not_empty_composites
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "A composite whose children hold test-file paths in covered_by flattens to those children, rather than to nothing."
+  - name: test_a_genuine_nested_composite_is_still_expanded
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "A child whose covered_by names resolvable ACs is still expanded to its own descendants, so this is a correction and not a flattening of the recursion."
+  - name: test_an_unresolvable_entry_still_contributes_nothing
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "An entry resolving to no AC record is still skipped, preserving BO-2500a-6's own M-2 behaviour."
+test_rationale: |
+  The three cases are the classification's whole truth table: a leaf that looks composite,
+  a composite that really is one, and an entry that is neither. The middle case is
+  load-bearing — a fix that simply stopped recursing would satisfy the first and the third
+  while silently dropping real nesting, and nothing else in the suite would notice.
+
+  They call _resolve_all_child_ids directly with a synthetic status map rather than driving
+  the whole oracle, because the defect is in that function's classification and a
+  whole-oracle test would only reproduce it at several removes.
+covered_by:
+  - unit_tests/ac_store/test_done_proof_child_resolution.py
+implemented_by:
+  - scripts/ac_store/done_proof.py
+origin_agent: BrainCandy
+created: 2026-09-23
+amended_by: []
+superseded_by: null
+notes: |
+  FIELD EVIDENCE — 2026-09-23, CI on PR #862. The required Proof-of-done gate failed with:
+
+      [check-done-proof] BO-400e: composite BO-400e has no coverable children
+      [check-done-proof] BP-1100e-1: composite BP-1100e-1 has no coverable children
+
+  Both composites have children that are present in the status map and genuinely covered.
+  BO-400e's five children were all done with passing covers-tagged tests. The flattening
+  returned an empty list for both, so neither could be proven and the gate refused them.
+
+  Cause: _resolve_all_child_ids's recursive step branched on `if child_covered_by:` —
+  non-emptiness — while the top-level caller branched on _has_resolvable_child. Because the
+  dominant convention for a LEAF in this store is to record its test files in covered_by,
+  every such leaf looked composite one level down, was recursed into, and yielded nothing.
+  BO-2500a-6's M-2 remediation had introduced _has_resolvable_child for exactly this
+  confusion and applied it at one level only.
+
+  The bug is invisible until someone marks a composite done whose children use the
+  test-path convention, which is why it survived: composites whose children use the
+  child-id convention (BO-400a-2 and friends) resolve fine.
+
+  NAMED MUTATIONS (each turns only this record's tests red):
+    M1 — restore the non-emptiness test. Caught by
+         test_children_recording_test_paths_are_leaves_not_empty_composites.
+    M2 — stop recursing entirely and treat every direct child as a leaf. Caught by
+         test_a_genuine_nested_composite_is_still_expanded.
+    M3 — treat unresolvable entries as leaves so they demand their own tests. Caught by
+         test_an_unresolvable_entry_still_contributes_nothing.

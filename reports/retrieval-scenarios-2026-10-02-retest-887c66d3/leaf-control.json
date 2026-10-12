@@ -1,0 +1,672 @@
+{
+  "request": {
+    "request_id": "retest-terminal-leaves",
+    "repository_id": "leafcutter",
+    "revision": "59269e024e4d0290b68b03d0d382745966e67e29",
+    "operation": "get_ac_descendants",
+    "mode": "graph",
+    "arguments": {
+      "root_id": "TQ-500f"
+    },
+    "disclosure_level": 1,
+    "budget": {
+      "max_results": 100,
+      "max_candidates": 100,
+      "max_content_bytes": 131072,
+      "max_estimated_tokens": 16000
+    },
+    "answer_requirements": {
+      "original_question": "At the pinned source revision, list only terminal descendants of TQ-500f, excluding every parent, with work_status.",
+      "required_fields": [
+        "work_status",
+        "level"
+      ],
+      "require_complete": true,
+      "scope": {
+        "population": "ac_descendants",
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "terminal_leaves"
+      }
+    }
+  },
+  "actual_response": {
+    "contract_version": "1",
+    "request_id": "retest-terminal-leaves",
+    "retrieval_id": "3e4193bd-3d93-4b61-8342-f93bc8088704",
+    "status": "ok",
+    "requested_mode": "graph",
+    "executed_mode": "graph",
+    "operation": "get_ac_descendants",
+    "operation_version": "1",
+    "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+    "generation_id": "20c370b99a39e0939e985846c9132986f8dc3052007b0dec5b43c19ddda7c28f",
+    "evidence": [
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-1-i",
+          "kind": "AcceptanceCriterion",
+          "title": "All three lists of test kinds move together, or the lockstep check names the one that did not",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-1-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "9bf022807769361d8629224c848c371d6b8a8660b91939554b23bc9afde2fb37"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-1"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-1",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-ac63b05b4a30ddaee9d05c77152db8638ace703806dadc844fef9ade4d5541fd",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-i",
+          "kind": "AcceptanceCriterion",
+          "title": "An empty or malformed wrong-versions list is refused, and the fallback route never invents one",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "9979c6f46ac018c287e8fdb3dc005c3ca98c04af8d126b3ca5529be285c92121"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-23359d1d7ad6a6dd32d3a551142672dec4d842772e2f13d9fb6fae554ba8e1c1",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-2-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "Bug-fix and gate requirements arrive at the test writer with their wrong versions already named",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-2-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "047233b38c07b25dabffa3aba4137efb7cdb4b0441fe7ce5563ab5ad5e4ebdba"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-2",
+              "ACD-2500c",
+              "ACD-2500d-5"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-2",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-68f6734a3e2ffeebd464edd6bec0022058e0d33994b28c7acf5abd54f88b3d7b",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-i",
+          "kind": "AcceptanceCriterion",
+          "title": "The red-baseline check refuses absence-only red for a test that names wrong versions to catch",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "fc775fe8646a55fdbb8436819a78a318afe50570565190fda3a07ac934ac3b07"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-ff59520e773fe2a81a776825e338765f0d98dca6988b766fb18a08c941123058",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "The /build-feature path runs the same red-baseline reader the fast lane uses, and does not take the test writer's word for it",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "011f72dcda2fc9fba449e5a8d2aa2875fac5cf0833b5184eab6caf0e8c92a2d5"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "done",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-3-i"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-f37e3d5dbb5b1e7f07a9f519924f2630a9baa95de20ac0ec282855018ca0ee34",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-iii",
+          "kind": "AcceptanceCriterion",
+          "title": "A covering tag is matched to the one test it sits on, so two tests sharing a name never lend each other their result",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iii.yaml",
+            "locator": "/criteria",
+            "content_hash": "6a08f63d69b52350f2b2a536fdf9049611c0caf4dc8714676675dd1743eac9bf"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-3-i",
+              "ACS-200f-2"
+            ],
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-4cf3e77a7d60fcda0596ced56cbe24cf85e5eb62be1d5d4e5cd918127cb5a7a9",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-3-iv",
+          "kind": "AcceptanceCriterion",
+          "title": "The /build-epic route runs the same red-baseline reader before the coder, and does not take the test writer's word for it",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-3-iv.yaml",
+            "locator": "/criteria",
+            "content_hash": "6434fbe21e66f0a539b1e6a2764448faaa6a923672b2195f66105ad98a44b03b"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-3",
+              "TQ-500f-3-i"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-3",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-91fb396f85fc8363414df5d1c38d633e9f53b0adf3e6a9dded609271442ec145",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-4-i",
+          "kind": "AcceptanceCriterion",
+          "title": "The database test writer, which does not run its tests, labels its answers as reasoning, not as results",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-i.yaml",
+            "locator": "/criteria",
+            "content_hash": "ac7c0bd5dc6f646e5a9901988df3ca9e8e927b95b78ec3245bd3644082a632a2"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-4"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-4",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-73cdff3ecc519485528ba93b8ef5d1d7befd7fb6bfaf3b2d14e61b259f4594e3",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-4-ii",
+          "kind": "AcceptanceCriterion",
+          "title": "A check that passes best when nothing happened is caught by the second question",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-4-ii.yaml",
+            "locator": "/criteria",
+            "content_hash": "ad6209a1f1bfd76d7bda22171718d8f31920969c9b0072dbb0af2d8ce755b904"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L3",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f-4"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f-4",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-61c3827b7b452840bc6e5c7c4cc869d9b0663cc00da48e47cd103832522c06a5",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-5",
+          "kind": "AcceptanceCriterion",
+          "title": "Reference guidance names the discrimination-shaped failure family, its catalogue, the new test kind and the wrong-versions field",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-5.yaml",
+            "locator": "/criteria",
+            "content_hash": "38b63e91583ea4ed24b6d44d674ad698b54ef994f1f59141bfea2ba168d7a6fe"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-1",
+              "TQ-500f-2"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-b06a09fca9a3e562f226c8922b8a5d7a6aef3837e3b8405a25c7226501948ef0",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      },
+      {
+        "entity": {
+          "canonical_id": "TQ-500f-6",
+          "kind": "AcceptanceCriterion",
+          "title": "A how-to: write a test that catches the plausible wrong version",
+          "summary": "",
+          "source": {
+            "repository_id": "leafcutter",
+            "source_sha": "59269e024e4d0290b68b03d0d382745966e67e29",
+            "path": "docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500f-6.yaml",
+            "locator": "/criteria",
+            "content_hash": "827dc2dc0d45a485f6c5ad016abe91c777ef9b44108e40839192b667c77e9ec5"
+          },
+          "properties": {
+            "status": "active",
+            "req_status": "draft",
+            "work_status": "todo",
+            "readiness": "approved",
+            "priority": "high",
+            "level": "L2",
+            "covered_by": [],
+            "implemented_by": [],
+            "depends_on": [
+              "TQ-500f",
+              "TQ-500f-2",
+              "TQ-500f-3",
+              "TQ-500f-4"
+            ],
+            "test_required": false,
+            "has_children": false,
+            "structural_parent": "TQ-500f",
+            "structural_parent_locator": "/id"
+          }
+        },
+        "evidence_id": "knowledge-477ac0d7cfdf71c26e07689c6e18790b90453a2cd46a749fe70ebaca48689ba7",
+        "content": null,
+        "disclosure_level": 1,
+        "signals": {},
+        "seed_id": null,
+        "path": [],
+        "limitations": [],
+        "relationships": [],
+        "field_availability": {
+          "work_status": "present",
+          "level": "present"
+        },
+        "field_locators": {
+          "work_status": "/work_status",
+          "level": "/level"
+        },
+        "field_derivations": {},
+        "related": []
+      }
+    ],
+    "warnings": [],
+    "errors": [],
+    "continuation": null,
+    "truncated": false,
+    "stats": {
+      "mapper_version": "7",
+      "population": {
+        "population": "ac_descendants",
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "terminal_leaves",
+        "relation": "structural_parent",
+        "direction": "children",
+        "complete": true,
+        "depth": 2
+      },
+      "candidates": 11,
+      "estimator_version": "utf8-bytes-div4-v1",
+      "round": 1,
+      "candidate_work": 16,
+      "duration_ms": 1656.963,
+      "estimated_tokens": 3544
+    },
+    "answer": {
+      "status": "fulfilled",
+      "original_question": "At the pinned source revision, list only terminal descendants of TQ-500f, excluding every parent, with work_status.",
+      "required_fields": [
+        "work_status",
+        "level"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "terminal_leaves"
+      },
+      "missing_fields": [],
+      "completeness": {
+        "complete": true,
+        "known_count": 11,
+        "exact_total": 11,
+        "limitations": []
+      },
+      "work_status_counts": {
+        "done": 4,
+        "todo": 7
+      },
+      "known_work_status_counts": {
+        "done": 4,
+        "todo": 7
+      },
+      "limitations": []
+    },
+    "assessment": null,
+    "observation": {
+      "state": "disabled"
+    }
+  },
+  "scope": "typed terminal-leaf facet, not model interpretation of the original vague question"
+}

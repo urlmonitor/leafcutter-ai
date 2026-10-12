@@ -1,0 +1,145 @@
+{
+  "kind": "Decision",
+  "status": "complete",
+  "implementation": "knowledge/native_types/decision.py",
+  "schema_asset": "knowledge/native_types/decision_schema.json",
+  "schema_sha256": "84471651010968540a902a3ea8dd83d7c1e5bdc71d3834201393a44c8880e1c3",
+  "contract": {
+    "public_validation": "validate_metadata(raw)",
+    "extract": "extract(root)",
+    "raw_fields": 31,
+    "nested_definitions": 14,
+    "defaults_inserted": false,
+    "snapshot_code_executed": false
+  },
+  "tests": {
+    "strict": true,
+    "red": {
+      "receipt": "reports/native-fields/decision-red.xml",
+      "failed": 57,
+      "reason": "reader module not implemented"
+    },
+    "green": {
+      "receipt": "reports/native-fields/decision-green.xml",
+      "passed": 61
+    },
+    "mutations": [
+      {
+        "mutation": "omit all metadata validation",
+        "tests": [
+          "test_decision_invalid_authored_fields_rejected_without_mutating",
+          "test_decision_duplicate_local_ids_rejected",
+          "test_decision_missing_approval_or_classification_rejected"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "omit cross-record target and reciprocity validation",
+        "tests": [
+          "test_decision_unresolved_store_links_rejected",
+          "test_decision_supersession_requires_reciprocal_source_and_preserves_original"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "accept unknown vocabulary values",
+        "tests": [
+          "test_decision_unknown_filter_value_rejected"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "accept unsupported plain YAML constructs",
+        "tests": [
+          "test_decision_plain_yaml_and_size_bound_enforced[anchor]",
+          "test_decision_plain_yaml_and_size_bound_enforced[tag]",
+          "test_decision_malformed_source_fails_explicitly"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "remove 400000-byte source boundary",
+        "tests": [
+          "test_decision_plain_yaml_and_size_bound_enforced[oversize]"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "ignore incompatible source schema",
+        "tests": [
+          "test_decision_changed_source_schema_cannot_weaken_trusted_validator"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "drop authored optional description",
+        "tests": [
+          "test_decision_complete_source_is_lossless_and_schema_pinned"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "insert absent optional default",
+        "tests": [
+          "test_decision_minimal_retains_omission_null_and_empty"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "invent records for empty store",
+        "tests": [
+          "test_decision_absent_or_empty_store_needs_no_schema_or_kernel"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      },
+      {
+        "mutation": "disable resolved source containment",
+        "tests": [
+          "test_decision_source_resolution_cannot_escape_snapshot"
+        ],
+        "exit_code": 1,
+        "result": "killed"
+      }
+    ]
+  },
+  "real_source_parity": {
+    "source_checkout": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\knowledge-retrieval-v01",
+    "records": 1,
+    "authored_fields": 31,
+    "metadata_exact": true,
+    "record_sha256": "d4426542cc89f863b3795b69e1caf182607980c8b642190318fc7c608c3ea819",
+    "read_only": true,
+    "copied_or_published": false
+  },
+  "current_source": {
+    "isolated_records": 0,
+    "active_immutable_records": 0,
+    "pending_record_imported": false
+  },
+  "source_validation": {
+    "approval": true,
+    "schema": true,
+    "filename_identity": true,
+    "plain_yaml": true,
+    "byte_bound": 400000,
+    "duplicate_yaml_keys": true,
+    "vocabulary": true,
+    "cross_record_links": true,
+    "source_schema_compatibility": true,
+    "generated_index": "upstream_source_validation_required"
+  },
+  "limitations": [
+    "Generated index freshness is explicitly an upstream validation requirement, not checked by projection.",
+    "Source YAML plain subset forbids all flow mappings including {}; empty map support is checked separately at the metadata-validation/encoding boundary.",
+    "The pending merged source record was read solely for parity proof, never copied into immutable sources or published."
+  ]
+}

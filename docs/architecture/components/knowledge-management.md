@@ -6,7 +6,7 @@ diagram_type: component
 status: active
 type: reference
 created: 2026-07-09
-last_updated: 2026-07-09
+last_updated: 2026-10-01
 components:
   - knowledge_management
 ---
@@ -108,3 +108,12 @@ phantom-edge filter, so AC-to-code traceability edges are never silently dropped
 | `Component` (Graph Visualiser) | Renders the index as a D3 force-directed HTML graph |
 | `System_Ext` | External inputs/outputs: the surface registry, the declared surfaces, and the generated HTML graph |
 | `Rel` labels | The data flow through the assembly pipeline |
+
+
+## Optional immutable retrieval runtime
+
+The existing knowledge_management component also owns the standalone `knowledge/` runtime and `integrations/` adapter. Git and the declared source loaders remain canonical; Neo4j is a rebuildable projection of explicitly supported surfaces, published as immutable repository-scoped generations. The new runtime does not replace the existing cross-surface query/visualisation tools or ingest every auxiliary directory document as an AC.
+
+The standalone JSON CLI exposes validation, planning, publication, status, retrieval, evaluation and retained-generation operations. `KnowledgeRetriever` supplies an optional application-owned port. The integration consumes the existing kernel retrieve.repository capability and canonical Evidence contracts; kernel decisions, checkpoints and telemetry retain their owners. Serving and ingestion have separate credential lifecycles, and disabled startup requires no backend.
+
+See [retrieval architecture](knowledge-retrieval.md), [ADR-062](../adrs/ADR-062-standalone-knowledge-retrieval.md), and the [operating guide](../../how-to/run-knowledge-retrieval.md) for current interfaces, supported mapping and deployment procedures.

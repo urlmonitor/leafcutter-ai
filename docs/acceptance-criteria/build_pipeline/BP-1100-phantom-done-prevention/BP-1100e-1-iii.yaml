@@ -20,6 +20,20 @@ criteria: |
     change whose actual diff matches its declared scope is a clean pass, not a mismatch
   And the reconciliation only ever flags on an actually-changed SOURCE file that is
     undeclared, so a ticket that changed no undeclared source file is never flagged
+
+  Given a docs-only or config-only ticket that DOES declare source files in out_of_scope
+  When the pre-done reconciliation runs on a multi-ticket branch, where the changed-file
+    set is computed over the branch range and so includes other tickets' source changes
+  Then those out_of_scope entries count as declared, exactly as they do for any other
+    ticket — the docs-only classification narrows what the ticket contributes of its
+    OWN, it does not discard what the ticket explicitly disclaimed
+  And the ticket is not flagged for them
+
+  Given a docs-only or config-only ticket that declares NOTHING in out_of_scope
+  When the pre-done reconciliation runs
+  Then its declared scope is still empty
+  And an undeclared source change is still flagged, so the narrow-scope guard cannot
+    be used to absorb source a ticket never mentioned
 depends_on:
   - BP-1100e-1
 doc_links:
@@ -44,8 +58,13 @@ amended_by:
     entry: "Pinned shared-hook portable surface (check_files_touched_reconciliation.py, ADR-001 parity). readiness draft->reviewed."
     confirmed_by: it-po-v3
     confirmed_at: 2026-07-01
+  - reason: clarify-out-of-scope-survives-the-docs-only-branch
+    entry: "Made explicit that a docs-only ticket's out_of_scope entries still count as declared. This was ALREADY the stated rule in it_requirements[0] ('absent from files_touched UNION out_of_scope'); the criteria did not say it and the implementation's docs-only early return discarded out_of_scope, so no docs ticket on a multi-ticket branch could be closed (KI-BO-20260923-0700, observed on BO-400e-5). Adds the two scenarios that pin both halves: out_of_scope survives, and declaring nothing still declares nothing. No requirement is widened -- the second scenario is the pre-existing guard, now stated."
+    confirmed_by: BrainCandy
+    confirmed_at: 2026-09-28
 superseded_by: null
 covered_by:
   - "unit_tests/commit_guardian/test_check_files_touched_reconciliation_remediation.py"
+  - "unit_tests/commit_guardian/test_predone_scope_docs_only_out_of_scope.py"
 implemented_by:
 - tickets/00_inbox/epics/EPIC-PhantomDoneFilesTouched/04_TICKET-20260706-BP-1100e-1-iii.md

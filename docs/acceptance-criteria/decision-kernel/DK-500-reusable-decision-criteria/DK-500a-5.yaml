@@ -1,0 +1,74 @@
+id: DK-500a-5
+title: 'Component diagram: the criteria mining as a separate offline component'
+component: decision-kernel
+components:
+- decision_kernel
+level: L2
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the criteria mining (DK-500a-1) is a new component,
+  When a reader opens the component diagram of the criteria library,
+  Then it shows the mining as its own component outside the decision run, reading the published decision records and the run history, and producing candidates only,
+  And it shows the category library, grouping suggestions, the generated usage index, the learning store and the knowledge graph import in relation to the decision kernel,
+  And it shows no connection from the decision run to the run history.
+depends_on:
+- DK-500a
+- DK-500a-1
+covered_by: []
+implemented_by: []
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+change_target: docs
+risk_surface: internal
+it_requirements:
+- A C4 component (L3) diagram page in docs/architecture/diagrams/ with frontmatter and diagram-parent links to docs/architecture/components/decision-kernel.md and docs/architecture/components/colony-memory.md.
+- Show the mining job, the mining store, grouping (code, then Jev), the review capability, the run root's staged area, publish, the category library docs/criteria/ with its generated index, the optional learning-store aggregates (ADR-065) and the knowledge graph import (ADR-062 native kind criterion_category).
+- Mark the Neo4j aggregates and the knowledge graph as optional. Show no edge from the decision run to Langfuse or to the mining store.
+test_required: false
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/decision-kernel.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/components/colony-memory.md
+  relationship: describes
+  status: exists
+- path: docs/architecture/adrs/ADR-058-langfuse-colony-history-scores-datasets.md
+  relationship: constrains
+  status: exists
+  relevance: 'Section 6: only an offline job reads Langfuse; the kernel''s hot path never does.'
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: describes
+  status: exists
+  relevance: Finite native reader registry (knowledge/native_types/registry.py), generation publication, registered operations and the optional authored query catalog.
+- path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+  relationship: constrains
+  status: exists
+  relevance: Immutable generations from one commit, validated and published atomically; a failed build leaves the active generation untouched; registered parameterized queries only; finite native reader registry; disabled, unavailable and stale are distinct from an empty answer. On this branch since the 2026-10-05 merge of origin/main.
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target docs, risk_surface, it_requirements and doc_links set; test_required false (documentation only); readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Documentation AC answering DK-500a's component-diagram trigger. The mining job is a new architectural component (L1 notes).
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.

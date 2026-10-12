@@ -2,6 +2,8 @@ import "server-only";
 import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import { acById } from "./ac-store";
 import { deriveImplSummary } from "./flow-impl-summary";
+import { parseContractDefinitions, parseIoContracts } from "./flow-contracts";
+import { parseActorKind } from "./actor-kind";
 import type {
   AcRef,
   ArtifactGraphEdge,
@@ -113,19 +115,21 @@ function rollupStatus(acs: AcRef[], fallback: WorkStatus): WorkStatus {
   return "in_progress";
 }
 
-function parseStep(raw: Record<string, unknown>): FlowStep {
+function parseStep(raw: Record<string, unknown>, definitions: unknown): FlowStep {
   const implementsIds = asArray(raw.implements);
   const fallbackStatus = normWork(raw.impl_status);
   const acs = resolveAcs(implementsIds, fallbackStatus);
   return {
     id: String(raw.id ?? ""),
     label: String(raw.label ?? raw.id ?? ""),
-    human: String(raw.human ?? ""),
+    description: String(raw.description ?? ""),
     order: Number(raw.order ?? 0),
     screen: raw.screen ? String(raw.screen) : null,
     agent: raw.agent ? String(raw.agent) : null,
+    actorKind: parseActorKind(raw.actor_kind),
     produces: asArray(raw.produces),
     consumes: asArray(raw.consumes),
+    ioContracts: parseIoContracts(raw.io_contracts, definitions),
     reads: asArray(raw.reads),
     writes: asArray(raw.writes),
     implements: implementsIds,
@@ -136,7 +140,7 @@ function parseStep(raw: Record<string, unknown>): FlowStep {
   };
 }
 
-function parseBranch(raw: Record<string, unknown>): FlowBranch {
+function parseBranch(raw: Record<string, unknown>, definitions: unknown): FlowBranch {
   const implementsIds = asArray(raw.implements);
   const fallbackStatus = normWork(raw.impl_status);
   const acs = resolveAcs(implementsIds, fallbackStatus);
@@ -145,11 +149,13 @@ function parseBranch(raw: Record<string, unknown>): FlowBranch {
     from: String(raw.from ?? ""),
     condition: String(raw.condition ?? ""),
     label: String(raw.label ?? raw.id ?? ""),
-    human: String(raw.human ?? ""),
+    description: String(raw.description ?? ""),
     screen: raw.screen ? String(raw.screen) : null,
     agent: raw.agent ? String(raw.agent) : null,
+    actorKind: parseActorKind(raw.actor_kind),
     produces: asArray(raw.produces),
     consumes: asArray(raw.consumes),
+    ioContracts: parseIoContracts(raw.io_contracts, definitions),
     reads: asArray(raw.reads),
     writes: asArray(raw.writes),
     implements: implementsIds,
@@ -175,11 +181,12 @@ function parseScenarios(v: unknown): FlowScenario[] {
 
 function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
   if (!raw || typeof raw !== "object" || !raw.id) return null;
+  const contractDefinitions = parseContractDefinitions(raw.contract_definitions);
   const steps = (Array.isArray(raw.steps) ? raw.steps : [])
-    .map((s) => parseStep(s as Record<string, unknown>))
+    .map((s) => parseStep(s as Record<string, unknown>, contractDefinitions))
     .filter((s) => s.id);
   const branches = (Array.isArray(raw.branches) ? raw.branches : [])
-    .map((b) => parseBranch(b as Record<string, unknown>))
+    .map((b) => parseBranch(b as Record<string, unknown>, contractDefinitions))
     .filter((b) => b.id);
   const summaryRaw = raw.impl_summary as Record<string, unknown> | undefined;
   const asof = summaryRaw?.asof ? String(summaryRaw.asof) : null;
@@ -202,6 +209,7 @@ function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
     scenarios: parseScenarios(raw.acceptance_scenarios),
     implSummary: deriveImplSummary({ steps, branches }, asof),
     filePath: rel(file),
+    contractDefinitions,
   };
 }
 

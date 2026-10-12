@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "context": [
+    "Synthetic observation only; no additional preference or authority."
+  ],
+  "known_ids": [],
+  "source_scope": {
+    "repository": "synthetic",
+    "revision": "pinned",
+    "read_roots": [
+      "docs"
+    ]
+  },
+  "catalog": {
+    "entity_types": {
+      "ac": "Acceptance criterion",
+      "schema": "Versioned contract"
+    },
+    "target_ids": {
+      "KM-500c-2": "Literal identifier in the original question; assess its requested role."
+    },
+    "required_fields": {
+      "criteria": "Required acceptance behavior",
+      "work_status": "Implementation progress",
+      "status": "Requirement lifecycle status",
+      "content": "Document content"
+    },
+    "document_types": {
+      "ac_yaml": "Canonical AC definition",
+      "schema": "Versioned contract document"
+    },
+    "relationships": {
+      "parent_direct": "Immediate parent only, one hop",
+      "all_descendants": "All descendants"
+    }
+  }
+}

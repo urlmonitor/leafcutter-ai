@@ -103,23 +103,56 @@ authorizes --no-verify usage.
 - `precommit-canary` (gate presence verification)
 - Any custom quality gate the project has installed
 
-## Step 0 — Kill orphan test workers (unconditional preamble)
+## Step 0 — Kill orphan test workers (worktree-scoped preamble)
 
-Before any staging or commit work, terminate all orphan SQL/pytest worker
-processes unconditionally (idle **or** active). These workers may hold file
-locks or open handles that cause `git commit` to hang or fail on Windows.
+Before any staging or commit work, terminate orphan SQL/pytest worker
+processes **that belong to this worktree** (idle **or** active). These workers
+may hold file locks or open handles that cause `git commit` to hang or fail on
+Windows.
+
+**NEVER kill machine-wide.** Worktrees isolate files, not processes. A
+machine-wide `pkill -f pytest` or `taskkill ... *pytest*` also terminates test
+runs belonging to other Claude sessions and other worktrees. Only touch a
+process whose working directory, or whose command line, lies inside the current
+worktree root (the output of `git rev-parse --show-toplevel`).
+
+Run each command below as its own single Bash call.
+
+**POSIX (Linux/macOS)** — enumerate candidates, then check each one's cwd:
 
 ```bash
-pkill -f "pytest" 2>/dev/null
+pgrep -f pytest
 ```
 
 ```bash
-taskkill /F /FI "IMAGENAME eq python.exe" /FI "WINDOWTITLE eq *pytest*" 2>nul
+readlink /proc/<pid>/cwd
 ```
 
-This step is a no-op when no processes match. It must run **every** time —
-not "only when idle" — because workers waiting on a lock are NOT idle but
-still block git operations.
+Kill `<pid>` (`kill <pid>`) only when the printed cwd equals the worktree root
+or starts with it followed by `/`. Skip every other pid. On macOS, where
+`/proc` is absent, use `lsof -a -p <pid> -d cwd -Fn` for the same check; if
+neither is available, treat scoping as impossible (see below).
+
+**Windows** — select by command line containing the worktree path, then stop
+only the returned PIDs:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like '*pytest*' -and $_.CommandLine -like '*<worktree-root>*' } | Select-Object ProcessId, CommandLine
+```
+
+```powershell
+Stop-Process -Id <pid> -Force
+```
+
+**If scoping is impossible** on the platform (no `/proc`, no `lsof`, no CIM
+access, or the worktree root cannot be determined), **skip the kill entirely**
+and proceed. If `git commit` then fails on a file lock, retry the commit once;
+if it still fails, surface the lock error to the user as a blocker. Never fall
+back to a machine-wide kill.
+
+This step is a no-op when no in-worktree processes match. It must run
+**every** time — not "only when idle" — because in-worktree workers waiting on
+a lock are NOT idle but still block git operations.
 
 ## Step 0a — Pre-commit hook probe (BO-1700d-3 / d-3-i)
 

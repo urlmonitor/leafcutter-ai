@@ -1,0 +1,155 @@
+id: BO-2400a-1-iv
+components:
+  - build_orchestration
+  - testing_quality
+title: "The lane asks its test-writer for the angles the criterion declares, not for one minimal test"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a lane run has resolved a build set whose criteria declare how they are to be
+    proved,
+  When the run asks its test-writer for the batch's tests,
+  Then the request carries the declared proof obligations rather than asking for a
+    single minimal test,
+  And a criterion that declares nothing still has the floor asked of it — that the
+    behaviour happens, and that the production entry point reaches it,
+  And the request never describes the wanted output in a way that is satisfied by one
+    happy-path test per criterion.
+depends_on: [BO-2400a-1]
+doc_links:
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: docs/testing/test-angles.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The workflow body has no file access, so the request cannot enumerate a criterion's
+     declared descriptors itself. It must instruct the performer to read them from the
+     store it is already given, and name them as the obligation. A request that merely
+     mentions the store without making the declared set the deliverable does not satisfy
+     this."
+  - "The floor is criterion PLUS reachability, per docs/testing/test-angles.md. The
+     reachability half is the one that matters most here: the 2026-09-28 BO-3500 run
+     produced four modules whose only callers were their own unit tests, which is exactly
+     what a missing reachability angle permits. Do NOT ask for 'all declared tests' and
+     stop there — a criterion carrying no test_spec must still get the floor."
+  - "Respect the cap of 4 angles that docs/testing/test-angles.md sets, and its rule to
+     cover two triggers with one test rather than dropping one. The request must not
+     imply that more tests are always better; the obligation is angle coverage, not test
+     count."
+  - "Do NOT resolve this by tightening the red-baseline gate's one-red rule. That rule
+     was deliberately loosened by BO-2400a-3-v because the stricter form made the lane
+     unusable on a partially-implemented criterion. Completeness of AUTHORING and
+     redness of what was authored are separate properties; this record governs only the
+     first."
+  - "Do NOT edit templates/agents/test-writer.md to fix this. That template already
+     carries the taught angle vocabulary (BP-1100g-1, the TAUGHT-TEST-ANGLES anchor kept
+     in lockstep with the schema enum). The gap is that the lane never asks it to use
+     that vocabulary — the defect is in the request, not in the performer."
+test_spec:
+  - name: test_the_request_makes_the_declared_proof_obligations_the_deliverable
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The test-writer dispatch the run actually makes is inspected: it
+      directs the performer to the criterion's own declared descriptors as what it owes.
+      Asserted on the recorded dispatch, not on the file's source text."
+  - name: test_the_request_does_not_ask_for_a_single_minimal_test
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "The pre-fix wording — a request for 'a minimal failing test' per AC —
+      is absent. This is the descriptor that fails on the shipped behaviour, and the one
+      that would fail again if the wording regressed to a singular ask."
+  - name: test_the_request_asks_for_the_reachability_floor
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The request names reachability — that the production entry point
+      reaches the behaviour — as owed even when a criterion declares no descriptors.
+      Without this a criterion carrying no test_spec still gets only a happy path."
+  - name: test_the_test_writer_dispatch_is_still_exactly_one_per_run
+    target_dir: unit_tests/workflows/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Non-regression over the parent BO-2400a-1: widening what is asked for
+      must not turn into asking more than once. Exactly one test-writer dispatch is made."
+test_rationale: |
+  The first two descriptors are the opposed pair. A fix that deletes the word "minimal"
+  and nothing else passes the second and fails the first; a fix that appends a sentence
+  about declared descriptors while leaving the singular ask in place passes the first and
+  fails the second. Only a request that both removes the singular framing and makes the
+  declared set the deliverable passes both.
+
+  The third exists separately because the store's own numbers make it the common case
+  rather than an edge: docs/testing/test-angles.md measures 1,509 of 1,886 coder-assigned
+  ACs (80%) as carrying no test_spec at all. A fix that only honours declared descriptors
+  would therefore change nothing for four criteria in five. The floor is what covers them.
+
+  These assert on the dispatch the harness records, which is the only observable surface a
+  prompt has — the same vehicle and the same argument as BO-2400f-7-iii's performer
+  assertion. A test that greps the workflow file for a phrase would pass on an unreachable
+  string constant; reading the recorded dispatch proves the run actually asked for it.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-1
+  contract: "BO-2400a-1 fixes that there is exactly one test-writer dispatch per batch.
+    This record constrains what that one dispatch asks for, so it governs the same
+    dispatch rather than adding another."
+origin_agent: BrainCandy
+created: 2026-09-29
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/workflows/test_bo2400a_1_iv_test_writer_ask.py
+implemented_by:
+  - templates/workflows-js/fast-lane-ship.js
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Measured on the 2026-09-28 BO-3500 lane run, the first run to complete the full arc.
+  Every AC in that batch declares 5-10 test_spec descriptors; every generated test file
+  contained exactly ONE test, the criterion happy path. Direct counts at the time:
+  BO-3500a-1 declared 5 and got 1, BO-3500b-1 declared 6 and got 1, BO-3500c-1 declared
+  10 and got 1.
+
+  THE CAUSE IS THE REQUEST, NOT THE PERFORMER. templates/workflows-js/fast-lane-ship.js
+  asked, verbatim, for "a minimal failing test that asserts the AC behavior" per AC, and
+  never mentioned test_spec or angles at all. The performer did exactly what it was
+  asked. test-writer's own template has carried the full taught angle vocabulary since
+  BP-1100g-1; the lane simply never invoked it.
+
+  WHY IT PRODUCED THE SECOND FINDING TOO. The same run's review also refused four new
+  modules whose only callers were their own unit tests. That is the missing reachability
+  angle stated in code: docs/testing/test-angles.md's thesis is that the coder's contract
+  is literally "make the red baseline green", so the cheapest green is exactly the shape
+  of the test written. One criterion-angle test per AC therefore BUYS a phantom
+  implementation -- it is not merely thin coverage. The same document records the same
+  defect shape in PR #422, where the BO-2400f-7..10 lifecycle functions shipped
+  unit-tested but unreachable.
+
+  WHAT THIS RECORD DELIBERATELY DOES NOT DO. It does not touch the red-baseline gate's
+  one-red rule. BO-2400a-3-v loosened that rule on purpose, because requiring every new
+  test to be red made the lane unusable on any partially-implemented criterion, and
+  re-tightening it here would reintroduce that. Redness of what was written and
+  completeness of what was written are different properties with different remedies.
+
+  HONEST LIMIT. This is a prompt-compliance fix: it changes what is asked for, and a
+  performer can still under-deliver. The enforcing version -- a gate that refuses when a
+  declared descriptor has no corresponding test -- is deterministic where this is
+  advisory, and is the natural successor. It is not folded in here because it would
+  refuse on the large existing population of partially-covered criteria described above,
+  and that blast radius deserves its own record rather than riding in on this one.

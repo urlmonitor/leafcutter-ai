@@ -1,0 +1,58 @@
+id: BO-4400f-4
+title: "Reference: where scratch lives, its age and ownership rule, and what counts as durable"
+component: build-orchestration
+components:
+  - build_orchestration
+  - testing_quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+criteria: |
+  Given scratch handling (BO-4400f-1, BO-4400f-1-i, BO-4400f-1-ii, BO-4400f-2,
+    BO-4400f-3, BO-4400f-3-i) is in place,
+  When a person reads the reference page for scratch and durable records,
+  Then the page names the one designated scratch location and the label every item
+    there carries (owning run, creation time),
+  And the page states the age and ownership rule in full, including that an active
+    run's scratch never expires, and the setting and default for the age limit,
+  And the page lists the locations treated as durable (logs, test results, evidence)
+    and states that nothing in them is ever removed by end-of-route deletion or the
+    sweep,
+  And the page lists the test-runner settings that keep scratch out of durable
+    folders and retain it only for failed tests,
+  And the page lists the third-party leftovers the rule also expires, including the
+    commit-check tool's change-stash files.
+depends_on: [BO-4400f, BO-4400f-1, BO-4400f-2, BO-4400f-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4400-nothing-accumulates/BO-4400f.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400f-1
+  contract: "Final scratch rule and location."
+package_surface: false
+it_requirements:
+  - >-
+    New reference page under docs/reference/ (name chosen by documentation-expert) with the repo's
+    doc frontmatter, registered through the doc-index flow. Location, label fields, rule, config
+    keys (scratch_root, scratch_max_age_hours, durable paths) and the third-party list are copied
+    from the built module (BO-4400f-1) and pytest settings (BO-4400f-2); keys are also listed in
+    docs/reference/skills-config-fields.md.
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4400f documentation_triggers: reference-doc.

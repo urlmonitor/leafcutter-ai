@@ -76,7 +76,7 @@ behavioral_patterns:
     related_agent: null
   - name: Multi-Member Connected Set Epic Path
     trigger: "Step 2b.1 select_connected returns more than one AC id for a leaf AC"
-    behavior: "Routes to dependency-ordered epic-generation path via goal_to_epic.py --ids (comma-separated id string, single argument) rather than generating a single ticket; every member of the connected set appears as a ticket in the epic folder; dependency cycles are drained upstream by fast_lane.resolve_connected_build_set before the ids reach goal_to_epic (CyclicDependencyError from goal_to_epic is a defensive backstop surfaced as a Stop-and-Ask error); --dry-run is honored by skipping the goal_to_epic --ids call and printing a summary (--ids mode does not implement dry-run); Step 3 prompt adapts to epic form"
+    behavior: "Routes to dependency-ordered epic-generation path via goal_to_epic.py --ids (comma-separated id string, single argument) rather than generating a single ticket; every member of the connected set appears as a ticket in the epic folder; dependency cycles are drained upstream by fast_lane.resolve_connected_build_set before the ids reach goal_to_epic (CyclicDependencyError from goal_to_epic is a defensive backstop surfaced as a Stop-and-Ask error); --dry-run is honored by passing --dry-run to the goal_to_epic --ids call, which prints the plan without writing files; Step 3 prompt adapts to epic form"
     related_agent: null
 ---
 
@@ -458,11 +458,11 @@ epic folder; the epic folder is the only output artifact.
 **If `goal_to_epic.py` exits non-zero:** surface the error verbatim and stop.
 Do not proceed to Step 3.
 
-**If `--dry-run` was given:** do NOT call `goal_to_epic.py --ids` — the `--ids`
-mode does not implement dry-run (the `--dry-run` flag is parsed but not checked
-in the `--ids` branch of `main()`; files would be written regardless). Instead,
-print a dry-run summary directly from the connected-set id list already returned
-by `select_connected` and exit without writing any files:
+**If `--dry-run` was given:** add `--dry-run` to the `goal_to_epic.py --ids`
+call — `--ids` mode honours it and prints the plan (ending with
+`Dry-run: would create <epic path>`) without writing any files. Print that plan,
+or a summary from the connected-set id list already returned by
+`select_connected`, and exit:
 
 ```
 [dry-run] Would emit a <N>-member connected-set epic:
@@ -649,3 +649,4 @@ DECISION HISTORY
 - 2026-08-12 17:00 [commit]: Fixed Step 2b.1 bash command — wrong script path corrected to scripts/build_orchestration/fast_lane.py select_connected; added required --ac-root argument. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/03)
 - 2026-08-12 18:00 [llm-expert]: Implemented Step 2b.3 multi-member connected-set epic-generation path (BO-2600a-4). Replaced placeholder stub with full goal_to_epic.py routing via --ac-ids, dependency ordering via resolve_leaf_dependencies + topological_sort, cycle-drain-with-warning behavior, epic folder as the only output artifact, and epic-form Step 3 prompt. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04)
 - 2026-08-12 [llm-expert]: Fixed Step 2b.3 per pr-reviewer findings (BO-2600a-4 rework). H-1: flag corrected from --ac-ids to --ids (the registered argparse flag in goal_to_epic.py). H-2: argument format corrected from space-separated tokens to a single comma-joined string (goal_to_epic.py parses via .split(',')). H-3: cycle-handling prose corrected — cycles are drained upstream by fast_lane.resolve_connected_build_set._drain_cycles before ids reach goal_to_epic; CyclicDependencyError is a defensive backstop that triggers Stop-and-Ask (not silent proceed). H-4: dry-run handling corrected — --ids mode does not implement dry-run so the coordinator must NOT call goal_to_epic --ids; instead print a summary from the already-resolved connected-set ids. Frontmatter behavioral_patterns entry updated to match. (#EPIC-BuildAcResolvesALeafAcsConnectedBuildSet/04)
+- 2026-10-06 [llm-expert]: Step 2b.3 and the connected-set behavioral_patterns entry updated: goal_to_epic --ids now honours --dry-run (prints the plan, writes nothing), so the dry-run path passes --dry-run instead of skipping the call; supersedes the H-4 dry-run note above. (ACD-1200a-3-iii, EPIC-BuildToolingRunsThrough/07)

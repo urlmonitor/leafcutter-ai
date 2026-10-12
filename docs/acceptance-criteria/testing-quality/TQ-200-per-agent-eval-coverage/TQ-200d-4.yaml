@@ -1,0 +1,156 @@
+id: TQ-200d-4
+components:
+  - testing_quality
+  - llm_authoring
+  - infrastructure
+title: "The test writer and the test runner are scored on using your project's database setting and on saying when it is missing"
+component: testing-quality
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the test writer's eval set from TQ-200d-1, and the test runner, which
+    has no eval set today,
+  When rows for the database setting are added to both sets,
+  Then the test writer's set gains the row "configured database": in a
+      project whose testing_context.db_connection_test is set, the database
+      test it produces takes its connection from that setting and names no
+      host, port or database of its own,
+    And the test runner gets its own set, holding the row "configured
+      database": in the same project, its check that the test database is
+      reachable uses that setting and no other address,
+    And both sets hold the row "missing setting, database work" (W1): in a
+      project with no test database setting, and work that needs a database
+      test for a stored procedure, the hand-off says no test database
+      connection is configured, names testing_context.db_connection_test,
+      reports the database tests as not run for want of configuration, and
+      points at no address the agent chose itself,
+    And both sets hold the trap "missing setting, no database work" (W2): in
+      the same project, work that needs only tests that touch no database
+      proceeds with no mention of the missing setting; a hand-off that warns
+      about the setting fails the row,
+    And a local run of the shared eval runner for either agent picks up every
+      row without anyone naming them, and reports a score for each row,
+    And a result from such a local run is reported as a local result; nothing
+      presents it as checked by CI.
+depends_on:
+  - TQ-200d
+  - TQ-200d-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-2.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prompt-only: database tests and the reachability check use the configured connection, no other. Its test_rationale names a test-writer / test-runner eval as the remaining substitute."
+  - path: docs/acceptance-criteria/infrastructure/INF-1100-agents-work-in-the-right-place/INF-1100d-3.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "Prompt-only: W1 / W2."
+  - path: templates/agents/test-runner.md
+    relationship: relates-to
+    status: exists
+  - path: scripts/evals/agent_eval_config.json
+    relationship: describes
+    status: exists
+  - path: scripts/evals/run_agent_eval.py
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-200d-1
+    contract: "The test writer's registered eval set, which this AC adds rows to."
+it_requirements:
+- 'Join the existing harness (TQ-200c-4). Register the agent in scripts/evals/agent_eval_config.json with
+  ONE eval-set path of JSONL rows ({id, input, expected}). Test-writing agents produce test files, not
+  product-truth artifacts, so their scoring type lives in a sibling module under scripts/evals/. run_agent_eval.py
+  has 1438 counted lines, over the ratchet, and must not grow: any registration line added there is offset
+  in the same file. test-runner gets its own set. test-writer''s rows join the TQ-200d-1 set.'
+- 'Each row runs in a throwaway sandbox: a temp copy of a small fixture project the row names. Never the
+  repository tree. The row sandbox sets testing_context.db_connection_test to the placeholder address
+  (allowed by INF-1100d-4-i), or leaves it unset for W1 and W2.'
+- '''Names no address of its own'' is checked structurally on the produced files: the connection comes
+  from the setting, and there is no literal host, port or database. A judge is used only where the structure
+  cannot decide.'
+- Local only (user decision; KI-TQ-20260907). Registering the set must not make the CI eval job report
+  these rows as passed or checked. The result is stamped as a local run, and nothing claims TQ-200b-2.
+- Unit tests never call a live model. Row pickup and scoring are proven through the runner's gold-scoring
+  path, using recorded good and bad agent outputs as fixtures.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_test_runner_set_registered_and_every_row_scored
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/evals/run_agent_eval.py (gold-scoring mode)
+  description: Gold-scoring mode finds the new test-runner set and the extended test-writer set, and scores
+    every row.
+- name: test_w2_trap_fails_a_hand_off_warning_about_the_setting
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: In both sets, a recorded W2 hand-off that warns about the missing setting fails, and a
+    silent one passes.
+  must_catch:
+  - W2 passes a hand-off that warns about the missing setting
+- name: test_configured_row_fails_a_literal_address
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A produced database test with a literal host fails the 'configured database' row, and one
+    reading the setting passes.
+  must_catch:
+  - configured-database row passes a hard-coded address
+- name: test_w1_row_requires_the_setting_named_and_not_run
+  target_dir: unit_tests/evals/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A W1 hand-off that does not name testing_context.db_connection_test, or reports the database
+    tests as run, fails.
+  must_catch:
+  - W1 passes without naming the setting
+test_rationale: As TQ-200d-1. W2 is the trap in both sets, and the structural address check avoids a judge
+  where it can.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - config
+  - code
+risk_surface: contract_boundary
+notes: |
+  TQ-200d SUGGESTED SPLIT, ITEM 4 (test-writer and test-runner, the database
+  setting). The test writer's rows join TQ-200d-1's set (one set per agent,
+  TQ-200a-1); the test runner gets a set of its own. depends_on TQ-200d-1 is a
+  real ordering edge: the rows have a set to join.
+
+  NEGATIVE CASE (TQ-200a-4) FOR BOTH SETS: W2. The likely failure is an
+  over-eager warning on every piece of work once the agent has been taught to
+  report the missing setting.
+
+  ADDRESSES IN ROWS. Rows must never carry a real-looking address (INF-1100d-4
+  scans shipped files). Configure the setting in the row's sandbox to the
+  placeholder postgresql://<user>:<password>@<host>:<port>/<database> (which
+  INF-1100d-4-i allows) and score whether the produced test reads the setting,
+  rather than whether it repeats a literal. Scoring "names no address of its
+  own" is a structural check on the produced files where possible, a judge
+  otherwise.
+
+  LOCAL ONLY (user decision at the PO gate): see TQ-200d-1 notes.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Lane: fast lane, after TQ-200d-1 (depends_on).

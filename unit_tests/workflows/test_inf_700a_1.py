@@ -54,6 +54,8 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 from _workflow_engine_harness import HarnessResult, run_workflow_under_e2  # noqa: E402
 
+import workflows._fast_lane_claim_fixtures as _claim_fx  # noqa: E402
+
 _WORKFLOW_PATH = _REPO_ROOT / "templates" / "workflows-js" / "fast-lane-ship.js"
 _TIMEOUT = 30
 
@@ -82,12 +84,9 @@ def _full_success_responses(worktree_root: Path, ac_ids: list[str]) -> dict[str,
     return {
         "fastlane-worktree": _worktree_label_response(worktree_root),
         "resolve-connected": {"ac_ids": ac_ids, "message": f"{len(ac_ids)} to build"},
-        "claim-connected": {
-            "claimed": ac_ids,
-            "excluded_claimed": [],
-            "target_refused": False,
-            "message": f"claimed {len(ac_ids)} ACs",
-        },
+        "claim-connected": _claim_fx.claim_ran(
+            ac_ids, message=f"claimed {len(ac_ids)} ACs"
+        ),
         "test-writer-connected": {
             "status": "ok",
             "tests_written": ["unit_tests/x/test_stub.py"],
@@ -230,6 +229,9 @@ class TestReportedResultCarriesRoutingFigures(unittest.TestCase):
             "unwritten": 1,
             "case": "completed",
         }
+        # Since INF-700a-5 the terminal figures come from the post-commit
+        # observation of what the commit carried; it reports the same run.
+        label_responses["knowledge-routing-observe"] = label_responses["knowledge-routing-step"]
         result = run_workflow_under_e2(
             _WORKFLOW_PATH,
             timeout=_TIMEOUT,
@@ -282,6 +284,7 @@ class TestRoutingResultIsConsumedNotFireAndForget(unittest.TestCase):
     def _run_with_routing(self, routing_response: dict[str, Any]) -> HarnessResult:
         label_responses = _full_success_responses(self.worktree_root, self.ac_ids)
         label_responses["knowledge-routing-step"] = routing_response
+        label_responses["knowledge-routing-observe"] = routing_response  # INF-700a-5
         return run_workflow_under_e2(
             _WORKFLOW_PATH,
             timeout=_TIMEOUT,

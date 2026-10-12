@@ -1,0 +1,89 @@
+id: DK-500b-2-i
+title: A question that bundles two questions is never merged into either of them
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the categories cat-52b16c7b5a23106f ("Does every change stay reviewable in normal git review?") and cat-d15d52392d7aa94c ("Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?"),
+  And the wording "Is every stored criterion or category reviewable in a Git diff, and does it come into existence only through a human approval, as ADR-060 requires for published records (so criteria mined automatically cannot self-publish)?", which asks both questions,
+  And the wording "Can it be put in place with a small change and used with one command or click per run?", which asks a question of cat-1dc11c5a2ffa7310 and a second question no category asks,
+  When groupings are suggested,
+  Then neither wording is placed in cat-52b16c7b5a23106f, cat-d15d52392d7aa94c or cat-1dc11c5a2ffa7310; both get "none" and are left for a person to split or keep,
+  And the wording "Does every published record still go through git review in a pull request?", which asks only the git-review question, is still placed in cat-52b16c7b5a23106f.
+depends_on:
+- DK-500b-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500b-2
+  contract: 'Placement outcome per wording: category id | none, with reason.'
+change_target: code
+risk_surface: internal
+it_requirements:
+- No compound-question detector is built. Under dec-a070edfb6465bced the p >= 0.8 threshold keeps a compound wording apart (the trial's compound false merges scored p = 0.63 and 0.69), and the person can still split or keep it at review. It is not flagged as compound, because no LLM is used.
+- The test replays the trial's recorded Jev outcomes for these wordings through a controlled Jev provider, so it fails if the threshold is lowered below the recorded probabilities.
+- The single-question wording must still be placed in cat-52b16c7b5a23106f (here by exact label, since it is an other wording of that category), which is the positive control.
+test_required: true
+test_spec:
+- name: test_compound_wordings_get_none
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The two compound wordings are placed in none of cat-52b16c7b5a23106f, cat-d15d52392d7aa94c or cat-1dc11c5a2ffa7310 and get none.
+- name: test_single_question_wording_still_placed
+  target_dir: tests/kernel/criteria/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: '''Does every published record still go through git review in a pull request?'' is placed in cat-52b16c7b5a23106f.'
+test_rationale: Drive the grouping through its public entry point with a controlled Jev provider that replays recorded probabilities and counts calls, plus a recording host port that fails on any request; assert placements, reasons and call counts, not internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/criteria-library.flow.json
+  relationship: implements
+  status: exists
+- path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+  relationship: specified-by
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  DECIDED METHOD (replaces the earlier pending-method note, which named the cancelled run run-b5af8c7fae2248ba): dec-a070edfb6465bced, option opt.jev_pick_existing, chosen by human:user on 2026-10-04 in run run-14655bf6d5e84cb3. Its question still says 'AC DK-300b' because the record is append-only; that is DK-500b after the 2026-10-05 renumbering. The method: (1) code places every wording that exactly matches a preferred or other label of an existing category, or shares a criterion id with a member, with no model call; (2) Jev answers one bounded choice per remaining wording over ALL existing non-retired categories (each shown by its preferred and other labels) plus 'none', while the library fits one choice question, and a merge is suggested only at p >= 0.8; (3) wordings left at 'none' become one-member candidate categories made by code, worded as the wording. No LLM anywhere in grouping and no broader-link suggestions. Cold start: no categories, so every wording is its own one-member candidate and Jev is not called. In a decision run: one Jev choice per drafted question within the run's Jev budget. Evidence for p >= 0.8: a live Jev trial on 82 wordings (22 in-category, 56 none, 4 pair probes) measured 100% precision (12/12) and 55% recall (12/22) at p >= 0.8, 94% / 68% at 0.7 and 78% / 82% at 0.5; caveats: LLM-drafted mock gold set approved as mock data, one run at one seed, small sample.
+  The two compound wordings are the trial's own false merges at low thresholds: crit.human_approved_git_record (merged into cat-d15d52392d7aa94c at p=0.63) and crit-easy-to-adopt (merged into cat-1dc11c5a2ffa7310 at p=0.69). The single-question wording is the positive control: a grouping that refuses every merge satisfies the first Then clause and fails the second.
+  SETTLED by dec-a070edfb6465bced (no LLM): a compound wording is not flagged as compound; it is kept apart by the p >= 0.8 threshold and left for a person to split or keep.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/criteria-library: suggest-grouping.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/criteria-library
+    node: suggest-grouping
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/criterion-categories
+    entities:
+      - CriterionCategory
+    source: mock
+    asof: '2026-10-04'

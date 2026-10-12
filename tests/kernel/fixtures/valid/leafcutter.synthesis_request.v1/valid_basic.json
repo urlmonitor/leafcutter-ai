@@ -1,0 +1,10 @@
+{
+  "operation": "compare_options",
+  "question": "Which option fits best?",
+  "evidence_ids": [
+    "ev-f542bf3ea1abf8d1"
+  ],
+  "output_requirements": [
+    "short list"
+  ]
+}

@@ -1,0 +1,337 @@
+schema_version: '1.0'
+kind: decision
+id: dec-9925ebf1895222f4
+repository_id: leafcutter-ai
+title: Step 0 prerequisites, then DK-400 in 3 and DK-500 in 4 dependency-checked epics, one at a ...
+description: How should we build the two approved Decision Kernel AC trees with /build-ac and then ...
+decision_type: design
+question: 'How should we build the two approved Decision Kernel AC trees with /build-ac and then /build-feature: DK-500 reusable
+  decision criteria (57 leaf ACs) and DK-400 split compound requests (50 leaf ACs)? Decide the build order, the epic size
+  (one epic per tree or one epic per L1), whether the trees run in parallel, and what must happen before the first build starts.'
+components: []
+change_target: []
+risk_surface: []
+roadmap_phase: []
+file_globs: []
+repository_wide: true
+selected_option_id: opt.added.1
+supersedes: []
+superseded_by: []
+related: []
+task_context:
+  goal: 'How should we build the two approved Decision Kernel AC trees with /build-ac and then /build-feature: DK-500 reusable
+    decision criteria (57 leaf ACs) and DK-400 split compound requests (50 leaf ACs)? Decide the build order, the epic size
+    (one epic per tree or one epic per L1), whether the trees run in parallel, and what must happen before the first build
+    starts.'
+  component_ids: []
+  technologies: []
+  constraints:
+    - '[must] requirement: Every merge into main is confirmed by the user.'
+    - '[must] requirement: ADR-067 is written by adr-author before DK-400c-1 is built (user''s final-gate approval, 2026-10-05).'
+    - '[must] scope: The user wants both whole trees built with /build-ac then /build-feature (2026-10-05).'
+rationale:
+  text: 'Design decision settled by a human. Kernel ranking (Jev''s per-criterion judgement, evidence not authority; stopped
+    researching because design_judgement after 1 research round(s)): 1. [opt.added.1] Step 0 prerequisites, then DK-400 in
+    3 and DK-500 in 4 dependency-checked epics, one at a time (required mean 0.81, 1/4 passed); 2. [opt.l1_epics_dk400_first]
+    one epic per L1, DK-400 first, then DK-500, one epic at a time (required mean 0.52, 0/4 passed); 3. [opt.l1_epics_dk500_first]
+    one epic per L1, DK-500 first, then DK-400, one epic at a time (required mean 0.39, 0/4 passed); 4. [opt.two_full_epics_sequential]
+    one epic per tree, DK-500 then DK-400 (required mean 0.27, 0/4 passed); 5. [opt.two_full_epics_parallel] one epic per
+    tree, both trees in parallel (required mean 0.19, 0/4 passed). human:user chose option [opt.added.1] Step 0 prerequisites,
+    then DK-400 in 3 and DK-500 in 4 dependency-checked epics, one at a time (kernel rank 1 of 5).'
+  origin: template
+assumptions: []
+unresolved_risks: []
+assessment:
+  basis: kernel_ranking
+  design_reason: design_judgement
+  confidence: 0.805
+  selected_rank: 1
+  ranking:
+    - option_id: opt.added.1
+      rank: 1
+      required_passed: 1
+      required_total: 4
+      required_mean: 0.805
+      scores:
+        crit.contained_failures: 0.77
+        crit.early_usable_value: 0.48
+        crit.no_cross_tree_conflicts: 0.78
+        crit.prerequisites_first: 0.93
+        crit.reviewable_prs: 0.74
+        crit.total_wall_clock: 0.36
+    - option_id: opt.l1_epics_dk400_first
+      rank: 2
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.52
+      scores:
+        crit.contained_failures: 0.44
+        crit.early_usable_value: 0.48
+        crit.no_cross_tree_conflicts: 0.52
+        crit.prerequisites_first: 0.51
+        crit.reviewable_prs: 0.61
+        crit.total_wall_clock: 0.26
+    - option_id: opt.l1_epics_dk500_first
+      rank: 3
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.3925
+      scores:
+        crit.contained_failures: 0.39
+        crit.early_usable_value: 0.3
+        crit.no_cross_tree_conflicts: 0.55
+        crit.prerequisites_first: 0.08
+        crit.reviewable_prs: 0.55
+        crit.total_wall_clock: 0.24
+    - option_id: opt.two_full_epics_sequential
+      rank: 4
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.27
+      scores:
+        crit.contained_failures: 0.32
+        crit.early_usable_value: 0.39
+        crit.no_cross_tree_conflicts: 0.4
+        crit.prerequisites_first: 0.23
+        crit.reviewable_prs: 0.13
+        crit.total_wall_clock: 0.29
+    - option_id: opt.two_full_epics_parallel
+      rank: 5
+      required_passed: 0
+      required_total: 4
+      required_mean: 0.1925
+      scores:
+        crit.contained_failures: 0.14
+        crit.early_usable_value: 0.48
+        crit.no_cross_tree_conflicts: 0.09
+        crit.prerequisites_first: 0.41
+        crit.reviewable_prs: 0.13
+        crit.total_wall_clock: 0.55
+final_outcome:
+  status: pending
+  observed_at: null
+  note: ''
+options:
+  - id: opt.l1_epics_dk500_first
+    title: one epic per L1, DK-500 first, then DK-400, one epic at a time
+    description: 'Generate an epic per L1 with goal_to_epic.py --ac <L1>: 7 for DK-500 (a-g), then 6 for DK-400 (a-f). Build
+      them one after another, each as its own worktree and PR (7 to 12 tickets each), merged before the next starts. ADR-067
+      is written by adr-author before the DK-400c epic. Each later epic starts from a main that already holds the earlier
+      ones, so shared kernel/capabilities and flow changes never conflict.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: human:user
+  - id: opt.l1_epics_dk400_first
+    title: one epic per L1, DK-400 first, then DK-500, one epic at a time
+    description: As the first option, but ADR-067 first, then the 6 DK-400 L1 epics, then the 7 DK-500 L1 epics. The split
+      machinery lands first; criteria reuse then runs inside parts that already exist.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: human:user
+  - id: opt.two_full_epics_parallel
+    title: one epic per tree, both trees in parallel
+    description: Generate the two full epics (57 and 50 tickets) and build them at the same time in two worktrees, one PR
+      each. ADR-067 is written before the DK-400c tickets run. The trees share kernel/capabilities, kernel/memory, the capability
+      registry and the decision-forming flow, so the second PR to merge re-merges main.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: human:user
+  - id: opt.two_full_epics_sequential
+    title: one epic per tree, DK-500 then DK-400
+    description: Generate the two full epics and build DK-500 (57 tickets) to a merged PR first, then write ADR-067, then
+      build DK-400 (50 tickets) as a second PR.
+    assumptions: []
+    evidence_ids: []
+    proposed_by: claude_code:host_proposed
+    approved_by: human:user
+  - id: opt.added.1
+    title: Step 0 prerequisites, then DK-400 in 3 and DK-500 in 4 dependency-checked epics, one at a time
+    description: 'Step 0, its own small PR: ADR-067 by adr-author (number re-checked free on main and remotes), main''s failing
+      tests recorded by node id, and test_every_host_capability_of_the_design_has_an_operation (in the file DK-400c-1 extends)
+      fixed or ticketed. Then DK-400 first (active roadmap phase) in 3 dependency-checked epics built with goal_to_epic --ids:
+      E1 = DK-400a + DK-400c without c-5 (17 tickets, merged with split.enabled false); E2 = DK-400b + DK-400d without d-5
+      + c-5 (18); E3 = DK-400e + DK-400f + d-5 (15), after which split.enabled returns to the approved default on. Then DK-500
+      in 4 epics: E1 = DK-500a without a-3 + b-1, b-1-i, b-2, b-2-i, b-3, b-3-i (13); E2 = DK-500c + DK-500d without d-4 +
+      a-3 (17); E3 = DK-500e + b-4, b-4-i, b-5 + d-4 (12); E4 = DK-500f + DK-500g with the live Neo4j tests (15). The DK-500
+      build adds a test that a split part run as a decision child goes through reuse-first criteria and charges its grouping
+      Jev calls to the part''s budget. One PR per epic, one epic at a time, each merged with the user''s confirmation before
+      the next epic''s worktree is created.'
+    assumptions: []
+    evidence_ids: []
+    proposed_by: human:user
+    approved_by: human:user
+criteria:
+  - id: crit.reviewable_prs
+    question: Does each PR stay small enough for one person to review end to end (number of tickets and diff size per PR)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-def9b6efcaeee9d9
+      - ev-cd50a88ada03eb75
+      - ev-b08c3ba7fbef5716
+      - ev-2e32efdd7624b726
+      - ev-18de1f3470586712
+  - id: crit.no_cross_tree_conflicts
+    question: How likely are the builds to collide in the files both trees change (kernel/capabilities, kernel/memory, config/capability_registry.json,
+      the decision-forming flow), forcing re-merges or rework?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-2e32efdd7624b726
+      - ev-b000de8dd7aa9f60
+      - ev-14d8e1d841ab0747
+      - ev-18de1f3470586712
+      - ev-b77cfee278f49f38
+  - id: crit.prerequisites_first
+    question: Does the plan put ADR-067 before DK-400c-1 and start from a known test baseline on main (the red tests, including
+      the host-operation test in the area DK-400 extends)?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-685fd6e02d072d91
+      - ev-6dcc963c8277cf85
+      - ev-b000de8dd7aa9f60
+      - ev-def9b6efcaeee9d9
+      - ev-b08c3ba7fbef5716
+  - id: crit.contained_failures
+    question: When one ticket blocks, how much other work stalls or must be rolled back?
+    priority: required
+    kind: design_judgement
+    evidence_ids:
+      - ev-6dcc963c8277cf85
+      - ev-685fd6e02d072d91
+      - ev-def9b6efcaeee9d9
+      - ev-b000de8dd7aa9f60
+      - ev-b08c3ba7fbef5716
+  - id: crit.early_usable_value
+    question: How soon does a usable, end-to-end slice reach main (for example criteria reuse in a real decision run)?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-6dcc963c8277cf85
+      - ev-b77cfee278f49f38
+      - ev-685fd6e02d072d91
+      - ev-e632662365be3c4d
+      - ev-cd50a88ada03eb75
+  - id: crit.total_wall_clock
+    question: How long does the whole build take, counting parallelism and the human merge confirmations?
+    priority: supporting
+    kind: design_judgement
+    evidence_ids:
+      - ev-6dcc963c8277cf85
+evidence:
+  - id: ev-14d8e1d841ab0747
+    locator: scripts/ac_store/goal_to_epic.py --dry-run output (host-run)
+    category: task_context
+    content_hash: b88a7627d96fd92a524b13221c04d2faad84af60007b4c0fbc111593d76fa111
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-b77cfee278f49f38
+    locator: docs/acceptance-criteria/decision-kernel/DK-400-*/ and DK-500-*/ (host count)
+    category: task_context
+    content_hash: e55dc2bd40b7a5aad8243f70d1672aa9474849bc291b447de9cab05d7d2f0e82
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-2e32efdd7624b726
+    locator: host analysis of it_requirements/test_spec/delivers_to text, 2026-10-05
+    category: existing_patterns
+    content_hash: 693e18a52b247ca65c582f552834de23dbb2efb0f5621c707537747cc0dab505
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-e632662365be3c4d
+    locator: docs/acceptance-criteria/decision-kernel/DK-400-split-compound-requests/DK-400.yaml (FINAL GATE)
+    category: prior_decisions
+    content_hash: 76b5234e8bf0cf5c7d24797dc97803c75844744eaf34ad4015f84a1a3f36654a
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-685fd6e02d072d91
+    locator: GitHub Actions CI runs 37317762249 (main) and 37318612185 (#1012), host comparison
+    category: task_context
+    content_hash: 6289d91f7425cf1ac50ec1374f842e18edf540b8b3107c14f70417303822177f
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-def9b6efcaeee9d9
+    locator: .claude/commands/build-feature.md; memory build-feature-workspace-gotchas (host)
+    category: existing_patterns
+    content_hash: 2141a0c3ae0f6b9c680a98d873200f8d77a738fcb1292452c280f6349b9f857e
+    verification: unverified
+    relevance: null
+    source_version: null
+  - id: ev-18de1f3470586712
+    locator: docs/architecture/diagrams/c2-004-build-ac-flow.md#L19-L79 (§/build-ac Execution Flow — Sequence Diagram)
+    category: existing_patterns
+    content_hash: 6185ee0f7240fc890cb7274f3fdbc15bc9b99f04666f840c5441bc172afd1339
+    verification: source_verified
+    relevance: 0.83
+    source_version: null
+  - id: ev-cd50a88ada03eb75
+    locator: docs/acceptance-criteria/decision-kernel/DK-400-split-compound-requests/DK-400e-1.yaml#L143-L152 (notes)
+    category: existing_patterns
+    content_hash: 79405f5460e47e7cfab9a49d05fa339b2685f061922d348f521952f5465d913a
+    verification: source_verified
+    relevance: 0.8
+    source_version: null
+  - id: ev-ef133900c17608a7
+    locator: docs/build-dataflow.json#L5097-L5121 (nodes)
+    category: existing_patterns
+    content_hash: 379b39be1fa57d510a0390490dee7b164963a54fd7c964f3d7eb20941fe45665
+    verification: source_verified
+    relevance: 0.67
+    source_version: null
+  - id: ev-6dcc963c8277cf85
+    locator: docs/known-issues/build-orchestration/open-low-ki-bo-20260901-1450.md#L79-L103 (§KI-BO-20260901-1450 — The fast
+      lane shares exactly one proc…)
+    category: existing_patterns
+    content_hash: e61bd78068bc71448add67268a3127d08ba4e9e0eb9f604d29b41de220cb0d64
+    verification: source_verified
+    relevance: 0.66
+    source_version: null
+  - id: ev-b000de8dd7aa9f60
+    locator: docs/analysis/2026-09-30-decision-kernel-design-6-tests-phases-risks.md#L85-L97 (§Phase plan (spec §15.2 order))
+    category: existing_patterns
+    content_hash: ed55d4253823d527dbc53855e637de2424a3e6dc6b07d0e522487bf0813af556
+    verification: source_verified
+    relevance: 0.61
+    source_version: null
+  - id: ev-b08c3ba7fbef5716
+    locator: docs/known-issues/build-orchestration/resolved/resolved-blocker-ki-bo-20260921-build-feature-abandons-the-epic-worktree-branch.md#L27-L61
+      (§Symptom, in the order it was noticed)
+    category: existing_patterns
+    content_hash: 3908f415bf370b42891b03c5bb304b131b44a7d279bc7bcc7f4747508f06d202
+    verification: source_verified
+    relevance: 0.58
+    source_version: null
+precedents_considered: []
+approval:
+  approval_status: approved
+  approved_by: human:user
+  approved_at: '2026-10-05T20:15:56Z'
+  note: ''
+provenance:
+  origin: learned
+  created_by_capability: decision
+  created_at: '2026-10-05T20:15:56Z'
+  run_id: run-0e9524762c1b4f85
+  root_task_id: task-d196a0452ed14139
+  langfuse_trace_id: e59616dc41bf4925e7102a080bf88b97
+  langfuse_trace_url: null
+  repository_revision:
+    commit: null
+    dirty: false
+  policy_version: null
+  template_version: decision.assess@1
+  model_version: jev-latest
+  kernel_version: 0.1.0.dev0
+  decision_versions:
+    options: fdc8c5c9846a
+    criteria: c00c9b6fefa0
+    templates: decision.assess@1
+corrections: []

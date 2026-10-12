@@ -1,0 +1,50 @@
+{
+  "kind": "Component",
+  "status": "reader_implemented_and_verified",
+  "review": "reports/native-fields/review-Component.json",
+  "module": "knowledge/native_types/component.py",
+  "test_file": "tests/knowledge/test_native_component.py",
+  "contract": "extract(root: pathlib.Path) -> list[NativeRecord]",
+  "source": "docs/components.json#/components",
+  "implemented": [
+    "Exactly one deterministically ordered record per registry entry, including entries without incoming memberships.",
+    "Identity is the exact registry key; locator uses RFC 6901 token escaping.",
+    "Metadata is the complete original entry without defaults, filtering, sorting arrays, renames, or document overlays.",
+    "Unknown nested fields, heterogeneous arrays, primitive types, explicit null, empty containers, and absent fields retain their authored distinctions.",
+    "Presentation title and description only use authored strings; nonstring source values remain unchanged in metadata.",
+    "Architecture documents never manufacture Component identities or overwrite registry type/status.",
+    "Absent optional registry yields an empty result; present malformed JSON, envelope, entries, identity conflicts, and detail_ref paths outside the snapshot fail explicitly.",
+    "Source files and referenced documents are never modified; reference paths are checked without reading referenced documents."
+  ],
+  "source_validation_policy": "Extraction validates structural identity and containment, not newer admission requirements. Legacy omitted fields and unconventional nested values remain authored metadata for separate diagnostics.",
+  "verification": {
+    "red": {"tests_failed": 16, "reason": "ModuleNotFoundError before component.py was created", "exit_code": 1},
+    "green": {"tests_passed": 16, "tests_failed": 0, "exit_code": 0},
+    "command": "AC_ENFORCE_STRICT=1 python -m pytest tests/knowledge/test_native_component.py -q -p no:cacheprovider --tb=short",
+    "real_registry_entries_compared": 46,
+    "lint": "ruff format --check and ruff check --no-cache passed for the two owned Python files",
+    "mutation_method": "Process-local mutations of the imported knowledge.native_types.component module; each test was called with a fresh temporary fixture, each injected fault was caught, and originals were restored before the final green run.",
+    "mutation_proofs": [
+      {"test": "test_component_preserves_every_field_and_registry_identity", "alteration": "drop unknown nested future field", "outcome": "caught"},
+      {"test": "test_component_preserves_every_field_and_registry_identity", "alteration": "overlay component document type on registry entry", "outcome": "caught"},
+      {"test": "test_component_preserves_every_field_and_registry_identity", "alteration": "mutate authored registry during extraction", "outcome": "caught"},
+      {"test": "test_component_real_registry_fields_match_exact_entries", "alteration": "fill absent agent_affinity with []", "outcome": "caught"},
+      {"test": "test_component_absent_registry_ignores_architecture_documents", "alteration": "manufacture a component from document stem", "outcome": "caught"},
+      {"test": "test_component_nonstring_presentation_fields_remain_authored", "alteration": "string-coerce null presentation name", "outcome": "caught"},
+      {"test": "test_component_malformed_registry_fails_explicitly", "input": "{", "alteration": "discard malformed registry as empty", "outcome": "caught"},
+      {"test": "test_component_malformed_registry_fails_explicitly", "input": "[]", "alteration": "discard malformed registry as empty", "outcome": "caught"},
+      {"test": "test_component_malformed_registry_fails_explicitly", "input": "{}", "alteration": "discard malformed registry as empty", "outcome": "caught"},
+      {"test": "test_component_malformed_registry_fails_explicitly", "input": "{\"components\": []}", "alteration": "discard malformed registry as empty", "outcome": "caught"},
+      {"test": "test_component_malformed_registry_fails_explicitly", "input": "{\"components\": {\"a\": []}}", "alteration": "discard malformed registry as empty", "outcome": "caught"},
+      {"test": "test_component_identity_conflict_fails_without_rewriting", "alteration": "silently discard conflicting identity", "outcome": "caught"},
+      {"test": "test_component_identity_conflict_fails_without_rewriting", "alteration": "mutate authored registry during extraction", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "../outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "docs/../../outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "C:/outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "C:\\outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "/outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"},
+      {"test": "test_component_reference_cannot_escape_snapshot", "input": "\\\\server\\share\\outside.md", "alteration": "disable detail_ref containment validation", "outcome": "caught"}
+    ]
+  },
+  "integration_boundary": "Shared field flattening, graph publication, legacy component-hub provenance, and Aura migration are coordinator responsibilities; this report makes no deployed Neo4j claim."
+}

@@ -1,0 +1,148 @@
+id: UXP-591-3
+title: "'Appears in flows' links in an AC's detail point at the step address of each node that implements it"
+component: ux-prototyping
+components:
+  - ux_prototyping
+  - frontend_coding
+level: L2
+status: active
+req_status: active
+work_status: todo
+readiness: approved
+priority: medium
+criteria: |
+  Given AC UXP-411 is implemented by the step 'resolve' of leafcutter/flow-render-pipeline,
+    AC UXP-210d-2 by the branch 'declined' of fern-and-fig/checkout-and-pay and the branch
+    'paymentFailed' of fern-and-fig/customer-buys-a-plant, and AC BO-2000b by the step 'code'
+    of leafcutter/how-acs-are-built and the steps 'conventions', 'docenforce' and 'complexity'
+    of leafcutter/python-coder-internal,
+  When the person opens each of those ACs' detail in the Atlas,
+  Then UXP-411's 'Appears in flows' link points at
+    /flows/leafcutter/flow-render-pipeline?step=resolve,
+  And UXP-210d-2's two links point at /flows/fern-and-fig/checkout-and-pay?step=declined and
+    /flows/fern-and-fig/customer-buys-a-plant?step=paymentFailed,
+  And BO-2000b shows four links, one per node, at /flows/leafcutter/how-acs-are-built?step=code,
+    /flows/leafcutter/python-coder-internal?step=conventions,
+    /flows/leafcutter/python-coder-internal?step=docenforce and
+    /flows/leafcutter/python-coder-internal?step=complexity,
+  And no link uses the /flows?flow= form or encodes the '/' in a flow id as %2F,
+  And following UXP-411's link opens leafcutter/flow-render-pipeline with the 'resolve'
+    drawer open.
+depends_on:
+  - UXP-591
+  - UXP-591-2
+  - UXP-524
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
+assigned_agent: frontend-coder
+estimated_complexity: S
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+it_requirements:
+  - leafcutter-web/components/atlas/detail-drawer.tsx (around line 311 it builds /flows?flow=<encodeURIComponent(id)>&step=<node
+    id> today) builds every 'Appears in flows' href with flowHref(flowId, nodeId) from the shared address
+    module; no local URL construction remains.
+  - One link per (flow, node) pair from the AC's existing product_truth back-reference, steps and branches
+    alike; no new data source and no de-duplication across different nodes of one flow (BO-2000b has three
+    links into leafcutter/python-coder-internal).
+  - Links are same-origin relative hrefs.
+  - 'This AC closes the UXP-524 gap: UXP-524 is work_status done, but its links open the default flow
+    because the Flows view ignores ?flow=. The link tests carry both `// covers: UXP-591-3` and `// covers:
+    UXP-524`. TICKET-20261009-AtlasFlowExplorerAcsProvenDone is on open PR #1065 and also touches UXP-524''s
+    proof: rebase onto it once merged and reconcile UXP-524''s covered_by rather than duplicating it.'
+delivers_to: null
+expects_from:
+  ac_id: UXP-591-2
+  contract: "A step address /flows/<flow id>?step=<step or branch id> opens that flow with that node's drawer open; the AC detail builds it from the flow id and node id its appearance list already carries."
+test_spec:
+  - name: AC detail 'Appears in flows' hrefs are the step addresses for UXP-411, UXP-210d-2 and BO-2000b
+    target_dir: leafcutter-web/components/atlas/__tests__/
+    framework: vitest
+    type: component
+    angle: criterion
+    covers:
+      - UXP-591-3
+      - UXP-524
+    must_catch:
+      - the drawer still emits /flows?flow=<id>&step=<node>
+      - branch appearances are dropped
+      - two nodes of one flow collapse into one link
+  - name: no 'Appears in flows' href uses the ?flow= form or percent-encodes the slash in a flow id
+    target_dir: leafcutter-web/components/atlas/__tests__/
+    framework: vitest
+    type: component
+    angle: failure
+    covers:
+      - UXP-591-3
+      - UXP-524
+  - name: every FlowAppearance in atlas-flows.mock.json yields its href in the AC detail
+    target_dir: leafcutter-web/components/atlas/__tests__/
+    framework: vitest
+    type: component
+    angle: real_artifact
+    covers:
+      - UXP-591-3
+      - UXP-524
+  - name: following UXP-411's href through the catch-all route opens leafcutter/flow-render-pipeline with
+      the resolve drawer
+    target_dir: leafcutter-web/__tests__/
+    framework: vitest
+    type: integration
+    angle: reachability
+    surface_invoked: href rendered by leafcutter-web/components/atlas/detail-drawer.tsx, then the default
+      export of leafcutter-web/app/flows/[...id]/page.tsx with that path and query
+    covers:
+      - UXP-591-3
+      - UXP-524
+test_rationale: UXP-524 was marked done while its links were dead, because nothing followed the href;
+  the reachability test follows UXP-411's href into the real route, and every test carries UXP-524 so
+  its proof is restored with this change.
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v5, step 'acStepLink' (FlowAppearance
+  records in the leafcutter/atlas-flows dataset). Replaces the link form UXP-524 introduced:
+  today the AC detail emits /flows?flow=<percent-encoded id>&step=<node id>, which the Flows
+  view does not read, so the link opens the default flow instead of the linked flow and step
+  (see the flow's 'cross' step). Old links in that form are covered by UXP-591-2-iii.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: acStepLink
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowAppearance
+    source: real
+    asof: '2026-10-09'

@@ -1,0 +1,251 @@
+{
+  "case_id": "N10",
+  "question": "What was each employee's payroll amount last month?",
+  "human_gold": "The offered repository catalog has no employees or compensation field. Preserve unmet payroll meaning and disclose unsupported need. Empty or unrelated selected fields cannot be presented as a resolved retrieval plan.",
+  "actor_id": "codex:root:needs_llm_host",
+  "model_id": null,
+  "underlying_model_requests": null,
+  "tokens": null,
+  "error": null,
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "What was each employee's payroll amount last month?",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_set",
+    "hierarchy_scope": "not_applicable",
+    "scope_resolution": "unknown",
+    "unresolved": [
+      "needs_outside_catalog: Employee identities, payroll amounts and payroll-period records have no supported labels in the supplied catalog or identified source in the supplied scope.",
+      "entity_types",
+      "document_types",
+      "required_fields",
+      "scope_resolution"
+    ],
+    "rationale": "The question requests the prior month's payroll amount for every employee. The offered entities and documents describe software requirements, code, contracts and test or publication reports; none faithfully represents payroll data. Preserve the exhaustive per-employee intent while leaving unsupported selections empty and requiring resolution.",
+    "engine": "host_llm",
+    "status": "needs_resolution",
+    "model_id": null
+  },
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-83eba873e4ae424b",
+    "root_task_id": "task-666bd12ad28a444c",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "What was each employee's payroll amount last month?",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_set",
+        "hierarchy_scope": "not_applicable",
+        "scope_resolution": "unknown",
+        "unresolved": [
+          "needs_outside_catalog: Employee identities, payroll amounts and payroll-period records have no supported labels in the supplied catalog or identified source in the supplied scope.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "rationale": "The question requests the prior month's payroll amount for every employee. The offered entities and documents describe software requirements, code, contracts and test or publication reports; none faithfully represents payroll data. Preserve the exhaustive per-employee intent while leaving unsupported selections empty and requiring resolution.",
+        "engine": "host_llm",
+        "status": "needs_resolution",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-83eba873e4ae424b\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-09c6719902b24dc7",
+        "created_at": "2026-10-03T09:45:55.403531Z",
+        "updated_at": "2026-10-03T09:45:55.403531Z",
+        "created_seq": 0,
+        "gap_key": "b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195",
+        "gap_type": "host_only",
+        "goal": "What was each employee's payroll amount last month?",
+        "normalized_need": "amount each employee last month payroll s was what",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "What was each employee's payroll amount last month?",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-83eba873e4ae424b"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: What was each employee's payroll amount last month?",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/b71fa114a2562032cd3f9d39f108aa94f811f9f843c190ee000248a7425ac195.md"
+        },
+        "first_seen": "2026-10-03T09:45:55.403531Z",
+        "last_seen": "2026-10-03T09:45:55.403531Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 624594,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "2b1c2f35c205d1dd038ceca58f5f4878",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "shared_semantics": {
+    "passed": false,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "What was each employee's payroll amount last month?",
+        "expected": "What was each employee's payroll amount last month?"
+      },
+      {
+        "name": "exclude.entity_types",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "ac",
+            "source_file",
+            "test",
+            "adr",
+            "schema",
+            "report",
+            "component"
+          ]
+        }
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [],
+        "expected": {
+          "forbidden": [
+            "criteria",
+            "work_status",
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "needs_resolution",
+        "expected": [
+          "needs_resolution"
+        ]
+      },
+      {
+        "name": "unsupported_need_disclosed",
+        "passed": false,
+        "actual": [
+          "needs_outside_catalog: Employee identities, payroll amounts and payroll-period records have no supported labels in the supplied catalog or identified source in the supplied scope.",
+          "entity_types",
+          "document_types",
+          "required_fields",
+          "scope_resolution"
+        ],
+        "expected": "Explicit unmet catalog dimension, unresolved; no synthetic confidence"
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

@@ -1,0 +1,82 @@
+id: DK-500f
+title: "See how often each category is used and how its decisions turned out"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_colony_1_collect
+criteria: |
+  Usage and outcomes per category show which questions earn their place.
+
+  For every published category you can see how many published decisions used
+  it, always counted from the records themselves rather than kept by hand, and,
+  where the optional learning store is set up, how the decisions that relied on
+  it turned out. Being used often never counts as proof that a category is good,
+  and decisions work exactly the same when no learning store is set up.
+depends_on:
+  - DK-500
+doc_links:
+  - path: docs/decisions/dec-93c1c730463c1f3c.yaml
+    relationship: governs
+    status: exists
+    relevance: "Usage counts generated from published records only (criterion crit.usage_generated_not_written); outcome statistics are Neo4j aggregates keyed by category id, never in Git (criterion crit.outcomes_left_to_colony_store)."
+  - path: docs/product-truth/mock-data/leafcutter/criterion-categories.mock.json
+    relationship: specified-by
+    status: exists
+    relevance: "usage_count rule and the CriterionCategoryAggregate entity (decision_count = confirmed + corrected + abandoned + pending; context dimensions; full rebuild)."
+  - path: docs/architecture/adrs/ADR-065-colony-learned-statistics-neo4j-aggregates.md
+    relationship: constrains
+    status: exists
+  - path: docs/architecture/adrs/ADR-056-colony-memory-evidence-reinforcement.md
+    relationship: constrains
+    status: exists
+    relevance: "Usage alone is never evidence; only verified outcomes reinforce."
+  - path: docs/architecture/components/colony-memory.md
+    relationship: specified-by
+    status: exists
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-03
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-500f-1
+  - DK-500f-2
+  - DK-500f-3
+  - DK-500f-4
+  - DK-500f-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+notes: |
+  This L1 is the user's "also into neo4j" for OUTCOMES. Category records hold no
+  outcome or success statistics. Those live only as derived, rebuildable Neo4j
+  aggregates keyed by the published category id (ADR-065). Usage counts are
+  generated from published records and freshness-checked, like
+  docs/decisions/index.json, and are never hand-written.
+
+  Optional store. Without a configured Neo4j store, or with
+  LEAFCUTTER_SELF_LEARNING=false, outcome statistics are off and nothing else
+  changes (phase_colony_1_collect exit criteria). The usage count does not
+  depend on the store.
+
+  NON-GOAL. These statistics do not change which categories DK-500d offers or
+  in what order. That would be influence, which comes after held-out evaluation
+  (ADR-056 section 3, phase_colony_4_influence).
+
+  Depends on the DK-500d open question: counts are only as good as the record
+  of which decisions reused which category.
+
+  COMPONENT DRIFT. This L1 belongs in colony_memory too (docs/components.json
+  lists it). It is omitted only because the components enum in
+  config/ac_store_schema.json does not contain colony_memory, so the validator
+  rejects it. Add colony_memory here once the schema enum is brought back in
+  line with docs/components.json.

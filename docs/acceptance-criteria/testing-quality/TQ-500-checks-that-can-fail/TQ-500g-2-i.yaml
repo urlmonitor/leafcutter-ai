@@ -1,0 +1,148 @@
+id: TQ-500g-2-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "A database run in which the suite quietly re-installs the correct code is caught, and never counts as the test noticing"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a database test suite for fn_refresh_due that re-installs every stored
+    procedure from the project's database source files each time it starts,
+    and the wrong version "drop the retry_due condition" of fn_refresh_due,
+  When two wrong-version runs are made —
+      D1: the wrong version is put into the test database only, and the
+          source file is left as it is,
+      D2: the wrong version is put into the source file the suite installs
+          from,
+  Then for each run the runner checks which definition of fn_refresh_due the
+      database held while the tests ran,
+    And D1, where the database held the correct definition because the suite
+      re-installed it from the unchanged source file, is reported as "invalid:
+      the suite put the correct code back before the tests ran", and the wrong
+      version is neither caught nor survived by D1,
+    And an invalid run leaves the work unfinished until the wrong version has
+      had a valid run,
+    And D2, where the database held the wrong version while the tests ran, is
+      a valid run and its outcome counts,
+    And after each run both the source file and the test database hold the
+      code as written again.
+depends_on:
+  - TQ-500g-2
+  - TQ-500g-1-i
+doc_links:
+  - path: docs/analysis/2026-09-25-test-writers-prove-failure-not-discrimination.md
+    relationship: describes
+    status: exists
+    relevance: "The adopter's documented trap: a database-level mutation is silently reverted because suites re-deploy .sql files in setUpClass."
+  - path: templates/agents/sql-test-writer.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner's apply / run / put-back cycle, extended here with a check of what the database actually held."
+it_requirements:
+- 'Detection is part of the shared runner''s cycle, not a database-specific fork. After each database
+  run and before the put-back, read from the configured test database''s catalogue the installed definition
+  of every database object the wrong version altered. Compare it, normalised, with the wrong version and
+  with the code as written. Equal to the code as written: invalid, ''the suite put the correct code back
+  before the tests ran''. Equal to the wrong version: a valid run. Neither, or unreadable: not_run, never
+  valid.'
+- The put-back restores the source file AND re-installs the as-written definition into the test database,
+  then reads the catalogue again to confirm. If they still differ, stop and name the object (the TQ-500g-1-iii
+  rule, applied to the database).
+- Connect only to the address resolve_test_db_address in scripts/db_check/checker.py resolves. There is
+  no second reader of the setting. Credentials are never logged or reported.
+- 'Leafcutter must not gain a mandatory database-driver dependency: requirements*.txt has none today.
+  Catalogue access uses a driver or client present in the adopter environment. If none is present, the
+  result is not_run, with the reason named.'
+- invalid and not_run keep the work unfinished (gate_passed false, reason unfinished).
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+- Any database address in a template, fixture or doc is the placeholder postgresql://<user>:<password>@<host>:<port>/<database>.
+  INF-1100d-4 scans shipped files.
+test_spec:
+- name: test_d1_suite_redeployed_correct_code_reported_invalid
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: A catalogue-reader double reports the as-written definition after D1's run. The run is
+    reported invalid with the re-deploy reason, is neither caught nor survived, and the verdict is unfinished.
+  must_catch:
+  - runner trusts the source-file alteration without reading the catalogue
+  - invalid run counted as caught
+- name: test_d2_database_held_wrong_version_is_valid
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'D2: the catalogue reports the wrong version, so the run is valid and its per-test outcomes
+    count.'
+  must_catch:
+  - every database run marked invalid
+- name: test_put_back_restores_source_file_and_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: After each run, both the source file and the catalogue hold the code as written. A catalogue
+    that still holds the wrong version after the re-install stops the drive, naming the object.
+  must_catch:
+  - put-back restores the file but leaves the database holding the wrong version
+- name: test_live_redeploy_trap_detected_on_configured_database
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared runner CLI
+  description: Against the configured test database (skipped with a stated reason when none is configured),
+    the runner CLI is run on a fixture suite that re-installs from a different source in setUpClass, and
+    it reports invalid.
+  requires_db: true
+test_rationale: D1 and D2 are proven deterministically with an injected catalogue reader, because CI has
+  no database. The one requires_db test shows that the real catalogue read works where a test database
+  is configured. The D2 control carries the must_catch that stops a detector which invalidates everything.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE setUpClass RE-DEPLOY TRAP, DETECTED RATHER THAN ONLY DOCUMENTED. The
+  request asks that it be "documented and detected". The documentation half is
+  TQ-500g-5 and the sql-test-writer prompt (TQ-500g-2); this is the detection.
+
+  WHY BOTH D1 AND D2. D1 is the trap. D2 is the control: a detector that marks
+  every database run invalid would pass D1 and make database wrong-version runs
+  impossible. D2 also shows the straightforward remedy (alter the file the suite
+  installs from), but the check must not rely on the remedy being used — it
+  inspects what the database held.
+
+  TECHNICAL DETAIL FOR IT-PO: "what the database held while the tests ran" can
+  be read from the procedure's installed definition (for example its source in
+  the catalogue) captured during or right after the test run, and compared with
+  the wrong version and with the code as written. When the suite runs in its
+  own transaction or drops the database, choose the capture point accordingly.
+  The put-back must restore the database too, not only the file — a database
+  left holding the wrong version poisons every later run.
+
+  NEEDS THE CONFIGURED TEST DATABASE (INF-1100d). Without one, the run is not
+  run (TQ-500g-2-ii), so this check never starts.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  OPEN: how the catalogue is read without a leafcutter driver dependency. See
+  the report's open questions. Lane: python-coder after TQ-500g-2 (prompt) is
+  done. Otherwise the fast lane pulls the prompt L2 into a python-coder build
+  set.

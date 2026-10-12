@@ -30,7 +30,7 @@ origin_agent: BrainCandy
 created: 2026-09-21
 amended_by: []
 superseded_by: null
-covered_by: [BO-4100d-1, BO-4100d-2, BO-4100d-3]
+covered_by: [BO-4100d-1, BO-4100d-2, BO-4100d-3, BO-4100d-4]
 implemented_by: []
 notes: >-
   Evidence, observed 2026-09-14: the canonical worktree-setup script labels every branch it

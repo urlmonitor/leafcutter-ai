@@ -21,7 +21,24 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** open — PARTIALLY FIXED (re-verified 2026-09-23). Closed: the schema's field
+  coverage gap is closed — `category`, `skills_invoked`, `knowledge_channels`,
+  `components`, `requires_verification`, `doc_links`, `behavioral_patterns`, and
+  `permits_shell` are now all declared in `config/agent_registry.schema.json` (each
+  appears at least once; `grep -c '"category"' config/agent_registry.schema.json` now
+  returns 1, not 0), so the specific "58 violations, zero declared" evidence this entry
+  quoted no longer reproduces. Remains open: the core defect is untouched. Grepped every
+  script under `scripts/` and `unit_tests/` for `agent_registry.schema.json` — the only
+  hit is a `$schema` fixture key in a test helper
+  (`unit_tests/ac_store/_acs_100i_registry_support.py:170`), not an actual
+  jsonschema load/validate call. `scripts/registry_validator.py` still performs only its
+  bespoke Python checks (no `jsonschema` import, no read of the schema file). The schema
+  remains inert. New closure condition unchanged from the original fix direction: either
+  wire real schema validation into `registry_validator.py`/`build.py`, or drop
+  `additionalProperties: false` so the file stops implying an enforcement that does not
+  exist. Affects `/plan-feature`: incidentally — `plan-feature.js` is named once, as the
+  downstream consumer that correctly fails closed on the `permits_shell` field; the
+  defect itself (an inert schema) is registry-wide, not plan-feature-specific.
 - **Occurrences:** 1
 - **First seen:** 2026-08-18 · **Last seen:** 2026-08-18
 - **Where:** `config/agent_registry.schema.json` (`additionalProperties: false` at `:189`, `:192`, `:216`, `:233`); `scripts/registry_validator.py`

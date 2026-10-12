@@ -1,0 +1,117 @@
+id: TQ-500g-3-i
+components:
+  - testing_quality
+  - build_orchestration
+title: "An edit to an existing test that the sweep list does not name stops the work"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given two pieces of work, each changing three test files that existed before
+    the work began — test_refresh.py, test_retry.py and test_export.py —
+    and each adding a new file test_refresh_gate.py,
+      W1: its sweep list names the edits in test_refresh.py and test_retry.py
+          only,
+      W2: its sweep list names the edits in all three existing files,
+  When each piece of work reaches the step before commit,
+  Then W1 stops, naming test_export.py and the tests changed in it as edits to
+      existing tests that the sweep list does not name,
+    And W2 goes on,
+    And test_refresh_gate.py, added by the work, is not treated as an existing
+      test in either piece of work,
+    And the decision comes from comparing the work with the code as it was
+      before the work began, and from the sweep list — never from the
+      writer's statement that its list is complete.
+depends_on:
+  - TQ-500g-3
+doc_links:
+  - path: templates/agents/test-writer.md
+    relationship: relates-to
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-3
+    contract: "The sweep list in the hand-off: each existing test touched, by name and file."
+it_requirements:
+- Reach it through the same single before-commit CLI entry that the routes call for the wrong-version
+  runs (TQ-500g-1-v, -vi, -vii). One implementation serves every route, and routes need no second dispatch.
+  Until that entry is wired, the check is not reachable and this AC is not done.
+- '''Existing'' means present at the route''s base ref. The comparison is per test function. Reuse _fl_red_baseline_support''s
+  test-name extraction and newly-added partition. A test counts as changed when its function source differs
+  between the base ref and the working tree.'
+- A missing or unparseable sweep list while any existing test changed stops the work (fail closed). With
+  no existing test changed, no list is needed.
+- The decision comes from git and the list only. Any statement by the writer that the list is complete
+  is ignored.
+- Every new or changed Python file stays at or under 400 counted lines (scripts/commit_guardian/_file_size_ratchet.py).
+  Files already over the limit must not grow.
+test_spec:
+- name: test_w1_unlisted_edit_stops_naming_file_and_tests
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: In a temp git repo, W1's list omits test_export.py. The check stops, naming test_export.py
+    and the changed test functions in it.
+  must_catch:
+  - file-level comparison passes W1 because other files are listed
+  - writer's 'list complete' claim trusted
+- name: test_w2_complete_list_goes_on
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: W2 lists all three existing files and passes. This is the control against returning to
+    the blanket ban.
+  must_catch:
+  - any edit to an existing test stops the work
+- name: test_new_test_file_not_treated_as_existing
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: test_refresh_gate.py, absent at the base ref, is never reported as an edited existing test.
+  must_catch:
+  - new file treated as existing because it matches test_*.py
+- name: test_sweep_check_through_before_commit_cli
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: the shared before-commit CLI (TQ-500g-1-i entry)
+  description: The before-commit CLI, run as a subprocess, returns the stop for W1 in its JSON verdict,
+    and fails closed when the sweep list is missing.
+  must_catch:
+  - missing sweep list treated as complete
+test_rationale: Real temp git repos with a real base commit, because 'existed before the work began' is
+  a git fact. W2 is the control. The CLI test proves the check sits on the path every route calls.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  THE FALSIFIABLE HALF OF "EVERY CHANGE TO ONE IS LISTED" (TQ-500g criteria).
+  W2 is the control: a check that stops every piece of work that touches an
+  existing test would pass W1 and bring back the blanket ban.
+
+  TECHNICAL DETAIL FOR IT-PO: "existed before the work began" is the file at
+  the merge base the routes already use. Granularity (file or test function) is
+  IT-PO's call; the criteria name tests, so a function-level comparison is the
+  intent. Which route runs it: all of them, through one shared check (the
+  both-lanes rule); wiring can ride the same step as the wrong-version runs.
+
+  IT-PO ENRICHMENT (2026-09-28)
+  GRANULARITY DECIDED: per test function (the BA left this to IT-PO).
+  WIRING: through the same before-commit call as the wrong-version runs, to
+  avoid more JS growth.

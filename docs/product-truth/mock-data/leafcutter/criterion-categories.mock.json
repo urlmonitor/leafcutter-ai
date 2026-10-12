@@ -1,0 +1,908 @@
+{
+  "id": "leafcutter/criterion-categories",
+  "component": "decision_kernel",
+  "status": "active",
+  "readiness": "draft",
+  "superseded_by": null,
+  "version": 1,
+  "shape_version": 2,
+  "reusable": true,
+  "realization": "spec",
+  "tags": ["decision-kernel", "decision-criteria", "criterion-categories", "criteria-mining", "precedent"],
+  "invariants": [
+    "CriterionCategory.repository_id == 'leafcutter-ai' and CriterionCategory.kind == 'criterion_category' for every record, and the key (repository_id, kind, id) is unique (ADR-061)",
+    "CriterionCategory.id matches ^cat-[0-9a-f]{16}$ and never changes: editing a label, merging or splitting keeps the id, and a retired id stays resolvable",
+    "CriterionCategory.pref_label is not one of its own alt_labels, and no label belongs to two categories that are not retired",
+    "Every CriterionCategory.members[] pair (decision_id, criterion_id) names a published record docs/decisions/<decision_id>.yaml whose criteria[] contain criterion_id (membership lives only in the category record; decision records are never edited)",
+    "A (decision_id, criterion_id) pair is a member of at most one category whose lifecycle_stage is staged or published",
+    "The question each member's criterion carries in its decision record is the category's pref_label or one of its alt_labels",
+    "CriterionCategory.member_view lists exactly the members, in order, joined with priority and question from the decision record (a derived display view, not a field of the record file)",
+    "CriterionCategory.broader is null or names another category that is staged or published (never a retired one), and following broader never leads back to the starting category",
+    "CriterionCategory.lifecycle_stage == 'retired' iff replaced_by != [] iff retirement != null; a retired category has members == [] (they moved to the replacement), and each replaced_by id names a published category",
+    "CriterionCategory.replaces lists exactly the categories whose replaced_by names this id (a derived reverse view, not a field of the record file)",
+    "CriterionCategory.lifecycle_stage == 'candidate' iff approval_status == 'proposed' iff approved_by == null; a candidate has run_id, staged_path and record_path == null (a mined candidate reaches a run root or Git only after a human approves it, ADR-058/ADR-060)",
+    "CriterionCategory.proposed_by == 'criteria_mining' or matches ^human(:<name>)?$, and approved_by matches ^human(:<name>)?$ on every approved record (the mining job proposes; only a person approves)",
+    "CriterionCategory.staged_path == '<run_root>/runs/' + run_id + '/staged/criterion_categories/' + id + '.yaml' whenever run_id != null",
+    "CriterionCategory.record_path == 'docs/criteria/' + id + '.yaml' iff lifecycle_stage in {published, retired}; null while candidate or staged",
+    "CriterionCategory.usage_count == the number of distinct members[].decision_id when lifecycle_stage in {published, retired}, generated from published records and never written by hand; null while candidate or staged",
+    "Every CriterionCategory.mined_from entry with source 'published_record' names a published decision whose criteria contain criterion_id with exactly that wording, and carries that record's provenance run_id and langfuse_trace_id; its run_status is null and origin is 'approved'",
+    "Every CriterionCategory.mined_from entry with source 'langfuse_trace' carries a kernel run_id, its langfuse_trace_id and run_status; decision_id is that run's staged, never-published record or null; origin is 'generated' or 'human_edited'. A trace sighting is evidence for a proposal, never a member",
+    "CriterionCategory records carry no outcome or success statistics; those exist only as CriterionCategoryAggregate rows in Neo4j (ADR-065)",
+    "CriterionCategoryAggregate.category_id names a published CriterionCategory (never a candidate, staged or retired one), and (repository_id, kind, category_id, context) is unique",
+    "CriterionCategoryAggregate.decision_count == confirmed_count + corrected_count + abandoned_count + pending_count, and summed over one category's rows it equals that category's usage_count",
+    "CriterionCategoryAggregate.context carries ADR-057 section 7's minimum dimensions (capability, task_type, components with repository_wide, repository_id, policy_version) plus decision_type; task_type and policy_version are null in V0 (OP-22), never omitted",
+    "Every CriterionCategoryAggregate row has the same rebuilt_at: each added item rebuilds all aggregates in full (ADR-065 A1.1, A1.2)"
+  ],
+  "entities": {
+    "CriterionCategory": {
+      "fields": {
+        "id": "string — kernel-minted cat-<16 hex>; stable for the life of the category (a label edit, merge or split never changes it)",
+        "repository_id": "string — first part of the ADR-061 identity key (repository_id, kind, id); memory.repository_id from the kernel config",
+        "kind": "enum: criterion_category — the declared record kind (ADR-061 key)",
+        "pref_label": "string — the canonical question: a member's wording, or one the approving human wrote (SKOS prefLabel)",
+        "alt_labels": "array of strings — the other wordings of the same question, from published records or mined traces (SKOS altLabel)",
+        "broader": "string | null — id of the broader category this one narrows (SKOS broader)",
+        "replaced_by": "array of category ids — set when this category is merged (one id) or split (several ids); empty while active",
+        "replaces": "array of category ids — categories whose replaced_by names this one (derived reverse view for display, not a field of the record file)",
+        "members": "array of { decision_id: dec id, criterion_id } — membership, stored only here, so published decision records stay unchanged",
+        "member_view": "array of { decision_id, criterion_id, priority: required | supporting, question } — each member joined with its criterion from the decision record (derived display view, not a field of the record file)",
+        "decision_types": "array of decision_type values the category applies to (declared vocabulary filter)",
+        "components": "array of component ids from docs/components.json ([] == not limited to a component)",
+        "lifecycle_stage": "enum: candidate | staged | published | retired — candidate == proposed by the offline mining job, awaiting a human; staged == approved in a kernel run and written to that run's root; published == entered into Git by a human-run publish; retired == published, then merged or split (replaced_by set)",
+        "approval_status": "enum: proposed | approved — only a human approval turns a candidate into a record",
+        "proposed_by": "string — criteria_mining (the offline mining job) or human:<name>",
+        "proposed_at": "string — ISO-8601 UTC time the category was proposed",
+        "approved_by": "string | null — human:<name>; never a model or the mining job; null while candidate",
+        "approved_at": "string | null — ISO-8601 UTC time of the human approval of this version of the record; null while candidate",
+        "run_id": "string | null — the kernel run that last staged this record (run-<16 hex>); null while candidate",
+        "staged_path": "string | null — where that run staged the record; <run_root> is the machine-local kernel run root",
+        "record_path": "string | null — docs/criteria/<id>.yaml once published (folder name not fixed by dec-93c1c730463c1f3c; docs/criteria/ is the name its question used); null while candidate or staged",
+        "retirement": "object | null — { retired_at, retired_by: human:<name>, reason } written when a human merges or splits the category; null while active",
+        "usage_count": "integer | null — distinct published decisions among members; generated from published records into a generated index (like docs/decisions/index.json), never hand-written; null while candidate or staged",
+        "mined_from": "array of { source: published_record | langfuse_trace, run_id, run_status: string | null, langfuse_trace_id, decision_id: dec id | null, criterion_id, origin: approved | generated | human_edited, wording } — the sightings the offline mining job found; Langfuse is read only by that job, never by a decision run",
+        "source": "string — where this sample record comes from: real data it is grounded in, and what is illustrative"
+      },
+      "records": [
+        {
+          "id": "cat-1dc11c5a2ffa7310",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Can it be built and verified as one ticket?",
+          "alt_labels": [
+            "Can it be built and verified as one ticket without new infrastructure?",
+            "Can the option be built and verified as one ticket without new infrastructure such as a graph database?",
+            "Can it be put in place with a small change?"
+          ],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": [],
+          "members": [
+            {"decision_id": "dec-4673055ef54113d5", "criterion_id": "crit.small_slice"},
+            {"decision_id": "dec-acdfd972fcaca478", "criterion_id": "crit.small_slice"},
+            {"decision_id": "dec-d53e1c52cd47c832", "criterion_id": "crit.small_slice"}
+          ],
+          "member_view": [
+            {
+              "decision_id": "dec-4673055ef54113d5",
+              "criterion_id": "crit.small_slice",
+              "priority": "supporting",
+              "question": "Can it be built and verified as one ticket without new infrastructure?"
+            },
+            {
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.small_slice",
+              "priority": "supporting",
+              "question": "Can it be built and verified as one ticket?"
+            },
+            {
+              "decision_id": "dec-d53e1c52cd47c832",
+              "criterion_id": "crit.small_slice",
+              "priority": "supporting",
+              "question": "Can the option be built and verified as one ticket without new infrastructure such as a graph database?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "published",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-05T10:12:44Z",
+          "run_id": "run-14de5fd6cc5bcf07",
+          "staged_path": "<run_root>/runs/run-14de5fd6cc5bcf07/staged/criterion_categories/cat-1dc11c5a2ffa7310.yaml",
+          "record_path": "docs/criteria/cat-1dc11c5a2ffa7310.yaml",
+          "retirement": null,
+          "usage_count": 3,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-9921881bfaa342ef",
+              "run_status": null,
+              "langfuse_trace_id": "4ffc49151294407f990941f5ef319bc4",
+              "decision_id": "dec-4673055ef54113d5",
+              "criterion_id": "crit.small_slice",
+              "origin": "approved",
+              "wording": "Can it be built and verified as one ticket without new infrastructure?"
+            },
+            {
+              "source": "published_record",
+              "run_id": "run-8a31d2cf1ea84f42",
+              "run_status": null,
+              "langfuse_trace_id": "8115d905671c341f780b4d618b8d1787",
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.small_slice",
+              "origin": "approved",
+              "wording": "Can it be built and verified as one ticket?"
+            },
+            {
+              "source": "published_record",
+              "run_id": "run-f0f15b38791a428f",
+              "run_status": null,
+              "langfuse_trace_id": "e944fec7169f6c70f899f3e7f9097fd4",
+              "decision_id": "dec-d53e1c52cd47c832",
+              "criterion_id": "crit.small_slice",
+              "origin": "approved",
+              "wording": "Can the option be built and verified as one ticket without new infrastructure such as a graph database?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-1dec9568f85745e4",
+              "run_status": "partial",
+              "langfuse_trace_id": "c12c99603d76061ce23284f20811cd87",
+              "decision_id": null,
+              "criterion_id": "crit-small-change",
+              "origin": "generated",
+              "wording": "Can it be put in place with a small change?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-35ecc5ce9780442d",
+              "run_status": "completed",
+              "langfuse_trace_id": "d1cf6cca5655445a160f172fffbd7153",
+              "decision_id": "dec-e4c6a3e133b9694b",
+              "criterion_id": "crit-small-change",
+              "origin": "generated",
+              "wording": "Can it be put in place with a small change?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-5bd2023780654292",
+              "run_status": "failed",
+              "langfuse_trace_id": "50182c38ec6e543536e4bad0efba5931",
+              "decision_id": null,
+              "criterion_id": "crit-small-change",
+              "origin": "generated",
+              "wording": "Can it be put in place with a small change?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-de1c989117414c1c",
+              "run_status": "waiting_human",
+              "langfuse_trace_id": "7849943eeef6fa5b0e887aae0453beea",
+              "decision_id": null,
+              "criterion_id": "crit-small-change",
+              "origin": "generated",
+              "wording": "Can it be put in place with a small change?"
+            }
+          ],
+          "source": "spec, grounded in real data: the three published crit.small_slice criteria (three wordings under one colliding decision-local id) plus crit-small-change from four kernel runs' Langfuse traces, one of them staged in dec-e4c6a3e133b9694b and never published; id, run and dates are illustrative (no category record exists on 2026-10-02)"
+        },
+        {
+          "id": "cat-d15d52392d7aa94c",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?",
+          "alt_labels": [
+            "Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule the person approved in an ADR, and never by a record or a precedent?",
+            "Does it keep human approval as the only source of authority, so no record or category self-authorizes?"
+          ],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": ["cat-40cc613f737e3323"],
+          "members": [
+            {"decision_id": "dec-d53e1c52cd47c832", "criterion_id": "crit.human_authority"},
+            {"decision_id": "dec-acdfd972fcaca478", "criterion_id": "crit.person_authorises"}
+          ],
+          "member_view": [
+            {
+              "decision_id": "dec-d53e1c52cd47c832",
+              "criterion_id": "crit.human_authority",
+              "priority": "required",
+              "question": "Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?"
+            },
+            {
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.person_authorises",
+              "priority": "required",
+              "question": "Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule the person approved in an ADR, and never by a record or a precedent?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "published",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-07T08:31:09Z",
+          "run_id": "run-d6a7c493a5e1ebd5",
+          "staged_path": "<run_root>/runs/run-d6a7c493a5e1ebd5/staged/criterion_categories/cat-d15d52392d7aa94c.yaml",
+          "record_path": "docs/criteria/cat-d15d52392d7aa94c.yaml",
+          "retirement": null,
+          "usage_count": 2,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-f0f15b38791a428f",
+              "run_status": null,
+              "langfuse_trace_id": "e944fec7169f6c70f899f3e7f9097fd4",
+              "decision_id": "dec-d53e1c52cd47c832",
+              "criterion_id": "crit.human_authority",
+              "origin": "approved",
+              "wording": "Does the option keep the rule that only a human approval creates a decision record and that precedent is evidence, never authority (ADR-060)?"
+            },
+            {
+              "source": "published_record",
+              "run_id": "run-8a31d2cf1ea84f42",
+              "run_status": null,
+              "langfuse_trace_id": "8115d905671c341f780b4d618b8d1787",
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.person_authorises",
+              "origin": "approved",
+              "wording": "Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule the person approved in an ADR, and never by a record or a precedent?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-1dec9568f85745e4",
+              "run_status": "partial",
+              "langfuse_trace_id": "c12c99603d76061ce23284f20811cd87",
+              "decision_id": null,
+              "criterion_id": "crit-human-approval-kept",
+              "origin": "generated",
+              "wording": "Does it keep human approval as the only source of authority, so no record or category self-authorizes?"
+            }
+          ],
+          "source": "spec, grounded in real data: crit.human_authority (dec-d53e1c52cd47c832) and crit.person_authorises (dec-acdfd972fcaca478), plus a generated wording from run-1dec9568f85745e4; the merge that moved crit.person_authorises in from cat-40cc613f737e3323 is illustrative"
+        },
+        {
+          "id": "cat-40cc613f737e3323",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule the person approved in an ADR, and never by a record or a precedent?",
+          "alt_labels": [],
+          "broader": null,
+          "replaced_by": ["cat-d15d52392d7aa94c"],
+          "replaces": [],
+          "members": [],
+          "member_view": [],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "retired",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-07T08:31:09Z",
+          "run_id": "run-d6a7c493a5e1ebd5",
+          "staged_path": "<run_root>/runs/run-d6a7c493a5e1ebd5/staged/criterion_categories/cat-40cc613f737e3323.yaml",
+          "record_path": "docs/criteria/cat-40cc613f737e3323.yaml",
+          "retirement": {
+            "retired_at": "2026-10-07T08:31:09Z",
+            "retired_by": "human:user",
+            "reason": "Merged into cat-d15d52392d7aa94c: it asks the same question as crit.human_authority in dec-d53e1c52cd47c832 (only a person's approval creates a record; a precedent never does). Its one member moved there; this id stays resolvable through replaced_by."
+          },
+          "usage_count": 0,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-8a31d2cf1ea84f42",
+              "run_status": null,
+              "langfuse_trace_id": "8115d905671c341f780b4d618b8d1787",
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.person_authorises",
+              "origin": "approved",
+              "wording": "Is every record that enters docs/decisions authorised by a person, either per decision or by a standing rule the person approved in an ADR, and never by a record or a precedent?"
+            }
+          ],
+          "source": "illustrative: first published on its own in run-14de5fd6cc5bcf07 with the member (dec-acdfd972fcaca478, crit.person_authorises), then merged into cat-d15d52392d7aa94c in run-d6a7c493a5e1ebd5 — the state a merge leaves behind; no real category has been merged yet"
+        },
+        {
+          "id": "cat-52b16c7b5a23106f",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Does every change stay reviewable in normal git review?",
+          "alt_labels": [
+            "Does every published record still go through git review in a pull request?",
+            "Does a new decision, an approval or a correction show up as a small, reviewable diff in one file?"
+          ],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": [],
+          "members": [
+            {"decision_id": "dec-acdfd972fcaca478", "criterion_id": "crit.git_review_kept"},
+            {"decision_id": "dec-ef8ddcb79d668a67", "criterion_id": "crit.reviewable_diffs"}
+          ],
+          "member_view": [
+            {
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.git_review_kept",
+              "priority": "required",
+              "question": "Does every published record still go through git review in a pull request?"
+            },
+            {
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.reviewable_diffs",
+              "priority": "required",
+              "question": "Does a new decision, an approval or a correction show up as a small, reviewable diff in one file?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "published",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-05T10:12:44Z",
+          "run_id": "run-14de5fd6cc5bcf07",
+          "staged_path": "<run_root>/runs/run-14de5fd6cc5bcf07/staged/criterion_categories/cat-52b16c7b5a23106f.yaml",
+          "record_path": "docs/criteria/cat-52b16c7b5a23106f.yaml",
+          "retirement": null,
+          "usage_count": 2,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-8a31d2cf1ea84f42",
+              "run_status": null,
+              "langfuse_trace_id": "8115d905671c341f780b4d618b8d1787",
+              "decision_id": "dec-acdfd972fcaca478",
+              "criterion_id": "crit.git_review_kept",
+              "origin": "approved",
+              "wording": "Does every published record still go through git review in a pull request?"
+            },
+            {
+              "source": "published_record",
+              "run_id": "run-2fbb4ef43b1345f6",
+              "run_status": null,
+              "langfuse_trace_id": "c93592ca1a813365b7d48d5a8363c66d",
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.reviewable_diffs",
+              "origin": "approved",
+              "wording": "Does a new decision, an approval or a correction show up as a small, reviewable diff in one file?"
+            }
+          ],
+          "source": "spec, grounded in real data: crit.git_review_kept and crit.reviewable_diffs from two published records; the preferred label is the wording the approving human wrote (illustrative)"
+        },
+        {
+          "id": "cat-d6ce5f78c181ebd1",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Can a later run find what it needs by filter, without opening every file?",
+          "alt_labels": [
+            "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?",
+            "Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's question and title, without opening every file?",
+            "Can a later run find candidate criteria for a new decision by filter and text without opening every file, as docs/decisions/index.json allows for decisions?"
+          ],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": [],
+          "members": [
+            {"decision_id": "dec-ef8ddcb79d668a67", "criterion_id": "crit.findable_by_filters"},
+            {"decision_id": "dec-93c1c730463c1f3c", "criterion_id": "crit.cheap_candidate_lookup"}
+          ],
+          "member_view": [
+            {
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.findable_by_filters",
+              "priority": "required",
+              "question": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?"
+            },
+            {
+              "decision_id": "dec-93c1c730463c1f3c",
+              "criterion_id": "crit.cheap_candidate_lookup",
+              "priority": "supporting",
+              "question": "Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's question and title, without opening every file?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "published",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-05T10:12:44Z",
+          "run_id": "run-14de5fd6cc5bcf07",
+          "staged_path": "<run_root>/runs/run-14de5fd6cc5bcf07/staged/criterion_categories/cat-d6ce5f78c181ebd1.yaml",
+          "record_path": "docs/criteria/cat-d6ce5f78c181ebd1.yaml",
+          "retirement": null,
+          "usage_count": 2,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-2fbb4ef43b1345f6",
+              "run_status": null,
+              "langfuse_trace_id": "c93592ca1a813365b7d48d5a8363c66d",
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.findable_by_filters",
+              "origin": "approved",
+              "wording": "Can a later run select precedent by component, roadmap phase, repository-wide flag and file type or language without opening every record?"
+            },
+            {
+              "source": "published_record",
+              "run_id": "run-3bba494c7c9b48ce",
+              "run_status": null,
+              "langfuse_trace_id": "ddd2a8a36efc7b0afaaf969dc062a882",
+              "decision_id": "dec-93c1c730463c1f3c",
+              "criterion_id": "crit.cheap_candidate_lookup",
+              "origin": "approved",
+              "wording": "Can a later run find candidate criteria or categories by filter and by criterion wording, not only by a decision's question and title, without opening every file?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-aa2831ba7f0e4ec9",
+              "run_status": "cancelled",
+              "langfuse_trace_id": "cd514e662b611e8934dd7877eeded069",
+              "decision_id": null,
+              "criterion_id": "crit.cheap_candidate_lookup",
+              "origin": "generated",
+              "wording": "Can a later run find candidate criteria for a new decision by filter and text without opening every file, as docs/decisions/index.json allows for decisions?"
+            }
+          ],
+          "source": "spec, grounded in real data: crit.findable_by_filters and crit.cheap_candidate_lookup from two published records, plus the earlier generated wording of crit.cheap_candidate_lookup from the cancelled run-aa2831ba7f0e4ec9; the broader parent of cat-6c3eb4f2af148922"
+        },
+        {
+          "id": "cat-6c3eb4f2af148922",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Do the filter fields take their values only from declared vocabularies that validation enforces?",
+          "alt_labels": [
+            "Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?"
+          ],
+          "broader": "cat-d6ce5f78c181ebd1",
+          "replaced_by": [],
+          "replaces": [],
+          "members": [{"decision_id": "dec-93c1c730463c1f3c", "criterion_id": "crit.filters_from_declared_vocabularies"}],
+          "member_view": [
+            {
+              "decision_id": "dec-93c1c730463c1f3c",
+              "criterion_id": "crit.filters_from_declared_vocabularies",
+              "priority": "required",
+              "question": "Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "staged",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-08T15:04:27Z",
+          "run_id": "run-8e11d78d6e2a6c2e",
+          "staged_path": "<run_root>/runs/run-8e11d78d6e2a6c2e/staged/criterion_categories/cat-6c3eb4f2af148922.yaml",
+          "record_path": null,
+          "retirement": null,
+          "usage_count": null,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-3bba494c7c9b48ce",
+              "run_status": null,
+              "langfuse_trace_id": "ddd2a8a36efc7b0afaaf969dc062a882",
+              "decision_id": "dec-93c1c730463c1f3c",
+              "criterion_id": "crit.filters_from_declared_vocabularies",
+              "origin": "approved",
+              "wording": "Are category, decision_type and components top-level plain-YAML fields whose values come from declared vocabularies that validation enforces, with the category list itself a reviewed vocabulary (ADR-061 section 4)?"
+            }
+          ],
+          "source": "spec, grounded in real data: crit.filters_from_declared_vocabularies (dec-93c1c730463c1f3c); illustrative state: approved and staged in run-8e11d78d6e2a6c2e, not yet published, with cat-d6ce5f78c181ebd1 as its broader category"
+        },
+        {
+          "id": "cat-1df63b670163b54e",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Use of existing solution: does it build on something that already exists rather than a new tool from scratch?",
+          "alt_labels": ["Does it reuse existing schemas, id minting and validators rather than adding new ones?"],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": [],
+          "members": [{"decision_id": "dec-ef8ddcb79d668a67", "criterion_id": "crit.reuses_conventions"}],
+          "member_view": [
+            {
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.reuses_conventions",
+              "priority": "supporting",
+              "question": "Does it reuse existing schemas, id minting and validators rather than adding new ones?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "published",
+          "approval_status": "approved",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": "human:user",
+          "approved_at": "2026-10-05T10:12:44Z",
+          "run_id": "run-14de5fd6cc5bcf07",
+          "staged_path": "<run_root>/runs/run-14de5fd6cc5bcf07/staged/criterion_categories/cat-1df63b670163b54e.yaml",
+          "record_path": "docs/criteria/cat-1df63b670163b54e.yaml",
+          "retirement": null,
+          "usage_count": 1,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-2fbb4ef43b1345f6",
+              "run_status": null,
+              "langfuse_trace_id": "c93592ca1a813365b7d48d5a8363c66d",
+              "decision_id": "dec-ef8ddcb79d668a67",
+              "criterion_id": "crit.reuses_conventions",
+              "origin": "approved",
+              "wording": "Does it reuse existing schemas, id minting and validators rather than adding new ones?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-49c4f5e97f2d41d6",
+              "run_status": "completed",
+              "langfuse_trace_id": "2c0ef12d0bc1ccac14800e5c9e775048",
+              "decision_id": "dec-36c4cb109225a1c8",
+              "criterion_id": "crit.edit.7",
+              "origin": "human_edited",
+              "wording": "Use of existing solution: does it build on something that already exists rather than a new tool from scratch?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-1dec9568f85745e4",
+              "run_status": "partial",
+              "langfuse_trace_id": "c12c99603d76061ce23284f20811cd87",
+              "decision_id": null,
+              "criterion_id": "crit-use-existing-solution",
+              "origin": "generated",
+              "wording": "Use of existing solution: does it build on existing mechanisms (decision store, precedent matching, the shipped/internal boundary) rather than a new system?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-35ecc5ce9780442d",
+              "run_status": "completed",
+              "langfuse_trace_id": "d1cf6cca5655445a160f172fffbd7153",
+              "decision_id": "dec-e4c6a3e133b9694b",
+              "criterion_id": "crit-use-existing-solution",
+              "origin": "generated",
+              "wording": "Use of existing solution: does it build on existing mechanisms (Jev candidate selection, config thresholds, the shipped/internal line, the precedent filter)?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-57d16125a4a94de0",
+              "run_status": "completed",
+              "langfuse_trace_id": "ba15f1cc25d8b27288525253e1b59f7b",
+              "decision_id": "dec-bb94d1090cd89b09",
+              "criterion_id": "crit-use-existing-solution",
+              "origin": "generated",
+              "wording": "Use of existing solution: does it build on something that already exists rather than a new tool from scratch?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-5bd2023780654292",
+              "run_status": "failed",
+              "langfuse_trace_id": "50182c38ec6e543536e4bad0efba5931",
+              "decision_id": null,
+              "criterion_id": "crit-use-existing-solution",
+              "origin": "generated",
+              "wording": "Use of existing solution: does it build on existing mechanisms (Jev candidate selection, config thresholds, the shipped/internal line, the precedent filter)?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-de1c989117414c1c",
+              "run_status": "waiting_human",
+              "langfuse_trace_id": "7849943eeef6fa5b0e887aae0453beea",
+              "decision_id": null,
+              "criterion_id": "crit-use-existing-solution",
+              "origin": "generated",
+              "wording": "Use of existing solution: does it build on existing mechanisms (Jev candidate selection, config thresholds, the precedent filter)?"
+            }
+          ],
+          "source": "spec, grounded in real data: crit.reuses_conventions (dec-ef8ddcb79d668a67) is the one published member; the preferred label is the wording the human wrote in run-49c4f5e97f2d41d6 (staged there as crit.edit.7), and five more runs' traces carry decision-specific variants of crit-use-existing-solution"
+        },
+        {
+          "id": "cat-73d233fc8b15c735",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "pref_label": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?",
+          "alt_labels": [
+            "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?",
+            "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?",
+            "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+          ],
+          "broader": null,
+          "replaced_by": [],
+          "replaces": [],
+          "members": [{"decision_id": "dec-5e7445182eaec1f2", "criterion_id": "crit.small_to_maintain"}],
+          "member_view": [
+            {
+              "decision_id": "dec-5e7445182eaec1f2",
+              "criterion_id": "crit.small_to_maintain",
+              "priority": "supporting",
+              "question": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+            }
+          ],
+          "decision_types": ["design"],
+          "components": [],
+          "lifecycle_stage": "candidate",
+          "approval_status": "proposed",
+          "proposed_by": "criteria_mining",
+          "proposed_at": "2026-10-05T07:30:00Z",
+          "approved_by": null,
+          "approved_at": null,
+          "run_id": null,
+          "staged_path": null,
+          "record_path": null,
+          "retirement": null,
+          "usage_count": null,
+          "mined_from": [
+            {
+              "source": "published_record",
+              "run_id": "run-7c7d6474612b438b",
+              "run_status": null,
+              "langfuse_trace_id": "b08d45b4f4d504ead065df9d2e5232a0",
+              "decision_id": "dec-5e7445182eaec1f2",
+              "criterion_id": "crit.small_to_maintain",
+              "origin": "approved",
+              "wording": "Does the option keep the number of artifacts small enough that one change to the lifecycle touches few files?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-49c4f5e97f2d41d6",
+              "run_status": "completed",
+              "langfuse_trace_id": "2c0ef12d0bc1ccac14800e5c9e775048",
+              "decision_id": "dec-36c4cb109225a1c8",
+              "criterion_id": "crit.edit.6",
+              "origin": "human_edited",
+              "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-1dec9568f85745e4",
+              "run_status": "partial",
+              "langfuse_trace_id": "c12c99603d76061ce23284f20811cd87",
+              "decision_id": null,
+              "criterion_id": "crit-maintainability",
+              "origin": "generated",
+              "wording": "Maintainability: does it keep working with little upkeep as decisions, components and the harness evolve?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-35ecc5ce9780442d",
+              "run_status": "completed",
+              "langfuse_trace_id": "d1cf6cca5655445a160f172fffbd7153",
+              "decision_id": "dec-e4c6a3e133b9694b",
+              "criterion_id": "crit-maintainability",
+              "origin": "generated",
+              "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-57d16125a4a94de0",
+              "run_status": "completed",
+              "langfuse_trace_id": "ba15f1cc25d8b27288525253e1b59f7b",
+              "decision_id": "dec-bb94d1090cd89b09",
+              "criterion_id": "crit-maintainability",
+              "origin": "generated",
+              "wording": "Maintainability: does it keep working with little upkeep as the kernel and its traces evolve?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-5bd2023780654292",
+              "run_status": "failed",
+              "langfuse_trace_id": "50182c38ec6e543536e4bad0efba5931",
+              "decision_id": null,
+              "criterion_id": "crit-maintainability",
+              "origin": "generated",
+              "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+            },
+            {
+              "source": "langfuse_trace",
+              "run_id": "run-de1c989117414c1c",
+              "run_status": "waiting_human",
+              "langfuse_trace_id": "7849943eeef6fa5b0e887aae0453beea",
+              "decision_id": null,
+              "criterion_id": "crit-maintainability",
+              "origin": "generated",
+              "wording": "Maintainability: does it keep working with little upkeep as decisions and the harness evolve?"
+            }
+          ],
+          "source": "real mined candidate: maintainability was asked in six kernel runs (one wording written by the human in run-49c4f5e97f2d41d6) but no published record carries it; the only published proposal is crit.small_to_maintain (dec-5e7445182eaec1f2). Still awaiting a human approval; id and proposed_at are illustrative"
+        }
+      ]
+    },
+    "CriterionCategoryAggregate": {
+      "fields": {
+        "id": "string — fixture handle: <category_id>@<context> (the store keys rows by repository_id, kind, category_id and context)",
+        "repository_id": "string — first part of the key, as on the category",
+        "kind": "enum: criterion_category — the kind of the record the aggregate is keyed on",
+        "category_id": "string — the published CriterionCategory.id the statistics are keyed on",
+        "context": "object { capability, task_type: null in V0, decision_type, components, repository_wide, repository_id, policy_version } — ADR-057 section 7 context; no global rate is ever kept",
+        "decision_count": "integer — published decisions in this context whose criteria are members of the category",
+        "confirmed_count": "integer — of those, final_outcome.status == confirmed",
+        "corrected_count": "integer — of those, final_outcome.status == corrected",
+        "abandoned_count": "integer — of those, final_outcome.status == abandoned",
+        "pending_count": "integer — of those, final_outcome.status == pending (no outcome observed yet)",
+        "rebuilt_at": "string — ISO-8601 UTC time of the full rebuild that produced the row",
+        "rebuilt_after": "string — the added item that triggered that rebuild",
+        "source": "string — where this sample row comes from"
+      },
+      "records": [
+        {
+          "id": "cat-1dc11c5a2ffa7310@repository_wide",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-1dc11c5a2ffa7310",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": [],
+            "repository_wide": true,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 3,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 3,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-4673055ef54113d5, dec-acdfd972fcaca478, dec-d53e1c52cd47c832 — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-d15d52392d7aa94c@repository_wide",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-d15d52392d7aa94c",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": [],
+            "repository_wide": true,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 2,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 2,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-acdfd972fcaca478, dec-d53e1c52cd47c832 — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-52b16c7b5a23106f@repository_wide",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-52b16c7b5a23106f",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": [],
+            "repository_wide": true,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 1,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 1,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-acdfd972fcaca478 — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-52b16c7b5a23106f@decision_kernel+knowledge_management",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-52b16c7b5a23106f",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": ["decision_kernel", "knowledge_management"],
+            "repository_wide": false,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 1,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 1,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-ef8ddcb79d668a67 — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-d6ce5f78c181ebd1@repository_wide",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-d6ce5f78c181ebd1",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": [],
+            "repository_wide": true,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 1,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 1,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-93c1c730463c1f3c — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-d6ce5f78c181ebd1@decision_kernel+knowledge_management",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-d6ce5f78c181ebd1",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": ["decision_kernel", "knowledge_management"],
+            "repository_wide": false,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 1,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 1,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-ef8ddcb79d668a67 — all pending on 2026-10-02"
+        },
+        {
+          "id": "cat-1df63b670163b54e@decision_kernel+knowledge_management",
+          "repository_id": "leafcutter-ai",
+          "kind": "criterion_category",
+          "category_id": "cat-1df63b670163b54e",
+          "context": {
+            "capability": "decision",
+            "task_type": null,
+            "decision_type": "design",
+            "components": ["decision_kernel", "knowledge_management"],
+            "repository_wide": false,
+            "repository_id": "leafcutter-ai",
+            "policy_version": null
+          },
+          "decision_count": 1,
+          "confirmed_count": 0,
+          "corrected_count": 0,
+          "abandoned_count": 0,
+          "pending_count": 1,
+          "rebuilt_at": "2026-10-07T09:02:16Z",
+          "rebuilt_after": "publish of run-d6a7c493a5e1ebd5 (cat-40cc613f737e3323 merged into cat-d15d52392d7aa94c)",
+          "source": "illustrative shape (ADR-065 leaves the aggregate model open; statistics start with COLLECT); the counts are computed from the real final_outcome of dec-ef8ddcb79d668a67 — all pending on 2026-10-02"
+        }
+      ]
+    }
+  },
+  "used_by": {"mockups": [], "tests": [], "flows": []},
+  "provenance": [
+    {
+      "action": "authored",
+      "by": "mock-data-author",
+      "date": "2026-10-02",
+      "note": "The ONE canonical CriterionCategory dataset for decision_kernel, in the format decided in dec-93c1c730463c1f3c: one reviewed record per category keyed (repository_id, kind, id), the canonical question as preferred label, other wordings as alternative labels, an optional broader category, replaced_by on merge or split, and membership as (decision id, criterion id) pairs inside the category record. Grounded in the seven published records in docs/decisions/ and in seven local kernel runs whose host submissions stand in for what the Langfuse mining job would surface (generated and human-edited criteria, including failed, cancelled and waiting runs). Covers every stage: a mined candidate awaiting approval, a staged record, published records and a retired one merged into its replacement. CriterionCategoryAggregate shows the separate Neo4j outcome view keyed by category id (ADR-065): derived, rebuildable rows that are never written into Git; the category records carry no outcome statistics. Decisions are referenced by id only; the Decision dataset (leafcutter/decisions) is not changed. Extend this dataset; do not start a second one."
+    }
+  ]
+}

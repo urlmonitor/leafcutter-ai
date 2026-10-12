@@ -1,0 +1,74 @@
+id: DK-200a-3-i
+title: "Recent conversation resolves a pronoun despite older conversation filling the allowance"
+component: decision-kernel
+components: [decision_kernel]
+level: L3
+status: active
+readiness: draft
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given the request is "Can you explain it?"
+  And older conversation fills the available caller-context allowance,
+  And the newest supplied conversation identifies "it" as the Zephyr manifest,
+  And permitted documentation describes that manifest,
+  When enrichment selects caller context and searches for grounding,
+  Then the retained conversation includes the recent Zephyr reference,
+  And the gathered evidence concerns the Zephyr manifest,
+  And the request remains "Can you explain it?".
+depends_on: [DK-200a-3]
+covered_by:
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_recent_referent_survives_older_conversation_filling_character_budget"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_recent_referent_survives_older_conversation_filling_query_budget"
+  - "tests/kernel/enrichment/test_context_enrichment.py::TestContextEnrichmentBoundaries::test_conversation_changes_actual_retrieval_for_the_same_pronoun_goal"
+implemented_by:
+  - "kernel/context_enrichment.py"
+  - "kernel/enrichment_sources.py"
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Recency must govern retention and query hints when older caller conversation exhausts the applicable allowance."
+  - "Caller context may clarify retrieval terms but must not rewrite the task's original goal."
+delivers_to: null
+expects_from: null
+test_required: true
+test_spec:
+  - name: test_recent_referent_survives_older_conversation_filling_character_budget
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "With an 80-character caller allowance and 1,800 characters of older conversation, the newest Zephyr reference and actual matching evidence survive, shortening is reported and the original goal/input remain unchanged."
+  - name: test_recent_referent_survives_older_conversation_filling_query_budget
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "Crowded older conversation cannot displace the recent Zephyr referent from actual repository retrieval."
+  - name: test_conversation_changes_actual_retrieval_for_the_same_pronoun_goal
+    target_dir: tests/kernel/enrichment/
+    framework: pytest
+    type: unit
+    angle: criterion
+    description: "The same unchanged pronoun goal retrieves the labelled Zephyr source only when its supplied conversation is present."
+test_rationale: "Separate caller-character and retrieval-query boundaries prove that the recent referent survives both truncation points; counterfactual gathering with the same goal proves the context changes actual evidence."
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/run-the-decision-kernel.md
+    relationship: context
+    status: exists
+origin_agent: business-analyst
+created: 2026-10-02
+amended_by:
+  - reason: "IT PO technical enrichment and verified test mapping on 2026-10-02; BA criteria and draft readiness preserved."
+superseded_by: null
+notes: |
+  Decomposed from the user-authorized context-enrichment scope and existing
+  DK-100 through DK-104. IT PO technical constraints and exact behavioral test
+  links are recorded. Readiness remains draft; no product approval is implied.

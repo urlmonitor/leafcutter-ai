@@ -1,7 +1,7 @@
 id: TQ-200a-1-i
 components:
   - testing_quality
-title: "The producer and AC-authoring agents are in scope for eval coverage"
+title: "The producer, AC-authoring and test-writing agents are in scope for eval coverage"
 component: testing-quality
 level: L3
 status: active
@@ -17,7 +17,9 @@ criteria: |
     flow-author are each in scope,
   And the AC-authoring agents product-owner, business-analyst, and it-po are each
     in scope,
-  And every one of these seven agents is required to have its own eval set.
+  And the test-writing agents test-designer, test-writer, sql-test-writer, and
+    test-runner are each in scope,
+  And every one of these eleven agents is required to have its own eval set.
 depends_on:
   - TQ-200a-1
 doc_links:
@@ -28,15 +30,27 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements: |
   Scope is the union of the product-truth producer agents (pt-classifier,
-  mock-data-author, mockup-author, flow-author) and the AC-authoring agents
-  (product-owner, business-analyst, it-po). These names should be a single
-  declared list the coverage check reads, not hard-coded in multiple places.
+  mock-data-author, mockup-author, flow-author), the AC-authoring agents
+  (product-owner, business-analyst, it-po) and the test-writing agents
+  (test-designer, test-writer, sql-test-writer, test-runner). These names should
+  be a single declared list the coverage check reads, not hard-coded in multiple
+  places, so a later addition is one entry in that list.
 delivers_to: null
 expects_from: {}
 test_required: true
 origin_agent: BrainCandy
 created: 2026-07-14
-amended_by: []
+amended_by:
+  - reason: "Scope widened to the test-writing agents test-designer, test-writer, sql-test-writer and test-runner (TQ-200d)"
+    by: business-analyst
+    at: 2026-09-28
+    note: >-
+      User decision at the PO gate of the Phase B planning pass (2026-09-28):
+      the list of in-scope agents is not closed. Title, criteria (one clause
+      added, the count changed from seven to eleven) and it_requirements
+      updated; depends_on unchanged. test-designer does not exist until
+      ACD-2500d-5 lands; until then the coverage check correctly reports it as
+      an in-scope agent with no eval set (TQ-200a-1's coverage-gap clause).
 superseded_by: null
 covered_by: []
 implemented_by: []

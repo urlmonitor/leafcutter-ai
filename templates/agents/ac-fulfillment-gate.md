@@ -11,7 +11,7 @@ description: 'AC fulfillment gate. Runs at priority 11.7 (after ac-validator at 
   auto-fix attempt, or if a present ac_traceability block resolves to zero ACs.
   Use when: ticket-supervisor dispatches at priority 11.7 for any ticket that
   has ac_traceability frontmatter referencing L2/L3 AC YAML files. Skips silently
-  for L0/L1 ACs (composite — fulfillment derived from children).
+  for composite ACs (covered_by lists child ACs — fulfillment derived from children).
   '
 model: sonnet
 name: ac-fulfillment-gate
@@ -55,10 +55,10 @@ behavioral_patterns:
   name: Conditional Behavior
   related_agent: null
   trigger: the file is absent
-- behavior: skip this AC entirely
+- behavior: run mark_ac_done.py instead of verifying directly
   name: Conditional Behavior
   related_agent: null
-  trigger: '`level` equals `L0` or `L1`'
+  trigger: '`covered_by` lists child AC ids'
 
 ---
 
@@ -127,10 +127,9 @@ reported as "no AC store fields to verify".
 
 Build the working list of ACs to check from `resolved_acs` (each entry already
 carries its own `ac_yaml_path` — never reconstruct one from a base path
-yourself). Skip any AC whose `level` is `L0` or `L1` (composite — fulfillment
-is derived from children, not directly verified) per Step 2b below. Level is
-determined by the AC YAML file's `level` field; if the file is absent, treat
-as L2/L3 (check it).
+yourself). Skip any composite AC (its `covered_by` lists child AC ids, at any
+level L0-L3 — the rule `check_done_proof` uses) per Step 2b below; its
+fulfillment is derived from children. If the file is absent, check the AC.
 
 ---
 
@@ -160,12 +159,13 @@ Read the file using the `Read` tool. Parse the fields:
   attempted for L3 — BO-202 draws no level qualifier around auto-fix, so a
   genuine `# covers: <AC-ID>` tag found in the diff must be captured
   regardless of level
-- `level` — used to skip L0/L1 ACs
+- `level` — informational only; composite detection does not use it
 
-### 2b. Skip L0/L1 ACs
+### 2b. Composite ACs
 
-If `level` equals `L0` or `L1`, skip this AC entirely. Record:
-`{ac_id: <ID>, status: skipped, reason: "L0/L1 composite AC — fulfillment derived from children"}`
+If any `covered_by` entry is a child AC id (not a test path), the AC is composite
+at any level L0-L3. Run Step 3a for it, skip 2d-2f and 3b-3c, and record:
+`{ac_id: <ID>, status: composite, reason: "covered_by lists child ACs — fulfillment derived from children"}`
 
 ### 2c. Gather branch diff evidence
 
@@ -201,7 +201,8 @@ If `implemented_by` is empty or has no intersection with the diff:
 ### 2f. Verify `covered_by`
 
 For L2 ACs: `covered_by` must be non-empty (at least one test file path listed).
-If empty, this AC is not yet `passed` for this field.
+Child AC ids in `covered_by` never count as test coverage. If empty, this AC is
+not yet `passed` for this field.
 
 For L3 ACs: an empty `covered_by` remains an acceptable FINAL state (L3 ACs are
 not hard-failed for missing coverage). But BO-202's auto-fix criterion carries
@@ -225,9 +226,15 @@ entries — it only adds new entries when they are absent.
 
 ### 3a. Auto-fix `work_status`
 
-If `work_status != "done"` AND `files_touched ∩ diff` is non-empty:
-- Set `work_status: done` in the YAML file via `Edit`.
-- Record: `{ac_id: <ID>, auto_fixed: work_status, old_value: "<previous>", new_value: "done"}`
+Never edit `work_status` yourself. If `work_status != "done"` AND
+`files_touched ∩ diff` is non-empty (or the AC is composite), run:
+```bash
+python3 {{config.output_root}}/scripts/ac_store/mark_ac_done.py --ac <ID> --test-root .
+```
+Quote the script's output in your sign-off and record one of: `done`;
+`in_progress` with the unfinished children it names (exit 0); or `refused`
+(non-zero exit) with the children named. On a refusal, sign off as a
+**blocker** naming those children.
 
 ### 3b. Auto-fix `implemented_by`
 
@@ -282,7 +289,7 @@ If the script exits non-zero:
 ## Step 4 — Re-verify after auto-fix
 
 After all auto-fix attempts, re-check each AC that was modified:
-- `work_status == "done"`?
+- `work_status == "done"`? (leaf ACs only — a composite is classified below)
 - `implemented_by` non-empty with at least one diff-intersecting path?
 - `covered_by`: non-empty required for L2 ACs. For L3 ACs, non-empty if 3c's
   auto-fix found a covering tag; an empty list remains acceptable for L3 when
@@ -291,6 +298,14 @@ After all auto-fix attempts, re-check each AC that was modified:
 Classify each AC as:
 - `passed` — all checks green after verification or auto-fix
 - `blocker` — one or more checks still fail after auto-fix attempt
+
+Classify each composite AC (Step 2b) by what `mark_ac_done.py` did in Step 3a,
+instead of re-checking `work_status`:
+- script marked it `done` → `passed`
+- script left or set it `in_progress` (exit 0, unfinished children named) →
+  `in_progress` — NOT a blocker. A composite's fulfilment is derived from its
+  children and is expected to stay in progress until they are done.
+- script refused (non-zero exit) → `blocker`, naming the children
 
 ---
 
@@ -305,14 +320,16 @@ Step 1, which returns before this step is ever reached.)
 
 ### All passed, and at least one AC was resolved → ok
 
-If `resolved_acs` is non-empty AND every AC in the working list is `passed`
-or `skipped`:
+If `resolved_acs` is non-empty AND every AC in the working list is `passed`,
+`skipped`, or an `in_progress` composite (no AC is a `blocker`):
 
 Sign off `(status: ok)`:
 ```
 All N L2/L3 ACs verified. work_status, implemented_by, and covered_by fields
 are accurate. <M auto-fixes applied.> Commit phase may proceed.
 ```
+If any composite is `in_progress`, add a line listing it and its unfinished
+children: `Composite <ID> in_progress — unfinished children: <child IDs>`.
 
 ### Zero ACs resolved → blocker (uninterpretable traceability block)
 

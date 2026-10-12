@@ -1,0 +1,150 @@
+id: ACD-2500a-3-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: approved
+priority: high
+title: "A documentation link saying the work modifies a file missing from the declared list needs a decision, and the file is never added automatically"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given record P declares the files scripts/x.py, marked existing, and
+      unit_tests/ac_store/test_x.py, marked to be created,
+    and P's documentation links name scripts/x.py as a file the work modifies,
+      scripts/y.py as a file the work modifies,
+      and docs/reference/ac-schema.md as describing the work,
+    and record S is in the "no declared files" state and its documentation links name
+      scripts/build.py as a file the work modifies,
+  When the requirement rule check runs,
+  Then P gets exactly one finding of this kind, with disposition "needs a decision", naming
+    P and scripts/y.py and stating that a documentation link says the work modifies a file
+    P's declared list does not contain,
+  And neither scripts/x.py (declared and linked as modified) nor docs/reference/ac-schema.md
+    (linked as describing) is named in a finding of this kind,
+  And after the run P's declared list is still exactly scripts/x.py and
+    unit_tests/ac_store/test_x.py, in that order -- scripts/y.py is not added and no link is
+    removed,
+  And S gets no finding of this kind; S is listed as "not evaluated: no declared files" for
+    this rule and is not counted as passed.
+depends_on:
+  - ACD-2500a-3
+  - ACD-1600c-4
+  - ACD-1600c-4-ii
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1600-single-source-buildable/ACD-1600c-4.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The declared list is the only answer to which files the work changes; a 'modifies'
+      documentation link is never part of it. This AC surfaces the disagreement between the
+      two for a human to settle instead of letting either side win silently.
+  - path: docs/known-issues/ac-store/open-high-ki-acs-002.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The doc_links derivation is wrong in both directions; a 'modifies' link outside the
+      declared list is either a stale link or a file missing from the list, and only the
+      author can say which.
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "A separate rule family in the ACD-2500a-1 requirement rule-check report (declared files versus 'modifies' documentation links), not a variant of the specialist-versus-surface family. Findings use the ACD-2500a-1 shape unchanged: disposition 'needs a decision', one finding per (file, record_id, rule_family, path) with the path as the subject, message naming the record and the path, detail carrying the path."
+  - "Declared files are read only through the declared-files seam (scripts/ac_store/declared_files.py, ACD-1600c-4); the rule never parses declared_files itself. Documentation-link paths and declared paths are compared in the seam's normalised repo-root-relative POSIX form (ACD-1600c-4-iii), not as raw text."
+  - "Only links whose relationship value is exactly 'modifies' are compared; every other relationship (describes, related, ...) is ignored by this rule -- data-driven, never keyed on paths or ids."
+  - "No repair: the rule never writes a record. Neither the declared list nor doc_links is changed by the run (ACD-2500a-2: a repair is applied only when fully determined by store data; this disagreement has two valid resolutions)."
+  - "A record in the 'no declared files' state is listed 'not evaluated: no declared files' for this family, verbatim, and excluded from the passed count (ACD-1600c-4-ii vocabulary)."
+  - "Verdict: any finding of this family makes the rule check's verdict failed for the authoring stage, exactly as for every other family under ACD-2500a-1 / ACD-2500a-2. 'Advisory' means human-decided and never auto-applied, not verdict-neutral; the rule gets no carve-out."
+  - "Runs within ACD-2500a-1's determinism and time budget (byte-identical report for an identical folder; 5 seconds for 100 records) with the family added."
+test_spec:
+  - name: test_modifies_link_outside_declared_list_one_needs_decision_finding
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "P gets exactly one finding of this family, disposition 'needs a decision', naming P and scripts/y.py."
+  - name: test_declared_modifies_link_and_describes_link_not_named
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "Neither scripts/x.py (declared and linked as modifies) nor docs/reference/ac-schema.md (describes) is named in a finding of this family."
+    angle: boundary
+  - name: test_declared_list_and_links_unchanged_after_run
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "After the run P's record file is byte-identical: declared list is still scripts/x.py then unit_tests/ac_store/test_x.py, scripts/y.py not added, no link removed."
+  - name: test_no_declared_files_record_not_evaluated_for_family
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "S gets no finding of this family, is listed 'not evaluated: no declared files' for it, and is not counted as passed."
+    angle: boundary
+  - name: test_family_finding_fails_stage_verdict
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "A folder whose only finding is P's scripts/y.py finding yields verdict 'failed' and a non-zero exit."
+    angle: failure
+  - name: test_declared_files_read_through_seam
+    target_dir: unit_tests/ac_store/
+    framework: pytest
+    type: unit
+    description: "With the seam's answer for P substituted, the family's findings follow the substituted answer, proving the rule reads declared files only through the seam."
+    angle: seam
+delivers_to: null
+expects_from:
+  - ac_id: ACD-2500a-3
+    contract: 'Requirement rule-check report: JSON on stdout, exit 0 iff verdict is passed. Shape: {verdict:
+      ''passed''|''failed'', location: str, records_checked: int, findings: [{file: str, record_id: str|null,
+      rule_family: str, disposition: ''fixed''|''needs a decision''|''failed''|''not evaluated'', message:
+      str, line: int|null, detail: object|null}]}; at most one finding per (file, record_id, rule_family,
+      subject). Declared files read only through the ACD-1600c-4 declared-files seam.'
+  - ac_id: ACD-1600c-4
+    contract: "Declared-files answer from scripts/ac_store/declared_files.py over the AC field declared_files: the named state 'no declared files' or the declared entries in order, each {path: repo-root-relative POSIX string, state: 'existing'|'to_be_created'}. Never derived from doc_links."
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by:
+  - reason: "it-po technical enrichment: it_requirements (own rule family in the ACD-2500a-1 report shape; declared files via the seam, normalised comparison; only 'modifies' links; no repair; 'not evaluated: no declared files'; any finding fails the stage verdict -- BA reading of 'advisory' kept; inherited budget), test_spec, expects_from gains ACD-1600c-4, doc_link to ac-driven-dev.md. Criteria unchanged."
+    date: '2026-09-28'
+    by: it-po
+    directed_by: user
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  ORIGIN (2026-09-28, user decision on open question Q5 of the declared-files run,
+  follow-up C3). Q5: for a record that HAS a declared list, what happens to a documentation
+  link tagged as modifying a file that is not on the list? Decision: one "needs a decision"
+  finding per such file in the requirement rule check; never raised for "no declared
+  files" records; the file is never added to the list automatically.
+
+  WHY A DECISION, NOT A REPAIR. The disagreement has two correct resolutions -- declare the
+  file, or re-tag / drop the link -- and the store holds nothing that picks one. ACD-2500a-2's
+  rule applies: a repair is applied only when fully determined by data in the store;
+  otherwise "needs a decision", never guessed. Auto-adding would re-create the doc_links ->
+  files derivation ACD-1600c-4 retires.
+
+  "ADVISORY" (user's word) is read as: a finding for a human, not a commit-time refusal and
+  not an automatic change. It is NOT read as "does not affect the check's verdict" -- under
+  ACD-2500a-1 / ACD-2500a-2 any finding makes the rule check's verdict failed for the
+  authoring stage, and this AC does not carve out an exception. Flagged to the user.
+
+  PLACEMENT. ACD-2500a is at its 5-L2 cap; this is an L3 under ACD-2500a-3 because both read
+  the record's declared files through the one seam and report per-file findings in the same
+  rule-check report. It is a separate rule (declared files versus 'modifies' links), not a
+  variant of the specialist-versus-surface verdict.
+
+  WHY S IS "NOT EVALUATED" RATHER THAN SILENT. ACD-1600c-4-ii makes "not evaluated: no
+  declared files" the store's vocabulary for every check that needs declared files, and
+  forbids counting such a record as passed. For S every 'modifies' link IS the derived file
+  list, so there is nothing to compare against.

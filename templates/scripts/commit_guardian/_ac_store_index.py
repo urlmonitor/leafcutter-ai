@@ -112,8 +112,9 @@ def _load_one_yaml_file(yaml_file: Path) -> dict[str, Any] | None:
         return _load_yaml_minimal(yaml_file)
 
     # Attempt PyYAML path via load_yaml.
-    # _ac_schema_validators.load_yaml calls yaml.safe_load() and only catches
-    # OSError; yaml.YAMLError (malformed YAML) propagates uncaught from it.
+    # _ac_schema_validators.load_yaml parses through the shared fast-vs-pure
+    # accessor and only catches OSError; yaml.YAMLError (malformed YAML)
+    # propagates uncaught from it.
     # We must catch it here to preserve the long-standing fail-open behaviour
     # (warn + skip the file, never crash the hook).
     try:
@@ -156,6 +157,18 @@ def _load_yaml_minimal(yaml_file: Path) -> dict[str, Any] | None:
     Handles only top-level scalar key: value lines. Sufficient for reading
     id, depends_on, covered_by, implements_pattern, and similar fields.
 
+    Deliberately yaml.SafeLoader, NOT the shared fast accessor (loader-audit,
+    TQ-600a-11 fix-pass, 2026-10-07): this function is the ImportError
+    fallback for `_load_one_yaml_file` above, which exists for exactly the
+    same purpose -- the AC store's guard against treating a malformed file as
+    valid -- and whose own PyYAML path was already reverted to
+    `_ac_schema_validators.load_yaml`'s pure-Python `yaml.SafeLoader` for
+    that reason. Leaving this sibling fallback on the fast, CSafeLoader-backed
+    accessor would reintroduce the identical defect on the path taken
+    whenever `_ac_schema_validators` itself fails to import (a documented
+    recurring deploy-layout gap in this repo), silently widening what this
+    guard accepts right when the primary path falls back to it.
+
     Args:
         yaml_file: Path to the .yaml file to parse.
 
@@ -173,7 +186,7 @@ def _load_yaml_minimal(yaml_file: Path) -> dict[str, Any] | None:
     try:
         import yaml  # type: ignore[import]
 
-        data = yaml.safe_load(content)
+        data = yaml.load(content, Loader=yaml.SafeLoader)
         return data if isinstance(data, dict) else None
     except ImportError:
         pass

@@ -421,6 +421,15 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/knowledge_frontmatter_reader.py`` — knowledge_query.py's
       sibling frontmatter/YAML reader module (KM-KGS-100a-3-xi); must ship
       alongside it or knowledge_query.py fails to import in consumers.
+    - ``scripts/frontmatter_path_resolver.py`` — GE-118d's shared
+      path-bearing-frontmatter-entry resolver, imported by
+      templates/scripts/commit_guardian/frontmatter_validators.py via the
+      sibling locator module _frontmatter_path_resolver_locator.py; must
+      ship as a sibling of scripts/commit_guardian/ under this phase's
+      real deploy root (never under templates/scripts/commit_guardian/
+      itself — see the resolver's own docstring for why) or the deployed
+      check-doc-frontmatter guard fails to import it on any document using
+      the labelled entry shape.
     - ``scripts/knowledge_file_nodes.py`` — knowledge_query.py's second
       sibling module (KM-KGS-100d-4), resolving file-path relationship
       values to path-keyed graph nodes; must also ship alongside it for the
@@ -429,11 +438,22 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
       sibling module (KM-KGS-100c-1/-i/-ii), the surface-set completeness
       check; loaded on demand by knowledge_query.check_surface_set() and
       must also ship alongside it.
+    - ``scripts/knowledge_rendering.py`` — knowledge_query.py's fourth
+      sibling module, the text/JSON renderers; loaded at import time, so
+      knowledge_query.py fails to import in consumers without it.
+    - ``scripts/knowledge_edges.py`` — knowledge_query.py's fifth sibling
+      module, edge extraction and routing (GE-127 size-ratchet extraction);
+      loaded at import time, so knowledge_query.py fails to import in
+      consumers without it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
     - ``scripts/live_surface_startup.py`` — used by the live-surface-tester agent.
     - ``scripts/generate_doc_index.py`` — used by the transform-doc-index pre-commit hook.
+
+    The list itself is ``WORKFLOW_TOOL_SCRIPTS`` in build_phases_knowledge.py,
+    the same tuple ``_manifest_workflow_tool_scripts`` reports, imported at
+    call time like ``build_phases`` above. Add a new script there, not here.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -476,28 +496,33 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     #   knowledge_query.py's third sibling module, loaded on demand via
     #   _load_sibling_module() by check_surface_set(), so a consumer install
     #   missing it fails that call. (#TICKETLESS reason=km-kgs-100c-1-surface-check)
+    # - 2026-09-28 [python-coder/GE-118d]: Added frontmatter_path_resolver.py
+    #   right after knowledge_frontmatter_reader.py. Placement in this list
+    #   has no import-order dependency on any other entry; it is the second
+    #   of two required deploy-manifest locations for this ticket (see
+    #   _manifest_workflow_tool_scripts() in build_phases_knowledge.py for
+    #   the first, and this ticket's Implementation Notes for the
+    #   architect-review correction of which file that second location
+    #   actually lives in).
+    # - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+    #   Dropped the local deploy_scripts list; this phase now iterates
+    #   build_phases_knowledge.WORKFLOW_TOOL_SCRIPTS, the one list the
+    #   manifest also reads, so a script can no longer be added to only one
+    #   of them. knowledge_rendering.py joined that list: knowledge_query.py
+    #   loads it at import time since c2ddb6f12, and neither hand list named
+    #   it, so every consumer's deployed knowledge_query.py crashed.
+    #   Missing-source handling (record_deploy_failure) is unchanged.
     """
     import shutil
 
     import build_phases as _bp
+    from build_phases_knowledge import WORKFLOW_TOOL_SCRIPTS
 
     scripts_src = _bp.PACKAGE_ROOT / "scripts"
-    deploy_scripts = [
-        "add_component.py",
-        "knowledge_query.py",
-        "knowledge_frontmatter_reader.py",
-        "knowledge_file_nodes.py",
-        "knowledge_surface_check.py",
-        "set_ticket_status.py",
-        "ticket_prioritizer.py",
-        "port_registry.py",
-        "live_surface_startup.py",
-        "generate_doc_index.py",
-    ]
     output_dir = target_root / "scripts"
     written = 0
 
-    for script_name in deploy_scripts:
+    for script_name in WORKFLOW_TOOL_SCRIPTS:
         src_file = scripts_src / script_name
         if not src_file.is_file():
             # BP-900g-9 (n_location_rule: all) — same warn-and-continue shape as
@@ -588,4 +613,8 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   Version(version_str) as str | None where str is required. version_known
 #   still holds the same value and is still consulted below; behaviour is
 #   unchanged. (#KI-BP-20260831-0620)
+# - 2026-10-06 [python-coder/TICKET-20261006-DeployKnowledgeRendering]:
+#   build_workflow_tools() reads build_phases_knowledge.WORKFLOW_TOOL_SCRIPTS
+#   instead of its own copy of the list, and that list now ships
+#   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
 # ===========================================================================

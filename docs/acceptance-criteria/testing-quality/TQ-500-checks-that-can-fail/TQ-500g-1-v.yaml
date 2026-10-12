@@ -1,0 +1,167 @@
+id: TQ-500g-1-v
+components:
+  - testing_quality
+  - build_orchestration
+title: "The fast lane makes the wrong-version runs before it commits, as a guard added beside its two existing checks"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given three pieces of work built through the fast lane —
+      F1: a fix whose guarding test names must_catch
+          ["drop the retry_due condition"], and fails under it,
+      F2: a fix whose guarding test names the same wrong version, and still
+          passes under it,
+      F3: work whose tests name no wrong version and declare no
+          discrimination angle,
+    each of which has passed the check that its tests were red before the code
+    and the check that its tests are green and cover the requirement,
+  When each reaches the step before commit,
+  Then the fast lane makes the wrong-version runs through the one shared
+      runner, with the same requirement ids, test root and base the other
+      routes pass,
+    And F1 goes on to commit and open its pull request,
+    And F2 stops before commit, no pull request is opened, and the stop
+      carries the runner's report naming the test and the surviving wrong
+      version,
+    And F3 goes on with "wrong-version runs not applicable: no test names a
+      wrong version" in its outcome, never "verified",
+    And the red-before-the-code check and the green-and-covering check still
+      run and still stop the work as they do today; the runs are added beside
+      them, never in place of either,
+    And for the same tests and outcomes the fast lane's verdict is identical
+      to /build-feature's.
+depends_on:
+  - TQ-500g-1
+  - TQ-500g-1-i
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's step sequence: verify_red_baseline, the coder, verify_green_and_coverage, commit, PR. The runs go after verify_green_and_coverage and before commit."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: describes
+    status: exists
+    relevance: "The fast-lane workflow; runs its gates through a depth-1 executor agent."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: TQ-500g-1-i
+    contract: "The shared runner's CLI and its machine-readable stop/continue verdict."
+it_requirements:
+- 'Placement: immediately before the commit dispatch. This is after every pre-commit phase, so no later
+  step can change the code the runs judged. It runs on every drive that reaches that point, whatever earlier
+  sign-offs say. It is not a phase in the agents map, so there is no sign-off to trust.'
+- 'Sequence: (1) dispatch the preparer (TQ-500g-1-iv), passing the ids, the base ref and the manifest
+  path; (2) dispatch the shared runner CLI (TQ-500g-1-i) with the same ids, test root, AC store root,
+  base ref and manifest path as every other route. A preparer that fails or returns nothing is not a halt
+  by itself: the runner reports the missing entries as unfinished.'
+- 'Dispatch the command through an executor agent registered with permits_shell: true in config/agent_registry.json
+  (for example command-step-runner). Never use status-checker: it is registered read-only and has refused
+  shell steps (KI-BO-20260927, KI-BO-20260901-1620).'
+- Fail closed on the reply. A null, refused or unparseable reply, or one without a boolean gate_passed,
+  halts the work as blocked and never counts as a pass. The commit dispatch is unreachable on any path
+  that has not read gate_passed true from the runner's own JSON.
+- 'gate_passed false: halt before commit, carrying the runner''s JSON verbatim (survivors or unfinished)
+  in the halt payload. applicable false: record the runner''s outcome string and continue. Never record
+  ''verified'' for it.'
+- 'Resume: on a resumed drive, call the runner''s recovery step (TQ-500g-1-iii) before any other dispatch
+  that touches the worktree.'
+- Once TQ-500g-3-i and -3-ii exist, the same single before-commit CLI call also carries them. Do not add
+  a second dispatch for them.
+- 'Edit only templates/workflows-js/ sources. Deployed mirrors regenerate through build.py. Respect the
+  E2 leaf invariant and ADR-006: no workflow() call inside the workflow.'
+- The verify_red_baseline and verify_green_and_coverage invocations and halts stay unchanged. The runs
+  are added beside them. Build the runner invocation next to redBaselineInvocation and greenCoverageInvocation,
+  as one template string.
+- Runner failure releases the claimed ACs exactly as the other gate failures do (buildReleaseOutcomeFields).
+- The commit message and PR body name the runs among the passed gates only when they were applicable and
+  passed. F3 shows the not-applicable outcome.
+- 'JS growth: fast-lane-ship.js has 1652 counted lines, against a .js limit of 1000, so the ratchet forbids
+  growth. Expected growth is about 45 to 60 lines: two dispatches, a fail-closed parse, release-on-failure
+  and the resume recovery call. Before commit this needs either an equal in-file shrink or an explicit,
+  recorded ratchet decision by the user (see the BO-3900 precedent).'
+test_spec:
+- name: test_fast_lane_dispatches_runner_after_green_and_review_before_commit
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: templates/workflows-js/fast-lane-ship.js under unit_tests/_workflow_engine_harness.py
+  description: Drives fast-lane-ship.js (the build.py-deployed copy) under the workflow-engine harness.
+    The recorded dispatches show the preparer and the runner after verify_green_and_coverage and Review
+    and before the commit agent, carrying the batch ids, worktree, AC root and base ref.
+  must_catch:
+  - runner placed after the commit dispatch
+- name: test_f2_survivor_stops_before_commit_and_pr
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: 'F2: the runner executor returns gate_passed false with a survivor. No commit or pull-request
+    agent is dispatched, and the halt payload names the test and the wrong version. F1: gate_passed true,
+    and commit and PR follow.'
+  must_catch:
+  - runner dispatched but its verdict ignored
+- name: test_f3_not_applicable_continues_never_verified
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: 'F3: the runner returns applicable false. The drive continues to commit, the outcome reads
+    ''wrong-version runs not applicable: no test names a wrong version'', and no field says verified.'
+  must_catch:
+  - F3 recorded as verified
+  - F3 halted as a failure
+- name: test_refused_or_unparseable_runner_reply_fails_closed
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Null, refused and non-JSON replies each halt as blocked, with no commit and the claimed
+    ACs released. The existing red and green gate halts still fire unchanged.
+  must_catch:
+  - unparseable runner reply treated as a pass
+  - existing verify_green_and_coverage halt removed
+test_rationale: A workflow gate is only proven by driving the workflow and asserting that its verdict
+  controls the next dispatch. A grep of the workflow source is forbidden (CLAUDE.md). The harness runs
+  the deployed copy, so a deploy gap also shows up. Cross-route verdict identity is proven once, by the
+  TQ-500g-1 seam test.
+origin_agent: business-analyst
+created: 2026-09-28
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  BOTH LANES, SHARED SCRIPTS (user direction at the Phase A BA gate,
+  2026-09-25): an ADDITIONAL guard beside verify_red_baseline and
+  verify_green_and_coverage, never a replacement and never a lane-specific
+  copy. Build one shared command constructor with TQ-500g-1-vi so the routes
+  cannot drift (the TQ-500f-3-ii precedent).
+
+  F3 IS THE CONTROL. Most fast-lane work names no wrong version; it must not be
+  slowed or stopped, and it must never be reported as verified by runs that
+  never happened.
+
+  TESTABILITY: drive fast-lane-ship.js under the workflow-engine harness and
+  assert on the recorded dispatches (runner invoked after the green check and
+  before commit; the verdict consumed in control flow). A grep of the workflow
+  source for the runner's name is not acceptable (CLAUDE.md, Verify
+  Behaviorally, Not by Grep).
+
+  IT-PO ENRICHMENT (2026-09-28)
+  Placement refined: before commit AND after Review. So a review-driven
+  change can never follow the runs.
+  Lane: fast lane (python-coder) after -1-i, -1-ii, -1-iii and -1-iv. The JS
+  ratchet decision is open (see the growth it_requirement).

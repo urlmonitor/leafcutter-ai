@@ -39,6 +39,11 @@ doc_links:
 assigned_agent: llm-expert
 estimated_complexity: M
 it_requirements:
+- 'SHIP-TOGETHER (user decision 2026-09-28): this prompt change must land in the same change as
+  ACD-2500b-1-i, which declares test_intent in the schema. Shipped alone, the IT PO would write a
+  field every schema gate still rejects. Build it as a set with its subtree (a fast-lane build of
+  this AC includes b-1-i); never build this AC on its own. The depends_on direction (b-1-i lists
+  b-1) is the tree''s parent link and stays as is.'
 - 'Field shape (IT-PO decision, taking the BA''s suggestion): test_intent: list of {clause: str (the outcome
   clause text, verbatim from criteria), needs_test: bool, reason: str (one sentence)}; exactly one entry
   per Then/And outcome clause; no test names, directories, frameworks, types, angles or strategy. It is
@@ -70,6 +75,11 @@ test_required: false
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "ship-together constraint recorded: ACD-2500b-1 (prompt) and ACD-2500b-1-i (schema) must land in
+    one change; the parent link in depends_on cannot be reversed without breaking the tree"
+  date: '2026-09-28'
+  by: it-po
+  directed_by: user
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po

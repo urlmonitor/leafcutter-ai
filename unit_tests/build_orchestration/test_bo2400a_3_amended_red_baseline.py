@@ -613,20 +613,32 @@ class TestPartitionIsGitDrivenNotCallerSupplied(unittest.TestCase):
 
     def test_ac3ii_signature_accepts_no_caller_supplied_file_list_param(self) -> None:
         # covers: BO-2400a-3-ii
-        """The pinned signature is exactly (*, ac_ids, test_root, base_ref=None).
+        """The pinned signature is (*, ac_ids, test_root, base_ref=None, ac_root=None).
 
         No parameter for an agent-reported list of written test files may
         exist -- BO-2400a-3 it_requirements[0] already requires the verdict
         to be derived from process exit codes, not agent judgment; a
         caller-supplied file list would reintroduce exactly that judgment.
+
+        ``ac_root`` (optional, defaults to ``None``) is a sanctioned
+        TQ-500f-3-i addition -- the AC YAML store root the declared-
+        absence-only-red refusal rule reads ``test_spec`` from. It is NOT a
+        caller-supplied outcome/file-list parameter (it names a directory to
+        read AC records from, never a judgment about which tests were
+        written or how they ran), so it does not reopen the hole this test
+        guards against. Omitting it preserves this function's pre-TQ-500f-3-i
+        behaviour exactly (TQ-500f-3-i's own backward-compatibility
+        requirement).
         """
         params = signature(verify_red_baseline).parameters
         self.assertEqual(
             set(params.keys()),
-            {"ac_ids", "test_root", "base_ref"},
+            {"ac_ids", "test_root", "base_ref", "ac_root"},
             "verify_red_baseline's signature must be exactly "
-            "(*, ac_ids, test_root, base_ref=None) per BO-2400a-3-ii -- no "
-            f"caller-supplied written-files parameter is permitted; got {sorted(params.keys())!r}.",
+            "(*, ac_ids, test_root, base_ref=None, ac_root=None) per "
+            "BO-2400a-3-ii plus TQ-500f-3-i's sanctioned ac_root addition -- "
+            "no caller-supplied written-files parameter is permitted; got "
+            f"{sorted(params.keys())!r}.",
         )
         self.assertIn("base_ref", params)
         self.assertIsNone(

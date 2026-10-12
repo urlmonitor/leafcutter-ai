@@ -335,6 +335,14 @@
             }
           },
           "additionalProperties": false
+        },
+        "step_kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["reads_store", "changes_store", "changes_repository", "publishes"]
+          },
+          "description": "Optional set of step kinds this agent's step declares. The single source of the four allowed values — scripts/step_kinds_validator.py (via registry_validator.py's validate_agent_registry) and every other reader load them from here at run time rather than holding a second, driftable copy. Absent and [] both mean the agent declares no step kind at all; a duplicate or unrecognised value is rejected by the running registry gate, not just by this schema definition."
         }
       },
       "additionalProperties": false

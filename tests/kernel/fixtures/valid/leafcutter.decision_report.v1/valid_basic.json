@@ -1,0 +1,11 @@
+{
+  "status": "resolved",
+  "recommendation": "In memory",
+  "selected_option_id": "opt-mem",
+  "supporting_evidence_ids": [],
+  "approval_status": "proposed",
+  "rationale": {
+    "text": "Meets every required criterion.",
+    "origin": "template"
+  }
+}

@@ -117,34 +117,50 @@ When the user does not specify an action, default to `auto`.
 
 ## Pre-flight: DB Container Check (sql-functions / all / manual)
 
-Before running any suite that touches the database, check whether the local DB
-container is reachable:
+Before running any suite that touches the database, invoke the shipped checker
+CLI instead of connecting yourself. It resolves the project's own
+`testing_context.db_connection_test` setting and reports one of five
+statuses — `not_configured`, `invalid`, `config_error`, `unreachable`,
+`reachable` — never a password:
+
+Run it with `--target-dir` set to the project root, not
+`{{config.output_root}}` (that is the install subdirectory —
+`resolve_test_db_address()` looks for this project's own `skills_config.json`
+directly under the project root). This agent's suite commands already run
+with cwd at the project root (e.g. the live-trader suite's `-t .`), so `.` is
+that root:
 
 ```bash
-poetry run python -c "
-import psycopg2, sys
-try:
-    psycopg2.connect('postgresql://trader:trader@localhost:5403/LIVE', connect_timeout=3).close()
-    print('DB_READY')
-except Exception as e:
-    print(f'DB_NOT_READY: {e}')
-    sys.exit(1)
-"
+python "{{config.output_root}}/scripts/db_check/checker.py" --target-dir .
 ```
 
-If the check fails, stop and emit:
+It prints one JSON line and exits 0 only when `status` is `reachable`. Relay
+the checker's own report; do not compose your own message or guess an
+address:
 
-```
-## DB Not Running
+- `not_configured` — stop and emit, naming the setting by its full path:
+  ```
+  ## Database Not Configured
 
-The SQL function test suite requires the local database container (port 5403).
-Start the container first, then re-invoke the test-runner.
+  testing_context.db_connection_test is not configured. Set it in this
+  project's skills_config.json before running database tests.
+  ```
+- `invalid` / `config_error` — stop and emit the checker's `message` verbatim
+  (it never contains the raw configured value or a credential).
+- `unreachable` — stop and emit the checker's `host`, `port`, and `database`
+  fields only, never a password:
+  ```
+  ## Database Unreachable
 
-Rerun command once the DB is up:
-  /test sql-functions
-```
+  Could not reach <host>:<port>/<database>. Start it, then re-invoke the
+  test-runner.
 
-Do NOT attempt to run the SQL suite when the DB is not ready.
+  Rerun command once it is up:
+    /test sql-functions
+  ```
+- `reachable` — proceed with the SQL suite.
+
+Do NOT attempt to run the SQL suite unless the checker reports `reachable`.
 
 ## No-op Rule
 
@@ -222,7 +238,8 @@ Warn first:
 ```
 ## Running All Suites
 
-Note: the SQL function suite requires the local database container (port 5403).
+Note: the SQL function suite requires the configured test database
+(testing_context.db_connection_test).
 Checking DB availability…
 ```
 

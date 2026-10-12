@@ -1,0 +1,67 @@
+id: AR-300d
+title: "Granting an ability takes no extra wiring, now or later"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  A newly granted ability reaches its specialist the day you grant it.
+
+  Granting an ability, or adding a specialist, is a single decision that takes
+  effect on its own. Nobody goes round preparing each specialist to be able to
+  receive what it was given, and the next specialist added is correct without
+  anyone remembering a step.
+depends_on:
+  - AR-300
+doc_links:
+  - path: templates/skills/signoff/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The precedent to generalise. A per-specialist block that arrives for 23 of 23 specialists that declare they need it, with no per-specialist marker to forget."
+  - path: scripts/template_compiler.py
+    relationship: modifies
+    status: exists
+    relevance: "Holds both designs side by side: the marker-gated delivery that reached 0 of 60, and the flag-driven delivery that reached 23 of 23."
+  - path: docs/acceptance-criteria/infrastructure/INF-1200-standards-reach-the-author/INF-1200d.yaml
+    relationship: related
+    status: exists
+    relevance: "The same guarantee for a different subject -- a standard added later reaches its audience the day it is added. Independent promise, likely shared machinery; reuse it if it lands first rather than restating it."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-300d-1
+  - AR-300d-2
+  - AR-300d-3
+  - AR-300d-4
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "The authoring-facing statement of this guarantee lands in the same authoring reference AR-300c already triggers; this criterion introduces no separate surface of its own."
+notes: |
+  THIS IS THE CRITERION THE CHEAP FIX FAILS. The whole defect exists because
+  delivery was made conditional on each specialist carrying a marker that
+  nothing required and nobody added -- correct-looking machinery that reached
+  nobody for as long as it existed. Reinstating the marker across 60 specialists
+  would satisfy AR-300a on the day it ships and re-open the same hole for the
+  sixty-first.
+
+  THE NEGATIVE CASE THAT PROVES THIS IS NOT AR-300a. A repair that hand-edits
+  every specialist template so the table arrives satisfies AR-300a completely
+  and fails this criterion completely. That is precisely today's design, made
+  correct once by hand.
+
+  A RULE THAT RESOLVES TO NOTHING PASSES FOREVER. Any evidence for this criterion
+  must show it examined the whole population of specialists, not that it found no
+  problems. This repository has already shipped a check that matched zero files,
+  printed a success line and exited clean for eight days.

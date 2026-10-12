@@ -51,7 +51,11 @@ delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "notes: dated UPDATE paragraph records that the 'must land before the must_catch work' sequencing is overtaken -- PR #911 (TQ-500f-1/-2) merged first and added test_spec[].must_catch; ACD-2500c-3 now builds on it, only the code-aware test designer writes it, and TQ-500f-2-ii depends on ACD-2500c / ACD-2500d-5. Original SEQUENCING paragraph kept as history. Title, criteria, doc_links and readiness unchanged."
+    date: '2026-09-28'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500a
@@ -83,6 +87,19 @@ notes: |
   the test design ACD-2500c relocates. Ordering inside this goal: ACD-2500b and
   ACD-2500c ship together (intent without a filler leaves the test writer with
   nothing); ACD-2500a can ship first and independently.
+
+  UPDATE 2026-09-28 (business-analyst, user-directed): the "must land before the
+  must_catch work" constraint in the paragraph above is overtaken; the paragraph is kept
+  as history. The must_catch work landed first: PR #911 (TQ-500f-1/-2, merged 2026-09-27)
+  added the optional test_spec[].must_catch list and the 'discrimination' angle to the
+  test design without depending on this goal. The relation now runs the other way:
+  ACD-2500c-3 builds on that existing field (it neither forbids nor re-specifies it), and
+  only the code-aware test-design step (the test designer) writes must_catch -- the
+  technical planner never does. TQ-500f-2-ii, being amended on branch
+  ac-authoring/tq-500f-2-ii-amend in another session, depends on ACD-2500c / ACD-2500d-5.
+  The ordering inside this goal (ACD-2500b with ACD-2500c; ACD-2500a independently) is
+  unchanged. The first doc_link's relevance ("THE WORK THIS GOAL MUST PRECEDE") is
+  overtaken in the same way.
 
   DECIDED AT THE PO GATE (user, 2026-09-25): the test design is filled by a
   code-aware planning step BEFORE the build (test-planner with source access), not

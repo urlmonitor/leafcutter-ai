@@ -37,10 +37,10 @@ doc_links:
   - path: templates/hooks/enforce_commit_delegation.py
     relationship: modifies
     status: exists
-  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260925-commit-delegation-hook-misses-git-dash-c.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-high-ki-cg-20260925-commit-delegation-hook-misses-git-dash-c.md
     relationship: describes
     status: exists
-  - path: docs/known-issues/commit-guardian/open-low-ki-cg-016.md
+  - path: docs/known-issues/commit-guardian/resolved/resolved-low-ki-cg-016.md
     relationship: describes
     status: exists
 assigned_agent: python-coder

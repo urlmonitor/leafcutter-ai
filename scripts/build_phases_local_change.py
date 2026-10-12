@@ -117,6 +117,20 @@ def set_local_change_baseline(target_root: Path, output_root: Path) -> None:
         _previous_output_mappings = previous_mappings
 
 
+def get_previous_output_mappings() -> dict[str, Any]:
+    """Return a copy of the previous install's output_mappings baseline.
+
+    The same record ``set_local_change_baseline`` captured before any phase
+    wrote a file. ``build_retired_outputs`` reads it to attribute an installed
+    file whose template the package no longer ships.
+
+    Returns:
+        A shallow copy of the baseline. Empty when no baseline was set or no
+        readable previous manifest existed (a first install).
+    """
+    return dict(_previous_output_mappings)
+
+
 def _hash_for_local_change_check(path: Path) -> str | None:
     """Hash pre-write file content identically to check_output_drift.py.
 
@@ -180,6 +194,48 @@ def _local_change_output_key(target: Path) -> str | None:
         return None
 
 
+def target_locally_changed(target: Path) -> bool:
+    """Whether ``target`` diverged from the previous install's own output.
+
+    The same four conditions ``announce_if_local_change_replaced`` checks
+    (see that function's docstring for the full account), exposed as a
+    plain predicate so a caller can decide what to do about a local change
+    instead of always overwriting. BP-1500g-2-i: ``build_skills()`` treats a
+    local change at a package-shipped, still-discoverable capability name as
+    a name-level collision to report and preserve, never to silently
+    replace -- unlike every other generated-file family, whose write paths
+    keep this module's own "the install always wins" behaviour via
+    ``announce_if_local_change_replaced``, unchanged.
+
+    Args:
+        target: Absolute path a caller is about to inspect or overwrite.
+
+    Returns:
+        True when a previous-install baseline exists, ``target`` already
+        exists, was recorded by the previous install, and its current
+        on-disk content no longer matches what that install produced (or
+        could not be read at all -- never coerced to "unchanged" on a read
+        failure, per the repository error-handling policy). False in every
+        other case, including "nothing to compare against".
+    """
+    if _local_change_target_root is None or not _previous_output_mappings:
+        return False
+    if not target.exists():
+        return False
+
+    output_key = _local_change_output_key(target)
+    if output_key is None:
+        return False
+
+    entry = _previous_output_mappings.get(output_key)
+    previous_hash = entry.get("expected_output_hash") if isinstance(entry, dict) else None
+    if not previous_hash:
+        return False  # Not recorded by the previous install — no baseline to diverge from.
+
+    current_hash = _hash_for_local_change_check(target)
+    return current_hash is None or current_hash != previous_hash
+
+
 def announce_if_local_change_replaced(target: Path) -> None:
     """Print a notice when ``target`` diverged from the previous install.
 
@@ -198,6 +254,8 @@ def announce_if_local_change_replaced(target: Path) -> None:
        something changed the file after the last install, the exact
        KI-ACD-004 shape.
 
+    Delegates the divergence verdict to ``target_locally_changed`` (the same
+    four conditions, as a plain predicate) so the two can never drift apart.
     Never refuses, preserves, or delays the overwrite that follows this
     call — the install still wins; this only announces the loss before it
     happens. Callers must invoke this BEFORE overwriting ``target``, while
@@ -206,27 +264,9 @@ def announce_if_local_change_replaced(target: Path) -> None:
     Args:
         target: Absolute path about to be overwritten.
     """
-    if _local_change_target_root is None or not _previous_output_mappings:
+    if not target_locally_changed(target):
         return
-    if not target.exists():
-        return
-
     output_key = _local_change_output_key(target)
-    if output_key is None:
-        return
-
-    entry = _previous_output_mappings.get(output_key)
-    previous_hash = entry.get("expected_output_hash") if isinstance(entry, dict) else None
-    if not previous_hash:
-        return  # Not recorded by the previous install — no baseline to diverge from.
-
-    current_hash = _hash_for_local_change_check(target)
-    if current_hash is not None and current_hash == previous_hash:
-        return  # Unchanged since the last install: nothing is being lost.
-
-    # current_hash is None (unreadable) OR it differs from the previous
-    # install's own output — announce either way rather than silently
-    # suppressing a read failure (repository error-handling policy).
     print(f"[build] NOTICE: a local change is being replaced: {output_key}")
 
 
@@ -250,4 +290,19 @@ def announce_if_local_change_replaced(target: Path) -> None:
 #   follows the same sibling-module pattern build_phases_ac_store.py,
 #   build_phases_workflows.py and the rest already use. No behaviour change
 #   from the pre-split implementation. (#refactor/build-phases-size-limit)
+# - 2026-09-23 [python-coder/BP-1500g-2-i]: Extracted the divergence verdict
+#   out of announce_if_local_change_replaced() into a new plain predicate,
+#   target_locally_changed() -- same four conditions, no behaviour change to
+#   the existing announce-then-overwrite callers. build_skills()
+#   (build_phases_agents_skills.py) is the first caller that does NOT always
+#   overwrite: a local change at a package-shipped, still-discoverable
+#   capability name is a name-level collision (an adopter's content answers
+#   to the same name the package ships, reached through the still-intact
+#   ``.claude/skills`` symlink) that must be reported and preserved, not
+#   silently replaced like every other generated-file family. (#BP-1500g-2-i)
+# - 2026-09-30 [BrainCandy/TICKET-20260930-RetireRenamedCommandOutputs]:
+#   Added get_previous_output_mappings(), a read-only copy of the baseline,
+#   so build_retired_outputs attributes a retired command file from this same
+#   previous-install record instead of reading the manifest a second time.
+#   (#TICKET-20260930-RetireRenamedCommandOutputs)
 # ===========================================================================

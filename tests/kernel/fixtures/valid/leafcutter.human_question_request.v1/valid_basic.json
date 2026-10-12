@@ -1,0 +1,15 @@
+{
+  "question": "Should stale entries be served?",
+  "choices": [
+    {
+      "id": "yes",
+      "label": "Yes",
+      "consequences": "Faster, may be stale"
+    },
+    {
+      "id": "no",
+      "label": "No"
+    }
+  ],
+  "why_research_cannot_settle": "Product preference"
+}

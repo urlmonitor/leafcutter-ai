@@ -1,0 +1,70 @@
+id: DK-500e
+title: "New questions are written only when the approved ones fall short"
+component: decision-kernel
+components:
+  - decision_kernel
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Fresh criteria are drafted only for the gaps the approved ones leave open.
+
+  If Jev, the kernel's judging model, finds that the reused categories leave out
+  something this decision needs, new criteria are drafted for that gap alone,
+  and you can always add your own. When no approved category fits yet, the
+  decision is framed the way it is today, so an empty library costs nothing,
+  and the newly written questions become material for the next review of past
+  decisions.
+depends_on:
+  - DK-500
+doc_links:
+  - path: docs/decisions/dec-93c1c730463c1f3c.yaml
+    relationship: governs
+    status: exists
+  - path: docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+    relationship: constrains
+    status: exists
+    relevance: "Reuse (deterministic) first, Jev judges sufficiency, an LLM drafts only the gap, a human can always add."
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: modifies
+    status: exists
+    relevance: "Step 7 (propose) becomes a fallback branch for the gap, not the default path."
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-03
+amended_by: []
+superseded_by: null
+covered_by:
+  - DK-500e-1
+  - DK-500e-2
+  - DK-500e-3
+  - DK-500e-4
+implemented_by: []
+documentation_triggers:
+  - sequence-diagram
+notes: |
+  USER REQUIREMENT (original idea): "we only need LLMs to generate further
+  categories if jev thinks some are missing to make better decision". This is
+  ADR-053's order applied to criteria: reuse, then Jev, then an LLM, then a
+  human.
+
+  COLD START. With no published categories, behaviour equals today's forming
+  flow. This is a regression guard: an empty library must not block, degrade or
+  slow down a decision.
+
+  OPEN, for BA / IT PO: what exactly Jev judges (coverage of this decision's
+  concerns against the reused set) and how that verdict is shown. The PO
+  recommends showing it at the approval gate, so the person sees WHY new
+  criteria were drafted, or why none were. A sufficiency verdict that the person
+  overrules (by adding criteria) is useful evidence for later calibration.
+
+  Feedback loop: drafted and human-added criteria that end up in a PUBLISHED
+  decision become published-record input to DK-500a. Draft-only wordings are
+  seen through traces only.

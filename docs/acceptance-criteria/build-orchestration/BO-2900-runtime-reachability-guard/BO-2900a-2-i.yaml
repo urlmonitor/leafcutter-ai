@@ -1,0 +1,201 @@
+id: BO-2900a-2-i
+components:
+  - build_orchestration
+  - testing_quality
+  - ac_store
+title: "A proof that drives the way in as a separate program it launches is watched, not invisible"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: reviewed
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a unit that exposes a runtime way in,
+    And three proof-of-done tests for the same criterion over that unit:
+      test S, which reaches the code under proof only by launching the unit as a
+        separate program and giving it the action under proof,
+      test H, which both imports the unit and launches it, and reaches the code
+        under proof through the program it launched,
+      test B, which launches the unit as a separate program but gives it an
+        action whose handler never reaches the code under proof, and which the
+        launched program finishes successfully,
+  When each test is evaluated for whether the proof reached the code through the
+    way in,
+  Then test S and test H are both judged to have reached it,
+    And test B is judged not to have, even though the program it launched ran to
+      a successful finish and was given the unit's own way in,
+    And test S receives the same judgement as an otherwise identical proof that
+      drove the same action without launching a separate program, so where the
+      way in ran changes nothing about the answer,
+    And a way in entered by a program launched by a program the proof launched is
+      judged the same as one the proof launched itself,
+    And each of the three judgements is attributable to the one test it is about,
+      so no test inherits the reachability of a sibling in the same file,
+    And the three judgements are produced in one exercise, so neither a
+      judge-everything-reached nor a judge-nothing-reached mechanism can satisfy
+      the set.
+depends_on:
+  - BO-2900a-2
+doc_links:
+  - path: docs/analysis/2026-09-29-the-entry-point-gate-refuses-the-proof-it-wants-and-accepts-the-one-it-does-not-3-scoping-recommendation.md
+    relationship: describes
+    status: exists
+    relevance: "The measured prototype: seven proof shapes, with the load-bearing row being a child that spawns but bypasses the way in and exits successfully — the row that disqualifies the cheap alternative of reading the launched command and accepting a zero exit. Also names the two ship blockers and the coverage ceiling."
+  - path: scripts/ac_store/_gtfa_constants.py
+    relationship: describes
+    status: exists
+    relevance: "The standing instruction that makes this the repository's MANDATED proof shape rather than an exotic one: invoke the production entry point as a subprocess/dispatch, and do not satisfy this by importing the function directly. 164 ticket files carry it."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-2.yaml
+    relationship: modifies
+    status: exists
+    relevance: "The parent whose observation this extends to the process tree. ITS CONTRACT CANNOT EXPRESS THIS TODAY — it describes one target and one pair of booleans for a single process. The contract needs amending, not replacing; the criteria it states (execution-derived, decoy-immune, ancestry-aware, loud when unavailable) are right and unchanged."
+  - path: docs/acceptance-criteria/build-orchestration/BO-2900-runtime-reachability-guard/BO-2900a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The rule that consumes this judgement. Its two measured failure modes are opposite and both are fixed here: a proof that only launches the unit passes silently today, and a proof that both imports and launches it is refused."
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  - "HOST THE OBSERVATION IN THE PYTEST RUN THAT ALREADY HAPPENS. BO-2900a-2's own constraint already requires this and it is restated only to bind the process-tree work to it: install the observation around the existing subprocess in scripts/ac_store/done_proof.py::_run_pytest_and_parse (line 1306), and add NO second pytest run and NO second bespoke runner per AC. The shipped code violated that constraint and this AC must not repeat it."
+  - "RETIRE _REACHABILITY_RUNNER_SCRIPT AND _observe_reachability AS THE OBSERVATION MECHANISM (scripts/ac_store/done_proof.py, lines 433-557 and 560 onward). It calls _test_func() with zero arguments (line 522), so every proof whose test function takes pytest fixture arguments — 47% of an in-scope sample, 129 of the 862 covers-tagged functions by shape census — cannot execute at all. A mechanism that cannot run a proof cannot judge it. Do not extend it to the process tree; replace it."
+  - "MATCH FRAMES ON THE RESOLVED FILE PATH, NEVER ON THE NAME A RUNNING PROGRAM REPORTS FOR ITSELF. The current spec is f\"{frame.f_globals.get('__name__')}:{frame.f_code.co_name}\" (done_proof.py:479); a script launched as `python hook.py` reports __name__ == '__main__', so a name-keyed spec can never match a child. Compare Path(frame.f_code.co_filename).resolve() against the resolved declared unit path. Stem comparison is equally forbidden — .leafcutter/ and scripts/ hold same-stem copies of the same file and a stem cannot tell them apart."
+  - "PROPAGATION MUST BE RE-ENTRANT. Whatever carries the observer into a launched program must detect that it is already installed in that interpreter and return without chaining. A naive sitecustomize chain recursed 245 times in the measured prototype. This is a named ship blocker, not a theoretical risk."
+  - "PROPAGATION MUST SURVIVE A REPLACED ENVIRONMENT. A test that hands subprocess.run/Popen a bare env={...} drops whatever the observer travelled in, and the proof then reads as not reaching the code — a false negative that looks exactly like a correct one. Five proof files under unit_tests/ac_store/ pass a bare env today. The observation must merge its own variables into the environment a test supplies rather than relying on inheritance, and a child whose environment could not be reached at all is unwatched (BO-2900a-2-ii), never not-reached."
+  - "ANCESTRY MUST SURVIVE THE PROCESS BOUNDARY AS ONE FACT, NOT TWO. reached_through stays a single property of one live call chain (inherited from BO-2900a-2, which forbids computing it as a conjunction of independent booleans). Across processes the chain is: an entry-point frame live in process P, and a code-under-proof frame entered in P or in any descendant created while that frame was still live. Each process record must carry its pid, its parent pid, and the entry-point frame that was live at spawn time, so the join is by ancestry and not by 'both things happened somewhere during the run'."
+  - "READING THE LAUNCHED ARGV OR THE CHILD'S EXIT CODE IS NOT AN ACCEPTABLE ANSWER, EVEN AS A FALLBACK. The measured prototype's load-bearing negative is a child that was given the unit's own way in, ran to a successful finish, and never reached the code under proof: argv-plus-zero-exit accepts it and it is a real defect. When frames from a child are unavailable the answer is unwatched, never reached."
+  - "PER-TEST ATTRIBUTION IS KEYED ON THE PYTEST NODEID. Under one pytest process the per-test boundary must come from pytest's own per-test hooks (pytest_runtest_protocol or the equivalent dynamic-context mechanism), and every process spawned during a test's protocol phase attributes to that test's nodeid. A run-level or file-level record makes every test in a file inherit the reachability of its most thorough sibling — the inherited per-test constraint is restated here only because a tree of programs makes it newly easy to lose."
+  - "DECOY IMMUNITY IS INHERITED IN FULL AND MUST NOT BE RELAXED BY THE WIDENING. No code path in the observation may read, parse, tokenize, import-for-inspection or regex a proof file's source, in the runner process or in any child. Decoy immunity stays a property of the mechanism rather than a filter enumerating comment, docstring and dead-helper forms."
+  - "OVERHEAD BUDGET. The observation must not more than double the wall-clock time of the per-AC done-proof pytest run it is hosted in, and must add no process spawn of its own per AC beyond the children the proofs themselves launch. done_proof already invokes pytest per AC inside a required CI gate."
+  - "DEPLOY MANIFEST. Every new module (the observer and the interpreter-startup shim) must be added to build_ac_store's deploy_map in scripts/build_phases_ac_store.py in the SAME change, and must be verified importable from the DEPLOYED layout, not only from the source tree. The deployed check_done_proof hook imports done_proof, which will import the observer; a module absent from the manifest crashes the required CI done-proof job with ModuleNotFoundError and blocks every merge."
+  - "THE RECORD SHAPE IS BO-2900a-2's AMENDED reach_record. This AC populates its processes list and its reached_code set; it does not define its own record type and must not emit a second, parallel record shape alongside the parent's."
+delivers_to:
+  agent: python-coder
+  contract: "A per-test reachability judgement that spans every program the test's run reached into, so a proof written in the subprocess shape this project mandates is answerable at all. Concretely, per pytest nodeid: reached_code as a SET of '<resolved source path>:<qualname>' entries entered while an entry-point frame of the declared unit was a live ancestor, plus processes as a list of {pid: int, ppid: int, program_file: str|null, spawned_under_entry_point: bool} covering every descendant reached. Consumed by BO-2900a-1's rule, by BO-2900a-1-i's reached-through distinction and by BO-2900a-1-iii's corpus exercise."
+expects_from:
+  ac_id: BO-2900a-2
+  contract: "The execution-derived, per-test, decoy-immune observation this AC widens from one process to the tree of programs one test reaches into. Concretely the amended reach_record whose single-process fields (one target, one entry point, two booleans) grow into reached_code: set, processes: list and a tri-state reached_through; the parent's method constraints — hosted in the existing pytest run, no source-text reading, per-test attribution, loud when unavailable — are inherited unchanged."
+test_spec:
+  - name: test_spawn_only_hybrid_and_bypassing_child_receive_three_verdicts_in_one_exercise
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    surface_invoked: "scripts/ac_store/done_proof.py::_run_pytest_and_parse"
+    description: "Executes the three real fixture proofs of the criteria — S launches the unit as a separate program and gives it the action under proof; H both imports and launches it, reaching the code through the launched program; B launches it with an action whose handler never reaches the code and finishes successfully — under the real observation hosted in the real pytest invocation, and asserts in one block that S is reached, H is reached, and B is not_reached."
+    must_catch:
+      - "an observation that answers reached for every proof"
+      - "an observation that answers not_reached for every proof"
+      - "a mechanism that reads the launched argv and accepts a zero exit code, which passes B"
+      - "an observation keyed on frame.f_globals['__name__'], which matches no child at all and answers not_reached for S"
+  - name: test_the_same_action_driven_in_process_and_as_a_separate_program_gets_the_same_verdict
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Two proofs of the same behaviour over the same unit: one calling main([action]) in-process, one spawning `python <unit> <action>`. Asserts identical reached_through for both — where the way in ran changes nothing about the answer."
+    must_catch:
+      - "an observation that only sees the in-process case"
+      - "an observation that credits any spawn of the unit regardless of what the child reached"
+  - name: test_a_grandchild_entry_point_is_judged_like_a_direct_child
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A proof that spawns a launcher which spawns the unit with the action under proof. Asserts reached, and asserts the processes list records the grandchild with its parent pid so the ancestry join is visible rather than inferred."
+    must_catch:
+      - "propagation that reaches only one level deep"
+      - "an ancestry join that credits any code reached anywhere in the process tree regardless of which frame was live"
+  - name: test_two_tests_in_one_file_do_not_inherit_each_others_reachability
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "One proof file containing a thorough subprocess test and a direct-import test for the same unit. Asserts the two records carry opposite reached_through values and are keyed on their own pytest nodeids."
+    must_catch:
+      - "a run-level or file-level record that makes both tests read as reached"
+      - "records keyed on the proof file path rather than the nodeid"
+  - name: test_a_child_given_a_wholly_replaced_environment_is_still_watched
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A proof that spawns the unit with a bare env={...} containing only PATH, exactly as five proof files in this repository already do. Asserts the verdict is reached — not unwatched and, critically, not not_reached."
+    must_catch:
+      - "an observation that relies on environment inheritance and reports not_reached, a false negative that looks exactly like a correct one"
+      - "an observation that reports unwatched for any test supplying its own env, which would hide the whole population"
+  - name: test_the_startup_shim_installs_once_per_interpreter_and_does_not_recurse
+    target_dir: unit_tests/ac_store/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A proof whose child spawns a child which spawns a child. Asserts the run completes within the observation's own budget and that the shim recorded exactly one installation per pid — the 245-deep recursion the prototype produced without a re-entry guard."
+    must_catch:
+      - "a naive chain that re-invokes the previous sitecustomize and recurses"
+      - "a guard that suppresses installation in every child after the first, which would leave grandchildren unwatched"
+test_rationale: "A judgement over hand-fed reach records proves the arithmetic and not the observation, and the observation is the entire content of this AC — which is why every entry executes real proofs under the real observation hosted in the real pytest invocation. The three cases belong in one exercise because each alone is satisfied by a degenerate mechanism: S alone passes an answer-reached-for-everything observer, B alone passes an answer-not-reached-for-everything one, and the argv-plus-zero-exit shortcut passes both S and H while accepting B, which the prototype measured as a real defect. The environment-replacement and re-entrancy tests are not edge-case garnish: both are measured prototype failures that produce a PLAUSIBLE wrong answer — a false not_reached and a 245-deep recursion — and neither is visible to any assertion about the S/H/B verdicts. The per-test test exists because a tree of programs makes run-level attribution the path of least resistance, and a file-level record would make the direct-import proof in the same file read as reached."
+origin_agent: business-analyst-v3
+created: 2026-09-30
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  THIS IS THE CORE DEFECT AND IT IS SPECIFIED NOWHERE ELSE IN BO-2900. The
+  repository instructs authors, in 164 ticket files, to prove their work by
+  driving the production entry point as a separate program, and explicitly forbids
+  satisfying the requirement by importing the function directly. The observation
+  behind the required rule watches only the process it runs in. So the mandated
+  shape is invisible and the forbidden shape is the only one that can be seen.
+
+  THE TWO MEASURED FAILURE MODES ARE OPPOSITE, which is why one record has to
+  cover both. A proof that ONLY launches the unit imports nothing local, so no way
+  in is found and the criterion passes with nothing having judged it — a
+  phantom-done vector, handed to a sibling rule that fires for none of the store. A
+  proof that BOTH imports and launches is refused and told it reached the code by
+  direct import, when it ran the real command surface. An implementer who fixes
+  only one half moves the population between the two rather than judging it.
+
+  WHY TEST B IS NOT OPTIONAL. The cheap version of this AC reads what command the
+  proof launched and accepts a successful finish. Test B passes that version and is
+  a real defect: the program was launched, the way in was entered, and the code
+  under proof was never reached. The measured prototype refuses it, so this is a
+  demonstrated requirement rather than a hypothetical one.
+
+  TWO NAMED SHIP BLOCKERS the implementer will hit, recorded here so they are not
+  rediscovered. A launched program that installs an observation of its own
+  displaces the one watching it, and the resulting record reads as "nothing was
+  reached" rather than "the run was not watched" — that is a refusal manufactured
+  out of a blind spot, and BO-2900a-2-ii is where its correct handling is
+  specified. Second, whatever mechanism carries the observation into a launched
+  program must tolerate already being present: a naive arrangement recursed 245
+  times in the prototype.
+
+  ONE PRACTICAL TRAP FROM THE PROTOTYPE, because it produces a false negative that
+  looks like a correct one: a test that hands the launched program a wholly
+  replaced environment drops whatever the observation travelled in, and the proof
+  then reads as not reaching the code. The environment a test supplies must be
+  merged with what the observation needs, not replace it.
+
+  ALSO MATCH ON THE PROGRAM'S FILE, NOT THE NAME IT REPORTS FOR ITSELF. A script
+  launched directly as a program reports itself under a generic name, so a
+  mechanism keyed on the name a running program gives itself never matches the
+  unit it is watching for. The prototype matched on the file instead.
+
+  BOUNDARY. This AC governs WHAT the observation must span. What happens when it
+  cannot span it is BO-2900a-2-ii. What question it is asked is BO-2900a-2-iii.
+  What the answer is used for is BO-2900a-1. Do not restate any of those here, and
+  do not let this AC's process-tree widening become an excuse to relax the
+  parent's decoy-immunity or per-test attribution constraints — both are inherited
+  in full, and the per-test clause above is restated only because a tree of
+  programs makes it newly easy to lose.
+
+  VERIFICATION MUST EXECUTE ALL THREE PROOFS. A judgement over hand-fed records
+  proves the arithmetic and not the observation, and the observation is the entire
+  content of this AC. The three cases belong in one exercise: S alone passes a
+  mechanism that answers "reached" for everything, and B alone passes one that
+  answers "not reached" for everything.

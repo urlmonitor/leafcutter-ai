@@ -1,0 +1,302 @@
+{
+  "case_id": "N03",
+  "question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+  "human_gold": "Preserve explicitly specified L2/L3 population, all descendants and root-only exclusion. work_status is implementation progress, not lifecycle status. A later traversal depth cap cannot silently change all descendants to direct children. Do not re-ask the stated scope.",
+  "actor_id": "codex:root:needs_llm_host",
+  "model_id": null,
+  "underlying_model_requests": null,
+  "tokens": null,
+  "error": null,
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "TQ-500f"
+      ],
+      "required_fields": [
+        "level",
+        "work_status"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "all_descendants"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "exhaustive_count",
+    "hierarchy_scope": "exclude_root",
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The population is every descendant of the named root whose level is L2 or L3, including intermediate descendants that are themselves parents. Exclude only TQ-500f and group the complete count by implementation work_status. Direct children and lifecycle status would not preserve the request.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-b8e03912ebc8474b",
+    "root_task_id": "task-cae66f913e6d4d91",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "TQ-500f"
+          ],
+          "required_fields": [
+            "level",
+            "work_status"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "all_descendants"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "fields",
+        "completeness": "exhaustive_count",
+        "hierarchy_scope": "exclude_root",
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "The population is every descendant of the named root whose level is L2 or L3, including intermediate descendants that are themselves parents. Exclude only TQ-500f and group the complete count by implementation work_status. Direct children and lifecycle status would not preserve the request.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-nsvsjpd2\\kernel-runs\\runs\\run-b8e03912ebc8474b\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-7611e9138a48cb13",
+        "created_at": "2026-10-03T09:45:54.773988Z",
+        "updated_at": "2026-10-03T09:45:54.773988Z",
+        "created_seq": 0,
+        "gap_key": "2443ae0f073eada683e014083c79fdc120aca9c698dd587a35cfed0396527d50",
+        "gap_type": "host_only",
+        "goal": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+        "normalized_need": "500f all by count descendants excluding grouped l2 l3 only tq work_status",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped b...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-b8e03912ebc8474b"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped b...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/2443ae0f073eada683e014083c79fdc120aca9c698dd587a35cfed0396527d50.md"
+        },
+        "first_seen": "2026-10-03T09:45:54.773988Z",
+        "last_seen": "2026-10-03T09:45:54.773988Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 624672,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "a14167171c10050a7f0ee63abdc6f517",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status.",
+        "expected": "Count all L2 and L3 descendants of TQ-500f, excluding only TQ-500f, grouped by work_status."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "TQ-500f"
+        ],
+        "expected": [
+          "TQ-500f"
+        ]
+      },
+      {
+        "name": "include.required_fields",
+        "passed": true,
+        "actual": [
+          "level",
+          "work_status"
+        ],
+        "expected": [
+          "work_status",
+          "level"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "include.relationships",
+        "passed": true,
+        "actual": [
+          "all_descendants"
+        ],
+        "expected": [
+          "all_descendants"
+        ]
+      },
+      {
+        "name": "exclude.required_fields",
+        "passed": true,
+        "actual": [
+          "level",
+          "work_status"
+        ],
+        "expected": {
+          "forbidden": [
+            "status"
+          ]
+        }
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "exhaustive_count",
+        "expected": [
+          "exhaustive_count"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "exclude_root",
+        "expected": [
+          "exclude_root"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

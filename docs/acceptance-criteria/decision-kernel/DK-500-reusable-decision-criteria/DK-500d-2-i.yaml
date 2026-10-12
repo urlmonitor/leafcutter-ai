@@ -1,0 +1,98 @@
+id: DK-500d-2-i
+title: A reused criterion the person rewords stays traceable to its category without changing the category
+component: decision-kernel
+components:
+- decision_kernel
+level: L3
+status: active
+readiness: approved
+req_status: draft
+priority: high
+work_status: todo
+roadmap_phase: phase_kernel_2_knowledge
+criteria: |
+  Given the reused criterion "Can it be built and verified as one ticket?" from cat-1dc11c5a2ffa7310,
+  When the person edits it at the approval of proposals to "Can it be built and verified as one ticket by one agent?",
+  Then the approved criterion carries the new wording and states that it started from cat-1dc11c5a2ffa7310 and was edited,
+  And cat-1dc11c5a2ffa7310's wordings are unchanged by the run,
+  And the edited criterion is not counted as an unchanged reuse of cat-1dc11c5a2ffa7310,
+  And a reused criterion the person approves unedited keeps its plain link to its category.
+depends_on:
+- DK-500d-2
+covered_by: []
+implemented_by: []
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: DK-500d-2
+  contract: Approval of proposals with edits.
+change_target: code
+risk_surface: internal
+it_requirements:
+- An edit at the approval changes the reuse kind to edited and keeps the started-from category id in the run state, the run report and the staged area. The run never changes the category record.
+- An edited reuse stages no membership addition, because it is not an unchanged reuse. The edited wording reaches the category only as a grouping suggestion a person accepts (in the run, DK-500b-4, or in the next mining round).
+- 'Whether a wording is edited is decided by the shared wording rule, so a whitespace-only or case-only change is not an edit. Wording equality (''exact match'', ''identical'', ''repeat'', label uniqueness) is one shared rule for every caller (offline grouping, in-run grouping, publish label checks, drafted-repeat removal, edit detection): Unicode NFC, trimmed, internal whitespace collapsed to one space, case-folded; punctuation and word order stay significant. No caller may apply a looser or stricter rule of its own.'
+test_required: true
+test_spec:
+- name: test_edited_reuse_states_origin_and_edit
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: The approved criterion carries the new wording and states that it started from cat-1dc11c5a2ffa7310 and was edited.
+- name: test_category_wordings_unchanged_by_run
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: cat-1dc11c5a2ffa7310's record is byte-identical after the run.
+- name: test_edited_reuse_not_counted_as_unchanged
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: criterion
+  description: No membership addition is staged for the edited criterion.
+- name: test_unedited_reuse_keeps_plain_link
+  target_dir: tests/kernel/capabilities/
+  framework: pytest
+  type: behavioral
+  angle: boundary
+  description: A reused criterion approved unedited keeps its plain link and stages a membership addition.
+test_rationale: Run the decision capability through the public run/resume boundary with a scripted Jev provider and a recording host port over a fixture category library; assert the approval payload, call counts and staged files rather than internal helpers.
+doc_links:
+- path: docs/decisions/dec-93c1c730463c1f3c.yaml
+  relationship: governs
+  status: exists
+- path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/adrs/ADR-060-source-of-truth-and-approval-authority.md
+  relationship: constrains
+  status: exists
+- path: docs/decisions/dec-a070edfb6465bced.yaml
+  relationship: governs
+  status: exists
+  relevance: 'Grouping method (opt.jev_pick_existing, approved by human:user 2026-10-04): code places exact label or criterion-id matches, then Jev answers one bounded choice per wording over all existing categories plus ''none'' while the library fits one choice question, a merge only at p >= 0.8; leftovers become code-made one-member candidates; no LLM, no broader-link suggestions; in a run one Jev choice per drafted question within the run''s Jev budget. Its question says ''AC DK-300b'', which is DK-500b after the 2026-10-05 renumbering.'
+origin_agent: business-analyst
+created: 2026-10-04
+amended_by:
+- reason: it-po-technical-enrichment
+  date: '2026-10-05'
+  by: it-po
+  summary: 'Technical enrichment: assigned_agent confirmed, estimated_complexity, change_target, risk_surface, it_requirements, contracts, doc_links and the test contract set; readiness draft -> reviewed. BA criteria unchanged.'
+superseded_by: null
+notes: |
+  Whether the edited wording still asks the same question is a grouping judgement, so it reaches the category only as a suggestion a person accepts (DK-500b rule (d)), through the next mining round or the in-run grouping. The edited wording is illustrative.
+  FLOW BACK-LINK (for step.implements, to be applied by the store owner): leafcutter/decision-forming: approve-proposals.
+  Authored by the business-analyst stage of /plan-feature (route strategic) under decision dec-93c1c730463c1f3c; readiness draft, no product approval implied.
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: approve-proposals
+    node_kind: step
+    flow_kind: data
+    screen: decision-approve-proposals
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-04'

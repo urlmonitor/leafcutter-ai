@@ -1,0 +1,34 @@
+{
+  "files": [
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-i.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-iv.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-v.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vi.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-vii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-viii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-ix.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-x.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xi.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xiv.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xv.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvi.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1-xvii.yaml",
+    "docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400a-1.yaml"
+  ],
+  "checks": [
+    {
+      "check": "ac-schema-validation",
+      "exit_code": 0,
+      "output": "OK: all 18 AC YAML files are valid.\n"
+    },
+    {
+      "check": "ac-tree-validation",
+      "exit_code": 0,
+      "output": ""
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 id: KM-KGS-100d-3-i
 components:
   - knowledge_management
-readiness: draft
+readiness: approved
 priority: critical
 title: "An entry the builder cannot turn into an edge is reported, never passed over in silence"
 component: knowledge-management
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 roadmap_phase: phase_1
 parent: KM-KGS-100d-3
 criteria: |

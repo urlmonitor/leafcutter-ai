@@ -26,14 +26,20 @@ doc_links:
     relationship: related
     status: exists
     relevance: >-
-      The planned must_catch field lands in the test design this L1 produces. Keep
-      the design shape open to that addition.
+      The must_catch field exists: PR #911 (TQ-500f-2, merged 2026-09-27) added the
+      optional test_spec[].must_catch list (and TQ-500f-1 the 'discrimination' angle) to
+      the test design this L1 produces. ACD-2500c-3 builds on it without re-specifying it,
+      and only the code-aware test-design step writes it.
 assigned_agent: null
 delivers_to: null
 expects_from: null
 origin_agent: product-owner
 created: 2026-09-25
-amended_by: []
+amended_by:
+  - reason: "doc_link relevance on the 2026-09-25 analysis updated: must_catch is existing (PR #911, TQ-500f-1/-2), not planned; ACD-2500c-3 builds on it and only the code-aware test-design step writes it. Criteria, title and readiness unchanged."
+    date: '2026-09-28'
+    by: business-analyst
+    directed_by: user
 superseded_by: null
 covered_by:
   - ACD-2500c-1

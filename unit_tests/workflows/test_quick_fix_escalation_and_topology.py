@@ -319,6 +319,10 @@ class TestBP600WorkflowFullRunTopology:
             # the wrong anchor.
             "knowledge-routing-step",
             "commit",
+            # INF-700a-5: one read-only observation of what the fix commit
+            # actually carried, right after it; its answer is the reported
+            # knowledge_routing.
+            "knowledge-routing-observe",
             "changelog-author",
             "commit/changelog",
             "push-and-pr",

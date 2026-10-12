@@ -1,0 +1,47 @@
+{
+  "mutations": [
+    {
+      "test": "tests.kernel.enrichment.test_context_enrichment.TestContextEnrichmentBoundaries.test_redaction_expansion_stays_within_each_caller_field_limit",
+      "mutation": "remove per-field cap after redaction",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_context_enrichment.TestContextEnrichmentBoundaries.test_recent_referent_survives_older_conversation_filling_query_budget",
+      "mutation": "prioritise older conversation query terms",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_context_enrichment.TestContextEnrichmentBoundaries.test_excerpt_cut_at_whitespace_hashes_the_retained_text",
+      "mutation": "hash whitespace before the model normalises it",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_projection.TestContextProjection.test_near_limit_request_fits_with_plain_or_json_escaped_context",
+      "mutation": "append context without provider budget projection",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_projection.TestContextProjection.test_no_room_omits_context_without_altering_or_oversizing_the_request",
+      "mutation": "append context without provider budget projection",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_projection.TestContextProjection.test_data_policy_removes_evidence_from_projection_but_not_checkpoint",
+      "mutation": "ignore send_repo_excerpts=False",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_projection.TestContextProjection.test_downstream_batch_uses_configured_remaining_allowance",
+      "mutation": "downstream batch appends unlimited context",
+      "detected": true
+    },
+    {
+      "test": "tests.kernel.enrichment.test_projection.TestContextProjection.test_intent_batch_preserves_goal_while_projecting_context_with_its_budget",
+      "mutation": "intent batch appends unlimited context",
+      "detected": true
+    }
+  ],
+  "detected": 8,
+  "total": 8,
+  "production_files_modified": false
+}

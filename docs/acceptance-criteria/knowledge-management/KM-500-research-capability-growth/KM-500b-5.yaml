@@ -1,0 +1,134 @@
+id: KM-500b-5
+title: Keep reusable queries trustworthy as source data and versions change
+component: knowledge-management
+components:
+- knowledge_management
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: medium
+work_status: todo
+parent: KM-500b
+criteria: 'Given a verified query has an active version and readers already pinned to that version and its
+  source
+
+  When source data, supported mappings or the query contract changes
+
+  Then the declared compatibility policy distinguishes legitimate data changes from an incompatible or unverified
+  query
+
+  And any required revalidation uses reviewed expectations for the new source instead of assuming old result
+  IDs remain correct
+
+  And failed or incomplete revalidation cannot silently promote an incompatible version or erase the last verified
+  version and its evidence
+
+  When an authorized operator retires a query, selects a verified rollback version or recovers interrupted
+  activation
+
+  Then the authorized active-version selection is persisted in the configured catalog according to the recorded
+  policy and the reason and verification history remain inspectable
+
+  And already pinned readers either complete against retained compatible artifacts or receive an explicit expiration
+  or incompatibility result
+
+  And recovery never exposes a partly activated catalog or grants broader write permission
+
+  And concurrent retirement, activation or rollback has one consistent outcome without conflicting active versions.'
+depends_on:
+- KM-500b
+doc_links:
+- path: docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500b-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400d-3.yaml
+  relationship: context
+  status: exists
+  relevance: Reuse the existing bounded behavior; this pending criterion adds validation, operation or lifecycle
+    scope without replacing completed proof.
+- path: docs/architecture/components/knowledge-retrieval.md
+  relationship: context
+  status: exists
+  relevance: Neutral projection/catalog ownership and existing kernel integration boundaries.
+origin_agent: business-analyst
+created: '2026-10-01'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: 'PO/BA/IT PO coverage audit at user request. This is a pending behavioral obligation, not an implementation
+  or execution claim. Existing KM-400 and KM-500 completed mechanics retain their evidence. Authoring this
+  criterion does not authorize external provider data transfer, merge, deployment or implementation during
+  the AC-only audit. IT PO supplies technical constraints and test contracts. IT PO 2026-10-01: technical constraints
+  and planned public proof supplied; todo and empty covered_by/implemented_by are intentional. No implementation,
+  provider call or deployment was performed during this acceptance audit.'
+declares_side_effect: true
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+- Extend the neutral catalog/admission lifecycle, not the kernel registry snapshot. Define compatibility using
+  descriptor/compiler/mapping versions and verification source baseline; distinguish ordinary data drift from
+  incompatible source kinds or query contracts.
+- Revalidation uses reviewed new-source expectations and records source SHA/generation plus descriptor digest.
+  Do not require obsolete source-A entity IDs to remain the exact answer on legitimate source-B changes.
+- Retirement and rollback require the same narrow configured catalog-root authority, atomic compare-and-swap
+  and audit provenance as activation; retain immutable versions for pinned readers and return explicit expiry/incompatibility
+  when unavailable.
+- 'Interrupted-writer recovery may be a tested operator procedure: establish ownership and that no writer remains
+  before removing only owned lock/temp state. Never guess a live writer is stale or delete arbitrary paths.'
+- Test concurrent lifecycle mutations and process crash/reopen using the actual catalog file boundary; a helper-only
+  active-pointer update is insufficient.
+test_required: true
+test_rationale: Planned public-interface and separately labeled real-artifact proof covers the full observable
+  obligation. Existing mechanism tests are reusable but do not establish real-agent, provider or deployment
+  readiness. No planned test is represented as existing coverage.
+expects_from:
+  ac_id: KM-500b-3
+  contract: Reuse the existing bounded implementation and canonical contracts; add only this explicit lifecycle
+    or readiness obligation.
+delivers_to:
+  agent: python-coder
+  contract: Implement and prove KM-500b-5 through the existing knowledge/kernel or operational interface; return
+    measured evidence and preserve explicit not-run prerequisites.
+test_spec:
+- name: test_catalog_lifecycle_public_operations
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: reachability
+  description: Through supported lifecycle operations exercise activate, source-A to B compatibility/revalidation,
+    retire and verified rollback; preserve pinned readers and reject permission denial or stale compare-and-swap.
+  covers:
+  - KM-500b-5
+  requires_db: false
+- name: test_catalog_crash_and_concurrent_lifecycle
+  target_dir: tests/knowledge/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: Terminate a writer at controlled persistence seams, reopen and execute the documented recovery;
+    concurrent activation/retirement/rollback has one consistent outcome and no partial catalog, foreign deletion
+    or lost verified history.
+  covers:
+  - KM-500b-5
+  requires_db: false
+- name: test_catalog_generation_compatibility
+  target_dir: tests/knowledge_live/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: Execute retained and new query versions against two real scoped Neo4j generations with legitimate
+    data changes and incompatible mappings; verify explicit policy and source-bound evidence after revalidation.
+  covers:
+  - KM-500b-5
+  requires_db: true

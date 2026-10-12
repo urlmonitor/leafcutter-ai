@@ -39,8 +39,18 @@ it_requirements:
   step writes (outcome clause proved, code file exercised, to-be-created flag, convention test file) and
   adds record-level provenance (authorship mark {step, date}, opened-files list). additionalProperties:
   false stays on test_spec items.'
-- must_catch is NOT added; an unknown key stays rejected, so the discrimination work has to specify it
-  first (its schema AC must depend on this AC).
+- 'Builds ON the existing optional test_spec[].must_catch (TQ-500f-2, PR #911: non-empty list of non-blank
+  strings, copied verbatim onto the ticket and kept identical in shape to config/test_requirements.schema.json)
+  and the existing angle value ''discrimination'' (TQ-500f-1). Neither is redefined, renamed or re-shaped
+  here; the new per-entry keys are added alongside them.'
+- 'The design-entry key set otherwise stays closed: any key the schema does not declare is rejected, naming
+  the key, at every enforcement point (the check-ac-schema hook including its manual fallback, and
+  validate_ac_schema.py).'
+- 'Declaration rule (settled on the TQ side, 2026-09-27): the presence of must_catch, or of angle ''discrimination'',
+  on a test_spec entry IS the test designer''s bug-fix/gate declaration. No new schema key is added for
+  that declaration.'
+- 'Writer rule: only the code-aware test-design step (ACD-2500c-1 / ACD-2500d-5) writes must_catch; the
+  technical planner (it-po) never does.'
 - 'Legacy test_spec (no provenance, no new keys) stays valid: the new keys are optional in the schema,
   and their presence on code-aware designs is enforced by ACD-2500c-1-i, not by the schema.'
 - The ticket generator passes the new keys through or drops them without producing a ticket that violates
@@ -56,14 +66,14 @@ delivers_to:
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key. Read by ACD-2500b-2, ACD-2500b-3 and ACD-2500c-1-i.'
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key. Read by ACD-2500b-2, ACD-2500b-3 and ACD-2500c-1-i.'
 - agent: llm-expert
   contract: 'Code-aware test design = the record''s test_spec list, each item carrying the existing keys
     (name, target_dir, description, framework, type, angle) plus the ACD-2500c-3 per-entry keys (the outcome
     clause it proves, verbatim test_intent.clause text; the code file it exercises; a to-be-created flag;
     the neighbouring test file cited as convention), and record-level provenance: authorship mark {step:
     <code-aware agent id>, date: YYYY-MM-DD} and the list of repository files the step opened (repo-root-relative
-    POSIX). No must_catch key. Written by the code-aware agent (ACD-2500c-1).'
+    POSIX). Optional must_catch (TQ-500f-2: non-empty list of non-blank strings, copied verbatim onto the ticket) and angle ''discrimination'' are written only by the code-aware step; their presence on an entry is that step''s bug-fix/gate declaration (no separate declaration key). No other undeclared key. Written by the code-aware agent (ACD-2500c-1).'
 expects_from: null
 test_spec:
 - name: test_code_aware_design_accepted_with_provenance
@@ -83,6 +93,13 @@ test_spec:
   type: unit
   description: An entry with an undeclared key is rejected and the message names the key.
   angle: failure
+- name: test_code_aware_entry_with_must_catch_and_discrimination_accepted
+  target_dir: unit_tests/ac_store/
+  framework: pytest
+  type: unit
+  description: A code-aware entry carrying the new per-entry keys together with the existing must_catch and
+    angle 'discrimination' is accepted, and the generated ticket entry carries must_catch verbatim.
+  angle: seam
 - name: test_generated_ticket_valid_against_test_requirements_schema
   target_dir: unit_tests/ac_store/
   framework: pytest
@@ -95,6 +112,10 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: "reconcile with main: PR #911 (TQ-500f-1/-2, merged 2026-09-27) added optional test_spec[].must_catch and angle 'discrimination'. it_requirements rewritten to build on must_catch instead of forbidding it (key set otherwise closed; presence of must_catch or angle 'discrimination' is the test designer's bug-fix/gate declaration, no new key; only the test designer writes must_catch); both contracts' 'No must_catch key' replaced in lockstep with ACD-2500c-1, ACD-2500c-1-i, ACD-2500c-2-i; one seam test added. Criteria unchanged (they never named must_catch)."
+  date: '2026-09-27'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -110,3 +131,12 @@ notes: |
   keeps must_catch from being bolted on before that work is specified.
   Note: the analysis file is present only as an untracked file in the main checkout, not
   on this branch; the ACD-2500 L0 doc_link marks it status: exists.
+
+  CORRECTION (2026-09-27, it-po, user-directed): the ORDERING CONSTRAINT above is overtaken.
+  PR #911 (TQ-500f-1/-2) landed the optional test_spec[].must_catch list and the
+  'discrimination' angle on main first, without depending on this AC. This AC now builds ON
+  that field: it neither forbids nor re-specifies must_catch. What survives of the intent:
+  the design-entry key set stays closed for any OTHER key, only the code-aware test-design
+  step writes must_catch (the technical planner never does), and the presence of must_catch
+  or angle 'discrimination' on an entry is that step's bug-fix/gate declaration -- no
+  separate schema key.

@@ -1,0 +1,158 @@
+id: KM-400f-1
+title: "Generation retention has a declared bound that names what may be reclaimed"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the repository holds active generation G32 and retired generations G31 down to G1
+  And G29 was retired 2 hours ago
+  And an unexpired pinned continuation is held against G28
+  When the retention policy is evaluated
+  Then the evaluation reports the declared bound as an inspectable value naming both its generation-count limit of 3 and its minimum retirement age of 24 hours
+  And it reports the configuration source the bound was read from
+  And G32 is reported not reclaimable because it is the active generation
+  And G31 and G30 are reported not reclaimable because they are inside the declared count bound
+  And G29 is reported not reclaimable because it is younger than the declared minimum retirement age
+  And G28 is reported not reclaimable because its pinned continuation has not expired, even though it is outside both bounds
+  And exactly G27 down to G1 are reported reclaimable
+  And the evaluation leaves every generation, the active pointer and every continuation unchanged
+
+  Given no retention bound is declared in configuration
+  When the retention policy is evaluated
+  Then the evaluation refuses and names the unset retention bound setting
+  And it does not resolve the bound from a built-in value
+  And no generation is reported reclaimable
+
+  Given a declared bound names a generation count but no minimum retirement age
+  When the retention policy is evaluated
+  Then the evaluation refuses and names the missing minimum retirement age
+  And it does not treat generation count alone as the whole bound
+depends_on: [KM-400f]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: The projection stays a rebuildable artifact; a declared bound governs how much of it is kept.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+    relationship: context
+    status: exists
+    relevance: Pinning is the superior constraint; a retrieval begun against a generation stays pinned to it while retained, so an unexpired continuation blocks reclaimability.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the existing cleanup mechanism this policy decides the input for; KM-400b-5 implies age only, this AC adds the generation-count basis.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit honest coverage and method for every reported figure; an undeclared bound is unknown, never a default.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The declared bound and its two bases must be documented as operator-visible configuration.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: KM-400f-2 and KM-400f-4 consume the reclaimability determination and the
+    declared bound reported by this AC; neither recomputes the policy.
+expects_from:
+  ac_id: KM-400b-5
+  contract: The existing projector-owned cleanup mechanism and its continuation-expiration
+    result; this AC decides which generations are offered to it.
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+  - "2026-10-09: product-owner re-parented this AC from KM-400b to the new KM-400f,
+    where retention and capacity now live. It was authored as KM-400b-6 and is renamed
+    to KM-400f-1 because parentage in this store is derived from the id string. The
+    rename is safe only because the id was one day old and referenced nowhere outside
+    this file and its parents — no test covers tag, no ticket, no implemented_by entry.
+    Criteria, test_spec, test_rationale and must_catch are unchanged; only the id,
+    parent, depends_on, the delivers_to contract's references, the covers tags and the
+    approval fields were touched. readiness moved to approved and priority to high at
+    the user's approval gate."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, config]
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09 after a measured incident: the projection published an immutable
+  generation of roughly 9,850 nodes and 26,100 relationships on every merge to the
+  canonical branch and never reclaimed the old ones. 32 generations reached 189,950 nodes
+  and 304,498 relationships, hit the hosted free-tier ceiling, and the instance latched
+  read-only, after which every write failed including cleanup itself. The instance had to
+  be destroyed and recreated.
+
+  The gap this AC closes is a specification gap, not only a code gap. The store pushes
+  exclusively toward preservation (KM-400a-3-i "retained generations are preserved",
+  KM-400b-3 pinning "while it is retained", KM-400b "evidence already in use stays
+  stable") and no criterion anywhere required reclamation, so unbounded accumulation was
+  the specified behaviour. A retention_seconds default of 3600 exists in the projection
+  adapter and appears nowhere in the store; this AC makes the bound declared and
+  inspectable instead.
+
+  Settled design decision, not to be reopened: immutable generations are KEPT. This AC
+  adds a bound and does not replace generations with in-place upserting. KM-400b-3's
+  pinning guarantee is strictly superior to the bound — an unexpired continuation
+  protects its generation regardless of count or age.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_retention_policy_reports_declared_bound_and_exact_reclaimable_set
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Build a 32-generation fixture with one active, one recently retired and
+      one pin-protected generation, evaluate the policy through its public entry point and
+      assert the exact reclaimable set, the per-generation reason, and that the reported
+      bound names both the count limit and the minimum age.
+    covers: [KM-400f-1]
+    must_catch:
+      - "evaluate the bound on age only and ignore the generation count"
+      - "treat the pin-protected generation as reclaimable because it is outside both bounds"
+      - "include the active generation in the reclaimable set"
+    requires_db: false
+  - name: test_undeclared_retention_bound_refuses_instead_of_defaulting
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With no retention bound in configuration, assert the evaluation refuses
+      naming the unset setting and reports no reclaimable generation, rather than resolving
+      the adapter's built-in retention value.
+    covers: [KM-400f-1]
+    must_catch:
+      - "fall back to the built-in retention_seconds value when the bound is unset"
+      - "report an empty reclaimable set as a successful evaluation"
+    requires_db: false
+  - name: test_policy_evaluation_changes_no_generation
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database holding several published generations, evaluate
+      the policy twice and assert identical canonical fingerprints, unchanged active
+      pointer and unchanged continuations — evaluation reports, it never reclaims.
+    covers: [KM-400f-1]
+    requires_db: true
+test_rationale: >-
+  The bound only binds when the fixture is large enough for it to bind, so the criterion
+  test builds a 32-generation fixture rather than the 2-node snapshot used elsewhere in
+  this family, under which no limit is ever reached and a no-op policy would pass. Each
+  protection (active, count, age, pin) is asserted with its own reason so a policy that
+  returns the right set for the wrong reason is still caught, and must_catch names the
+  wrong versions explicitly because this AC exists to prevent a regression to
+  zero-reclaimable. The refusal test must execute the configuration path, not inspect the
+  source for a constant.

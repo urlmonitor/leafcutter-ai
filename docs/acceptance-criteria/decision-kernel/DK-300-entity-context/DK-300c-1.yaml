@@ -1,0 +1,94 @@
+id: DK-300c-1
+title: "Explicit index preparation records current repository and reader coverage"
+component: decision-kernel
+components: [decision_kernel]
+level: L2
+status: active
+readiness: reviewed
+req_status: draft
+priority: high
+work_status: done
+criteria: |
+  Given canonical owner sources and Python declarations in a selected repository workspace,
+  When index preparation or refresh is explicitly requested outside an initial recognition pass,
+  Then a disposable derived index is produced with repository and workspace identity, schema version, source snapshot, reader coverage and source hashes,
+  And unchanged canonical input yields the same entity identities and projection content,
+  And refresh reflects changed, added and removed supported sources without changing canonical source records,
+  And uncommitted source changes contribute to the snapshot fingerprint even when the committed revision is unchanged,
+  And repository declarations are inspected without importing or executing repository code.
+depends_on: [DK-300c]
+doc_links:
+  - path: docs/analysis/2026-10-03-kernel-entity-context-concept.md
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/flows/leafcutter/decision-forming.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/architecture/components/decision-kernel.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+delivers_to: {"agent":"python-coder","contract":"kernel.entity_index.build_entity_index(repository_root,config,*,output_path=None)->EntityIndex and python -m kernel entities build --repository-root ABS [--config PATH] [--output PATH] prepare the local derived index outside a run. Runtime kernel.entity_context.recognize_entities(task_input,config,registry=None,*,redactor=None)->EntityContext consumes this index without rebuilding. Physical workspace identity is the canonical resolved checkout root plus manifest; arbitrary Scope.workspace_id labels need not equal a directory name."}
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-03
+amended_by:
+  - reason: "IT PO review on 2026-10-03 adds technical contracts and planned test specifications under existing user authorization; readiness is now reviewed. BA criteria, implementation status and historical evidence are preserved."
+superseded_by: null
+covered_by:
+  - 'DK-300c-1-i'
+  - 'tests/kernel/entity_context/test_index.py::test_explicit_index_cli_prepares_consumable_metadata'
+  - 'tests/kernel/entity_context/test_index.py::test_refresh_reflects_additions_changes_and_removals_without_source_writes'
+  - 'tests/kernel/entity_context/test_index.py::test_second_dirty_edit_changes_snapshot_with_same_head'
+  - "tests/kernel/entity_context/test_independent_regressions.py::test_new_previously_absent_configured_root_invalidates_snapshot"
+implemented_by:
+  - "kernel/entity_owner_scope.py"
+  - "kernel/entity_records.py"
+  - "kernel/entity_index.py"
+  - "kernel/entity_index_read.py"
+  - "kernel/entity_sources.py"
+  - "kernel/entity_cli.py"
+notes: |
+  New behavioral requirement derived from the user-authorized entity-context concept.
+  BA behavior and IT PO technical contracts are reviewed; implementation is verified by the independent strict entity suite and recognition corpus.
+  Verification evidence: reports/entity-context-verification.md. No human approval is implied.
+  Historical DK-200 direct-gather tests and evaluation reports are preserved.
+  Fresh-run wiring criteria were explicitly reconciled to EntityContext on 2026-10-04.
+estimated_complexity: L
+it_requirements:
+  - "Index preparation is an explicit local CLI/API maintenance operation; runtime recognition must never call build/refresh, including on first use or source changes."
+  - "Index binding includes canonical resolved checkout root and source manifest independently from arbitrary task workspace labels; another checkout cannot silently reuse it."
+  - "Freshness covers actual dirty content and additions/removals under supported configured roots. Two successive changes to the same already-dirty source invalidate earlier content even with unchanged HEAD/status."
+  - "Cache integrity is not source freshness; source policy/config changes and reader/schema incompatibility are independently detected. An unverifiable snapshot yields explicit unavailable coverage."
+  - "Refresh writes only the declared derived cache, leaves canonical source records unchanged and retains deterministic identities/projections for unchanged input."
+test_required: true
+test_spec:
+  - name: "test_explicit_index_cli_prepares_consumable_metadata"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "reachability"
+    description: "tests/kernel/entity_context/test_index.py::test_explicit_index_cli_prepares_consumable_metadata: Invoke python -m kernel entities build against real canonical fixtures, parse one JSON result, then recognize an indexed term; verify schema/source/reader coverage and physical checkout binding."
+  - name: "test_refresh_reflects_additions_changes_and_removals_without_source_writes"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "integration"
+    angle: "real_artifact"
+    description: "tests/kernel/entity_context/test_index.py::test_refresh_reflects_additions_changes_and_removals_without_source_writes: Build, change/add/remove canonical supported files, explicitly refresh and assert current meanings and hashes, deterministic unchanged projections and unchanged canonical bytes beyond intentional fixture edits."
+  - name: "test_second_dirty_edit_changes_snapshot_with_same_head"
+    target_dir: "tests/kernel/entity_context/"
+    framework: "pytest"
+    type: "behavioral"
+    angle: "criterion"
+    description: "tests/kernel/entity_context/test_index.py::test_second_dirty_edit_changes_snapshot_with_same_head: Within a local repository edit the same already-dirty source twice and refresh; assert source/snapshot fingerprint differs without HEAD changing and old runtime meanings are stale."
+test_rationale: "Exercise production public boundaries with real canonical-source fixtures and an injected recording classifier; assert observable outputs and side effects, not source strings. Capture red results before runtime implementation; no live provider is required."
+product_truth:
+  - flow: leafcutter/decision-forming
+    node: enrich-context
+    node_kind: step
+    flow_kind: data
+    screen: null
+    mock_data: leafcutter/decisions
+    entities: []
+    source: real
+    asof: '2026-10-03'

@@ -1,15 +1,16 @@
 ---
 agent_id: flow-author
 title: 'Agent Card: flow-author'
-description: 'Flow authoring agent for the product-truth store. Given drafted mock
-  data and mockups for a multi-step request, it assembles a draft flow (*.flow.json):
-  steps ordered and each wired to its screen and the entities it reads and writes,
-  with one acceptance_scenario per step the business-analyst can turn into ACs. It
-  follows the add-vs-create rule — extending an existing journey when a screen belongs
-  to one rather than creating a new flow. Output conforms to flow.schema.json.  Use
+description: 'Flow authoring agent for the product-truth store. Given a multi-step
+  request and its source contracts or drafted mockups, it assembles a draft flow (*.flow.json):
+  ordered steps with checked handoffs and screens/entities where the journey actually
+  has them, with one acceptance_scenario per step the business-analyst can turn into
+  ACs. It follows the add-vs-create rule — extending an existing journey when a screen
+  belongs to one rather than creating a new flow. Output conforms to flow.schema.json.  Use
   when: the product-truth classifier (pt-classifier) returns needs_flow (outcome full-set)
-  — a multi-step journey — and the mock data and mockups have been drafted, so the
-  journey wiring can be assembled before the business-analyst derives the ACs.'
+  — a multi-step journey — with source contracts available, or mock data and mockups
+  drafted for UI work, so the journey wiring can be assembled before the business-analyst
+  derives the ACs.'
 type: card
 status: active
 created: 2026-08-13
@@ -18,15 +19,15 @@ last_updated: '2026-08-13'
 ---
 # flow-author
 
-**Flow authoring agent for the product-truth store. Given drafted mock data and
-mockups for a multi-step request, it assembles a draft flow (*.flow.json): steps
-ordered and each wired to its screen and the entities it reads and writes, with one
+**Flow authoring agent for the product-truth store. Given a multi-step request and its source contracts or drafted mockups,
+it assembles a draft flow (*.flow.json): ordered steps with checked handoffs
+and screens/entities where the journey actually has them, with one
 acceptance_scenario per step the business-analyst can turn into ACs. It follows the
 add-vs-create rule — extending an existing journey when a screen belongs to one
 rather than creating a new flow. Output conforms to flow.schema.json.
 
 Use when: the product-truth classifier (pt-classifier) returns needs_flow (outcome
-full-set) — a multi-step journey — and the mock data and mockups have been drafted,
+full-set) — a multi-step journey — with source contracts available, or mock data and mockups drafted for UI work,
 so the journey wiring can be assembled before the business-analyst derives the ACs.**
 
 | Field | Value |

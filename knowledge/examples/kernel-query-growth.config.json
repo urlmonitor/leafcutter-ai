@@ -1,0 +1,20 @@
+{
+  "knowledge": {
+    "backend": "neo4j",
+    "repository_id": "leafcutter",
+    "repository_root": "REPLACE_WITH_ABSOLUTE_REPOSITORY_ROOT",
+    "query_catalog_root": "REPLACE_WITH_ABSOLUTE_CATALOG_ROOT"
+  },
+  "sources": [
+    {
+      "id": "knowledge.graph",
+      "kind": "graph_query",
+      "categories": [
+        "task_context",
+        "existing_patterns",
+        "prior_decisions",
+        "internal_principles"
+      ]
+    }
+  ]
+}
