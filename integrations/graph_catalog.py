@@ -6,6 +6,7 @@ ARCHITECTURE: Deterministic binding over permitted entity cards and digest-pinne
 from __future__ import annotations
 
 from integrations.graph_offers import GraphOffer, _identity, interpreted_targets
+from integrations.graph_eligibility import recipe_result_contract
 from kernel.capabilities.base import ExecutionContext
 from kernel.contracts.payloads import RetrievalRequestPayload
 from knowledge.contracts import OPERATIONS
@@ -66,10 +67,11 @@ def catalog_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload, cata
         targets = _targets(ctx, payload, descriptor, cards, wanted)
         if 1 <= len(targets) <= 20:
             offers[descriptor.operation] = GraphOffer(descriptor.description, tuple(targets), seed,
-                "graph", True, descriptor.version, row["digest"])
+                "graph", True, descriptor.version, row["digest"], recipe_result_contract(descriptor.recipe))
     return offers
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-09 15:40 [python-coder]: Share the entity selector across builtin and admitted query offers. (#KM-500/KM-500e-1-i)
+# - 2026-10-10 10:51 [python-coder]: Derive saved-query result facts from the pinned recipe rather than its description. (#KM-500/KM-500a-2-i)

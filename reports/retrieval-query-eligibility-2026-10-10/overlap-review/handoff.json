@@ -1,0 +1,136 @@
+{
+  "status": "frozen_for_conservative_refinement",
+  "authority": "Root authorized separate supplemental controls, then only two specifically identified assertion corrections after BA reviewed the real-consumer self-dependency witness.",
+  "first43_baseline_receipt_sha256": "0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089",
+  "first43_baseline": "22 assertion reds + 21 preservation passes before production implementation. Expert separately reported 43 first-pass greens; neither result is rewritten.",
+  "red_runtime_source_sha256": {
+    "integrations/graph_eligibility.py": "de2875da73067ddfa3b7a4c33c23ab2f880c1d23e206b1bd1efd25cd857fbd73",
+    "integrations/graph_offers.py": "34679db75969f220fd69165788dcdba736a8a6e2270b7f37fd5ab6cba933b2ae",
+    "integrations/graph_catalog.py": "18f13b57cf585f4698af3e40ee80b1534958b41985b7ef78f5941ddaa5400bfe",
+    "integrations/graph_selection.py": "b41bec07297bd7d5e92330d8066e7463f901e4889f6b93002d2b3d1ce1f96fb3",
+    "integrations/graph_selection_result.py": "d36aae6ae8375d6f59bda54a35f38182382c89b5f26c433fac2274cbd94b111f"
+  },
+  "red_result": {
+    "tests": 9,
+    "failed": 7,
+    "passed": 2,
+    "errors": 0,
+    "seconds": "5.257",
+    "cases": [
+      {
+        "name": "test_native_self_endpoint_reaches_real_answer_consumer[get_declared_dependents]",
+        "status": "passed",
+        "cause": null
+      },
+      {
+        "name": "test_native_self_endpoint_reaches_real_answer_consumer[get_corrected_decisions]",
+        "status": "passed",
+        "cause": null
+      },
+      {
+        "name": "test_native_self_endpoint_remains_selectable[get_declared_dependents]",
+        "status": "failed",
+        "cause": "AssertionError: The native result can contain the required exact identity\nassert 'get_declared_dependents' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+      },
+      {
+        "name": "test_native_self_endpoint_remains_selectable[get_corrected_decisions]",
+        "status": "failed",
+        "cause": "AssertionError: The native result can contain the required exact identity\nassert 'get_corrected_decisions' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+      },
+      {
+        "name": "test_admitted_round_trip_remains_selectable[typed-cycle]",
+        "status": "failed",
+        "cause": "AssertionError: Admitted reverse traversal can return its seed\nassert 'read_round_trip' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+      },
+      {
+        "name": "test_admitted_round_trip_remains_selectable[unknown-endpoint]",
+        "status": "failed",
+        "cause": "AssertionError: Admitted reverse traversal can return its seed\nassert 'read_round_trip' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+      },
+      {
+        "name": "test_eligibility_keeps_unknown_and_bounded_candidates[Enumerate every descendant and prove the complete population.]",
+        "status": "failed",
+        "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+      },
+      {
+        "name": "test_eligibility_keeps_unknown_and_bounded_candidates[Read automated Test records that demonstrate verification.]",
+        "status": "failed",
+        "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+      },
+      {
+        "name": "test_exact_ac_fields_keep_hydratable_get_entities",
+        "status": "failed",
+        "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+      }
+    ]
+  },
+  "new_execution_count": 6,
+  "revised_existing_execution_count": 3,
+  "red_causes": "Four newly added selector executions and three executions of the approved corrected assertions reject potentially overlapping exact identities. The two native backend/answer witnesses already pass.",
+  "native_witness": {
+    "path": "validate_snapshot -> KnowledgeService -> neo4j_queries.query -> real population/disclosure/answers; only driver IO and source IO are controlled",
+    "operations": [
+      "get_declared_dependents",
+      "get_corrected_decisions"
+    ],
+    "both": "Admitted self-edge; exact requested identity returned; status ok; answer fulfilled; missing_fields and limitations empty.",
+    "declared_dependents": "Actual stats.population=declared_dependents while unchanged requested scope.population=returned_entities. The answer consumer accepts exact IDs; unequal labels do not establish disjointness.",
+    "limitation": "No live Neo4j or provider ran. This is a query-contract witness using permitted driver rows, not an Aura or production data claim."
+  },
+  "saved_witness": "Real admission activated an AC -> Test -> AC recipe using outgoing then incoming covered_by. Both declared-AC and unspecified endpoint kinds were removed from the paid menu. Compiled statements and bound parameters are checked at controlled driver IO; no new query evaluator.",
+  "revision": {
+    "reason": "Original negative assertions treated unequal population labels as proof of incompatible exact identity, contrary to only-provable-mismatch contract.",
+    "paths": [
+      "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "tests/knowledge/test_query_eligibility_public.py"
+    ],
+    "patch": "approved-assertion-amendment.patch",
+    "original_bytes": [
+      "test_query_eligibility_selection.py.first43",
+      "test_query_eligibility_public.py.first43"
+    ],
+    "preserved": "Correct get_entities dispatch, required fields/citations, Test-kind and named-hierarchy mismatches, thresholds, all nine question bytes and source-oracle bytes remain unchanged."
+  },
+  "unchanged_original_paths": [
+    "tests/knowledge/query_eligibility_support.py",
+    "tests/knowledge/test_query_eligibility_consumers.py",
+    "tests/fixtures/_shared/query_eligibility/cases.json",
+    "tests/fixtures/_shared/query_eligibility/controls.json",
+    "tests/fixtures/_shared/query_eligibility/saved_exact.json",
+    "tests/fixtures/_shared/query_eligibility/source-blobs.json",
+    "tests/fixtures/_shared/query_eligibility/source-oracles.json"
+  ],
+  "frozen_test_sha256": {
+    "tests/kernel/entity_context/test_query_eligibility_selection.py": "5ad9468c715229dfedc26b85ec95b9efaea6466ac95b9633349436aaa41ee21f",
+    "tests/knowledge/test_query_eligibility_public.py": "743b662f8cfd4c144d23d8475db176a3f2ac40b0fb79dee6c1f5ad08fd20693b",
+    "tests/knowledge/test_query_eligibility_overlap.py": "fbd18c7d831fb77e52436782961f8f883b4cfd0f10f40c469295b77c9b357f8a",
+    "tests/fixtures/_shared/query_eligibility/overlap.json": "3b99f62e7a934b6e44f5af6cf1b6d6fe59a0c64fbe2c06d630d5ed21011e9aab"
+  },
+  "ruff": "All checks passed for three Python paths.",
+  "provisional_test_repair": "First supplemental run assumed admission status accepted. Existing API returned activated. Only this new-test API expectation and an unused import were corrected before freeze. red-attempt1.xml preserves that non-product failure.",
+  "supplemental_questions": [
+    {
+      "test": "test_native_self_endpoint_reaches_real_answer_consumer",
+      "Q1": "The actual backend/answer contract permits self endpoints for exact IDs.",
+      "Q2": "Valid self relation and real answer evaluator return fulfilled.",
+      "Q3": "A label-only exclusion contradicts established consumer behavior.",
+      "vacuity": "Rows, actual native driver query, returned ID, hydrated field, scope and answer status are asserted."
+    },
+    {
+      "test": "test_native_self_endpoint_remains_selectable",
+      "Q1": "Potentially overlapping native candidate remains in one paid menu.",
+      "Q2": "Real registered binding executes selected candidate through real service.",
+      "Q3": "First-pass fit incorrectly removes same-kind related or declared candidates.",
+      "vacuity": "Choice membership, wrong-kind paired negative, both disclosure calls, exact-ID scope and fulfilled answer are asserted."
+    },
+    {
+      "test": "test_admitted_round_trip_remains_selectable",
+      "Q1": "Declared reverse path may return seed despite different population label.",
+      "Q2": "Real admission, compiler, public scheduler, source resolver and answer consumer.",
+      "Q3": "First-pass fit excludes admitted typed/unknown endpoints.",
+      "vacuity": "Positive and empty admission cases, generated direction, paid menu, actual saved request, provenance and answer are asserted."
+    }
+  ],
+  "limits": "No relevance supplemental test added; root requested only if concise. Runtime fix remains expert-owned. Existing preservation suites are not rerun here. No Git mutations, hooks, live graph/provider calls.",
+  "next": "Expert refines production, runs these frozen tests and relevant preservation suite, records green evidence separately without overwriting red receipt."
+}

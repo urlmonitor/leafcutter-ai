@@ -1,0 +1,41 @@
+{
+  "status": "offline_oracle_equivalence_only_publication_readiness_pending",
+  "source_revision": "13db09f1a231f5c55a5a9b044a5007d8467f7afa",
+  "baseline_source_revision": "44406d923e2a0e2f40079a317135d0736534c654",
+  "baseline_oracle_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+  "new_oracle_sha256": "9d82aad4090f0ef6b980b5c48e374d32559fe95aa3172b7d1a417015d3a069bb",
+  "publication_workflow_reference": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/38047097266",
+  "publication_authority": "Root supplied merge/workflow identity. No completed publication or live readiness assumed by this receipt.",
+  "generation_id": null,
+  "checks": {
+    "tq_all": {
+      "root_semantics_equal": true,
+      "membership_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_bytes_equal": true
+    },
+    "tq_l3_terminal": {
+      "root_semantics_equal": true,
+      "membership_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_bytes_equal": true
+    },
+    "km_changed_root": {
+      "root_semantics_equal": true,
+      "membership_semantics_equal": true,
+      "count_equal": true,
+      "counts_equal": true,
+      "selected_bytes_equal": true
+    },
+    "exact_record": {
+      "identity_semantics_equal": true,
+      "fields_equal": true,
+      "source_bytes_equal": true
+    }
+  },
+  "equivalent": true,
+  "replaces_for_future_planning": "740b419 preparation remains preserved; this is a separate revision addendum, not a silent source substitution.",
+  "no_live_calls": true
+}

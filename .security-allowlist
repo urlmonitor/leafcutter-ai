@@ -1004,3 +1004,30 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+
+# Query-eligibility evidence: 20 exact canonical AC base64 blobs at 44406d923;
+# four independently verified receipt-path/hash or recorded-command lines.
+ENTROPY_HIGH:docs/analysis/2026-10-10-retrieval-query-eligibility-contract.md:51
+ENTROPY_HIGH:reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/handoff.json:36
+ENTROPY_HIGH:reports/retrieval-query-eligibility-2026-10-10/publication/reconstruction.json:7
+ENTROPY_HIGH:reports/retrieval-query-eligibility-2026-10-10/publication/reconstruction.json:281
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:2
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:3
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:4
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:5
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:6
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:7
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:8
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:9
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:10
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:11
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:12
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:13
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:14
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:15
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:16
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:17
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:18
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:19
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:20
+ENTROPY_HIGH:tests/fixtures/_shared/query_eligibility/source-blobs.json:21

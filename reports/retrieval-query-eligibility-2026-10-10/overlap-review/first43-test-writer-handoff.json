@@ -1,0 +1,601 @@
+{
+  "status": "frozen_for_implementation",
+  "baseline_source": "44406d923e2a0e2f40079a317135d0736534c654",
+  "ac": "KM-500a-2-i",
+  "classification": "production_drift",
+  "runtime_or_ac_changes": false,
+  "live_provider_or_graph_calls": false,
+  "result": {
+    "tests": 43,
+    "assertion_failures": 22,
+    "preservation_passes": 21,
+    "errors": 0,
+    "seconds": 23.135
+  },
+  "ruff": "All checks passed!",
+  "command": "python -m pytest tests/knowledge/test_query_eligibility_public.py tests/knowledge/test_query_eligibility_consumers.py tests/kernel/entity_context/test_query_eligibility_selection.py -q --tb=short -p no:cacheprovider -o addopts='' --junitxml=<temporary>/retrieval-eligibility-independent-red.xml",
+  "artifacts": {
+    "junit": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\retrieval-eligibility-independent-red.xml",
+    "junit_sha256": "cdcc4e0c2a442708f0472b3671a747ed5e2fec898b5d19b2a7821adee4550136"
+  },
+  "file_hashes": {
+    "tests/knowledge/query_eligibility_support.py": {
+      "sha256": "51fce703c8ffb670805ee17a5fa387ee06f8791a96cd89903ee0aff9e5bb56d2",
+      "normalized_lf_sha256": "9050d6014495f06035144236058f05cab2584810a2ad89c302dc943b1b6c20e7",
+      "bytes": 6597
+    },
+    "tests/knowledge/test_query_eligibility_public.py": {
+      "sha256": "26d5c0f7dc0802c266b622ce752bb4c315fd246af07726b4d37ff4be733a6ae2",
+      "normalized_lf_sha256": "a6e93ec4a30806847cd2d05eac62f48733f468b684e5cbb2a5e48ddb0127b022",
+      "bytes": 6055
+    },
+    "tests/knowledge/test_query_eligibility_consumers.py": {
+      "sha256": "d2e05c2d69c17d7e424291901b1617e110c7ba7e910eb0bee904ee9dc564cdde",
+      "normalized_lf_sha256": "ffabe0de0cb8f4859615b4018df3e1ec34d109f752e03774520eb64f35488555",
+      "bytes": 10550
+    },
+    "tests/kernel/entity_context/test_query_eligibility_selection.py": {
+      "sha256": "668bcf34f4630f5a040acf042a2ffe992ddb9b641ec3d52366b0a62d058da900",
+      "normalized_lf_sha256": "1a74130439c0b34373eb4961d8bfa23b5929e6e34fb111c2aa4583dc86fae5e4",
+      "bytes": 13470
+    },
+    "tests/fixtures/_shared/query_eligibility/cases.json": {
+      "sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "normalized_lf_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+      "bytes": 16074
+    },
+    "tests/fixtures/_shared/query_eligibility/controls.json": {
+      "sha256": "98da882ee329da25c282a32fbd25d845201ebde3cfa2fc9e765f35bb65d7e972",
+      "normalized_lf_sha256": "965cbb4eacf9e80e84feae2530d7f925c48227ff4573592b73ffda3ebfaf880d",
+      "bytes": 1491
+    },
+    "tests/fixtures/_shared/query_eligibility/saved_exact.json": {
+      "sha256": "6746db9783d58d377f8a8db45378ec868f1740fd699cb9bf1b6959c1acd9aa70",
+      "normalized_lf_sha256": "793f35c7e4bbfff2cd4f3a5681ae3f4275c1dbc2435674461584631fb98b1c0c",
+      "bytes": 896
+    },
+    "tests/fixtures/_shared/query_eligibility/source-blobs.json": {
+      "sha256": "0b596c5ef63c2d4bd1b0c34d05eac1a69cad75079f2415999ed676a74bb66063",
+      "normalized_lf_sha256": "564a92e663f218916742183af69af4083ed127f24e9811b224a0ba01961865f5",
+      "bytes": 228165
+    },
+    "tests/fixtures/_shared/query_eligibility/source-oracles.json": {
+      "sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "normalized_lf_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+      "bytes": 16917
+    }
+  },
+  "fixture_verification": {
+    "frozen_cases_and_oracle_byte_identical_to_reports": true,
+    "source_blob_count": 20,
+    "all_original_blob_hashes_verified": true,
+    "corpus_provenance": "44406d923e2a0e2f40079a317135d0736534c654",
+    "fixture_runtime_revision": "actual temporary Git commit over exact source bytes; deliberately distinct from corpus provenance",
+    "runtime_ancestor_object_dependency": false,
+    "network_fetches": false,
+    "ci_check": "Checkout history varies across CI jobs; no arbitrary ancestor object required."
+  },
+  "red_baseline": [
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE01]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 2.824,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4A0F22C0>()\n +    where <built-in method keys of dict object at 0x000001AA4A0F22C0> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE02]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.687,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4A0AAB80>()\n +    where <built-in method keys of dict object at 0x000001AA4A0AAB80> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE03]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.705,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4A54B580>()\n +    where <built-in method keys of dict object at 0x000001AA4A54B580> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE04]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.685,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4A6E7540>()\n +    where <built-in method keys of dict object at 0x000001AA4A6E7540> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE05]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.682,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4A8ABDC0>()\n +    where <built-in method keys of dict object at 0x000001AA4A8ABDC0> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE06]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.733,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4AA92C80>()\n +    where <built-in method keys of dict object at 0x000001AA4AA92C80> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE07]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.674,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4AC45480>()\n +    where <built-in method keys of dict object at 0x000001AA4AC45480> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_public_population_choice_executes_frozen_scope[QE08]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.738,
+      "kind": "assertion",
+      "error": "AssertionError: Proved wrong populations reached the paid selector: ['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']\nassert not ({'get_declared_dependents', 'get_entities', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_ac_descendants', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4ACA2B80>()\n +    where <built-in method keys of dict object at 0x000001AA4ACA2B80> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}.keys\n +      where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_exact_ac_fields_keep_hydratable_get_entities",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 1.035,
+      "kind": "assertion",
+      "error": "AssertionError: {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... truncation does not establish completeness.', 'unsupported': 'No offered graph operation answers this question.', ...}\nassert not ({'get_ac_descendants', 'get_declared_dependents', 'get_related_tests'} & dict_keys(['get_entities', 'get_related_tests', 'get_declared_dependents', 'unsupported', 'unsupported_population']))\n +  where dict_keys(['get_entities', 'get_related_tests', 'get_declared_dependents', 'unsupported', 'unsupported_population']) = <built-in method keys of dict object at 0x000001AA4AB343C0>()\n +    where <built-in method keys of dict object at 0x000001AA4AB343C0> = {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... truncation does not establish completeness.', 'unsupported': 'No offered graph operation answers this question.', ...}.keys"
+    },
+    {
+      "test_name": "test_saved_recipe_population_outweighs_misleading_prose[Enumerate every descendant and prove the complete population.]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.746,
+      "kind": "assertion",
+      "error": "AssertionError: Zero-hop exact records cannot enumerate descendants\nassert 'get_saved_exact_population' not in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}"
+    },
+    {
+      "test_name": "test_saved_recipe_population_outweighs_misleading_prose[Read automated Test records that demonstrate verification.]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.815,
+      "kind": "assertion",
+      "error": "AssertionError: Zero-hop exact records cannot enumerate descendants\nassert 'get_saved_exact_population' not in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo... entity, rather than explain the entity itself. Results are bounded; truncation does not establish completeness.', ...}"
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[False-uncertain]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.365,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[True-uncertain]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.272,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_useful_sibling_evidence_survives_actual_public_resume[uncertain]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.948,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_useful_sibling_evidence_survives_actual_public_resume[empty]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.95,
+      "kind": "assertion",
+      "error": "AssertionError: assert 1 == 0\n +  where 1 = len([JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0...sion_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None))])"
+    },
+    {
+      "test_name": "test_selection_probability_and_confidence_gates_preserved[historical_a02]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.217,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_selection_probability_and_confidence_gates_preserved[below_probability]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.218,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_selection_probability_and_confidence_gates_preserved[below_confidence]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.221,
+      "kind": "assertion",
+      "error": "AssertionError: assert 'unsupported' == 'selection_uncertain'\n  \n  - selection_uncertain\n  + unsupported"
+    },
+    {
+      "test_name": "test_empty_and_single_candidate_boundaries",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.212,
+      "kind": "assertion",
+      "error": "AssertionError: All proved incompatible candidates still spent a choice\nassert [JevBatch(sch...on_seq=None))] == []\n  \n  Left contains one more item: JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None))\n  Use -v to get more diff"
+    },
+    {
+      "test_name": "test_eligibility_keeps_unknown_and_bounded_candidates[Enumerate every descendant and prove the complete population.]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.214,
+      "kind": "assertion",
+      "error": "AssertionError: The paired proved mismatch must still be excluded\nassert 'get_related_tests' not in {'get_entities': 'Enumerate every descendant and prove the complete population.', 'get_related_tests': 'Find automated... establish completeness.', 'legacy_unclassified': 'Enumerate every descendant and prove the complete population.', ...}\n +  where {'get_entities': 'Enumerate every descendant and prove the complete population.', 'get_related_tests': 'Find automated... establish completeness.', 'legacy_unclassified': 'Enumerate every descendant and prove the complete population.', ...} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_eligibility_keeps_unknown_and_bounded_candidates[Read automated Test records that demonstrate verification.]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.223,
+      "kind": "assertion",
+      "error": "AssertionError: The paired proved mismatch must still be excluded\nassert 'get_related_tests' not in {'get_entities': 'Read automated Test records that demonstrate verification.', 'get_related_tests': 'Find automated te...not establish completeness.', 'legacy_unclassified': 'Read automated Test records that demonstrate verification.', ...}\n +  where {'get_entities': 'Read automated Test records that demonstrate verification.', 'get_related_tests': 'Find automated te...not establish completeness.', 'legacy_unclassified': 'Read automated Test records that demonstrate verification.', ...} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+    },
+    {
+      "test_name": "test_fit_facts_count_in_pre_call_wire_budget",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.224,
+      "kind": "assertion",
+      "error": "AssertionError: The paid packet has no additive typed fit facts: ['original_question', 'need_question', 'query_hints', 'retrieval_needs', 'answer_requirements', 'operation_targets']\nassert ({})"
+    }
+  ],
+  "preservation_passes": [
+    {
+      "test_name": "test_selection_does_not_promote_incomplete_counts[QE01]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.728
+    },
+    {
+      "test_name": "test_selection_does_not_promote_incomplete_counts[QE02]",
+      "file": "tests/knowledge/test_query_eligibility_public.py",
+      "seconds": 0.673
+    },
+    {
+      "test_name": "test_explicit_operation_and_catalog_provenance_compatible",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 1.656
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[False-unsupported]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.275
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[False-unsupported_population]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.283
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[True-unsupported]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.265
+    },
+    {
+      "test_name": "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume[True-unsupported_population]",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.276
+    },
+    {
+      "test_name": "test_missing_user_meaning_still_requests_focused_clarification",
+      "file": "tests/knowledge/test_query_eligibility_consumers.py",
+      "seconds": 0.458
+    },
+    {
+      "test_name": "test_selection_probability_and_confidence_gates_preserved[at_probability]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.215
+    },
+    {
+      "test_name": "test_selection_probability_and_confidence_gates_preserved[at_confidence]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.252
+    },
+    {
+      "test_name": "test_relationship_population_control_remains_offered",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.227
+    },
+    {
+      "test_name": "test_fit_metadata_preserves_positional_offer_consumers[5]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.213
+    },
+    {
+      "test_name": "test_fit_metadata_preserves_positional_offer_consumers[7]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.23
+    },
+    {
+      "test_name": "test_missing_meaning_and_provider_failure_remain_distinct[provider]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.207
+    },
+    {
+      "test_name": "test_missing_meaning_and_provider_failure_remain_distinct[unoffered]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.225
+    },
+    {
+      "test_name": "test_missing_meaning_and_provider_failure_remain_distinct[denied]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.219
+    },
+    {
+      "test_name": "test_missing_meaning_and_provider_failure_remain_distinct[exhausted]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.26
+    },
+    {
+      "test_name": "test_malformed_inputs_fail_before_paid_selection[question]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.257
+    },
+    {
+      "test_name": "test_malformed_inputs_fail_before_paid_selection[scope]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.374
+    },
+    {
+      "test_name": "test_malformed_inputs_fail_before_paid_selection[explicit]",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.21
+    },
+    {
+      "test_name": "test_explicit_operation_keeps_deterministic_validation",
+      "file": "tests/kernel/entity_context/test_query_eligibility_selection.py",
+      "seconds": 0.29
+    }
+  ],
+  "existing_preservation_suites": "Not run in this authoring phase; reused their helpers and covered preservation through21 new passing executions. Full suite is not run by test-writer.",
+  "limitations": [
+    "Controlled host and Jev choices prove wiring and finite offers, not live-provider semantic quality.",
+    "Nine intended positives are fixed; this baseline fails eligibility for9/9 despite their controlled correct dispatch.",
+    "Truncated count controls stay partial; count completeness remains issue03.",
+    "The wire-budget test is red at absent additive fit facts; its measured boundary assertions execute after implementation supplies those facts.",
+    "Initial fixture/API assertion drift was corrected before freeze: builtin version normalization=1, provider_unavailable, blocked/budget_exhausted, source denial after discovery, HumanQuestion.question. No production behavior was changed."
+  ],
+  "completion_manifest": {
+    "cross_layer_seam_answer": {
+      "result": "covered",
+      "producing_side": "real graph selection_result, catalog offers, host interpretation and KnowledgeService",
+      "consuming_side": "real retrieve.repository binding, ResearchExecutor merge/guard, KernelService scheduler and resumed public research"
+    },
+    "reachability_entry_point_answer": {
+      "result": "resolved",
+      "entry_point": "KernelService.start_run(TaskInput) -> durable interpret_retrieval_needs host wait -> KernelService.resume_run(host_submission) -> actual retrieve.repository binding and final evidence"
+    }
+  },
+  "three_questions": {
+    "test_public_population_choice_executes_frozen_scope": {
+      "q1": "Leave wrong populations in the paid menu or bind all questions to one root/inclusion.",
+      "q2": "Actual dispatch and every original scope/field/source value are asserted before the observed wrong-menu failure.",
+      "q3": "Eight unchanged/paraphrased/root/inclusion/catalog cases share the real public path; all retain their distinct obligations.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_exact_ac_fields_keep_hydratable_get_entities": {
+      "q1": "Drop test_spec or substitute linked Test records for the authored AC.",
+      "q2": "Both source-authored fields and separate locators pass; the observed menu still admits wrong result populations.",
+      "q3": "Matching get_entities executes against actual bytes despite test_spec being absent from graph properties.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_selection_does_not_promote_incomplete_counts": {
+      "q1": "Promote a correctly selected but truncated descendants result to a complete count.",
+      "q2": "Known nonzero subset is smaller than independent15-member oracle, exact_total/status/count assertions would reject promotion.",
+      "q3": "Correct dispatch still occurs; incompleteness follows actual truncation rather than lack of retrieval.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_saved_recipe_population_outweighs_misleading_prose": {
+      "q1": "Trust saved description text over its zero-hop exact-record recipe.",
+      "q2": "Actual admitted zero-hop recipe remains in the descendants menu on baseline, producing assertion red.",
+      "q3": "Both changed descriptions have the same recipe; genuine descendants operation remains offered.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_explicit_operation_and_catalog_provenance_compatible": {
+      "q1": "Lose saved version/digest/seed or silently route to a builtin instead.",
+      "q2": "Actual first neutral request is checked for saved name,version,digest,arguments and all original fields.",
+      "q3": "Real admission creates the fixture once; subsequent retrieval does not mutate catalog bytes.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_uncertain_and_unsupported_results_do_not_veto_sibling_resume": {
+      "q1": "Add an unresolved assessment to uncertainty/ordinary unsupported or remove every assessment guard.",
+      "q2": "Real producer output is passed into real research merge/resume in both orders; currently useful sibling completes before diagnostic red.",
+      "q3": "Established unsupported_population remains partial while the two non-veto outcomes complete with actual sibling evidence.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_useful_sibling_evidence_survives_actual_public_resume": {
+      "q1": "Manufacture an uncertainty assessment, continue paid empty-set selection or require user clarification.",
+      "q2": "Actual public KernelService host resume completes with nonempty native evidence; baseline fails only diagnostic/empty paid-call checks.",
+      "q3": "Uncertainty pays one call; all-proved-incompatible absence pays zero; both share useful native sibling.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_missing_user_meaning_still_requests_focused_clarification": {
+      "q1": "Suppress genuine missing-root clarification or turn it into a paid selection.",
+      "q2": "Actual public WAITING_HUMAN question must name root and no selector/storage calls occur.",
+      "q3": "Sufficient-request uncertainty is exercised separately through actual public completion.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_selection_probability_and_confidence_gates_preserved": {
+      "q1": "Autoexecute a sole candidate, lower probability/confidence thresholds, retry, or discard paid usage.",
+      "q2": "Historical.71,.7999 and confidence.49 rows refuse without graph calls; baseline observed wrong status diagnostic.",
+      "q3": ".80/.64 and.80/.50 permit exactly2 graph disclosure calls with one paid operation decision and unchanged budget.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_empty_and_single_candidate_boundaries": {
+      "q1": "Call Jev on all-proved-incompatible offers or create unsupported_population assessment.",
+      "q2": "Baseline observes one paid operation call where zero are required.",
+      "q3": "Single-candidate acceptance/refusal rows are exercised in the gate test, so blanket no-selection behavior fails.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_eligibility_keeps_unknown_and_bounded_candidates": {
+      "q1": "Remove missing metadata/prose-looking legacy offers or retain proved Test/dependent mismatch.",
+      "q2": "Unknown named legacy offer and hydratable field obligations survive; baseline fails paired proved-mismatch exclusion.",
+      "q3": "Descriptions vary independently of facts; selected valid get_entities still reaches actual executor.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_relationship_population_control_remains_offered": {
+      "q1": "Disable all relationship queries or require Test result identity to equal its AC anchor.",
+      "q2": "Exactly one linked-Test operation reaches2 discovery/disclosure calls and returns distinct Test provenance.",
+      "q3": "Exact-AC tests exclude this operation; typed linked-Test intent preserves it.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_fit_metadata_preserves_positional_offer_consumers": {
+      "q1": "Insert or reorder required GraphOffer fields and break five/seven positional callers.",
+      "q2": "Both old constructors flow through the real selector/executor, checking2 calls, canonical arguments and evidence.",
+      "q3": "Absent additive metadata retains callable legacy offers; real saved query test separately checks nonempty digest/version.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_fit_facts_count_in_pre_call_wire_budget": {
+      "q1": "Omit fit facts or budget only the old state before charging.",
+      "q2": "Baseline observes no additive fit facts; post-repair branch computes real packet sizes and refuses at full-size-minus-one without charge.",
+      "q3": "Full unlimited packet dispatches; same original obligations and sole candidate cross only the measured metadata budget.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline (budget beyond missing-fit assertion remains pending green implementation)",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_missing_meaning_and_provider_failure_remain_distinct": {
+      "q1": "Collapse provider failure/unknown choice/denial/exhaustion into clarification or retry.",
+      "q2": "Exact existing codes,statuses,paid calls and graph discovery counts are asserted.",
+      "q3": "Provider and unoffered replies pay1; exhausted pays0; denied disclosure stops after1 graph discovery.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_malformed_inputs_fail_before_paid_selection": {
+      "q1": "Spend on malformed explicit requirements or an invalid explicit operation.",
+      "q2": "Three invalid shapes must report knowledge_invalid_request with zero provider/graph/usage.",
+      "q3": "Valid explicit operation separately reaches real execution without semantic choice.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    },
+    "test_explicit_operation_keeps_deterministic_validation": {
+      "q1": "Route valid explicit calls through new Jev choice or change their bound argument.",
+      "q2": "An intentionally unusable scripted choice cannot interfere;1 graph call returns1 evidence and zero usage.",
+      "q3": "Invalid explicit shape is rejected by the same registration before any call.",
+      "q1_label": "reasoned; no mutations performed",
+      "q2_label": "observed baseline",
+      "q3_label": "observed baseline",
+      "vacuity": {
+        "exact_count": "Exact selection/request/evidence or result cardinality is asserted where the branch has a count; source field values and scope use equality.",
+        "control_row": "Named in Q3; may be the paired test for explicit/invalid and sufficient/missing-meaning paths.",
+        "distinct_input": "Typed population/fields and misleading prose or threshold values differ independently.",
+        "collaborator_calls": "Actual recorded selector/provider/graph calls are asserted; real consumer output also checked."
+      }
+    }
+  },
+  "freeze_note": "All9 new file paths and their raw/LF-normalized hashes are frozen for implementation. Test expectations will not be revised after runtime work starts without explicit independent defect review."
+}

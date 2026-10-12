@@ -19,6 +19,7 @@ from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from knowledge.contracts import OPERATIONS
 from knowledge.errors import invalid
 from integrations.retrieval_relationships import relation_role
+from integrations.graph_eligibility import OperationResult, builtin_result_contract
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class GraphOffer:
     many: bool = False
     version: str | None = None
     digest: str | None = None
+    result_contract: OperationResult | None = None
 
 
 def _permitted(ctx: ExecutionContext, card: EntityCard) -> bool:
@@ -190,7 +192,8 @@ def graph_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload,
         """Bind a registered argument without accepting provider-generated arguments."""
         if targets:
             mode, argument = OPERATIONS[operation]
-            offers[operation] = GraphOffer(description, targets, argument, mode, argument == "entity_ids")
+            offers[operation] = GraphOffer(description, targets, argument, mode, argument == "entity_ids",
+                                           result_contract=builtin_result_contract(operation))
 
     add("get_entities", all_ids,
         "Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, "
@@ -198,9 +201,9 @@ def graph_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload,
         "criterion/ADR' so its authored content can be read. It does not retrieve related records or "
         "enumerate a filtered population.")
     add("get_related_tests", ac_ids,
-        "Find automated tests or executable checks that demonstrate the named acceptance criterion "
-        "is met. Choose this when the requested answer is its verification evidence, rather than an "
-        "explanation of the acceptance criterion itself.")
+        "Retrieve linked Test records and their source. Use this for facts about those tests, not "
+        "acceptance clauses or an authored verification specification stored on the named criterion. "
+        "Declared links and test source do not establish an execution outcome.")
     for operation, description in (
         ("get_component_context", "Read context for a trusted component."),
         ("get_acceptance_criteria", "Read acceptance criteria linked to a trusted component."),
@@ -271,3 +274,4 @@ def repository_sources(ctx: ExecutionContext, payload: RetrievalRequestPayload) 
 # - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)
 
 # - 2026-10-09 18:49 [python-coder]: Share canonical target normalization between query offers and answer scope. (#KM-500/KM-500e-1-i)
+# - 2026-10-10 10:51 [python-coder]: Append authoritative result contracts without changing positional offer consumers. (#KM-500/KM-500a-2-i)

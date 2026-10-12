@@ -1,0 +1,447 @@
+{
+  "status": "prepared_locally_not_run_requires_authorization",
+  "purpose": "One bounded fresh-model nine-case public retrieval evaluation of issue02; grade selection separately from complete answers.",
+  "case_manifest_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+  "cases": [
+    {
+      "id": "QE01",
+      "variant": "original",
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "catalog": false,
+      "provenance": "Copied verbatim from historical P03/P04; only source-specific gold is newly pinned.",
+      "historical_case_id": "P03",
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_all",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE02",
+      "variant": "original",
+      "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "catalog": true,
+      "provenance": "Copied verbatim from historical P03/P04; only source-specific gold is newly pinned.",
+      "historical_case_id": "P04",
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_all",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE03",
+      "variant": "paraphrase",
+      "question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+      "catalog": false,
+      "provenance": "New exact wording frozen on 2026-10-10; earlier planning preserved the concept, not an exact manifest.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_all",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE04",
+      "variant": "paraphrase",
+      "question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+      "catalog": true,
+      "provenance": "New exact wording frozen on 2026-10-10; earlier planning preserved the concept, not an exact manifest.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_all",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE05",
+      "variant": "l3_terminal",
+      "question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+      "catalog": false,
+      "provenance": "New exact wording frozen on 2026-10-10; no TQ-500f-3 substitution.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L3"
+          ],
+          "inclusion": "terminal_leaves"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_l3_terminal",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE06",
+      "variant": "l3_terminal",
+      "question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+      "catalog": true,
+      "provenance": "New exact wording frozen on 2026-10-10; no TQ-500f-3 substitution.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "TQ-500f",
+          "levels": [
+            "L3"
+          ],
+          "inclusion": "terminal_leaves"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "tq_l3_terminal",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE07",
+      "variant": "changed_root",
+      "question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+      "catalog": false,
+      "provenance": "New exact wording frozen on 2026-10-10; root has three L2 descendants and no L3 descendants at this pin.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "KM-500c",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "km_changed_root",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE08",
+      "variant": "changed_root",
+      "question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+      "catalog": true,
+      "provenance": "New exact wording frozen on 2026-10-10; root has three L2 descendants and no L3 descendants at this pin.",
+      "historical_case_id": null,
+      "expected_operation": "get_ac_descendants",
+      "expected_requirements": {
+        "original_question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+        "required_fields": [
+          "work_status"
+        ],
+        "scope": {
+          "population": "ac_descendants",
+          "entity_ids": [],
+          "root_id": "KM-500c",
+          "levels": [
+            "L2",
+            "L3"
+          ],
+          "inclusion": "root_excluded"
+        },
+        "require_complete": true
+      },
+      "source_oracle": "km_changed_root",
+      "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+      "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+      "forbidden": [
+        "Dropping intermediate parents for root_excluded",
+        "Using lifecycle/requirement status as work_status",
+        "Dropping requested levels because the source has none",
+        "Claiming complete counts from selection, saved prose or bounded subsets"
+      ]
+    },
+    {
+      "id": "QE09",
+      "variant": "unchanged_A02",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "catalog": true,
+      "provenance": "Exact question and catalog-on mode retained from closed Aura A02 in precision-v2-44406d9; source-specific oracle independently pinned before issue02 implementation. Adds one execution to the eight population cases.",
+      "expected_operation": "get_entities",
+      "expected_requirements": {
+        "original_question": "For KM-500c-2, what must tests demonstrate?",
+        "required_fields": [
+          "criteria",
+          "test_spec"
+        ],
+        "scope": {
+          "population": "returned_entities",
+          "entity_ids": [
+            "KM-500c-2"
+          ],
+          "root_id": null,
+          "levels": null,
+          "inclusion": null
+        },
+        "require_complete": true
+      },
+      "source_oracle": "exact_record",
+      "selection_pass": "One actual operation-selection judgment accepts get_entities under unchanged gates and actual retrieval dispatch retains both fields, target, source and budgets.",
+      "whole_answer_pass": "Both canonical fields match source-oracles.json with separate /criteria and /test_spec citations; declaration is not executed proof.",
+      "forbidden": [
+        "Replacing AC with related Test records",
+        "All-fields selection or literal ID/question field injection",
+        "Dropping test_spec because graph projection alone lacks it"
+      ]
+    }
+  ],
+  "destinations": {
+    "jev": {
+      "provider": "TypeSafe System One / Jev",
+      "model_default": "jev-latest",
+      "documented_default_api": "https://api.typesafe.ai/v1/systemone",
+      "mechanism": "Existing configured production Jev adapter; effective non-secret transport/model endpoint must be frozen before authorization/execution, with no model substitution."
+    },
+    "host": "Fresh blind Codex host agent per emitted host packet using the active configured model; record actual agent/model/dispatch IDs rather than infer them.",
+    "graph": "Existing canonical Neo4j Aura leafcutter read endpoint; no graph publication, schema setup, writes, catalog activation, embeddings or warmup.",
+    "local_output": "reports/retrieval-query-eligibility-2026-10-10/live-runs/issue02-nine-13db09f/ (new, one-shot, immutable attempts; no directory created yet)",
+    "credentials": "Existing externally held environment-file reference used by prior authorized proof; never copy secret values into reports or host packets."
+  },
+  "scope": {
+    "repository_id": "leafcutter",
+    "source_ids": [
+      "knowledge.graph"
+    ],
+    "read_roots": [
+      "docs"
+    ],
+    "permissions": [
+      "read_repo"
+    ],
+    "data_window": "Immutable exact main source revision, no latest alias; graph generation must match source before each attempt.",
+    "source_sha": "13db09f1a231f5c55a5a9b044a5007d8467f7afa",
+    "generation_id": null,
+    "publication_workflow": "https://github.com/urlmonitor/leafcutter-ai/actions/runs/38047097266",
+    "publication_readiness": "Pending independent real manifest check after authorization; workflow success alone is not that check.",
+    "oracle": "publication-13db09f-source-oracles.json",
+    "oracle_sha256": "9d82aad4090f0ef6b980b5c48e374d32559fe95aa3172b7d1a417015d3a069bb",
+    "equivalence": "publication-13db09f-equivalence.json",
+    "equivalence_sha256": "bf556bce1c67109d31ff0ebce098b449b80ab77444434db1c8e1b00339581c5e",
+    "code_commit": null,
+    "reviewed_working_source_sha256": {
+      "integrations/graph_eligibility.py": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+      "integrations/graph_offers.py": "8da59fa16c1a2645fe613dbf1d5c6624cf7ef732f7dcc7889150b9eb2df6c7d0",
+      "integrations/graph_catalog.py": "8004deaa9431564ecb10421adbaa717396247cf7a9d1232ecb53011acd5ca457",
+      "integrations/graph_selection.py": "9943321c3ca3bd63770eff29f34a6f646ff5e7e9c2287ec9d84fa17ec3ba4b18",
+      "integrations/graph_selection_result.py": "d685c39180b53d82fcb63f2d9483b84fb443c17e9f93b4c53be6b9373eab31b5"
+    },
+    "code_pin_rule": "After packaging, freeze actual implementation commit and all executable/config/controller bytes independently from the canonical source SHA. No alternate-code snapshot wrapper or silent source update."
+  },
+  "bounds": {
+    "runs": 9,
+    "operation_selection_judgments_per_nonempty_candidate_set": 1,
+    "jev_calls_per_run": 12,
+    "jev_calls_total": 108,
+    "host_results_per_run": 3,
+    "host_results_total": 27,
+    "max_retries": 0,
+    "max_active_seconds_per_run": 150,
+    "outer_attempt_timeout_seconds": 160,
+    "jev_timeout_seconds": 30,
+    "jev_max_wire_chars": 60000,
+    "graph_writes": 0,
+    "catalog_writes": 0,
+    "telemetry_exports": 0,
+    "embeddings_enabled": false,
+    "retrieval_work": "Keep existing production per-request/cumulative defaults; do not raise max_results, fanout, candidates, hops, bytes, tokens, rounds or timeout to force complete counts."
+  },
+  "data_sent": "Only the real current public question/scope, bounded operation options/fit facts and normal bounded research evidence go to configured Jev; the blind host receives only its actual current packet/input refs. Source oracles, tests, expected counts, historical responses and grading feedback are withheld from the host.",
+  "blind_host_process": [
+    "Start exactly once for each unchanged case after source/runtime readiness and authorization. Archive the actual wait and its input bytes.",
+    "Spawn a fresh agent without conversation history; give only the actual host packet and input references. Record real dispatch provenance and model identity.",
+    "Resume the same durable run once per emitted wait using the new response bytes. Stop on refusal, source drift, unexpected clarification, limits or interruption; preserve the outcome. Do not regenerate unfavorable answers."
+  ],
+  "reuse_plan": {
+    "existing_controller": "reports/retrieval-aura-2026-10-09/controller.py",
+    "existing_support": "reports/retrieval-aura-2026-10-09/proof_support.py",
+    "closed_files_policy": "Do not modify the previous four-case scripts or receipts.",
+    "new_adapter_scope": "A new versioned nine-case adapter only binds this frozen manifest, isolated output root and bounds, reusing existing production environment/readiness/start/resume/record/dispatch/fingerprint behavior. No new planner, provider, storage double or evaluation framework.",
+    "known_bindings": "Legacy helpers hardcode A* current-envelope globs and four CASES. Use runtime A01..A09 with an explicit immutable QE01..QE09 mapping in the new adapter, or a narrowly manifest-driven iterator. Questions, catalogs and expected meanings remain byte-identical.",
+    "runtime_case_mapping": {
+      "A01": "QE01",
+      "A02": "QE02",
+      "A03": "QE03",
+      "A04": "QE04",
+      "A05": "QE05",
+      "A06": "QE06",
+      "A07": "QE07",
+      "A08": "QE08",
+      "A09": "QE09"
+    },
+    "scoring": "Do not reuse exact-record-only score_case for hierarchy. Reuse citation/source helpers; add narrowly case-driven comparisons against frozen hierarchy membership/work-status counts. Grade every case, never just successful records.",
+    "adapter_status": "Not yet authored/executed; prepare and offline-validate the narrow adapter after code commit is known, then final authorization is the last step before live prepare/start."
+  },
+  "grading": {
+    "selection_denominator": 9,
+    "selection_pass": "Actual accepted operation and executed correct discovery dispatch with original fields/targets/hierarchy/scope/source; offered-only or unsupported/refused is not positive.",
+    "whole_answer_denominator": 9,
+    "whole_answer_pass": "Exact requested population/identity and required field values match independent canonical source with correct citations and complete enumeration. Partial or bounded totals fail complete-answer coverage even if selection passed.",
+    "gold_counts": {
+      "tq_all": {
+        "total": 15,
+        "done": 8,
+        "in_progress": 2,
+        "todo": 5
+      },
+      "tq_l3_terminal": {
+        "total": 9,
+        "done": 5,
+        "todo": 4
+      },
+      "km_changed_root": {
+        "total": 3,
+        "done": 3
+      }
+    },
+    "preserve_usage": "Retain each attempt, actual paid usage, selection probabilities/confidence, request/result trace, diagnostics, continuation, selected source/generation and disclosure phases. Unknown usage stays unknown.",
+    "thresholds": {
+      "selected_probability": 0.8,
+      "confidence": 0.5
+    },
+    "issue_boundary": "Selection does not prove complete counts; residual population completeness belongs to issue03."
+  },
+  "ready": [
+    "Nine exact questions/catalog modes and original source oracle are frozen.",
+    "Full merged-source corpus independently scanned; all selected source bytes and semantic gold equivalent.",
+    "49+2 strict tests and independent source review pass.",
+    "Existing one-shot controller/support and minimal adapter/scoring changes identified."
+  ],
+  "remaining_before_authorization": [
+    "Finalize implementation commit/runtime fingerprint.",
+    "Record successful merge publication generation in a new addendum.",
+    "Author and offline-validate the narrow nine-case adapter, including request shapes, bounds, exact case mapping and hierarchy scoring.",
+    "Freeze effective non-secret provider/transport/model references and external environment-file reference.",
+    "Root resolves new nine-case authorization; prior four-exact-case authorization does not cover this execution."
+  ],
+  "live_calls_made": 0
+}

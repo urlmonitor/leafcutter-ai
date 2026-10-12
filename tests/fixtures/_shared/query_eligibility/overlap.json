@@ -1,0 +1,18 @@
+{
+  "native": [
+    {
+      "operation": "get_declared_dependents",
+      "kind": "AcceptanceCriterion",
+      "id": "EC-1100a-1-i",
+      "edge": "depends_on",
+      "path": "docs/acceptance-criteria/EC-1100a-1-i.yaml"
+    },
+    {
+      "operation": "get_corrected_decisions",
+      "kind": "Decision",
+      "id": "Decision:dec-0123456789abcdef",
+      "edge": "CORRECTED_BY",
+      "path": "docs/decisions/dec-0123456789abcdef.yaml"
+    }
+  ]
+}

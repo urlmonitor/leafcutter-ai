@@ -52,10 +52,12 @@ async def selection_result(ctx: ExecutionContext, invocation: CapabilityInvocati
     return CapabilityResult(invocation_id=invocation.id, work_item_id=invocation.work_item_id,
         status=ResultStatus.PARTIAL, output_schema_id=schema_ids.EVIDENCE_BUNDLE,
         output_payload=bundle.model_dump(mode="json"), usage=usage, limitations=bundle.limitations,
-        diagnostics={"knowledge_selection": choice.operation, "knowledge_status": "unsupported",
+        diagnostics={"knowledge_selection": choice.operation,
+                     "knowledge_status": "selection_uncertain" if choice.operation == "uncertain" else "unsupported",
                      "knowledge_reason": choice.reason})
 
 
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-03 20:00 [python-coder]: Preserve unsupported population obligations across research merges. (#TICKETLESS reason=user-approved-DK300-graph-routing)
+# - 2026-10-10 10:51 [python-coder]: Distinguish uncertain selection diagnostically without vetoing useful sibling evidence. (#KM-500/KM-500a-2-i)

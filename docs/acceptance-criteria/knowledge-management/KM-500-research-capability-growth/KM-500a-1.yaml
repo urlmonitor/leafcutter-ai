@@ -47,7 +47,8 @@ doc_links:
     capability-growth evidence.
 origin_agent: business-analyst
 created: '2026-10-01'
-amended_by: []
+amended_by:
+- "2026-10-10: IT PO (retrieval_acceptance_next) qualified uncertainty wording to match existing missing-input criteria; model confidence alone is not missing user meaning. Existing criteria, approval, work status and historical evidence remain unchanged."
 superseded_by: null
 covered_by:
 - tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_clarification_restarts_then_emits_real_coding_handoff
@@ -76,8 +77,9 @@ estimated_complexity: L
 it_requirements:
 - Reuse HumanQuestionRequestPayload/RequestKind.HUMAN, current-wait child outcome and checkpointed retrieval continuation;
   no parallel pause protocol.
-- Jev assesses readiness and selects only offered options through existing ask_jev reserve-before-use; uncertainty
-  asks bounded clarification and never authors database syntax.
+- Jev assesses readiness and selects only offered options through existing ask_jev reserve-before-use; only
+  genuinely missing user meaning or a required input asks bounded clarification. Model selection uncertainty
+  alone is diagnostic, never a clarification request or database syntax authoring authority.
 test_required: true
 test_rationale: Prove observable behavior at the public service/kernel or trusted real-backend admission boundary.
   Provider and host doubles are labeled; no helper-only proof substitutes for the persisted end-to-end flow.

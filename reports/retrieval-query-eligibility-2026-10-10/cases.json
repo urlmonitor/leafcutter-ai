@@ -1,0 +1,313 @@
+[
+  {
+    "id": "QE01",
+    "variant": "original",
+    "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+    "catalog": false,
+    "provenance": "Copied verbatim from historical P03/P04; only source-specific gold is newly pinned.",
+    "historical_case_id": "P03",
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_all",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE02",
+    "variant": "original",
+    "question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+    "catalog": true,
+    "provenance": "Copied verbatim from historical P03/P04; only source-specific gold is newly pinned.",
+    "historical_case_id": "P04",
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count every L2 and L3 AC under TQ-500f, excluding only TQ-500f itself, grouped by work status.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_all",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE03",
+    "variant": "paraphrase",
+    "question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+    "catalog": false,
+    "provenance": "New exact wording frozen on 2026-10-10; earlier planning preserved the concept, not an exact manifest.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_all",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE04",
+    "variant": "paraphrase",
+    "question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+    "catalog": true,
+    "provenance": "New exact wording frozen on 2026-10-10; earlier planning preserved the concept, not an exact manifest.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Under TQ-500f, how many L2 and L3 acceptance criteria are in each work status? Exclude TQ-500f itself, but keep intermediate parent criteria as well as their children.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_all",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE05",
+    "variant": "l3_terminal",
+    "question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+    "catalog": false,
+    "provenance": "New exact wording frozen on 2026-10-10; no TQ-500f-3 substitution.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L3"
+        ],
+        "inclusion": "terminal_leaves"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_l3_terminal",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE06",
+    "variant": "l3_terminal",
+    "question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+    "catalog": true,
+    "provenance": "New exact wording frozen on 2026-10-10; no TQ-500f-3 substitution.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count only L3 acceptance criteria under TQ-500f that have no structural children, grouped by work status. Exclude TQ-500f itself and every nonterminal criterion.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "TQ-500f",
+        "levels": [
+          "L3"
+        ],
+        "inclusion": "terminal_leaves"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "tq_l3_terminal",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE07",
+    "variant": "changed_root",
+    "question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+    "catalog": false,
+    "provenance": "New exact wording frozen on 2026-10-10; root has three L2 descendants and no L3 descendants at this pin.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "KM-500c",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "km_changed_root",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE08",
+    "variant": "changed_root",
+    "question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+    "catalog": true,
+    "provenance": "New exact wording frozen on 2026-10-10; root has three L2 descendants and no L3 descendants at this pin.",
+    "historical_case_id": null,
+    "expected_operation": "get_ac_descendants",
+    "expected_requirements": {
+      "original_question": "Count every L2 and L3 AC under KM-500c, excluding only KM-500c itself, grouped by work status.",
+      "required_fields": [
+        "work_status"
+      ],
+      "scope": {
+        "population": "ac_descendants",
+        "entity_ids": [],
+        "root_id": "KM-500c",
+        "levels": [
+          "L2",
+          "L3"
+        ],
+        "inclusion": "root_excluded"
+      },
+      "require_complete": true
+    },
+    "source_oracle": "km_changed_root",
+    "selection_pass": "Actual public path sends eligible options to Jev, accepts a decision under unchanged gates and dispatches get_ac_descendants with unchanged root, levels, inclusion, fields and source. An offered but unexecuted operation or honest unsupported is not a positive pass.",
+    "whole_answer_pass": "Complete answer independently matches every canonical member and actual work-status count with valid citations and proven enumeration completeness. Bounded/incomplete result stays partial with exact_total null; it may pass selection but fails complete-answer coverage.",
+    "forbidden": [
+      "Dropping intermediate parents for root_excluded",
+      "Using lifecycle/requirement status as work_status",
+      "Dropping requested levels because the source has none",
+      "Claiming complete counts from selection, saved prose or bounded subsets"
+    ]
+  },
+  {
+    "id": "QE09",
+    "variant": "unchanged_A02",
+    "question": "For KM-500c-2, what must tests demonstrate?",
+    "catalog": true,
+    "provenance": "Exact question and catalog-on mode retained from closed Aura A02 in precision-v2-44406d9; source-specific oracle independently pinned before issue02 implementation. Adds one execution to the eight population cases.",
+    "expected_operation": "get_entities",
+    "expected_requirements": {
+      "original_question": "For KM-500c-2, what must tests demonstrate?",
+      "required_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "scope": {
+        "population": "returned_entities",
+        "entity_ids": [
+          "KM-500c-2"
+        ],
+        "root_id": null,
+        "levels": null,
+        "inclusion": null
+      },
+      "require_complete": true
+    },
+    "source_oracle": "exact_record",
+    "selection_pass": "One actual operation-selection judgment accepts get_entities under unchanged gates and actual retrieval dispatch retains both fields, target, source and budgets.",
+    "whole_answer_pass": "Both canonical fields match source-oracles.json with separate /criteria and /test_spec citations; declaration is not executed proof.",
+    "forbidden": [
+      "Replacing AC with related Test records",
+      "All-fields selection or literal ID/question field injection",
+      "Dropping test_spec because graph projection alone lacks it"
+    ]
+  }
+]

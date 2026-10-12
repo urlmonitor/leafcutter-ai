@@ -1,0 +1,60 @@
+{
+  "status": "independent_strict_green_and_frozen",
+  "authorization": "Root authorized independent phase adjudication and only supported supplemental phase-assertion corrections; production, AC/PT and original questions/gold unchanged.",
+  "prior_overlap_red_receipt_sha256": "ed3c760a2d85111df9820258494eee918506c92d1d31014ada0c97a3bb8397b7",
+  "strict_before_phase_correction": {
+    "path": "strict-before-phase-correction.xml",
+    "sha256": "5fa47d6c9d8890535991245886ec7b2612f67059d9cefa7b48fc9cf1516f6353",
+    "failed": 4,
+    "passed": 2,
+    "finding": "All eligibility/menu assertions passed. Four new phase assertions incorrectly demanded the selected discovery operation also serve source hydration, or fulfillment at disclosure0."
+  },
+  "independent_observed_phases_sha256": "26db0c6394be5a32dd35034f1fcb5f1b6aa719def5f7944a6f7028aaa28ee680",
+  "contract_adjudication": {
+    "source": "integrations/knowledge_followups.py:160-177",
+    "finding": "Existing disclose_selected constructs get_entities at target disclosure level while retaining initial answer requirements and budgets. Both native self-endpoint queries and two saved round trips independently produced selected-op0 partial/disclosure_omitted followed by get_entities3 fulfilled.",
+    "correction": "Only supplemental downstream phase assertions changed; stronger checks now cover both phases, unchanged requirements, exact identity, required fields, source revision/path, field availability and locators.",
+    "preserved_before": "test_query_eligibility_overlap.py.before-phase-correction",
+    "patch": "phase-assertion-correction.patch",
+    "old_test_sha256": "fbd18c7d831fb77e52436782961f8f883b4cfd0f10f40c469295b77c9b357f8a",
+    "new_test_sha256": "cd8bda1fa6283d06b2baafb7eb35ee6165730ed07130fb1f5e356d0add94ae37"
+  },
+  "strict_final": {
+    "environment": {
+      "AC_ENFORCE_STRICT": "1"
+    },
+    "tests": 49,
+    "passed": 49,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "xfails": 0,
+    "seconds_stdout": 19.84,
+    "xml_seconds": "19.604",
+    "xml": "strict-49.xml",
+    "xml_sha256": "6e5c2c4d16aa6c67a5034f0dd9b4c91b5aa279840f20a845d07c7264c153baff",
+    "command": "python -B -m pytest tests/knowledge/test_query_eligibility_public.py tests/knowledge/test_query_eligibility_consumers.py tests/kernel/entity_context/test_query_eligibility_selection.py tests/knowledge/test_query_eligibility_overlap.py -q --tb=short -p no:cacheprovider -o addopts='' --junitxml=reports/retrieval-query-eligibility-2026-10-10/phase-adjudication/strict-49.xml"
+  },
+  "ruff": "All checks passed for changed supplemental Python module.",
+  "runtime_source_sha256": {
+    "integrations/graph_eligibility.py": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+    "integrations/graph_offers.py": "8da59fa16c1a2645fe613dbf1d5c6624cf7ef732f7dcc7889150b9eb2df6c7d0",
+    "integrations/graph_catalog.py": "8004deaa9431564ecb10421adbaa717396247cf7a9d1232ecb53011acd5ca457",
+    "integrations/graph_selection.py": "9943321c3ca3bd63770eff29f34a6f646ff5e7e9c2287ec9d84fa17ec3ba4b18",
+    "integrations/graph_selection_result.py": "d685c39180b53d82fcb63f2d9483b84fb443c17e9f93b4c53be6b9373eab31b5"
+  },
+  "independent_production_review": {
+    "actionable_findings": [],
+    "reviewed": "Conservative named-population requirements versus actual metadata; exact-ID overlap for native same-kind, saved direction/cycles and unknown endpoints, relevance and mixed candidates; authoritative native kind predicates; saved recipe digest facts; explicit query bypass; original targets/fields/source binding; exact paid wire budget; uncertainty diagnostics and sibling evidence consumers.",
+    "conclusion": "Only known kind conflicts and unsupported named-population execution contracts are rejected. Different result labels do not prove exact-ID disjointness. Unknown result facts remain candidates; hydratable fields and completeness are left to actual evidence. No provider threshold, source authorization, retry or assessment-veto change found.",
+    "limits": "Controlled IO tests do not prove fresh-model selection quality, live Aura availability or whole-population counts. Relevance overlap received source review but no new supplemental execution."
+  },
+  "preservation_evidence": "Expert reported 126 relevant existing preservation tests passed; not rerun redundantly by independent reviewer.",
+  "unchanged_gold": {
+    "reports/cases_sha256": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "reports/source_oracles_sha256": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65",
+    "original_unchanged_paths": 7,
+    "approved_prior_two_test_revisions": "Verified at their prior overlap receipt hashes."
+  },
+  "side_effects": "Only authorized supplemental test and new phase-adjudication artifacts written. No production/AC/PT edits, Git operations, hooks, provider calls, graph calls or snapshot substitution."
+}

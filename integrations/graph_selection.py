@@ -10,6 +10,7 @@ from knowledge.query_catalog import QueryCatalog
 from knowledge.answer_models import AnswerRequirements
 from knowledge.errors import KnowledgeError
 from integrations.graph_catalog import catalog_offers
+from integrations.graph_eligibility import operation_fit
 from integrations.retrieval_relationships import relation_role
 
 from integrations.graph_offers import GraphOffer, graph_offers, repository_sources, selection_context
@@ -53,7 +54,9 @@ async def _select(ctx: ExecutionContext, invocation: CapabilityInvocation, quest
     spec = choice_question(question, purpose + ".v1",
         "Choose only an offered value that serves the user's original_question; need_question is "
         "the research need's context and may contain a generic instruction to find guidance. "
-        "For an explanation or lookup of a specifically named record, select get_entities. "
+        "For an explanation or lookup of a specifically named record, retrieve that record's authored facts. "
+        "Use operation_fit facts to distinguish requested records from related records. Eligible means "
+        "compatible, not a complete answer; source_hydration_fields need later source disclosure. "
         "Select a relationship operation only when the user asks for related tests/checks, children, "
         "descendants, dependents, or other relationships instead of the record itself. "
         "For a target question, choose the authorized target of the already selected operation. "
@@ -233,8 +236,16 @@ async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityIn
                     if payload.answer_requirements is not None else None)
     scoped = selection_context(ctx)
     offers, options = _operation_options(scoped, payload, capabilities, catalog, allow_catalog)
+    fit = operation_fit(offers, payload, requirements)
+    incompatible = {name for name, facts in fit.items()
+                    if isinstance(facts, dict) and facts["status"] == "incompatible"}
+    if incompatible and incompatible == set(offers):
+        return RetrievalChoice(False, "graph", "unsupported",
+            "All bound candidates return a population incompatible with the original requirements."), []
+    offers = {name: offer for name, offer in offers.items() if name not in incompatible}
+    options = {name: meaning for name, meaning in options.items() if name not in incompatible}
     state: dict[str, JsonValue] = {**_selection_state(ctx, payload), "operation_targets":
-        {name: list(offer.targets) for name, offer in offers.items()}}
+        {name: list(offer.targets) for name, offer in offers.items()}, "operation_fit": fit}
     usage: list[Usage] = []
     observed: dict[str, JsonValue] = {}
     selected = await _select(scoped, invocation, "operation", state, options, usage, observed)
@@ -268,3 +279,5 @@ async def assess_graph_operation(ctx: ExecutionContext, invocation: CapabilityIn
 # - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)
 
 # - 2026-10-09 18:49 [python-coder]: Keep all original selected targets mandatory and reject incompatible operation cardinality. (#KM-500/KM-500e-1-i)
+# - 2026-10-10 10:51 [python-coder]: Remove proved population contradictions before the unchanged finite Jev judgment. (#KM-500/KM-500a-2-i)
+# - 2026-10-10 11:49 [python-coder]: Make the existing selector JSON shapes explicit for type checking without changing eligibility rules. (#KM-500/KM-500a-2-i)

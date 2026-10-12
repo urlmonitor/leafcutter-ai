@@ -1,0 +1,264 @@
+"""Independent selector controls; external responses are deterministic, production seams are real."""
+from dataclasses import replace
+
+import pytest
+
+from integrations import graph_selection
+from integrations.graph_offers import GraphOffer
+from integrations.research_needs import RepositoryNeedsInterpreter
+from kernel.capabilities.research.state import Plan
+from kernel.contracts.base import canonical_json
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
+from kernel.providers.base import JevUnavailable
+from kernel.providers.jev_wire import question_to_wire
+from tests.conftest import load_fixture
+from tests.knowledge.public_retrieval_needs_support import controlled_needs
+from tests.kernel.entity_context.graph_selection_support import (
+    AC_ID, FiniteBudget, SelectionRig, _choices,
+)
+
+CONTROLS = load_fixture("_shared/query_eligibility/controls")
+
+
+def typed_request(goal, fields=("content",), *, relation=False):
+    response = controlled_needs({"original_question": goal, "source_scope": {}}, AC_ID, fields)
+    if relation:
+        response["selections"].update(entity_types=["test"], document_types=["code"], relationships=["covered_by"])
+        response["completeness"] = "examples"
+    output = RetrievalNeedsOutput.model_validate(response)
+    plan = RepositoryNeedsInterpreter().apply(Plan(goal, "", [], []), output)
+    return {"retrieval_needs": output, "answer_requirements": plan.answer_requirements}
+
+
+def only_operations(monkeypatch, names, *, legacy=False):
+    original = graph_selection.graph_offers
+
+    def limited(ctx, payload, capabilities):
+        offers = original(ctx, payload, capabilities)
+        selected = {name: offer for name, offer in offers.items() if name in names}
+        if legacy:
+            selected = {name: GraphOffer(offer.description, offer.targets, offer.argument, offer.mode, offer.many)
+                        for name, offer in selected.items()}
+        return selected
+
+    monkeypatch.setattr(graph_selection, "graph_offers", limited)
+
+
+def assert_uncertain(result):
+    assert result.status.value == "partial"
+    assert result.diagnostics["knowledge_selection"] == "uncertain"
+    assert result.diagnostics["knowledge_status"] == "selection_uncertain"
+    assert result.output_payload["assessments"] == {}
+    assert set(result.output_payload["coverage"].values()) == {"unavailable"}
+    assert result.requests == []
+    assert result.evidence == []
+    assert sum(item.calls for item in result.usage) == 1
+    assert sum(item.input_tokens or 0 for item in result.usage) == 17
+    assert sum(item.output_tokens or 0 for item in result.usage) == 3
+
+
+@pytest.mark.parametrize("case", CONTROLS["gates"], ids=lambda case: case["id"])
+def test_selection_probability_and_confidence_gates_preserved(tmp_path, monkeypatch, case):
+    # covers: KM-500a-2-i
+    # angle: boundary
+    selection = SelectionRig(tmp_path)
+    only_operations(monkeypatch, {"get_entities"})
+    selection.probability, selection.confidence = case["probability"], case["confidence"]
+    goal = "Read the authored record " + AC_ID
+    ctx = replace(selection.context(goal), budget=FiniteBudget(3))
+    result, _, _ = selection.run(goal, context=ctx, **typed_request(goal))
+    assert len(selection.operation_batches()) == 1, "A sole candidate must still receive one decision"
+    assert ctx.budget.reservations == 1 and ctx.budget.remaining == 2
+    assert result.requests == []
+    if case["accept"]:
+        assert len(selection.port.calls) == 2
+        assert selection.port.calls[0].operation == "get_entities"
+        assert selection.port.calls[0].arguments == {"entity_ids": [AC_ID]}
+        assert result.evidence
+        assert sum(item.calls for item in result.usage) == 1
+    else:
+        assert selection.port.calls == []
+        assert_uncertain(result)
+
+
+def test_empty_and_single_candidate_boundaries(tmp_path, monkeypatch):
+    # covers: KM-500a-2-i
+    # angle: boundary
+    selection = SelectionRig(tmp_path)
+    goal = "Read the authored record " + AC_ID
+    only_operations(monkeypatch, {"get_related_tests"})
+    selection.choice = "unsupported"
+    ctx = replace(selection.context(goal), budget=FiniteBudget(2))
+    result, _, _ = selection.run(goal, context=ctx, **typed_request(goal))
+    assert result.diagnostics["knowledge_selection"] == "unsupported"
+    assert result.diagnostics["knowledge_status"] == "unsupported"
+    assert result.status.value == "partial"
+    assert result.output_payload["assessments"] == {}
+    assert result.requests == [] and result.evidence == [] and selection.port.calls == []
+    assert selection.operation_batches() == [], "All proved incompatible candidates still spent a choice"
+    assert result.usage == []
+    assert ctx.budget.remaining == 2 and ctx.budget.reservations == 0
+
+
+@pytest.mark.parametrize("wording", CONTROLS["prose"])
+def test_eligibility_keeps_unknown_and_bounded_candidates(tmp_path, monkeypatch, wording):
+    # covers: KM-500a-2-i
+    # angle: discrimination
+    selection = SelectionRig(tmp_path)
+    original = graph_selection.graph_offers
+
+    def legacy_and_proven(ctx, payload, capabilities):
+        offers = original(ctx, payload, capabilities)
+        exact = offers["get_entities"]
+        offers["get_entities"] = GraphOffer(wording, exact.targets, exact.argument, exact.mode, exact.many)
+        offers["legacy_unclassified"] = GraphOffer(wording, exact.targets, exact.argument, exact.mode, exact.many)
+        return offers
+
+    monkeypatch.setattr(graph_selection, "graph_offers", legacy_and_proven)
+    goal = "Read acceptance record " + AC_ID
+    result, _, _ = selection.run(goal, **typed_request(goal, ("criteria", "test_spec", "content")))
+    batch = selection.operation_batches()[0]
+    assert len(selection.operation_batches()) == 1
+    assert selection.port.calls and selection.port.calls[0].operation == "get_entities"
+    assert selection.port.calls[0].answer_requirements.required_fields == ["criteria", "test_spec", "content"]
+    assert {"get_entities", "legacy_unclassified"} <= _choices(batch).keys(), "Legacy missing metadata is unknown, not a refusal"
+    assert "get_related_tests" not in _choices(batch), "The paired proved mismatch must still be excluded"
+    assert "get_declared_dependents" not in _choices(batch)
+    assert result.requests == []
+
+
+def test_relationship_population_control_remains_offered(tmp_path):
+    # covers: KM-500a-2-i
+    # angle: criterion
+    selection = SelectionRig(tmp_path)
+    goal = "Read the tests linked to " + AC_ID
+    selection.choice = "get_related_tests"
+    selection.port.response_entity = ("Test:pkg/tests.py", "Test", "pkg/tests.py", "")
+    result, _, _ = selection.run(goal, **typed_request(goal, relation=True))
+    assert len(selection.operation_batches()) == 1
+    offered = _choices(selection.operation_batches()[0])
+    assert set(offered) == {"get_related_tests", "unsupported", "unsupported_population"}
+    assert len(selection.port.calls) == 2
+    assert selection.port.calls[0].arguments == {"entity_ids": [AC_ID]}
+    requirements = selection.port.calls[0].answer_requirements
+    assert requirements.scope.entity_ids == [] and requirements.scope.root_id == AC_ID
+    assert len(result.evidence) == 1
+    assert "Test%3Apkg%2Ftests.py" in result.evidence[0].source.locator
+
+
+@pytest.mark.parametrize("arity", [5, 7])
+def test_fit_metadata_preserves_positional_offer_consumers(tmp_path, monkeypatch, arity):
+    # covers: KM-500a-2-i
+    # angle: boundary
+    selection = SelectionRig(tmp_path)
+    original = graph_selection.graph_offers
+
+    def legacy(ctx, payload, capabilities):
+        offer = original(ctx, payload, capabilities)["get_entities"]
+        args = [offer.description, offer.targets, offer.argument, offer.mode, offer.many]
+        if arity == 7:
+            args += [None, None]
+        return {"get_entities": GraphOffer(*args)}
+
+    monkeypatch.setattr(graph_selection, "graph_offers", legacy)
+    goal = "Read record " + AC_ID
+    result, _, _ = selection.run(goal, **typed_request(goal))
+    assert len(selection.operation_batches()) == 1
+    assert len(selection.port.calls) == 2
+    request = selection.port.calls[0]
+    assert request.arguments == {"entity_ids": [AC_ID]}
+    assert request.operation == "get_entities" and request.mode == "exact"
+    assert request.operation_version == "1" and request.operation_digest is None
+    assert len(result.evidence) == 1
+
+
+def test_fit_facts_count_in_pre_call_wire_budget(tmp_path, monkeypatch):
+    # covers: KM-500a-2-i
+    # angle: boundary
+    selection = SelectionRig(tmp_path / "observed")
+    only_operations(monkeypatch, {"get_entities"})
+    goal = "Read record " + AC_ID
+    kwargs = typed_request(goal, ("criteria", "test_spec", "content"))
+    selection.run(goal, context=replace(selection.context(goal), entity_context=None), **kwargs)
+    batch = selection.operation_batches()[0]
+    legacy_keys = set(CONTROLS["legacy_state_keys"])
+    fit_facts = {key: value for key, value in batch.state.items() if key not in legacy_keys}
+    assert fit_facts and "get_entities" in canonical_json(fit_facts), (
+        "The paid packet has no additive typed fit facts: " + repr(list(batch.state)))
+    wire = {"state": batch.state, "questions": {q.id: question_to_wire(q) for q in batch.questions}}
+    old_wire = {**wire, "state": {key: value for key, value in batch.state.items() if key in legacy_keys}}
+    full_size, old_size = len(canonical_json(wire)), len(canonical_json(old_wire))
+    assert full_size > old_size
+    ctx = replace(selection.context(goal), entity_context=None)
+    budget = FiniteBudget(2)
+    ctx = replace(ctx, budget=budget, config=ctx.config.model_copy(update={"jev":
+        ctx.config.jev.model_copy(update={"max_state_chars": full_size - 1})}))
+    calls_before = selection.jev.call_count
+    graph_before = len(selection.port.calls)
+    result, _, _ = selection.run(goal, context=ctx, **kwargs)
+    assert result.status.value == "failed"
+    assert result.error.code == "payload_too_large"
+    assert selection.jev.call_count == calls_before and len(selection.port.calls) == graph_before
+    assert budget.reservations == 0 and result.usage == []
+    assert kwargs["answer_requirements"]["required_fields"] == ["criteria", "test_spec", "content"]
+
+
+@pytest.mark.parametrize("case", CONTROLS["failures"], ids=lambda case: case["id"])
+def test_missing_meaning_and_provider_failure_remain_distinct(tmp_path, monkeypatch, case):
+    # covers: KM-500a-2-i
+    # covers: KM-500a-1
+    # angle: failure
+    selection = SelectionRig(tmp_path)
+    only_operations(monkeypatch, {"get_entities"})
+    goal = "Read record " + AC_ID
+    ctx = replace(selection.context(goal), budget=FiniteBudget(0 if case["id"] == "exhausted" else 2))
+    if case["id"] == "provider":
+        error = JevUnavailable("controlled offline selector")
+        error.completed_usage = selection.jev.usage
+        selection.jev.fail_next(error)
+    elif case["id"] == "unoffered":
+        selection.choice = "unregistered_query"
+    elif case["id"] == "denied":
+        ctx = replace(ctx, scope=ctx.scope.model_copy(update={"read_roots": ["forbidden"]}))
+    result, _, _ = selection.run(goal, context=ctx, **typed_request(goal))
+    assert result.status.value == ("blocked" if case["id"] == "exhausted" else "failed")
+    assert result.error.code == case["code"]
+    assert len(selection.port.calls) == (1 if case["id"] == "denied" else 0)
+    assert result.requests == [] and result.evidence == []
+    assert len(selection.operation_batches()) == case["paid_calls"]
+    assert sum(item.calls for item in result.usage) == case["paid_calls"]
+
+
+@pytest.mark.parametrize("invalid", ["question", "scope", "explicit"])
+def test_malformed_inputs_fail_before_paid_selection(tmp_path, invalid):
+    # covers: KM-500a-2-i
+    # angle: failure
+    selection = SelectionRig(tmp_path)
+    goal = "Read record " + AC_ID
+    kwargs = typed_request(goal)
+    if invalid == "question":
+        kwargs["answer_requirements"]["original_question"] = ""
+    elif invalid == "scope":
+        kwargs["answer_requirements"]["scope"]["entity_ids"] = "not-a-list"
+    else:
+        kwargs["knowledge"] = {"operation": "get_entities", "mode": "exact", "arguments": {"entity_ids": []}}
+    result, _, _ = selection.run(goal, **kwargs)
+    assert result.status.value == "failed"
+    assert result.error.code == "knowledge_invalid_request"
+    assert selection.jev.call_count == 0 and selection.port.calls == [] and result.usage == []
+
+
+def test_explicit_operation_keeps_deterministic_validation(tmp_path):
+    # covers: KM-500a-2-i
+    # angle: seam
+    selection = SelectionRig(tmp_path)
+    goal = "Read record " + AC_ID
+    explicit = {"operation": "get_entities", "mode": "exact",
+                "arguments": {"entity_ids": [AC_ID]}, "disclosure_level": 3}
+    selection.choice = "unregistered_query"
+    result, _, _ = selection.run(goal, knowledge=explicit)
+    assert selection.jev.call_count == 0
+    assert len(selection.port.calls) == 1
+    assert selection.port.calls[0].operation == "get_entities"
+    assert selection.port.calls[0].arguments == explicit["arguments"]
+    assert len(result.evidence) == 1 and result.usage == []

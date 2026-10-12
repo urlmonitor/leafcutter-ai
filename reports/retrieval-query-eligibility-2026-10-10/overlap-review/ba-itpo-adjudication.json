@@ -1,0 +1,152 @@
+{
+  "id": "QE-ADJ-001",
+  "date": "2026-10-10",
+  "role": "BA / IT PO (retrieval_acceptance_next)",
+  "decision": "The approved only-proven-incompatibility behavior is retained. Two exact-record negative-offer assertions are corrected after independent counterexamples; no positive question or answer gold is relaxed.",
+  "ac": "KM-500a-2-i",
+  "ac_before_sha256": "a9a8e9db80baa92109e62e740f538c7dfe6e4ad8a18cb33152d9972a1b991a41",
+  "criteria_changed": false,
+  "approval_basis": "Root relayed the existing user-authorized sequential repair and explicitly authorized only the two identified negative-assertion corrections plus independently frozen supplemental tests. This does not claim a new personal human review or a completed implementation.",
+  "evidence": {
+    "handoff": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/handoff.json",
+    "handoff_sha256": "ed3c760a2d85111df9820258494eee918506c92d1d31014ada0c97a3bb8397b7",
+    "first43_red": {
+      "path": "reports/retrieval-query-eligibility-2026-10-10/overlap-review/first43-test-writer-handoff.json",
+      "sha256": "0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089",
+      "assertion_failures": 22,
+      "preservation_passes": 21,
+      "errors": 0
+    },
+    "first43_green": "Expert separately reported 43/43 passing against first-pass runtime; this historical outcome is preserved, not reclassified as proof of conservative eligibility.",
+    "supplemental_red": {
+      "tests": 9,
+      "failed": 7,
+      "passed": 2,
+      "errors": 0,
+      "seconds": "5.257",
+      "cases": [
+        {
+          "name": "test_native_self_endpoint_reaches_real_answer_consumer[get_declared_dependents]",
+          "status": "passed",
+          "cause": null
+        },
+        {
+          "name": "test_native_self_endpoint_reaches_real_answer_consumer[get_corrected_decisions]",
+          "status": "passed",
+          "cause": null
+        },
+        {
+          "name": "test_native_self_endpoint_remains_selectable[get_declared_dependents]",
+          "status": "failed",
+          "cause": "AssertionError: The native result can contain the required exact identity\nassert 'get_declared_dependents' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+        },
+        {
+          "name": "test_native_self_endpoint_remains_selectable[get_corrected_decisions]",
+          "status": "failed",
+          "cause": "AssertionError: The native result can contain the required exact identity\nassert 'get_corrected_decisions' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+        },
+        {
+          "name": "test_admitted_round_trip_remains_selectable[typed-cycle]",
+          "status": "failed",
+          "cause": "AssertionError: Admitted reverse traversal can return its seed\nassert 'read_round_trip' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+        },
+        {
+          "name": "test_admitted_round_trip_remains_selectable[unknown-endpoint]",
+          "status": "failed",
+          "cause": "AssertionError: Admitted reverse traversal can return its seed\nassert 'read_round_trip' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...ision_id=None, capability_id='retrieve.repository', interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+        },
+        {
+          "name": "test_eligibility_keeps_unknown_and_bounded_candidates[Enumerate every descendant and prove the complete population.]",
+          "status": "failed",
+          "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': 'Enumerate every descendant and prove the complete population.', 'legacy_unclassified': 'Enumerate ev...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+        },
+        {
+          "name": "test_eligibility_keeps_unknown_and_bounded_candidates[Read automated Test records that demonstrate verification.]",
+          "status": "failed",
+          "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}\n +  where {'get_entities': 'Read automated Test records that demonstrate verification.', 'legacy_unclassified': 'Read automated ...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'} = _choices(JevBatch(schema_version='1.0', purpose='knowledge.operation_select', state={'caller_context': {'schema_version': '1.0'...tion_id=None, decision_id=None, capability_id=None, interaction_id=None, parent_work_item_id=None, causation_seq=None)))"
+        },
+        {
+          "name": "test_exact_ac_fields_keep_hydratable_get_entities",
+          "status": "failed",
+          "cause": "AssertionError: Same-kind self-dependency is not proved disjoint\nassert 'get_declared_dependents' in {'get_entities': \"Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, compo...mbers of a filtered population; no offered operation establishes that complete population. Samples cannot fulfill it.'}"
+        }
+      ]
+    },
+    "native_witness": {
+      "path": "validate_snapshot -> KnowledgeService -> neo4j_queries.query -> real population/disclosure/answers; only driver IO and source IO are controlled",
+      "operations": [
+        "get_declared_dependents",
+        "get_corrected_decisions"
+      ],
+      "both": "Admitted self-edge; exact requested identity returned; status ok; answer fulfilled; missing_fields and limitations empty.",
+      "declared_dependents": "Actual stats.population=declared_dependents while unchanged requested scope.population=returned_entities. The answer consumer accepts exact IDs; unequal labels do not establish disjointness.",
+      "limitation": "No live Neo4j or provider ran. This is a query-contract witness using permitted driver rows, not an Aura or production data claim."
+    },
+    "saved_witness": "Real admission activated an AC -> Test -> AC recipe using outgoing then incoming covered_by. Both declared-AC and unspecified endpoint kinds were removed from the paid menu. Compiled statements and bound parameters are checked at controlled driver IO; no new query evaluator."
+  },
+  "reviewed_contract_facts": [
+    "knowledge/projection/validation.py permits same-kind depends_on and CORRECTED_BY endpoints without an identity-inequality requirement.",
+    "knowledge/adapters/neo4j_queries.py returns the matching endpoint without excluding the seed.",
+    "knowledge/answers.py checks original exact identities, requested fields and source/disclosure completeness for returned_entities; population label equality is imposed only for an explicitly named non-returned_entities scope.",
+    "Independent real-service/query/disclosure/answer witnesses accepted the exact requested AC and Decision through valid self endpoints; actual answer fulfilled with no missing fields or limitations. Driver/source IO was controlled, so this is not live Aura evidence."
+  ],
+  "superseding_assertions": [
+    {
+      "test": "tests/kernel/entity_context/test_query_eligibility_selection.py::test_eligibility_keeps_unknown_and_bounded_candidates",
+      "old": "get_declared_dependents absent for exact AC",
+      "new": "get_declared_dependents remains offered because same-kind self-dependency can return the exact identity; get_related_tests remains excluded as disjoint Test-kind."
+    },
+    {
+      "test": "tests/knowledge/test_query_eligibility_public.py::test_exact_ac_fields_keep_hydratable_get_entities",
+      "old": "get_declared_dependents, get_related_tests and get_ac_descendants absent",
+      "new": "get_declared_dependents remains offered; get_related_tests and get_ac_descendants remain absent. Actual chosen get_entities, both fields, exact citations and fulfilled answer assertions remain."
+    }
+  ],
+  "refined_rule": {
+    "exact_id_scope": "Possible identity overlap from admitted native self endpoints or saved round trips is unknown, not proved incompatible. Different population labels or an indirect route are insufficient exclusion reasons. Directness is a Jev preference; actual retrieval/answer assessment still decides sufficiency.",
+    "named_scope": "Explicit ac_descendants or other named population obligations require matching population metadata and established completeness. An endpoint/dependency recipe cannot establish a hierarchy count merely because some returned IDs overlap.",
+    "kind_control": "A proved disjoint endpoint kind remains incompatible; absent endpoint kind metadata stays unknown."
+  },
+  "preserved_originals_sha256": {
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\approved-assertion-amendment.patch": "9085cdf89c19b72c3c619225ac7e248e07bb5cc901d7c05c0ce3803e908981a8",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\first43-original-red.xml": "cdcc4e0c2a442708f0472b3671a747ed5e2fec898b5d19b2a7821adee4550136",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\first43-test-writer-handoff.json": "0d1ad74254390443a1a81500a734fdad61e610caa1fbd4eef27862a9b4347089",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\graph_catalog.first-pass-source": "18f13b57cf585f4698af3e40ee80b1534958b41985b7ef78f5941ddaa5400bfe",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\graph_eligibility.first-pass-source": "de2875da73067ddfa3b7a4c33c23ab2f880c1d23e206b1bd1efd25cd857fbd73",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\graph_offers.first-pass-source": "34679db75969f220fd69165788dcdba736a8a6e2270b7f37fd5ab6cba933b2ae",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\graph_selection.first-pass-source": "b41bec07297bd7d5e92330d8066e7463f901e4889f6b93002d2b3d1ce1f96fb3",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\graph_selection_result.first-pass-source": "d36aae6ae8375d6f59bda54a35f38182382c89b5f26c433fac2274cbd94b111f",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\handoff.json": "ed3c760a2d85111df9820258494eee918506c92d1d31014ada0c97a3bb8397b7",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\red-attempt1.xml": "d9daba8cd411f882b22c804a656f332b8c413223bac436db44aaf6e90e7534ed",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\red.xml": "10c2f9177fb6fcd886785a030b820a06b7b9b58b6dc4cc7742242c6de7e7a06f",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\test_query_eligibility_public.py.first43": "26d5c0f7dc0802c266b622ce752bb4c315fd246af07726b4d37ff4be733a6ae2",
+    "reports\\retrieval-query-eligibility-2026-10-10\\overlap-review\\test_query_eligibility_selection.py.first43": "668bcf34f4630f5a040acf042a2ffe992ddb9b641ec3d52366b0a62d058da900",
+    "reports\\retrieval-query-eligibility-2026-10-10\\plan.json": "1e2d93cd5b7152d8ff0e458ef4a30e104298d92166f707d4f641ba573d9446e3",
+    "reports\\retrieval-query-eligibility-2026-10-10\\cases.json": "5dc0f94cd79d84880cf0a05a76e94877496cd338580066b70462e558bbda1643",
+    "reports\\retrieval-query-eligibility-2026-10-10\\source-oracles.json": "af64d7587a4d96071b00badb7355e750b5eb7e0c339ffe738f0e9c95834f9d65"
+  },
+  "first_pass_runtime_sha256": {
+    "integrations/graph_eligibility.py": "de2875da73067ddfa3b7a4c33c23ab2f880c1d23e206b1bd1efd25cd857fbd73",
+    "integrations/graph_offers.py": "34679db75969f220fd69165788dcdba736a8a6e2270b7f37fd5ab6cba933b2ae",
+    "integrations/graph_catalog.py": "18f13b57cf585f4698af3e40ee80b1534958b41985b7ef78f5941ddaa5400bfe",
+    "integrations/graph_selection.py": "b41bec07297bd7d5e92330d8066e7463f901e4889f6b93002d2b3d1ce1f96fb3",
+    "integrations/graph_selection_result.py": "d36aae6ae8375d6f59bda54a35f38182382c89b5f26c433fac2274cbd94b111f"
+  },
+  "approved_patch_sha256": "9085cdf89c19b72c3c619225ac7e248e07bb5cc901d7c05c0ce3803e908981a8",
+  "superseding_test_sha256": {
+    "tests/kernel/entity_context/test_query_eligibility_selection.py": "5ad9468c715229dfedc26b85ec95b9efaea6466ac95b9633349436aaa41ee21f",
+    "tests/knowledge/test_query_eligibility_public.py": "743b662f8cfd4c144d23d8475db176a3f2ac40b0fb79dee6c1f5ad08fd20693b",
+    "tests/knowledge/test_query_eligibility_overlap.py": "fbd18c7d831fb77e52436782961f8f883b4cfd0f10f40c469295b77c9b357f8a",
+    "tests/fixtures/_shared/query_eligibility/overlap.json": "3b99f62e7a934b6e44f5af6cf1b6d6fe59a0c64fbe2c06d630d5ed21011e9aab"
+  },
+  "unchanged": [
+    "All nine positive questions and expected answers",
+    "P03/P04 wording and source-bound population/field/identity oracles",
+    "0.80 selected probability and 0.50 confidence thresholds",
+    "No forced sole-candidate execution, retry, clarification or assessment veto",
+    "Original 43-case red receipt, two original files and archived first-pass runtime",
+    "Named-population completeness guards and live-source publication requirements"
+  ],
+  "implementation_status": "in_progress",
+  "limits": "No production/test edits or provider/graph calls by BA. Supplemental results are a separate nine-execution red gate (seven assertion failures, two controlled native witness passes), not a rewritten original result. Final PT bindings await the concrete runtime interface."
+}

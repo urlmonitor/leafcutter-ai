@@ -1,0 +1,562 @@
+{
+  "eligibility_sha256": "529d32670ea8b246090fb7a84ba0786e76bc7a2dc968b030d28ee8cf082f5d51",
+  "method": "Independent rerun of real registered/public paths with controlled IO. Only observation is wrapped; unchanged frozen test stops at its reported phase assertion. No provider/graph calls.",
+  "records": [
+    {
+      "case": "get_declared_dependents",
+      "pairs": [
+        {
+          "operation": "get_declared_dependents",
+          "disclosure_level": 0,
+          "arguments": {
+            "entity_ids": [
+              "EC-1100a-1-i"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the authored content of EC-1100a-1-i",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "EC-1100a-1-i"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "partial",
+            "original_question": "Read the authored content of EC-1100a-1-i",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "EC-1100a-1-i"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "EC-1100a-1-i",
+                "field": "content",
+                "reason": "disclosure_omitted"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "EC-1100a-1-i",
+              "path": "docs/acceptance-criteria/EC-1100a-1-i.yaml",
+              "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "field_availability": {
+                "content": "disclosure_omitted"
+              },
+              "field_locators": {
+                "content": ""
+              }
+            }
+          ]
+        },
+        {
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "arguments": {
+            "entity_ids": [
+              "EC-1100a-1-i"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the authored content of EC-1100a-1-i",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "EC-1100a-1-i"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "fulfilled",
+            "original_question": "Read the authored content of EC-1100a-1-i",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "EC-1100a-1-i"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "EC-1100a-1-i",
+              "path": "docs/acceptance-criteria/EC-1100a-1-i.yaml",
+              "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "field_availability": {
+                "content": "present"
+              },
+              "field_locators": {
+                "content": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "get_corrected_decisions",
+      "pairs": [
+        {
+          "operation": "get_corrected_decisions",
+          "disclosure_level": 0,
+          "arguments": {
+            "entity_ids": [
+              "Decision:dec-0123456789abcdef"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the authored content of Decision:dec-0123456789abcdef",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "Decision:dec-0123456789abcdef"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "partial",
+            "original_question": "Read the authored content of Decision:dec-0123456789abcdef",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "Decision:dec-0123456789abcdef"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "Decision:dec-0123456789abcdef",
+                "field": "content",
+                "reason": "disclosure_omitted"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "Decision:dec-0123456789abcdef",
+              "path": "docs/decisions/dec-0123456789abcdef.yaml",
+              "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "field_availability": {
+                "content": "disclosure_omitted"
+              },
+              "field_locators": {
+                "content": ""
+              }
+            }
+          ]
+        },
+        {
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "arguments": {
+            "entity_ids": [
+              "Decision:dec-0123456789abcdef"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the authored content of Decision:dec-0123456789abcdef",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "Decision:dec-0123456789abcdef"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "fulfilled",
+            "original_question": "Read the authored content of Decision:dec-0123456789abcdef",
+            "required_fields": [
+              "content"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "Decision:dec-0123456789abcdef"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "Decision:dec-0123456789abcdef",
+              "path": "docs/decisions/dec-0123456789abcdef.yaml",
+              "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "field_availability": {
+                "content": "present"
+              },
+              "field_locators": {
+                "content": ""
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "saved-AcceptanceCriterion",
+      "pairs": [
+        {
+          "operation": "read_round_trip",
+          "disclosure_level": 0,
+          "arguments": {
+            "ac_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "partial",
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "KM-500c-2",
+                "field": "criteria",
+                "reason": "disclosure_omitted"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "KM-500c-2",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+              "revision": "80a51003a589bec4df82c898f164eee9939aaa40",
+              "field_availability": {
+                "criteria": "disclosure_omitted"
+              },
+              "field_locators": {
+                "criteria": "/criteria"
+              }
+            }
+          ]
+        },
+        {
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "fulfilled",
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "KM-500c-2",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+              "revision": "80a51003a589bec4df82c898f164eee9939aaa40",
+              "field_availability": {
+                "criteria": "present"
+              },
+              "field_locators": {
+                "criteria": "/criteria"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "saved-None",
+      "pairs": [
+        {
+          "operation": "read_round_trip",
+          "disclosure_level": 0,
+          "arguments": {
+            "ac_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "partial",
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [
+              {
+                "canonical_id": "KM-500c-2",
+                "field": "criteria",
+                "reason": "disclosure_omitted"
+              }
+            ],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "KM-500c-2",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+              "revision": "80a51003a589bec4df82c898f164eee9939aaa40",
+              "field_availability": {
+                "criteria": "disclosure_omitted"
+              },
+              "field_locators": {
+                "criteria": "/criteria"
+              }
+            }
+          ]
+        },
+        {
+          "operation": "get_entities",
+          "disclosure_level": 3,
+          "arguments": {
+            "entity_ids": [
+              "KM-500c-2"
+            ]
+          },
+          "requirements": {
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "require_complete": true
+          },
+          "answer": {
+            "status": "fulfilled",
+            "original_question": "Read the criteria of KM-500c-2",
+            "required_fields": [
+              "criteria"
+            ],
+            "scope": {
+              "population": "returned_entities",
+              "entity_ids": [
+                "KM-500c-2"
+              ],
+              "root_id": null,
+              "levels": null,
+              "inclusion": null
+            },
+            "missing_fields": [],
+            "completeness": {
+              "complete": true,
+              "known_count": 1,
+              "exact_total": 1,
+              "limitations": []
+            },
+            "work_status_counts": null,
+            "known_work_status_counts": {},
+            "limitations": []
+          },
+          "evidence": [
+            {
+              "id": "KM-500c-2",
+              "path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+              "revision": "80a51003a589bec4df82c898f164eee9939aaa40",
+              "field_availability": {
+                "criteria": "present"
+              },
+              "field_locators": {
+                "criteria": "/criteria"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

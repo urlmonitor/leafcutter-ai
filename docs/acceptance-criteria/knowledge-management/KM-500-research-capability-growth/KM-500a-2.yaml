@@ -8,7 +8,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: done
+work_status: in_progress
 parent: KM-500a
 criteria: 'Given a ready research need and the eligible registered query catalog
 
@@ -49,9 +49,11 @@ doc_links:
     capability-growth evidence.
 origin_agent: business-analyst
 created: '2026-10-01'
-amended_by: []
+amended_by:
+- "2026-10-10: BA / IT PO (retrieval_acceptance_next) added approved child KM-500a-2-i under standing user authorization and reopened aggregate work to in_progress; original criteria, linked tests and historical primitive acceptance remain unchanged."
 superseded_by: null
 covered_by:
+- KM-500a-2-i
 - tests/knowledge/test_query_admission.py::test_unknown_operation_still_rejected_without_trusted_catalog_context
 - tests/knowledge/test_query_growth_kernel.py::TestQueryGrowthRun::test_verified_build_resumes_same_research_and_fresh_run_reuses_catalog
 implemented_by:
@@ -71,7 +73,8 @@ notes: 'User explicitly authorized implementation of this research/query capabil
   This checkpoint was superseded by the final acceptance below. Final independent acceptance:
   bounded implemented behavior passes linked criterion tests and actual Neo4j/Aura artifacts where promised; live
   external Jev remains not run pending explicit provider approval. See docs/analysis/2026-10-01-query-growth-acceptance.md.
-  Commit/release status is separate.'
+  Commit/release status is separate. The 2026-10-10 child KM-500a-2-i adds an unfinished typed eligibility obligation;
+  work_status is in_progress for that new scope while the historical primitive acceptance above is preserved.'
 assigned_agent: python-coder
 estimated_complexity: L
 it_requirements:

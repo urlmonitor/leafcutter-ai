@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="0" tests="6" time="33.983" timestamp="2026-10-10T10:56:04.542606+00:00" hostname="BrainDesk"><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_reaches_real_answer_consumer[get_declared_dependents]" time="0.143" /><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_reaches_real_answer_consumer[get_corrected_decisions]" time="0.131" /><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_remains_selectable[get_declared_dependents]" time="0.187"><failure message="assert False&#10; +  where False = all(&lt;generator object test_native_self_endpoint_remains_selectable.&lt;locals&gt;.&lt;genexpr&gt; at 0x000001BFCC0CBA00&gt;)">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/retrieval-eligibility-overlap-strict/test_native_self_endpoint_rema0')
+case = {'operation': 'get_declared_dependents', 'kind': 'AcceptanceCriterion', 'id': 'EC-1100a-1-i', 'edge': 'depends_on', ...}
+
+    @pytest.mark.parametrize("case", DATA["native"], ids=lambda row: row["operation"])
+    def test_native_self_endpoint_remains_selectable(tmp_path, case):
+        # covers: KM-500a-2-i
+        # angle: discrimination
+        rig = SelectionRig(tmp_path)
+        rig.port = NativeOverlap(tmp_path, case)
+        rig.choice = case["operation"]
+        goal, kwargs = exact_needs(case)
+        result, _, _ = rig.run(goal, **kwargs)
+        assert len(rig.operation_batches()) == 1
+        offered = _choices(rig.operation_batches()[0])
+        assert case["operation"] in offered, "The native result can contain the required exact identity"
+        wrong_kind = "get_related_tests" if case["kind"] == "AcceptanceCriterion" else "get_related_lessons"
+        assert wrong_kind not in offered
+        assert result.evidence and len(rig.port.calls) == 2
+&gt;       assert all(call.operation == case["operation"] for call in rig.port.calls)
+E       assert False
+E        +  where False = all(&lt;generator object test_native_self_endpoint_remains_selectable.&lt;locals&gt;.&lt;genexpr&gt; at 0x000001BFCC0CBA00&gt;)
+
+tests\knowledge\test_query_eligibility_overlap.py:125: AssertionError</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_native_self_endpoint_remains_selectable[get_corrected_decisions]" time="0.201"><failure message="assert False&#10; +  where False = all(&lt;generator object test_native_self_endpoint_remains_selectable.&lt;locals&gt;.&lt;genexpr&gt; at 0x000001BFCC090660&gt;)">tmp_path = WindowsPath('C:/Users/Hendrik/AppData/Local/Temp/retrieval-eligibility-overlap-strict/test_native_self_endpoint_rema1')
+case = {'operation': 'get_corrected_decisions', 'kind': 'Decision', 'id': 'Decision:dec-0123456789abcdef', 'edge': 'CORRECTED_BY', ...}
+
+    @pytest.mark.parametrize("case", DATA["native"], ids=lambda row: row["operation"])
+    def test_native_self_endpoint_remains_selectable(tmp_path, case):
+        # covers: KM-500a-2-i
+        # angle: discrimination
+        rig = SelectionRig(tmp_path)
+        rig.port = NativeOverlap(tmp_path, case)
+        rig.choice = case["operation"]
+        goal, kwargs = exact_needs(case)
+        result, _, _ = rig.run(goal, **kwargs)
+        assert len(rig.operation_batches()) == 1
+        offered = _choices(rig.operation_batches()[0])
+        assert case["operation"] in offered, "The native result can contain the required exact identity"
+        wrong_kind = "get_related_tests" if case["kind"] == "AcceptanceCriterion" else "get_related_lessons"
+        assert wrong_kind not in offered
+        assert result.evidence and len(rig.port.calls) == 2
+&gt;       assert all(call.operation == case["operation"] for call in rig.port.calls)
+E       assert False
+E        +  where False = all(&lt;generator object test_native_self_endpoint_remains_selectable.&lt;locals&gt;.&lt;genexpr&gt; at 0x000001BFCC090660&gt;)
+
+tests\knowledge\test_query_eligibility_overlap.py:125: AssertionError</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_admitted_round_trip_remains_selectable[typed-cycle]" time="1.849"><failure message="AssertionError: assert 'partial' == 'fulfilled'&#10;  &#10;  - fulfilled&#10;  + partial">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001BFCC114770&gt;
+endpoint_kind = 'AcceptanceCriterion'
+
+    @pytest.mark.parametrize("endpoint_kind", ["AcceptanceCriterion", None], ids=["typed-cycle", "unknown-endpoint"])
+    def test_admitted_round_trip_remains_selectable(monkeypatch, endpoint_kind):
+        # covers: KM-500a-2-i
+        # angle: seam
+        harness = public_harness(monkeypatch, catalog=True)
+        requests, results = observe_requests(monkeypatch)
+        original = pinned_snapshot()
+        root = next(node for node in original.nodes if node.canonical_id == "KM-500c-2")
+        test_node = Entity(canonical_id="Test:overlap", kind="Test", title="Linked test", source=root.source)
+        edge = Relation(source=root.source, source_id=root.canonical_id, target_id=test_node.canonical_id,
+                        edge_type="covered_by")
+        snapshot = original.model_copy(update={"nodes": [*original.nodes, test_node], "edges": [edge],
+            "supported_kinds": [*original.supported_kinds, "Test"],
+            "supported_relationships": [*original.supported_relationships, "covered_by"]})
+        validate_snapshot(snapshot)
+        monkeypatch.setattr(public, "source_snapshot", lambda: snapshot)
+        driver_calls = []
+    
+        async def compiled_read(statement, parameters=None, write=False):
+            assert not write
+            driver_calls.append((statement, parameters))
+            assert "(n0)-[r0:COVERED_BY]-&gt;(n1:Test" in statement
+            assert "(n1)&lt;-[r1:COVERED_BY]-(n2:" in statement
+            assert parameters["step_0_edge"] == parameters["step_1_edge"] == "covered_by"
+            assert parameters.get("step_1_kind") == endpoint_kind
+            # One declared AC -&gt; Test edge admits its AC endpoint after the reverse hop.
+            nodes = [root] if root.canonical_id in parameters["arg_ac_ids"] else []
+            return [{"payloads": [node.model_dump_json() for node in nodes], "expansion_truncated": False}]
+    
+        harness.storage._run = compiled_read
+        candidate = load_fixture("_shared/query_eligibility/saved_exact")
+        candidate["descriptor"].update(operation="read_round_trip", description="Read endpoints reached by the declared round trip")
+        candidate["descriptor"]["recipe"]["steps"] = [
+            {"edge_type": "covered_by", "direction": "outgoing", "kind": "Test"},
+            {"edge_type": "covered_by", "direction": "incoming", "kind": endpoint_kind},
+        ]
+    
+        async def exercise():
+            receipt = await harness.admission.verify_and_activate(candidate,
+                repository_id=public.REPOSITORY, source_sha=snapshot.source_sha)
+            assert receipt["status"] == "activated"
+            driver_calls.clear()
+            harness.operation = "read_round_trip"
+            final, values = await public.interpret_public_question(harness,
+                "Read the criteria of KM-500c-2", fields=("criteria",))
+            return final, values
+    
+        try:
+            final, values = asyncio.run(exercise())
+            batches = operation_batches(harness)
+            assert len(batches) == 1
+            assert "read_round_trip" in choices(batches[0]), "Admitted reverse traversal can return its seed"
+            selected = [(request, result) for request, result in zip(requests, results)
+                        if request.operation == "read_round_trip"]
+            assert selected and driver_calls
+            request, result = selected[-1]
+            assert request.answer_requirements.scope.entity_ids == ["KM-500c-2"]
+            assert request.answer_requirements.required_fields == ["criteria"]
+&gt;           assert result.answer.status == "fulfilled"
+E           AssertionError: assert 'partial' == 'fulfilled'
+E             
+E             - fulfilled
+E             + partial
+
+tests\knowledge\test_query_eligibility_overlap.py:188: AssertionError</failure></testcase><testcase classname="tests.knowledge.test_query_eligibility_overlap" name="test_admitted_round_trip_remains_selectable[unknown-endpoint]" time="0.650"><failure message="AssertionError: assert 'partial' == 'fulfilled'&#10;  &#10;  - fulfilled&#10;  + partial">monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000001BFCC1176F0&gt;
+endpoint_kind = None
+
+    @pytest.mark.parametrize("endpoint_kind", ["AcceptanceCriterion", None], ids=["typed-cycle", "unknown-endpoint"])
+    def test_admitted_round_trip_remains_selectable(monkeypatch, endpoint_kind):
+        # covers: KM-500a-2-i
+        # angle: seam
+        harness = public_harness(monkeypatch, catalog=True)
+        requests, results = observe_requests(monkeypatch)
+        original = pinned_snapshot()
+        root = next(node for node in original.nodes if node.canonical_id == "KM-500c-2")
+        test_node = Entity(canonical_id="Test:overlap", kind="Test", title="Linked test", source=root.source)
+        edge = Relation(source=root.source, source_id=root.canonical_id, target_id=test_node.canonical_id,
+                        edge_type="covered_by")
+        snapshot = original.model_copy(update={"nodes": [*original.nodes, test_node], "edges": [edge],
+            "supported_kinds": [*original.supported_kinds, "Test"],
+            "supported_relationships": [*original.supported_relationships, "covered_by"]})
+        validate_snapshot(snapshot)
+        monkeypatch.setattr(public, "source_snapshot", lambda: snapshot)
+        driver_calls = []
+    
+        async def compiled_read(statement, parameters=None, write=False):
+            assert not write
+            driver_calls.append((statement, parameters))
+            assert "(n0)-[r0:COVERED_BY]-&gt;(n1:Test" in statement
+            assert "(n1)&lt;-[r1:COVERED_BY]-(n2:" in statement
+            assert parameters["step_0_edge"] == parameters["step_1_edge"] == "covered_by"
+            assert parameters.get("step_1_kind") == endpoint_kind
+            # One declared AC -&gt; Test edge admits its AC endpoint after the reverse hop.
+            nodes = [root] if root.canonical_id in parameters["arg_ac_ids"] else []
+            return [{"payloads": [node.model_dump_json() for node in nodes], "expansion_truncated": False}]
+    
+        harness.storage._run = compiled_read
+        candidate = load_fixture("_shared/query_eligibility/saved_exact")
+        candidate["descriptor"].update(operation="read_round_trip", description="Read endpoints reached by the declared round trip")
+        candidate["descriptor"]["recipe"]["steps"] = [
+            {"edge_type": "covered_by", "direction": "outgoing", "kind": "Test"},
+            {"edge_type": "covered_by", "direction": "incoming", "kind": endpoint_kind},
+        ]
+    
+        async def exercise():
+            receipt = await harness.admission.verify_and_activate(candidate,
+                repository_id=public.REPOSITORY, source_sha=snapshot.source_sha)
+            assert receipt["status"] == "activated"
+            driver_calls.clear()
+            harness.operation = "read_round_trip"
+            final, values = await public.interpret_public_question(harness,
+                "Read the criteria of KM-500c-2", fields=("criteria",))
+            return final, values
+    
+        try:
+            final, values = asyncio.run(exercise())
+            batches = operation_batches(harness)
+            assert len(batches) == 1
+            assert "read_round_trip" in choices(batches[0]), "Admitted reverse traversal can return its seed"
+            selected = [(request, result) for request, result in zip(requests, results)
+                        if request.operation == "read_round_trip"]
+            assert selected and driver_calls
+            request, result = selected[-1]
+            assert request.answer_requirements.scope.entity_ids == ["KM-500c-2"]
+            assert request.answer_requirements.required_fields == ["criteria"]
+&gt;           assert result.answer.status == "fulfilled"
+E           AssertionError: assert 'partial' == 'fulfilled'
+E             
+E             - fulfilled
+E             + partial
+
+tests\knowledge\test_query_eligibility_overlap.py:188: AssertionError</failure></testcase></testsuite></testsuites>
