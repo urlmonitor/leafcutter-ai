@@ -105,7 +105,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `write-c4-diagram` | always | — |
+| `write-c4-diagram` | conditional | — |
 ---
 
 ## Configuration

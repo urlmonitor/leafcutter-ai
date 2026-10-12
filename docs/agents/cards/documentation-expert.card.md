@@ -119,15 +119,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
-| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `route-knowledge` | conditional | When asked to remember, capture or save knowledge rather than author a doc, load route-knowledge to pick its target surface. |
-| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
+| `route-knowledge` | conditional | — |
+| `signoff` | conditional | — |
 | `direct-write` | conditional | — |
 ---
 

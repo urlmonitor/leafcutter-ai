@@ -98,7 +98,6 @@ flowchart TD
 |------|
 | `Read` |
 | `Bash` |
-| `Skill` |
 ---
 
 ## Skills Used
@@ -106,6 +105,7 @@ flowchart TD
 | Skill | Mode | Condition |
 |-------|------|-----------|
 | `building-epics` | always | — |
+| `signoff` | always | — |
 ---
 
 ## Configuration
