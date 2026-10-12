@@ -2,7 +2,10 @@
 MODULE: pytest_scratch_basetemp
 GOAL: Keep a pytest run's scratch in the one designated scratch location,
     refuse a scratch base inside a durable folder or the project tree, and print
-    where a failed test's scratch was retained (BO-4400f-2).
+    where a failed test's scratch was retained (BO-4400f-2). It does NOT
+    redirect the process-wide temp dir (TMPDIR / tempfile.tempdir): a path
+    that contained the scratch root would be read as product-owned content by
+    code that matches path components, and would move other plugins' state.
 BUSINESS CONTEXT: test-logs/wire-700a5-tmp reached 3.4 GB because a run's
     --basetemp pointed at a durable log folder. Retention "failed" (pytest.ini)
     plus this plugin means passing tests leave nothing and failing tests leave
@@ -19,7 +22,6 @@ from __future__ import annotations
 import importlib.util
 import os
 import shutil
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -28,6 +30,7 @@ import pytest
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SCRATCH_SOURCE = _REPO_ROOT / "templates" / "scripts" / "scratch.py"
 _ITEM_KEY = "_bo4400f2_scratch_item"
+_CALLER_OWNED_KEY = "_bo4400f2_caller_owned_basetemp"
 
 
 def _load_scratch():
@@ -70,17 +73,30 @@ def pytest_configure(config) -> None:
         message = refusal_for(str(given), Path(str(config.rootpath)), scratch.durable_paths())
         if message:
             raise pytest.UsageError(message)
+        setattr(config, _CALLER_OWNED_KEY, True)
         return
     if hasattr(config, "workerinput"):
         return
     item = scratch.new_item(f"pytest-{os.getpid()}-{uuid.uuid4().hex[:8]}", "pytest")
-    scratch_tmp = Path(item) / "tmp"
-    scratch_tmp.mkdir()
-    for name in ("TMPDIR", "TEMP", "TMP"):
-        os.environ[name] = str(scratch_tmp)
-    tempfile.tempdir = str(scratch_tmp)
     config.option.basetemp = str(Path(item) / "basetemp")
     setattr(config, _ITEM_KEY, item)
+
+
+def pytest_sessionstart(session) -> None:
+    """Keep every test's folder when the caller supplied (and so owns) --basetemp.
+
+    The shipped ``tmp_path_retention_policy = failed`` is for the plugin-chosen
+    folder inside the scratch item, which is removed when the run is green. A
+    caller that names its own --basetemp (a parent test inspecting a child
+    session's trees, or a person debugging) has taken ownership of that folder
+    and cleans it up itself; deleting passed tests' trees out from under it
+    would make the supplied folder useless.
+    """
+    if not getattr(session.config, _CALLER_OWNED_KEY, False):
+        return
+    factory = getattr(session.config, "_tmp_path_factory", None)
+    if factory is not None and hasattr(factory, "_retention_policy"):
+        factory._retention_policy = "all"
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -100,10 +116,8 @@ def pytest_runtest_makereport(item, call):
 def pytest_sessionfinish(session, exitstatus) -> None:
     """Remove this run's scratch item when nothing failed.
 
-    ``trylast`` is load-bearing: the shared reference layout lives under the
-    TMPDIR this plugin points into the item, and shared_layout_integrity
-    evaluates that layout in its own sessionfinish. Removing the item first
-    makes the integrity check see missing files and fail an otherwise green run.
+    ``trylast`` keeps the removal after every other plugin's sessionfinish has
+    finished reading anything under the item (e.g. the basetemp folders).
     """
     item = getattr(session.config, _ITEM_KEY, None)
     if item and session.testsfailed == 0:
