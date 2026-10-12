@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -128,7 +128,13 @@ amended_by:
   date: '2026-10-08'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- templates/skills/building-epics/SKILL.md
+- templates/agents/pull-request.md
+- templates/agents/ticket-supervisor.md
+- templates/skills/build-single-ticket/SKILL.md
+- templates/skills/quick-fix/SKILL.md
+- templates/agents/epic-supervisor.md
 change_target:
   - prompt
 risk_surface: internal
@@ -137,3 +143,53 @@ notes: |
   the starting inventory found at re-enrichment; the implementer confirms it and records
   the final list here. SCENARIO EVALUATION RESULTS TO RECORD HERE (per runbook, states A
   and B, decision reached).
+
+  FINAL RUNBOOK INVENTORY (2026-10-12). The rule is written once at
+  templates/skills/building-epics/SKILL.md §3.6; each runbook below points to it.
+  Included:
+  - templates/skills/building-epics/SKILL.md: canonical home; §3 is the failure ladder.
+  - templates/agents/ticket-supervisor.md: walks the ladder on blockers, so must not
+    respawn on this check (pointer in "Failure adjudication").
+  - templates/agents/pull-request.md: Merge-State Poll Gate sees BLOCKED/UNSTABLE
+    (pointer as new step 6).
+  - templates/skills/build-single-ticket/SKILL.md: Step 4c hands a PR to the user; the
+    first place it can see failing checks (pointer).
+  - templates/skills/quick-fix/SKILL.md: Step 7.4 opens the PR (pointer).
+  - templates/agents/epic-supervisor.md (deprecated, ADR-006, but still shipped): Step 4
+    mergeability gate lists failing required checks (one-sentence pointer).
+  Excluded:
+  - templates/agents/commit.md: "Failing checks" is the pre-commit hook probe, not PR checks.
+  - templates/agents/test-failure-triage.md: no PR-check language; classifies post-merge
+    test failures inside the finalize workflow script.
+  - templates/skills/ship/SKILL.md: runs local live_trader tests, offers `gh pr create`
+    or direct merge; reads no PR checks.
+  - templates/commands/finalize-feature.md, templates/commands/fast-lane-build.md,
+    templates/workflows/commit-push-pr.md (delegates to pull-request): thin wrappers
+    over workflow scripts or the pull-request agent; no check handling of their own.
+  - templates/skills/signoff, prompt-audit; templates/workflows/status.md: "check" matches
+    unrelated to PR checks.
+  FOLLOW-UP (not authored here): workflows-js/finalize-feature.js and fast-lane-ship.js
+  are deterministic code that classifies check failures; they need a sibling code record,
+  agent chosen by file type.
+  Scenario fixtures: TQ-600a-13-xviii-scenarios/.
+
+  SCENARIO EVALUATION RESULTS (2026-10-12; model: default subagent model; one agent per
+  runbook, README withheld; A = hold only, B = hold beside a pytest failure; notice #9001):
+  - ticket-supervisor: A: external hold reported (quote, run link, #9001); no edit, push,
+    re-run, Fixes or respawn. B: pytest treated as own failure via §3.1/§4 coder rework;
+    hold stays external; no Fixes.
+  - pull-request: A: no merge, external hold reported, stop. B: no merge; pytest reported
+    as own failure to the user/supervisor; hold external; no Fixes. Findings: description
+    field missing from the gh command; item 5 vs item 6 contradiction. Both fixed.
+  - build-single-ticket: A: hold reported, no edit/push/re-run/Fixes, finalize summary.
+    B: pytest is own failure, fixed via the coder and commit agent; hold external. Gap
+    noted: no written step for post-open CI failures. Clarified (§3.1/§4 via supervisor).
+  - quick-fix: A: hold reported; merging left to the user. B: pytest is own failure;
+    options presented per Stop-and-Ask (re-dispatch coder or escalate); hold external;
+    no Fixes.
+  - epic-supervisor: A: merge halted, hold reported, no agent dispatched. B: merge halted;
+    both reported separately; pytest named as a blocker for rework; no edits.
+  - building-epics: A: no ladder step, halted-for-user payload with the hold. B: §3.1
+    coder rework for pytest; hold external; no Fixes.
+  covered_by is left empty: it holds child AC ids that parent-link hooks resolve, not
+  file paths, and test_required is false (the fixtures are evidence, not a test).
