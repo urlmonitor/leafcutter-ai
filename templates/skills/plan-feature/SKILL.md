@@ -117,7 +117,7 @@ only; ticket generation from ACs is a separate concern handled by the
 
 ## Telemetry
 
-The workflow logs each stage transition to `debugging/logs/agent_telemetry.jsonl`
+The workflow logs each stage transition to the install's declared telemetry stream
 via the `emit_event.py` script (non-blocking; failures are ignored).
 
 ## Error Handling

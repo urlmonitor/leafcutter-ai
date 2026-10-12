@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -102,9 +102,24 @@ amended_by:
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/feedback/test_inf_500d_4_vi.py
+- unit_tests/feedback/test_inf_500d_4_vi_harvester.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/05_TICKET-20261009-INF-500d-4-vi.md
+- templates/agents/epic-supervisor.md
+- templates/agents/feedback-analyst.md
+- templates/agents/knowledge-harvester.md
+- templates/agents/retrospective-agent.md
+- templates/agents/ticket-supervisor.md
+- templates/agents/user-surface-smoker.md
+- templates/skills/agent-telemetry/SKILL.md
+- templates/skills/building-epics/SKILL.md
+- templates/skills/feedback-analysis/SKILL.md
+- templates/skills/feedback-review/SKILL.md
+- templates/skills/plan-feature/SKILL.md
+- templates/skills/signoff/SKILL.md
+- templates/workflows/feedback-report.md
 change_target: prompt
 risk_surface: contract_boundary
 notes: |

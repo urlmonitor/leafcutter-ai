@@ -23,7 +23,7 @@ time — no completed epic required.
 ## §1 Overview
 
 The feedback write side is handled by `scripts/feedback/submit_feedback.py`,
-which appends JSONL entries to `debugging/logs/feedback.jsonl`. Two read-side
+which appends JSONL entries to the install's declared feedback sink. Two read-side
 query scripts already exist:
 
 - `scripts/feedback/aggregate.py` — filters entries by ticket, category, phase,
