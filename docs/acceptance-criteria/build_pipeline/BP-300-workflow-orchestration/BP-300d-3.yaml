@@ -49,4 +49,12 @@ amended_by: []
 superseded_by: null
 covered_by:
   - BP-300d-3-i
+  - BP-300d-3-ii
 implemented_by: []
+change_target: code
+test_spec:
+  - name: test_unsupported_runtime_deploys_prose_fallback_for_primary_commands
+    target_dir: unit_tests/
+    framework: unittest
+    type: integration
+    description: "Build into a tmp target with the runtime reported as below the workflow-script minimum (e.g. CLAUDE_CODE_VERSION=2.1.100); the deployed bodies of build-feature, create-ticket and finalize-feature are the prose fallbacks from templates/workflows/<name>.md, and none of them is the workflow-invoking body. Added 2026-10-12 when the parent was first staged with a child: an approved code AC needs a test contract (check-ac-schema)."
