@@ -1261,10 +1261,8 @@ function buildPlanHoldback(recordPath, reason, resolved) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Read the ticket's record back off disk after a gate has run.
@@ -1535,9 +1533,7 @@ async function concludeTicket(spec) {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Resolve target and worktree
-// ---------------------------------------------------------------------------
 
 phase("Resolve Target");
 
@@ -2942,11 +2938,8 @@ function prerequisiteStateFromOutcome(outcome) {
 
 phase("Build");
 
-/* BO-4400f-1: this run's labelled scratch item. A shell step creates it (ADR-030: the
- * workflow body cannot touch the filesystem) and records the long-lived process that
- * runs the drive as its owner ($PPID). driveTicketPhases appends scratchEnvNote to the
- * dispatches that start processes, so their temp files land in the item. Fail-open: no
- * item, no note. TWIN: mirrors build-ticket.js. */
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-ticket.js.
 const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-feature-$PPID" build-feature --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Build", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
 const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
 

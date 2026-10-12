@@ -36,7 +36,7 @@
     "models",
     "scripts"
   ],
-  "test_output_dir": "%TEMP%/leafcutter-tests/",
+  "test_output_dir": "",
   "worktree_base_path": "../",
   "settings_module": "settings",
   "changelog_folder": "changelogs/",

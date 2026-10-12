@@ -57,8 +57,8 @@ THIRD_PARTY_LEFTOVERS = (
 )
 
 
-def _find_cleanup_config(start: Path) -> dict:
-    """Return the ``worktree_cleanup`` section found walking up from ``start``."""
+def _find_project_config(start: Path) -> dict:
+    """Return the skills_config.json found walking up from ``start`` ({} if none)."""
     for folder in (start, *start.parents):
         for relative in _CONFIG_RELATIVE:
             candidate = folder / relative
@@ -69,9 +69,14 @@ def _find_cleanup_config(start: Path) -> dict:
             except (OSError, ValueError) as exc:
                 logger.warning("scratch: cannot read config %s: %s", candidate, exc)
                 continue
-            section = data.get("worktree_cleanup") if isinstance(data, dict) else None
-            return section if isinstance(section, dict) else {}
+            return data if isinstance(data, dict) else {}
     return {}
+
+
+def _find_cleanup_config(start: Path) -> dict:
+    """Return the ``worktree_cleanup`` section found walking up from ``start``."""
+    section = _find_project_config(start).get("worktree_cleanup")
+    return section if isinstance(section, dict) else {}
 
 
 def _cleanup_config() -> dict:
@@ -133,6 +138,31 @@ def new_item(owner_run_id: str, route: str, owner_pid: int | None = None) -> str
         logger.warning("scratch: cannot write label in %s: %s", item, exc)
         raise
     return item
+
+
+def _is_system_temp_setting(value: str) -> bool:
+    """True for the legacy system-temp test_output_dir values (%TEMP%..., /tmp/...)."""
+    normalized = value.replace("\\", "/")
+    return "%TEMP%" in normalized.upper() or normalized == "/tmp" or normalized.startswith("/tmp/")
+
+
+def resolve_test_output_dir(owner_pid: int | None = None) -> str:
+    """Return the folder for longer-lived test output (testing_context.test_output_dir).
+
+    An explicit, non-system-temp setting is honoured as configured. Empty (the
+    default) or a legacy system-temp value resolves to the scratch home: a fresh
+    labelled item in the scratch root, so test output carries an owner and an
+    age and expires under classify() like any other scratch (BO-4400f-1).
+    """
+    configured = str(_find_project_config(Path.cwd()).get("test_output_dir") or "").strip()
+    if configured and not _is_system_temp_setting(configured):
+        return os.path.abspath(os.path.expanduser(configured))
+    if configured:
+        logger.warning(
+            "scratch: test_output_dir %r points into the system temp folder; using the scratch home",
+            configured,
+        )
+    return new_item(f"tests-{os.getpid() if owner_pid is None else owner_pid}", "tests", owner_pid)
 
 
 def _read_label(item: str) -> dict | None:
@@ -288,6 +318,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     make.add_argument("--owner-pid", type=int, default=None,
                       help="the run's long-lived process (default: this process)")
     commands.add_parser("sweep", help="remove expired scratch and declared leftovers")
+    out = commands.add_parser("test-output-dir", help="resolve the folder for test output")
+    out.add_argument("--owner-pid", type=int, default=None,
+                     help="the run's long-lived process (default: this process)")
     return parser.parse_args(argv)
 
 
@@ -297,11 +330,15 @@ def main(argv: list[str] | None = None) -> int:
     ``new-item <owner_run_id> <route> [--owner-pid PID]`` prints one JSON line
     ``{"item": "<abs path>"}``. ``sweep`` prints the sweep report as one JSON
     line and exits 1 when any expired entry could not be removed.
+    ``test-output-dir [--owner-pid PID]`` prints ``{"path": "<abs path>"}``.
     """
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     args = _parse_args(list(sys.argv[1:] if argv is None else argv))
     if args.command == "new-item":
         print(json.dumps({"item": new_item(args.owner_run_id, args.route, args.owner_pid)}))
+        return 0
+    if args.command == "test-output-dir":
+        print(json.dumps({"path": resolve_test_output_dir(args.owner_pid)}))
         return 0
     report = sweep()
     print(json.dumps(report))

@@ -27,7 +27,7 @@ config_keys:
     source: skills_config
   test_output_dir:
     required: false
-    description: "Temp directory for test output (outside project root)"
+    description: "Folder for test output (outside project root); empty means the scratch home (scratch.py test-output-dir)"
     source: skills_config
   collector_enforcer_paths:
     required: false
@@ -371,7 +371,7 @@ must be marked `_MANUAL` and excluded from the standard run. Never commit a test
 that auto-runs but exceeds 5 seconds.
 
 **No file output to project directories.** Any temporary files a test or script
-writes must go to `tmp_path`, `tempfile`, or `%TEMP%/<project>-tests/`. Never
+writes must go to `tmp_path`, `tempfile`, or the folder `scratch.py test-output-dir` prints. Never
 write to the project root or any project subdirectory. See CLAUDE.md §"Testing".
 
 Do NOT use `db.session_scope()` in tests (it auto-commits). Use transaction

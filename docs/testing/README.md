@@ -200,9 +200,12 @@ Every held message also says "This is not caused by this pull request." and ends
 All test output (temp files, result artifacts, logs) must go to:
 - `tmp_path` fixture (pytest) — automatically cleaned up.
 - `tempfile.mkdtemp()` (unittest) — clean up in `tearDown`.
-- `%TEMP%/leafcutter-tests/` — shared test output dir for longer-lived artifacts.
+- The scratch home — for longer-lived artifacts, use the folder
+  `python .leafcutter/scripts/scratch.py test-output-dir` prints: a fresh labelled item
+  in the one scratch location, which expires like any other scratch (BO-4400f-1).
 
-The `testing_context.test_output_dir` config key holds this path.
+The top-level `test_output_dir` config key overrides this when set; empty (the default)
+or a legacy system-temp value (`%TEMP%/...`, `/tmp/...`) means the scratch home.
 
 ---
 

@@ -1039,9 +1039,7 @@ function buildPlanHoldback(recordPath, reason, resolved) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
-// ---------------------------------------------------------------------------
 
 function parseAgentJson(raw, ctx) {
   const stage = ctx.stage;
@@ -1090,10 +1088,8 @@ function parseAgentJson(raw, ctx) {
   );
 }
 
-// ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Read the ticket's record back off disk after a gate has run.
@@ -1362,9 +1358,7 @@ async function concludeTicket(spec) {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
-// ---------------------------------------------------------------------------
 // Read the worktree path from args if provided. If args.worktree_path is set,
 // the caller already resolved the worktree context — skip the ambient CWD check.
 // This fixes the false-halt that occurred when build-ticket was invoked from
@@ -1602,11 +1596,8 @@ if (neededPhases.length === 0) {
   });
 }
 
-/* BO-4400f-1: this run's labelled scratch item. A shell step creates it (ADR-030: the
- * workflow body cannot touch the filesystem) and records the long-lived process that
- * runs the drive as its owner ($PPID). scratchEnvNote is appended to every dispatch
- * below that starts processes, so their temp files land in the item. Fail-open: no
- * item, no note. TWIN: mirrors build-feature.js. */
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-feature.js.
 const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-ticket-$PPID" build-ticket --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Phase Dispatch", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
 const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
 

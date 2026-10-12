@@ -452,12 +452,8 @@ if (acBlock) return acBlock
 const { ac_id, ac_path, parent_ac_path, component_id, ac_title } = acResult
 log(`AC created: ${ac_id} at ${ac_path} (parent back-linked: ${parent_ac_path})`)
 
-/* BO-4400f-1: this run's labelled scratch item. A shell step creates it (ADR-030: the
- * workflow body cannot touch the filesystem) and records the long-lived process that
- * runs the fix as its owner ($PPID). scratchEnvNote is appended to every dispatch below
- * that starts processes, and the mutation proof's revert files and the PR body live in
- * scratchDir, so nothing lands in the project root or the system temp folder.
- * Fail-open: no item, no note, and scratchDir stays /tmp as before. */
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote and the mutation-proof/PR-body files live in scratchDir. Fail-open: /tmp, no note.
 const scratchItem = ((await agent(`Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "quick-fix-${ac_id}-$PPID" quick-fix --owner-pid $PPID`, { label: 'scratch-item', phase: 'Red Phase', schema: { 'type': 'object', 'properties': { 'item': { 'type': ['string', 'null'] } } } })) || {}).item
 const scratchDir = typeof scratchItem === 'string' && scratchItem ? scratchItem : '/tmp'
 const scratchEnvNote = scratchDir === '/tmp' ? '' : `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchDir}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.`
@@ -681,21 +677,21 @@ paths above — name only those.` + scratchEnvNote,
 const fixBlock = blockedOnFailure(fixResult, 'Fix', 'python-coder')
 if (fixBlock) return fixBlock
 
-/* Scope expansion check (BP-600e-1, narrowed by BP-600e-1-ii)
- *
- * By the time this phase runs, ac_path, parent_ac_path and testFile are ALWAYS
- * already dirty — the workflow itself wrote them in earlier phases. A fix agent
- * that reports everything from `git status --porcelain` (as instructed above)
- * will therefore always see these three paths, even when it touched nothing but
- * target_file. Without this filter every run halts on the workflow's own output.
- *
- * The exclusion set is built from the run's own known-good variables, never from
- * a hardcoded glob — a glob would also silence a genuine unrelated AC or test
- * edit, which is exactly the third-party change this guard exists to catch.
- *
- * Paths are normalised before matching (separator, leading "./", and
- * worktree-absolute vs repo-relative) because the agent reports paths as
- * `git status --porcelain` prints them, not as this script constructed them. */
+// Scope expansion check (BP-600e-1, narrowed by BP-600e-1-ii)
+//
+// By the time this phase runs, ac_path, parent_ac_path and testFile are ALWAYS
+// already dirty — the workflow itself wrote them in earlier phases. A fix agent
+// that reports everything from `git status --porcelain` (as instructed above)
+// will therefore always see these three paths, even when it touched nothing but
+// target_file. Without this filter every run halts on the workflow's own output.
+//
+// The exclusion set is built from the run's own known-good variables, never from
+// a hardcoded glob — a glob would also silence a genuine unrelated AC or test
+// edit, which is exactly the third-party change this guard exists to catch.
+//
+// Paths are normalised before matching (separator, leading "./", and
+// worktree-absolute vs repo-relative) because the agent reports paths as
+// `git status --porcelain` prints them, not as this script constructed them.
 function normalizeArtifactPath(rawPath, root) {
   if (!rawPath) return ''
   let normalized = String(rawPath).replace(/\\/g, '/')

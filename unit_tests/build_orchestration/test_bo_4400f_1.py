@@ -23,6 +23,8 @@ import pytest
 from . import _bo4400f1_routes as routes
 from ._bo4400f1_helpers import make_sandbox, read_label, snapshot
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 def _deployed_scripts(layout) -> Path:
     """The deployed scripts dir; the module's presence is asserted on first use
@@ -120,6 +122,37 @@ def test_route_workflow_obtains_its_scratch_item_and_exports_temp_vars(
     bare = routes.run_route(workflow, None, sandbox.project)
     assert [c.label for c in bare.agent_calls] == labels
     assert routes.NOTE_MARKER not in " ".join(routes.prompt_of(c) for c in bare.agent_calls)
+
+
+@pytest.mark.shared_layout_reader
+def test_test_output_dir_defaults_to_the_scratch_home(sandbox):
+    # covers: BO-4400f-1
+    # angle: seam
+    # must_catch: test output still defaults into the system temp folder
+    module = sandbox.scripts_dir / "scratch.py"
+    config = sandbox.project / ".claude" / "skills_config.json"
+    config.parent.mkdir()
+    root = Path(sandbox.call("locations", {})["root"])
+    shipped = json.loads((REPO_ROOT / "config" / "skills_config.default.json").read_text(encoding="utf-8"))
+    # An explicit setting is honoured as given (expanded against the redirected HOME).
+    custom = sandbox.home / "custom-test-output"
+    cases = [(shipped["test_output_dir"], None), ("%TEMP%/leafcutter-tests/", None),
+             ("/tmp/myproject-tests/", None), ("~/custom-test-output", custom)]
+    for value, expected in cases:
+        config.write_text(json.dumps({"test_output_dir": value}), encoding="utf-8")
+        before = snapshot(sandbox.temp_standin, sandbox.project)
+        done = subprocess.run(  # noqa: S603
+            [sys.executable, str(module), "test-output-dir"], cwd=sandbox.project, env=sandbox.env,
+            capture_output=True, text=True, timeout=60, check=False,
+        )
+        assert done.returncode == 0, done.stderr[-1500:]
+        path = Path(json.loads(done.stdout.strip().splitlines()[-1])["path"])
+        if expected is None:
+            assert root in path.parents and path.is_dir(), (value, path)
+            assert read_label(str(path))["route"] == "tests", value
+        else:
+            assert path == expected, (value, path)
+        assert snapshot(sandbox.temp_standin, sandbox.project) == before, value
 
 
 @pytest.mark.shared_layout_reader
