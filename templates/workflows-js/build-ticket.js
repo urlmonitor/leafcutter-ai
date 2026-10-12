@@ -245,6 +245,9 @@ const COMPLETION_WRITE_SCHEMA = {
 const MAX_RETRIES = 2;
 const MAX_HANDOFFS_PER_PAIR = 1;
 const MAX_HANDOFFS_PER_TICKET = 3;
+/* BO-3800d: engagements of the restructuring specialist per delivery. Its own constant, never MAX_RETRIES (a restructure that fell short is not transient). */
+const MAX_SPECIALIST_ENGAGEMENTS = 1;
+const describeDemand = (demand) => (Array.isArray(demand) ? demand : []).map((e) => e.function !== undefined ? `${e.function} in ${e.path} has complexity ${e.score} (ceiling ${e.ceiling})` : `${e.path} must lose ${e.lines_to_remove} line(s)`).join("; ");
 
 /**
  * Put `name` at the head of the pending list, removing any pending copy
@@ -1313,12 +1316,10 @@ function buildTicketOutcome(spec) {
  */
 async function concludeTicket(spec) {
   const record = spec.record;
-
   const requiredPhases = requiredPhasesForCompletion(
     demandedPhasesFromRecord(spec.demandedRecord),
     spec.deferredPhases
   );
-
   const verdict = completionVerdictFromRecord(record, {
     requiredPhases,
     unverifiedReasons: spec.unverifiedReasons || {},
@@ -1328,7 +1329,6 @@ async function concludeTicket(spec) {
 
   let writeApplied = false;
   let writeError = null;
-
   if (verdict.completed) {
     const writeResult = await writeTicketCompletion(spec.recordPath, requiredPhases);
     if (writeResult && writeResult.status === "ok") {
@@ -1339,7 +1339,6 @@ async function concludeTicket(spec) {
         "the completion write returned no usable result";
     }
   }
-
   return buildTicketOutcome({
     recordPath: spec.recordPath,
     title: spec.title,
@@ -1359,11 +1358,8 @@ async function concludeTicket(spec) {
 // the caller already resolved the worktree context — skip the ambient CWD check.
 // This fixes the false-halt that occurred when build-ticket was invoked from
 // the session root (where CWD is the main clone, not the worktree).
-
 phase('Worktree Guard')
-
 const ticketPath = (args && (args.ticket_path || args.userInput || '').trim()) || '';
-
 if (!ticketPath) {
   return {
     status: "error",
@@ -1371,7 +1367,6 @@ if (!ticketPath) {
       "No ticket_path provided. Pass args: { ticket_path: '<path>' }",
   };
 }
-
 // If the caller already provided worktree_path in args, trust it — no ambient check.
 const callerWorktreePath = (args && args.worktree_path) || null;
 
@@ -1392,9 +1387,7 @@ const resolvedTarget = {
   ticket_path: ticketPath,
   worktree_path: null,
 };
-
 let gitInfo = null;
-
 if (callerWorktreePath) {
   resolvedTarget.worktree_path = callerWorktreePath;
 } else {
@@ -1414,9 +1407,7 @@ if (callerWorktreePath) {
     "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<absolute path, omit if unknown>\" }",
     { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
   );
-
   gitInfo = worktreeCheck;
-
   if (gitInfo && (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master")) {
     return {
       status: "error",
@@ -1433,7 +1424,6 @@ if (callerWorktreePath) {
       action_required: "create_worktree",
     };
   }
-
   if (gitInfo && gitInfo.git_type === "file") {
     resolvedTarget.worktree_path = gitInfo.worktree_path || null;
   }
@@ -1468,14 +1458,11 @@ if (!resolvedTarget.worktree_path) {
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read ticket frontmatter → ordered_phases JSON
 // -------------------------------------------------------------------------
-
 phase('Planner')
-
 const plannerResult = await agent(
   `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
-
 // BO-1900a-4-ii — an unusable plan reply holds the ticket back. It is never
 // reduced to a blank record and then to a blank list, which is what turned a
 // dead planner into a `status: done` write.
@@ -1483,7 +1470,6 @@ const planReason = unusablePlanReason(plannerResult);
 if (planReason) {
   return buildPlanHoldback(ticketPath, planReason, resolvedTarget);
 }
-
 const plan = plannerResult;
 const orderedPhases = plan.ordered_phases;
 const filesTouched = plan.files_touched || [];
@@ -1505,7 +1491,6 @@ const existingTestFiles = Array.isArray(plan.existing_test_files)
   : []
 let hasTestRequirements =
   plan.has_test_requirements === true || existingTestFiles.length > 0;
-
 // TQ-500f-3-ii: source_ac id(s); empty skips the red-baseline gate. TWIN of build-feature.js.
 const sourceAcIds = Array.isArray(plan.source_ac)
   ? plan.source_ac.filter((x) => typeof x === 'string' && x.trim())
@@ -1514,7 +1499,6 @@ const sourceAcIds = Array.isArray(plan.source_ac)
     : [];
 let redBaselineGateOutcome = null; // carried into the final payload below
 let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
-
 // Agents that produce production code — must NOT run without Test Requirements.
 const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 
@@ -1651,6 +1635,7 @@ const plannedPhaseNames = new Set(neededPhases.map((p) => p.agent));
 const attemptedPhases = new Set();
 const handoffChain = []; // BO-3000a: "from->to" steps, pushed before the cap check
 const handoffFrom = {}; // target -> {from, message, seen}; kept until the target completes verified
+const restructureLog = []; // BO-3800d: {target, demand} per accepted specialist engagement; the count is read from here
 
 while (pendingPhases.length > 0) {
   const currentPhase = pendingPhases.shift();
@@ -1958,6 +1943,10 @@ while (pendingPhases.length > 0) {
               ? `names '${normalizedTarget}', which is deferred for this drive (pull-request is opened once per epic)`
               : "";
       if (unfit) return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-ticket.`);
+      /* BO-3800d: bound reached and the standard still refuses on the same terms: stop and account for it; never deliver, relax or roll back. */
+      const prior = restructureLog.filter((r) => r.target === normalizedTarget);
+      if (brief && prior.length >= MAX_SPECIALIST_ENGAGEMENTS) return refuse(`Restructuring handoff stopped at its bound: '${normalizedTarget}' was engaged ${prior.length} time(s) (bound ${MAX_SPECIALIST_ENGAGEMENTS}) after '${phaseName}' was refused by '${remedy.hook_id}'. Asked: ${describeDemand(prior[0].demand)}. The refusal stands on the same terms; the file now stands at: ${describeDemand(brief.demand)}. Whatever the specialist changed remains in place and has not been undone. The change was not delivered: nothing was delivered, and the standard was not relaxed.`, "restructuring_unmet", { specialist_engagements: prior.length });
+      if (brief) restructureLog.push({ target: normalizedTarget, demand: brief.demand });
       /* Caps: one chain array, pushed BEFORE the check so the refused step is named too. */
       const step = `${phaseName}->${normalizedTarget}`;
       handoffChain.push(step);
@@ -1982,6 +1971,10 @@ while (pendingPhases.length > 0) {
       break;
     }
 
+    if ((resultStatus === "blocker" || resultStatus === "failed") && from && from.brief) {
+      /* BO-3800d: the specialist itself failed: a machinery ending, told apart from a file that fell short. */
+      return refuse(`Restructuring specialist '${phaseName}' could not be engaged to a result for the refusal of '${from.from}' (it returned status '${resultStatus}'). This is a failure of the machinery, not evidence about the file, so the file's standing is unknown. The change was not delivered: nothing was delivered.`, "restructuring_unavailable");
+    }
     if (resultStatus === "blocker" || resultStatus === "failed") {
       const classifyResult = await agent(
         `Classify this blocker for ticket ${ticketPath}, failing phase ${phaseName}. Retry count: ${retryCounts[phaseName]}/${MAX_RETRIES}. Blocker detail: ${JSON.stringify(phaseResult)}. Return classification as one of: mechanical | cross_agent | design | halt.`,
