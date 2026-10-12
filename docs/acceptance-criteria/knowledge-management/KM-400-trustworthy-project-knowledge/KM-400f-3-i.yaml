@@ -1,0 +1,181 @@
+id: KM-400f-3-i
+title: "A published limit is reported as a published limit, never as the usage at which writes will be accepted"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: high
+work_status: todo
+parent: KM-400f-3
+criteria: |
+  Given the backend's published limits are 200,000 nodes and 400,000 relationships
+  And this backend is recorded as having refused all changes twice while under those published limits, at 169,568 nodes with 251,326 relationships and at 189,950 nodes with 304,498 relationships
+  And measured current usage is 150,000 nodes and 280,000 relationships
+  And the prepared snapshot contains 9,850 nodes and 26,100 relationships
+  When publication is requested
+  Then the headroom result names the figures the measured usage was compared against and states that those figures are the backend's published limits
+  And the headroom result states that the usage at which this backend actually begins refusing changes is not determined
+  And it gives the two recorded refusals below the published limits as the reason it is not determined, naming the usage measured at each
+  And a measured usage under the published limits is reported as being under the published limits, and is not reported as a determination that this publication will be accepted
+
+  Given the same published limits and the same measured usage
+  And no refusal by this backend is recorded
+  When publication is requested
+  Then the headroom result states that no refusal by this backend is recorded
+  And it still states that the usage at which this backend would begin refusing changes is not determined
+  And the absence of a recorded refusal is not reported as evidence that the published limits are the usage at which changes stop being accepted
+
+  Given the backend refuses the request that reports its published limits, and no refusal by this backend is recorded
+  When publication is requested
+  Then the headroom result names the measured usage and reports both the published limits and the refusal threshold as unknown
+  And no part of the result is reported as a satisfied headroom check
+depends_on: [KM-400f-3, KM-400f-1-vi]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-3.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Measures usage against a reported ceiling and refuses an unsafe
+      publication; this record fixes what that ceiling may be claimed to mean.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that a reported figure states its method
+      and that an undeterminable value is reported as unknown, never resolved to one that
+      reads as a fit.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the distinction between a refusal and an empty result; an
+      undeterminable threshold is a stated unknown, not a silent pass.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The published-limit basis and the recorded refusal figures must be
+      documented as operator-visible, since they are what an operator plans headroom against.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: A headroom verdict that carries the basis of its ceiling figure and any
+    recorded refusal usages, which KM-400f-4's operator surface reports rather than
+    presenting the published limit as the real one.
+expects_from:
+  ac_id: KM-400f-3
+  contract: The measured usage, the reported ceiling and the headroom verdict this record
+    constrains the reporting of; the refusal and warning thresholds are unchanged.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12. KM-400f-3 measures usage against the ceiling the backend reports and
+  refuses when the snapshot will not fit. The figures in its own first scenario — 189,950 of
+  200,000 nodes, 94.98 percent — were chosen because at that usage the refusal is clearly
+  correct. The measurement that motivates this record is that both real latches happened
+  BELOW those published limits, so a headroom check written against them would have reported
+  a fit on both occasions.
+
+  Measured, both instances:
+
+  - instance destroyed 2026-10-08: latched read-only at 169,568 nodes and 251,326
+    relationships, against published limits of 200,000 and 400,000 — 84.8 percent of the
+    node limit and 62.8 percent of the relationship limit;
+  - instance destroyed 2026-10-12: latched read-only at 189,950 nodes and 304,498
+    relationships against the same published limits — 94.98 percent and 76.1 percent.
+
+  Neither was at its published limit. The second is inside KM-400f-3's own refusal
+  threshold of 90 percent and would have been refused; the FIRST is under both the 90
+  percent refusal threshold and, on relationships, under the 75 percent warning threshold,
+  so KM-400f-3 as specified would have let it publish with no warning at all. The real
+  ceiling is therefore not derivable from the published limits, and a percentage of a
+  published limit is not a safety property.
+
+  This record does not invent a different ceiling, because none has been measured — two
+  observations are not a threshold. It requires the report to say which figure it used, to
+  state that the refusal point is undetermined, and to give the recorded observations as the
+  reason. An operator who is told "150,000 of a published 200,000, and this backend has
+  twice refused at 169,568" can act; one who is told "75 percent, within limits" cannot.
+
+  Deliberately not specified here: refusing at a figure derived from the recorded
+  observations. That would be a new threshold with two data points behind it, and the
+  honest form today is a stated unknown rather than a guess dressed as a bound.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_headroom_result_names_its_basis_and_states_the_refusal_point_is_undetermined
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With published limits of 200,000 nodes and 400,000 relationships, two
+      recorded refusals below them at the measured incident figures, and usage of 150,000
+      nodes and 280,000 relationships, assert the result names the published limits as its
+      basis, states the refusal point is undetermined, names both recorded refusal usages,
+      and does not present the comparison as a determination that publication will be
+      accepted.
+    covers: [KM-400f-3-i]
+    must_catch:
+      - "report a percentage of the published limit as a headroom verdict with no statement of basis"
+      - "report that the snapshot fits, which is the claim both latches falsified"
+      - "name the published limits but omit the recorded refusals below them"
+    requires_db: false
+  - name: test_no_recorded_refusal_is_not_evidence_the_published_limit_is_the_real_one
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With the same published limits and usage but no recorded refusal, assert the
+      result says no refusal is recorded and still states the refusal point is undetermined,
+      rather than treating the absence of an observation as confirmation of the published
+      limit.
+    covers: [KM-400f-3-i]
+    must_catch:
+      - "treat an empty refusal history as a determination that the published limit is the refusal point"
+      - "omit the refusal-point statement entirely when there is no observation to cite"
+    requires_db: false
+  - name: test_unreported_published_limit_and_no_history_is_two_unknowns_not_a_pass
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With a backend that refuses to report its published limits and no recorded
+      refusal, assert the result names the measured usage, reports both the published limits
+      and the refusal point as unknown, and is not counted as a satisfied headroom check.
+    covers: [KM-400f-3-i]
+    must_catch:
+      - "count a result with no ceiling at all as a satisfied headroom check"
+      - "substitute a built-in published limit and report a basis the backend never gave"
+    requires_db: false
+  - name: test_live_headroom_report_states_its_basis_against_a_real_backend
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database, assert the headroom result's measured usage equals
+      the backend's own counts and that the reported basis names the backend's published
+      limits as published limits, with the refusal point stated as undetermined.
+    covers: [KM-400f-3-i]
+    requires_db: true
+test_rationale: >-
+  KM-400f-3's existing tests use the second instance's figures, at which a published-limit
+  comparison happens to give the right answer, so they cannot distinguish a report that knows
+  its ceiling is a published limit from one that treats it as the refusal point. Both tests
+  here are driven at usages BELOW the published limits — including the first instance's
+  169,568 nodes and 251,326 relationships, which KM-400f-3 as specified would have let
+  publish without even a warning — because a fixture pinned at 94.98 percent reproduces the
+  one case where the wrong basis looks correct, which is the same fixture bias that aimed the
+  retention evaluator at an empty population. The assertions are on what the report SAYS
+  about its own basis rather than on the verdict, since the verdict is identical under the
+  correct and the incorrect implementation at these usages and the basis statement is the
+  only observable difference. The two-unknowns test is separate because its wrong version is
+  a substituted built-in limit, which produces a confident report citing a figure the backend
+  never supplied.

@@ -88,8 +88,24 @@ amended_by:
     KM-400e-4 is retained deliberately: the outage-versus-empty-result distinction is
     still inherited from KM-400e even though this AC no longer sits under it. readiness
     moved to approved and priority to high at the user's approval gate."
+  - "2026-10-12: business-analyst added one L3 child, KM-400f-3-i, recorded in covered_by.
+    This AC's criteria, test_spec, test_rationale, must_catch, readiness, priority and
+    work_status are UNCHANGED; only covered_by and this note were touched. The child exists
+    because BOTH measured latches occurred while UNDER the published limits this AC's
+    thresholds are percentages of — 169,568 nodes with 251,326 relationships on the
+    instance destroyed 2026-10-08, and 189,950 with 304,498 on the instance destroyed
+    2026-10-12, both against published limits of 200,000 and 400,000. The second is inside
+    this AC's 90 percent refusal threshold and would have been refused; the FIRST is under
+    the 90 percent refusal threshold and, on relationships, under the 75 percent warning
+    threshold, so this AC as specified would have let that publication proceed with no
+    warning at all. The real refusal point is therefore not derivable from the published
+    limits. KM-400f-3-i does NOT introduce a different threshold — two observations are not
+    a bound — it requires the headroom report to name the published limits as published
+    limits, to state that the usage at which the backend begins refusing is undetermined,
+    and to give the recorded refusals as the reason."
 superseded_by: null
-covered_by: []
+covered_by:
+  - KM-400f-3-i
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

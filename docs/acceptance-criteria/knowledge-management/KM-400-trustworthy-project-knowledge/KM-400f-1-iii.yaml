@@ -1,0 +1,160 @@
+id: KM-400f-1-iii
+title: "The active generation is never reclaimable, whatever its publication outcome"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: high
+work_status: todo
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the active pointer references generation G12
+  And G12 records a publication that did not complete, because publication was interrupted part way through
+  And G12 was created 40 hours ago and carries no retirement time
+  When the retention policy is evaluated
+  Then G12 is reported not reclaimable because it is the generation the active pointer references
+  And that verdict holds whether or not G12's publication completed
+  And the evaluation reports that the active pointer references a generation whose publication did not complete
+
+  Given the active pointer references generation G12 whose publication completed
+  And generation G11 records a failed publication, was created 40 hours ago and sits outside the declared count bound
+  When the retention policy is evaluated
+  Then G12 is reported not reclaimable because it is the generation the active pointer references
+  And G11 is reported reclaimable
+  And the reason given for G12 names the active pointer, not its publication outcome
+
+  Given the active pointer references no generation
+  When the retention policy is evaluated
+  Then the evaluation reports that no active generation could be identified
+  And it does not treat the most recently created generation as active in place of the absent pointer
+  And no generation is reported reclaimable while the active generation is unidentified
+depends_on: [KM-400f-1, KM-400f-1-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. States that the active generation is not reclaimable; this record
+      makes that protection independent of the generation's publication outcome.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-2.yaml
+    relationship: context
+    status: exists
+    relevance: Reclamation at publication consumes this verdict; the active generation it
+      protects may be one whose publication did not complete.
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Describes the active pointer and the publication sequence in which the
+      pointer can come to reference an incompletely published generation.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: The active-generation protection as a verdict independent of publication
+    outcome, which KM-400f-2's reclamation and KM-400f-4's sweep both honour.
+expects_from:
+  ac_id: KM-400f-1-i
+  contract: The full generation population, which includes the generation the active
+    pointer references even when that generation's publication did not complete.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12 against a measured hazard, not a theoretical one. On the live hosted
+  store on 2026-10-12 the active pointer referenced a generation whose publication had NOT
+  completed, because the read-only latch caught that publication mid-flight. So in practice
+  "is the active generation" and "its publication completed" are independent properties,
+  and any criterion that assumes they coincide is wrong on the only instance anyone has
+  measured.
+
+  This matters in both directions and that is why it is its own record. Widening the
+  retention evaluation to generations whose publication failed (KM-400f-1-i) makes the
+  active generation a member of the newly admitted set — so the widening, taken alone,
+  would make the live store's active generation reclaimable. An implementer who derives the
+  active-generation protection from the publication outcome rather than from the pointer
+  gets a policy that reclaims the generation currently being served.
+
+  The third scenario is deliberately conservative. An absent active pointer means the
+  evaluation cannot tell which generation is being served, and guessing — most recently
+  created, highest identifier — is the shape of mistake that reclaims the live one.
+  Reporting that the active generation is unidentified and reclaiming nothing keeps the
+  operator able to act, which is the posture KM-400e already requires for an outage.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_active_generation_with_an_incomplete_publication_is_not_reclaimable
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Point the active pointer at a 40-hour-old generation whose publication did
+      not complete and which carries no retirement time, evaluate the policy, and assert it
+      is reported not reclaimable with the active pointer named as the reason, and that the
+      incomplete publication is itself reported.
+    covers: [KM-400f-1-iii]
+    must_catch:
+      - "derive the active-generation protection from the publication outcome, so an incompletely published active generation is reclaimed"
+      - "report the generation as not reclaimable but give its age or its publication outcome as the reason instead of the active pointer"
+    requires_db: false
+  - name: test_active_pointer_outranks_publication_outcome_in_both_directions
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: With a completed-publication active generation and a failed-publication
+      generation outside the bound, assert the active one is retained with the pointer as its
+      reason and the out-of-bound one is reclaimed — then repeat with the active generation's
+      publication outcome flipped and assert the verdicts do not change.
+    covers: [KM-400f-1-iii]
+    must_catch:
+      - "retain every generation whose publication did not complete, so nothing is ever reclaimed"
+      - "reclaim every generation whose publication did not complete, including the active one"
+    requires_db: false
+  - name: test_absent_active_pointer_reclaims_nothing_and_says_so
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With no active pointer present, assert the evaluation reports that no active
+      generation could be identified and reports nothing reclaimable, rather than inferring
+      the active generation from creation order.
+    covers: [KM-400f-1-iii]
+    must_catch:
+      - "infer the active generation as the most recently created one and reclaim the rest"
+      - "treat an absent active pointer as there being no active generation to protect, so every generation is reclaimable"
+    requires_db: false
+  - name: test_live_active_pointer_is_honoured_against_a_real_backend
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database whose active pointer references a generation that
+      records an incomplete publication, assert the evaluation reports that generation not
+      reclaimable and that the active pointer is unchanged after evaluation.
+    covers: [KM-400f-1-iii]
+    requires_db: true
+test_rationale: >-
+  KM-400f-1's existing fixture gives the active generation a completed publication along with
+  every other generation, so under it a policy that protects the active generation BY its
+  publication outcome is indistinguishable from one that protects it by the pointer — that
+  fixture bias is why the active-versus-complete independence was never tested. Every fixture
+  here reproduces the REAL observed shape instead: an active pointer referencing a generation
+  whose publication did NOT complete, which is the live store's actual state on 2026-10-12,
+  because a fixture pairing active with completed rebuilds the blind spot. The second test
+  flips the active generation's publication outcome and asserts the verdicts do NOT move,
+  which is the only form that catches a protection keyed on the wrong property; its two
+  must_catch entries name the two opposite collapses (retain everything incomplete, reclaim
+  everything incomplete) because each produces a self-consistent report and a test asserting
+  one verdict would pass under the other. The absent-pointer test is separate because its
+  wrong version is an inference that looks correct on an ordered fixture and reclaims the
+  live generation on a real store.
