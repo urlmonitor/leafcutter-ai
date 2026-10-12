@@ -1156,24 +1156,31 @@ async function checkProductTruthStorePresent(ptStorePath, authoringWorktreePath)
  *
  * The workflow cannot append to a log file directly (everything is an agent
  * dispatch), so store-absent / skip events are recorded by dispatching a
- * status-checker to append one JSON line to debugging/logs/agent_telemetry.jsonl.
+ * status-checker to append one JSON line to the DECLARED operational telemetry
+ * stream. The stream is never composed here (AC INF-500d-4-iv): the dispatched
+ * command asks the deployed `sink_resolution.py --print-location telemetry`
+ * (INF-500d-4-iii) for it, repository-anchored through
+ * _buildRepoRootResolutionSnippet(), so the line lands in the enduring log
+ * root and not in the authoring worktree that is deleted afterwards.
  * Best-effort: never throws, never blocks the pipeline. This is the "never
  * silent" guarantee for the store-absent self-skip.
  *
  * @param {string}      event                 - Short event key (e.g. "pt_phase_skipped_store_absent").
  * @param {object}      detail                - JSON-serialisable detail payload.
- * @param {string|null} authoringWorktreePath - Absolute path to the authoring worktree.
+ * @param {string|null} authoringWorktreePath - Unused: the stream is declared, never derived from the worktree.
  * @returns {Promise<void>}
  */
 async function emitPtTelemetry(event, detail, authoringWorktreePath) {
   log(`[plan-feature][PT] ${event}: ${JSON.stringify(detail)}`);
-  const root = authoringWorktreePath ? authoringWorktreePath.replace(/\/$/, "") + "/" : "";
-  const logPath = root + "debugging/logs/agent_telemetry.jsonl";
   const line = JSON.stringify({ source: "plan-feature", phase: "product-truth", event, detail });
+  const target = ".leafcutter/scripts/knowledge/sink_resolution.py";
+  const cmd = _buildRepoRootResolutionSnippet(target) + "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
+    "STREAM=$(python \"$SCRIPT\" --print-location telemetry) || exit 1; " +
+    "printf '%s\\n' " + JSON.stringify(line) + " >> \"$STREAM\"";
   try {
     await agent(
-      `Append exactly one line to a telemetry log (create the directory if needed).\n` +
-      `Run: mkdir -p "${root}debugging/logs" && printf '%s\\n' ${JSON.stringify(line)} >> "${logPath}"\n` +
+      `Append exactly one line to the declared operational telemetry stream. Its path comes from the ` +
+      `location query sink_resolution.py --print-location telemetry; never compose a path yourself.\nRun: ${cmd}\n` +
       `This is an observability signal for the /plan-feature product-truth phase — event: ${event}.\n` +
       `Return JSON: { "exit_code": <number> }`,
       { agentType: "status-checker", label: "pt-telemetry" }
@@ -2128,16 +2135,6 @@ function buildRepoAnchoredResolutionCommand(relPath) {
     "echo \"$SCRIPT\""
   );
 }
-
-// buildRepoAnchoredReadCommand(), _parseRegistryUnreadableDiagnostic(),
-// _describeRegistryInterpretationFailure(), and
-// _resolveWorkspaceSetupAgentEntryState() used to live here, supporting the
-// Pre-Stage-0 workspace-setup permission dispatch above. ACD-2100b-5 removed
-// that dispatch (the registry read now happens locally, in
-// scripts/worktree/check_workspace_setup_permission.py, invoked by the
-// plan-feature skill before this workflow runs — see that section's own
-// comment) and these four helpers had no other caller, so they were removed
-// with it rather than left as dead code.
 
 /**
  * Build the single-line POSIX-sh command that resolves BOTH the
