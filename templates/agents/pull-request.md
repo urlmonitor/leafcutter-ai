@@ -304,8 +304,14 @@ file.
    manually or wait and re-run /pull-request." Stop; do not call
    `gh pr merge`.
 
-5. **On `MERGEABLE` + `CLEAN` (or any non-UNKNOWN, non-CONFLICTING state)**:
+5. **On `MERGEABLE` + `CLEAN` (or any non-UNKNOWN, non-CONFLICTING state other than `BLOCKED`/`UNSTABLE`, see item 6)**:
    proceed to `gh pr merge` as normal.
+
+6. **On `BLOCKED` / `UNSTABLE`**: do not call `gh pr merge`. List the failing
+   checks (`gh pr checks <number> --json name,state,link,description`). If one is
+   `Post-merge suite status`, handle it per `building-epics` §3.6 (external
+   hold: report, do not edit/re-run/commit); handle any other failing check as
+   a normal failure and report it to the user.
 
 ## Conflict Detection and Resolver Delegation
 
