@@ -33,7 +33,7 @@ python scripts/feedback/aggregate.py --unresolved --format json
 If the command exits non-zero, surface stderr verbatim and abort:
 
 ```
-aggregate.py failed — check feedback.jsonl path and try again.
+aggregate.py failed — check the sink path it stated on stderr and try again.
 <stderr output>
 ```
 

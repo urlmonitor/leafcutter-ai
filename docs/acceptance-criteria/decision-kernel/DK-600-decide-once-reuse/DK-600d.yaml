@@ -6,7 +6,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: in_progress
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_kernel_1_founding

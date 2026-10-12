@@ -1506,6 +1506,46 @@
           "reason": "This is the census/liveness runner itself: it examines OTHER hooks' declared negative_control.command, it has no known-bad staged-file input of its own to reject the way a judging gate does. Its own falsifiability is covered by unit_tests/portability/test_ge_120f_1.py's alter-and-revert, pairing, seam, deployed, and reachability descriptors (GE-120f-1), not by a self-referential negative_control entry. Declaring negative_control on the other hooks_manifest entries is deliberately deferred to GE-120f-1-i/-ii (out of scope here) per this AC's own 'day-one blast radius is the correct outcome' guidance: most checks read never-attempted until a declaration is added for them."
         },
         "_comment": "GE-120f-1/EPIC-AGuardThatHasNeverSaidNoIsNotCountedAs/01: registers the negative-control liveness sweep so it actually gates a commit (KI-CG-021 — a runner nothing calls is inert). Reads hooks_manifest.hooks from THIS SAME manifest at run time, actually runs each EXAMINED hook's declared negative_control.command as a real subprocess, and writes the observed `currently` block back into this file in place — see check_negative_control_liveness.py's own module docstring. always_run: true because this hook reads the whole manifest's declared population, never the staged-file list (pass_filenames: false), mirroring check-build-drift's own rationale above in this manifest."
+      },
+      {
+        "id": "check-lint-gate",
+        "tier": "judgment",
+        "name": "Check Lint Gate (BP-1300e-1 — CI lint parity)",
+        "entry": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py",
+        "language": "system",
+        "stages": [
+          "pre-commit"
+        ],
+        "pass_filenames": false,
+        "change_set_source": "handed_by_commit_path",
+        "always_run": true,
+        "verbose": true,
+        "script": "check_lint_gate.py",
+        "description": "Refuses a commit carrying a violation that CI's required lint check would reject, judged on the staged bytes by the rules and over the trees declared in leafcutter-lint.json; a linter that is missing, cannot start, differs in version from CI's, or a configuration it cannot read refuses the commit instead of passing it.",
+        "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py --probe known-clean",
+        "pass_criteria": "exit 0 and RESULT: ok -- a staged file with no violation is accepted",
+        "negative_control": {
+          "input": "a throwaway one-file project whose staged probe.py holds `l = 1` (E741), a violation CI's required lint check would reject, staged and judged by this same script as a separate process (--probe known-bad)",
+          "command": "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
+          "expected_result": "non-zero exit with `RESULT: refused` naming probe.py:1 and E741",
+          "currently": {
+            "state": "passing",
+            "observed": "2026-10-12",
+            "evidence": [
+              {
+                "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-bad",
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nprobe.py:1:1: E741 Ambiguous variable name: `l` [step: repository-rules]\nlint gate: 1 finding(s) in 1 file(s) that CI's required lint check would also reject; the commit is refused.\nRESULT: refused\n",
+                "exit_code": 1
+              },
+              {
+                "command": "python .leafcutter/scripts/commit_guardian/run_hook.py .leafcutter/scripts/commit_guardian/check_lint_gate.py --probe known-clean",
+                "output": "lint gate: linter version used: ruff 0.15.15; no exact linter version is declared for the project (requirements-dev.txt does not exist), so no version check was applied\nlint gate: inspected 1 staged files, found no violation CI would reject.\n  probe.py\nRESULT: ok\n",
+                "exit_code": 0
+              }
+            ]
+          }
+        },
+        "_comment": "BP-1300e-1: the commit-time counterpart of CI's required 'Lint (ruff)' check. always_run with no files key because the script derives its own staged set from the INDEX (`git diff --cached`) and decides scope from leafcutter-lint.json, not from a regex over filenames. NO tree name and NO rule code lives here or in the script: scope and rule sets are the project's own, declared in leafcutter-lint.json (BP-1300e-1-i). Every could-not-check cause (ruff absent, cannot start, unreadable configuration or declaration, a version that differs from CI's, no repository, an internal defect) BLOCKS rather than fails open, because pre-commit prints Passed beside any hook that exits 0 (BP-1300e-1-iii). Appended after every tier: transform entry. verbose: true so the files-inspected line and RESULT line are visible on a passing commit."
       }
     ]
   },
@@ -1652,6 +1692,10 @@
       "check_*.py",
       "run_hook.py",
       "regenerate_*.py"
+    ],
+    "_platform_agents_comment": "GE-132a-2: the closed list of agents the platform provides, which have no entry in config/agent_registry.json. A remedy declaration may name one of these without a registry entry. Widening it is a reviewed edit to this data, never a code change.",
+    "platform_agents": [
+      "general-purpose"
     ],
     "_undeclared_remedy_baseline_comment": "GE-132a-1: ids of pre-commit judgment gates that had no remedy declaration (a rules[] entry with a disposition in templates/scripts/precommit-autofix.json) when the rule landed. It may lose entries and never gain one: check_hook_parity.py compares it with the list in HEAD and every MERGE_HEAD parent. Seeded from the same population the check derives from this manifest; re-measure, never hand-extend.",
     "undeclared_remedy_baseline": [

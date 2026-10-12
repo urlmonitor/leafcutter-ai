@@ -29,6 +29,14 @@ DOC_LINKS:
   - docs/reference/ac-schema.md
 
 DECISION HISTORY:
+  - 2026-10-12 [python-coder/BP-1300e-1]: Added OUTCOME_REFUSED. check_lint_gate.py
+    (the commit-time mirror of CI's required lint check) must tell "the linter ran
+    and found violations CI would reject" apart from "the linter could not run"
+    (OUTCOME_COULD_NOT_CHECK) and from a clean pass (OUTCOME_OK), and a consumer of
+    its --json payload (run_ci_local.py, BO-570-3's sign-off adapter) keys on that
+    distinction rather than on the exit code, because both non-clean outcomes exit
+    non-zero. Per BP-1300e-1-iii's it_requirements the value is added HERE, in the
+    one vocabulary module, rather than minted privately by the gate.
   - 2026-09-09 [python-coder/UXP-700c-3-ii]: Added OUTCOME_NOT_RUN and
     emit_not_run(). UXP-700c-3-ii requires that a checker which never got the
     chance to run at all — because its hook entry was disabled, skipped, or
@@ -86,6 +94,10 @@ OUTCOME_NOTHING_TO_INSPECT = "nothing_to_inspect"
 # but could not complete its own inspection). Emitted by the dispatch wrapper
 # on the checker's behalf via emit_not_run(), never by the checker itself.
 OUTCOME_NOT_RUN = "not_run"
+# BP-1300e-1: the check ran to completion and found violations that the required
+# CI check would also reject. Distinct from OUTCOME_COULD_NOT_CHECK, where no
+# verdict was reached at all. Emitted by check_lint_gate.py.
+OUTCOME_REFUSED = "refused"
 
 # UXP-700c-3-ii's own Gherkin names exactly these three reasons a checker
 # "does not execute" -- kept here, alongside the outcome constant, so

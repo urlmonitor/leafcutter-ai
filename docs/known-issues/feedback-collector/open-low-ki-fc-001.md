@@ -5,12 +5,15 @@ type: reference
 category: reference
 status: active
 created: '2026-08-25'
-last_updated: '2026-08-25'
+last_updated: '2026-10-12'
 components:
   - feedback_collector
 related_docs:
   - docs/known-issues/feedback-collector.md
   - docs/known-issues/README.md
+  - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+  - docs/architecture/feedback-lifecycle.md
+  - reports/feedback-snapshots/README.md
 ---
 
 # KI-FC-001 — The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora
@@ -21,7 +24,8 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** open — fix built on `epic/one-durable-log-root-for-every-workspace`
+  (INF-500d-4, ADR-069), not yet merged or verified. See the 2026-10-12 amendment below.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/feedback/submit_feedback.py` — `_find_project_root()` (`:65-77`),
@@ -144,5 +148,61 @@ correct-but-separate sinks instead of 14 wrong ones. Two further pieces are need
 **Not done here.** No sink was moved, merged, or deleted — 787 records are intact where they
 lie, and consolidating them is a data-migration decision, not a filing decision. The
 aggregate above is reproducible from the `find` command at the top of this section.
+
+---
+
+## 2026-10-12 — fix built under INF-500d-4; not closed yet
+
+**What the fix is.** The work follows the "one declared sink per install" direction above.
+It does not use the `git rev-parse` anchor proposed in the original fix direction.
+[ADR-069](../../architecture/adrs/ADR-069-durable-log-root-for-workspaces.md) records why
+git-based discovery was rejected. The commits are on the epic branch:
+
+| Commit | AC | Change |
+|---|---|---|
+| `01bf0610a` | INF-500d-4-iii | `config/knowledge_sink.json` gains `operational_log_root` and `feedback_sink`. `build.py --log-root` records the root. The worktree bootstrap passes the main install's recorded root, or warns and passes `--no-log-root`. `sink_resolution.py --print-location`. Parity check for the new keys. |
+| `3f356b815` | INF-500d-4-i | `submit_feedback.py` writes only to `feedback_sink`, or refuses with one `destination could not be written` line and exits 1. `_find_project_root` and `_JSONL_DEFAULT`, this entry's root cause, are removed. |
+| `81dbae3b2` | INF-500d-4-iv | `emit_event.py`, `inline_work_guard.py` and `plan-feature.js` write under the declared root. |
+| `abb24ba8f` | INF-500d-4-v | Readers default to the declared sink and print `read N records from <path>`. They name a differing populated pre-declaration sink once. |
+| `eede17c6c` | INF-500d-4-vi | Shipped prompts drop their `--jsonl` / `--log` overrides. The pre-drive probes are read-only. |
+| `6dc2df06c` | INF-500d-4-i, -v | One usable-stream rule: a stream counts only directly under an absolute `operational_log_root`. `--no-log-root` records an empty declaration, so writers refuse. `extract_epic_facts.py` reads the declared stream or exits 1. |
+| `2a222cb54` | INF-500d-4-iii | Stale means the enduring root holding `operational_log_root` is gone, so an inherited-root harvest is no longer refused as STALE. |
+| `59ed536f8` | INF-500d-4 review | A fresh install gets its first write. The Gemini copies resolve the install. `weekly_health.py` reads the declared stream. The bootstrap retries an older worktree build without the flag. Rewrites back the sink up first. |
+| `aaffaf70b` | INF-500d-4-iv | `inline_work_guard.py` creates its log directory under a live root and refuses a vanished project. |
+| `9ce8d8052` | INF-500d-4-vi | `knowledge-harvester.md` asks `--print-sink` for the sink instead of naming `debugging/logs`. |
+
+Both anchors in the root cause are gone. With no `--jsonl`, the sink is the declared one.
+Prompts no longer pass a working-directory-relative `--jsonl`. The symlink route described
+above now leads to the main install's declaration, which names the same enduring root.
+
+**Migration decision: none.** No sink is moved, merged or deleted. Reports written into
+per-drive worktrees before this change stay where they are. The one-off rescue is
+[`reports/feedback-snapshots/`](../../../reports/feedback-snapshots/README.md).
+
+**Why this entry stays open.** INF-500d-4-vii requires that this entry not be closed until
+INF-500d-4-iii through -vi are done, and never on the strength of a documentation record
+alone. As of this amendment their AC records are still `work_status: todo`, their tickets'
+`test-runner` and `commit` phases are still `needed`, and the branch is unmerged. Close the
+entry once those land: move it to `resolved/` and update the index.
+
+Update at finalize (2026-10-12): INF-500d-4-i and -iii through -vi are now
+`work_status: done` on the branch. All 175 covers-tagged INF-500d-4 / INF-400c-4 tests pass
+under `AC_ENFORCE_STRICT=1`. The entry still stays open until the epic PR is merged, because
+"land" means merged.
+
+**Still open after the epic:**
+
+- The BO-100d probe ACs still pin the relative `debugging/logs/agent_telemetry.jsonl`. See
+  [KI-BO-20261009](../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
+  Their owner has to change them.
+- The harvester's record identity collides. `harvest_learnings._event_hash` keys a record on
+  `(timestamp, agent, component, destination, entry_kind)` and leaves out `text`. The
+  2026-10-12 knowledge snapshot (PR #1152, `reports/knowledge-snapshots/README.md` on `main`)
+  found 16 distinct records sharing 3 hashes. Once one of them is marked processed, the others
+  look processed too. INF-500d-4 does not change the hash.
+
+Fixed on the branch since the first amendment, and no longer open:
+`extract_epic_facts.py` reads the declared stream or exits 1 (`6dc2df06c`), and
+`knowledge-harvester.md` no longer names `debugging/logs` (`9ce8d8052`).
 
 ---

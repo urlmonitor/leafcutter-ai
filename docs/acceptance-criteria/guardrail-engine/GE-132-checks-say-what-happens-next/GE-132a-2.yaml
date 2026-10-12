@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -119,14 +119,15 @@ it_requirements:
     skill complexity-reduction, with arm one's instruction.
     check-doc-links: author-clears, with "fix or remove the broken link". Its general-purpose
     autofix route is dropped deliberately, as arm one requires.
-    Every other rule for a registered check (18 once GE-132a-1 removes the stale one and
-    renames the other) keeps today's behaviour: mechanical-autofix, naming its current
-    subagent_type, plus a non-empty instruction that its description may seed. That covers
-    the other 10 general-purpose rules, glossary-triage and sql-coder. The structural coder
-    rules (check-exception-handling, check-file-size, check-ac-schema,
-    check-contract-shrinking) also take mechanical-autofix, because BO-210c's
-    originator re-dispatch stays their route. Moving check-file-size to engage-specialist is
-    BO-3800b-1's change, not this one.
+    Disposition table for every other rule (BrainCandy, 2026-10-12), each with a non-empty
+    instruction that its description may seed:
+    engage-specialist, keeping the existing agent: check-ac-schema (python-coder),
+    check-contract-shrinking (python-coder), check-exception-handling (python-coder),
+    check-file-size (python-coder), check-glossary-coverage (glossary-triage),
+    check-sql-complexity (sql-coder), check-ticket-ac-limits (python-coder).
+    author-clears, naming no agent and no skills: check-secrets and check-commit-scope (a
+    leaked credential or an out-of-scope commit stays an author decision).
+    mechanical-autofix, naming general-purpose: every remaining rule.
   - >-
     A registry that cannot be read refuses as could-not-check. It never passes, and is never
     reported as "agent does not exist". Each refusal names the hook id, the unresolved name,
@@ -177,7 +178,10 @@ test_rationale: >-
   per arm, all through a real commit. All four are red today.
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: "BrainCandy 2026-10-12: structural coder-routed checks keep engage-specialist; check-secrets and check-commit-scope stay author-clears with no agent"
+    date: '2026-10-12'
+    by: BrainCandy
 superseded_by: null
 covered_by: []
 implemented_by: []

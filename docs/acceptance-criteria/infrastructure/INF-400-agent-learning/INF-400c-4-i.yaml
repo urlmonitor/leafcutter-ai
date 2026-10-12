@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml"
@@ -96,9 +96,16 @@ amended_by:
 superseded_by: null
 covered_by:
 - unit_tests/portability/test_inf_400c_4_i.py
+- unit_tests/feedback/test_inf_500d_4_i_no_log_root_writers.py
+- unit_tests/feedback/test_inf_500d_4_iii_harvest_inherited_root.py
+- unit_tests/feedback/test_inf_500d_4_vi_harvester.py
 implemented_by:
 - scripts/ci/check_sink_parity.py
 - scripts/knowledge/harvest_learnings.py
+- scripts/knowledge/sink_resolution.py
+- scripts/build_log_root.py
+- templates/scripts/setup_ticket_worktree.py
+- scripts/setup_ticket_worktree.py
 - templates/skills/signoff/SKILL.md
 - templates/agents/product-owner.md
 - templates/agents/business-analyst.md

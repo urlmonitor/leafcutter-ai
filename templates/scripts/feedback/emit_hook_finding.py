@@ -8,8 +8,10 @@ BUSINESS CONTEXT: Each commit_guardian hook that surfaces a violation calls
       False — the calling hook's exit code and stdout output are never affected.
 ARCHITECTURE: Imports submit_feedback from the local package tree (relative to this
       file's location). Falls back to subprocess.run if the import fails (different
-      Python env). The feedback.jsonl path defaults to the project default via
-      submit_feedback._JSONL_DEFAULT. Category defaults to process-finding; callers
+      Python env). The feedback.jsonl path defaults to the install's declared
+      ``feedback_sink`` (build-time declaration, ADR-069); when that declaration is
+      unusable submit_feedback refuses with one stderr line and emit_finding returns
+      False. Category defaults to process-finding; callers
       may override with tooling-issue or quality-concern where semantically appropriate.
 DOC_LINKS:
   - docs/how-to/feedback-collection.md
@@ -58,10 +60,11 @@ def _import_submit_feedback():
         spec = importlib.util.spec_from_file_location("submit_feedback", _sf_path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return mod
     except Exception as exc:  # noqa: BLE001 — import fallback is intentional
         print(f"[emit_hook_finding] submit_feedback import failed (will use subprocess fallback): {exc}", file=sys.stderr)
         return None
+    else:
+        return mod
 
 
 # ---------------------------------------------------------------------------
@@ -159,9 +162,10 @@ def _call_submit_feedback(
     )
     try:
         exit_code = sf_mod.main(argv)
-        return exit_code == 0
     except SystemExit as exc:
         return exc.code == 0
+    else:
+        return exit_code == 0
 
 
 def _build_argv(

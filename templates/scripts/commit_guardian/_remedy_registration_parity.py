@@ -25,6 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import _remedy_declaration_validity
 import check_outcome
 from _remedy_declarations import RemedyInputError, declared_view, load_tables
 
@@ -280,6 +281,8 @@ def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]
                     f"for a check that is not registered in {canonical_manifest}.\n"
                     f"  Fix: remove the declaration or register the check."
                 )
+    # GE-132a-2: every declaration is valid (disposition, instruction, real agent and skills).
+    violations.extend(_remedy_declaration_validity.validate(declared, manifest, canonical_manifest, root))
     return violations
 
 

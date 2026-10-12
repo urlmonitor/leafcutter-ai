@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -132,9 +132,24 @@ amended_by:
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/feedback/test_inf_500d_4_v.py
+- unit_tests/feedback/test_inf_500d_4_v_extract_epic_facts_default.py
+- unit_tests/feedback/test_inf_500d_4_v_rewrite_safety.py
+- unit_tests/feedback/test_inf_500d_4_v_weekly_health_default.py
+- unit_tests/feedback/test_inf_500d_4_i_feedback_sink_rule.py
+- unit_tests/feedback/test_inf_500d_4_iv_gemini_copies.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/04_TICKET-20261009-INF-500d-4-v.md
+- templates/scripts/feedback/feedback_reader.py
+- templates/scripts/feedback/aggregate.py
+- templates/scripts/feedback/link_feedback.py
+- templates/scripts/feedback/list_tags.py
+- templates/scripts/feedback/resolve_feedback.py
+- templates/skills/feedback-analysis/scripts/trend_report.py
+- scripts/agent-health/generate_health_report.py
+- scripts/agent-health/weekly_health.py
+- scripts/retrospective/extract_epic_facts.py
 change_target:
   - code
   - infrastructure

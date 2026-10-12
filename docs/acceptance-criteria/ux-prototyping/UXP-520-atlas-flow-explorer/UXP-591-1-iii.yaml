@@ -151,7 +151,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-1-iii.md
 notes: |
   Owner ruling at the AC gate (2026-10-09), decision (2)(d): a canonical path with a
   percent-encoded slash or a trailing slash answers with the 404 'Flow not found' state quoting

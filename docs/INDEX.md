@@ -65,7 +65,7 @@ task, then pull only those files.
 | agent delivery workflows | [docs/architecture/agent_delivery_workflows.md](architecture/agent_delivery_workflows.md) | Visualises how the leafcutter-ai agent ecosystem orchestrates code delivery — slash-command entry points, supervisor dispatch topology, quick-fix workflow, and blocker adjudication flows. |
 | agent knowledge plane | [docs/architecture/agent_knowledge_plane.md](architecture/agent_knowledge_plane.md) | Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including skills_invoked cross-reference validation. |
 | agent knowledge system | [docs/architecture/agent_knowledge_system.md](architecture/agent_knowledge_system.md) | Overview of Agent Knowledge System. |
-| feedback lifecycle | [docs/architecture/feedback-lifecycle.md](architecture/feedback-lifecycle.md) | Feedback Lifecycle — Data Flow |
+| feedback lifecycle | [docs/architecture/feedback-lifecycle.md](architecture/feedback-lifecycle.md) | Overview of Feedback Lifecycle — Data Flow. |
 
 ## Architecture Decision Records (ADRs)
 
@@ -136,6 +136,7 @@ task, then pull only those files.
 | ADR 066 kernel resolves named terms and finds its own root | [docs/architecture/adrs/ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md](architecture/adrs/ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md) | When a goal or a human answer names something the kernel cannot resolve (such as \"Atlas\"), the kernel researches it before ranking, reports an option with no evidence as unresearched instead of scoring it, finds its own git repository root from the topmost folder, and records every request it cannot serve as a countable request in one central store. On 2026-10-02 a wrong root and a missing term together produced a `completed` run that ranked the owner's option last with no evidence. |
 | ADR 067 kernel splits bundled requests into approved parts | [docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md](architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | A request that bundles several questions is split inside the kernel: the host proposes 2 to 5 verbatim-quoted parts through a new host operation, host.decompose_goal, deterministic code converts the proposal, and only a person approves it before the parts run one at a time in dependency order. This replaces the hand split outside the kernel and keeps capability-gap counts honest; the ADR pins the four schema ids (a new leafcutter.split_answer.v1, not an extension of leafcutter.human_answer.v1), the endings by trigger, the bounds and budgets, and the staged rollout of split.enabled. |
 | ADR 068 drift exempt gets its own result column | [docs/architecture/adrs/ADR-068-drift-exempt-gets-its-own-result-column.md](architecture/adrs/ADR-068-drift-exempt-gets-its-own-result-column.md) | check-output-drift must stop counting a drift-exempt recorded output in uncomparable and must report it in a new drift_exempt column appended last, because two live tests already assert population and line-reconciliation identities that the current double-counting silently violates. |
+| ADR 069 durable log root for workspaces | [docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md](architecture/adrs/ADR-069-durable-log-root-for-workspaces.md) | config/knowledge_sink.json names one absolute operational_log_root under which every operational log (feedback, telemetry, knowledge emissions) sits, and a per-drive worktree inherits that root from the main install's recorded declaration, because a worktree-relative log directory is destroyed with the worktree and the evidence a retrospective needs goes with it. |
 
 ## How-To Guides
 
@@ -192,7 +193,7 @@ task, then pull only those files.
 | using frontend coder with design integration | [docs/how-to/using-frontend-coder-with-design-integration.md](how-to/using-frontend-coder-with-design-integration.md) | How to use frontend-coder with design integration |
 | verify precommit active | [docs/how-to/verify-precommit-active.md](how-to/verify-precommit-active.md) | Step-by-step guide to running the verify_precommit_active.py probe and interpreting its four checks to confirm that pre-commit hooks will fire in a git worktree. |
 | verify shared layout stays read only | [docs/how-to/verify-shared-layout-stays-read-only.md](how-to/verify-shared-layout-stays-read-only.md) | How to run and read the shared_layout_integrity guard so a test that dirties the shared deployed layout (TQ-600a-1) is caught and named, instead of silently corrupting every test that runs after it. |
-| working with leafcutter | [docs/how-to/working-with-leafcutter.md](how-to/working-with-leafcutter.md) | How to work with leafcutter end-to-end |
+| working with leafcutter | [docs/how-to/working-with-leafcutter.md](how-to/working-with-leafcutter.md) | Overview of How to work with leafcutter end-to-end. |
 | write a test that catches the wrong version | [docs/how-to/write-a-test-that-catches-the-wrong-version.md](how-to/write-a-test-that-catches-the-wrong-version.md) | Guard a bug fix or a gate change with a test that goes red under named wrong versions of the code, not only when the code is missing. Worked through on the refresh-gate retry storm. |
 | writing a tdd ticket | [docs/how-to/writing-a-tdd-ticket.md](how-to/writing-a-tdd-ticket.md) | This guide walks you through writing a ticket that will go through the leafcutter |
 
@@ -223,6 +224,7 @@ task, then pull only those files.
 | frontend coder capabilities | [docs/reference/frontend-coder-capabilities.md](reference/frontend-coder-capabilities.md) | frontend-coder Unified Agent — Preserved Capabilities Reference |
 | kernel request splitting 2 conversion gate runs config | [docs/reference/kernel-request-splitting-2-conversion-gate-runs-config.md](reference/kernel-request-splitting-2-conversion-gate-runs-config.md) | The full rules behind ADR-067 sections 5 to 11, read when building or reviewing a split: proposal conversion, the split gate, endings by trigger, bounds, order and budgets, the split output, gap accounting, and configuration with the staged rollout. |
 | kernel request splitting | [docs/reference/kernel-request-splitting.md](reference/kernel-request-splitting.md) | The full rules behind ADR-067 sections 1 to 4, read when building or reviewing a split: the mechanism of each step, bundle detection and its triggers, the host.decompose_goal operation and registry entry, and the fields of the four split schemas. |
+| knowledge retention bound | [docs/reference/knowledge-retention-bound.md](reference/knowledge-retention-bound.md) | Lookup for the declared generation retention bound of the knowledge graph: its two settings, the resolved bound, the read-only evaluation report, the reason vocabulary, the refusals and the retention command. |
 | knowledge retrieval answers | [docs/reference/knowledge-retrieval-answers.md](reference/knowledge-retrieval-answers.md) | Request fields, status meanings, population rules, evidence assessment, evaluation contracts and explicit limits for repository research answers. |
 | knowledge retrieval evidence | [docs/reference/knowledge-retrieval-evidence.md](reference/knowledge-retrieval-evidence.md) | Canonical evidence fields, field-specific citations, requested source disclosure and availability limits for repository research answers. |
 | knowledge routing step | [docs/reference/knowledge-routing-step.md](reference/knowledge-routing-step.md) | Lookup for where the knowledge-routing step runs, which completion paths carry it, what its reported outcome and figures mean to the caller, and what the routing-run recency answer reports versus the waiting count and capture-health figures. |
@@ -251,9 +253,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -261,9 +263,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
