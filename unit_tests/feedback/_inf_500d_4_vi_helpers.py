@@ -41,8 +41,11 @@ _DECLARED = {
 _SCAN_DIRS = ("agents", "skills", "commands", "workflows", "gemini")
 
 _ARG_FLAGS = r"(?:--jsonl|--log|--feedback|--telemetry|--sink|--log-path|--output|--out)"
-# knowledge_emissions.jsonl belongs to the knowledge surfaces (INF-400c-4), not to feedback/telemetry.
-_REL = r"(?:\./)?debugging[/\\]logs[/\\](?!knowledge_emissions)[^\s\"'`)\]]+"
+# Every workspace-relative ``debugging/logs/<file>`` counts -- knowledge_emissions.jsonl included. It was once
+# exempted ("it belongs to the knowledge surfaces"), and that exemption is exactly what let the harvester prompt
+# keep checking ``ls debugging/logs/knowledge_emissions.jsonl`` and passing ``--sink debugging/logs/...`` in an
+# inherited-root worktree, where the file is not there and the agent reports "nothing to harvest" (review H-5).
+_REL = r"(?:\./)?debugging[/\\]logs[/\\][^\s\"'`)\]]+"
 _Q = r"[\"'`]?"
 _DESTINATION_PATTERNS = {
     "flag argument": re.compile(rf"{_ARG_FLAGS}(?:\s+|=)\s*{_Q}{_REL}"),
@@ -190,8 +193,11 @@ def _prepare(cmd: Cmd, out_root: Path, tmpdir: Path, feedback_id: str = "fb_2026
     text = _OPTIONAL_RE.sub("", cmd.raw)
     text = _PLACEHOLDER_RE.sub(
         lambda m: feedback_id if m.group(1) == "feedback_id" else _PLACEHOLDERS.get(m.group(1), "probe"), text)
-    text = _SCRIPT_PREFIX_RE.sub(lambda m: f"{out_root}/{m.group(1)}", text)
-    return text.replace("/tmp/", f"{tmpdir}/")
+    # Confine the prompt's own ``/tmp/`` redirects FIRST, then point the script prefix at the temp install:
+    # substituting out_root first would also rewrite the ``/tmp/`` inside out_root itself whenever pytest's
+    # basetemp lives under /tmp (CI's default), sending every command at a path that does not exist.
+    text = text.replace("/tmp/", f"{tmpdir}/")
+    return _SCRIPT_PREFIX_RE.sub(lambda m: f"{out_root}/{m.group(1)}", text)
 
 
 def _shell(command: str, cwd: Path, tmpdir: Path, *, path: str | None = None) -> subprocess.CompletedProcess[str]:

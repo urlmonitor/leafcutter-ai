@@ -176,20 +176,29 @@ def test_stale_declaration_refuses_without_creating_the_enduring_root(tmp_path):
     h.declare(out_root, gone / "debugging" / "logs")
     before = h.snapshot(tmp_path)
     stale = h.submit(out_root, cwd, tmpdir)
-    _assert_refusal(stale, h.declaration_path(out_root), r"stale|no longer exists|does not exist")
+    # The reason is matched on the words alone: this test's own name (hence tmp_path) contains "stale", and
+    # the refusal line quotes paths under tmp_path, so matching "stale" on the raw line passes on the path.
+    assert re.search(r"no longer exists|does not exist", h.without_paths(stale.stderr, tmp_path), re.IGNORECASE), (
+        f"the refusal must say the enduring root is gone: {stale.stderr!r}")
+    _assert_refusal(stale, h.declaration_path(out_root), r"no longer exists|does not exist")
     assert h.snapshot(tmp_path) == before, "a stale declaration must create nothing"
     assert not gone.exists(), "mkdir(parents=True) on the declared directory turned a stale install into a healthy-looking empty one"
 
-    # Control (the ordinary first write): the project root exists, only the final log directory is missing.
+    # Control (the ordinary first write of a FRESH install): the project root exists, but neither `debugging`
+    # nor the log directory does -- exactly what an ordinary build declares without creating (it records
+    # <project>/debugging/logs). Pre-creating `debugging` here (as this control once did) hid the first-write
+    # refusal: the check passed on the parent that the fresh install does not have.
     live = tmp_path / "live_project"
-    (live / "debugging").mkdir(parents=True)
+    live.mkdir()
     logs = live / "debugging" / "logs"
     h.declare(out_root, logs)
+    assert not (live / "debugging").exists(), "fixture: a fresh install has no debugging directory yet"
     before_live = h.snapshot(live)
     ok = h.submit(out_root, cwd, tmpdir)
     assert ok.returncode == 0, f"a live root must still accept the first write: {ok.stderr!r}"
     created = h.snapshot(live) - before_live
-    assert created == {str(logs), str(logs / "feedback.jsonl")}, f"only the final log directory and the sink may appear: {sorted(created)}"
+    assert created == {str(live / "debugging"), str(logs), str(logs / "feedback.jsonl")}, (
+        f"only the missing log directories and the sink may appear: {sorted(created)}")
     assert ok.stdout.strip() in (logs / "feedback.jsonl").read_text(encoding="utf-8")
 
 

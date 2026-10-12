@@ -133,3 +133,89 @@ def test_a_root_problem_is_named_by_the_shared_rule_and_the_inline_copy_alike(tm
     verdict = json.loads(proc.stdout)[shape]
     assert "operational_log_root" in verdict["shared_why"], verdict
     assert "operational_log_root" in verdict["inline_why"], verdict
+
+
+# ---------------------------------------------------------------------------
+# Staleness rows: a declaration whose enduring project is gone is unusable to BOTH copies
+# ---------------------------------------------------------------------------
+# The table above compares the rule's SHAPE checks. Staleness is the other half of "usable": the shared
+# side answers it with ``enduring_root_exists``; ``emit_event.py`` (standard library only) carries its own
+# inline copy. H-2 of the whole-epic review: the inline copy had none, so it conjured a vanished root.
+
+_STALE_PROBE = """
+import importlib.util, json, sys
+from pathlib import Path
+out_root, emit_path, cases = Path(sys.argv[1]), Path(sys.argv[2]), json.loads(sys.argv[3])
+sys.path.insert(0, str(out_root / "scripts" / "knowledge"))
+import sink_resolution
+spec = importlib.util.spec_from_file_location("emit_event_under_test", emit_path)
+emit = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(emit)
+result = {}
+for name, root in cases.items():
+    root = Path(root)
+    stream, why = sink_resolution.read_usable_stream(root, "operational_telemetry_stream")
+    live = sink_resolution.enduring_root_exists(root)
+    inline, inline_why = emit._declared_stream(root / "config" / "knowledge_sink.json")
+    result[name] = {
+        "shape_ok": stream is not None, "enduring_root_exists": live,
+        "shared_usable": stream is not None and live,
+        "shared_stream": str(stream) if stream is not None else None,
+        "inline_usable": inline is not None, "inline_stream": str(inline) if inline is not None else None,
+        "inline_why": inline_why,
+    }
+print(json.dumps(result))
+"""
+
+# name -> (declared root relative to the temp base, directories that exist beforehand, usable?)
+_STALE_CASES = {
+    "log_dir_present": ("ok_a/debugging/logs", ["ok_a/debugging/logs"], True),
+    "fresh_project_live": ("ok_b/debugging/logs", ["ok_b"], True),
+    "flat_root_live": ("ok_c/logs", ["ok_c"], True),
+    "conventional_project_gone": ("gone_d/debugging/logs", [], False),
+    "flat_root_gone": ("gone_e/logs", [], False),
+}
+
+
+def test_both_copies_agree_on_staleness_and_only_a_live_project_is_usable(tmp_path):
+    # covers: INF-500d-4-iv
+    # covers: INF-400c-4-v
+    # angle: seam
+    """sink_resolution (read_usable_stream AND enduring_root_exists) and emit_event._declared_stream are fed the
+    same declarations in a fresh process. They must agree; exactly the layouts whose project exists are usable.
+    The exact expected set keeps the table from agreeing vacuously on 'everything usable' (what the inline
+    copy answers today for the two vanished-project rows) or on 'everything unusable'."""
+    tmpdir = tmp_path / "tmpdir"
+    tmpdir.mkdir()
+    roots: dict[str, Path] = {}
+    for name, (root_rel, existing, _usable) in _STALE_CASES.items():
+        for rel in existing:
+            (tmp_path / rel).mkdir(parents=True)
+        project = tmp_path / f"install_{name}"
+        project.mkdir()
+        roots[name] = h.deploy_install(project)
+        h.declare(roots[name], tmp_path / root_rel)
+    first = next(iter(roots.values()))
+    emit_path = first.parent / ".claude" / "skills" / "agent-telemetry" / "scripts" / "emit_event.py"
+    assert emit_path.is_file(), "fixture: the deployed emit_event.py must exist"
+
+    proc = h.run_code(_STALE_PROBE, [str(first), str(emit_path), json.dumps({k: str(v) for k, v in roots.items()})],
+                      tmp_path, tmpdir)
+    assert proc.returncode == 0, f"the probe could not load both copies in a fresh process:\n{proc.stderr}"
+    verdicts = json.loads(proc.stdout)
+    assert set(verdicts) == set(_STALE_CASES) and len(verdicts) == 5
+
+    # fixture sanity: every row passes the SHAPE rule, so only staleness can separate them.
+    assert all(v["shape_ok"] for v in verdicts.values()), json.dumps(verdicts, indent=2)
+
+    disagreements = {n: v for n, v in verdicts.items()
+                     if v["shared_usable"] != v["inline_usable"] or v["shared_stream"] != v["inline_stream"]}
+    assert not disagreements, (
+        "the shared rule and emit_event's inline copy disagree about staleness (a FINDING): "
+        + json.dumps(disagreements, indent=2))
+
+    usable = {n for n, v in verdicts.items() if v["shared_usable"]}
+    assert usable == {n for n, (_r, _e, ok) in _STALE_CASES.items() if ok}, f"usable set is {sorted(usable)}"
+    for name, v in verdicts.items():
+        if not _STALE_CASES[name][2]:
+            assert v["inline_why"], f"{name}: the inline copy must say why a vanished project is unusable"

@@ -44,6 +44,9 @@ from unit_tests.feedback import _inf_500d_4_helpers as h
 
 _TEXTS = ("inherited root learning one", "inherited root learning two")
 _EXISTING_NONZERO = {1, 2, 3, 4}
+# The harvester's real staleness message (sink_resolution.stale_declaration_message). Matching the bare word
+# "stale" is brittle: pytest's tmp_path embeds the test name, and a test about staleness has "stale" in its path.
+_STALE_MARKER = "Declared knowledge-emission sink is STALE"
 
 
 def _tmpdir(base: Path) -> Path:
@@ -109,7 +112,7 @@ def test_ordinary_harvest_in_an_inherited_root_install_drains_the_declared_sink(
 
     proc = _harvest(out_root, project, tmpdir)
 
-    assert "stale" not in _output(proc).lower(), (
+    assert _STALE_MARKER not in _output(proc), (
         f"an inherited root is the designed state (ADR-069 section 3), not a stale declaration:\n{_output(proc)}")
     assert proc.returncode == 0, f"an ordinary harvest must drain an inherited-root sink:\n{_output(proc)}"
     assert re.search(r"\b2 learnings routed\b", proc.stdout), f"both records must be routed: {proc.stdout!r}"
@@ -159,7 +162,7 @@ def test_an_inherited_root_whose_sink_was_never_written_is_a_no_work_run_not_a_s
 
     proc = _harvest(out_root, project, tmpdir)
 
-    assert "stale" not in _output(proc).lower(), f"a never-written sink under a live root is not stale:\n{_output(proc)}"
+    assert _STALE_MARKER not in _output(proc), f"a never-written sink under a live root is not stale:\n{_output(proc)}"
     assert proc.returncode == 0, f"a never-written sink is a no-work run:\n{_output(proc)}"
     assert not sink.exists(), "asking must not conjure the sink file"
     assert not destination.exists()
@@ -172,7 +175,7 @@ def test_an_inherited_root_whose_sink_was_never_written_is_a_no_work_run_not_a_s
     f_sink.parent.rmdir()
     assert f_sink.parent.parent.is_dir() and not f_sink.parent.exists()
     first = _harvest(f_out, f_project, _tmpdir(first_base))
-    assert "stale" not in _output(first).lower(), f"a missing log directory under a live root is a first write:\n{_output(first)}"
+    assert _STALE_MARKER not in _output(first), f"a missing log directory under a live root is a first write:\n{_output(first)}"
     assert first.returncode == 0, _output(first)
     assert not f_sink.exists()
 
@@ -191,7 +194,7 @@ def test_a_declaration_whose_recorded_enduring_root_is_gone_is_still_refused_as_
 
     out = _output(proc)
     assert proc.returncode in _EXISTING_NONZERO, f"a stale declaration must reuse an existing non-zero status: {proc.returncode}\n{out}"
-    assert "stale" in out.lower(), f"the report must say the declaration went stale:\n{out}"
+    assert _STALE_MARKER in out, f"the report must say the declaration went stale:\n{out}"
     assert str(sink) in out, f"the report must name the declared path it could not reach ({sink}):\n{out}"
     assert not (tmp_path / "enduring_project").exists(), "mkdir on the declared location turns a stale install into a healthy-looking empty one"
     assert h.snapshot(tmp_path) == before, "refusing a stale declaration must create nothing anywhere"

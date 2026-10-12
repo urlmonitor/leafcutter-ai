@@ -238,6 +238,26 @@ def stderr_lines(proc: subprocess.CompletedProcess[str]) -> list[str]:
     return [line for line in proc.stderr.splitlines() if line.strip()]
 
 
+def without_paths(text: str, *paths: Path | str) -> str:
+    """``text`` with every given path removed, longest first.
+
+    pytest's ``tmp_path`` embeds the test's own name, so an assertion on WORDS in a message that also quotes a
+    path under it (``stale``, ``missing``...) can pass on the path alone. Strip the paths, then match the words.
+    """
+    for path in sorted((str(p) for p in paths), key=len, reverse=True):
+        text = text.replace(path, "")
+    return text
+
+
+def emit_script(out_root: Path) -> Path:
+    """``emit_event.py`` the way the skill documents it: through the ``.claude/skills`` symlink."""
+    return out_root.parent / ".claude" / "skills" / "agent-telemetry" / "scripts" / "emit_event.py"
+
+
+def emit_args(agent: str = "ticket-supervisor", event: str = "agent_start") -> list[str]:
+    return ["--event", event, "--agent", agent, "--ticket", "/x/01_t.md", "--phase", "python-coder"]
+
+
 def empty_bin_path(base: Path) -> str:
     """A PATH holding no tools at all (git cannot be found on it)."""
     empty = base / "empty-bin"
