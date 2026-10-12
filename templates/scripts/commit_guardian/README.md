@@ -104,6 +104,7 @@ Directories excluded from ALL hooks unless a hook section provides its own `excl
 | `default_limit` | integer | `400` | Fallback limit for extensions not in `line_limits`. |
 | `checked_extensions` | array | `[".py", ".sql"]` | File extensions that are checked. |
 | `published_rule_surfaces` | array | `["README.md", "commit_guardian.json"]` | Paths (relative to `check_file_size_rule_parity.py`'s own directory) of every published statement of this rule's covered kinds, watched by `check-file-size-rule-parity`. |
+| `length_refusal_exemptions` | array | `[]` | Locations where a file's length is still measured, compared and reported, but is never *refused* — because the remedy this standard prescribes (moving code into a smaller companion file) cannot be performed there at all. Each entry is `{"path": <directory prefix>, "reason": <why splitting is impossible>}`; an entry whose reason is blank or missing grants nothing. Matching is an exact directory prefix, so `templates/workflows-js/` never matches a sibling such as `templates/workflows-js-extra/`. Every run states the declared set in force, including when it is empty, so a stand-aside is never silent. This is **not** a scope rule — the kind stays in `checked_extensions` and the file is still counted. Before adding an entry, answer the question the mechanism turns on: is the remedy genuinely unavailable there, or merely inconvenient? |
 
 ### `complexity`
 

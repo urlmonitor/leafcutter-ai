@@ -128,6 +128,7 @@ from config import (
     CHECKED_EXTENSIONS,
     DEFAULT_LINE_LIMIT,
     FILE_LINE_LIMITS,
+    LENGTH_REFUSAL_EXEMPTIONS,
 )
 
 logger = logging.getLogger(__name__)
@@ -508,6 +509,139 @@ def _print_scope_declaration(measured_kinds: list[str], unmeasured_kinds: list[s
     print(f"🚫 Not measured this run (kind not in scope): {unmeasured_text}")
 
 
+def _declared_exemptions() -> list[tuple[str, str]]:
+    """The declared locations in force, as (directory prefix, reason) pairs.
+
+    GE-127f-5: an entry whose path or reason is blank, missing, or not a
+    mapping is DROPPED here rather than honoured -- "a place that does not say
+    why it is excused has not been excused". Dropping it in this one function
+    is what keeps that rule true of every consumer at once: the declaration
+    printed in the outcome and the set consulted when deciding to refuse are
+    the same list, so a reader can never be shown a location that does not
+    actually excuse anything, nor the reverse.
+
+    Each returned prefix ends in "/" so matching is an exact directory
+    boundary: ``pkg/unsplittable/`` can never match ``pkg/unsplittable-extra/``.
+
+    Returns:
+        The usable (prefix, reason) pairs, in the order they were declared.
+    """
+    declared: list[tuple[str, str]] = []
+    for entry in LENGTH_REFUSAL_EXEMPTIONS:
+        if not isinstance(entry, dict):
+            continue
+        path = str(entry.get("path", "")).strip()
+        reason = str(entry.get("reason", "")).strip()
+        if not path or not reason:
+            continue
+        declared.append((path if path.endswith("/") else path + "/", reason))
+    return declared
+
+
+def resolve_length_refusal_exemption(filepath: str) -> str | None:
+    """The recorded reason *filepath*'s length is not refused, or None.
+
+    Consulted only when the gate has ALREADY measured the file and already
+    decided its length is over -- never to decide whether to measure it. That
+    boundary is the whole distinction between this record and GE-127c, which
+    owns which KINDS are in scope: an excused file is still counted, still
+    compared, and still reported.
+
+    Args:
+        filepath: The staged file's repo-relative path, as git reports it.
+
+    Returns:
+        The declared reason when *filepath* sits inside a declared location,
+        else None.
+    """
+    for prefix, reason in _declared_exemptions():
+        if filepath.startswith(prefix):
+            return reason
+    return None
+
+
+def _print_exemption_declaration() -> None:
+    """State the declared locations in force -- including when there are none.
+
+    GE-127f-5's visibility clause. An exemption that only appeared in the
+    outcome when it fired would be unauditable: silence would be
+    indistinguishable from a build where the feature is absent. Printed on
+    every run that reaches the report, beside GE-127c-1's measured-kinds line
+    and for the same reason.
+    """
+    declared = [prefix for prefix, _ in _declared_exemptions()]
+    text = ", ".join(declared) if declared else "(none)"
+    print(f"🪪 Length refusals excused in: {text}")
+
+
+def _withdraw_excused(
+    grown_files: list[tuple[str, int, int]],
+    failed_files: list[tuple[str, int, int]],
+) -> tuple[list[tuple[str, int, int]], list[tuple[str, int, int]], list[tuple[str, int, int, str]]]:
+    """Take every refusal in a declared location out of the refusing sets.
+
+    GE-127f-5. Runs on the classification's RESULTS, after every covered file
+    has already been measured and judged -- so the declared set can only ever
+    withdraw a refusal the gate has already arrived at. It structurally cannot
+    stop a file being measured, which is GE-127c's question (which KINDS are in
+    scope) and not this record's. Keeping this a separate step rather than a
+    branch inside ``main()``'s classification loop is also what leaves that
+    loop's shape byte-for-byte as the sibling suites' verbatim mutation
+    targets expect it (see _ge_127a_1_ordinary_commit_fixture).
+
+    Args:
+        grown_files: (path, previous_length, current_length) per GE-127b-1.
+        failed_files: (path, current_length, limit) per GE-127a-1.
+
+    Returns:
+        The two refusing lists with excused entries removed, plus the excused
+        entries as (path, current_length, limit, reason).
+    """
+    excused: list[tuple[str, int, int, str]] = []
+    kept_grown: list[tuple[str, int, int]] = []
+    kept_failed: list[tuple[str, int, int]] = []
+    for path, previous, lines in grown_files:
+        reason = resolve_length_refusal_exemption(path)
+        if reason is None:
+            kept_grown.append((path, previous, lines))
+        else:
+            excused.append((path, lines, get_limit_for_extension(path), reason))
+    for path, lines, limit in failed_files:
+        reason = resolve_length_refusal_exemption(path)
+        if reason is None:
+            kept_failed.append((path, lines, limit))
+        else:
+            excused.append((path, lines, limit, reason))
+    return kept_grown, kept_failed, excused
+
+
+def _print_excused_files(excused: list[tuple[str, int, int, str]]) -> None:
+    """Report each over-length file whose location excuses the refusal.
+
+    Each block is deliberately shaped like the two refusal blocks -- same
+    path, same measured length, same permitted length, same ``Measures:``
+    line -- because the file genuinely IS over and a reader must be able to
+    see that. What is missing is the refusal itself, and the recorded reason
+    says why.
+
+    Takes the whole list and loops internally (rather than being called once
+    per file from ``main()``) so ``main``'s own branch count is unchanged by
+    this record -- it already sits at the complexity ratchet's ceiling.
+
+    Args:
+        excused: (path, measured length, permitted length, reason) per file.
+    """
+    for filepath, lines, limit, reason in excused:
+        print("🪪 LENGTH REFUSAL EXCUSED (measured, not refused):")
+        print(f"   {filepath}")
+        print(f"   Lines: {lines} (Limit: {limit})")
+        _print_measures_line()
+        print(f"   Excused because: {reason}")
+        print("   This file is still over its permitted length; the standard is")
+        print("   standing aside here, not reporting the file as within limits.")
+        print()
+
+
 def _resolve_ratchet_or_indeterminate(covered_paths: list[str]) -> tuple[dict[str, int] | None, int | None]:
     """Resolve previous lengths for *covered_paths*, or the INDETERMINATE exit.
 
@@ -685,10 +819,15 @@ def main() -> int:
     except (CurrentLengthUnmeasurableError, AddedLineCountUnavailableError) as exc:
         return _report_indeterminate(exc.reason)
 
+    grown_files, failed_files, excused_files = _withdraw_excused(grown_files, failed_files)
+
     # Print results
     print("\n📏 File Size Check\n")
     _print_scope_declaration(measured_kinds, unmeasured_kinds)
+    _print_exemption_declaration()
     print(f"📊 Compared {len(previous_lengths)} file(s) against their previous length.\n")
+
+    _print_excused_files(excused_files)
 
     try:
         for filepath, previous, lines in grown_files:
@@ -718,6 +857,58 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-12 [python-coder/GE-127f-5]: Added the length-refusal exemption.
+  GE-127f-2 made the oversized-file comparison judge what a change PUT IN
+  rather than net growth, and GE-127f-4 states the resulting obligation as
+  two-for-one. Both presuppose the remedy GE-127f-3 names -- take the content
+  out, or have a restructuring specialist do it. For
+  `templates/workflows-js/` that remedy does not exist: ADR-030 records that
+  the E2 engine executes each workflow as a TOP-LEVEL BODY with no module
+  loader (no require, no import, no fs), so there is nowhere for content to
+  go; `plan-feature.js` and `finalize-feature.js` already duplicate a shared
+  helper across two files and each say so in a comment. The gate was
+  therefore refusing changes no author could satisfy -- a different failure
+  from a file merely being too long. New `resolve_length_refusal_exemption`
+  /`_declared_exemptions` read `file_size.length_refusal_exemptions` from
+  config. They are consulted by a new `_withdraw_excused`, which runs on the
+  classification loop's RESULTS -- after every covered file has already been
+  measured and judged -- and moves any refusal in a declared location into an
+  `excused_files` list reported by `_print_excused_files` with its measured
+  length, its permitted length, the shared `Measures:` line and the recorded
+  reason. A SEPARATE STEP, NOT A BRANCH IN THE LOOP, for two reasons: it makes
+  "can only withdraw a refusal already arrived at, can never prevent a
+  measurement" structural rather than a matter of reading the branch order,
+  and it leaves `main()`'s classification loop byte-for-byte as
+  `_ge_127a_1_ordinary_commit_fixture`'s verbatim string-replacement mutation
+  target expects it. An earlier draft did fold it into the loop and reddened
+  that sibling's `apply_mutation_report_all_staged_as_offenders` with
+  "mutation target snippet not found"; the loop was restored rather than the
+  sibling's snippet rewritten.
+  DELIBERATELY NOT IN `should_check_file`, AND NOT A STAGED-LIST FILTER:
+  either would excuse the file by never measuring it, which is GE-127c's
+  question (WHICH KINDS are in scope) answered at this record's address, and
+  would hide the file's length from the outcome. The kind stays in
+  `checked_extensions`, the file is still counted under GE-127d's rule, and
+  it is still named in the report -- what stands aside is the refusal alone.
+  A blank or missing reason grants nothing (dropped once, in
+  `_declared_exemptions`, so the set printed and the set consulted can never
+  disagree). Matching is an exact directory prefix with an enforced trailing
+  separator, so `templates/workflows-js-extra/` is not excused by
+  `templates/workflows-js/`. `_print_exemption_declaration` states the
+  declared set on EVERY run including when it is empty, for the same reason
+  GE-127c-1 states the measured kinds: a guard that stands aside invisibly
+  cannot be told from one that looked and found nothing. VERIFIED ON THE
+  REAL ARTIFACT, not only in fixtures: a staged 3-line addition to the real
+  `templates/workflows-js/fast-lane-ship.js` (1590 measured lines against
+  its 1000 limit) ran the real script against the real config and completed
+  at exit 0, printing the file, its length and the reason -- the probe was
+  then reverted. HONEST COST, recorded rather than buried: this removes the
+  pressure that would otherwise force the lane's size to be confronted. The
+  durable fix is to stop expressing orchestration of this size in a
+  sandboxed JS body; a cheaper interim exists and is unevaluated -- the
+  engine's `workflow()` primitive runs another workflow inline one level
+  deep, so the lane could delegate whole phases even though it cannot
+  extract helper modules.
 - 2026-10-07 [python-coder/GE-127f-4]: `_print_grown_file`'s closing advice
   sentence stated a ONE-for-one obligation ("Shrink it, or add no more than
   you remove, to commit this edit") while the enforced rule
