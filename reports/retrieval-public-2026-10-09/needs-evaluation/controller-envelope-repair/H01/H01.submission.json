@@ -1,0 +1,58 @@
+{
+  "run_id": "run-20ce5281a0624e0e",
+  "interaction_id": "int-c87ac0c4a27a4ebd",
+  "expected_state_revision": 1,
+  "actor": {
+    "id": "host:blind_retrieval_host",
+    "kind": "host"
+  },
+  "relayed_by": "isolated-evaluation-controller",
+  "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+  "response": {
+    "schema_version": "1.0",
+    "original_question": "Tell me the acceptance obligations of KM-500c-1 itself, not the checks linked to it.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-1"
+      ],
+      "required_fields": [
+        "criteria"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": []
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "fields",
+    "completeness": "single_entity",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "The request is confined to the named criterion's acceptance obligations and explicitly excludes its linked checks.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  }
+}

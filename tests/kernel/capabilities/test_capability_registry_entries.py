@@ -30,7 +30,7 @@ from tests.kernel.helpers import ScriptedExecutor, load_json, make_request_body
 
 CONFIG = Path(__file__).resolve().parents[3] / "config"
 HOST_IDS = ["host.formulate_question", "host.generate_options", "host.query_build", "host.research",
-            "host.synthesize"]
+            "host.retrieval_needs", "host.synthesize"]
 
 
 def _table() -> BindingTable:
@@ -55,7 +55,9 @@ class TestEntries(unittest.TestCase):
     def test_every_entry_is_a_native_registration_of_this_ticket(self) -> None:
         for d in self.snapshot.descriptors:
             self.assertEqual(d.admission.kind, "native_registration")
-            expected = "TICKET-20261001-KM-500b-3" if d.id in {"host.query_build", "knowledge.activate_query"} else "TICKET-20260930-KernelBootstrapV0"
+            references = {"host.query_build": "TICKET-20261001-KM-500b-3",
+                          "knowledge.activate_query": "TICKET-20261001-KM-500b-3", "host.retrieval_needs": "ADR-053"}
+            expected = references.get(d.id, "TICKET-20260930-KernelBootstrapV0")
             self.assertEqual(d.admission.decision_ref, expected)
             self.assertEqual(d.version, "1.0.0")
             self.assertEqual(d.binding, d.id)
@@ -80,6 +82,7 @@ class TestEntries(unittest.TestCase):
             "host.generate_options": ([schema_ids.OPTIONS_REQUEST], [schema_ids.OPTIONS]),
             "host.synthesize": ([schema_ids.SYNTHESIS_REQUEST], [schema_ids.FINDINGS]),
             "host.research": ([schema_ids.RETRIEVAL_REQUEST], [schema_ids.EVIDENCE_BUNDLE]),
+            "host.retrieval_needs": ([schema_ids.RETRIEVAL_NEEDS_REQUEST], [schema_ids.RETRIEVAL_NEEDS_OUTPUT]),
             "host.formulate_question": ([schema_ids.HUMAN_QUESTION_REQUEST],
                                         [schema_ids.HUMAN_QUESTION_REQUEST]),
         }

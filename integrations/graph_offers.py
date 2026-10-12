@@ -6,6 +6,7 @@ ARCHITECTURE: Pure offer construction over trusted scope and the registered read
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from collections.abc import Callable
 from pathlib import Path
 
 from kernel.capabilities.base import ExecutionContext
@@ -14,7 +15,10 @@ from kernel.capabilities.retrieval.executor import select_sources
 from kernel.capabilities.retrieval.locators import parse_locator
 from kernel.contracts.entity_context import EntityBudgets, EntityCard, EntityCoverage
 from kernel.contracts.payloads import RetrievalRequestPayload
+from kernel.contracts.retrieval_needs import RetrievalNeedsOutput
 from knowledge.contracts import OPERATIONS
+from knowledge.errors import invalid
+from integrations.retrieval_relationships import relation_role
 
 
 @dataclass(frozen=True)
@@ -25,10 +29,21 @@ class GraphOffer:
     targets: tuple[str, ...]
     argument: str
     mode: str
+    many: bool = False
+    version: str | None = None
+    digest: str | None = None
 
 
 def _permitted(ctx: ExecutionContext, card: EntityCard) -> bool:
-    """Recheck the card owner independently of a graph-only transport child."""
+    """Recheck the card owner independently of a graph-only transport child.
+
+    Args:
+        ctx: Trusted execution scope, configuration and services.
+        card: Recognized native identity with source provenance.
+
+    Returns:
+        Whether the native owner is readable in the current scope.
+    """
     source = next((s for s in ctx.config.sources if s.id == card.provenance.source_id), None)
     if source is None or source.kind != "repo_text":
         return False
@@ -68,7 +83,14 @@ def selection_context(ctx: ExecutionContext) -> ExecutionContext:
 
 
 def _identity(card: EntityCard) -> str | None:
-    """Translate native owner identity exactly as the graph canonical mapper does."""
+    """Translate native owner identity exactly as the graph canonical mapper does.
+
+    Args:
+        card: Recognized native identity with source provenance.
+
+    Returns:
+        Canonical graph identity, or None for unresolved or non-native cards.
+    """
     if card.family != "artifact_id" or card.resolution != "resolved":
         return None
     if card.native_kind in {"AcceptanceCriterion", "ADR", "Component"}:
@@ -76,6 +98,75 @@ def _identity(card: EntityCard) -> str | None:
     if card.native_kind in {"Ticket", "Flow", "Decision"}:
         return f"{card.native_kind}:{card.identity}"
     return None
+
+
+def interpreted_targets(payload: RetrievalRequestPayload, native_kind: str | None = None) -> tuple[str, ...]:
+    """Bind accepted literal candidates as lookup seeds, not proof of existence or permission.
+
+    Returned evidence still passes repository, revision and read-root authorization.
+    Native cards are optional enrichment; the host cannot introduce an unoffered target.
+
+    Args:
+        payload: Typed retrieval request and preserved question obligations.
+        native_kind: Optional canonical kind restricting eligible query seeds.
+
+    Returns:
+        Deduplicated lookup seeds without claiming their existence.
+    """
+    needs = payload.retrieval_needs
+    return canonical_target_ids(needs, native_kind) if needs is not None else ()
+
+
+def canonical_target_ids(needs: RetrievalNeedsOutput, native_kind: str | None = None) -> tuple[str, ...]:
+    """Use the same canonical IDs for query seeds and immutable answer obligations.
+
+    Args:
+        needs: Accepted host interpretation retaining the original selected identities.
+        native_kind: Optional canonical kind restricting eligible query seeds.
+
+    Returns:
+        Deduplicated canonical identities, without asserting source existence or permission.
+    """
+    kinds = {"ac": "AcceptanceCriterion", "adr": "ADR", "ticket": "Ticket",
+             "component": "Component", "flow": "Flow", "decision": "Decision"}
+    role = relation_role(needs)
+    selected = ({role[0]} if role is not None else
+                {kinds[label] for label in needs.selections["entity_types"] if label in kinds})
+    if native_kind is not None and selected != {native_kind}:
+        return ()
+    prefix = next(iter(selected)) if len(selected) == 1 else None
+    return tuple(dict.fromkeys(
+        f"{prefix}:{identifier}" if prefix in {"Ticket", "Flow", "Decision"}
+        and not identifier.startswith(prefix + ":") else identifier
+        for identifier in needs.selections["target_ids"]))
+
+
+def _targets(ctx: ExecutionContext, payload: RetrievalRequestPayload) -> tuple:
+    """Combine optional verified native cards with accepted unverified lookup candidates.
+
+    Args:
+        ctx: Trusted execution scope, configuration and services.
+        payload: Typed retrieval request and preserved question obligations.
+
+    Returns:
+        Eligible target groups bound to the requested seed kind.
+    """
+    cards = ctx.entity_context.entities if ctx.entity_context is not None else []
+    if payload.retrieval_needs is not None:
+        wanted = set(payload.retrieval_needs.selections["target_ids"])
+        cards = [card for card in cards if _identity(card) in wanted or card.identity in wanted]
+    all_ids = tuple(dict.fromkeys([*(i for c in cards if (i := _identity(c))),
+                                  *interpreted_targets(payload)]))
+    ac_ids = tuple(dict.fromkeys([*(c.identity for c in cards
+        if _identity(c) and c.native_kind == "AcceptanceCriterion"),
+        *interpreted_targets(payload, "AcceptanceCriterion")]))
+    decisions = tuple(dict.fromkeys([*(i for c in cards
+        if c.native_kind == "Decision" and (i := _identity(c))), *interpreted_targets(payload, "Decision")]))
+    components = (_components(ctx, cards) if payload.retrieval_needs is None else
+                  interpreted_targets(payload, "Component"))
+    if ctx.scope.component_ids:
+        components = tuple(target for target in components if target in ctx.scope.component_ids)
+    return all_ids, ac_ids, decisions, components
 
 
 def graph_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload,
@@ -92,18 +183,14 @@ def graph_offers(ctx: ExecutionContext, payload: RetrievalRequestPayload,
     """
     if not capabilities.get("graph") or capabilities.get("status") not in {None, "ready", "ok"}:
         return {}
-    cards = ctx.entity_context.entities if ctx.entity_context is not None else []
-    all_ids = tuple(dict.fromkeys(i for c in cards if (i := _identity(c))))
-    ac_ids = tuple(c.identity for c in cards if _identity(c) and c.native_kind == "AcceptanceCriterion")
-    decisions = tuple(i for c in cards if c.native_kind == "Decision" and (i := _identity(c)))
-    components = _components(ctx, cards)
+    all_ids, ac_ids, decisions, components = _targets(ctx, payload)
     offers: dict[str, GraphOffer] = {}
 
     def add(operation: str, targets: tuple[str, ...], description: str) -> None:
         """Bind a registered argument without accepting provider-generated arguments."""
         if targets:
             mode, argument = OPERATIONS[operation]
-            offers[operation] = GraphOffer(description, targets, argument, mode)
+            offers[operation] = GraphOffer(description, targets, argument, mode, argument == "entity_ids")
 
     add("get_entities", all_ids,
         "Look up or explain the specifically named record itself: an acceptance criterion, ADR, ticket, "
@@ -138,11 +225,24 @@ def _components(ctx: ExecutionContext, cards: list[EntityCard]) -> tuple[str, ..
                               if _identity(c) and c.native_kind == "Component"))
 
 
-def _population_offers(payload, ac_ids, all_ids, add) -> None:
-    """Offer bounded discovery, or bind an explicitly scoped population to its real root."""
+def _population_offers(payload: RetrievalRequestPayload, ac_ids: tuple[str, ...],
+                       all_ids: tuple[str, ...],
+                       add: Callable[[str, tuple[str, ...], str], None]) -> None:
+    """Offer bounded discovery, or bind an explicitly scoped population to its real root.
+
+    Args:
+        payload: Typed retrieval request and preserved question obligations.
+        ac_ids: Eligible acceptance-criterion identity candidates.
+        all_ids: Eligible canonical identity candidates.
+        add: Callback adding one bound registered operation.
+    """
     requirements = payload.answer_requirements or {}
     scope = requirements.get("scope", {})
+    if not isinstance(scope, dict):
+        invalid("answer scope must be an object")
     root = scope.get("root_id")
+    if root is not None and not isinstance(root, str):
+        invalid("answer scope root_id must be a string")
     descendant_ids = (root,) if root in ac_ids else ac_ids if not root else ()
     dependent_ids = (root,) if root in all_ids else all_ids if not root else ()
     if payload.answer_requirements is None and len(payload.need.question) <= 4000:
@@ -167,3 +267,7 @@ def repository_sources(ctx: ExecutionContext, payload: RetrievalRequestPayload) 
 # ================================================================================
 # - 2026-10-03 20:00 [python-coder]: Bind graph offers to permitted native identities and trusted components. (#TICKETLESS reason=user-approved-DK300-graph-routing)
 # - 2026-10-03 22:56 [python-coder]: Distinguish explaining a named record from retrieving its related records. (#TICKETLESS reason=user-approved-DK300-live-routing-correction)
+
+# - 2026-10-09 15:40 [python-coder]: Preserve typed question obligations through public research and scoped query selection. (#KM-500/KM-500e-1-i)
+
+# - 2026-10-09 18:49 [python-coder]: Share canonical target normalization between query offers and answer scope. (#KM-500/KM-500e-1-i)

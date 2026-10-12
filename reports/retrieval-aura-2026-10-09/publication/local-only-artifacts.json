@@ -1,0 +1,117 @@
+{
+  "preserve_original_bytes": true,
+  "files": [
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A01/runtime/checkpoints.sqlite",
+      "sha256": "61374d81471ba9c46ef5b1bfe04efa27a7d831e91fa0a8517fc3dea730fc68a1",
+      "bytes": 4382720,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A02/runtime/checkpoints.sqlite",
+      "sha256": "5bd1c27ac2139cb94171f77060297dec619c560efa3dab92f89b70be728cee9f",
+      "bytes": 4382720,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A03/runtime/checkpoints.sqlite",
+      "sha256": "c9169ef1291bdb272ea9ccd7067ac2359be52559ba259298c88563ef621208ed",
+      "bytes": 2310144,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-aura-2026-10-09/runs/published-2a8ebc87/A04/runtime/checkpoints.sqlite",
+      "sha256": "692fdc3d0f70d3bb68c06c69ef43a3d252b4d4f68b29959c83e1094731bc98d6",
+      "bytes": 2007040,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP01/runtime/checkpoints.sqlite",
+      "sha256": "d434846379f47afd14cb32321671e483e4a741de149c36070674adb5e7683d10",
+      "bytes": 438272,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP02/runtime/checkpoints.sqlite",
+      "sha256": "d41b2fc30c0df52e1e88da3996b956d465e8bb9b095158a30846b3ca05bb52ce",
+      "bytes": 438272,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP03/runtime/checkpoints.sqlite",
+      "sha256": "fd73aee143ea36a1c270d4bf13908e53ab9d4848dead245e6538c845f6c5e08f",
+      "bytes": 450560,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP04/runtime/checkpoints.sqlite",
+      "sha256": "bacdf6b3d2bb67aef20b683577dd0db709f119a4ac330983c00ceb67990ce006",
+      "bytes": 430080,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP05/runtime/checkpoints.sqlite",
+      "sha256": "decf8f8f44bf63f7b923aa6d268f7d73eb1cea6368b118bde5f7e48451917293",
+      "bytes": 442368,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP06/runtime/checkpoints.sqlite",
+      "sha256": "f2f1f518931d5aeb8657d0e68685b8bb0f7be332b9fe691f5ff245c6e7ee0c35",
+      "bytes": 438272,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP07/runtime/checkpoints.sqlite",
+      "sha256": "04cdfc69acf2bd550d7552d1b5694092b510c8282f162774d69e0c59a519188b",
+      "bytes": 450560,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP08/runtime/checkpoints.sqlite",
+      "sha256": "0edd7742e3a67e2eb62f46fc23fab0d91d358e8d1e78d16ddcdca3dbd4238db0",
+      "bytes": 442368,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP09/runtime/checkpoints.sqlite",
+      "sha256": "f2fdd5248e01247cc986da58903bcb674906b79c5e3c882790385cfb150b5555",
+      "bytes": 442368,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP10/runtime/checkpoints.sqlite",
+      "sha256": "3d5b70dbc4739f80c10235c9821c5db8b5237129ab7922e4bd9d36310c8b9366",
+      "bytes": 454656,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP11/runtime/checkpoints.sqlite",
+      "sha256": "29bf9fc4139a657280a11c03cb217d166e88546e6d1c209a6b606b5054dd2f0c",
+      "bytes": 454656,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    },
+    {
+      "path": "reports/retrieval-needs-precision-2026-10-09/stage1/IP12/runtime/checkpoints.sqlite",
+      "sha256": "bc13ab30d16b33cb2efd793fbd49845aaaaac333fc8b16b705ed64ce66595d28",
+      "bytes": 446464,
+      "publication": "local_only",
+      "reason": "Replay checkpoint database. Public envelopes, traces and state exports provide review evidence; this binary is preserved locally for forensic replay and is not cleared for upload."
+    }
+  ]
+}

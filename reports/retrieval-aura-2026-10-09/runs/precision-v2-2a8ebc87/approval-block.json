@@ -1,0 +1,13 @@
+{
+  "recorded_at": "2026-10-09T21:50:11.021791+00:00",
+  "action": "A01 public start",
+  "execution_started": false,
+  "process_created": false,
+  "actual_jev_calls": 0,
+  "accepted_host_results": 0,
+  "case_retrieval_calls": 0,
+  "preparation_readiness_reads_completed": true,
+  "reason": "Automatic approval review rejected starting these exact four live payloads because they can send repository-derived context to the configured external provider and perform real Aura retrieval. Explicit user authorization for this exact bounded plan is pending.",
+  "retry_policy": "No retry or indirect provider execution until actual user approval. Frozen cases, oracle and code remain unchanged.",
+  "prepared_run": "precision-v2-2a8ebc87"
+}

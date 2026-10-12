@@ -1,0 +1,118 @@
+{
+  "created_at": "2026-10-09T21:10:02.490935+00:00",
+  "immutable_baseline": "summary.json",
+  "oracle_sha256": "c1db6ff91ab52e1b835e810e4ddb2537f321aacf431501444ff6d411e17d69c6",
+  "failures": [
+    {
+      "case_id": "A01",
+      "defect": "Authored test_spec omitted by accepted needs interpretation and absent from public evidence.",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "expected_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "actual_fields": [
+        "criteria"
+      ],
+      "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "source_oracle_path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+      "source_oracle_file_sha256": "785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75",
+      "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "test_spec_authored": true,
+      "test_spec": [
+        {
+          "name": "test_km500_c_2_behavior",
+          "target_dir": "tests/knowledge/",
+          "framework": "pytest",
+          "type": "integration",
+          "angle": "criterion",
+          "description": "Use actual research answer assessment to show relevant but insufficient evidence remains partial, contradictions persist, and newly retrieved evidence answers the original question without false certainty.",
+          "covers": [
+            "KM-500c-2"
+          ],
+          "requires_db": false
+        }
+      ],
+      "response": "A01/started/host/response.json",
+      "response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+      "actual_returned_field_locators": [
+        "/criteria"
+      ],
+      "final_status": "partial"
+    },
+    {
+      "case_id": "A02",
+      "defect": "Authored test_spec omitted by accepted needs interpretation and absent from public evidence.",
+      "question": "For KM-500c-2, what must tests demonstrate?",
+      "expected_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "actual_fields": [
+        "criteria"
+      ],
+      "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "source_oracle_path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml",
+      "source_oracle_file_sha256": "785f641b0c92fbb15d795d782add2aa19807106a3ee2761cc9f1f9980b051c75",
+      "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "test_spec_authored": true,
+      "test_spec": [
+        {
+          "name": "test_km500_c_2_behavior",
+          "target_dir": "tests/knowledge/",
+          "framework": "pytest",
+          "type": "integration",
+          "angle": "criterion",
+          "description": "Use actual research answer assessment to show relevant but insufficient evidence remains partial, contradictions persist, and newly retrieved evidence answers the original question without false certainty.",
+          "covers": [
+            "KM-500c-2"
+          ],
+          "requires_db": false
+        }
+      ],
+      "response": "A02/started/host/response.json",
+      "response_sha256": "59248b8bbcef1049b1f4966dd57e9596f3c8134afdbb5e3be3dee850770d9fe0",
+      "actual_returned_field_locators": [
+        "/criteria"
+      ],
+      "final_status": "partial"
+    },
+    {
+      "case_id": "A03",
+      "defect": "Authored test_spec omitted by accepted needs interpretation and absent from public evidence.",
+      "question": "For KM-500c-1, what must tests demonstrate?",
+      "expected_fields": [
+        "criteria",
+        "test_spec"
+      ],
+      "actual_fields": [
+        "criteria"
+      ],
+      "rationale": "The question asks for the acceptance obligations that tests must demonstrate for one explicitly named criterion. The complete criteria field supplies those obligations. Test specifications may provide optional supporting detail. No hierarchy traversal or population discovery is requested. The supplied source scope is preserved without validating source availability.",
+      "source_oracle_path": "docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-1.yaml",
+      "source_oracle_file_sha256": "dce8915674dbf33a45e27c1548e2fc84bdb0b8cf331e074bc8376b0e20493b03",
+      "source_sha": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+      "test_spec_authored": true,
+      "test_spec": [
+        {
+          "name": "test_km500_c_1_behavior",
+          "target_dir": "tests/knowledge/",
+          "framework": "pytest",
+          "type": "integration",
+          "angle": "criterion",
+          "description": "Complete real KernelService missing-query host handoff, verified activation and retrieval in the same research, reopen checkpoint, then prove fresh-run reuse without a build handoff.",
+          "covers": [
+            "KM-500c-1"
+          ],
+          "requires_db": false
+        }
+      ],
+      "response": "A03/started/host/response.json",
+      "response_sha256": "acd148eec1177eb525368c84dae084e90e2c564232f4e4b551df1a31f87262a1",
+      "actual_returned_field_locators": [
+        "/criteria"
+      ],
+      "final_status": "completed"
+    }
+  ]
+}

@@ -63,6 +63,8 @@ python -m knowledge status --root REPOSITORY --repository-id leafcutter --revisi
 
 REPOSITORY is an absolute trusted checkout; REVISION is an exact commit SHA. Validation and plan do not connect or publish. Sync reads immutable Git objects, builds a full generation and atomically publishes after validation. Repeating the same revision/mapping reuses its generation. Failed builds leave the previous generation active; stale or non-descendant publications cannot silently replace it.
 
+Standalone writer commands use a bounded **30-second transaction timeout** for staging and atomic publication; serving retains its independent **3-second default**. Node and relationship batches remain capped at 250, and count validation and publication guards still apply. A transaction-timeout error alone does not identify the slow statement. After an authorized retry, confirm the published SHA and lag before calling recovery successful; a local configuration test does not establish live publication.
+
 Default imports include all reviewed native record types. Existing AC, ADR and
 Component identities remain stable; additional kinds use kind-qualified native
 identities to prevent collisions. Specialized and generated document views are
@@ -105,7 +107,7 @@ Resume a continuation with exactly the same repository, operation, arguments, re
 
 Set knowledge.backend=neo4j, trusted knowledge.repository_id and absolute knowledge.repository_root in kernel configuration. Add a source kind graph_query with its evidence categories; overrides replace source lists, so preserve other desired sources. A leafcutter.retrieval_request.v1 payload can include the optional knowledge operation/mode/arguments/disclosure object. Invocation and repository identity are bound by the composition root; backend sessions, queries and writer credentials do not enter kernel state.
 
-The existing retrieve.repository binding consumes canonical Evidence/SourceVersion. Obvious exact and relationship choices avoid Jev; ambiguous supported semantic choices use the existing reserve-before-use Jev framework. Compact discovery precedes selected-ID source disclosure. The existing research sufficiency judgment decides whether evidence answers the question. Similarity scores are ranking signals, never correctness probabilities.
+The retrieve.repository binding consumes canonical Evidence/SourceVersion. Explicit low-level operation requests retain deterministic execution. Natural research carrying interpreted needs uses the shared finite Jev operation selector, with or without a query catalog; the earlier low-level compatibility helper does not bypass that selector. Compact discovery precedes selected-ID source disclosure. The existing research sufficiency judgment decides whether evidence answers the question. Similarity scores are ranking signals, never correctness probabilities.
 
 Evidence IDs are stable for locator/content; retrieval IDs identify separate runs. Capability diagnostics and existing tracer record modes, SHA, generation and retrieval references. Graph provenance is explicitly derived context, source excerpts stay unchanged. Telemetry outages preserve retrieval with a warning. Async hosts await environment.aclose() before closing their loop; synchronous hosts call environment.shutdown() afterward. A synchronous shutdown inside a running loop is explicitly rejected.
 
@@ -139,6 +141,14 @@ Restore connectivity then replay a failed revision. Repair canonical reference e
 Serving accepts `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` as aliases for the default `LEAFCUTTER_NEO4J_*` names. Aura hosts ending in `.databases.neo4j.io` default to username `neo4j` when none is provided. `NEO4J_INSTANCE` is metadata, never a database name; database selection uses an explicit nonempty `database` setting first, otherwise `LEAFCUTTER_NEO4J_DATABASE` or `NEO4J_DATABASE` through the same source precedence, then `neo4j` as a fallback. The unset configuration default is `null`, so a saved Aura database is honored. Existing explicit database strings, including `neo4j`, continue to override environment values. Writer commands accept both database environment names.
 
 Enabled serving and writer composition resolve each setting from the process environment, then the file named by `LEAFCUTTER_ENV_FILE`, then the nearest `.env` walking upward from the configured repository root (or current directory). Within a source, the legacy `LEAFCUTTER_*` name wins over its alias. Empty values count as absent, matching kernel credential loading. Custom configured variable names are exact: they do not fall back to conventional aliases. Named unreadable files fail; unreadable discovered files emit a generic warning. Loading never mutates the process environment and disabled serving never reads credential files.
+
+An Aura instance ID and a Neo4j database name are different settings. For example,
+`NEO4J_URI=neo4j+s://2fb38dda.databases.neo4j.io` selects the instance;
+`NEO4J_DATABASE=neo4j` selects a database inside it. Use the actual database name
+shown by your deployment. `NEO4J_INSTANCE=2fb38dda` does not select a database.
+Setting the database to an instance ID fails unless a database with that exact
+name exists. The local `.env` is not copied into GitHub Actions: the publication
+workflow uses its configured database variable and writer secrets separately.
 
 Keep the actual `.env` outside Git and set `LEAFCUTTER_ENV_FILE` to its existing path when a worktree cannot discover it. Do not copy credentials into the worktree. Writer operations accept the shared URI but still require `LEAFCUTTER_NEO4J_WRITER_USERNAME` and `LEAFCUTTER_NEO4J_WRITER_PASSWORD`; serving credentials do not silently authorize writes. Merely configuring Aura does not run migrations or index a corpus.
 

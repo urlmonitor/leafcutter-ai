@@ -42,8 +42,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -116,7 +116,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-1"
+      ]
     },
     {
       "id": "check-record",
@@ -142,8 +145,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -257,7 +260,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-2"
+      ]
     },
     {
       "id": "write-published",
@@ -295,8 +301,8 @@
       "writes": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -534,7 +540,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-3"
+      ]
     },
     {
       "id": "check-store",
@@ -564,8 +573,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -737,7 +746,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-3"
+      ]
     },
     {
       "id": "review",
@@ -764,8 +776,8 @@
       "reads": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -899,7 +911,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-4"
+      ]
     },
     {
       "id": "merge",
@@ -937,8 +952,8 @@
       "writes": [
         "Decision"
       ],
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1160,7 +1175,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-4"
+      ]
     }
   ],
   "branches": [
@@ -1180,8 +1198,8 @@
         "decision_record/provenance/run_id: string (required)"
       ],
       "outcome_kind": "exit",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1255,7 +1273,10 @@
           }
         ]
       },
-      "produces": []
+      "produces": [],
+      "implements": [
+        "DK-600d-1-i"
+      ]
     },
     {
       "id": "no-staged-record",
@@ -1267,8 +1288,8 @@
       "actor_kind": "deterministic",
       "consumes": [],
       "outcome_kind": "failure",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [],
         "produces": [
@@ -1349,6 +1370,9 @@
         "decision_publish_result/already_present: array (required)",
         "decision_publish_result/corrected: array (required)",
         "decision_publish_result/index_written: boolean (required)"
+      ],
+      "implements": [
+        "DK-600d-2-i"
       ]
     },
     {
@@ -1367,8 +1391,8 @@
         "decision_record/roadmap_phase: array (optional; default [])"
       ],
       "outcome_kind": "failure",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1506,6 +1530,9 @@
         "decision_publish_result/already_present: array (required)",
         "decision_publish_result/corrected: array (required)",
         "decision_publish_result/index_written: boolean (required)"
+      ],
+      "implements": [
+        "DK-600d-2-ii"
       ]
     },
     {
@@ -1534,8 +1561,8 @@
         "Decision"
       ],
       "outcome_kind": "alternative",
-      "impl_asof": "2026-10-02",
-      "impl_status": "not_started",
+      "impl_asof": "2026-10-06",
+      "impl_status": "done",
       "io_contracts": {
         "consumes": [
           {
@@ -1667,7 +1694,10 @@
             }
           }
         ]
-      }
+      },
+      "implements": [
+        "DK-600d-3-i"
+      ]
     }
   ],
   "acceptance_scenarios": [
@@ -1753,11 +1783,11 @@
     }
   ],
   "impl_summary": {
-    "done": 0,
+    "done": 10,
     "in_progress": 0,
-    "not_started": 10,
+    "not_started": 0,
     "total": 10,
-    "asof": "2026-10-02"
+    "asof": "2026-10-06"
   },
   "contract_definitions": {
     "decision_index_entry": {

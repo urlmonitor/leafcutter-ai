@@ -23,8 +23,10 @@ ARCHITECTURE: All decision logic lives here; ``post-merge-suite.yml`` is a thin
     pytest exit statuses. Which stage a run stopped at is decided by
     ``_post_merge_stages`` from the report AND from the ``needs.run.result`` /
     ``needs.retry.result`` values the verdict step receives as ``RUN_RESULT`` /
-    ``RETRY_RESULT``. Stdlib-only. TQ-600a-13-xiii adds the pass-on-retry
-    history window at the marked extension point in ``build_verdict_file``.
+    ``RETRY_RESULT``. Stdlib-only. TQ-600a-13-xiii: ``verdict --api-url --repo --run-id``
+    (token in GITHUB_TOKEN) reads the earlier settled runs' verdict artifacts through
+    ``_flaky_window`` and ``build_verdict_file`` turns them into the pass-on-retry window and
+    the repeated-pass-on-retry escalation; without those options no history is read.
 """
 
 from __future__ import annotations
@@ -40,6 +42,8 @@ from pathlib import Path
 if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_suite.py`: make `scripts.ci` importable
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from scripts.ci._flaky_window import HistoryRead, flaky_fields, load_tunables, read_history, short_history  # noqa: E402
+from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
 from scripts.ci._post_merge_stages import (  # noqa: E402
     FAILED_STATES,
     REPORT_ABSENT,
@@ -152,8 +156,16 @@ def build_verdict_file(
     retry_result: str = "",
     first_state: str = REPORT_ABSENT,
     lane: str = LANE,
+    history: list[dict | None] | None = None,
+    tunables: dict | None = None,
 ) -> dict:
     """Build the ``post-merge-verdict.json`` object from the two reports (None = absent).
+
+    ``history`` (TQ-600a-13-xiii) is the earlier settled runs' parsed verdict files, newest first, ``None`` for an
+    unreadable one; with ``tunables`` (default: ``post_merge_tunables.json``) it fills ``pass_on_retry_window``,
+    ``window_runs_read`` and ``repeated_pass_on_retry``. A correctness-lane test that passed on retry in
+    ``flaky_red_threshold`` of the last ``flaky_window_runs`` runs makes a run that otherwise completed red; the
+    timing lane and a run that did not complete never escalate.
 
     ``run_result`` / ``retry_result`` are the dependency results of the verdict job and ``first_state``
     says whether a missing first-run report was absent or unreadable; see ``_post_merge_stages``.
@@ -167,8 +179,11 @@ def build_verdict_file(
     verdict = classify(results, (retry or {}).get("results"))
     if stage:
         verdict["verdict"] = "did_not_complete"
-    # TQ-600a-13-xiii extension point: read earlier verdicts, fill the window and the escalation list.
-    window = {node_id: 1 for node_id in verdict["passed_on_retry"]}
+    window, runs_read, repeated = flaky_fields(
+        verdict["passed_on_retry"], history, tunables or load_tunables(), escalate=lane == LANE and not stage
+    )
+    if repeated:
+        verdict["verdict"] = "red"
     errors = sorted((first or {}).get("collection_errors") or [])
     return {
         "collection_errors": errors,
@@ -182,9 +197,9 @@ def build_verdict_file(
         "first_run_failures": verdict["first_run_failures"],
         "failing": verdict["failing"],
         "passed_on_retry": verdict["passed_on_retry"],
-        "repeated_pass_on_retry": [],
+        "repeated_pass_on_retry": repeated,
         "pass_on_retry_window": window,
-        "window_runs_read": 1,
+        "window_runs_read": runs_read,
         "run_runner": (first or {}).get("runner"),
         "retry_runner": (retry or {}).get("runner"),
         **_run_context(env),
@@ -283,11 +298,34 @@ def _cmd_retry(opts: argparse.Namespace, command: list[str]) -> int:
     return 0
 
 
+def _history_for(opts: argparse.Namespace, tunables: dict) -> HistoryRead | None:
+    """The earlier runs' verdicts for the pass-on-retry window, or None when history is not wanted or cannot be asked.
+
+    Only the correctness lane reads history, and only when ``--api-url --repo --run-id`` and GITHUB_TOKEN are
+    all given; anything less is a window of this run alone (``window_runs_read`` says so). Never raises for a
+    service problem: the verdict must be written whatever the history read does.
+    """
+    given = (opts.api_url, opts.repo, opts.run_id)
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if opts.lane != LANE or not any(given):
+        return None
+    if not all(given) or not token:
+        logger.warning("pass-on-retry history needs --api-url, --repo, --run-id and GITHUB_TOKEN; reading none")
+        return None
+    try:
+        return read_history(GitHubClient(opts.api_url, token), opts.repo, opts.run_id, tunables)
+    except (GitHubError, KeyError, TypeError, ValueError) as exc:  # a service problem or a malformed tunable: a window of this run alone
+        logger.warning("cannot read the pass-on-retry history; the window covers this run only: %s", exc)
+        return HistoryRead([], None)
+
+
 def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
     """Classify both reports, write the verdict file, publish the verdict as a step output."""
     base = Path(opts.artifacts)
     first, first_state = load_report(base / FIRST_REPORT)
     retry, _retry_state = load_report(base / RETRY_REPORT)
+    tunables = load_tunables()
+    read = _history_for(opts, tunables)
     verdict_file = build_verdict_file(
         first,
         retry,
@@ -296,25 +334,31 @@ def _cmd_verdict(opts: argparse.Namespace, _command: list[str]) -> int:
         retry_result=normalize_job_result(os.environ.get("RETRY_RESULT")),
         first_state=first_state,
         lane=opts.lane,
+        history=read.entries if read else None,
+        tunables=tunables,
     )
     _write_text(Path(opts.output), json.dumps(verdict_file, indent=2) + "\n")
     _set_output("verdict", verdict_file["verdict"])
-    _append_summary(verdict_file)
+    short = short_history(read, tunables, verdict_file["window_runs_read"])
+    _append_summary(verdict_file, f"{verdict_file['window_runs_read']} of {tunables['flaky_window_runs']} runs read" if short else None)
     logger.info("verdict: %s (stage: %s)", verdict_file["verdict"], verdict_file["stage"])
     return 0
 
 
-def _append_summary(verdict_file: dict) -> None:
-    """Append one line per passed-on-retry id and per failing id to the step summary, when there is one.
+def _append_summary(verdict_file: dict, short_history_note: str | None = None) -> None:
+    """Append one line per passed-on-retry id, per repeated id and per failing id to the step summary, when there is one.
 
-    Makes a fail-then-pass visible on a green run. A summary that cannot be written is logged
-    and dropped: nothing but the verdict may change this run's conclusion.
+    Makes a fail-then-pass visible on a green run, names what made a run red by repeating, and warns (with
+    ``short_history_note``) when less of the pass-on-retry window was read than it holds. A summary that cannot
+    be written is logged and dropped: nothing but the verdict may change this run's conclusion.
     """
     target = os.environ.get("GITHUB_STEP_SUMMARY")
     if not target:
         return
     lines = [f"- passed on retry: `{i}`\n" for i in verdict_file["passed_on_retry"]]
+    lines += [f"- repeated pass-on-retry: `{i}`\n" for i in verdict_file["repeated_pass_on_retry"]]
     lines += [f"- FAILING: `{i}`\n" for i in verdict_file["failing"]]
+    lines += [f"- WARNING: short pass-on-retry history: {short_history_note}\n"] if short_history_note else []
     try:
         with open(target, "a", encoding="utf-8") as handle:
             handle.writelines(lines)
@@ -346,6 +390,9 @@ def build_parser() -> argparse.ArgumentParser:
     verdict.add_argument("--artifacts", required=True)
     verdict.add_argument("--output", required=True)
     verdict.add_argument("--lane", choices=LANES, default=LANE, help="which lane's verdict file to write")
+    verdict.add_argument("--api-url", default=None, help="API root; with --repo and --run-id (token in GITHUB_TOKEN) reads earlier runs' verdicts")
+    verdict.add_argument("--repo", default=None, help="OWNER/NAME of the repository whose run history is read")
+    verdict.add_argument("--run-id", default=None, type=int, help="this run's id: only settled main runs below it are read")
     status = sub.add_parser("exit-status", help="exit non-zero unless the verdict file is green")
     status.add_argument("--verdict-file", required=True)
     return parser
@@ -364,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         return _HANDLERS[opts.command](opts, command)
-    except (LaneReportError, OSError):
+    except (LaneReportError, OSError, TypeError, KeyError, ValueError):  # the last three: a malformed tunables file
         logger.exception("%s failed", opts.command)
         return 2
 

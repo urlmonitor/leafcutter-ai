@@ -122,6 +122,7 @@ class TestStructuredApproval(ApprovalCase):
     """Structured answers make proposals usable, attributed to the human actor."""
 
     async def test_the_approval_question_offers_a_structured_answer_over_the_proposals(self) -> None:
+        # covers: DK-600b-1
         packet = await self.until_approval_question()
         self.assertTrue(packet["structured_allowed"])
         self.assertEqual(packet["subject_ids"], ["c1", "c2", "A", "B"])
@@ -129,6 +130,7 @@ class TestStructuredApproval(ApprovalCase):
         self.assertEqual([b for b in self.jev.batches if b.purpose == "decision.assess"], [])
 
     async def test_subset_approval_makes_only_the_listed_criteria_usable(self) -> None:
+        # covers: DK-600b-1-i
         packet = await self.until_approval_question()
         self.decision_params["satisfies"] = {("c1", "A"): 0.95, ("c1", "B"): 0.05}
         result = await self.step(human_submission(
@@ -147,6 +149,7 @@ class TestStructuredApproval(ApprovalCase):
                                       "selected_option_id": "A", "missing_needs": 0})
 
     async def test_edited_criteria_become_human_supplied_and_approved_by_the_human(self) -> None:
+        # covers: DK-600b-1-i
         packet = await self.until_approval_question()
         edit = {"edited_criteria": [{"id": "c1", "question": "Must survive a crash"},
                                     {"question": "Must run offline", "priority": "supporting"}],
@@ -158,6 +161,7 @@ class TestStructuredApproval(ApprovalCase):
                          {"c1": "Must survive a crash", "crit.edit.2": "Must run offline"})
 
     async def test_free_text_is_recorded_not_turned_into_criteria(self) -> None:
+        # covers: DK-600b-1-ii
         packet = await self.until_approval_question()
         result = await self.step(human_submission(
             packet, self.run_id, {"free_text": "- Must be fast\n- Must be small"}))
@@ -170,6 +174,7 @@ class TestStructuredApproval(ApprovalCase):
                                for x in state["outcome"].limitations))
 
     async def test_a_host_cannot_approve_the_proposals_it_generated(self) -> None:
+        # covers: DK-600b-1
         first = (await self.start(self.task_input(GOAL))).interrupts[0].value
         host = narrow(
             (await self.step(human_submission(first, self.run_id, {"free_text": "x"}))).pending)
@@ -186,6 +191,7 @@ class TestNoLeakAcrossQuestions(ApprovalCase):
     """An earlier question's answer must not act on a later phase of the decision."""
 
     async def test_clarification_answer_does_not_become_a_criterion_or_an_approval(self) -> None:
+        # covers: DK-600b-1-ii
         packet = await self.until_approval_question()
         self.decision_params["satisfies"] = {("c1", "A"): 0.95, ("c2", "A"): 0.95}
         result = await self.step(human_submission(packet, self.run_id, {"choice_id": "approve"}))

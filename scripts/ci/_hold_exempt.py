@@ -357,4 +357,6 @@ def apply_claim(client: GitHubClient, repo: str, verdict: dict, issues: list[dic
     others = [n for n in {notice.get("number")} if isinstance(n, int) and n != chosen]
     recorded = _record(client, repo, chosen, others, claim, head, proof, run)
     reason = f"Post-merge suite status passes: this pull request declares and proves a fix for #{chosen} (red run {run.get('html_url')}; fix proof run {proof.get('html_url')}).{recorded}"
+    if verdict.get("stage") == "unknown":  # TQ-600a-13-ix: the held verdict's jobs read failed; the exemption still says so
+        reason += f" Note: the jobs of the red run could not be read ({verdict.get('cause')})."
     return {**verdict, "state": "exempt", "reason": reason, "cause": None}

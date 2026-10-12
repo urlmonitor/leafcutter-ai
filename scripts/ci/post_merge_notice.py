@@ -28,9 +28,14 @@ ARCHITECTURE: A pure planner (``plan_writes``: verdict, open notices, commit
     ``post_merge_previous_run``). Extension
     points: TQ-600a-13-iv reopens (it needs the closed notices, so its read
     joins ``read_notices``; its branch joins ``_plan_raise``), -v refines the
-    did_not_complete wording in ``_notice_render._headline``, -xiii adds its
-    section to the description via the same renderer. The verdict file is only
-    read, never written.
+    did_not_complete wording in ``_notice_render._headline``. TQ-600a-13-xiii: a
+    correctness-lane ``apply`` also writes the non-holding ``post-merge-flaky`` notice
+    (``_flaky_notice``; from the verdict file's window alone, one more read of open
+    notices labelled flaky, attempted whatever the red notice's writes did), names the
+    ids a repeated pass-on-retry made red in the red description, and names a
+    red-then-green-at-the-same-commit run's failures (``--previous-verdict-file``, which
+    the correctness notice job now also passes) on the flaky notice. Lane entrants stay
+    a timing-lane section. The verdict file is only read, never written.
 """
 
 from __future__ import annotations
@@ -49,6 +54,8 @@ if __package__ in (None, ""):  # run as `python scripts/ci/post_merge_notice.py`
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci import _notice_render as render  # noqa: E402
+from scripts.ci._flaky_notice import FLAKY, FLAKY_LABEL, may_close, not_reproduced, plan_flaky_writes, repeated_lines, wants_write  # noqa: E402
+from scripts.ci._flaky_window import load_tunables  # noqa: E402
 from scripts.ci._github_rest import GitHubClient, GitHubError  # noqa: E402
 from scripts.ci._notice_entrants import find_entrants, render_entrant_lines  # noqa: E402
 from scripts.ci._notice_render import CORRECTNESS, LANES, LaneSpec  # noqa: E402
@@ -86,7 +93,8 @@ def plan_writes(
 ) -> list[Write]:
     """Return the ordered writes for this verdict given the open notices (ascending by number).
 
-    ``entrants`` are the lane-entrant lines a red timing notice carries (empty for every other notice).
+    ``entrants`` are the extra section lines of a RED notice, passed through to the description unchanged: the lane
+    entrants of a timing notice, or the repeated pass-on-retry ids of a correctness notice (empty for every other notice).
     """
     if verdict["verdict"] == "green":
         return _plan_close(verdict, notices, lane)
@@ -321,32 +329,73 @@ def read_previous_verdict(path: str | None) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
-def _entrant_lines(opts: argparse.Namespace, verdict: dict) -> list[str]:
-    """The lane-entrant section for a RED run's notice; empty for any other verdict or without a previous file."""
+def _red_extra_lines(opts: argparse.Namespace, verdict: dict, lane: LaneSpec) -> list[str]:
+    """The extra sections of a RED run's notice: the repeated pass-on-retry ids (correctness), the lane entrants (timing)."""
     if verdict["verdict"] != "red":
         return []
+    if lane.name == CORRECTNESS.name:  # entrants are a timing-lane notion: the correctness lane's collected ids are not a lane membership
+        return repeated_lines(verdict, load_tunables())
     return render_entrant_lines(find_entrants(verdict, read_previous_verdict(opts.previous_verdict_file), opts.repo_dir))
 
 
-def _decide(opts: argparse.Namespace, client: GitHubClient) -> tuple[list[Write], str | None]:
-    """Read what the decision needs and return (writes, reason there are none)."""
+def _decide(opts: argparse.Namespace, client: GitHubClient) -> tuple[list[Write], str | None, dict | None]:
+    """Read what the decision needs and return (red/timing notice writes, reason there are none, the verdict or None)."""
     lane = LANES[opts.lane]
     runs = read_runs(client, opts.repo, lane)
     selection = select_verdict_run(runs)
     run = selection.run
     if run is None or run.get("id") != opts.run_id:
-        return [], f"run {opts.run_id} is not the settled main-branch verdict run; nothing to write"
+        return [], f"run {opts.run_id} is not the settled main-branch verdict run; nothing to write", None
     verdict = load_verdict(opts, client, run, lane)
     verdict["run_url"] = run["html_url"]  # the link comes from the API, never from an artifact
     if verdict.get("lane", lane.name) != lane.name:
-        return [], f"run {opts.run_id} is the {verdict['lane']} lane; it never writes the {lane.label} notice"
+        return [], f"run {opts.run_id} is the {verdict['lane']} lane; it never writes the {lane.label} notice", None
     notices = read_notices(client, opts.repo, lane)
     commit_range = render.CommitRange(render.RANGE_NO_GREEN)
     if verdict["verdict"] != "green" and lane.lists_commits:
         anchor = last_green_anchor(runs, run["run_number"])
         page_full = len(runs) >= render.RUNS_PAGE_SIZE
         commit_range = render.collect_commits(opts.repo_dir, verdict["head_sha"], anchor, page_full)
-    return plan_writes(verdict, notices, commit_range, _now(), lane, _entrant_lines(opts, verdict)), None
+    return plan_writes(verdict, notices, commit_range, _now(), lane, _red_extra_lines(opts, verdict, lane)), None, verdict
+
+
+def _flaky_writes(opts: argparse.Namespace, client: GitHubClient, verdict: dict) -> list[Write]:
+    """The non-holding ``post-merge-flaky`` notice's writes for a correctness-lane verdict (TQ-600a-13-xiii).
+
+    Reads no history: the verdict file carries the window. A verdict without one (a run with no artifact) says
+    nothing about the window, so it writes nothing. The notices are read only when a write is possible.
+    """
+    if "pass_on_retry_window" not in verdict:
+        return []
+    previous = read_previous_verdict(opts.previous_verdict_file)
+    candidates = not_reproduced(verdict, previous)
+    size = int(load_tunables()["flaky_window_runs"])
+    if not (wants_write(verdict, candidates) or may_close(verdict, size)):
+        return []
+    notices = read_notices(client, opts.repo, FLAKY)
+    return [Write(*write) for write in plan_flaky_writes(verdict, notices, size, candidates, previous)]
+
+
+def _perform(client: GitHubClient, repo: str, writes: list[Write], label: str) -> int:
+    """Apply ``writes`` under ``label``; return ``EXIT_OK`` or ``EXIT_WRITE_FAILED``, logging what was not written."""
+    if not writes:
+        return EXIT_OK
+    not_written = apply_writes(client, repo, writes, label)
+    if not_written:
+        done = len(writes) - len(not_written)
+        logger.warning("%s notice NOT fully written: %d of %d writes done; not written: %s", label, done, len(writes), "; ".join(not_written))
+        return EXIT_WRITE_FAILED
+    return EXIT_OK
+
+
+def _apply_flaky(opts: argparse.Namespace, client: GitHubClient, verdict: dict) -> int:
+    """Decide and perform the flaky notice's writes; a failure here is its own exit status and touches nothing else."""
+    try:
+        writes = _flaky_writes(opts, client, verdict)
+    except (GitHubError, ValueError, OSError, TypeError, KeyError) as exc:
+        logger.warning("%s notice: cannot decide what to write: %s", FLAKY_LABEL, exc)
+        return EXIT_WRITE_FAILED
+    return _perform(client, opts.repo, writes, FLAKY_LABEL)
 
 
 def run_apply(opts: argparse.Namespace, token: str) -> int:
@@ -357,20 +406,16 @@ def run_apply(opts: argparse.Namespace, token: str) -> int:
         return EXIT_BAD_INPUT
     try:
         client = GitHubClient(opts.api_url, token)
-        writes, reason = _decide(opts, client)
-    except (GitHubError, ValueError) as exc:
+        writes, reason, verdict = _decide(opts, client)
+    except (GitHubError, ValueError, OSError, TypeError, KeyError) as exc:  # the last three: an unreadable or malformed tunables file
         logger.warning("%s notice: cannot decide what to write: %s", label, exc)
         return EXIT_BAD_INPUT
     if reason:
         logger.info("%s notice: %s", label, reason)
-    if not writes:
-        return EXIT_OK
-    not_written = apply_writes(client, opts.repo, writes, label)
-    if not_written:
-        done = len(writes) - len(not_written)
-        logger.warning("%s notice NOT fully written: %d of %d writes done; not written: %s", label, done, len(writes), "; ".join(not_written))
-        return EXIT_WRITE_FAILED
-    return EXIT_OK
+    status = _perform(client, opts.repo, writes, label)
+    if verdict is not None and opts.lane == CORRECTNESS.name:  # the flaky notice is independent of the red one: attempted whatever happened above
+        status = max(status, _apply_flaky(opts, client, verdict))
+    return status
 
 
 def build_parser() -> argparse.ArgumentParser:

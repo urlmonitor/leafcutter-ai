@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "host_role": "blind_host",
+  "operation": "interpret_retrieval_needs",
+  "interaction_id": "int-d0d434375ec34205",
+  "packet_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\packet.json",
+  "packet_sha256": "2cf11e3d94ddebb973ff514fb83820c7825cab821c3ac3d56a0ad16dee4d4709",
+  "input_artifact_refs": [
+    "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\runtime\\runs\\run-1e7a4d71ca5a4cff\\artifacts\\input-int-d0d434375ec34205.json"
+  ],
+  "archived_inputs": [
+    {
+      "path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\inputs\\0.json",
+      "sha256": "28da79eb340f559a4b46e49130496fde9b6ad2d98b4c26b14d6e373c8eeb9994"
+    }
+  ],
+  "response_path": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\response.json",
+  "response_sha256": "acd148eec1177eb525368c84dae084e90e2c564232f4e4b551df1a31f87262a1",
+  "model_id": null,
+  "completed_at": "2026-10-09T21:02:26.9199735Z",
+  "scope_statement": "Read only the manifest and its explicitly referenced packets and archived inputs; performed only the named host interpretation. No source inspection, retrieval, external provider calls, graph writes, code changes or Git operations.",
+  "run_id": "run-1e7a4d71ca5a4cff",
+  "case_id": "A03",
+  "agent_id": "/root/retrieval_aura_blind_host",
+  "dispatched_at": null,
+  "dispatch_time_note": "Exact root tool-dispatch timestamp unavailable; session creation is recorded separately, not substituted.",
+  "agent_session_created_at": "2026-10-09T21:01:00.887Z",
+  "agent_session_metadata_recorded_at": "2026-10-09T21:01:01.163Z",
+  "registered_at": "2026-10-09T21:03:41.763025+00:00",
+  "root_spawn_fork_turns": "none",
+  "supervision_source": "Root orchestrator confirmed fresh fork_turns=none dispatch and independently inspected agent session metadata.",
+  "original_host_record": "C:\\Users\\Hendrik\\Code\\leafcutter\\worktrees\\typed-research-binding-v01\\reports\\retrieval-aura-2026-10-09\\runs\\published-2a8ebc87\\A03\\started\\host\\dispatch.original-host.json",
+  "original_host_record_sha256": "365c207c2ce149d4cdab5d3d0bc777e581e0a9aba3912e820fe53ef1bfbf4948",
+  "validated_packet_sha256": "2cf11e3d94ddebb973ff514fb83820c7825cab821c3ac3d56a0ad16dee4d4709",
+  "validated_response_sha256": "acd148eec1177eb525368c84dae084e90e2c564232f4e4b551df1a31f87262a1",
+  "blindness_policy": "Only actual current host packets and their input refs; no oracles, expected outcomes, previous responses or grading feedback."
+}

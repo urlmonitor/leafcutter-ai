@@ -1,0 +1,190 @@
+id: GE-132a-3
+title: "A complexity refusal says \"complexity X, only Y allowed\" and what to do next, which is to bring in the restructuring specialist with the complexity-reduction skill, and every reader gets that same text from the declaration"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given check-complexity's remedy declaration names the restructuring specialist and
+    the complexity-reduction skill,
+  And a person at a terminal runs git commit on a change that raises plan_batches in
+    scripts/planner.py from 30 to 31, where 30 is the ceiling applied to it,
+  When check-complexity refuses the commit,
+  Then the refusal states that plan_batches has complexity 31 and only 30 is allowed,
+    not merely that it is too complex,
+  And it states that the next step is to bring in the restructuring specialist to
+    apply the complexity-reduction skill to plan_batches.
+
+  Given the same change refused the same way when it is committed by the commit agent,
+    and again when an interactive session runs git commit itself,
+  When each refusal is read,
+  Then all three refusals state the same score, the same ceiling and the same next
+    step, so one text serves the agent that acts on it and every agent or person who
+    only reads it.
+
+  Given the declaration's instruction alone is changed to "bring in the restructuring
+    specialist to split plan_batches until it scores at or under 30",
+  When the same refusal recurs,
+  Then the refusal shows the changed next step and not the earlier one, so the next step
+    comes from the declaration and not from text kept inside the check.
+depends_on:
+  - GE-132a
+  - GE-132a-2
+  - INF-800f-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-132-checks-say-what-happens-next/GE-132a.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-131-functions-stay-followable/GE-131a-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Already requires the complexity refusal to name the file, the function, its score,
+      the ceiling applied and the complexity-reduction skill. This record pins the form
+      ("complexity X, only Y allowed") and requires the next step to come from the
+      declaration and to name the restructuring specialist. GE-131a-3's ratchet arithmetic
+      is not restated.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns how a refusal reads in general. This record fixes only the two facts above and where the next step comes from."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Who acts on this text. Commits by the commit agent or by a drive bring the specialist
+      in automatically. An interactive session or a person is only told.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+delivers_to:
+  - ac_id: BO-3800a-2
+    contract: >-
+      One refusal text, the same for every committer, stating the score, the ceiling
+      applied and the declared next step (the specialist and the skill).
+  - ac_id: BO-3800c-2
+    contract: >-
+      Added at IT PO enrichment. Alongside the human text, one machine-readable record per
+      refused function: {path: str, function: str (qualified name), score: int, ceiling: int,
+      reason: "new" | "grew" | "crossed"}, in refusal order, rendered from the same Refusal
+      values as the text. The run carries the demand from this and never parses the sentence.
+expects_from:
+  - ac_id: GE-132a-2
+    contract: "A declaration whose instructions are non-empty and whose specialist and skill exist."
+  - ac_id: GE-132a-1
+    contract: "The shared declaration loader: local table first, with a per-hook fallback to the package seed."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    FORM. Each refused function is rendered as "<function> has complexity <score>, only
+    <ceiling> allowed", with the file and the reason (new, grew or crossed) kept. Exact
+    punctuation is the coder's. The GE-131a-1, GE-131a-2 and GE-131a-3 tests assert the
+    score, the ceiling, the reason, "complexity-reduction" and the SKIP=check-complexity
+    pure-move line, and must stay green without being edited.
+  - >-
+    ONE SOURCE FOR THE NEXT STEP. The instruction, specialist and skills are read from
+    check-complexity's declaration at refusal time, through the same file the router reads:
+    the tracked template in the package repo, and skills_config precommit_autofix_config_path
+    when deployed. Delete the hard-coded tip that duplicates it ("Use the
+    complexity-reduction skill..."). The pure-move SKIP line belongs to GE-131a-3 and stays.
+  - >-
+    WRITE-IF-ABSENT HAZARD, decided by BrainCandy on 2026-10-09. .claude/precommit-autofix.json
+    is a write-if-absent, gitignored scaffold, so an existing install keeps a table with no
+    declaration fields after a rebuild. check-complexity reads its declaration only through
+    GE-132a-1's shared loader, which falls back to the package seed for any hook the local
+    table does not declare. An old install therefore still prints the seed's next step. It
+    must never print an empty or stale next step, and never fall back to text kept inside
+    the check.
+  - >-
+    AUTOFIX_AGENT. Today the line names python-coder, through get_agent_for_extension(".py")
+    with a python-coder fallback literal. Under this design it names restructuring-specialist,
+    derived from the declaration and never from owns_file_extensions. Remove the fallback
+    literal. Retiring the line is GE-132a's named follow-up. If it is retired here, the
+    BO-210c-1 parse in precommit-autofix Step 4a.1 changes in the same ticket.
+  - >-
+    BO-210c POPULATION, in the same change. A structural-category hook in blocking_hook_ids
+    is re-dispatched to the originating coder (precommit-autofix Step 4a, BO-210c-1).
+    check-complexity must leave that population, or both python-coder and the specialist
+    are engaged. The hook can be excluded from the originator path by its declared
+    disposition or category, never by a hard-coded id. BO-3800b-3 arm one's third And is
+    the test that catches this.
+  - >-
+    The text must not vary by committer. Nothing may branch on COMMIT_AGENT_MODE,
+    CLAUDECODE, a TTY or any other signal that identifies the caller.
+  - >-
+    Tests run real `git commit` in a scratch repo through the generated stanza from
+    shared_reference_layout (@pytest.mark.shared_layout_reader). Add no new build.py spawn.
+test_required: true
+test_spec:
+  - name: test_ge132a3_refusal_states_complexity_ceiling_and_declared_next_step
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Arm 1. plan_batches goes from 30 to 31. The refused commit's output says plan_batches has complexity 31 and only 30 is allowed. Its next step names the restructuring specialist and complexity-reduction applied to plan_batches. RED TODAY: the output says 'scores 31, ceiling 30', the tip is hard-coded, and no specialist is named."
+    must_catch:
+      - "THE BARE VERDICT: refuse with 'too complex' and no numbers"
+  - name: test_ge132a3_three_committers_get_identical_refusal_text
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: boundary
+    description: "Arm 2. The same staged change is committed three times: with no env marker (terminal), with COMMIT_AGENT_MODE=1 (commit agent) and with CLAUDECODE=1 (interactive session). The three refusal blocks are byte-identical and each carries the score, the ceiling and the declared next step. RED TODAY on content, because there is no next step yet."
+  - name: test_ge132a3_changed_declaration_instruction_changes_the_refusal
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Arm 3. Only the fixture declaration's instruction changes, to 'split plan_batches until it scores at or under 30'. The recurring refusal shows the new instruction and not the old one. RED TODAY."
+    must_catch:
+      - "THE COPY: print a hard-coded copy of the declared instruction"
+test_rationale: >-
+  One real commit per arm through the generated stanza. Arm 3 is the only test that tells
+  a declaration-driven next step from a hard-coded copy, so it edits the fixture's data and
+  never the check. All three are red today.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by:
+  - reason: depends-on-amended-by-product-decision
+    by: it-po
+    at: 2026-10-09
+    note: >-
+      BrainCandy approved this on 2026-10-09 (IT PO ambiguity 3). depends_on gains GE-132a-2
+      and INF-800f-1. Arm one's declaration names the restructuring specialist and the
+      complexity-reduction skill. GE-132a-2's validator refuses that declaration until
+      INF-800f-1 has registered the specialist, so this record cannot be built before both.
+      The edge already existed in practice through expects_from GE-132a-2. criteria, title
+      and req_status are untouched.
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: internal
+notes: |
+  THE CORE DELIVERABLE, IN BRAINCANDY'S WORDS (2026-10-09): "we do not just say: too
+  complex, but that we say: complexity X but only Y allowed. Spawn restructuring agent
+  (which should have the complexity skill). And then of course if commit agent did it, it
+  would be able to spawn it. And if any other agent or human does it they would also know
+  what to do."
+
+  THE SECOND ARM IS WHY ONE TEXT MATTERS. If the agent-facing and human-facing messages
+  are built separately, they drift, and the reader who is only told gets the weaker one.
+  The check cannot know who committed, so it must not vary its text by committer.
+
+  THE THIRD ARM IS THE DISCRIMINATOR. A check that hard-codes the same wording as its
+  declaration passes the first two arms.
+
+  NAMED MUTATIONS.
+  (1) THE BARE VERDICT: refuse with "too complex" and no numbers. MUST GO RED: arm one's
+      "complexity 31, only 30 allowed". MUST STAY GREEN: arm three.
+  (2) THE COPY: print a hard-coded copy of the declared instruction. MUST GO RED: arm
+      three. MUST STAY GREEN: arms one and two.
