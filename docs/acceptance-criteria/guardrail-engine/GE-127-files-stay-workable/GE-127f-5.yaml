@@ -1,0 +1,308 @@
+id: GE-127f-5
+title: "Where the standard's own remedy cannot be performed, the standard says so and stands aside, naming the place and the reason, instead of refusing a change no one can satisfy"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a location is declared, with a stated reason, as one where the remedy this
+    standard prescribes — moving code out into a smaller companion file — cannot be
+    performed at all,
+  And a file in that location already stands above its permitted length,
+  When an author stages a change that puts measured lines into that file and performs
+    an ordinary commit,
+  Then the commit is not refused for the file's length,
+  And the file is still measured and its length still reported, because what is
+    excused is the refusal, not the measurement,
+  And the outcome names the location and states the recorded reason, so a reader sees
+    that the standard stood aside and why, rather than seeing nothing.
+
+  Given the same change staged against a file in any location that is NOT declared,
+  When the author performs an ordinary commit,
+  Then the standard applies unchanged, including the obligation GE-127f-1 and
+    GE-127f-4 enforce.
+
+  Given a declared location whose recorded reason is empty or absent,
+  When an author stages a change to a file in it,
+  Then the declaration grants nothing and the standard applies in full, because a
+    place that does not say why it is excused has not been excused.
+
+  Given a file in a declared location that breaks a rule other than its length,
+  When the author performs an ordinary commit,
+  Then that other rule still refuses the change, because this record excuses one
+    obligation in one place and is not a general exemption from the guard.
+
+  Given the outcome of any run that measured at least one file,
+  When a reader looks at it,
+  Then the set of declared locations in force is stated, including when that set is
+    empty, so an exemption can never take effect unseen.
+depends_on: [GE-127f, GE-127f-1, GE-127c-1]
+doc_links:
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "Records that an E2 workflow body is executed as a top-level body with no
+      module loader, which is why the standard's remedy is unavailable in
+      templates/workflows-js/."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME IDEA ON THE DOCUMENT SIDE — CONVERGE THE VOCABULARY, DO NOT
+      DUPLICATE THE MECHANISM. GE-127g ("A document nobody writes by hand is
+      not judged by a limit written for one, and you can see that it was set
+      aside") reaches this record's conclusion for check-doc-length: where the
+      standard's remedy cannot be acted on, it stands aside and says so. Both
+      were authored independently; the agreement is evidence the shape is
+      right, and the duplication is a liability. Two differences a future
+      reader must not mistake for accidents. FIRST, VOCABULARY: GE-127g says
+      "set aside", this record's gate says "excused". They mean the same
+      thing and should not stay different words for one concept. SECOND, AND
+      MORE IMPORTANT, THE CEILING: GE-127g-5 requires every set-aside location
+      to declare a size beyond which its documents are REPORTED (never
+      refused), and states that no location may be set aside without one. This
+      record ships NO ceiling, deliberately and not by oversight — see the
+      notes. If the two mechanisms are ever unified, the ceiling is the
+      question to settle first, and GE-127g-5's answer is the incumbent.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, NOT WIDENED — READ BEFORE IMPLEMENTING. GE-127c owns WHICH KINDS of
+      file are in scope, and GE-127f's own notes forbid either record pinning the
+      other's answer. This record does not touch that: .js stays a checked kind,
+      a file in the declared location is still measured, its length is still
+      counted by GE-127d's rule, and it is still reported. What stands aside is
+      the REFUSAL for length, in one named place. Implementing this by removing
+      the location from scope — skipping the file, dropping it from the measured
+      set, or short-circuiting before it is counted — lands it at GE-127c's
+      address instead of this one and must be rejected in review.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "The declared locations live in the published rule surface
+     (commit_guardian.json's file_size section), NOT as a path literal in the hook. A
+     reader must be able to learn the rule from the published surface alone, which is
+     what GE-127c-1 and GE-127d-2 already require of this gate's other rules."
+  - "Each declaration carries a NON-EMPTY reason, and an empty or absent reason grants
+     nothing. This mirrors the reachability exemption registry (BO-2900d-1-i), where a
+     blank reason records nothing and grants no pass. Do not invent a second convention
+     for the same idea."
+  - "EXCUSE THE REFUSAL, NOT THE MEASUREMENT. The declared location must be consulted
+     at the point the gate decides to REFUSE, after the file has been counted — not
+     in should_check_file(), not by filtering the staged list, not by any early
+     return that stops the file being measured. Those all re-implement GE-127c's
+     scope question at this record's address, and they would also hide the file's
+     length from the output, which the fourth criterion forbids."
+  - "Match on an exact declared directory prefix. No globs, no name or extension
+     convention, no 'anything that looks like a workflow'. An exemption that matches by
+     resemblance will eventually excuse a file nobody considered."
+  - "The outcome must STATE the declared set in force, including when it is empty. A
+     silent stand-aside is the defect this repo has hit repeatedly — a check that
+     examined nothing must not look like a check that found nothing. GE-127c-1 already
+     makes the measured KINDS visible for exactly this reason; this extends the same
+     treatment to excused LOCATIONS."
+  - "The first and only declaration is templates/workflows-js/, and its reason is the
+     engine constraint, not the file's size. Per ADR-030 the E2 engine executes a
+     workflow as a top-level body with no module loader, so a sibling module cannot be
+     imported at runtime; the repo already DUPLICATES a shared helper across
+     plan-feature.js and finalize-feature.js rather than extract it, and both files say
+     so in their own comments. Record that, not 'this file is too big'."
+  - "Do NOT widen the declaration to templates/ or to .js generally, and do NOT raise
+     the .js line_limits entry. Either would excuse files whose remedy IS available."
+  - "Do NOT change what GE-127f-1, GE-127f-2, GE-127f-3 or GE-127f-4 enforce anywhere
+     else. Their existing tests must stay green unweakened; this record adds a
+     stand-aside, it does not soften the obligation."
+test_required: true
+test_spec:
+  - name: test_a_declared_location_is_not_refused_on_length_grounds
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "An oversized file inside the declared location takes an addition and
+      the gate does not refuse it. Driven through the hook's real entry point against a
+      real staged change, not by calling a predicate directly."
+  - name: test_an_undeclared_location_is_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "The identical oversized-file addition outside the declared location is
+      still refused with the GE-127f obligation. This is the arm that fails if the
+      exemption is implemented too broadly."
+    must_catch:
+      - "an exemption written so loosely that it excuses files outside the declared location"
+  - name: test_an_excused_file_is_still_measured_and_its_length_still_reported
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The excused file's measured length appears in the output exactly as a
+      non-excused file's would. Fails if the exemption was implemented by skipping the
+      file rather than by declining to refuse it — the GE-127c boundary violation."
+    must_catch:
+      - "an exemption implemented in should_check_file or by filtering the staged list,
+         which silently removes the file from measurement"
+  - name: test_a_declaration_with_no_reason_grants_nothing
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: "A declared location whose reason is empty, whitespace, or absent does
+      not excuse anything; the change is refused exactly as if undeclared."
+  - name: test_the_outcome_states_the_declared_set_including_when_empty
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The run's own output names the declared locations in force, and still
+      says so when the set is empty. Asserted on what the hook actually prints."
+    must_catch:
+      - "an exemption that takes effect without appearing anywhere in the output"
+  - name: test_the_declaration_is_read_from_the_published_surface
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: seam
+    description: "Changing the declared set in commit_guardian.json changes the gate's
+      behaviour. Fails if the location is hardcoded in the hook and the config entry is
+      decorative."
+  - name: test_matching_is_an_exact_directory_prefix_not_a_resemblance
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A sibling path that merely resembles the declared one — a longer name
+      sharing the prefix, a similarly-named directory elsewhere in the tree — is NOT
+      excused."
+  - name: test_the_existing_oversized_file_obligation_is_unchanged_elsewhere
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Non-regression over GE-127f-1 and GE-127f-4: outside the declared
+      location the two-for-one obligation and its wording are exactly as before."
+test_rationale: |
+  The first two descriptors are the opposed pair. An exemption that excuses everything
+  passes the first and fails the second; no exemption at all passes the second and fails
+  the first. Only one scoped to the declared location passes both.
+
+  The fourth exists because of this repo's own repeated failure mode: a guard that stands
+  aside invisibly is indistinguishable from a guard that looked and found nothing. The
+  same reasoning produced GE-127c-1's measured-kinds line, and the same reasoning applies
+  to an excused location — more so, because here the gate is deliberately not enforcing.
+
+  The fifth is the anti-decoration test. This repo has shipped a declared constant that
+  control flow never read (FAST_LANE_DECLINE_SWEEP_EXEMPT_STEPS, found dead during
+  BO-2400f-5-iii), so a config entry that looks authoritative while the behaviour is
+  hardcoded is a known shape here, not a hypothetical one.
+
+  Every descriptor drives the hook's real entry point against a real staged change.
+  A test that calls an is_exempt() predicate directly would pass on an exemption that the
+  commit path never consults — the grep-equivalent failure this repo's CLAUDE.md rules
+  out, and which outranks any narrower seam this spec might otherwise sanction.
+delivers_to: null
+expects_from:
+  ac_id: GE-127f
+  contract: "GE-127f establishes that an addition to an oversized file must leave it
+    smaller than it was found. This record does not change that obligation; it states
+    what happens where the remedy that obligation assumes is unavailable."
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/commit_guardian/test_ge_127f_5.py
+  - unit_tests/commit_guardian/test_ge_127f_5_real_artifact.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_file_size.py
+  - templates/scripts/commit_guardian/config.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - templates/scripts/commit_guardian/README.md
+change_target:
+  - code
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  WHY THIS EXISTS. GE-127f's obligation assumes a remedy: if a file is too long, move
+  code out of it into a companion file. For templates/workflows-js/ that remedy does not
+  exist. ADR-030 records, from measurement against the real engine, that an E2 workflow
+  is executed as a TOP-LEVEL BODY whose bare `return` is the workflow result. A top-level
+  body cannot carry a static import (SyntaxError), and the injected global set contains
+  no module loader at all — no require, no import, no fs. A refactor attempt on
+  2026-09-30 stopped at this exact wall before changing a byte, and the evidence is
+  four-fold: the ADR, the harness's own docstring, the absence of any import site across
+  all eight files in that directory, and the fact that plan-feature.js and
+  finalize-feature.js DUPLICATE a shared helper across two files and each explain in a
+  comment that extraction is impossible.
+
+  There is a deployment trap that makes a half-measure worse than none: build.py globs
+  workflows-js/*.js and registers every match as an invocable workflow, so a "helper"
+  sibling WOULD be copied next to the lane and WOULD be registered as a workflow, while
+  remaining unreachable from it at runtime. Present on disk, unreachable in use — the
+  shape this repo files as the deployed-layout no-op trap.
+
+  WHAT THIS IS NOT. It is not a judgement that fast-lane-ship.js is an acceptable size.
+  It is 1587 measured lines against a permitted 1000, and that is bad. The point is
+  narrower: under GE-127f-2 the gate measures what a change PUT IN rather than net
+  growth, and GE-127f-4 enforces a two-for-one obligation, so every change to that file
+  must now pay for itself twice over out of a file that cannot be reduced structurally.
+  The standard therefore refuses changes that no author can satisfy, which is a different
+  failure from a file merely being too long.
+
+  THE HONEST COST, recorded so the next reader can weigh it. This removes the pressure
+  that would otherwise force the problem to be confronted. The durable fix is to stop
+  expressing orchestration this size in a sandboxed JS body at all — the owner's stated
+  mid-term direction is LangGraph. NESTED WORKFLOWS ARE NOT AN INTERIM: an earlier draft of
+  this record claimed the engine's workflow() global runs a child workflow inline, one
+  level deep. That is false for E2. docs/reference/workflow-authoring-contract.md (Edge 5,
+  and its "Workflow nesting" row) and ADR-030 both record that workflow() THROWS when
+  called from a running E2 workflow — a leaf-invariant guard, usable only as an
+  engine-detection probe — and no script in templates/workflows-js/ calls it. The interim
+  that IS available keeps the JS as control flow only and moves the substance out of it:
+  deterministic steps into Python scripts the lane runs through command-step-runner (as
+  setup_ticket_worktree.py already is for worktree creation), and judgment steps into
+  agents. Both are reachable from E2 today, and both are what a later framework's nodes
+  would call anyway.
+
+  SCOPE DISCIPLINE. One declaration, templates/workflows-js/, reasoned from the engine
+  constraint rather than from the file's length. If a second location is ever proposed,
+  the question to ask is the one this record turns on: is the standard's remedy actually
+  unavailable there, or merely inconvenient?
+
+  WHY NO CEILING, AND WHY THAT IS AN OPEN QUESTION RATHER THAN A SETTLED ONE. The
+  sibling document-side record GE-127g-5 requires every set-aside location to declare a
+  size beyond which its contents are REPORTED (never refused), and says flatly that no
+  location may be set aside without one. This record ships without one. Three reasons,
+  recorded so the asymmetry is reviewable:
+
+    - GE-127g's population is GENERATED. A regenerated document grows because unrelated
+      work landed elsewhere, so without a ceiling there is no signal at all that anything
+      changed. This record's population is HAND-AUTHORED: every measured line in
+      fast-lane-ship.js was typed by someone, and the gate already prints the file's
+      measured length and its permitted length on every run that touches it. Runaway
+      growth is therefore visible here without a named threshold, which is weaker than a
+      ceiling but is not silence.
+    - GE-127g is approved and NOT BUILT (work_status todo at the time of writing). Fixing
+      this record's shape to an unbuilt sibling's design would guess at a mechanism that
+      may change before it ships, and would be a second implementation of it either way.
+    - A code-side ceiling is a real decision with a cost — it reintroduces a number
+      somebody must maintain for a file nobody can split — and it should be taken
+      deliberately, alongside whoever builds GE-127g, rather than inferred here.
+
+  SO: if the two mechanisms are unified, settle the ceiling first and treat GE-127g-5's
+  answer as the incumbent. Do not read this record's silence as a judgement that a
+  ceiling is wrong; read it as a question left open on purpose.

@@ -34,6 +34,13 @@
     "published_rule_surfaces": [
       "README.md",
       "commit_guardian.json"
+    ],
+    "_comment_length_refusal_exemptions": "GE-127f-5 (2026-10-12) — locations where a file's length is still measured, still compared and still reported, but is never REFUSED, because the remedy this standard prescribes cannot be performed there. This is NOT a scope rule: the kind stays in checked_extensions, the file is still counted under the GE-127d measurement rule above, and an excused file is reported with its length and the recorded reason so the stand-aside is visible rather than silent. An entry whose reason is blank or missing grants nothing. Matching is an exact directory prefix, so templates/workflows-js/ can never match a sibling such as templates/workflows-js-extra/. Before adding an entry, answer the question this mechanism turns on: is the remedy genuinely unavailable there, or merely inconvenient? Only the first justifies an entry.",
+    "length_refusal_exemptions": [
+      {
+        "path": "templates/workflows-js/",
+        "reason": "the E2 workflow engine executes each file as a top-level body with no module loader — no require, no import, no fs — so code cannot be moved into a companion module and 'split the file' is not an available remedy here (ADR-030); build.py also registers every .js in this directory as an invocable workflow, so a helper sibling would be deployed as a workflow yet still be unreachable from the file that needs it"
+      }
     ]
   },
   "doc_length": {

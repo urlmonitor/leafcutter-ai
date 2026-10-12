@@ -107,6 +107,16 @@ CHECKED_EXTENSIONS: list[str] = _get("file_size", "checked_extensions", [".py", 
 PUBLISHED_RULE_SURFACES: list[str] = _get(
     "file_size", "published_rule_surfaces", ["README.md", "commit_guardian.json"]
 )
+# GE-127f-5: locations where a file's length is still MEASURED and REPORTED but
+# is never REFUSED, because the remedy the size standard prescribes -- moving
+# code out into a smaller companion file -- cannot be performed there at all.
+# Each entry is {"path": <directory prefix>, "reason": <why splitting is
+# impossible>}. An entry with a blank or missing reason grants nothing; that is
+# enforced in check_file_size.py, not here, so the raw declared value stays
+# readable from this surface exactly as it was written.
+LENGTH_REFUSAL_EXEMPTIONS: list[dict[str, str]] = _get(
+    "file_size", "length_refusal_exemptions", []
+)
 
 # ---------------------------------------------------------------------------
 # check_complexity
@@ -317,7 +327,19 @@ TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
 ====================================================================
 DECISION HISTORY
 ====================================================================
-- 2026-09-15 [python-coder/GE-127d-1]: Added PUBLISHED_RULE_SURFACES, read
+- 2026-10-12 [python-coder/GE-127f-5]: Added LENGTH_REFUSAL_EXEMPTIONS, read
+  from the new nested file_size.length_refusal_exemptions key (default [], so
+  a config predating this record behaves exactly as before and an absent key
+  is indistinguishable from an empty one at the gate). Deliberately exposed
+  RAW -- the entries are returned as declared, with no filtering of blank
+  reasons here. That validation lives in check_file_size.py's
+  _declared_exemptions() instead, in one place, so the set the outcome
+  PRINTS and the set the gate CONSULTS are produced by the same function and
+  cannot disagree; splitting it across both modules is how a location gets
+  announced as excused while excusing nothing (or the reverse).
+  Nested under the existing file_size section, not a new top-level section,
+  for the same whole-document-shape reason as published_rule_surfaces below.
+- 2026-09-22 [python-coder/GE-127d-1]: Added PUBLISHED_RULE_SURFACES, read
   from the new nested file_size.published_rule_surfaces config key (default
   ["README.md", "commit_guardian.json"]), for the new
   check_file_size_rule_parity.py reconciliation gate. Deliberately NOT a new
