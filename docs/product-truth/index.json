@@ -33,7 +33,9 @@
     "FlowRoute",
     "FlowAppearance",
     "FlowNavigation",
-    "Decomposition"
+    "Decomposition",
+    "FlowNode",
+    "FlowFinderQuery"
   ],
   "artifacts": [
     {
@@ -1262,18 +1264,20 @@
     {
       "id": "leafcutter/atlas-flows",
       "type": "mock_data",
-      "title": "Atlas flows view and canonical flow URLs",
-      "summary": "The canonical Flow dataset for the Atlas /flows view: real flows with their canonical /flows/<flow id> URLs, how each address resolves (default entry, selected, 404 not-found), step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step), the redirect of legacy /flows?flow=<id>&step=<step> links, the AC drawer's 'Appears in flows' step links, and browser sessions covering select, drill, breadcrumb, back and forward. v2: opening a step's drawer writes ?step=<id> into the address bar and closing it removes it with history replace (no new Back-button entries), so Back and Forward move between flows; selecting or drilling from an open drawer pushes the new flow's URL with no ?step=, and Back restores the drawer that was last replaced into an entry. v3 (owner rulings at the flow gate, so the URL always matches the screen): opening a drawer on bare /flows replaces it with /flows/leafcutter/deliver-a-feature?step=<id>; opening a real step's drawer after 'Step not found' clears the notice and replaces the unknown ?step=; a Source, Kind or Realization filter change that renders a different flow replaces the URL with that flow's canonical URL (no new Back entry), and one that keeps the flow leaves the URL unchanged. Navigation records now carry the filter state and the 'Step not found' notice, and Back and Forward restore an entry's filters.",
+      "title": "Atlas flows view, canonical flow URLs and the flow finder",
+      "summary": "The canonical Flow dataset for the Atlas /flows view: every flow the view can draw (the 27 stored flows plus the Artifact Knowledge Graph) with its canonical /flows/<flow id> URL, page title, actor mix, entities and screens; how each address resolves (finder, selected, 404 not-found); step links /flows/<flow id>?step=<step id> that open a step's or branch's drawer (and a 'Step not found' notice for an unknown step); the 308 redirect of legacy /flows?flow=<id>&step=<step> links; the AC drawer's 'Appears in flows' step links; and browser sessions in which opening, switching and closing a drawer replace the URL in place (no new Back entry) while select, drill, breadcrumb and opening a finder result push, and Back and Forward restore each entry's drawer and filters. v4 (Atlas Flow finder): bare /flows shows a finder overview instead of the default flow (changing UXP-591-1-i), with one search box over flow names, step labels and text, input and output field names, AC ids, entities and screens; facets with counts for Product, Actor (Code, AI agent, Person, Jev), Kind, Realization, Level, Uses field, Produces field, 'I/O not yet defined' (/flows?io=gap finds the 102 steps and branches whose input or output fields are not filled in yet, in 9 flows), Entity and Screen; and results grouped by flow whose step rows open the step link. The finder state lives in the /flows query string (typing and facet clicks replace it, so a search can be shared and Back from a flow returns to it), while flow addresses stay filter-free. Step cards carry actor badges, focusable names and AC chips that open /atlas?ac=<id>; a Source, Kind or Realization filter change never swaps the drawn flow (it shows an 'Outside the current filters' notice); Enter opens a step's drawer, the drawer's close button is named 'Close step details', and each flow page has its own title.",
       "component": "ux-prototyping",
       "path": "mock-data/leafcutter/atlas-flows.mock.json",
       "status": "active",
       "readiness": "draft",
-      "version": 3,
+      "version": 4,
       "entities": [
         "Flow",
         "FlowRoute",
         "FlowAppearance",
-        "FlowNavigation"
+        "FlowNavigation",
+        "FlowNode",
+        "FlowFinderQuery"
       ],
       "tags": [
         "atlas",
@@ -1286,7 +1290,16 @@
         "not-found",
         "ac-appearances",
         "drawer-history",
-        "filter-replace"
+        "filter-replace",
+        "finder",
+        "search",
+        "facets",
+        "filter-keeps-flow",
+        "actor-badge",
+        "keyboard-access",
+        "page-title",
+        "ac-deep-link",
+        "io-gap"
       ]
     },
     {
@@ -1531,6 +1544,12 @@
         ]
       }
     },
+    "FlowFinderQuery": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {}
+    },
     "FlowNavigation": {
       "canonical_mock_data": {
         "ux-prototyping": "leafcutter/atlas-flows"
@@ -1540,6 +1559,12 @@
           "leafcutter/explore-flows-in-atlas"
         ]
       }
+    },
+    "FlowNode": {
+      "canonical_mock_data": {
+        "ux-prototyping": "leafcutter/atlas-flows"
+      },
+      "flows": {}
     },
     "FlowRoute": {
       "canonical_mock_data": {
