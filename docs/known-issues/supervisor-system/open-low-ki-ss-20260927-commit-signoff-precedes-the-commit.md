@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-10-12'
+last_updated: '2026-10-13'
 components:
   - supervisor_system
 related_docs:
@@ -24,10 +24,11 @@ related_docs:
   under a permission classifier that refuses unverified success claims.
 - **Status:** open — no AC.
 - **Occurrences:** 3 builds. GE-120f-1 family, 5 commit attempts (PR #916, 2026-09-25 to
-  2026-09-27). BO-4300, 2 false ok entries: ticket 05 (2026-10-09) and ticket 06 (2026-10-10).
+  2026-09-27). BO-4300, 5 false ok entries: ticket 05 (2026-10-09), ticket 06 (2026-10-10), and
+  tickets 10, 11 and 13 (2026-10-12/13), plus one ok entry left behind for a dropped commit.
   EPIC-RightJobRightAgent, 1 false ok entry that the driver then closed as `done`: ticket 46
   (run `wf_54e15913-aea`, 2026-10-12). See "Observed again" below.
-- **First seen:** 2026-09-25 · **Last seen:** 2026-10-12
+- **First seen:** 2026-09-25 · **Last seen:** 2026-10-13
 - **Where:** `templates/skills/signoff/SKILL.md` (the atomic sign-off recipe, run before the phase's
   action completes); `templates/agents/commit.md` (signs off, stages the ticket, then commits, and
   on hook failure rewrites its own entry to `failed`).
@@ -192,3 +193,32 @@ whoever next owns it.
 result. When HEAD did not move, the agent must rewrite its own entry to `failed`/`blocker`
 before returning, and the driver must re-check HEAD itself (2026-10-09 note). Neither may rely
 on the reply alone.
+
+## Observed again, 2026-10-13
+
+**Where:** tickets 10, 11 and 13 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-12/13,
+driven by `/build-feature`. The sequence is from the coordinator's session account. The ticket files
+on the epic branch (tip `cc3c85edc`) hold the corrected records.
+
+**What happened.** Each time, the commit agent wrote `agents.commit: signed_off` and a
+`commit (status: ok)` entry, then ran the commit, and a hook refused it. In tickets 10 and 11 the
+sign-off was left in place. In ticket 13 the agent left the work staged and reported the blocker in its
+reply, but the record still claimed the commit. Ticket 10's record names `check-workflow-meta`,
+`check-file-size` and output drift among its commit blockers, and ticket 11's names `check-file-size`.
+Ticket 10 keeps one honest entry for a refused attempt:
+`### 2026-10-12 23:59 — commit (status: failed)`, "No commit made; HEAD unchanged at 4def0f1e0"
+(`10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md:1238-1240`).
+
+**A new variant: an ok record that outlives its commit (verified).** Ticket 11's
+`### 2026-10-13 19:00 — commit (status: ok)` says "Committed as c4abedd02"
+(`11_TICKET-20260928-BO-4300-workflow-routes.md:921-928`). That commit did land. The user then had it
+dropped by a soft reset, because it had gamed the file-size ratchet
+(`KI-CG-20261013-file-size-measure-can-be-gamed-by-comment-style`). `c4abedd02` is no longer an
+ancestor of the epic branch. The work landed again as `880e15455`, with a second commit entry
+(`:999-1003`), and the first entry was never annotated. The ticket now records a commit that is not in
+its own branch.
+
+**Fix, sharpened again.** A commit record should be checkable against the branch, and should be
+checked when the ticket closes: every hash a `commit (status: ok)` entry names must pass
+`git merge-base --is-ancestor <hash> HEAD`. That catches the pre-written entry, which names no hash or
+a stale one, and the stranded entry, whose hash was rewritten away.
