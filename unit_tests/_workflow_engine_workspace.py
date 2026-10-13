@@ -29,6 +29,7 @@ __all__ = [
     "_WORKSPACE_ANSWER_SOURCE",
     "_WORKSPACE_ANSWER_START",
     "_fill_workspace_answer",
+    "_handed_in_verify_default",
     "_workspace_step_default_responses",
     "finalize_baseline_responses",
     "finalize_deploy_parity_responses",
@@ -248,3 +249,19 @@ def finalize_deploy_parity_responses(still_failing, deploy_exit_status=0):
         "step-3-deploy-parity": shell_step_reply("", exit_status=deploy_exit_status),
         "step-3-deploy-parity-rerun": pytest_run_reply(list(still_failing)),
     }
+
+
+def _handed_in_verify_default(script_path: Path, args: dict[str, Any]) -> dict[str, Any]:
+    """Default ``workspace-verify`` reply for a run handed a location (BO-4300c-4-i).
+
+    A workflow carrying the WORKSPACE-ANSWER block confirms a handed-in ``worktree_path`` /
+    ``workspace_path`` with ONE verify request. Callers that are not about that step get the
+    maker's ok verify answer naming the SAME location; a test that exercises the step scripts
+    the ``workspace-verify`` label itself and wins (merge order).
+    """
+    given = next((args[k] for k in ("worktree_path", "workspace_path") if isinstance(args.get(k), str) and args[k].strip()), None)
+    if given is None or args.get("workspace") is not None or not _workspace_step_default_responses(script_path):
+        return {}
+    answer = workspace_ensure_reply(given.strip(), branch="feature/harness-default")
+    answer["stdout"] = json.dumps({**json.loads(answer["stdout"]), "verb": "verify"})
+    return {"workspace-verify": answer}

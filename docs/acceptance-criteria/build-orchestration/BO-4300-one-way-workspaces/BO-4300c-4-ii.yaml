@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -91,9 +91,18 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by: [unit_tests/build_orchestration/test_bo_4300c_4_ii.py]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/11_TICKET-20260928-BO-4300-workflow-routes.md
+- templates/workflows-js/build-epic.js
+- templates/workflows-js/build-feature.js
+- templates/workflows-js/build-ticket.js
+- templates/workflows-js/fast-lane-ship.js
+- templates/workflows-js/finalize-feature.js
+- templates/workflows-js/plan-feature.js
+- templates/workflows-js/quick-fix.js
+- templates/workflows/build-backlog.md
+- templates/workflows-js/_shared/workspace-answer.js
 notes: |
   The end-to-end observable of the incident, and KI-ACD-007: the product-truth phase wrote into
   the main checkout even when a worktree was created. BO-1800e covers the end state on the

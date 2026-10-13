@@ -258,8 +258,8 @@ function parseAgentJson(raw, ctx) {
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
 // The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
-// by one verbatim dispatch of the maker command below. There is no ambient CWD check and no args.worktree_path
-// fallback -- a run started from the main clone or the workspace parent never works there.
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check; a handed-in args.worktree_path / args.workspace_path is confirmed by the maker (verify)
+// and never trusted, and there is no fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -279,7 +279,7 @@ if (!epicPath) {
 
 // BO-4300c-3 / BO-4300a-1-ia: the epic's working copy is the workspace maker's answer -- handed in as
 // args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
-// that answer's workspace_path ONLY. A caller-supplied args.worktree_path is not a source of a location, and
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path / args.workspace_path is only a claim: the maker confirms it (verify) before any step runs, and
 // there is no ambient probe of the folder the run was started in and no fall-back to the epic folder:
 // anything but an accepted answer ends the run here, quoting what was received.
 

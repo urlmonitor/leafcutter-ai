@@ -247,7 +247,7 @@ if (!workspace.accepted) return workspaceFailure(workspace)
 
 // Step 0b — the established workspace: every later phase is anchored to it.
 const worktreeRoot = workspace.workspace_path
-const activeBranch = typeof workspace.answer.branch === 'string' ? workspace.answer.branch : ''
+const activeBranch = workspaceBranch(workspace.answer)
 const selfIsolated = true
 log(`Workspace ready: ${worktreeRoot} on ${activeBranch || '(branch not reported)'}.`)
 

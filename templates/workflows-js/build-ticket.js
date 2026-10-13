@@ -172,20 +172,6 @@ const CLASSIFY_SCHEMA = {
   required: ['classification'],
 }
 
-const WORKTREE_SCHEMA = {
-  type: 'object',
-  properties: {
-    git_type: { type: 'string' },
-    branch: { type: 'string' },
-    // The root of the worktree the check POSITIVELY identified. Optional:
-    // when it is absent the isolated working copy stays undetermined and the
-    // drive holds back (BO-1900a-4-i) rather than substituting the ambient
-    // directory.
-    worktree_path: { type: 'string' },
-  },
-  required: ['git_type', 'branch'],
-}
-
 /**
  * Reply shape of the post-dispatch record read-back (BO-2900f-1-i).
  *
@@ -1374,8 +1360,8 @@ async function concludeTicket(spec) {
 // Phase 0 — Worktree guard
 // ---------------------------------------------------------------------------
 // The working copy is the workspace maker's answer (BO-4300c-3): handed in as args.workspace, or obtained
-// by one verbatim dispatch of the maker command below. There is no ambient CWD check and no args.worktree_path
-// fallback -- a run started from the main clone or the workspace parent never works there.
+// by one verbatim dispatch of the maker command below. There is no ambient CWD check; a handed-in args.worktree_path / args.workspace_path is confirmed by the maker (verify)
+// and never trusted, and there is no fallback -- a run started from the main clone or the workspace parent never works there.
 
 phase('Worktree Guard')
 
@@ -1409,7 +1395,7 @@ const resolvedTarget = {
 
 // BO-4300c-3 / BO-4300a-1-ia: the drive's working copy is the workspace maker's answer -- handed in as
 // args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is
-// that answer's workspace_path ONLY. A caller-supplied args.worktree_path is not a source of a location, and
+// that answer's workspace_path ONLY. A caller-supplied args.worktree_path / args.workspace_path is only a claim: the maker confirms it (verify) before any step runs, and
 // there is no ambient probe of the folder the run was started in: anything but an accepted answer ends the
 // drive here, quoting what was received, with no phase agent spawned.
 

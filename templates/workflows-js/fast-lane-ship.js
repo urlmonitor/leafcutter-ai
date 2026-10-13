@@ -52,45 +52,6 @@ export const meta = {
   ],
 };
 
-// BO-2400f-13: worktree_path is no longer required — a refusal payload
-// (outcome: "refused") legitimately carries no worktree_path at all. The
-// Phase 1 guard below branches on `outcome === "opened"` and treats any
-// other value (a refusal, a missing/null outcome, an unparseable reply, or
-// the legacy blank-worktree_path shape) as a refusal by a plain-falsy,
-// fail-closed read.
-const WORKTREE_SCHEMA = {
-  type: "object",
-  required: ["outcome"],
-  properties: {
-    outcome: { type: "string", enum: ["opened", "refused"] },
-    worktree_path: { type: "string" },
-    branch: { type: "string" },
-    ac_store_path: { type: "string" },
-    created: { type: "boolean" },
-    base_commit: { type: "string" },
-    base_matches_origin_main: { type: "boolean" },
-    refusal: { type: "object" },
-  },
-};
-
-const WORKTREE_VERIFY_SCHEMA = {
-  type: "object",
-  required: ["worktree_path", "raw"],
-  properties: {
-    worktree_path: { type: "string" },
-    raw: { type: "string" },
-  },
-};
-
-const RESOLVER_SCHEMA = {
-  type: "object",
-  required: ["ac_ids"],
-  properties: {
-    ac_ids: { type: "array", items: { type: "string" } },
-    message: { type: "string" },
-  },
-};
-
 const TEST_WRITER_SCHEMA = {
   type: "object",
   required: ["status"],
@@ -680,7 +641,7 @@ const workspace = await workspaceObtain(
 if (!workspace.accepted) return workspaceFailure(workspace);
 
 const worktreePath = workspace.workspace_path;
-const branch = (typeof workspace.answer.branch === "string" && workspace.answer.branch) || `fast-lane/${slug}`;
+const branch = workspaceBranch(workspace.answer) || `fast-lane/${slug}`;
 // BO-2400f-13-iv: carried through to the operator so a green result is never
 // silently ambiguous about which mainline it was measured against.
 const workspaceCreated =

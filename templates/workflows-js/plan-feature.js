@@ -1951,28 +1951,6 @@ function isAgentRefusal(answer) {
   return false;
 }
 
-/**
- * BO-1500a-5-i: build the `{status: "error", setup_failure_kind, message}`
- * halt payload shared by all four non-confirming worktree-setup reply
- * shapes (refused / uninterpretable / no_workspace_named / silent_success),
- * so the common suffix text and JSON.stringify(rawReply) logic is written
- * once, never duplicated per shape.
- * @param {string} kind - One of the four setup_failure_kind values.
- * @param {string} reason - Shape-specific sentence naming which it was.
- * @param {*} rawReply - The raw worktree-setup reply (string or parsed object).
- * @returns {{status: "error", setup_failure_kind: string, message: string}}
- */
-function buildSetupFailureResult(kind, reason, rawReply) {
-  return {
-    status: "error",
-    setup_failure_kind: kind,
-    message:
-      reason + " Halting before any authoring agent is dispatched.\n" +
-      "Raw reply: " + JSON.stringify(rawReply) + "\n" +
-      "Resolve the issue and re-run /plan-feature.",
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Repository-anchored support-script resolution
 // (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
@@ -2167,6 +2145,7 @@ function buildRepoAnchoredResolutionCommand(relPath) {
 function buildPauseStoreCommand(subcommandArgs) {
   const target = ".leafcutter/scripts/pause_store.py";
   return (
+    (typeof authoringWorktreePath === "string" && authoringWorktreePath ? "cd \"" + authoringWorktreePath + "\" || exit 1; " : "") +
     _buildRepoRootResolutionSnippet(target) +
     "SCRIPT=\"$REPO_ROOT/" + target + "\"; " +
     "if [ ! -f \"$SCRIPT\" ]; then " +
@@ -2318,26 +2297,12 @@ const sessionSlug = component
 // -------------------------------------------------------------------------
 // Pre-Stage-0 — Workspace-Setup Permission Gate (ACD-2100b-5).
 // -------------------------------------------------------------------------
-// The isolated-workspace setup step below runs repository-mutating commands
-// (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
-// be dispatched only to an agent whose registered charter (config/agent_registry.json)
-// permits running repository/shell commands.
-//
-// ACD-2100b-5 moved the registry read OUT of this workflow body. The E2
-// engine (ADR-030) contextifies this body with EXACTLY agent, parallel,
-// pipeline, phase, log, args, workflow, budget — no module loader and no
-// filesystem primitive of any kind (canonical statement: unit_tests/
-// _workflow_engine_harness.py docstring, "ENGINE FIDELITY" section) — so
-// this workflow physically cannot read config/agent_registry.json itself.
-// The agent()-dispatch round-trip this section used to make existed only to
-// work around that sandbox; it is gone. The plan-feature SKILL now runs a
-// LOCAL pre-flight script (scripts/worktree/check_workspace_setup_permission.py)
-// BEFORE invoking this workflow — the skill runs in the main agent loop,
-// which has real Bash/Read access — and passes that script's verdict through
-// `args.workspace_setup_permission`, the only injected global that carries
-// caller-supplied data. This workflow makes NO agent() dispatch and touches
-// no filesystem for this check at all; it only consumes the pre-computed
-// verdict, and fails closed whenever one does not reach it.
+// The workspace-setup step below runs repository-mutating commands (fetch, branch-create, workspace make) and
+// must be dispatched only to an agent whose registered charter (config/agent_registry.json) permits shell
+// commands. This body cannot read the registry itself (E2 engine: no module loader, no filesystem; see
+// unit_tests/_workflow_engine_harness.py, "ENGINE FIDELITY"): the plan-feature SKILL runs the local pre-flight
+// (scripts/worktree/check_workspace_setup_permission.py) first and passes its verdict as
+// `args.workspace_setup_permission`. This workflow only consumes that verdict and fails closed without one.
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "shell-runner";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
@@ -2437,6 +2402,8 @@ const authoringWorkspace = await workspaceObtain(
 if (!authoringWorkspace.accepted) return workspaceFailure(authoringWorkspace);
 
 const authoringWorktreePath = authoringWorkspace.workspace_path;
+const workingLocationNote = `Working location (the maker's workspace): ${authoringWorktreePath}\n` +
+  "Do all work and write every file inside that folder only.\n";
 const acStoreDir = (typeof authoringWorkspace.answer.ac_store_path === "string" && authoringWorkspace.answer.ac_store_path) || "docs/acceptance-criteria";
 
 // -------------------------------------------------------------------------
@@ -2511,6 +2478,7 @@ const committedStageKeys = await scanCommittedStages(authoringWorktreePath);
 // Stage 0 — ac-triage: duplicate check + route classification
 // -------------------------------------------------------------------------
 const triageResult = await agent(
+  workingLocationNote +
   "Triage the user's request against the AC store. " +
   "Return a JSON object with keys: route, existing_acs, parent_l1_id, rationale. " +
   "route must be one of: strategic | behavioral | technical | covered. " +
@@ -2623,6 +2591,7 @@ let ptFlowRef = null;          // store-relative path to the approved .flow.json
 let ptComponent = component;   // classifier may refine the target component
 
 const classifierResult = await agent(
+  workingLocationNote +
   "Classify which product-truth artifacts this request needs. " +
   "Decide needs_mock_data, needs_mockup, needs_flow; derive the `outcome` per OUTCOME_BY_COMBO " +
   "(full-set / mockup+data / mockup-only / mock-data-only / none); name the target component and entities. " +
@@ -2683,6 +2652,7 @@ if (ptRunSet.skip) {
 
       while (!ptApproved) {
         ptResult = await agent(
+          workingLocationNote +
           `You are running as part of the /plan-feature product-truth phase (outcome: ${ptRunSet.outcome}). ` +
           `Draft or extend the ${ptStep.stage} artifact for this request. Write it ONLY to ${ptStoreDir} — ` +
           "do NOT write to docs/product-truth/ relative to the current checkout. " +
@@ -3012,6 +2982,7 @@ for (const step of pipeline) {
       // Dispatch the authoring agent, directing AC writes to the dedicated
       // authoring worktree's AC store path (AC BO-1500a-1).
       stepResult = await agent(
+        workingLocationNote +
         `You are running as part of the /plan-feature pipeline (route: ${effectiveRoute}). ` +
         (acFeedback
           ? `The user reviewed your previous attempt and requested changes — address this feedback: ${acFeedback}. `

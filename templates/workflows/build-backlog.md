@@ -124,22 +124,19 @@ Take the first entry from `READY_LIST` as `CURRENT_ITEM`. Announce:
 
 **For epic items** (path contains an `EPIC-*` directory component):
 
-1. Call `worktree-agent create` with the first sub-ticket path to get or create
-   the epic worktree:
+1. Get the epic's workspace from the one workspace maker, as ONE command by the
+   absolute path of the deployed `worktree.py` (never a cwd-relative path, never
+   chained with another command):
 
-   {% if platform == 'claude' %}
-   ```
-   Agent(agent="worktree-agent", input={action: "create", ticket_path: "<first sub-ticket path>"})
-   ```
-   {% elif platform == 'antigravity' %}
    ```bash
-   python .agents/agents/worktree-agent/scripts/run.py --action="create" --args="<first sub-ticket path>"
+   python <absolute-install-root>/scripts/worktree.py ensure --kind epic --slug <slug> --repo-root <absolute-project-root>
    ```
-   {% endif %}
 
-   Capture the returned `worktree_path`. If the agent reports failure, record
-   the failure and skip this item (do not halt the entire loop unless the error
-   is structural).
+   `<slug>` is the epic folder's name, lower-cased. The maker is idempotent (a second run
+   with the same slug resumes the same workspace). On exit 0, parse the single JSON object on stdout and capture its
+   `workspace_path`; do not guess the location any other way. If the maker
+   refuses or fails, record the failure and skip this item (do not halt the
+   entire loop unless the error is structural).
 
 2. Read the epic's `Master_Plan.md` and every sub-ticket frontmatter to compute
    `ready_batch` — the maximal set of tickets that:
@@ -252,7 +249,7 @@ Exit 0 if no failures; exit 1 if any items failed.
 | Cycle detected (exit code 1 from ticket-prioritizer) | Surface `CYCLE DETECTED: A -> B -> A` message; stop without dispatching anything. |
 | Empty ready list at start | Print "Backlog exhausted" message and exit 0. |
 | ticket-supervisor returns `failed` or `blocked` | Prompt user to continue or halt; record failure. |
-| worktree-agent reports failure | Record failure for that epic item; prompt user to continue or halt. |
+| The workspace maker refuses or fails | Record failure for that epic item; prompt user to continue or halt. |
 | `--limit N` where N is not a positive integer | Print usage error and exit non-zero. |
 | `--epic-only` and `--ticket-only` both set | Print "Conflicting flags: --epic-only and --ticket-only cannot be used together." and exit non-zero. |
 
@@ -277,7 +274,7 @@ Exit 0 if no failures; exit 1 if any items failed.
   Type:     epic
 ---
 
-(worktree-agent creates/reuses worktree; ticket-supervisor(s) dispatched directly)
+(the workspace maker makes or resumes the epic workspace; ticket-supervisor(s) dispatched directly)
 
 ...
 

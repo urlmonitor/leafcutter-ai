@@ -857,6 +857,24 @@ async function agent(prompt, opts = {}) {
     };
   }
 
+  // BO-4300c-4-i: a location handed in (args.worktree_path / args.workspace_path) is confirmed by ONE verify
+  // request. A scenario scripts it with `workspace_verify` (served verbatim); absent, the maker answers ready
+  // for exactly the location the request names.
+  if (label === "workspace-verify") {
+    if (scenario.workspace_verify !== undefined) return scenario.workspace_verify;
+    const named = /--path "([^"]+)"/.exec(String(prompt));
+    const path = named ? named[1] : (scenario.record_dir || "/fake/worktree");
+    return {
+      command: "python3 worktree.py verify (harness default)",
+      exit_status: 0,
+      stdout: JSON.stringify({
+        schema_version: 1, status: "ok", code: "OK", verb: "verify",
+        workspace_path: path, worktree_path: path, message: "workspace ready (harness default)",
+      }),
+      stderr: "",
+    };
+  }
+
   if (RE_EPIC_ENUM.test(label)) {
     return epicEnumerationReply(label);
   }

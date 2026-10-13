@@ -55,19 +55,6 @@ export const meta = {
 };
 
 // ---------------------------------------------------------------------------
-// JSON Schemas for agent() responses (E2: engine enforces; no JSON.parse needed)
-// ---------------------------------------------------------------------------
-
-const GATE_SCHEMA = {
-  type: 'object',
-  properties: {
-    status: { type: 'string', enum: ['ok', 'blocked'] },
-    message: { type: 'string' },
-  },
-  required: ['status'],
-}
-
-// ---------------------------------------------------------------------------
 // Narration helper — AC BO-1000a-1, AC BO-1000a-1-i
 //
 // Emits a start-of-step progress line on the workflow's narration channel
@@ -490,25 +477,7 @@ async function pauseAtGate(gateId, runId, ctxSnapshot, descriptor) {
 }
 
 // -------------------------------------------------------------------------
-// Pre-flight worktree resolution
-//
-// Fix (TICKET-20260707-Finalize_Preflight_Branch_Detection):
-// Previously the pre-flight ran `git branch --show-current` with no -C
-// anchor, reading from the session CWD — which is often the main clone on
-// `main`. This caused a false "must be run from a feature branch" abort even
-// when a valid epic worktree existed.
-//
-// The new approach:
-//   1. Extract the epic/ticket name from `args` (e.g. "EPIC-FooBar").
-//   2. Run `git worktree list --porcelain` (no anchor needed — lists all
-//      registered worktrees for this repo regardless of CWD) to find the
-//      worktree whose branch matches `EPIC-<name>` or the single-ticket branch.
-//   3. Anchor the branch/toplevel detection at the resolved worktree root
-//      using `git -C <worktree_root>`.
-//   4. When no matching worktree is found, fail with a clear, actionable
-//      message (not a silent misdetection or a false "on main" abort).
-//   5. When no arg is provided, fall back to the CWD-based detection so
-//      existing callers that pass no argument are unaffected.
+// Pre-flight workspace: branch and root come only from the workspace maker's answer (below).
 // -------------------------------------------------------------------------
 
 // Extract the epic/ticket argument passed to the workflow.
@@ -535,7 +504,7 @@ const finalizeWorkspace = await workspaceObtain(
   "python3 {{config.output_root}}/scripts/worktree.py ensure --kind feature --slug " + finalizeSlug, "Pre-flight");
 if (!finalizeWorkspace.accepted) return workspaceFailure(finalizeWorkspace);
 
-const BRANCH = (typeof finalizeWorkspace.answer.branch === "string" ? finalizeWorkspace.answer.branch : "").trim();
+const BRANCH = workspaceBranch(finalizeWorkspace.answer);
 const WORKTREE_ROOT = finalizeWorkspace.workspace_path;
 
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
@@ -584,6 +553,8 @@ let baselineRunAt = null;    // ISO string | null
 const baselineSlug = ("finalize-baseline-" + String((args && args.baseline_ts) || "baseline"))
   .toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
 let baselineWorktreePath = null;
+// BO-4300e-4: the outcome of clearing the scratch copy (the maker's `remove` answer) -- part of finalize's own result.
+let scratchClearing = null;
 
 /** Remove the scratch baseline workspace: one shell-runner dispatch of the maker's `remove`; best-effort, a failed reply is logged. */
 async function cleanupBaselineWorktree() {
@@ -595,8 +566,10 @@ async function cleanupBaselineWorktree() {
       "python3 {{config.output_root}}/scripts/worktree.py remove --path \"" + path + "\" --force",
       "cleanup-baseline-worktree", "Cleanup"), "cleanup-baseline-worktree");
     if (!removal.ok) log("[finalize-feature][WARNING] baseline workspace " + path + " was not removed: " + removal.reason + " -- " + removal.received);
+    scratchClearing = workspaceRemovalRecord(path, removal);
   } catch (err) {
     log("[finalize-feature][WARNING] baseline workspace cleanup failed: " + (err && err.message));
+    scratchClearing = workspaceRemovalRecord(path, null, String(err && err.message));
   }
 }
 
@@ -639,7 +612,7 @@ function pytestFailedIds(stdout) {
 
 /** Branch, PR and step-progress fields every halt return carries (each still states its own step_summary). */
 function haltRefs() {
-  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps, step_outcomes: stepOutcomes };
+  return { branch: BRANCH, pr_number: prNumber, pr_url: prUrl, completed_steps: completedSteps, skipped_steps: skippedSteps, step_outcomes: stepOutcomes, scratch_clearing: scratchClearing };
 }
 
 /** A step_refused halt: the shell-runner's answer was no usable result, so whether the step ran is unknown. */
@@ -765,6 +738,7 @@ if (isRefusalStatus(baselineStatus)) {
     completed_steps: completedSteps,
     skipped_steps: skippedSteps,
     step_outcomes: stepOutcomes,
+    scratch_clearing: scratchClearing,
     step_summary: stepOutcomes.map(e => `${e.step}: ${e.outcome}`).join('\n'),
   };
 }
@@ -1960,6 +1934,7 @@ return {
   untracked_failures: untrackedFailures,
   unpublished_learnings: unpublishedLearnings, // INF-700a-5-i: announced before the removal
   worktree_removed: worktreeRemoved,
+  scratch_clearing: scratchClearing,
   completed_steps: completedSteps,
   skipped_steps: skippedSteps,
   // In-order per-step outcome record (AC BO-1000b-1).

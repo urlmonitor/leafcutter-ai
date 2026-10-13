@@ -114,16 +114,6 @@ const PLANNER_SCHEMA = {
   },
 };
 
-const WORKTREE_SCHEMA = {
-  type: "object",
-  required: ["worktree_path", "status"],
-  properties: {
-    worktree_path: { type: "string" },
-    status: { type: "string", enum: ["created", "reused"] },
-    error: { type: "string" },
-  },
-};
-
 /**
  * The "run a command, relay raw stdout" envelope (BO-4000's repository-facts
  * dispatch; same shape plan-feature.js already uses for its registry read).
@@ -1562,6 +1552,15 @@ if (!target) {
   };
 }
 
+// BO-4300c-4-i: a handed-in location (args.worktree_path / args.workspace_path) is confirmed with the maker first.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+let handedInWorkspace = null;
+if (!(args && args.workspace !== undefined && args.workspace !== null) && workspaceHandedIn()) {
+  handedInWorkspace = await workspaceConfirmHandedIn(workspaceHandedIn(), `python3 {{config.output_root}}/scripts/worktree.py ensure`, "Resolve Target");
+  if (!handedInWorkspace.accepted) return workspaceFailure(handedInWorkspace);
+}
+
 const resolveResult = await agent(
   `Resolve the /build-feature target (the workspace is obtained separately, by the workspace maker).\n\n` +
   `Target: "${target}"\n\n` +
@@ -1616,8 +1615,7 @@ const resolvedTarget = {
   worktree_path: null,
 };
 
-// Establish the isolated worktree (reuse or open) before any build work. repoAnchor is the repository reference every worktree_repo_facts.py call below is asked relative to: those subcommands default to the process cwd, which for a phase agent is not a checkout at all, so an unanchored call answers null about a perfectly healthy worktree and aborts the run (BO-4000f). Absoluteness is BO-3900's classifier, never a leading-slash test, or drive-lettered and UNC targets fall back to that same broken default.
-const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target), repoAnchor = classifyPathForm(worktreeTarget) === "absolute" ? worktreeTarget : ".";
+const worktreeTarget = target_type === "epic" ? (epic_path || target) : (ticket_path || target);
 /**
  * Run WORKTREE_REPO_FACTS_SCRIPT and relay its parsed JSON. Never itself
  * decides reuse/open/refuse — every caller below reads structured facts,
@@ -1630,25 +1628,17 @@ async function repoFactsCall(command, label, phase = "Resolve Target") {
 }
 /** A worktree-undetermined abort payload (BO-4000's abort shape), extended per refusal kind. */
 function undetermined(extra) { return Object.assign({ status: "error", worktree_undetermined: true, resolved_target: resolvedTarget, action_required: "establish_worktree" }, extra); }
-// BO-4300c-3 / BO-4300a-1-ia: the build's working copy is the workspace maker's answer -- handed in as
-// args.workspace, or obtained by exactly ONE verbatim dispatch of the maker command -- and its location is that
-// answer's workspace_path ONLY. The maker decides reuse / open / refuse (an occupied location, a stale branch);
-// this workflow no longer opens, reuses or probes worktrees in its own words. Anything but an accepted answer
-// ends the run here, quoting what was received, with no phase agent spawned.
-
-// WORKSPACE-ANSWER-START
-// WORKSPACE-ANSWER-END
-
+// BO-4300c-3 / BO-4300a-1-ia: the working copy is the maker's answer (args.workspace, or ONE verbatim dispatch of
+// the maker command), its location that answer's workspace_path ONLY. The maker decides reuse / open / refuse.
+// Anything but an accepted answer ends the run here, quoting what was received, with no phase agent spawned.
 const buildIdentity = normalizePathForm(worktreeTarget).replace(/\/$/, "").split("/").filter(Boolean).pop() || worktreeTarget;
 const buildSlug = buildIdentity.replace(/^EPIC-/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase()
   .replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "build";
 const buildWorkspace = await workspaceObtain(
   `python3 {{config.output_root}}/scripts/worktree.py ensure --kind ${target_type === "epic" ? "epic" : "ticket"} --slug ${buildSlug}` +
-  (target_type === "ticket" && ticket_path ? ` --ticket "${ticket_path}"` : ""), "Resolve Target");
+  (target_type === "ticket" && ticket_path ? ` --ticket "${ticket_path}"` : ""), "Resolve Target", handedInWorkspace);
 if (!buildWorkspace.accepted) return Object.assign(workspaceFailure(buildWorkspace), { resolved_target: resolvedTarget });
 const realWorktreePath = buildWorkspace.workspace_path;
-// The accepted answer establishes the isolated working copy, so the resolved target carries it and no longer
-// reads as undetermined.
 resolvedTarget.worktree_path = realWorktreePath;
 
 // BO-3900-PATH-HELPERS-START
@@ -1730,23 +1720,6 @@ function resolvePathOntoRoot(root, input) {
   return { ok: true, form, path: normalizePathForm(root).replace(/\/$/, "") + "/" + path };
 }
 
-/**
- * A comparison key for an absolute path (BO-4000's equivalence rule, reusing
- * BO-3900b's own case policy): separators and a trailing separator are
- * ignored; letter case is ignored ONLY for drive-lettered ("C:/...") and UNC
- * ("//server/...") forms, and preserved for a POSIX ("/...") form.
- *
- * @param {string} input
- * @returns {string}
- */
-function pathComparableKey(input) {
-  const norm = normalizePathForm(input).replace(/\/$/, "");
-  return /^([A-Za-z]:\/|\/\/)/.test(norm) ? norm.toLowerCase() : norm;
-}
-/** Do `a` and `b` name the same location, per pathComparableKey()? */
-function pathsEquivalent(a, b) {
-  return pathComparableKey(a) === pathComparableKey(b);
-}
 // BO-3900-PATH-HELPERS-END
 
 // Derive worktree-resident paths from resolve output. resolve may return an absolute

@@ -124,11 +124,69 @@ async function workspaceDispatch(command, phaseName, stepLabel) {
   return await shellStepDispatch(command, stepLabel || WORKSPACE_STEP_LABEL, phaseName || "Workspace");
 }
 
-// Obtain the workspace: take the answer handed in as args.workspace, or issue the one dispatch. Returns
-// the acceptance result; there is no other source of a location.
-async function workspaceObtain(command, phaseName) {
+// BO-4300c-4-i: a location handed in by whoever started the run (args.worktree_path / args.workspace_path).
+const WORKSPACE_VERIFY_LABEL = "workspace-verify";
+function workspaceHandedIn() {
+  const given = args ? (args.worktree_path || args.workspace_path) : undefined;
+  return typeof given === "string" && given.trim() ? given.trim() : "";
+}
+
+// Both spellings of one location are the same location: separators, repeated and trailing slashes, and the
+// case of a drive-lettered path do not tell two locations apart.
+function workspaceSamePath(a, b) {
+  const form = function (p) {
+    const t = String(p).replace(/[\\]+/g, "/").replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+    return /^[a-z]:/i.test(t) ? t.toLowerCase() : t;
+  };
+  return form(a) === form(b);
+}
+
+// The verify request for a handed-in location, derived from the run's own ensure command (same script).
+function workspaceVerifyCommand(ensureCommand, location) {
+  const m = /^(.*?worktree\.py)(?:"|')?\s+ensure\b/.exec(String(ensureCommand));
+  return (m ? m[1] : "python3 worktree.py") + ' verify --path "' + location + '"';
+}
+
+// Confirm the handed-in location with the maker (ONE verbatim verify request) before any step runs. Only an
+// ok answer whose workspace_path is that same location lets the run go on; the failure names the location.
+async function workspaceConfirmHandedIn(location, ensureCommand, phaseName) {
+  const raw = await shellStepDispatch(workspaceVerifyCommand(ensureCommand, location), WORKSPACE_VERIFY_LABEL, phaseName || "Workspace");
+  const result = workspaceAcceptAnswer(raw);
+  const given = "the location given (" + location + ")";
+  if (!result.accepted) return workspaceReject(given + " is not a ready workspace: " + result.reason, raw, result.kind);
+  if (!workspaceSamePath(result.workspace_path, location)) {
+    return workspaceReject(given + " was not confirmed: the maker answered for a different location (" + result.workspace_path + ")", raw, "invalid");
+  }
+  return result;
+}
+
+// Obtain the workspace: take the answer handed in as args.workspace, confirm a handed-in location with the
+// maker, or issue the one ensure dispatch. Returns the acceptance result; there is no other source of a location.
+// A run that must confirm the location before its own first step passes the confirmation it already got.
+async function workspaceObtain(command, phaseName, confirmed) {
   if (args && args.workspace !== undefined && args.workspace !== null) return workspaceAcceptAnswer(args.workspace);
+  if (confirmed) return confirmed;
+  const handedIn = workspaceHandedIn();
+  if (handedIn) return await workspaceConfirmHandedIn(handedIn, command, phaseName);
   return workspaceAcceptAnswer(await workspaceDispatch(command, phaseName));
+}
+
+// The branch an accepted answer names (a verify answer carries it in its marker); "" when it names none.
+function workspaceBranch(answer) {
+  const named = answer.branch || (answer.marker && answer.marker.branch);
+  return typeof named === "string" ? named.trim() : "";
+}
+
+// finalize's record of clearing a scratch copy: the maker's `remove` answer, or why none was usable.
+function workspaceRemovalRecord(path, removal, failure) {
+  const answer = removal && removal.ok ? workspaceParseJson(removal.stdout) : null;
+  const said = workspaceIsObject(answer) ? answer : {};
+  return {
+    path: path,
+    status: removal && removal.ok ? (said.status || "unknown") : "not_removed",
+    removed_path: typeof said.removed_path === "string" ? said.removed_path : null,
+    detail: removal && removal.ok ? (said.message || "") : (failure || removal.reason + " -- " + removal.received),
+  };
 }
 
 function workspaceFailure(result) {

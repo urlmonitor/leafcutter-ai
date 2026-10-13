@@ -114,7 +114,7 @@ class TestBO4300c3EveryCallerStops(unittest.TestCase):
         recorded dispatch names the sentinel main-copy/start location handed
         in via args. Control: with a ready answer the run continues past the
         workspace step and no later dispatch uses the sentinel."""
-        extra = {"worktree_path": SENTINEL_MAIN_COPY, "epicPath": SENTINEL_MAIN_COPY, "started_from": SENTINEL_MAIN_COPY}
+        extra = {"epicPath": SENTINEL_MAIN_COPY, "started_from": SENTINEL_MAIN_COPY}
         failures = []
         for name in _consumers():
             for kind in FIVE_HOSTILE:

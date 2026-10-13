@@ -173,7 +173,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from _workflow_engine_workspace import *  # noqa: F403 -- re-export of the BO-4300 workspace helpers
-from _workflow_engine_workspace import _fill_workspace_answer
+from _workflow_engine_workspace import _fill_workspace_answer, _handed_in_verify_default
 
 logger = logging.getLogger(__name__)
 
@@ -1049,22 +1049,14 @@ def run_workflow_under_e2(
             f"Expected a .js file, got: {script_path}"
         )
 
-    # Script-specific built-in defaults (currently fast-lane-ship.js's gates)
-    # are merged UNDER caller-supplied label_responses, so an explicit
-    # caller value for the same label always wins (e.g. a test deliberately
-    # exercising a refusal path).
+    # Script-specific built-in defaults (label responses, and ARGS such as plan-feature's
+    # `workspace_setup_permission`, ACD-2100b-5) are merged UNDER caller-supplied values,
+    # so an explicit caller value always wins (e.g. a test exercising a refusal path).
+    merged_args = {**_default_args_for_script(script_path), **(args or {})}
     merged_label_responses = {
         **_default_label_responses_for_script(script_path),
+        **_handed_in_verify_default(script_path, merged_args),
         **(label_responses or {}),
-    }
-
-    # Script-specific built-in ARGS defaults (currently plan-feature.js's
-    # `workspace_setup_permission` key, ACD-2100b-5) are merged UNDER
-    # caller-supplied args, so an explicit caller value for the same key
-    # always wins (e.g. a test deliberately exercising the denial path).
-    merged_args = {
-        **_default_args_for_script(script_path),
-        **(args or {}),
     }
 
     try:
