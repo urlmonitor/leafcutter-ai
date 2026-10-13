@@ -1305,20 +1305,21 @@
     {
       "id": "leafcutter/atlas-flows-canonical-url",
       "type": "mockup",
-      "title": "Atlas Flows: canonical flow URLs",
-      "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. From leafcutter/atlas-flows v2.",
+      "title": "Atlas Flows: canonical flow URLs, actor badges and filters",
+      "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. Flow-page quick wins (leafcutter/atlas-flows v4): every step card shows an actor badge (Code, AI agent, Person or Jev) and an accessible name; Enter opens a step's drawer; the drawer close button is named 'Close step details'; changing a filter never swaps the drawn flow and raises an 'Outside the current filters' notice instead; each flow page has its own tab title. The bare /flows address is no longer a drawn default flow: it is the finder, screen atlas-flows-finder. From leafcutter/atlas-flows v4.",
       "screen": "atlas-flows-canonical-url",
       "source": "mock",
       "component": "ux-prototyping",
       "path": "mockups/leafcutter/atlas-flows-canonical-url.mockup.json",
       "status": "active",
       "readiness": "draft",
-      "version": 1,
+      "version": 2,
       "entities": [
         "Flow",
         "FlowRoute",
         "FlowAppearance",
-        "FlowNavigation"
+        "FlowNavigation",
+        "FlowNode"
       ],
       "mock_data_ref": "leafcutter/atlas-flows",
       "tags": [
@@ -1330,7 +1331,45 @@
         "legacy-redirect",
         "browser-history",
         "not-found",
-        "drawer-history"
+        "drawer-history",
+        "actor-badge",
+        "keyboard-access",
+        "page-title",
+        "filter-keeps-flow",
+        "ac-deep-link"
+      ]
+    },
+    {
+      "id": "leafcutter/atlas-flows-finder",
+      "type": "mockup",
+      "title": "Atlas Flows: finder overview",
+      "summary": "The bare /flows address as a finder overview: one search box over flow names, step labels and text, io_contracts input and output field names, and AC ids, entities and screens; facet filters with counts (Product, Actor with Code, AI agent, Person and Jev, Kind, Realization, Level, Uses field, Produces field, Entity, Screen, and 'I/O not yet defined'); applied-filter chips with Clear all; and results grouped by flow, where each matching step row carries an actor badge, the reason it matched and a link to /flows/<product>/<flow>?step=<id>. Search and filter state live in the /flows query string so a search can be shared. Eleven states: the overview, three field and search states, Jev, AC-id prefix, entity and screen, two 'I/O not yet defined' states and the empty 'No flows match' state. From leafcutter/atlas-flows v4.",
+      "screen": "atlas-flows-finder",
+      "source": "mock",
+      "component": "ux-prototyping",
+      "path": "mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json",
+      "status": "active",
+      "readiness": "draft",
+      "version": 1,
+      "entities": [
+        "Flow",
+        "FlowNode",
+        "FlowFinderQuery",
+        "FlowRoute",
+        "FlowNavigation"
+      ],
+      "mock_data_ref": "leafcutter/atlas-flows",
+      "tags": [
+        "atlas",
+        "flows",
+        "finder",
+        "search",
+        "facets",
+        "actor-badge",
+        "io-gap",
+        "empty-state",
+        "shareable-query",
+        "step-link"
       ]
     }
   ],
@@ -1414,7 +1453,8 @@
         "fern-and-fig/plant-detail",
         "fern-and-fig/plant-listing",
         "fern-and-fig/shipment-tracking",
-        "leafcutter/atlas-flows-canonical-url"
+        "leafcutter/atlas-flows-canonical-url",
+        "leafcutter/atlas-flows-finder"
       ]
     }
   },
