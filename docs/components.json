@@ -666,7 +666,15 @@
         "templates/scripts/worktree.py",
         "templates/scripts/workspace_root.py",
         "templates/scripts/worktree_git.py",
-        "templates/scripts/worktree_admin.py"
+        "templates/scripts/worktree_admin.py",
+        "templates/scripts/worktree_answer.py",
+        "templates/scripts/worktree_identity.py",
+        "templates/scripts/worktree_layout.py",
+        "templates/scripts/worktree_paths.py",
+        "templates/scripts/worktree_readiness.py",
+        "templates/scripts/worktree_remove.py",
+        "templates/scripts/worktree_ensure_state.py",
+        "templates/scripts/worktree_migrate.py"
       ]
     }
   }

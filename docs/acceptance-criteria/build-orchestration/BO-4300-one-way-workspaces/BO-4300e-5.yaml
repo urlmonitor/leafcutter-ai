@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -89,9 +89,11 @@ amended_by:
     2026-09-28). readiness stays
     approved.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300_docs.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/13_TICKET-20260928-BO-4300-docs-and-diagrams.md
+- docs/how-to/clear-a-workspace.md
 notes: |
   documentation_trigger how-to on BO-4300e. Q8 -- DECIDED (user, 2026-09-28): the authorisation
   is the one-time discard token returned by the refusal (BO-4300e-3); the page documents that

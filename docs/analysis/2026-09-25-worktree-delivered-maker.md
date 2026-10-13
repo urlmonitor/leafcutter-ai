@@ -4,7 +4,7 @@ description: "How BO-4300a-1 closed the worktree-consolidation analysis: the how
 type: explanation
 status: active
 created: 2026-09-25
-last_updated: 2026-09-28
+last_updated: 2026-10-13
 components:
   - worktree_manager
   - build_orchestration
@@ -16,6 +16,10 @@ Part of [the worktree-consolidation analysis](2026-09-25-worktree-creation-conso
 (per-feature clones, real install files, `origin/main` everywhere, one script run from a skill)
 are in section 8 of that page and in [the decision memo](2026-09-25-worktree-isolation-decision-memo.md);
 where they change what is written here, they win.
+
+> **Superseded for the answer contract (2026-10-13).** The as-built answer table below is
+> replaced by [the answer reference](../reference/workspace-maker-answer.md); the procedures are in
+> [get a workspace](../how-to/get-a-workspace.md) and [clear a workspace](../how-to/clear-a-workspace.md).
 
 ## 9. Delivered — the one maker (2026-09-28)
 

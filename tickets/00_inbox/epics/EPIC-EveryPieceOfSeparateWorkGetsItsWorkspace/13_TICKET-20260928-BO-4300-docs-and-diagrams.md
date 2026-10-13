@@ -28,7 +28,7 @@ ac_traceability:
   - BO-4300c-5
   - BO-4300d-5
   - BO-4300e-5
-ac_coverage: 0/6
+ac_coverage: 6/6
 tags:
 - BO-4300
 - re-cut-2026-09-28
@@ -37,8 +37,8 @@ files_touched:
 - docs/how-to/clear-a-workspace.md
 - docs/reference/workspace-maker-answer.md
 - docs/architecture/components/worktree-manager.md
-- docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-- docs/architecture/diagrams/c3-011-workspace-request-states.md
+- docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+- docs/architecture/diagrams/c3-031-workspace-request-states.md
 - docs/analysis/2026-09-25-worktree-delivered-maker.md
 - docs/components.json
 - docs/INDEX.md
@@ -46,20 +46,20 @@ files_touched:
 - docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300d-5.yaml
 - unit_tests/build_orchestration/test_bo_4300_docs.py
 agents:
-  ac-fulfillment-gate: needed
-  ac-validator: needed
-  architect-review: needed
-  architecture-diagram-author: needed
-  commit: needed
-  documentation-expert: needed
-  documentation-verifier: needed
+  ac-fulfillment-gate: signed_off
+  ac-validator: signed_off
+  architect-review: signed_off
+  architecture-diagram-author: signed_off
+  commit: signed_off
+  documentation-expert: signed_off
+  documentation-verifier: signed_off
   frontend-coder: not_needed
-  pr-reviewer: needed
+  pr-reviewer: signed_off
   pull-request: not_needed
   python-coder: not_needed
   sql-coder: not_needed
-  test-runner: needed
-  test-writer: needed
+  test-runner: signed_off
+  test-writer: signed_off
   user-surface-smoker: not_needed
 ---
 
@@ -177,12 +177,12 @@ And it shows how to authorise, up front in the request, the loss of work that
 And it gives no manual deletion steps that bypass the workspace maker.
 ```
 
-- [ ] AC-1: BO-4300a-3 -- How-to: getting a workspace, for agents and people alike
-- [ ] AC-2: BO-4300a-4 -- Component diagram: the one workspace maker and everyone who calls it
-- [ ] AC-3: BO-4300a-5 -- Reference: the answer every caller receives, and what a caller must do with it
-- [ ] AC-4: BO-4300c-5 -- Sequence diagram: a caller, the workspace maker, and the halt path
-- [ ] AC-5: BO-4300d-5 -- State diagram: a workspace's states and what each request does to it
-- [ ] AC-6: BO-4300e-5 -- How-to: clearing a workspace by hand, and authorising the loss of unsent work
+- [x] AC-1: BO-4300a-3 -- How-to: getting a workspace, for agents and people alike
+- [x] AC-2: BO-4300a-4 -- Component diagram: the one workspace maker and everyone who calls it
+- [x] AC-3: BO-4300a-5 -- Reference: the answer every caller receives, and what a caller must do with it
+- [x] AC-4: BO-4300c-5 -- Sequence diagram: a caller, the workspace maker, and the halt path
+- [x] AC-5: BO-4300d-5 -- State diagram: a workspace's states and what each request does to it
+- [x] AC-6: BO-4300e-5 -- How-to: clearing a workspace by hand, and authorising the loss of unsent work
 
 ## Test Requirements
 
@@ -205,8 +205,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_component_diagram_names_the_one_maker_and_every_caller
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -222,8 +222,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_answer_reference_points_at_the_contract_record
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -239,8 +239,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_halt_sequence_diagram_exists_and_shows_the_halt_path
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -255,8 +255,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_state_diagram_exists_and_names_every_request_state
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -272,8 +272,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -290,8 +290,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 - name: test_ticket_13_reachable_from_entry_point
   file: unit_tests/build_orchestration/test_bo_4300_docs.py
   covers:
@@ -306,8 +306,8 @@ tests:
   - docs/how-to/clear-a-workspace.md
   - docs/reference/workspace-maker-answer.md
   - docs/architecture/components/worktree-manager.md
-  - docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md
-  - docs/architecture/diagrams/c3-011-workspace-request-states.md
+  - docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md
+  - docs/architecture/diagrams/c3-031-workspace-request-states.md
 ```
 
 ## Implementation Notes
@@ -364,29 +364,29 @@ tests:
 
 ### test-writer
 
-- [ ] AC-1: red tests for BO-4300a-3 per `## Test Requirements`
-- [ ] AC-2: red tests for BO-4300a-4 per `## Test Requirements`
-- [ ] AC-3: red tests for BO-4300a-5 per `## Test Requirements`
-- [ ] AC-4: red tests for BO-4300c-5 per `## Test Requirements`
-- [ ] AC-5: red tests for BO-4300d-5 per `## Test Requirements`
-- [ ] AC-6: red tests for BO-4300e-5 per `## Test Requirements`
+- [x] AC-1: red tests for BO-4300a-3 per `## Test Requirements`
+- [x] AC-2: red tests for BO-4300a-4 per `## Test Requirements`
+- [x] AC-3: red tests for BO-4300a-5 per `## Test Requirements`
+- [x] AC-4: red tests for BO-4300c-5 per `## Test Requirements`
+- [x] AC-5: red tests for BO-4300d-5 per `## Test Requirements`
+- [x] AC-6: red tests for BO-4300e-5 per `## Test Requirements`
 
 **Delivers to:** documentation-expert (red baseline).
 
 ### documentation-expert
 
-- [ ] AC-1: how-to | docs/how-to/get-a-workspace.md | How-to: getting a workspace, for agents and people alike
-- [ ] AC-2: architecture | docs/architecture/components/worktree-manager.md | Component diagram: the one workspace maker and everyone who calls it
-- [ ] AC-3: reference | docs/reference/workspace-maker-answer.md | Reference: the answer every caller receives, and what a caller must do with it
-- [ ] AC-4: architecture | docs/architecture/diagrams/c3-010-workspace-request-halt-sequence.md | Sequence diagram: a caller, the workspace maker, and the halt path
-- [ ] AC-5: architecture | docs/architecture/diagrams/c3-011-workspace-request-states.md | State diagram: a workspace's states and what each request does to it
-- [ ] AC-6: how-to | docs/how-to/clear-a-workspace.md | How-to: clearing a workspace by hand, and authorising the loss of unsent work
+- [x] AC-1: how-to | docs/how-to/get-a-workspace.md | How-to: getting a workspace, for agents and people alike
+- [x] AC-2: architecture | docs/architecture/components/worktree-manager.md | Component diagram: the one workspace maker and everyone who calls it
+- [x] AC-3: reference | docs/reference/workspace-maker-answer.md | Reference: the answer every caller receives, and what a caller must do with it
+- [x] AC-4: architecture | docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md | Sequence diagram: a caller, the workspace maker, and the halt path
+- [x] AC-5: architecture | docs/architecture/diagrams/c3-031-workspace-request-states.md | State diagram: a workspace's states and what each request does to it
+- [x] AC-6: how-to | docs/how-to/clear-a-workspace.md | How-to: clearing a workspace by hand, and authorising the loss of unsent work
 
 ### architecture-diagram-author
 
-- [ ] AC-2: diagram for BO-4300a-4 (component / sequence / state)
-- [ ] AC-4: diagram for BO-4300c-5 (component / sequence / state)
-- [ ] AC-5: diagram for BO-4300d-5 (component / sequence / state)
+- [x] AC-2: diagram for BO-4300a-4 (component / sequence / state) <!-- signed: architecture-diagram-author -->
+- [x] AC-4: diagram for BO-4300c-5 (component / sequence / state) <!-- signed: architecture-diagram-author -->
+- [x] AC-5: diagram for BO-4300d-5 (component / sequence / state) <!-- signed: architecture-diagram-author -->
 
 ### Expects From
 
@@ -406,12 +406,12 @@ tests:
 
 | AC | Test | Implementation | Validated |
 |----|------|----------------|-----------|
-| AC-1 | | | |
-| AC-2 | | | |
-| AC-3 | | | |
-| AC-4 | | | |
-| AC-5 | | | |
-| AC-6 | | | |
+| AC-1 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_get_a_workspace_how_to_publishes_a_maker_command_that_runs | docs/how-to/get-a-workspace.md | ok — 2026-10-13 |
+| AC-2 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_component_diagram_names_the_one_maker_and_every_caller | docs/architecture/components/worktree-manager.md | ok — 2026-10-13 |
+| AC-3 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_answer_reference_points_at_the_contract_record | docs/reference/workspace-maker-answer.md | ok — 2026-10-13 |
+| AC-4 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_halt_sequence_diagram_exists_and_shows_the_halt_path | docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md | ok — 2026-10-13 |
+| AC-5 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_state_diagram_exists_and_names_every_request_state | docs/architecture/diagrams/c3-031-workspace-request-states.md | ok — 2026-10-13 |
+| AC-6 | unit_tests/build_orchestration/test_bo_4300_docs.py:test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs | docs/how-to/clear-a-workspace.md | ok — 2026-10-13 |
 
 ## Risk & Safety
 
@@ -421,17 +421,146 @@ tests:
 
 ## Sign-offs
 
-- [ ] architect-review
-- [ ] architecture-diagram-author
-- [ ] test-writer
-- [ ] test-runner
-- [ ] documentation-expert
-- [ ] pr-reviewer
-- [ ] ac-validator
-- [ ] ac-fulfillment-gate
-- [ ] documentation-verifier
-- [ ] commit
+- [x] architect-review — 2026-10-13 04:30
+- [x] architecture-diagram-author — 2026-10-13 04:08
+- [x] test-writer — 2026-10-13 05:00
+- [x] test-runner — 2026-10-13 06:00
+- [x] documentation-expert — 2026-10-13 07:00
+- [x] pr-reviewer — 2026-10-13 08:00
+- [x] ac-validator — 2026-10-13 09:00
+- [x] ac-fulfillment-gate — 2026-10-13 08:17
+- [x] documentation-verifier — 2026-10-13 10:00
+- [x] commit — 2026-10-13 11:00
 
 ## Comments
 
 _(Append-only log -- leave blank when authoring.)_
+
+### 2026-10-13 04:08 — architecture-diagram-author (status: ok)
+feedback-id: fb_2026-10-13_eb816824
+completion_manifest:
+  diagram_created: true
+  flight_level_correct: true
+  cross_links_added: true
+Drew the three diagrams against the shipped maker. AC-2 (BO-4300a-4) is a C4Component diagram in the rewritten `docs/architecture/components/worktree-manager.md`, an update in place per write-c4-diagram §3b. AC-4 (BO-4300c-5) is the sequenceDiagram `docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md`. AC-5 (BO-4300d-5) is the stateDiagram-v2 `docs/architecture/diagrams/c3-031-workspace-request-states.md`. All three are L3-Component and mermaid-only. They pass check-doc-frontmatter, check-mermaid-parent-link, check-mermaid-complexity and check-doc-length in staged mode, and mmdc renders all three with no parse error.
+
+**Scaffold-free pass.** `scripts/scaffold/new_arch_doc.py` has never existed. AC-2 (`worktree-manager.md`, frontmatter keys and Legend added), AC-4 (`c3-030-…`) and AC-5 (`c3-031-…`) were drawn scaffold-free under the user's standing pass `dec-b10271ebb40b9eaa` (approved 2026-10-10 by human:user; record on branch `epic/abundled-request-that-routing-turns-away-is`, commit `ac5a5f514`). Each diagram's decision history records this. No skill text was edited.
+
+**Renumbered.** `c3-010` and `c3-011` were taken (reachability-guard data flow; done-proof gates). `next_diagram_seq.py 3` returned 30, and `c3-030`/`c3-031` are free on `origin/main` and on every remote. This ticket's `files_touched`, test `implementation_files` and documentation-expert contract paths now name the new files. The doc_links in BO-4300c-5 and BO-4300d-5 were re-pointed (status `exists`), each with an `amended_by` record. Criteria are unchanged.
+
+**root: true** on all three, as on c3-008 and c3-009. No L2 doc sits above worktree_manager, and check-mermaid-parent-link refuses an L3 parent for an L3 diagram. Before this change, worktree-manager.md already failed `ARCH-PARENT-MISSING`. The three are cross-linked through `related_diagrams` and See also lines.
+
+For later phases:
+- documentation-expert: the a-4 page rewrite is done (overview, responsibilities, entry points, and the ACD-2100a-2 and setup-script notes removed). Still yours: `components.json` primary_code (`worktree_repo_facts.py` is not part of the maker), and links from these pages to get-a-workspace, clear-a-workspace and workspace-maker-answer once they exist.
+- Ticket 14 (BO-4300f-2): `setup_ticket_worktree.py` is still named in `templates/agents/worktree-agent.md` and in the header comments of fast-lane-ship.js, plan-feature.js and quick-fix.js.
+
+### 2026-10-13 04:30 — architect-review (status: ok)
+feedback-id: fb_2026-10-13_49ad7670
+completion_manifest:
+  classification_done: true
+  escalation_logged: true
+Classified small. Docs-only change: no Alembic, hypertable, public API or ADR contract change; 12 files but all documentation plus one test module and two AC YAML link updates, and the shipped maker (tickets 03-12) is the contract being described. Components are worktree_manager and documentation_system (two, below the three-component bar). requires_adr stays false: it records mechanisms already decided (Q4, Q5, Q8) and introduces no new cross-cutting policy, so this is the judgment-call exception to the two-component heuristic. Design concern: pages must point at BO-4300c-2 rather than restate the answer contract. Acceptance adjustments: none. Anomaly: the dispatch file list names c3-010/c3-011, but those numbers are taken; the ticket's files_touched correctly uses c3-030/c3-031 and the tests must use those. suggested_diagrams is empty because the three diagrams already exist. research-agent was not spawned (no Agent tool in this session); the analysis rests on the ticket and the diagram-author comment.
+
+### 2026-10-13 05:00 — test-writer (status: ok)
+feedback-id: fb_2026-10-13_512e045f
+completion_manifest:
+  cross_layer_seam_answer:
+    result: covered
+    producing_side: "deployed worktree.py maker (ensure/locate/remove answers)"
+    consuming_side: "the commands published in get-a-workspace.md and clear-a-workspace.md, run verbatim by test_bo_4300_docs.py"
+  reachability_entry_point_answer:
+    result: resolved
+    entry_point: "python <deployed>/scripts/worktree.py ensure/locate/remove (CLI via subprocess), commands taken from the how-to pages"
+Wrote unit_tests/build_orchestration/test_bo_4300_docs.py (7 tests, all tagged covers/angle). Diagram numbers are c3-030/c3-031 (the numbers the ACs record), not c3-010/011 (taken).
+Verification: `AC_ENFORCE_STRICT=1 python -m pytest unit_tests/build_orchestration/test_bo_4300_docs.py` -> 4 failed, 3 passed, exit 1. Without strict the repo conftest turns failures of not-done ACs into xfail.
+red_baseline:
+  - test_name: test_get_a_workspace_how_to_publishes_a_maker_command_that_runs
+    file: unit_tests/build_orchestration/test_bo_4300_docs.py
+    kind: absence
+    error: "AssertionError: docs\how-to\get-a-workspace.md does not exist"
+  - test_name: test_ticket_13_reachable_from_entry_point
+    file: unit_tests/build_orchestration/test_bo_4300_docs.py
+    kind: absence
+    error: "AssertionError: docs\how-to\get-a-workspace.md does not exist"
+  - test_name: test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs
+    file: unit_tests/build_orchestration/test_bo_4300_docs.py
+    kind: absence
+    error: "AssertionError: docs\how-to\clear-a-workspace.md does not exist"
+  - test_name: test_answer_reference_points_at_the_contract_record
+    file: unit_tests/build_orchestration/test_bo_4300_docs.py
+    kind: absence
+    error: "AssertionError: docs\reference\workspace-maker-answer.md does not exist"
+Notes: the three diagram tests (AC-2, AC-4, AC-5) pass immediately because architecture-diagram-author already delivered those docs; they guard regressions (halt branch count, no edge leaving Occupied, refusal codes on refused edges, retired script absent). Doc tests extract commands from fenced blocks naming worktree.py and fill <kind>/<slug>/<path>/<token>/<repo> placeholders; documentation-expert must publish ensure, locate, remove and `remove ... --discard-token <token>` commands in that form.
+
+### 2026-10-13 05:30 — test-runner (status: handoff)
+feedback-id: fb_2026-10-13_b262dda0
+Ran `python -m pytest unit_tests/build_orchestration/test_bo_4300_docs.py`: 3 passed, 4 xfailed (masked by the AC enforcement hook because the ACs are not done; they are real failures under AC_ENFORCE_STRICT=1). Elapsed 91s. Not signed off: the suite is red.
+- test_get_a_workspace_how_to_publishes_a_maker_command_that_runs (BO-4300a-3): docs/how-to/get-a-workspace.md missing.
+- test_ticket_13_reachable_from_entry_point (BO-4300a-3): same missing page.
+- test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs (BO-4300e-5): docs/how-to/clear-a-workspace.md missing.
+- test_answer_reference_points_at_the_contract_record (BO-4300a-5): docs/reference/workspace-maker-answer.md missing.
+The three diagram tests (a-4, c-5, d-5) pass. Handing off to documentation-expert, who has not yet written the three pages, components.json, INDEX.md and the analysis pointer.
+
+### 2026-10-13 06:00 — test-runner (status: ok)
+feedback-id: fb_2026-10-13_d11e826c
+completion_manifest:
+  test_suite_executed: true
+  all_tests_passing: true
+  failure_report_structured: true
+Ran unit_tests/build_orchestration/test_bo_4300_docs.py: 7 passed, 0 failed, 0 xfailed, in 27s (also 7 passed under AC_ENFORCE_STRICT=1). The four earlier red tests are now green after documentation-expert wrote the pages.
+
+### 2026-10-13 10:00 — documentation-verifier (status: ok)
+feedback-id: fb_2026-10-13_8b08ff67
+completion_manifest:
+  required_docs_list_parsed: true
+  all_required_docs_present_in_diff: true
+  no_placeholder_content_in_changed_docs: true
+Documentation coverage verified: all 6 required doc(s) present (branch-range diff origin/scaffold/EPIC-BO-4300...HEAD union working-tree diff) with real content.
+
+## Escalation
+
+Branch: none
+Reason: docs-only, no always-large trigger fired; 2 components, no code boundary crossed.
+
+### 2026-10-13 07:00 — documentation-expert (status: ok)
+feedback-id: fb_2026-10-13_0e3a663a
+completion_manifest:
+  doc_written: true
+  cross_links_added: true
+  diataxis_genre_correct: true
+Two how-tos, the answer reference (points at BO-4300c-2), the worktree-manager page, both c3 diagrams, components.json primary_code, the analysis-page pointer and the two AC doc_links are in place and staged. `AC_ENFORCE_STRICT=1 pytest unit_tests/build_orchestration/test_bo_4300_docs.py`: 7 passed.
+
+### 2026-10-13 08:00 — pr-reviewer (status: ok)
+feedback-id: fb_2026-10-13_c674f275
+completion_manifest:
+  diff_reviewed: true
+  contract_validation_done: true
+  high_findings: 0
+Reviewed the staged docs-only diff (3 new pages, 2 diagrams, component page rewrite, 2 AC doc_links re-points, test module). 7 tests pass; no high-confidence findings. Diagrams carry the halt branch for each non-ready answer and no edge leaving Occupied; the how-tos carry no git worktree/symlink recipe; the c3-009/c3-010 paths survive only in historical it_requirements text of the AC records and the ticket notes, not as asserted paths. Suppressed: 0 low, 0 medium. Escalation: none (medium count 0).
+
+### 2026-10-13 09:00 — ac-validator (status: ok)
+feedback-id: fb_2026-10-13_15beb275
+All 6 ACs covered (6/6). Store alignment script exit 0. Test run: unit_tests/build_orchestration/test_bo_4300_docs.py 7 passed.
+AC-1 covered: impl docs/how-to/get-a-workspace.md (staged A); test test_get_a_workspace_how_to_publishes_a_maker_command_that_runs (test_bo_4300_docs.py:173, covers BO-4300a-3)
+AC-2 covered: impl docs/architecture/components/worktree-manager.md (staged M); test test_component_diagram_names_the_one_maker_and_every_caller (:278)
+AC-3 covered: impl docs/reference/workspace-maker-answer.md; test test_answer_reference_points_at_the_contract_record (:260)
+AC-4 covered: impl docs/architecture/diagrams/c3-030-workspace-request-halt-sequence.md; test test_halt_sequence_diagram_exists_and_shows_the_halt_path (:299)
+AC-5 covered: impl docs/architecture/diagrams/c3-031-workspace-request-states.md; test test_state_diagram_exists_and_names_every_request_state (:319)
+AC-6 covered: impl docs/how-to/clear-a-workspace.md; test test_clear_a_workspace_how_to_publishes_a_remove_command_that_runs (:220)
+Cross-file contracts: no delivers_to; expects_from producers (maker CLI) are exercised by the tests against the deployed maker.
+
+### 2026-10-13 08:17 — ac-fulfillment-gate (status: ok)
+feedback-id: fb_2026-10-13_ed1d1a90
+completion_manifest:
+  ac_store_verified: true
+  auto_fixes_applied: true
+  schema_valid: true
+All 6 L2 ACs verified (BO-4300a-3, a-4, a-5, c-5, d-5, e-5). Resolver initially failed work_status and covered_by on all six, and implemented_by listed only the ticket. Auto-fixed append-only: covered_by gained unit_tests/build_orchestration/test_bo_4300_docs.py (carries `# covers:` tag for each AC), implemented_by gained each AC's own doc from files_touched. check_ac_schema.py exit 0 on all six. mark_ac_done.py: marked BO-4300a-3, a-4, a-5, c-5, d-5, e-5 work_status=done (all exit 0). Resolver re-run: ok true, failures []. Commit phase may proceed.
+
+### 2026-10-13 11:00 — commit (status: ok)
+feedback-id: fb_2026-10-13_af4fd835
+completion_manifest:
+  pre_commit_hooks_pass: true
+  commit_message_valid: true
+  ticket_staged: true
+Committed ticket 13 (docs and diagrams) as one commit; hook probe passed before staging.
