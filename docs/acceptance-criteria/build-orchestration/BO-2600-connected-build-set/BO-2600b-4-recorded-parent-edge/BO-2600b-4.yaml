@@ -1,4 +1,4 @@
-id: BO-2600a-6
+id: BO-2600b-4
 components:
   - build_orchestration
 title: "A prerequisite that records the criterion as its child is treated as its structural parent, even when the ids do not show the link"
@@ -24,10 +24,10 @@ criteria: |
   And the resolved set is exactly [P-512],
   And none of P-510, P-511, P-513, P-514, P-515, P-516 appear in the set, and nothing
     reachable only through P-590's own prerequisites appears in the set,
-  And a parent whose id shape does show the link (e.g. BO-2600a for BO-2600a-6) is still
+  And a parent whose id shape does show the link (e.g. BO-2600b for BO-2600b-4) is still
     recognised and excluded exactly as before: the recorded-edge rule is added to the
     id-shape rule, not substituted for it.
-depends_on: [BO-2600a, BO-2600a-1]
+depends_on: [BO-2600b, BO-2600a-1]
 doc_links:
   - path: scripts/build_orchestration/fast_lane.py
     relationship: modifies
@@ -82,7 +82,7 @@ test_spec:
     target_dir: unit_tests/build_orchestration/
     framework: unittest
     type: unit
-    description: "A parent derivable by derive_parent_id (BO-2600a for BO-2600a-6) is still excluded exactly as before - recorded-edge rule is additive"
+    description: "A parent derivable by derive_parent_id (BO-2600b for BO-2600b-4) is still excluded exactly as before - recorded-edge rule is additive"
 delivers_to: null
 expects_from:
   ac_id: BO-2600a-1
@@ -91,7 +91,7 @@ origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
 superseded_by: null
-covered_by: [BO-2600a-6-i, BO-2600a-6-ii, BO-2600a-6-iii]
+covered_by: [BO-2600b-4-i, BO-2600b-4-ii, BO-2600b-4-iii]
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
