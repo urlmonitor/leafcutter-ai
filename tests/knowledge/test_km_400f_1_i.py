@@ -23,8 +23,6 @@ import sys
 import textwrap
 from pathlib import Path
 
-import pytest
-
 NOW = 1_800_000_000.0
 HOUR = 3600.0
 REPO_ROOT = Path(__file__).resolve().parents[2]
