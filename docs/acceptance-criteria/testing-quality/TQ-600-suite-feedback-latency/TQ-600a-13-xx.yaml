@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -311,8 +311,10 @@ amended_by:
   agent: approve_acs
   date: '2026-10-14'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/workflows/test_tq_600a_13_xx_finalize_hold.py
+implemented_by:
+- templates/workflows-js/finalize-feature.js
 change_target:
   - pipeline
 risk_surface: internal
@@ -339,3 +341,15 @@ notes: |
 
   readiness is draft: the owner approves. Line numbers in it_requirements are from
   origin/main as of 2026-10-14 and are approximate; re-confirm before editing.
+
+  BUILT 2026-10-14 (approved by BrainCandy the same day). Step 4 gains one
+  `step-4-pr-checks` status-checker read before the merge gate; classifyPrChecks() matches
+  the exact name and a failing state (bucket `fail`, or state FAILURE / ERROR / CANCELLED /
+  TIMED_OUT / ACTION_REQUIRED); holdHaltPayload() records Step 4's single outcome and
+  returns `held_externally` or `required_checks_failing`. A PENDING hold is not a hold. An
+  unreadable reply is logged and treated as no hold. The check_file_size ratchet required
+  finalize-feature.js to shrink to 1564 measured lines or fewer; it is 1509, by condensing
+  comments and hoisting one repeated message and the Step 3.9 SHA comparison, with no
+  behaviour change. Tests: 5 tests and 8 subtests, red before the change; unit_tests/workflows
+  is 1123 passed under AC_ENFORCE_STRICT=1. The query omits `--required`, so in state B a
+  non-required failing check is also listed as the branch's own; the merge is blocked either way.
