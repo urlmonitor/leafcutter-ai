@@ -658,11 +658,13 @@
       "id": "worktree_manager",
       "name": "Worktree Manager",
       "type": "infrastructure",
-      "description": "Git worktree lifecycle management for isolated epic and ticket branch environments.",
+      "description": "Per-feature clone workspaces made, found, listed and cleared through one maker, with one project-root resolver.",
       "detail_ref": "docs/architecture/components/worktree-manager.md",
       "status": "active",
       "primary_code": [
-        "scripts/worktree/"
+        "scripts/worktree/",
+        "templates/scripts/worktree.py",
+        "templates/scripts/workspace/workspace_root.py"
       ]
     }
   }

@@ -47,6 +47,7 @@ from build_phases import (
     AGENT_SUPPORT_SCRIPT_DIRS,
     AGENT_SUPPORT_SCRIPT_FILES,
 )
+from build_phases_script_deploy import WORKSPACE_MAKER_SCRIPTS
 
 
 def _manifest_ac_store_scripts(package_root: Path) -> set[str]:  # noqa: ARG001
@@ -260,6 +261,9 @@ def _manifest_template_standalone_scripts(package_root: Path) -> set[str]:
         # GE-132a-1: the remedy-declaration seed is deployed by the same phase.
         if (templates_scripts / "precommit-autofix.json").is_file():
             result.add("scripts/precommit-autofix.json")
+    # BO-4300a-1: the workspace maker's NAMED entries, mirrored from the phase's
+    # own WORKSPACE_MAKER_SCRIPTS so the two cannot diverge.
+    result.update(f"scripts/{n}" for n in WORKSPACE_MAKER_SCRIPTS)
     return result
 
 
@@ -279,6 +283,8 @@ def _guard_source_paths_template_standalone(package_root: Path) -> set[str]:
                 source_paths.add(f"templates/scripts/{f.name}")
         if (templates_scripts / "precommit-autofix.json").is_file():
             source_paths.add("templates/scripts/precommit-autofix.json")
+    # BO-4300a-1: same named entries, by SOURCE path (kept 1:1 with the set above).
+    source_paths.update(f"templates/scripts/{n}" for n in WORKSPACE_MAKER_SCRIPTS)
     return source_paths
 
 
@@ -361,4 +367,7 @@ def _manifest_sync_platforms_scripts(package_root: Path) -> set[str]:
 #   occurrences of a text anchor inside those two functions' own physical
 #   copy in scripts/build.py) and now import these ten from here. Pure move,
 #   no behaviour change. (#BP-1500g-1/extract-unrelated-headroom)
+# - 2026-10-14 12:00 [python-coder]: The template-standalone manifest helpers
+#   now add the workspace maker's named entries from WORKSPACE_MAKER_SCRIPTS.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
 # ====================================================================

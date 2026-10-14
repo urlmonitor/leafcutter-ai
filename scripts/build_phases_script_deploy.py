@@ -421,6 +421,20 @@ def _deploy_fast_lane_release_dependency(target_root: Path, dry_run: bool,
     return 1
 
 
+# BO-4300a-1: the workspace maker and every module it imports, each a NAMED
+# entry (not left to the shallow glob below). The phase is non-recursive, so a
+# helper module the maker imports needs its own name here; the resolver module
+# is deliberately separate from the maker's CLI file so a hook can import it.
+WORKSPACE_MAKER_SCRIPTS: tuple[str, ...] = (
+    "worktree.py",
+    "workspace/__init__.py",
+    "workspace/workspace_root.py",
+    "workspace/workspace_core.py",
+    "workspace/workspace_checks.py",
+    "workspace/workspace_create.py",
+)
+
+
 def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
                                       dry_run: bool, force: bool) -> int:
     """Deploy standalone Python scripts from ``templates/scripts/`` to ``<target_root>/scripts/``.
@@ -432,6 +446,12 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 
     - ``templates/scripts/setup_ticket_worktree.py`` → ``scripts/setup_ticket_worktree.py``
       Referenced by worktree-agent.md and build-single-ticket/SKILL.md.
+    - ``WORKSPACE_MAKER_SCRIPTS`` (BO-4300a-1): ``worktree.py`` (the one workspace
+      maker) and the ``workspace/`` package beside it -- ``workspace_root.py``
+      (the project-root resolver, importable on its own) and the helper modules
+      ``workspace_core.py``, ``workspace_checks.py``, ``workspace_create.py`` --
+      each named, deployed to ``scripts/workspace/``, and recorded as a deploy
+      failure when its source is absent.
 
     Files are copied verbatim (no template compilation). The compare-before-write
     guard prevents mtime churn on unchanged files.
@@ -461,15 +481,26 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
     output_dir = target_root / "scripts"
     written = 0
 
+    # BO-4300a-1: named entries fail closed -- a missing maker module must be a
+    # recorded deploy failure, never a silent absence the shallow glob hides.
+    for name in WORKSPACE_MAKER_SCRIPTS:
+        if not (templates_scripts_src / name).is_file():
+            _bp.record_deploy_failure(
+                "build_template_standalone_scripts", name, templates_scripts_src / name)
+
     # Shallow scan — only top-level .py files; subdirectories have their own phases.
     # GE-132a-1: the remedy-declaration seed rides along, because the deployed
     # shared loader (_remedy_declarations.py) falls back to scripts/precommit-autofix.json.
     seed = templates_scripts_src / "precommit-autofix.json"
-    for src_file in sorted([*templates_scripts_src.glob("*.py"), seed]):
+    # BO-4300a-1: the maker's helper package (scripts/workspace/) is deployed by
+    # its explicit named entries -- a nested entry is never reached by the glob.
+    nested = [templates_scripts_src / n for n in WORKSPACE_MAKER_SCRIPTS if "/" in n]
+    for src_file in sorted([*templates_scripts_src.glob("*.py"), seed, *nested]):
         if not src_file.is_file():
             continue
 
-        output_path = output_dir / src_file.name
+        rel = src_file.relative_to(templates_scripts_src).as_posix()
+        output_path = output_dir / rel
 
         if not _bp._should_overwrite(output_path, force):
             continue
@@ -479,7 +510,7 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
             continue
 
         if dry_run:
-            print(f"  [DRY-RUN] would copy scripts/{src_file.name}")
+            print(f"  [DRY-RUN] would copy scripts/{rel}")
             written += 1
         else:
             try:
@@ -493,7 +524,7 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
                     exc,
                 )
                 raise
-            print(f"  scripts/{src_file.name}")
+            print(f"  scripts/{rel}")
             written += 1
 
     return written
@@ -552,4 +583,7 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 #   at all since this setting ships no default address (user decisions
 #   Q3/NQ1) -- see checker.py's own module docstring.
 #   (#TICKETLESS reason=fast-lane-inf-1100d-3-ac-pair)
+# - 2026-10-14 12:00 [python-coder]: Added WORKSPACE_MAKER_SCRIPTS, named
+#   deploy entries (fail-closed) for the workspace maker, its resolver and its
+#   three helper modules. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
 # ===========================================================================
