@@ -51,7 +51,6 @@ from doc_length_helpers import (
 from _file_size_ratchet import CurrentLengthUnmeasurableError, PreviousLengthSourceError
 from _doc_length_ratchet import (
     SetAsideDeclarationError,
-    parse_set_aside_locations,
     classify_dimension,
     count_lines_and_sections,
     is_adr_file,
@@ -59,6 +58,11 @@ from _doc_length_ratchet import (
     read_doc_content,
     resolve_doc_ratchet,
     strip_frontmatter,
+)
+from _doc_length_set_aside import (
+    parse_declared_set_aside,
+    render_population_report,
+    select_set_aside_paths,
 )
 
 # ---------------------------------------------------------------------------
@@ -412,7 +416,7 @@ def main() -> int:
     _ensure_utf8_stdout()
 
     try:
-        set_aside_paths = parse_set_aside_locations(DOC_LENGTH_SET_ASIDE_LOCATIONS)
+        set_aside_paths = parse_declared_set_aside(DOC_LENGTH_SET_ASIDE_LOCATIONS)
     except SetAsideDeclarationError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
         return 2
@@ -457,7 +461,19 @@ def main() -> int:
         return 2
 
     checked_count = len(checked_paths)
+    try:
+        population_report = render_population_report(
+            checked_count,
+            select_set_aside_paths(staged_files, set_aside_paths),
+            DOC_LENGTH_SET_ASIDE_LOCATIONS,
+        )
+    except CurrentLengthUnmeasurableError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
     if not violations:
+        # Reported on a COMPLETING run only: a refusal names the refused documents alone.
+        if population_report:
+            print(population_report + "\n")
         if checked_count > 0:
             print(f"✅ PASSED: compared {checked_count} doc files against their length limits")
         return 0
