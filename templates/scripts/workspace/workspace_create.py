@@ -20,6 +20,10 @@ ARCHITECTURE: Stdlib-only helper of worktree.py, deployed beside it by its own
 # - 2026-10-14 17:00 [python-coder]: A failed ensure deletes its half-made
 #   workspace so a retry is not blocked; an unreachable hub is FETCH_FAILED
 #   unless --allow-stale-base. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-070)
+# - 2026-10-14 18:00 [python-coder]: A requested ticket must be on the workspace's
+#   base with the main copy's bytes, else TICKET_NOT_ON_BASE (absent | differs),
+#   checked before the build; the half-made workspace is removed.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
 """
 from __future__ import annotations
 
@@ -31,7 +35,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from workspace.workspace_checks import CANARY_FILE, require_ready
-from workspace.workspace_core import MakerError, discard_tree, git, log, must, out, run, write_marker
+from workspace.workspace_core import (
+    MakerError, discard_tree, git, log, must, out, run, write_marker,
+)
 from workspace.workspace_root import MARKER_NAME
 
 CONFIG_COPY = "workspace_build_config.json"
@@ -174,12 +180,19 @@ def _build(plan: dict, build: tuple) -> None:
                          f"{(done.stderr or done.stdout).strip()[-800:]}")
 
 
-def create_workspace(plan: dict, allow_stale: bool, build: tuple) -> tuple[str, dict]:
-    """Make a new workspace end to end; return (base commit, ready checks)."""
+def create_workspace(plan: dict, allow_stale: bool, build: tuple,
+                     ticket: tuple | None = None) -> tuple[str, dict]:
+    """Make a new workspace end to end; return (base commit, ready checks).
+
+    ``ticket`` is (path as requested, project-relative path); its presence on the
+    base is checked after the fetch and before the install build.
+    """
     created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
         _clone(plan, created_at)
         base = _checkout(plan, allow_stale)
+        if ticket:
+            check_ticket_on_base(plan, *ticket)
         _copy_env_files(plan)
         _build(plan, build)
         checks = require_ready(plan, base, tolerate_stale=allow_stale)
@@ -201,16 +214,57 @@ def _abandon(ws: Path, exc: Exception) -> None:
         exc.extra.pop("workspace_path", None)
 
 
-def ticket_fields(plan: dict, ticket: str) -> dict:
-    """Return the ticket's working location inside the workspace."""
+def ticket_rel(plan: dict, ticket: str) -> Path:
+    """Return the ticket's project-relative path (never relative to cwd) or raise USAGE."""
     raw = Path(ticket)
+    project = plan["project"]
     try:
-        rel = raw.relative_to(plan["project"]) if raw.is_absolute() else raw
+        if raw.is_absolute():
+            rel = Path(os.path.realpath(raw)).relative_to(os.path.realpath(project))
+        else:
+            rel = Path(os.path.normpath(raw))
     except ValueError as exc:
-        raise MakerError("TICKET_NOT_FOUND", f"{ticket} is not inside the project") from exc
-    inside = plan["ws"] / rel
-    if not inside.is_file():
+        raise MakerError("USAGE", f"--ticket {ticket} is not inside the project") from exc
+    if rel.is_absolute() or rel.parts[:1] == ("..",) or rel == Path("."):
+        raise MakerError("USAGE", f"--ticket {ticket} is not inside the project")
+    return rel
+
+
+def check_ticket_on_base(plan: dict, ticket: str, rel: Path) -> None:
+    """Refuse (TICKET_NOT_ON_BASE) unless the workspace's base holds the main copy's bytes."""
+    ws = plan["ws"]
+    main_copy = plan["project"] / rel
+    wanted = out(ws, "hash-object", "--no-filters", str(main_copy))
+    if not wanted:
+        raise MakerError("TICKET_NOT_FOUND", f"{rel} cannot be read in the main copy")
+    held = out(ws, "rev-parse", "--verify", "-q", f"HEAD:{rel.as_posix()}")
+    reason = "absent" if held is None else ("differs" if held != wanted else "")
+    if reason:
+        raise MakerError(
+            "TICKET_NOT_ON_BASE",
+            f"{rel.as_posix()} is {reason} on the workspace's base; push it and ask again",
+            ticket_path=ticket, reason=reason)
+
+
+def ticket_fields(plan: dict, rel: Path, ticket: str, resumed: bool = False) -> dict:
+    """Return the ticket's working location inside the workspace, proven just now.
+
+    Run immediately before an ok answer. A new workspace was already compared
+    with the main copy before its build. A resumed workspace is judged against
+    its own line, never the main copy (phase agents commit sign-offs on the
+    ticket): ``rel`` absent from the line's HEAD is TICKET_NOT_ON_BASE (absent).
+    Either way the stated location must be a regular file. This never clears
+    the workspace.
+    """
+    ws = plan["ws"]
+    if resumed and out(ws, "rev-parse", "--verify", "-q", f"HEAD:{rel.as_posix()}") is None:
+        raise MakerError(
+            "TICKET_NOT_ON_BASE",
+            f"{rel.as_posix()} is absent on the workspace's base; push it and ask again",
+            ticket_path=ticket, reason="absent")
+    inside = ws / rel
+    if not inside.is_file() or inside.is_symlink():
         raise MakerError("TICKET_NOT_FOUND", f"{rel} does not exist in the workspace",
-                         workspace_path=str(plan["ws"]))
+                         workspace_path=str(ws))
     return {"ticket_path_in_worktree": str(inside),
             "ticket_path_in_worktree_posix": inside.as_posix()}

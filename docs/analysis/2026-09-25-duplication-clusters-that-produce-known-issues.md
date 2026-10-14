@@ -260,7 +260,7 @@ prompts; a non-appending `--check-writable` probe.
 | KI-CG-20260925-check-ac-schema-path-argument-is-ignored | high | C5/C9 |
 | KI-CG-20260925-commit-delegation-hook-misses-git-dash-c | high | C6 |
 | KI-BO-20260925-templates-hardcode-a-personal-gh-account | high | C6 |
-| KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path | high | worktree / C4 |
+| KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path | high | worktree / C4 (status: BO-4300a-1-ii gives the maker an explicit in-workspace ticket location, see [reference](../reference/workspace-maker-answers-and-codes.md#ticket-location-fields); caller fixes tracked by BO-4300a-1-ib (build-single-ticket) and BO-4300f-2-ia (worktree-agent)) |
 | KI-BO-20260925-prioritize-py-treats-in-progress-and-blocked-as-ready | high | C10 |
 | KI-ACS-20260925-validate-ac-bare-directory-exits-0 | high | C9 |
 | KI-ACS-20260925-v2-alignment-flat-lookup-misses-feature-folders | high | C9 |

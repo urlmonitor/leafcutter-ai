@@ -57,11 +57,57 @@ Present on `ensure`, `locate`, `verify`, `remove`, and on each element of `list.
 | Verb | Additional fields |
 |---|---|
 | `ensure`, `verify` | `origin_main_commit` (string or null: `refs/remotes/origin/main` in the workspace), `base_matches_origin_main` (boolean), `checks` (object; see Readiness Checks in the parent document). |
-| `ensure` with `--ticket` | `ticket_path_in_worktree` (string), `ticket_path_in_worktree_posix` (string). |
+| `ensure` with `--ticket` | `ticket_path_in_worktree` (string), `ticket_path_in_worktree_posix` (string); see [Ticket Location Fields](#ticket-location-fields). |
 | `locate` | Entry fields only. |
 | `list` | `workspaces` (array of entry objects). |
 | `remove` | Entry fields of the removed workspace, `removed` (boolean, `true`). |
 | `where` | `maker_path` (string). `where` carries no entry fields. |
+
+### Ticket Location Fields
+
+Source: `workspace_create.ticket_fields`, `check_ticket_on_base`, `ticket_rel`; `worktree.verb_ensure`. Added to an `ensure` answer only when the request carried `--ticket`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `ticket_path_in_worktree` | string | Absolute path of the ticket inside `workspace_path`, native separators. |
+| `ticket_path_in_worktree_posix` | string | Same path with forward slashes. |
+
+| Rule | Detail |
+|---|---|
+| Presence | On an ok answer to a request with `--ticket` only. ABSENT (the key is not in the object, never `null`) on every non-ok answer and on any request without `--ticket`. |
+| Location | Both values lie inside `workspace_path`. |
+| Content, new workspace | The main copy's git blob hash is compared with `HEAD:<path>` (the base: `origin/main`, or the resumed hub line) after the fetch and checkout, before the install build. Absent or different is `TICKET_NOT_ON_BASE`, and the half-made workspace is cleared. |
+| Content, resumed workspace | The ticket must exist at the resumed line's `HEAD`; there is no byte comparison with the main copy, so a ticket the line itself edited and committed is accepted. Absent at `HEAD` is `TICKET_NOT_ON_BASE` (`reason: absent`). The workspace is kept, never altered or cleared. |
+| Regular file | In both cases the stated location must be a regular file, not a symlink; otherwise `TICKET_NOT_FOUND`. |
+| Never emitted | `ticket_path_final` and `ticket_path_new`, not even as aliases. Both names were read as "the ticket inside the workspace" while meaning the input path (the `--ticket` value as requested). |
+
+Example, `ensure --kind ticket --slug BO-4300a-1-ii --ticket tickets/00_inbox/t.md` on a new workspace:
+
+```json
+{"status": "ok", "code": "OK", "verb": "ensure", "workspace_path": "/ws/ticket-BO-4300a-1-ii", "ticket_path_in_worktree": "/ws/ticket-BO-4300a-1-ii/tickets/00_inbox/t.md", "ticket_path_in_worktree_posix": "/ws/ticket-BO-4300a-1-ii/tickets/00_inbox/t.md"}
+```
+
+(Entry, `checks` and version fields elided.)
+
+### Refused answer
+
+Returned for `TICKET_NOT_ON_BASE` and `OCCUPIED` (`workspace_core.REFUSAL_CODES`): the maker declined the request; nothing is broken.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `status` | string | `"refused"`. |
+| `code` | string | `TICKET_NOT_ON_BASE` or `OCCUPIED`. |
+| `verb` | string | Verb requested. |
+| `message` | string | Human-readable cause. |
+| `ticket_path` | string | `TICKET_NOT_ON_BASE` only: the `--ticket` value exactly as requested. |
+| `reason` | string | `TICKET_NOT_ON_BASE` only: `"absent"` (base or resumed `HEAD` lacks the file) or `"differs"` (new workspace only: base holds other bytes than the main copy). |
+| `workspace_path` | string | `OCCUPIED` only: the occupying folder. Never on `TICKET_NOT_ON_BASE`. |
+
+Like an error answer, a refused answer carries no `mechanism` or `maker_version`.
+
+```json
+{"status": "refused", "code": "TICKET_NOT_ON_BASE", "verb": "ensure", "message": "tickets/00_inbox/t.md is absent on the workspace's base; push it and ask again", "ticket_path": "tickets/00_inbox/t.md", "reason": "absent"}
+```
 
 ### Error answer
 
@@ -92,12 +138,15 @@ An error answer carries no `mechanism` or `maker_version`.
 
 ## Status and Refusal Codes
 
-Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspace_create.py`, `workspace_checks.py`. `OK` is the only ok code.
+Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspace_create.py`, `workspace_checks.py`. `OK` is the only ok code. The two codes in `REFUSAL_CODES` answer status `refused`; all others answer `error`.
 
 | Code | Returned when | Raised in |
 |---|---|---|
 | `OK` | A verb succeeded. | `worktree._ok` |
-| `BAD_ARGUMENT` | Unparseable command line (including unknown verb or missing required flag); `--ticket` with `--kind scratch`; `locate` with no selector; slug that normalises to empty. | `_Parser.error`, `verb_ensure`, `verb_locate`, `normalize_slug` |
+| `BAD_ARGUMENT` | Unparseable command line (including unknown verb or missing required flag); `locate` with no selector; slug that normalises to empty. | `_Parser.error`, `verb_ensure`, `verb_locate`, `normalize_slug` |
+| `USAGE` | `--ticket` with `--kind scratch`; or `--ticket` names a path outside the project (absolute and not under the project root, relative with `..`, or the project root itself). | `verb_ensure`, `ticket_rel` |
+| `TICKET_NOT_ON_BASE` | Answer status `refused`, exit 2; carries `ticket_path` and `reason`, no `workspace_path`, no ticket fields. New workspace: the base lacks the ticket (`absent`) or holds other bytes than the main copy (`differs`); checked after the fetch and checkout, before the install build; the half-made workspace is cleared. Resumed workspace: the ticket is absent at the line's `HEAD` (`absent`; no byte comparison); the workspace is kept. Caller action: push the ticket, then ask again. | `check_ticket_on_base`, `ticket_fields` |
+| `OCCUPIED` | Answer status `refused`, exit 2. `ensure` found a folder at the workspace location with no workspace marker. Nothing is changed. | `verb_ensure` |
 | `NO_REPO` | No project could be resolved, or `--repo-root` is not a repo. | `resolve_project` |
 | `AMBIGUOUS_REPO` | The child or sibling search found more than one repository. | `resolve_project` |
 | `NO_HUB` | The main checkout has no `origin` remote. | `hub_of` |
@@ -115,7 +164,7 @@ Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspa
 | `CHECKOUT_FAILED` | Checkout of the branch or detached base, or setting `gc.auto` / `maintenance.auto`, failed. | `_checkout` |
 | `COPY_FAILED` | `.env` or `.mcp.json` could not be copied. | `_copy_env_files` |
 | `BUILD_FAILED` | The workspace's install build exited non-zero; `message` ends with the last 800 characters of its output. | `_build` |
-| `TICKET_NOT_FOUND` | `--ticket` is outside the project, or the ticket file does not exist inside the workspace. The workspace is left in place. | `ticket_fields` |
+| `TICKET_NOT_FOUND` | The main copy of the ticket cannot be read (new workspace; the half-made workspace is cleared), or the stated location in the workspace is not a regular file (missing, or a symlink; `workspace_path` carried; the workspace is left in place). | `check_ticket_on_base`, `ticket_fields` |
 | `INTERNAL_ERROR` | The marker cannot be written, the exclude file cannot be updated, or any unclassified exception; `message` is `<ExceptionType>: <text>`. No traceback is printed on stdout. | `write_marker`, `_clone`, `main` |
 
 ---
@@ -127,9 +176,10 @@ Source: `worktree.main`.
 | Exit code | Meaning |
 |---|---|
 | `0` | The verb answered `status: ok`. |
-| `1` | The verb answered `status: error` (any code above), including argument errors. |
+| `1` | The verb answered `status: error` (any code above except the two refusals), including argument errors. |
+| `2` | The verb answered `status: refused` (`TICKET_NOT_ON_BASE`, `OCCUPIED`). |
 
-The parser never exits with argparse's own status `2`; usage errors become a `BAD_ARGUMENT` answer with exit `1`. Logger warnings go to stderr.
+The parser never exits with argparse's own status `2`; usage errors become a `BAD_ARGUMENT` answer with exit `1`, so exit `2` always means a refusal. Logger warnings go to stderr.
 
 ---
 

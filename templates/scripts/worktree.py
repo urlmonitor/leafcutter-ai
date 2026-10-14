@@ -33,6 +33,9 @@ ARCHITECTURE: Stdlib-only CLI, run as ``python <install>/scripts/worktree.py
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
 # - 2026-10-14 17:00 [python-coder]: remove uses the shared discard_tree.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-070)
+# - 2026-10-14 18:00 [python-coder]: A declined request (TICKET_NOT_ON_BASE,
+#   OCCUPIED) answers status "refused" and exits 2; a folder with no marker is
+#   OCCUPIED. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
 """
 from __future__ import annotations
 
@@ -48,7 +51,9 @@ from workspace.workspace_core import (  # noqa: E402
     KINDS, MAKER_VERSION, MakerError, dirname_for, discard_tree, log, make_plan,
     must, normalize_slug, out, plan_from_marker, read_marker, resolve_project, scan,
 )
-from workspace.workspace_create import create_workspace, derive_build, ticket_fields  # noqa: E402
+from workspace.workspace_create import (  # noqa: E402
+    create_workspace, derive_build, ticket_fields, ticket_rel,
+)
 
 
 def _entry(ws: Path, marker: dict) -> dict:
@@ -86,22 +91,28 @@ def _find(project: Path, path: str) -> tuple[Path, dict]:
 def verb_ensure(args: argparse.Namespace) -> dict:
     """Make (or re-verify) the workspace for one piece of work."""
     if args.kind == "scratch" and args.ticket:
-        raise MakerError("BAD_ARGUMENT", "--ticket is not accepted with --kind scratch")
+        raise MakerError("USAGE", "--ticket is not accepted with --kind scratch")
     plan = make_plan(args.kind, args.slug, args.repo_root)
     ws = plan["ws"]
-    if ws.exists():
+    rel = ticket_rel(plan, args.ticket) if args.ticket else None
+    resumed = ws.exists()
+    if resumed:
         marker = read_marker(ws)
-        if not marker or marker.get("state") != "ready":
+        if not marker:
+            raise MakerError("OCCUPIED", f"{ws} holds something that is not a workspace",
+                             workspace_path=str(ws))
+        if marker.get("state") != "ready":
             raise MakerError("WORKSPACE_INCOMPLETE", f"{ws} exists but is not ready; "
                              "remove it and ensure again", workspace_path=str(ws))
         base = marker.get("base_commit") or ""
         answer = _ready_answer("ensure", plan, base, require_ready(plan, base, True))
     else:
         build = derive_build(plan["project"], args.config_path)
-        base, checks = create_workspace(plan, args.allow_stale_base, build)
+        wanted = (args.ticket, rel) if rel else None
+        base, checks = create_workspace(plan, args.allow_stale_base, build, wanted)
         answer = _ready_answer("ensure", plan, base, checks)
-    if args.ticket:
-        answer.update(ticket_fields(plan, args.ticket))
+    if rel:
+        answer.update(ticket_fields(plan, rel, args.ticket, resumed))
     return answer
 
 
@@ -222,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         args = _build_parser().parse_args(words)
         payload, code = _VERBS[args.verb](args), 0
     except MakerError as exc:
-        payload, code = exc.payload(verb), 1
+        payload, code = exc.payload(verb), 2 if exc.refused else 1
     except Exception as exc:  # noqa: BLE001 - boundary: unclassified becomes an error answer
         log.warning("unclassified failure in %s: %r", verb, exc)
         payload = MakerError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}").payload(verb)

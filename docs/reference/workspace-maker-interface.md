@@ -56,7 +56,7 @@ Source: `worktree.py` `_build_parser`, `verb_*` functions. Every verb except `wh
 |---|---|---|---|---|
 | `--kind` | enum: `ticket`, `feature`, `ac`, `fastlane`, `epic`, `scratch` | Yes | — | Kind of work; selects branch prefix and folder name (see Work Identity). |
 | `--slug` | string | Yes | — | Raw work identity; normalised by the maker. |
-| `--ticket` | path | No | none | Ticket in the main checkout (absolute, or relative to the project root). Adds `ticket_path_in_worktree` and `ticket_path_in_worktree_posix` to the answer. Refused with `--kind scratch`. |
+| `--ticket` | path | No | none | Ticket in the main checkout (absolute, or relative to the project root). Adds `ticket_path_in_worktree` and `ticket_path_in_worktree_posix` to an ok answer (see [Ticket Location Fields](workspace-maker-answers-and-codes.md#ticket-location-fields)). `USAGE` with `--kind scratch` or outside the project. |
 | `--repo-root` | path | No | resolved from the working directory | Project root; see Project Resolution. |
 | `--config-path` | path | No | derived from the main install config | Explicit build config file. Must exist. |
 | `--allow-stale-base` | flag | No | off | Accept the existing `origin/main` when the hub is unreachable; also exempts `base_is_fresh` from the readiness requirement on creation. |
