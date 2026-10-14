@@ -1,0 +1,147 @@
+id: KM-400b-5-i
+title: "A publication that fails after it began storing removes the generation it stored, in the same operation, and still reports why it failed"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: draft
+priority: medium
+work_status: todo
+parent: KM-400b-5
+criteria: |
+  Given generation G32 is the active generation of repository R1
+  And a second repository R2 in the same database holds its own 4 generations
+  And a publication of generation G33 for R1 has stored 10,700 nodes and 28,000 relationships tagged to G33
+  When that publication then fails because its count check reports 28,814 relationships expected and 28,813 kept
+  Then before the publication operation returns, the store holds 0 nodes and 0 relationships tagged to G33
+  And no generation record for G33 remains in a state that reads as building or active
+  And G32 is still the active generation of R1 and its node and relationship counts are unchanged
+  And R2's 4 generations are unchanged in count, canonical identity and content
+  And the operation reports failure, carrying the original cause: the count check, the mismatched kind and both figures
+  And the result states that the failed generation G33 was removed, with the number of nodes and relationships removed
+  And that removal is reported separately from the count of retained generations reclaimed, which stays 0 for a failed publication
+
+  Given a publication of G33 for R1 has stored part of its generation
+  When that publication fails because the backend reports itself unavailable for a write
+  Then the same removal of G33's nodes and relationships is attempted within the same operation
+  And the operation reports failure carrying the backend-unavailable cause
+
+  Given a publication of G33 fails during snapshot validation, before any node or relationship of G33 is stored
+  When the operation returns
+  Then no removal is attempted
+  And the result states that nothing was stored for G33
+depends_on: [KM-400b-5]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Cleanup affects only the selected repository's projector-owned generation and leaves foreign data unchanged; this record applies that guarantee to the attempt's own failed generation.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml
+    relationship: context
+    status: exists
+    relevance: Readers never see a partial generation. This record does not change visibility; it stops the invisible partial generation from staying in the store.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-2.yaml
+    relationship: context
+    status: exists
+    relevance: Its last scenario requires a failed publication to reclaim no generation and report a reclaimed count of 0. This record keeps that true by reporting removal of the attempt's own generation as a separate figure.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1-iv.yaml
+    relationship: context
+    status: exists
+    relevance: Retention reports a failed-publication generation as reclaimable. That stays the backstop for any generation this record could not remove; it is not the primary remedy.
+  - path: docs/reference/knowledge-retention-bound.md
+    relationship: context
+    status: exists
+    relevance: Capacity context for why a stranded generation per failed run exhausts the hosted relationship cap.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: A publication failure result carrying the original cause plus the removal outcome for the failed generation (removed, with counts, or not removed); KM-400b-5-ii extends the not-removed branch.
+expects_from:
+  ac_id: KM-400b-5
+  contract: The owned-generation cleanup that touches only the selected repository's projector-owned data.
+origin_agent: business-analyst
+created: '2026-10-14'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-14 from a root-caused outage. On a failed publication the projector
+  only marks the generation failed and re-raises; nothing it stored is removed. Each
+  failed run stranded ~10.7k nodes and ~28.4k relationships. With every publication
+  failing (see KM-400b-2-i) at ~45 runs a day, that filled two hosted instances to the
+  400,000-relationship cap and latched them read-only.
+
+  Not a duplicate of KM-400f-1-i..vi (checked on origin/main 0cda85bf2). Those records
+  specify that the retention EVALUATION sees and reports failed-publication generations:
+  -i assesses every generation whatever its outcome, -ii ages a never-retired one, -iii
+  protects the active one, -iv names the failed-publication basis, -v reconciles
+  untracked nodes, -vi reports could-not-assess. None of them removes anything, and none
+  says that a failed publication cleans up after itself; -i's notes state the existing
+  cleanup is deliberately not re-specified. KM-400f-2 reclaims on SUCCESSFUL publication
+  and, for a failed one, requires that no generation is reclaimed — which this record
+  honours by reporting the attempt's own removal as a separate figure, not as a
+  reclamation.
+
+  Scope: failures the operation itself observes — a failed count check, a backend error
+  surfaced during storing. A process killed mid-publication cannot run any removal; that
+  case is left to retention (KM-400f-1-iv) and to KM-400b-3's interrupted-build
+  guarantee, whose resumable build is unaffected because the removal only runs on an
+  observed failure. Removal is scoped to the attempt's own generation id within its own
+  repository; it never selects by status alone.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_failed_publication_leaves_no_node_or_relationship_of_its_generation
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Seed a backend double that records writes and deletes with an active generation for R1 and 4 generations for R2, publish a new R1 generation that fails its count check after storing part of its data, and assert afterwards that zero nodes and zero relationships tagged to the failed generation remain, the active generation and R2 are byte-identical to before, and the failure result carries the original cause and the removed counts.
+    covers: [KM-400b-5-i]
+    must_catch:
+      - "mark the generation failed and re-raise without removing anything"
+      - "remove nodes but leave relationships tagged to the failed generation"
+      - "remove by failed status across repositories, touching R2 or an older failed generation"
+      - "replace the original failure cause with the cleanup outcome"
+    requires_db: false
+  - name: test_backend_unavailable_mid_publish_also_removes_partial_generation
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Make the backend double report unavailable on a write partway through publishing, then accept the removal; assert the partial generation is gone and the failure carries the backend-unavailable cause.
+    covers: [KM-400b-5-i]
+    must_catch:
+      - "clean up only on count-check failure and strand data on a backend error"
+    requires_db: false
+  - name: test_failure_before_any_write_attempts_no_removal
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Fail a publication at snapshot validation and assert the double recorded no write and no delete, and the result says nothing was stored.
+    covers: [KM-400b-5-i]
+    requires_db: false
+  - name: test_live_failed_publication_leaves_store_counts_unchanged
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database, force a count-check failure after storing and assert total node and relationship counts equal their pre-publication values.
+    covers: [KM-400b-5-i]
+    requires_db: true
+test_rationale: >-
+  The existing publish tests never fed a duplicate relationship, so no test ever drove a
+  publication into failure after it had stored data — which is why a one-line data error
+  became a total outage, and why the stranded generations went unnoticed until the
+  instances latched read-only. The criterion test uses a backend double that records
+  every write and delete and fails mid-publish, and asserts on the store contents
+  afterwards rather than on a returned status, because "marked failed" and "removed"
+  look identical in a status field. A foreign repository and an older failed generation
+  are seeded so a removal that selects by status rather than by the attempt's own
+  generation goes red. Grep-only coverage is forbidden for this record.
