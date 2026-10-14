@@ -165,6 +165,9 @@ amended_by:
   - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved on this record and on the children this change set touched or created (INF-500d-4-i, -iii, -iv, -v, -vi, -vii, -viii); INF-500d-4-ii was already approved and done and is not touched. Criteria and work_status unchanged."
     by: BrainCandy
     at: 2026-10-09
+  - reason: "The four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py (all pass against main). work_status stays todo: the done flip is blocked only by the check-done-proof composite gap, which does not accept the test_required:false documentation children INF-500d-4-vii and INF-500d-4-viii as done-and-covered. See KI-CG-20260914-done-proof-precommit-ignores-test-required. Criteria unchanged; covered_by and implemented_by link fields added."
+    by: test-writer
+    at: 2026-10-14
 superseded_by: null
 covered_by:
   - INF-500d-4-i
@@ -175,7 +178,17 @@ covered_by:
   - INF-500d-4-vi
   - INF-500d-4-vii
   - INF-500d-4-viii
-implemented_by: []
+  - unit_tests/portability/test_inf_500d_4_e2e.py
+  - unit_tests/portability/_inf_500d_4_e2e_helpers.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/scripts/feedback/feedback_sink.py
+  - templates/skills/agent-telemetry/scripts/emit_event.py
+  - templates/scripts/setup_ticket_worktree.py
+  - scripts/build_log_root.py
+  - scripts/build_phases_knowledge.py
+  - scripts/knowledge/sink_resolution.py
+  - scripts/knowledge/harvest_learnings.py
 change_target:
   - code
   - infrastructure
