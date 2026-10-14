@@ -1,0 +1,133 @@
+id: KM-400b-2-i
+title: "Two identical relationships in a snapshot are collapsed to one before publication starts, and the collapse is reported with its source"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400b-2
+criteria: |
+  Given valid generation A is active for the repository
+  And the proposed revision contains an AC record whose implemented_by list names the same test path twice
+  And loading that revision yields 28,815 relationships of which 28,814 are distinct, the extra one being an identical second implemented_by relationship from that AC to that test path
+  When the snapshot is published
+  Then before any node or relationship of the new generation is created in the store, the snapshot holds exactly one implemented_by relationship from that AC to that test path
+  And the snapshot carries 28,814 relationships
+  And the publication result includes a diagnostic naming the relationship type implemented_by, the source AC record's path, the field locator implemented_by, the target test path, and the number of identical copies found, 2
+  And the publication is not failed and is not refused on account of the duplicate
+
+  Given the proposed revision contains two implemented_by relationships from the same AC to the same test path that differ in any recorded property, for example their source locator
+  When the snapshot is published
+  Then both relationships remain in the snapshot as two distinct relationships
+  And no collapse diagnostic is reported for them
+
+  Given the proposed revision contains no identical relationships
+  When the snapshot is published
+  Then the publication result reports 0 identical relationships collapsed
+  And that figure is stated explicitly rather than omitted
+depends_on: [KM-400b-2]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. It already refuses a duplicate canonical NODE id before publication; it says nothing about duplicate relationships, which is the gap this record closes.
+  - path: docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Publication is a projection of the authoritative records; the projection must not turn a redundant record entry into an outage.
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: implemented_by is a list field in AC records; nothing in the schema forbids a repeated entry, so the projection must tolerate one.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: The collapsed count is a reported figure; a zero is stated, never omitted.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: A snapshot whose relationships are unique by full identity, plus the list of collapse diagnostics; KM-400b-2-ii computes the expected relationship count from this de-duplicated set.
+expects_from:
+  ac_id: KM-400b-2
+  contract: The existing pre-publication snapshot validation step, which runs before any write and already rejects duplicate node ids.
+origin_agent: business-analyst
+created: '2026-10-14'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-14 from a root-caused outage. Every publication since 2026-10-12 stored
+  its whole generation and then failed its own count check: one AC record listed the same
+  test path twice under implemented_by, the loader emitted two identical relationships,
+  the store's merge-on-key write folded them into one, and the expected count was taken
+  from the un-deduplicated list. Measured offline: 28,441 relationships, 28,440 distinct
+  keys at 435c113; 28,815 and 28,814 at 0cda85bf2; at fed4809c (the last successful
+  publication, 2026-10-10) 27,596 and 27,596. At ~45 runs a day that one repeated list
+  entry filled two hosted instances to the 400,000-relationship cap.
+
+  Decision: COLLAPSE, not refuse. Refusal was the alternative offered and is rejected.
+  A relationship is folded only when it is identical in every recorded property —
+  type, endpoints AND provenance (source record and locator) — so the two copies state
+  the same fact from the same place and nothing is lost by keeping one. Refusing would
+  turn a harmless redundancy in one AC file into a halt on every knowledge update until
+  someone edited that file; the graph would silently go stale, which is the failure the
+  family exists to prevent. That differs from KM-400b-2's duplicate node id refusal,
+  which stays as is: two records claiming one id CONFLICT, two identical relationships
+  do not. The second scenario is the guard against over-collapsing: keying the collapse
+  on endpoints and type alone would merge relationships that carry different provenance.
+
+  The data duplicate itself is being removed in a separate change. This record is about
+  the pipeline surviving the next one.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_identical_relationships_from_real_ac_yaml_collapse_before_any_write
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Build a fixture repository revision from a real-format AC YAML record whose implemented_by list repeats one test path, load it through the real snapshot loader and publish through the real publication entry point against a backend double that records every write; assert the snapshot handed to the first write holds one implemented_by relationship for that pair, and that the result carries a diagnostic naming the type, source AC path, locator, target and copy count 2.
+    covers: [KM-400b-2-i]
+    must_catch:
+      - "hand the snapshot to the writer with both identical relationships still present"
+      - "collapse silently, with no diagnostic naming the source AC record and locator"
+      - "refuse or fail the publication because of the duplicate"
+    requires_db: false
+  - name: test_relationships_differing_in_provenance_are_not_collapsed
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Publish a snapshot holding two implemented_by relationships with the same endpoints and type but different source locators; assert both survive to the writer and no collapse diagnostic is reported.
+    covers: [KM-400b-2-i]
+    must_catch:
+      - "key the collapse on type and endpoints only, merging relationships with different provenance"
+    requires_db: false
+  - name: test_zero_collapsed_relationships_is_reported_explicitly
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Publish a snapshot with no identical relationships and assert the result states 0 collapsed rather than omitting the figure.
+    covers: [KM-400b-2-i]
+    must_catch:
+      - "omit the collapsed figure when it is zero, so absent and zero read alike"
+    requires_db: false
+test_rationale: >-
+  The existing publish tests never fed a duplicate relationship, which is why a one-line
+  data error in one AC file became a total publication outage that no test detected. The
+  criterion test therefore builds its snapshot from a real-format AC YAML record with a
+  repeated implemented_by entry and runs it through the real loader, because a
+  hand-assembled list of relationships would bypass exactly the step that emitted the
+  duplicate. It asserts on what a recording backend double receives at the first write,
+  not on an internal helper's return, so a de-duplication that exists but is not wired
+  ahead of the write still fails. The provenance boundary is its own test because the
+  obvious wrong fix — collapse by endpoints — passes the duplicate test while losing data.
+  Grep-only coverage is forbidden for this record.

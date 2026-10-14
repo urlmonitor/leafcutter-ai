@@ -1,0 +1,112 @@
+id: KM-400b-2-ii
+title: "The publication count check expects what the store keeps for that snapshot, and still fails a real shortfall"
+component: knowledge-management
+components: [knowledge_management]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400b-2
+criteria: |
+  Given valid generation A is active for the repository
+  And the proposed snapshot holds 10,700 nodes and 28,814 relationships with 28,814 distinct relationship identities
+  When the snapshot is published and the store keeps all 10,700 nodes and 28,814 relationships for the new generation
+  Then the count check compares 10,700 kept nodes against 10,700 expected and 28,814 kept relationships against 28,814 expected
+  And the count check passes
+  And the new generation becomes the active generation
+  And the publication result states the expected and kept count for nodes and for relationships
+
+  Given the proposed snapshot was loaded with 28,815 relationships of which 28,814 are distinct
+  When the snapshot is published and the store keeps 28,814 relationships for the new generation
+  Then the expected relationship count used by the count check is 28,814, the number of distinct relationship identities, not 28,815
+  And the count check passes
+
+  Given the proposed snapshot holds 28,814 distinct relationships
+  When the snapshot is published and the store keeps only 28,813 relationships for the new generation
+  Then the count check fails
+  And the failure names relationships as the mismatched kind and states 28,814 expected and 28,813 kept
+  And generation A remains the active generation and remains retrievable
+depends_on: [KM-400b-2, KM-400b-2-i]
+doc_links:
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. A failed check must leave A active; this record makes sure a valid snapshot is never the thing that fails it.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-i.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the de-duplicated relationship set whose size is the expected count.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml
+    relationship: context
+    status: exists
+    relevance: When the shortfall scenario fails a publication after it has begun storing, that record governs removal of the partial generation.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Expected and kept counts are reported figures and state their basis.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: KM-400b-2-i
+  contract: A snapshot whose relationships are unique by full identity, so its relationship count equals the number of distinct identities the store keys on.
+origin_agent: business-analyst
+created: '2026-10-14'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-14. The count check compared relationships kept (keyed on identity,
+  merged on that key, so duplicates fold) against the raw length of the loaded list
+  (duplicates counted). Those are two different bases, so any duplicate made every
+  publication fail even though every distinct fact was stored. This record pins the
+  basis: expected is counted on the same identity the store keys on.
+
+  KM-400b-2-i already removes duplicates before the write, so in the normal path the
+  two bases coincide. The second scenario still matters: it is the defence in depth if
+  a duplicate reaches the check by a path that bypasses the collapse, and it states the
+  basis as a requirement rather than an accident of ordering.
+
+  The third scenario is the discriminating half and is not optional. The easy wrong fix
+  for "the count check fails" is to weaken or drop the check, or to compute expected from
+  what was stored. Either passes the first two scenarios and reports success for a
+  publication that silently lost a relationship.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_valid_snapshot_with_loaded_duplicate_validates_and_activates
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Load a fixture revision from real-format AC YAML containing a repeated implemented_by entry, publish through the real publication entry point against a backend double that models merge-on-identity storage, and assert the count check compares like with like, passes, and the new generation is active with expected and kept counts stated.
+    covers: [KM-400b-2-ii]
+    must_catch:
+      - "compute expected from the raw loaded relationship list, so one duplicate fails every publication"
+    requires_db: false
+  - name: test_genuine_relationship_shortfall_still_fails_the_count_check
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: Publish a snapshot of distinct relationships against a backend double that drops one relationship on write; assert the check fails naming relationships, 28,814 expected and 28,813 kept, and the previous generation stays active.
+    covers: [KM-400b-2-ii]
+    must_catch:
+      - "drop or weaken the count check to make publication succeed"
+      - "take the expected count from what the store reports keeping"
+      - "report a mismatch without naming the kind and both figures"
+    requires_db: false
+test_rationale: >-
+  The existing publish tests never fed a duplicate relationship, so the two counting bases
+  always agreed in test and the mismatch only existed in production — which is how a
+  one-line data error became a total outage undetected. The first test therefore loads
+  from real AC YAML with a repeated list entry and uses a backend double that folds on
+  identity the way the real store merges on key; a double that keeps every row as given
+  would hide the defect again. The shortfall test exists so that the fix cannot be
+  "remove the check": it goes red under any implementation that stops comparing against
+  an independent expected figure. Grep-only coverage is forbidden for this record.
