@@ -24,7 +24,7 @@ TEST STRATEGY: mirrors unit_tests/workflows/test_acd_2100a_4.py's own
     REAL git repository ("the project") holding a REAL, verbatim copy of
     this repository's own scripts/pause_store.py under its untracked
     .leafcutter/scripts/ (matching production; ADR-001), and a REAL
-    `git worktree add` of that repository as a sibling directory holding NO
+    the linked-checkout add of that repository as a sibling directory holding NO
     .leafcutter/ of its own -- verified absent before every run that depends
     on it. Driving templates/workflows-js/plan-feature.js's real, on-disk
     top-level body via a real Node child_process with `cwd` set to the
@@ -75,11 +75,12 @@ _UT_DIR = Path(__file__).resolve().parent.parent
 if str(_UT_DIR) not in sys.path:
     sys.path.insert(0, str(_UT_DIR))
 from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 _DRAFT_RELATIVE_PATH = "docs/acceptance-criteria/test-component/DRAFT-9999.yaml"
 _DRAFT_CONTENT = (
@@ -139,12 +140,7 @@ def _make_worktree_fixture(tmp_path: Path) -> dict:
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-c2-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-c2-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 

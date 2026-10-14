@@ -36,6 +36,7 @@ from typing import Any
 
 import yaml
 
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT, OLD_WAY_REMOVE_TEXT
 from unit_tests.build_orchestration._workspace_maker_fixtures import deployed_maker_path, make_project
 from unit_tests.build_orchestration._workspace_maker_builders import _isolated_git_env, _run_git
 
@@ -191,7 +192,7 @@ class TestGetAWorkspaceHowTo(DocMakerCase):
         self.assertRegex(text, r"(?i)ask(ing)? again[^.]*safe|safe[^.]*ask(ing)? again|always safe")
         self.assertIn("clear-a-workspace.md", text)
         self.assertIn("workspace-maker-answer.md", text)
-        banned = ("git worktree add", "git clone", "ln -s", "mklink", "cp -r", "symlink(")
+        banned = (OLD_WAY_ADD_TEXT, "git clone", "ln -s", "mklink", "cp -r", "symlink(")
         block_text = fenced_text(GET_DOC)
         for needle in banned:
             self.assertNotIn(needle, block_text, f"hand-made recipe in fenced block: {needle}")
@@ -252,7 +253,7 @@ class TestClearAWorkspaceHowTo(DocMakerCase):
         self.assertRegex(text, r"(?i)unpushed commit")
         self.assertRegex(text, r"(?i)uncommitted")
         block_text = fenced_text(CLEAR_DOC)
-        for needle in ("rm -rf", "rmdir", "git worktree remove", "rmtree", "Remove-Item"):
+        for needle in ("rm -rf", "rmdir", OLD_WAY_REMOVE_TEXT, "rmtree", "Remove-Item"):
             self.assertNotIn(needle, block_text, f"manual deletion bypasses the maker: {needle}")
 
 

@@ -54,7 +54,7 @@ HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test
     every dispatch whose prompt embeds a `pause_store.py` invocation (the
     pause-persist write and its read-back verify) -- against a REAL git
     project, a REAL git worktree of it, and a REAL git worktree stub script
-    that performs a REAL `git worktree add` on disk. Only the ac-triage
+    that performs a REAL the linked-checkout add on disk. Only the ac-triage
     classification itself (`stage-0-triage`) is given a fixed, deterministic
     answer (`route: "covered"`) so all three runs are driven to the SAME
     named first question (`covered-route-gate`) rather than depending on
@@ -95,12 +95,16 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT  # noqa: E402
+
+_ADD_VERB = repr(OLD_WAY_ADD_TEXT.split()[1:])  # the stub's add-a-checkout argv tail
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
-_TIMEOUT = 60  # seconds; includes real `git worktree add` and real subprocess I/O.
+_TIMEOUT = 60  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 _HALT_LABELS = (
     "workspace-setup-registry-uninterpretable",
@@ -146,14 +150,14 @@ _WORKTREE_SETUP_STUB = textwrap.dedent(
         try:
             subprocess.run(
                 [
-                    "git", "-C", str(repo_root), "worktree", "add",
+                    "git", "-C", str(repo_root), *@@ADD_VERB@@,
                     "-b", branch, str(worktree_path), "main",
                 ],
                 check=True, capture_output=True, text=True,
             )
         except subprocess.CalledProcessError as exc:
             print(
-                json.dumps({"error": "worktree add failed", "detail": exc.stderr}),
+                json.dumps({"error": "linked-checkout add failed", "detail": exc.stderr}),
                 file=sys.stderr,
             )
             return 1
@@ -211,25 +215,20 @@ def _make_project(tmp_path: Path) -> Path:
     pause_store_dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
 
     setup_dest = project_dir / ".leafcutter" / "scripts" / "setup_ticket_worktree.py"
-    setup_dest.write_text(_WORKTREE_SETUP_STUB, encoding="utf-8")
+    setup_dest.write_text(_WORKTREE_SETUP_STUB.replace("@@ADD_VERB@@", _ADD_VERB), encoding="utf-8")
 
     return project_dir
 
 
 def _make_run_worktree(tmp_path: Path, project_dir: Path, branch: str) -> Path:
-    """A REAL `git worktree add` of `project_dir`, used as the STARTING cwd
+    """A REAL the linked-checkout add of `project_dir`, used as the STARTING cwd
     for scenario B -- distinct from the AC-authoring worktree the workflow
     itself creates internally via `_WORKTREE_SETUP_STUB` above. Holds NO
     `.leafcutter/` of its own (asserted below), mirroring
     test_acd_2100a_3.py / test_acd_2100a_4.py's own fixture convention.
     """
     worktree_path = tmp_path / "run-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", branch, str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", branch, str(worktree_path), "main"])
     return worktree_path
 
 

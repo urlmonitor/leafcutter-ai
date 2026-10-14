@@ -27,7 +27,7 @@ from unit_tests.build_orchestration._bo_4300a_1_ii_fixtures import (
     same,
     snapshot,
 )
-from unit_tests.build_orchestration._workspace_maker_fixtures import legacy_worktree
+from unit_tests.build_orchestration._workspace_maker_fixtures import legacy_worktree, unlink_checkout
 
 
 def admin_state(project: Path) -> dict[str, bytes]:
@@ -72,7 +72,7 @@ class TestBO4300d3i(unittest.TestCase):
                 if place == "location":
                     legacy = self.legacy_at_location()
                 else:
-                    git(["worktree", "remove", "--force", str(self.landing / "epic" / "alpha")], self.project)
+                    unlink_checkout(self.project, ["--force", str(self.landing / "epic" / "alpha")])
                     git(["branch", "-q", "-D", "EPIC-Alpha"], self.project)
                     legacy = self.legacy_in_old_folder()
                 before = (snapshot(legacy), admin_state(self.project), (legacy / ".git").read_bytes())

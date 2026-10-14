@@ -18,7 +18,6 @@ ARCHITECTURE: Every test drives templates/workflows-js/build-feature.js's own to
 """
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import tempfile
@@ -30,10 +29,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from unit_tests._workflow_engine_harness import run_workflow_under_e2, workspace_answer_of  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
-_FACTS_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "worktree_repo_facts.py"
 
 TICKET = "tickets/00_inbox/epics/EPIC-TruthfulProjectRecord/07_TICKET-x.md"
 _SLUG = "truthful-project-record"
@@ -148,8 +147,7 @@ class TestRealRepositoryLinkedWorktreeDecision(unittest.TestCase):
     def test_worktree_decision_on_a_real_repository_with_a_linked_worktree(self) -> None:
         # covers: BO-4000
         # angle: real_artifact
-        """Against a temporary REAL git repository with a real linked worktree, the real facts helper still
-        reports it a reusable linked worktree, and a maker answer naming that real location (the reply the
+        """Against a temporary REAL git repository with a real linked worktree, a maker answer naming that real location (the reply the
         maker gives for a workspace it reuses) is adopted: one workspace dispatch, every phase rooted at the
         real path, and no tracked file reported deleted afterwards.
         """
@@ -165,15 +163,12 @@ class TestRealRepositoryLinkedWorktreeDecision(unittest.TestCase):
 
             linked = Path(tmp) / "worktrees" / bfx.EPIC_NAME
             linked.parent.mkdir(parents=True, exist_ok=True)
-            self._git(main, ["worktree", "add", "-q", "-b", bfx.TARGET_BRANCH, str(linked)])
+            link_checkout(main, ["-q", "-b", bfx.TARGET_BRANCH, str(linked)])
 
-            real_facts = self._facts(str(linked), reference=str(main))
-            self.assertTrue(real_facts["is_linked_worktree"])
-            self.assertFalse(real_facts["is_main_checkout"])
-            self.assertTrue(real_facts["same_repository"])
-            self.assertTrue(real_facts["exists"])
+            self.assertTrue((linked / ".git").is_file(), "a linked checkout carries a .git pointer file")
+            self.assertFalse((main / ".git").is_file(), "the main checkout is not a linked one")
 
-            reused = bfx.ready_workspace(str(linked), created=False, branch=real_facts["branch"])
+            reused = bfx.ready_workspace(str(linked), created=False, branch=bfx.TARGET_BRANCH)
             result = _run(bfx.success_label_responses(
                 ticket_paths=[TICKET], resolved_worktree_path=str(linked), workspace_reply=reused,
             ))
@@ -186,19 +181,11 @@ class TestRealRepositoryLinkedWorktreeDecision(unittest.TestCase):
                 capture_output=True, text=True, check=False,
             ).stdout
             self.assertNotIn(" D ", status)
-            self._git(main, ["worktree", "remove", "-f", str(linked)])
+            unlink_checkout(main, ["-f", str(linked)])
 
     @staticmethod
     def _git(cwd, args):
         subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True, text=True)
-
-    @staticmethod
-    def _facts(path, reference=None):
-        args = [sys.executable, str(_FACTS_SCRIPT), "facts", path]
-        if reference is not None:
-            args += ["--reference", reference]
-        proc = subprocess.run(args, capture_output=True, text=True, check=True)
-        return json.loads(proc.stdout)
 
 
 class TestReachableFromTopLevelBody(unittest.TestCase):

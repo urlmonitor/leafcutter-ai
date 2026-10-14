@@ -95,6 +95,7 @@ class TestBO4300b3i(unittest.TestCase):
 
     def test_request_from_empty_folder_is_refused_no_repo_naming_the_folder(self):
         # covers: BO-4300b-3-i
+        # covers: BO-4100d-4
         # angle: criterion
         """Refused NO_REPO, searched_from is the start folder, exit 2."""
         res = maker(["ensure", "--kind", "scratch", "--slug", "x"], self.empty, ceiling=self.base)

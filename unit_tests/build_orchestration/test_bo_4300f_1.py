@@ -57,6 +57,7 @@ from unit_tests.build_orchestration._bo_4300c_3_fixtures import (
     terminal,
     workspace_calls,
 )
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT
 from unit_tests.build_orchestration.test_bo_4300e_2 import WorkspaceCase
 
 VERIFY_LABEL = "workspace-verify"
@@ -250,10 +251,10 @@ class TestEveryRouteGetsItsWorkspaceFromTheMaker(RealMakerCase):
     def test_build_backlog_does_not_make_workspaces_another_way(self):
         # covers: BO-4300f-1
         # angle: criterion
-        """AC-5: the backlog build text names no worktree-agent create step and no git worktree add."""
+        """AC-5: the backlog build text names no worktree-agent create step and no hand-made checkout add command."""
         text = (TEMPLATES_DIR / "workflows" / "build-backlog.md").read_text(encoding="utf-8")
         self.assertNotRegex(text, r"worktree-agent[^\n]*create|action:\s*\"create\"", msg="worktree-agent create remains")
-        self.assertNotIn("git worktree add", text)
+        self.assertNotIn(OLD_WAY_ADD_TEXT, text)
 
     def test_no_route_works_in_a_workspace_the_maker_did_not_make(self):
         # covers: BO-4300f-1

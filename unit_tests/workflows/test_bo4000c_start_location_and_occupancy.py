@@ -12,14 +12,13 @@ RE-POINTED BY BO-4300c-3 / BO-4300a-1-ia: the workflow no longer names a locatio
     foreign checkout, a worktree on another branch) stops the run before any phase agent, quoting the
     occupant, with no alternative location chosen.
 ARCHITECTURE: The workflow-body cases drive templates/workflows-js/build-feature.js through
-    unit_tests/_workflow_engine_harness.py. The real-artifact case drives
-    templates/scripts/worktree_repo_facts.py directly against a temporary real repository, starting from an
-    actual linked worktree, with each occupant kind really on disk.
+    unit_tests/_workflow_engine_harness.py. The real-artifact case drives the REAL deployed maker
+    (worktree.py) against a temporary real project, starting from an actual maker-made workspace, with a
+    plain-directory occupant really on disk (BO-4300f-2 removed the facts / base lookups it used before).
 """
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -30,10 +29,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from unit_tests._workflow_engine_harness import run_workflow_under_e2  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import make_project, run_maker  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
-_FACTS_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "worktree_repo_facts.py"
 TICKET = "tickets/00_inbox/epics/EPIC-TruthfulProjectRecord/07_TICKET-x.md"
 
 
@@ -49,26 +48,6 @@ def _workspace_calls(result):
 
 def _phase_calls(result):
     return [c for c in result.agent_calls if c.label not in bfx.RESOLVE_PHASE_LABELS]
-
-
-def _facts_call(path, reference=None):
-    args = [sys.executable, str(_FACTS_SCRIPT), "facts", path]
-    if reference is not None:
-        args += ["--reference", reference]
-    proc = subprocess.run(args, capture_output=True, text=True, check=True)
-    return json.loads(proc.stdout)
-
-
-def _base_call(start):
-    proc = subprocess.run(
-        [sys.executable, str(_FACTS_SCRIPT), "base", start],
-        capture_output=True, text=True, check=True,
-    )
-    return json.loads(proc.stdout)
-
-
-def _git(cwd, args):
-    subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True, text=True)
 
 
 class TestStartFromUnrelatedWorktreeNamesSameLocationAsMain(unittest.TestCase):
@@ -143,34 +122,32 @@ class TestLocationDecisionsOnARealRepositoryFromALinkedWorktree(unittest.TestCas
     def test_location_decisions_on_a_real_repository_started_from_a_linked_worktree(self) -> None:
         # covers: BO-4000c
         # angle: real_artifact
-        """With a temporary real repository and a real linked worktree as the
-        start directory, the base named from inside that worktree equals the
-        base named from the main checkout, and a real plain directory at the
-        named location is correctly classified as an occupant, not a
-        reusable worktree.
+        """RE-POINTED (BO-4300f-2): with a real project and a real maker-made workspace as the start
+        directory, the REAL maker names the same location for a slug whether it is asked from the project or
+        from inside that workspace, and a real plain directory at another slug's location is refused as
+        OCCUPIED, never reused and never replaced by an alternative location.
         """
         with tempfile.TemporaryDirectory(prefix="bo4000c_realrepo_") as tmp:
-            main = Path(tmp) / "main-repo"
-            main.mkdir()
-            _git(main, ["init", "-q"])
-            _git(main, ["config", "user.email", "t@example.com"])
-            _git(main, ["config", "user.name", "t"])
-            (main / "README.md").write_text("hi", encoding="utf-8")
-            _git(main, ["add", "."])
-            _git(main, ["commit", "-q", "-m", "init"])
-            other_linked = Path(tmp) / "worktrees" / "unrelated"
-            other_linked.parent.mkdir(parents=True, exist_ok=True)
-            _git(main, ["worktree", "add", "-q", "-b", "unrelated-branch", str(other_linked)])
-            base_from_main = _base_call(str(main))
-            base_from_linked = _base_call(str(other_linked))
-            self.assertEqual(base_from_main, base_from_linked)
-            occupied = Path(base_from_linked["worktree_base"]) / "EPIC-Occupied"
+            made = make_project(Path(tmp))
+            project = made["project"]
+            start = run_maker(["ensure", "--kind", "scratch", "--slug", "bo4000c-start"], cwd=project)
+            start_dir = Path(start["answer"]["workspace_path"])
+            args = ["ensure", "--kind", "epic", "--slug", "bo4000c-same"]
+            from_project = run_maker(args, cwd=project)
+            from_workspace = run_maker(args, cwd=start_dir)
+            self.assertEqual(from_project["exit_code"], 0, from_project)
+            self.assertEqual(
+                from_project["answer"]["workspace_path"], from_workspace["answer"]["workspace_path"],
+                "the same slug must give the same place whatever folder the run started in",
+            )
+
+            occupied = made["landing_place"] / "epic" / "bo4000c-held"
             occupied.mkdir(parents=True)
-            occupant_facts = _facts_call(str(occupied), reference=str(main))
-            self.assertTrue(occupant_facts["exists"])
-            self.assertFalse(occupant_facts["is_linked_worktree"])
-            self.assertFalse(occupant_facts["is_git_toplevel"])
-            _git(main, ["worktree", "remove", "-f", str(other_linked)])
+            (occupied / "note.txt").write_text("not a workspace\n", encoding="utf-8")
+            refused = run_maker(["ensure", "--kind", "epic", "--slug", "bo4000c-held"], cwd=start_dir)
+            self.assertEqual(refused["exit_code"], 2, refused)
+            self.assertEqual(refused["answer"]["code"], "OCCUPIED", refused["answer"])
+            self.assertEqual((occupied / "note.txt").read_text(encoding="utf-8"), "not a workspace\n")
 
 
 class TestReachableFromTopLevelBody(unittest.TestCase):

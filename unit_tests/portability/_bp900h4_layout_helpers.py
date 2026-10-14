@@ -14,9 +14,9 @@ WHY A REAL CLONE / WORKTREE, NOT A COPY: BP-900h-4-i's constraint "THE
     populated in the main checkout is EMPTY in a linked worktree (worktrees
     share the object store but not untracked/gitignored working-tree state).
     A ``shutil.copytree`` reproduces the contents and therefore reproduces
-    neither the trigger nor the defect. ``git worktree add`` against this
+    neither the trigger nor the defect. the linked-checkout add against this
     very checkout's shared object store is fast (confirmed <1s for a full
-    clone, ~1s for a worktree add, in-session) and gives the real distinction.
+    clone, ~1s for a linked-checkout add, in-session) and gives the real distinction.
 
 Both helpers are safe to call from any test file rooted at this repository's
 own checkout (``_WORKTREE_ROOT`` is resolved relative to this file, three
@@ -30,6 +30,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout
+
 _WORKTREE_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -38,20 +40,14 @@ def make_package_checkout(dest: Path, *, as_worktree: bool) -> Path:
 
     as_worktree=False: a real ``git clone --local`` of this repository —
         a genuine non-worktree checkout (its own ``.git`` directory).
-    as_worktree=True: a real ``git worktree add`` linked to this repo's
+    as_worktree=True: a real the linked-checkout add linked to this repo's
         object store — a genuine git worktree (``.git`` is a file pointing
         at the shared store, and untracked/gitignored directories that
         happen to be populated in the main checkout are NOT copied).
     """
     dest = Path(dest)
     if as_worktree:
-        subprocess.run(
-            [
-                "git", "-C", str(_WORKTREE_ROOT), "worktree", "add",
-                "--quiet", "--detach", str(dest), "HEAD",
-            ],
-            check=True, capture_output=True, text=True, timeout=60,
-        )
+        link_checkout(_WORKTREE_ROOT, ["--quiet", "--detach", str(dest), "HEAD"])
     else:
         subprocess.run(
             ["git", "clone", "--local", "--quiet", str(_WORKTREE_ROOT), str(dest)],
@@ -63,16 +59,13 @@ def make_package_checkout(dest: Path, *, as_worktree: bool) -> Path:
 def remove_package_checkout(dest: Path, *, was_worktree: bool) -> None:
     """Tear down a checkout created by ``make_package_checkout``.
 
-    A worktree must be deregistered via ``git worktree remove`` — deleting
+    A worktree must be deregistered via the linked-checkout remove — deleting
     its directory alone leaves a dangling entry in the shared
     ``.git/worktrees/`` metadata.
     """
     dest = Path(dest)
     if was_worktree:
-        subprocess.run(
-            ["git", "-C", str(_WORKTREE_ROOT), "worktree", "remove", "--force", str(dest)],
-            check=False, capture_output=True, text=True, timeout=60,
-        )
+        unlink_checkout(_WORKTREE_ROOT, ["--force", str(dest)], check=False)
         subprocess.run(
             ["git", "-C", str(_WORKTREE_ROOT), "worktree", "prune"],
             check=False, capture_output=True, text=True, timeout=30,

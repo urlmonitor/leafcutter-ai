@@ -12,16 +12,15 @@ RE-POINTED BY BO-4300c-3 / BO-4300a-1-ia: comparing the branch with origin/main,
     message that quotes the maker's reply -- the branch, the counts and the reason reach the operator
     verbatim -- and never works on the stale branch.
 ARCHITECTURE: The workflow-body cases drive templates/workflows-js/build-feature.js through
-    unit_tests/_workflow_engine_harness.py. The real-artifact case drives
-    templates/scripts/worktree_repo_facts.py directly against a temporary real repository with a local bare
-    origin.
+    unit_tests/_workflow_engine_harness.py. BO-4300f-2 removed the branch-standing lookup of
+    worktree_repo_facts.py; the maker now decides whether an existing branch is reusable (see
+    unit_tests/build_orchestration/test_bo_4300b_2_ii.py and test_bo_4300a_1.py).
 """
 from __future__ import annotations
 
 import json
 import subprocess
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -33,7 +32,6 @@ from unit_tests._workflow_engine_harness import run_workflow_under_e2, workspace
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
-_FACTS_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "worktree_repo_facts.py"
 TICKET = "tickets/00_inbox/epics/EPIC-TruthfulProjectRecord/07_TICKET-x.md"
 
 
@@ -147,53 +145,6 @@ class TestReuseSkipsBranchComparisonEntirely(unittest.TestCase):
         self.assertEqual(_workspace_calls(result), [])
         self.assertEqual([c for c in result.agent_calls if c.label == "branch-standing"], [])
         self.assertTrue(_phase_calls(result), f"stderr={result.stderr!r}")
-
-
-class TestBehindAndAheadMeasuredOnARealRepository(unittest.TestCase):
-    def test_behind_and_ahead_are_measured_on_a_real_repository(self) -> None:
-        # covers: BO-4000b
-        # angle: real_artifact
-        """On a temporary real repository with a local bare origin, a branch
-        really 2 behind and 1 ahead is reported as 2 behind, 1 ahead — not
-        as 1 ahead only (the BO-900a-1 shape this record must not repeat).
-        """
-        with tempfile.TemporaryDirectory(prefix="bo4000b_realrepo_") as tmp:
-            bare = Path(tmp) / "origin.git"
-            _git(Path(tmp), ["init", "-q", "--bare", str(bare)])
-
-            work = Path(tmp) / "work"
-            work.mkdir()
-            _git(work, ["init", "-q"])
-            _git(work, ["config", "user.email", "t@example.com"])
-            _git(work, ["config", "user.name", "t"])
-            (work / "f.txt").write_text("1", encoding="utf-8")
-            _git(work, ["add", "."])
-            _git(work, ["commit", "-q", "-m", "c1"])
-            _git(work, ["branch", "-M", "main"])
-            _git(work, ["remote", "add", "origin", str(bare)])
-            _git(work, ["push", "-q", "origin", "main"])
-
-            _git(work, ["checkout", "-q", "-b", "epic/pair"])
-            (work / "f.txt").write_text("2", encoding="utf-8")
-            _git(work, ["commit", "-q", "-am", "ahead-1"])
-
-            _git(work, ["checkout", "-q", "main"])
-            (work / "g.txt").write_text("a", encoding="utf-8")
-            _git(work, ["add", "g.txt"])
-            _git(work, ["commit", "-q", "-m", "origin-1"])
-            (work / "g.txt").write_text("b", encoding="utf-8")
-            _git(work, ["commit", "-q", "-am", "origin-2"])
-            _git(work, ["push", "-q", "origin", "main"])
-            _git(work, ["checkout", "-q", "epic/pair"])
-
-            proc = subprocess.run(
-                [sys.executable, str(_FACTS_SCRIPT), "branch-standing", "epic/pair", "--repo", str(work)],
-                capture_output=True, text=True, check=True,
-            )
-            standing = json.loads(proc.stdout)
-            self.assertEqual(standing["behind"], 2)
-            self.assertEqual(standing["ahead"], 1)
-            self.assertTrue(standing["fetch_ok"])
 
 
 class TestReachableFromTopLevelBody(unittest.TestCase):

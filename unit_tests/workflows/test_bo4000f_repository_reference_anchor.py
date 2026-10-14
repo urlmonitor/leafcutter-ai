@@ -11,6 +11,11 @@ BUSINESS CONTEXT: FIELD EVIDENCE — run wf_4d8a1c41-0b9. Every
     worktree and `base` answered all-null. The reuse guard fell through, the
     base lookup then failed, and the run aborted worktree-base-unavailable
     with zero phase agents spawned. See BO-4000f.yaml.
+BO-4300f-2 NOTE: the facts / base / branch-standing lookups of
+    worktree_repo_facts.py were removed (the workspace maker answers those
+    questions), so the tests that executed them are gone; what remains is the
+    real maker answer driving the run and the driver anchoring of the
+    surviving dirty-state read.
 ARCHITECTURE: The cwd-sensitivity is proven by EXECUTING the real
     templates/scripts/worktree_repo_facts.py as a subprocess against a
     temporary REAL git repository with a real linked worktree, with cwd set
@@ -38,10 +43,10 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from unit_tests._workflow_engine_harness import run_workflow_under_e2, shell_step_reply  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout  # noqa: E402
 from unit_tests.workflows import _bo4000_fixtures as bfx  # noqa: E402
 
 _BUILD_FEATURE_JS = _REPO_ROOT / "templates" / "workflows-js" / "build-feature.js"
-_FACTS_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "worktree_repo_facts.py"
 _SCRIPT_NAME = "worktree_repo_facts.py"
 _QUOTE_CHARS = "`\"'"
 
@@ -179,10 +184,7 @@ class _RealRepositoryFixture(unittest.TestCase):
         cls.worktree_base = root / "worktrees"
         cls.linked = cls.worktree_base / "EPIC-AnchoredWorktree"
         cls.worktree_base.mkdir()
-        _git(
-            cls.main_checkout,
-            ["worktree", "add", "-q", "-b", TEMP_BRANCH, str(cls.linked)],
-        )
+        link_checkout(cls.main_checkout, ["-q", "-b", TEMP_BRANCH, str(cls.linked)])
         # The anchor the fix derives: the absolute epic folder of the target,
         # by construction inside the repository.
         cls.epic_target = cls.linked.joinpath(*EPIC_FOLDER_PARTS)
@@ -193,8 +195,8 @@ class _RealRepositoryFixture(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         try:
-            _git(cls.main_checkout, ["worktree", "remove", "-f", str(cls.linked)])
-        except subprocess.CalledProcessError:
+            unlink_checkout(cls.main_checkout, ["-f", str(cls.linked)])
+        except AssertionError:
             pass
         cls._tmp.cleanup()
 
@@ -208,71 +210,6 @@ class _RealRepositoryFixture(unittest.TestCase):
             "the launched-from directory must NOT be a git checkout, or this "
             "suite is not testing the condition that broke",
         )
-
-    def _facts_script(self, *args: str) -> dict:
-        """Run the REAL facts script from the non-git directory."""
-        proc = subprocess.run(
-            [sys.executable, str(_FACTS_SCRIPT), *args],
-            cwd=str(self.not_a_repo), capture_output=True, text=True, check=True,
-        )
-        return json.loads(proc.stdout)
-
-
-class TestUnanchoredCallsAreCwdSensitive(_RealRepositoryFixture):
-    def test_facts_without_a_reference_cannot_tell_it_is_the_same_repository(self) -> None:
-        # covers: BO-4000f
-        # angle: failure
-        """Run from a directory that is not a checkout, `facts` reports a real
-        linked worktree correctly in every respect EXCEPT same_repository,
-        which is null — the degenerate answer that made the reuse guard fall
-        through. Pinning it documents why the anchor is necessary and fails
-        loudly if the script's cwd default ever changes.
-        """
-        answer = self._facts_script("facts", str(self.linked))
-        self.assertIsNone(answer["same_repository"])
-        self.assertTrue(answer["exists"])
-        self.assertTrue(answer["is_linked_worktree"])
-        self.assertFalse(answer["is_main_checkout"])
-
-    def test_base_without_a_reference_resolves_nothing_outside_a_checkout(self) -> None:
-        # covers: BO-4000f
-        # angle: failure
-        """Run from the same directory, `base` answers all-null — the second
-        degenerate answer, the one the run aborted on.
-        """
-        answer = self._facts_script("base")
-        self.assertIsNone(answer["main_checkout"])
-        self.assertIsNone(answer["worktree_base"])
-        self.assertIsNone(answer["layout"])
-
-
-class TestAnchoredCallsAnswerIndependentlyOfCwd(_RealRepositoryFixture):
-    def test_facts_anchored_on_the_target_reports_the_same_repository(self) -> None:
-        # covers: BO-4000f
-        # angle: criterion
-        """With a reference derived from the target, `facts` answers
-        same_repository true from the very same non-git directory, so the
-        whole reuse predicate holds for a healthy worktree.
-        """
-        answer = self._facts_script(
-            "facts", str(self.linked), "--reference", str(self.epic_target)
-        )
-        self.assertTrue(answer["same_repository"])
-        self.assertTrue(answer["exists"])
-        self.assertTrue(answer["is_linked_worktree"])
-        self.assertFalse(answer["is_main_checkout"])
-
-    def test_base_anchored_on_the_target_resolves_the_worktree_base(self) -> None:
-        # covers: BO-4000f
-        # angle: criterion
-        """With the same reference, `base` resolves a non-null main checkout
-        and worktree base from outside any checkout.
-        """
-        answer = self._facts_script("base", str(self.epic_target))
-        self.assertIsNotNone(answer["main_checkout"])
-        self.assertIsNotNone(answer["worktree_base"])
-        self.assertEqual(Path(answer["main_checkout"]).resolve(), self.main_checkout.resolve())
-        self.assertEqual(Path(answer["worktree_base"]).resolve(), self.worktree_base.resolve())
 
 
 class TestRealAnswersDecideTheRun(_RealRepositoryFixture):
@@ -361,58 +298,3 @@ class TestDriverAnchorsEveryInvocation(unittest.TestCase):
             "the driver constructs a worktree_repo_facts.py subcommand other than the dirty-state read; the "
             "repository questions belong to the workspace maker (BO-4300c-3)",
         )
-
-
-class TestFileReferenceIsAnchoredOnItsFolder(_RealRepositoryFixture):
-    """BO-4000g: a reference naming a ticket FILE answers as its folder does."""
-
-    @property
-    def ticket_file(self) -> Path:
-        return self.epic_target / "01_TICKET-x.md"
-
-    def test_base_given_a_ticket_file_matches_the_folder_answer(self) -> None:
-        # covers: BO-4000g
-        # angle: criterion
-        """`base <ticket .md file>` names the real main checkout and worktree
-        base, exactly as it does for the folder holding that file."""
-        self.assertTrue(self.ticket_file.is_file())
-        from_folder = self._facts_script("base", str(self.epic_target))
-        self.assertIsNotNone(from_folder["main_checkout"])  # negative control
-        from_file = self._facts_script("base", str(self.ticket_file))
-        self.assertIsNotNone(from_file["main_checkout"])
-        self.assertIsNotNone(from_file["worktree_base"])
-        self.assertEqual(from_file, from_folder)
-
-    def test_facts_reference_a_ticket_file_reports_same_repository(self) -> None:
-        # covers: BO-4000g
-        # angle: criterion
-        """`facts --reference <ticket .md file>` answers same_repository true
-        for the linked worktree, so an existing worktree is reused."""
-        from_folder = self._facts_script(
-            "facts", str(self.linked), "--reference", str(self.epic_target)
-        )
-        self.assertTrue(from_folder["same_repository"])  # negative control
-        from_file = self._facts_script(
-            "facts", str(self.linked), "--reference", str(self.ticket_file)
-        )
-        self.assertTrue(from_file["same_repository"])
-        self.assertEqual(from_file, from_folder)
-
-    def test_branch_standing_repo_a_ticket_file_sees_the_branch(self) -> None:
-        # covers: BO-4000g
-        # angle: criterion
-        """`branch-standing --repo <ticket .md file>` finds the existing branch
-        instead of silently reporting it absent."""
-        from_folder = self._facts_script(
-            "branch-standing", TEMP_BRANCH, "--repo", str(self.epic_target)
-        )
-        self.assertTrue(from_folder["exists"])  # negative control
-        from_file = self._facts_script(
-            "branch-standing", TEMP_BRANCH, "--repo", str(self.ticket_file)
-        )
-        self.assertTrue(from_file["exists"])
-        self.assertEqual(from_file, from_folder)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -29,7 +29,7 @@ HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test Mandate):
     The standard `_workflow_engine_harness.py` mock stubs every agent() call
     with a static canned response -- it never actually runs a shell command,
     so it cannot tell us WHICH physical script file executes or whether a
-    real `git worktree add` landed on disk. This file therefore uses its own
+    real the linked-checkout add landed on disk. This file therefore uses its own
     small harness (`_run_plan_feature_real`) whose agent() mock, for any
     dispatch matching this file's pre-existing "Run the following command
     ...:\\n<cmd>\\nReturn JSON: ..." convention (already used by
@@ -70,12 +70,15 @@ _UT_DIR = Path(__file__).resolve().parent.parent
 if str(_UT_DIR) not in sys.path:
     sys.path.insert(0, str(_UT_DIR))
 from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT  # noqa: E402
+
+_ADD_VERB = repr(OLD_WAY_ADD_TEXT.split()[1:])  # the stub's add-a-checkout argv tail
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add I/O.
 _PERMISSION_LABEL = "resolve-workspace-setup-permission"
 _SETUP_LABEL = "worktree-setup"
 
@@ -108,14 +111,14 @@ _IN_REPO_STUB = textwrap.dedent(
         try:
             subprocess.run(
                 [
-                    "git", "-C", str(repo_root), "worktree", "add",
+                    "git", "-C", str(repo_root), *@@ADD_VERB@@,
                     "-b", branch, str(worktree_path), "main",
                 ],
                 check=True, capture_output=True, text=True,
             )
         except subprocess.CalledProcessError as exc:
             print(
-                json.dumps({"error": "worktree add failed", "detail": exc.stderr}),
+                json.dumps({"error": "linked-checkout add failed", "detail": exc.stderr}),
                 file=sys.stderr,
             )
             return 1
@@ -193,14 +196,14 @@ def _make_fixture(tmp_path: Path, *, with_repo_copy: bool) -> dict:
     parent_scripts = parent_dir / ".leafcutter" / "scripts"
     parent_scripts.mkdir(parents=True)
     (parent_scripts / "setup_ticket_worktree.py").write_text(
-        _PARENT_STUB, encoding="utf-8"
+        _PARENT_STUB.replace("@@ADD_VERB@@", _ADD_VERB), encoding="utf-8"
     )
 
     if with_repo_copy:
         repo_scripts = repo_dir / ".leafcutter" / "scripts"
         repo_scripts.mkdir(parents=True)
         (repo_scripts / "setup_ticket_worktree.py").write_text(
-            _IN_REPO_STUB, encoding="utf-8"
+            _IN_REPO_STUB.replace("@@ADD_VERB@@", _ADD_VERB), encoding="utf-8"
         )
 
     return {"parent_dir": parent_dir, "repo_dir": repo_dir}

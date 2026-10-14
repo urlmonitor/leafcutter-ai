@@ -104,6 +104,7 @@ class TestBO4300b3(unittest.TestCase):
 
     def test_two_candidate_projects_are_refused_as_ambiguous(self):
         # covers: BO-4300b-3
+        # covers: ACD-2100a-2-i
         # angle: criterion
         """From a folder containing shop and blog: refused AMBIGUOUS_REPO naming both, exit 2."""
         res = maker(self.args, self.parent, ceiling=self.tmp)
@@ -117,6 +118,7 @@ class TestBO4300b3(unittest.TestCase):
 
     def test_ambiguous_refusal_creates_nothing_in_either_project(self):
         # covers: BO-4300b-3
+        # covers: ACD-2100a-2-i
         # angle: failure
         """Neither project gains a branch, a landing-place entry or a lock file."""
         before = self._state()
@@ -128,6 +130,7 @@ class TestBO4300b3(unittest.TestCase):
 
     def test_naming_the_project_resolves_ambiguity(self):
         # covers: BO-4300b-3
+        # covers: BO-4100d-4
         # angle: criterion
         """The same request with --repo-root shop is answered ok with a clone of shop."""
         res = maker([*self.args, "--repo-root", str(self.shop)], self.parent, ceiling=self.tmp)

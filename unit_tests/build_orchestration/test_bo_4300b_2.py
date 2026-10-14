@@ -95,6 +95,7 @@ class TestBO4300b2(unittest.TestCase):
 
     def test_adopter_request_from_top_and_parent_folder_gives_same_location(self):
         # covers: BO-4300b-2
+        # covers: BO-4100d-4
         # angle: criterion
         """The deployed maker (outside shop's history) answers ok with one location from both folders."""
         a = maker(self.args, self.shop)["answer"]

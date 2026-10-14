@@ -323,9 +323,14 @@ def run_maker(
 # _workspace_maker_builders.starting_points calls) so this is a one-
 # directional dependency, never a true import cycle.
 from unit_tests.build_orchestration._workspace_maker_builders import (  # noqa: E402
+    commit_base_files,
     legacy_worktree,
+    link_checkout,
     make_project,
+    new_checkout,
     starting_points,
+    start_merge,
+    unlink_checkout,
 )
 
 __all__ = [
@@ -333,8 +338,13 @@ __all__ = [
     "TrackedSourceCopyError",
     "deployed_maker_path",
     "ensure_deployed_layout",
+    "commit_base_files",
     "legacy_worktree",
+    "link_checkout",
     "make_project",
+    "new_checkout",
+    "start_merge",
     "run_maker",
     "starting_points",
+    "unlink_checkout",
 ]

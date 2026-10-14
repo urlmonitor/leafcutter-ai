@@ -260,12 +260,12 @@ class TestLocatorNeverResolvesTrackedSourceCopy(unittest.TestCase):
         # angle: boundary
         """MUST BE IMPLEMENTED: TrackedSourceCopyError, naming the path,
         for BOTH real tracked locations this repository actually carries
-        today -- scripts/setup_ticket_worktree.py (the long-standing
-        tracked script) and templates/scripts/worktree.py (the maker's own
+        today -- scripts/build.py (a long-standing
+        tracked script under scripts/) and templates/scripts/worktree.py (the maker's own
         tracked source, built under BO-4300a-1) -- exercised through the
         override seam, since that is the only caller-facing way to force
         the locator's search at an arbitrary path in a unit test."""
-        tracked_scripts_copy = REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
+        tracked_scripts_copy = REPO_ROOT / "scripts" / "build.py"
         tracked_templates_copy = REPO_ROOT / "templates" / "scripts" / "worktree.py"
         self.assertTrue(tracked_scripts_copy.is_file(), msg=f"fixture assumption broken: {tracked_scripts_copy}")
         self.assertTrue(tracked_templates_copy.is_file(), msg=f"fixture assumption broken: {tracked_templates_copy}")

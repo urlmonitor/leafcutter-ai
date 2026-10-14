@@ -36,11 +36,6 @@ def _js_text() -> str:
     return _JS_PATH.read_text(encoding="utf-8")
 
 
-def _triage_md_text() -> str:
-    """Return the full text of test-failure-triage.md."""
-    return _TRIAGE_MD_PATH.read_text(encoding="utf-8")
-
-
 def _get_step_block(js: str, step_label: str, next_step_label: str) -> str:
     """Extract the source between two phase() markers.
 
@@ -59,26 +54,6 @@ def _get_step_block(js: str, step_label: str, next_step_label: str) -> str:
     return js[start:end]
 
 
-def _get_full_step_block(js: str, step_label: str) -> str:
-    """Extract from phase('X') to the next phase() call (any label)."""
-    start_marker = f"phase('{step_label}')"
-    start = js.find(start_marker)
-    if start == -1:
-        return ""
-    next_phase = js.find("phase(", start + len(start_marker))
-    if next_phase == -1:
-        return js[start:]
-    return js[start:next_phase]
-
-
-def _find_line_number(text: str, pattern: str) -> int:
-    """Return the 1-based line number of the first occurrence of pattern, or -1."""
-    for lineno, line in enumerate(text.splitlines(), start=1):
-        if pattern in line:
-            return lineno
-    return -1
-
-
 # ---------------------------------------------------------------------------
 # FIN-100a-1: Step 0 creates baseline worktree, records fields, removes it,
 #             forwards baseline to triage
@@ -91,13 +66,17 @@ class TestFin100a1BaselineCapture:
 
     def test_ac_fin100a1_step0_creates_detached_worktree(self):
         # covers: FIN-100a-1
-        """AC FIN-100a-1: Step 0 must create a temporary detached worktree at origin/main."""
+        """AC FIN-100a-1: Step 0 must run the baseline in a temporary scratch workspace made by the maker."""
         step0 = _get_step_block(_js_text(), "Step 0", "Step 1")
         assert step0, "phase('Step 0') block must exist in finalize-feature.js"
-        assert "worktree add --detach" in step0 or "worktree add" in step0, (
-            "Step 0 must create a detached worktree via 'git worktree add --detach' "
-            "to capture the baseline test run at origin/main. "
-            "The AC requires a temp detached worktree, not an in-place branch switch."
+        # RE-POINTED (BO-4300f-2): the scratch workspace at origin/main is the workspace maker's, not a
+        # hand-written command; Step 0 reaches it through mainTestRun, whose first act is the maker's ensure.
+        assert "mainTestRun(" in step0, "Step 0 must run the baseline through mainTestRun"
+        js = _js_text()
+        run_start = js.index("async function mainTestRun(")
+        assert "worktree.py ensure --kind scratch" in js[run_start:run_start + 600], (
+            "The baseline run must start by asking the workspace maker for a scratch workspace "
+            "(a temp workspace, not an in-place branch switch)."
         )
 
     def test_ac_fin100a1_step0_records_baseline_sha(self):

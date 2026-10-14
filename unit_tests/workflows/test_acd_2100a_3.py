@@ -44,7 +44,7 @@ HOW THE REAL SIDE EFFECT IS EXERCISED (Real-Artifact Behavioral Test Mandate):
     file's harness ACTUALLY EXECUTES every "Run the following command
     ...:\\n<cmd>\\nReturn JSON: ..." dispatch via a real Node child_process,
     with a real controlled `cwd` set to the real worktree this file creates on
-    disk with real `git worktree add`.
+    disk with real the linked-checkout add.
 
 TDD note: templates/workflows-js/plan-feature.js does not yet resolve the
     registry read to a location anchored on the project's repository rather
@@ -72,12 +72,13 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 from _workflow_engine_harness import fill_workspace_answer  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_setup_permission.py"
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add I/O.
 _MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
 _SETUP_RELATED_LABELS = ("workspace-ensure",)  # BO-4300c-3: the ONE workspace step (the script-path resolution and worktree-setup labels are retired)
 
@@ -100,10 +101,10 @@ def _make_worktree_fixture(tmp_path: Path, *, registry_bytes: bytes) -> dict:
           project/                        <- "the project": a real git repo
             .leafcutter/config/agent_registry.json  <- the project's registry
                                                          (untracked -- git
-                                                         worktree add will NOT
+                                                         linked-checkout add will NOT
                                                          copy this into any
                                                          linked worktree)
-          ac-authoring-worktree/          <- a REAL `git worktree add` of
+          ac-authoring-worktree/          <- a REAL the linked-checkout add of
                                               project/, on its own branch --
                                               holds no .leafcutter/ of its own
     """
@@ -124,12 +125,7 @@ def _make_worktree_fixture(tmp_path: Path, *, registry_bytes: bytes) -> dict:
     # with no copy of its own.
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(repo_dir), "worktree", "add",
-            "-b", "ac-authoring/test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(repo_dir, ["-b", "ac-authoring/test", str(worktree_path), "main"])
 
     return {"repo_dir": repo_dir, "worktree_path": worktree_path}
 

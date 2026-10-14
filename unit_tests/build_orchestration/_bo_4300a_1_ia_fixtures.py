@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT, OLD_WAY_REMOVE_TEXT
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # The repo-wide static lint's own it_requirement names its scan target
@@ -88,8 +90,8 @@ _SHELL_COMMAND_PATTERN = re.compile(
 # this ticket's own Implementation Notes name for removal.
 _FREE_FORM_WORKSPACE_PHRASES = (
     "open a new git worktree",
-    "git worktree add",
-    "git worktree remove",
+    OLD_WAY_ADD_TEXT,
+    OLD_WAY_REMOVE_TEXT,
     "bootstrap",  # matches both "Bootstrap it" and "bootstraps it"
     "symlink .leafcutter",
     "copy/symlink",

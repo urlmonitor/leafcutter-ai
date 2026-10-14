@@ -32,6 +32,7 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 
 import workflows._inf700a5_fixtures as fx  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, unlink_checkout  # noqa: E402
 from _workflow_engine_harness import (  # noqa: E402
     finalize_baseline_responses,
     run_workflow_under_e2,
@@ -65,9 +66,7 @@ class _ScratchOriginCase(unittest.TestCase):
         self.main = root / "main"
         fx._run_git(["clone", str(self.origin), str(self.main)], root)
         self.wt = root / "wt-feature"
-        fx._run_git(
-            ["worktree", "add", "-b", "feature", str(self.wt), "origin/main"], self.main
-        )
+        link_checkout(self.main, ["-b", "feature", str(self.wt), "origin/main"])
         self.sink = root / "install-logs" / "knowledge_emissions.jsonl"
         self.state = root / "install-logs" / "harvest_state.json"
 
@@ -131,7 +130,7 @@ class TestTheObservationFinalizeIssuesAgainstAMergedBranch(_ScratchOriginCase):
         self.assertIs(record["eligible"], True, "the shared sink outlives this removal")
         self.assertEqual(observed["written"], 1, observed)
 
-        fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
+        unlink_checkout(self.main, ["--force", str(self.wt)])
         self.assertFalse(self.wt.exists(), "the announcement must not stop the removal")
 
 
@@ -188,7 +187,7 @@ class TestTheTeardownObservationCoversEveryStageOnTheBranch(_ScratchOriginCase):
         self.assertIn(self.L2, named[_UNPUBLISHED]["text"])
         self.assertEqual(named[_UNPUBLISHED]["reason"], "left_out_of_commit")
         self.assertIs(named[_UNPUBLISHED]["eligible"], True)
-        fx._run_git(["worktree", "remove", "--force", str(self.wt)], self.main)
+        unlink_checkout(self.main, ["--force", str(self.wt)])
         self.assertFalse(self.wt.exists())
 
     def test_a_later_stage_that_could_not_complete_does_not_erase_earlier_stages(self) -> None:

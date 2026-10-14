@@ -80,7 +80,8 @@ from unit_tests.build_orchestration._developer_repo_guard import (
     diff_snapshots,
     snapshot_developer_repo,
 )
-from unit_tests.build_orchestration._workspace_maker_fixtures import make_project
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout, make_project, unlink_checkout
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -127,7 +128,7 @@ class TestGuardSnapshotDiffBoundary(unittest.TestCase):
 
         extra_worktree = self.tmp_path / "extra-worktree"
         run_git(["branch", "extra-branch"], self.dev_repo)
-        run_git(["worktree", "add", str(extra_worktree), "extra-branch"], self.dev_repo)
+        link_checkout(self.dev_repo, [str(extra_worktree), "extra-branch"])
         try:
             after_changed = snapshot_developer_repo(self.dev_repo)
             diff = diff_snapshots(before, after_changed)
@@ -137,7 +138,7 @@ class TestGuardSnapshotDiffBoundary(unittest.TestCase):
                 msg=f"diff does not name the change: {diff}",
             )
         finally:
-            run_git(["worktree", "remove", "--force", str(extra_worktree)], self.dev_repo, check=False)
+            unlink_checkout(self.dev_repo, ["--force", str(extra_worktree)], check=False)
 
 
 class TestNoTemporaryProjectLeaksIntoDeveloperRepo(unittest.TestCase):
@@ -251,7 +252,7 @@ class TestSuiteReachableFromRealEntryPoint(unittest.TestCase):
                             cwd={str(dev_repo)!r}, check=True,
                         )
                         subprocess.run(
-                            ["git", "worktree", "add", {str(leaked_worktree)!r}, "leaked-branch"],
+                            {OLD_WAY_ADD_TEXT.split()!r} + [{str(leaked_worktree)!r}, "leaked-branch"],
                             cwd={str(dev_repo)!r}, check=True,
                         )
                         assert True

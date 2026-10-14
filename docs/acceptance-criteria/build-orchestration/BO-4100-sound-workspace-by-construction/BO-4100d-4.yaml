@@ -101,9 +101,16 @@ amended_by:
     agent: BrainCandy
     date: '2026-09-28'
     reason: "The original criteria required the workspace to be created in 'the repository the tool belongs to'. That is not deliverable by this record and the first implementation of it was WORSE than the defect it replaced. Resolving from the process working directory made the tool silently return an UNRELATED repository whenever it ran from inside one -- measurably worse than the original bug, which at least landed inside the adopter's own project -- and it voided the isolation in unit_tests/build_orchestration/_bo2400f13_fixtures.py, so the suite created real worktrees and branches in the live development tree (14 tests red). Worse, the test written for the original criteria named the process working directory as ground truth, so implementation and test agreed with each other and both disagreed with the layout: a mutually-consistent wrong pair that passes every gate. The criteria are now restated as what this record can actually guarantee -- no silent answer from ambient state, invariance under the caller's working directory, and a refusal that names what it tried. Resolving the deployed copy's true repository is NOT delivered here and needs deploy-time provenance rather than a better guess; see docs/analysis/2026-09-28-git-toplevel-resolution-contract.md, which prototypes install-root anchoring at 7/7 layouts, and KI-BP-011 for why the build's own provenance is currently unreadable from a deployed copy. A successor record under BO-4100d should carry that."
+  - action: proof-moved
+    agent: claude_code
+    date: '2026-10-14'
+    reason: "The setup script this record describes was retired by BO-4300f-2; the deployed workspace maker that replaced it is proven against the same criteria by test_bo_4300b_2.py::test_adopter_request_from_top_and_parent_folder_gives_same_location, test_bo_4300b_3_i.py::test_request_from_empty_folder_is_refused_no_repo_naming_the_folder, test_bo_4300b_3.py::test_naming_the_project_resolves_ambiguity and test_bo_4300b_2_ii.py::test_stale_inner_install_does_not_change_the_project_found; decision dec-86d7db69b675de19."
 superseded_by: null
 covered_by:
-  - unit_tests/build_orchestration/test_bo_4100d_4.py
+  - unit_tests/build_orchestration/test_bo_4300b_2.py
+  - unit_tests/build_orchestration/test_bo_4300b_3_i.py
+  - unit_tests/build_orchestration/test_bo_4300b_3.py
+  - unit_tests/build_orchestration/test_bo_4300b_2_ii.py
 implemented_by:
   - scripts/setup_ticket_worktree.py
   - templates/scripts/setup_ticket_worktree.py

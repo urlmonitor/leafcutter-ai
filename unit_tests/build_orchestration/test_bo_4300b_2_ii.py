@@ -104,6 +104,7 @@ class TestBO4300b2ii(unittest.TestCase):
 
     def test_stale_inner_install_does_not_change_the_project_found(self):
         # covers: BO-4300b-2-ii
+        # covers: BO-4100d-4
         # angle: criterion
         """Requests from the parent, pkg's top folder and inside a workspace agree on project and location."""
         self.assertEqual(self.w.get("status"), "ok", self.w)

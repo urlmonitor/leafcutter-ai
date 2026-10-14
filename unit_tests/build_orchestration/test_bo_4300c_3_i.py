@@ -91,7 +91,7 @@ class TestBO4300c3iInvalidAnswerIsAFailure(unittest.TestCase):
                 subprocess.run(["git", "-C", str(main_copy), *cmd], check=True, capture_output=True)
             (main_copy / "tracked.txt").write_text("tracked\n", encoding="utf-8")
             subprocess.run(["git", "-C", str(main_copy), "add", "."], check=True, capture_output=True)
-            subprocess.run(["git", "-C", str(main_copy), "commit", "-q", "-m", "init"], check=True, capture_output=True)
+            subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=str(main_copy), check=True, capture_output=True)
             before = _snapshot(main_copy)
             cwd = os.getcwd()
             os.chdir(parent)  # "started from the workspace parent folder"

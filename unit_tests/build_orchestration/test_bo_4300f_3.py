@@ -6,7 +6,7 @@ TICKET: tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/
 
 Real-subprocess proof against the DEPLOYED maker (`worktree.py migrate-legacy`, resolved through the
 shared locator), real temp repos, a real bare hub, real legacy git worktrees made by the ONE
-test-side creator `legacy_worktree` (no test here spells the worktree add/remove commands). No mock
+test-side creator `legacy_worktree` (no test here spells the linked-checkout add/remove commands). No mock
 of git, no import of the maker module, never a build.py spawn of its own. Fixture writes pin
 newline="\\n"; git runs with an isolated HOME / GIT_CONFIG_GLOBAL / GIT_CONFIG_NOSYSTEM.
 

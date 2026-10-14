@@ -69,7 +69,7 @@ WHY THESE FIXTURES ARE REAL GIT, NOT MOCKS: every assertion below is on the
     own "Coverage note" ("cover this by executing the check as a process
     against a real repository ... reading the check's source does not cover
     this criterion") and this repo's Real-Artifact Behavioral Test Mandate.
-    Fixtures use `git worktree add` off THIS repository (never a synthetic
+    Fixtures use the linked-checkout add off THIS repository (never a synthetic
     minimal repo) because `check_doc_frontmatter.py` needs the real
     `docs/components.json` / `docs/FRONTMATTER.md` rules this repo ships —
     same reasoning as the sibling `test_ge_120e_1_i.py` file.
@@ -94,7 +94,7 @@ DECISION HISTORY
   exist yet, so every test that imports it fails via ModuleNotFoundError —
   the genuine red state for this ticket's actual deliverable. Tests A/B/F
   (carried-in absence, author-verdict stability, reachability) build real
-  merge/ordinary fixtures via `git worktree add`; test E additionally
+  merge/ordinary fixtures via the linked-checkout add; test E additionally
   injects a real fake-`git` shim on PATH to force the SECOND git call in the
   existing merge-scoping idiom to fail, reproducing the documented
   fall-back-to-unscoped-diff anti-pattern both checks currently ship.
@@ -113,6 +113,10 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+
+from unit_tests.build_orchestration._workspace_maker_fixtures import (
+    commit_base_files, new_checkout, start_merge, unlink_checkout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +171,7 @@ _SHARED_MODULE_MISSING_MSG = (
 _GIT_ENV_OVERRIDES = {
     "PRE_COMMIT_ALLOW_NO_CONFIG": "1",
     # KI-TQ-012. This fixture builds its scenarios as worktrees OF THE REAL
-    # REPOSITORY (`git worktree add` with cwd=_REPO_ROOT). Worktrees share
+    # REPOSITORY (the linked-checkout add with cwd=_REPO_ROOT). Worktrees share
     # $GIT_COMMON_DIR/config, so a plain `git config user.email ...` inside one
     # writes to the configuration of the ENTIRE repository family and outlives
     # the fixture — teardown removes the worktree but never unsets the keys.
@@ -248,17 +252,8 @@ class _NoAuthorMergeFixture:
         self.scratch_rel = "_ge120e1_probe_scratch.txt"
 
     def build(self) -> None:
-        _run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
-        if not (self.root / ".git").exists():
-            raise RuntimeError(f"Fixture setup failed: `git worktree add` did not create {self.root}")
-        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
-        # KI-TQ-012 there. Writing it here would escape into the real repo.
-
-        (self.root / self.deleted_test_rel).write_text("def test_probe():\n    assert True\n", encoding="utf-8")
-        (self.root / self.prod_file_rel).write_text("def probe_fn():\n    return 1\n", encoding="utf-8")
-        _run_git(["add", self.deleted_test_rel, self.prod_file_rel], cwd=self.root)
-        _run_git(["commit", "-q", "-m", "base: scratch fixture files"], cwd=self.root)
-        base_sha = _run_git(["rev-parse", "HEAD"], cwd=self.root).stdout.strip()
+        new_checkout(_REPO_ROOT, self.root)
+        base_sha = commit_base_files(self.root, self.deleted_test_rel, self.prod_file_rel, _run_git)
 
         _run_git(["checkout", "-q", "-b", self._ours_branch], cwd=self.root)
         (self.root / self.scratch_rel).write_text("authored scratch\n", encoding="utf-8")
@@ -273,15 +268,7 @@ class _NoAuthorMergeFixture:
         _run_git(["add", self.baddoc_rel, self.prod_file_rel], cwd=self.root)
         _run_git(["commit", "-q", "-m", "mainline: carried-in content"], cwd=self.root)
 
-        _run_git(["checkout", "-q", "-f", self._ours_branch], cwd=self.root)
-        merge_result = _run_git(["merge", self._theirs_branch, "--no-commit", "--no-ff"], cwd=self.root)
-        merge_head = _run_git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd=self.root)
-        if merge_head.returncode != 0:
-            raise RuntimeError(
-                "Fixture setup failed: MERGE_HEAD was not set after "
-                f"`git merge --no-commit --no-ff` (stdout={merge_result.stdout!r} "
-                f"stderr={merge_result.stderr!r})."
-            )
+        start_merge(self.root, self._ours_branch, self._theirs_branch, _run_git)
         staged = _run_git(["diff", "--cached", "--name-only"], cwd=self.root).stdout
         for expected in (self.baddoc_rel, self.deleted_test_rel, self.prod_file_rel):
             if expected not in staged:
@@ -290,7 +277,7 @@ class _NoAuthorMergeFixture:
                 )
 
     def teardown(self) -> None:
-        _run_git(["worktree", "remove", "--force", str(self.root)], cwd=_REPO_ROOT)
+        unlink_checkout(_REPO_ROOT, ["--force", str(self.root)], check=False)
         _run_git(["branch", "-D", self._ours_branch], cwd=_REPO_ROOT)
         _run_git(["branch", "-D", self._theirs_branch], cwd=_REPO_ROOT)
 
@@ -314,17 +301,8 @@ class _AuthorAndCarriedInMergeFixture:
         self.prod_file_rel = "_ge120e1_probe_author_prod.py"
 
     def build(self) -> None:
-        _run_git(["worktree", "add", "--detach", str(self.root), "HEAD"], cwd=_REPO_ROOT)
-        if not (self.root / ".git").exists():
-            raise RuntimeError(f"Fixture setup failed: `git worktree add` did not create {self.root}")
-        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
-        # KI-TQ-012 there. Writing it here would escape into the real repo.
-
-        (self.root / self.deleted_test_rel).write_text("def test_probe():\n    assert True\n", encoding="utf-8")
-        (self.root / self.prod_file_rel).write_text("def probe_fn():\n    return 1\n", encoding="utf-8")
-        _run_git(["add", self.deleted_test_rel, self.prod_file_rel], cwd=self.root)
-        _run_git(["commit", "-q", "-m", "base: scratch fixture files"], cwd=self.root)
-        base_sha = _run_git(["rev-parse", "HEAD"], cwd=self.root).stdout.strip()
+        new_checkout(_REPO_ROOT, self.root)
+        base_sha = commit_base_files(self.root, self.deleted_test_rel, self.prod_file_rel, _run_git)
 
         _run_git(["checkout", "-q", "-b", self._ours_branch], cwd=self.root)
         (self.root / "docs").mkdir(parents=True, exist_ok=True)
@@ -344,25 +322,13 @@ class _AuthorAndCarriedInMergeFixture:
         _run_git(["add", self.carried_baddoc_rel, self.prod_file_rel], cwd=self.root)
         _run_git(["commit", "-q", "-m", "mainline: carried-in content"], cwd=self.root)
 
-        _run_git(["checkout", "-q", "-f", self._ours_branch], cwd=self.root)
-        merge_result = _run_git(["merge", self._theirs_branch, "--no-commit", "--no-ff"], cwd=self.root)
-        merge_head = _run_git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd=self.root)
-        if merge_head.returncode != 0:
-            raise RuntimeError(
-                "Fixture setup failed: MERGE_HEAD was not set after "
-                f"`git merge --no-commit --no-ff` (stdout={merge_result.stdout!r} "
-                f"stderr={merge_result.stderr!r})."
-            )
+        start_merge(self.root, self._ours_branch, self._theirs_branch, _run_git)
 
     def build_ordinary_comparison(self, target_root: Path) -> None:
         """Build a SECOND, independent working copy holding ONLY the
         author's own bad doc, committed ordinarily (no merge in progress),
         so its check output can be compared against the merged case."""
-        _run_git(["worktree", "add", "--detach", str(target_root), "HEAD"], cwd=_REPO_ROOT)
-        if not (target_root / ".git").exists():
-            raise RuntimeError(f"Fixture setup failed: could not create {target_root}")
-        # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
-        # KI-TQ-012 there. Writing it here would escape into the real repo.
+        new_checkout(_REPO_ROOT, target_root)
         (target_root / "docs").mkdir(parents=True, exist_ok=True)
         (target_root / self.author_baddoc_rel).write_text(
             "---\nfoo: bar\n---\n# Author's own bad doc\n", encoding="utf-8",
@@ -372,7 +338,7 @@ class _AuthorAndCarriedInMergeFixture:
         # like the pre-commit hook would on an ordinary (non-merge) commit.
 
     def teardown(self) -> None:
-        _run_git(["worktree", "remove", "--force", str(self.root)], cwd=_REPO_ROOT)
+        unlink_checkout(_REPO_ROOT, ["--force", str(self.root)], check=False)
         _run_git(["branch", "-D", self._ours_branch], cwd=_REPO_ROOT)
         _run_git(["branch", "-D", self._theirs_branch], cwd=_REPO_ROOT)
 
@@ -493,7 +459,7 @@ class TestVerdictOnAuthorsOwnContentIsUnchanged(unittest.TestCase):
     @classmethod
     def tearDownClass(cls) -> None:
         cls.fixture.teardown()
-        _run_git(["worktree", "remove", "--force", str(cls.ordinary_root)], cwd=_REPO_ROOT)
+        unlink_checkout(_REPO_ROOT, ["--force", str(cls.ordinary_root)], check=False)
 
     def test_ge120e1_verdict_on_the_authors_own_content_is_unchanged(self) -> None:
         # covers: GE-120e-1
@@ -557,9 +523,7 @@ class TestOrdinaryCommitChangeSetEqualsFullStagedDiff(unittest.TestCase):
     def setUpClass(cls) -> None:
         suffix = uuid.uuid4().hex[:10]
         cls.root = Path(tempfile.gettempdir()) / f"ge120e1-ordinary-boundary-{suffix}"
-        _run_git(["worktree", "add", "--detach", str(cls.root), "HEAD"], cwd=_REPO_ROOT)
-        if not (cls.root / ".git").exists():
-            raise RuntimeError(f"Fixture setup failed: could not create {cls.root}")
+        new_checkout(_REPO_ROOT, cls.root)
         # Identity comes from _GIT_ENV_OVERRIDES, never `git config` — see
         # KI-TQ-012 there. Writing it here would escape into the real repo.
         cls.staged_rel = "_ge120e1_probe_ordinary.py"
@@ -570,7 +534,7 @@ class TestOrdinaryCommitChangeSetEqualsFullStagedDiff(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        _run_git(["worktree", "remove", "--force", str(cls.root)], cwd=_REPO_ROOT)
+        unlink_checkout(_REPO_ROOT, ["--force", str(cls.root)], check=False)
 
     def test_ge120e1_ordinary_commit_change_set_equals_full_staged_diff(self) -> None:
         # covers: GE-120e-1

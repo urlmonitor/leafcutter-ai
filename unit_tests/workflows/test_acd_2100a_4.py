@@ -41,7 +41,7 @@ WHY A BARE, EMPTY WORKTREE CANNOT PROVE THIS (mirrors test_acd_2100a_3.py's
     file builds a REAL git repository ("the project") holding a REAL, VERBATIM
     copy of this repository's own `scripts/pause_store.py` under its
     untracked `.leafcutter/scripts/` (matching production: build output, never
-    committed), and a REAL `git worktree add` of that repository as a sibling
+    committed), and a REAL the linked-checkout add of that repository as a sibling
     directory holding NO `.leafcutter/` of its own -- verified absent before
     every run that depends on it.
 
@@ -85,11 +85,12 @@ if str(_UNIT_TESTS_DIR) not in sys.path:
 from _plan_feature_harness_defaults import worktree_setup_default_responses
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 from _workflow_engine_harness import _strip_exports  # noqa: E402
+from unit_tests.build_orchestration._workspace_maker_fixtures import link_checkout  # noqa: E402
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
 _REAL_REGISTRY_PATH = _WORKTREE_ROOT / "config" / "agent_registry.json"
 
-_TIMEOUT = 40  # seconds; includes real `git worktree add` and real subprocess I/O.
+_TIMEOUT = 40  # seconds; includes real the linked-checkout add and real subprocess I/O.
 
 
 # ---------------------------------------------------------------------------
@@ -151,12 +152,7 @@ def _make_worktree_fixture(tmp_path: Path) -> dict:
     _install_real_pause_store(project_dir)
 
     worktree_path = tmp_path / "ac-authoring-worktree"
-    _run(
-        [
-            "git", "-C", str(project_dir), "worktree", "add",
-            "-b", "ac-authoring/pause-test", str(worktree_path), "main",
-        ]
-    )
+    link_checkout(project_dir, ["-b", "ac-authoring/pause-test", str(worktree_path), "main"])
 
     return {"project_dir": project_dir, "worktree_path": worktree_path}
 

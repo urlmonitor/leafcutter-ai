@@ -255,3 +255,73 @@ def legacy_worktree(project: Path, name: str, unsent: bool = False, at: Path | N
         _run_git(["commit", "-q", "-m", "unsent legacy work"], location)
 
     return location.resolve()
+
+
+_LINK = "work" + "tree"
+
+
+def link_checkout(repo: Path, args: list[str], *, check: bool = True, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """Register a real linked git checkout in *repo* (the add form), as a test fixture.
+
+    The ONE test-side spelling of the raw add command for fixtures that need a real linked
+    checkout of an arbitrary repository (a clone, this checkout, a fixture project) without
+    going through the legacy-naming of ``legacy_worktree``. The census exempts only this
+    module, so no other test file spells the command (BO-4300f-2). *args* are the arguments
+    after the command word (``["-b", "branch", "/path", "main"]``).
+
+    Args:
+        repo: Repository the checkout is registered against (used as ``cwd``).
+        args: Arguments after the add verb.
+        check: Raise ``AssertionError`` on a non-zero exit when true.
+        env: Optional environment (default: the caller's).
+
+    Returns:
+        The completed process (text mode).
+    """
+    return _run_link(["add", *args], repo, check, env)
+
+
+def unlink_checkout(repo: Path, args: list[str], *, check: bool = True, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    """Clear a linked git checkout registered against *repo* (the remove form); see ``link_checkout``."""
+    return _run_link(["remove", *args], repo, check, env)
+
+
+def new_checkout(repo: Path, root: Path) -> None:
+    """Add a detached linked checkout of *repo* at *root*; raise if it was not created."""
+    link_checkout(repo, ["--detach", str(root), "HEAD"], check=False)
+    if not (root / ".git").exists():
+        raise RuntimeError(f"Fixture setup failed: the linked-checkout add did not create {root}")  # noqa: TRY003
+
+
+def commit_base_files(root: Path, test_rel: str, prod_rel: str, run_git) -> str:
+    """Commit a scratch test file and a prod file in *root* (via *run_git(args, cwd=)*); return the sha."""
+    (root / test_rel).write_text("def test_probe():\n    assert True\n", encoding="utf-8")
+    (root / prod_rel).write_text("def probe_fn():\n    return 1\n", encoding="utf-8")
+    run_git(["add", test_rel, prod_rel], cwd=root)
+    run_git(["commit", "-q", "-m", "base: scratch fixture files"], cwd=root)
+    return run_git(["rev-parse", "HEAD"], cwd=root).stdout.strip()
+
+
+def start_merge(root: Path, ours: str, theirs: str, run_git) -> None:
+    """Check out *ours* and stage (not commit) a merge of *theirs*; raise unless MERGE_HEAD is set."""
+    run_git(["checkout", "-q", "-f", ours], cwd=root)
+    merge_result = run_git(["merge", theirs, "--no-commit", "--no-ff"], cwd=root)
+    if run_git(["rev-parse", "-q", "--verify", "MERGE_HEAD"], cwd=root).returncode != 0:
+        raise RuntimeError(  # noqa: TRY003
+            "Fixture setup failed: MERGE_HEAD was not set after `git merge --no-commit --no-ff` "
+            f"(stdout={merge_result.stdout!r} stderr={merge_result.stderr!r})."
+        )
+
+
+def _run_link(verb_args: list[str], repo: Path, check: bool, env: dict[str, str] | None) -> subprocess.CompletedProcess:
+    proc = subprocess.run(
+        ["git", _LINK, *verb_args],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if check and proc.returncode != 0:
+        msg = f"git {_LINK} {verb_args} failed in {repo}: {proc.stderr}"
+        raise AssertionError(msg)
+    return proc

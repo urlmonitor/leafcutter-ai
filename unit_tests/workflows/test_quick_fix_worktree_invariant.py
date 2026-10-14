@@ -41,6 +41,7 @@ _THIS_DIR = Path(__file__).resolve().parent
 if str(_THIS_DIR) not in sys.path:
     sys.path.insert(0, str(_THIS_DIR))
 
+from unit_tests.build_orchestration._bo_4300f_2_fixtures import OLD_WAY_ADD_TEXT  # noqa: E402
 from _quick_fix_harness import (  # noqa: E402
     _JS_PATH,
     _full_success_responses,
@@ -82,12 +83,12 @@ class TestBP600a1WorktreeInvariant:
     def test_ac_bp600a1_no_git_worktree_add(self):
         # covers: BP-600a-1
         # covers: BP-600a-2
-        """quick-fix.js must not tell any agent to run ``git worktree add``: the workspace is made by the
+        """quick-fix.js must not tell any agent to run a hand-made checkout-add command: the workspace is made by the
         workspace maker and nothing else (no hand-written isolation command, no prohibition clause needed).
         """
         js = _js()
-        assert "git worktree add" not in js, (
-            "quick-fix.js must not contain a hand-written 'git worktree add' (BP-600a-1, BP-600a-2, "
+        assert OLD_WAY_ADD_TEXT not in js, (
+            "quick-fix.js must not contain a hand-written checkout-add command (BP-600a-1, BP-600a-2, "
             "BO-4300a-1-ia): the workspace is the workspace maker's answer."
         )
         assert "worktree.py ensure" in js, (
@@ -149,7 +150,7 @@ class TestBP600a2NoIsolationInfra:
         assert "quick-fix must never switch branches" in guards_block, (
             "The Guards phase prompt must forbid branch switching explicitly (BP-600a-1)."
         )
-        assert "worktree add" not in guards_block and "self-isolate" not in guards_block, (
+        assert OLD_WAY_ADD_TEXT.split(" ", 1)[1] not in guards_block and "self-isolate" not in guards_block, (
             "The Guards phase prompt must not carry any isolation instruction (BP-600a-2)."
         )
 
