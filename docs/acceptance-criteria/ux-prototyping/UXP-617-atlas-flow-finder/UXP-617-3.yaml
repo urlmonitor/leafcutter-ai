@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Every step and branch card on a flow page shows who runs it: Code, AI agent, Person or Jev"
 component: ux-prototyping
@@ -47,11 +47,61 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: frontend-coder
-estimated_complexity: S
+estimated_complexity: M
 delivers_to:
   agent: frontend-coder
-  contract: "One actor-label mapping (deterministic -> Code, llm -> AI agent, human -> Person, jev -> Jev) shared by the step cards, the finder's step rows and its Actor filter, and each card's accessible name 'Step <order> of <step count>: <label> (<actor>)' or 'Branch: <label> (<actor>)'. UXP-617-3-i addresses cards by that name."
-expects_from: {}
+  contract: 'actorLabel(actorKind: ''deterministic'' | ''llm'' | ''human'' | ''jev'') -> ''Code'' | ''AI
+    agent'' | ''Person'' | ''Jev'' and cardLabel(node, stepCount) -> ''Step <order> of <step count>: <label>
+    (<actor>)'' | ''Branch: <label> (<actor>)'', from one pure module. UXP-617-1-ii and the Actor facet
+    use actorLabel; UXP-617-3-i addresses cards by cardLabel.'
+expects_from:
+  ac_id: UXP-591-1
+  contract: A flow drawn at its canonical address /flows/<flow id> through app/flows/[...id]/page.tsx.
+it_requirements:
+- One actor-label mapping keyed by stored actor_kind (deterministic -> Code, llm -> AI agent, human ->
+  Person, jev -> Jev) in a pure shared module outside components/flows/ (proposed leafcutter-web/lib/flow-finder/actor.ts),
+  imported by the step and branch cards, the finder's step rows and the Actor facet. Jev is never folded
+  into llm.
+- 'Each card''s accessible name comes from one function: ''Step <order> of <step count>: <label> (<actor>)''
+  for a step, ''Branch: <label> (<actor>)'' for a branch.'
+- 'flow-nodes.tsx is 429 lines: an edit must leave it shorter than before (file-size ratchet); move the
+  badge into components/flows/parts/ (2 files today) rather than growing it.'
+- A node with no stored actor (the flow contract allows null) renders without crashing; what it shows
+  is an open owner decision.
+test_spec:
+- name: decision-retrieval cards show Jev, Person and Code badges and the card names the criteria give
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: criterion
+  description: 'Renders leafcutter/decision-retrieval; asserts ''Step 4 of 5: Reuse it, or decide anew?
+    (Person)'' and the branch name form.'
+- name: actorLabel maps the four stored kinds and never returns 'AI agent' for jev
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  must_catch:
+  - jev is folded into llm
+- name: every FlowNode record's actor_label and card_label equal the shared functions' output
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays the 20 FlowNode records of docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json.
+- name: every step and branch card of a drawn flow carries a badge
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: boundary
+  must_catch:
+  - branch cards are left without a badge
+test_rationale: 'Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run`
+  (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest
+  tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -73,6 +123,8 @@ notes: |
   slots, two of which its documentation triggers take, and the folder holds at most 15 files.
   Open: the flow contract allows a step's actorKind to be null; the dataset assumes every node
   has one. What a card with no stored actor shows is not specified.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: actorBadge

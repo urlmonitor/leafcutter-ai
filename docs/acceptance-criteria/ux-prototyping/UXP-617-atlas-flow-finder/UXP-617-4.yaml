@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - documentation_system
   - atlas_frontend
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A how-to guide teaches a person to find a flow or step with the finder and share the search"
 component: ux-prototyping
@@ -53,10 +53,20 @@ assigned_agent: documentation-expert
 estimated_complexity: S
 delivers_to: null
 expects_from:
-  - ac_id: UXP-617-1
-    contract: "The finder screen, its facets and its counts as built."
-  - ac_id: UXP-617-2
-    contract: "The finder address format as built."
+- ac_id: UXP-617-1
+  contract: The finder screen, its facets and counts as built.
+- ac_id: UXP-617-2
+  contract: The finder address format as built.
+it_requirements:
+- A how-to page (proposed docs/how-to/find-a-flow-in-the-atlas.md) linked from the Atlas views table in
+  leafcutter-web/README.md and registered wherever the docs index requires.
+- The worked example's numbers are the dataset's FlowFinderQuery records and are labelled as measured
+  on 2026-10-12, so a later store change does not make the guide wrong without notice.
+- Parameter names and values are linked to the UXP-617-5 reference, not restated as a second table.
+- Written after the finder is built; screenshots are not required.
+test_required: false
+test_rationale: Documentation only (change_target docs); no executable behaviour.
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []

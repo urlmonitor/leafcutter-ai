@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Ticking a filter value narrows the results, shows a removable chip and recounts every option, zero values staying listed"
 component: ux-prototyping
@@ -48,10 +48,69 @@ assigned_agent: frontend-coder
 estimated_complexity: M
 delivers_to:
   agent: frontend-coder
-  contract: "The chosen facet values held as stored values per facet (product, actor, kind, realization, level, uses, produces, io, entity, screen), from which UXP-617-2 builds the address."
+  contract: 'Finder state {q: string | null, facets: {product, actor, kind, realization, level, uses,
+    produces, io, entity, screen: string[]}} holding stored values (for example actor [''human'']), from
+    which UXP-617-2 builds the address.'
 expects_from:
   ac_id: UXP-617-1
-  contract: "The facet panel with per-option flow counts."
+  contract: runFinder facetCounts and appliedChips, and the facet panel slot of the finder screen.
+it_requirements:
+- 'Facet semantics follow the dataset invariant: OR within a facet, AND across facets; product, kind,
+  realization, level and entity are flow facets; actor, uses, produces, io and screen are step facets
+  that one node must meet all at once.'
+- Each option's count is computed by the same listing function with that option alone in its facet and
+  q and the other facets kept; a zero option stays rendered and disabled, so the panel never reflows.
+- 'Chosen values are held as stored values per facet; labels are applied only at render. Chips are listed
+  in address order, each remove button named ''Remove filter <facet label>: <option label>''; ''Clear
+  all'' removes every facet value and keeps q.'
+- Uses field / Produces field options are picked by type-ahead over the index's field keys and list only
+  the chosen fields; entity options are sorted by name and screen options by title.
+- The facet panel and chips live in leafcutter-web/components/flows/finder/.
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: 'ticking Person replay: ''2 flows, 5 steps match'', Actor counts Code 5, AI agent 1, Person 2,
+    Jev 0, the chip and Clear all'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-selected-option-person facet_counts, applied_chips and clear_all_href.
+- name: Person plus Code lists the union of both actors' matches, and a second facet narrows
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  description: Expected sets are derived from the fixture nodes, not a pinned number.
+  must_catch:
+  - values within one facet combine with AND
+  - facets combine with OR
+- name: the Jev option stays listed and disabled at 0, and the chip's remove button has its full name
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+- name: Clear all removes every facet value and keeps the search 'selected option'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: boundary
+  must_catch:
+  - Clear all also clears the search
+- name: the panel offers the ten facets in order, with Uses and Produces picked by type-ahead
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+test_rationale: 'Counting and filtering share one function, so the replay plus the OR/AND discrimination
+  test cover both. Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run`
+  (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest
+  tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -69,6 +128,8 @@ notes: |
   the panel does not jump. Not specified by the flow or dataset: a concrete count for
   'Person' plus 'Code' together; the test should derive it from the dataset's FlowNode
   records rather than this AC pinning a number.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: finderFacets

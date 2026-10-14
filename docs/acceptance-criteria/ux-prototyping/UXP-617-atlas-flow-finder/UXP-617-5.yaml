@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - documentation_system
   - atlas_frontend
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A reference lists every /flows finder address parameter with its stored values and labels"
 component: ux-prototyping
@@ -54,7 +54,18 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: UXP-617-2
-  contract: "The finder address parameter names and stored values as built."
+  contract: Parameter names and stored values with labels from the facet vocabulary.
+it_requirements:
+- A reference page (proposed docs/reference/atlas-flows-finder-address.md) plus the 'The views' routes
+  table in leafcutter-web/README.md listing the bare /flows as the finder.
+- The value/label table is copied from the facet vocabulary declared in leafcutter-web/lib/flow-finder/
+  and cross-checked against the dataset's applied_chips invariant; any difference is reported, not silently
+  resolved.
+- 'Marked as a stable public contract: the page says renaming a parameter or a stored value breaks shared
+  links.'
+test_required: false
+test_rationale: Documentation only (change_target docs); no executable behaviour.
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []

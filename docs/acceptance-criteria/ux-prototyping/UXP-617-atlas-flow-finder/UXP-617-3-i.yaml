@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Enter on a focused step card opens its drawer and Enter on 'Close step details' closes it, exactly as clicks do"
 component: ux-prototyping
@@ -44,13 +44,54 @@ doc_links:
     status: exists
     relevance: "FlowNode card_label invariant: the card is focusable and opens its drawer with Enter."
 assigned_agent: frontend-coder
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
 expects_from:
-  - ac_id: UXP-617-3
-    contract: "Each card's accessible name 'Step <order> of <step count>: <label> (<actor>)'."
-  - ac_id: UXP-591-4
-    contract: "The replace-entry path drawer open and close already use."
+- ac_id: UXP-617-3
+  contract: cardLabel(node, stepCount), the accessible name each card is found by.
+- ac_id: UXP-591-4
+  contract: The replace-entry path that drawer open, switch and close use.
+it_requirements:
+- Enter on a focused card calls the same open-drawer intent a click calls, so there is exactly one replaceState
+  per open and no second history write.
+- The drawer's close control is a native button named 'Close step details'; Enter and Space close through
+  the same replace path as a click.
+- Every step and branch card is in the Tab order with a visible focus indicator.
+- 'flow-explorer.tsx (635 lines) and flow-drawer.tsx (438) are over the 400-line ratchet: any edit must
+  leave each shorter than before; extract into components/flows/parts/.'
+test_spec:
+- name: 'Enter on ''Step 2 of 3: ... (Code)'' opens the resolve drawer at ?step=resolve with history.length
+    unchanged'
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: criterion
+  must_catch:
+  - the key handler pushes an entry
+  - the key handler writes history twice
+- name: Enter on 'Close step details' closes the drawer and returns the address with no query
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: criterion
+- name: every step and branch card of flow-render-pipeline is reachable with Tab
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: boundary
+- name: keyboard-step-drawer session replay from atlas-flows.mock.json
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowNavigation session keyboard-step-drawer and checks it equals the click session's
+    history ops.
+test_rationale: 'Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run`
+  (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest
+  tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -67,6 +108,8 @@ notes: |
   to one drawer and share every precondition; the folder's 15-file cap left no room for two.
   The 'exactly as a click' clauses mean the key path must reuse the click path, not a second
   history write.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: drawerByKey

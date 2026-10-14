@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The finder's search and filters travel in the /flows address, so a shared link reopens the same results"
 component: ux-prototyping
@@ -57,13 +57,97 @@ doc_links:
 assigned_agent: frontend-coder
 estimated_complexity: M
 delivers_to:
-  - agent: frontend-coder
-    contract: "One finder address format: /flows plus q and the facet parameters product, actor, kind, realization, level, uses, produces, io, entity and screen, carrying stored values; written in place without adding a history entry. UXP-617-2-i and UXP-617-1-v's suggestion links use it."
-  - agent: documentation-expert
-    contract: "The stable parameter names and stored values the reference doc in UXP-617-5 lists."
+- agent: frontend-coder
+  contract: 'buildFinderHref(state) -> ''/flows'' | ''/flows?<canonical query>'' and parseFinderQuery(searchParams)
+    -> state {q: string | null, facets: {product, actor, kind, realization, level, uses, produces, io,
+    entity, screen: string[]}}, stored values only, in leafcutter-web/lib/flow-finder/; plus replaceFinderEntry(state)
+    writing that address in place through flow-history.ts with flushPending() for callers about to push.
+    Used by UXP-617-1-v and UXP-617-2-i.'
+- agent: documentation-expert
+  contract: The eleven parameter names (q, product, actor, kind, realization, level, uses, produces, io,
+    entity, screen) and every stored value with its label, as declared in the facet vocabulary in leafcutter-web/lib/flow-finder/,
+    for the UXP-617-5 reference.
 expects_from:
   ac_id: UXP-617-1-iii
-  contract: "The chosen facet values, held as stored values (for example actor human), from which the address is built."
+  contract: Finder state holding stored values per facet.
+it_requirements:
+- 'One finder-address module in leafcutter-web/lib/flow-finder/ builds and parses the address: ''/flows'',
+  then q first (form-encoded, spaces as ''+''), then one parameter per chosen value, facets in the order
+  product, actor, kind, realization, level, uses, produces, io, entity, screen, values in option order
+  and field keys sorted; ''/flows'' with no ''?'' when nothing is chosen. build(parse(url)) == url for
+  every FlowFinderQuery.url in the dataset.'
+- Search and facet state lives only in the /flows query string; a flow's canonical address (/flows/<product>/<flow>[?step=<id>])
+  never carries finder state, and a finder address never carries a flow or step parameter. History is
+  written only with window.history.pushState / replaceState through leafcutter-web/components/flows/flow-history.ts
+  (view state under 'leafcutter:flows-view', merged beside the App Router's __NA and __PRIVATE_NEXTJS_INTERNALS_TREE
+  keys); router.push, router.replace and router.refresh are never used for Flows history.
+- Search and facet edits rewrite the current entry with replaceState, never pushState, and make no server
+  request. Writes from typing are coalesced so they stay inside browser rate limits on the history API,
+  while results update on every keystroke; a pending write is flushed before any push (UXP-617-2-i).
+- 'Parameter names and stored values are a public contract (shared and bookmarked links): renaming one
+  is a breaking change and needs the UXP-617-5 reference updated in the same change.'
+- Unknown parameters and unknown values are ignored for results and produce no chip; the address is not
+  rewritten on load (UXP-591-1-i), and the next edit writes the canonical form.
+- leafcutter-web/middleware.ts keeps keying the legacy 308 on the 'flow' parameter alone, so no finder
+  address is redirected.
+- A shared finder address renders its results in the server HTML from searchParams with a 200.
+test_spec:
+- name: build and parse round-trip every FlowFinderQuery.url in atlas-flows.mock.json
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  must_catch:
+  - labels are written instead of stored values
+  - facet order is not canonical
+- name: typing 'selected option' then ticking Person rewrites the address twice with history.length unchanged
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: component
+  angle: criterion
+  description: Asserts /flows?q=selected+option then /flows?q=selected+option&actor=human on window.location.
+  must_catch:
+  - a search or facet edit uses pushState
+  - an edit calls router.replace or router.push
+- name: /flows?q=selected+option&actor=human through the route renders the search, the Person chip and
+    the runFinder summary
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: 'default export of leafcutter-web/app/flows/page.tsx with searchParams {q: ''selected
+    option'', actor: ''human''}'
+  description: Expected summary is runFinder over the live loaded index for the parsed state, so no number
+    is pinned.
+- name: middleware lets finder addresses through with no 308 and no rewrite
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: integration
+  angle: failure
+  surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest for /flows?q=selected+option&actor=human
+  must_catch:
+  - the legacy redirect fires on a finder query
+- name: clearing the search and unticking Person returns the address to exactly /flows
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: component
+  angle: boundary
+  must_catch:
+  - the address keeps a trailing '?'
+- name: the address never carries a flow or step parameter
+  target_dir: leafcutter-web/__tests__/uxp-617-2/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  must_catch:
+  - the drawn or hovered flow is written into the finder address
+test_rationale: 'The round-trip replay pins the public address format; the component test proves the in-place
+  writes; the route and middleware tests prove a shared link opens. Tests are vitest under leafcutter-web/__tests__/,
+  run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline''s red-baseline and
+  done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest,
+  as the UXP-591 epic was. No Playwright: the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -81,6 +165,8 @@ notes: |
   contract_boundary because a shared or bookmarked link depends on the parameter names and
   stored values staying stable; UXP-617-5 documents them. The legacy-link redirect is the one
   UXP-591-2-iii keys on the 'flow' parameter alone.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: finderUrl

@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Every flow page, the finder and 'Flow not found' have their own tab title"
 component: ux-prototyping
@@ -43,11 +43,59 @@ doc_links:
     relationship: describes
     status: exists
 assigned_agent: frontend-coder
-estimated_complexity: S
+estimated_complexity: M
 delivers_to: null
 expects_from:
-  - ac_id: UXP-591-5
-    contract: "Push and popstate paths, on which the title must follow the drawn flow."
+- ac_id: UXP-591-5
+  contract: Push and popstate paths, on which the title follows the drawn flow.
+- ac_id: UXP-617-2-i
+  contract: The finder/flow mode switch in one client tree.
+it_requirements:
+- One title builder produces '<flow name> · Flows · Leafcutter Atlas', 'Flows · Leafcutter Atlas' and
+  'Flow not found · Flows · Leafcutter Atlas'; the server metadata and the client updates both use it.
+- The title is correct in the server HTML for a flow address, a step address, the finder and an unknown
+  flow id. Next.js 14 handles not-found metadata differently from page metadata, so the unknown-id title
+  must be proven on the server output, not assumed.
+- Client-side pushes, finder/flow mode switches and pops set document.title to what is shown; a drawer
+  replace does not change it.
+test_spec:
+- name: server metadata gives the flow title for /flows/leafcutter/flow-render-pipeline with and without
+    ?step=resolve, and the finder title for /flows
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: metadata / generateMetadata exports of leafcutter-web/app/flows/[...id]/page.tsx and
+    app/flows/page.tsx
+- name: an unknown flow id gets 'Flow not found · Flows · Leafcutter Atlas' in the server output
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: integration
+  angle: failure
+  surface_invoked: leafcutter-web/app/flows/[...id] route for leafcutter/flow-render-pipline
+  must_catch:
+  - the not-found render keeps the root layout title
+- name: drilling into Build sets the sub-flow title and Back restores 'Deliver a feature end-to-end ·
+    Flows · Leafcutter Atlas'
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: seam
+  must_catch:
+  - document.title is set on push but not on popstate
+- name: every FlowRoute and FlowNavigation page_title in atlas-flows.mock.json equals the title builder's
+    output
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+test_rationale: 'The server and client title paths are different code, so each gets its own test. Tests
+  are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known
+  gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest tests yet, so build
+  by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is
+  deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -63,6 +111,8 @@ notes: |
   UXP-617-3 for the cap reasons that AC records. The title must be right on first load
   (server-rendered) as well as after client-side drills and Back, which are two different
   paths.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: pageTitle

@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Results are grouped by flow, each card showing up to three matching step rows with an actor badge and why it matched"
 component: ux-prototyping
@@ -46,10 +46,60 @@ assigned_agent: frontend-coder
 estimated_complexity: M
 delivers_to: null
 expects_from:
-  - ac_id: UXP-617-1-i
-    contract: "The matching steps per flow, with the target each matched on."
-  - ac_id: UXP-617-3
-    contract: "The shared actor-label mapping (Code, AI agent, Person, Jev)."
+- ac_id: UXP-617-1-i
+  contract: Matching nodes per flow, each with the highest-ranked target it matched.
+- ac_id: UXP-617-3
+  contract: 'actorLabel(actorKind) from the shared actor-label module: deterministic -> Code, llm -> AI
+    agent, human -> Person, jev -> Jev.'
+it_requirements:
+- 'Result ordering (with q: flow-own match first, then more matching steps, then name; without q: product
+  then name, case ignored), the three-row cap (steps in step order, then branches in stored order), more_steps
+  and the reason ranking are computed in leafcutter-web/lib/flow-finder/, not in the component.'
+- 'The reason ranking follows the dataset invariant exactly: Step/Branch label, AC, Output, Input, Screen,
+  Entity, then Text; without q the chosen step facet first of produces, uses, io, screen and actor.'
+- Actor badge text comes from the shared actor-label mapping of UXP-617-3; no local label table.
+- Each step row and flow card is a real link whose href is built by flowHref from lib/flow-url.ts (/flows/<flow
+  id>[?step=<node id>]), so open-in-new-tab works; the same-tab behaviour is UXP-617-2-i.
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: '''selected option'' + Person replay: card order, three rows with Person badges and reasons, ''1
+    more step'''
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-selected-option-person results (step_rows, reason, more_steps)
+    over the fixture.
+- name: rendered result cards show the step rows, badges, reasons and row hrefs of the record
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+- name: no card shows more than three rows and steps are listed before branches
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: boundary
+  must_catch:
+  - branches are interleaved with steps by stored order
+  - all matching rows are shown
+- name: with a search, a flow whose own name matches is listed before flows with more matching steps
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  must_catch:
+  - results are ordered by matching-step count alone
+test_rationale: 'Ordering and row rules live in the pure core, so they are unit-tested there; the component
+  test proves the rendering. Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx
+  vitest run` (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot
+  read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was.
+  No Playwright: the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -64,6 +114,8 @@ notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderResults'. The ordering
   clause comes from the dataset's result-ordering invariant. Opening a row or a card is
   UXP-617-2-i.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: finderResults

@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Searching 'selected option' lists the 5 flows and 27 steps whose names, text, fields, criteria, screens or entities match every word"
 component: ux-prototyping
@@ -51,7 +51,76 @@ estimated_complexity: M
 delivers_to: null
 expects_from:
   ac_id: UXP-617-1
-  contract: "The finder screen with its search box, result list and result summary."
+  contract: runFinder(index, state) and the FinderIndex node shape {label, text, condition, acIds, uses,
+    produces, screen, entities}, plus the search box and live-region summary.
+it_requirements:
+- 'One tokenizer is shared by the query and every target: case-insensitive, splitting at every character
+  that is not a letter or a digit (Unicode-aware), so snake_case, kebab-case, dotted field keys and AC
+  ids split.'
+- 'The one-target rule is enforced per target: a node matches only when every query word starts a word
+  of one single target. Targets are never pooled or concatenated per node.'
+- 'Targets are exactly the dataset''s list: label; text with condition; each AC id; each used and each
+  produced field key; screen id with screen title; each entity read or written. A flow''s own targets
+  are its name with its id, and each declared entity.'
+- Used/produced field keys and their labels come from the same derivation the drawer's Inputs/Outputs
+  tables use (<contract>.<JSON-pointer segments joined by '.'>); one implementation, moved into a pure
+  shared module if it currently lives inside a component.
+- Results recompute on each edit of the search box without a server request; the search text is trimmed
+  and an empty search shows the overview.
+- Each new summary is written into the existing polite live region; the region is not re-created per change.
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: '''selected option'' replay: ''5 flows, 27 steps match'' with the five flows in record order and
+    their matching step counts'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-selected-option over the frozen fixture.
+- name: '''Selected Option'' returns the same flows and steps as ''selected option'''
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: criterion
+  must_catch:
+  - the search is case-sensitive
+- name: a node with 'selected' only in its label and 'option' only in its text does not match
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  description: Built from a two-target node so the pooled-text implementation is caught.
+  must_catch:
+  - words are matched against the node's targets pooled into one string
+  - a word may match anywhere in a word rather than at its start
+- name: the tokenizer splits decision_record.selected_option_id and UXP-210d into their words
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: boundary
+- name: '''UXP-210d'' replay lists 2 flows with 8 matching steps found by AC id'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-ac-prefix.
+- name: typing into the search box updates the polite live region with the new summary
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+  description: Renders the finder with the fixture index; asserts the role status region text changes
+    in place.
+test_rationale: 'The one-target clause is the one most likely to be built wrong while still passing the
+  headline example, so it gets its own discrimination test. Tests are vitest under leafcutter-web/__tests__/,
+  run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline''s red-baseline and
+  done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest,
+  as the UXP-591 epic was. No Playwright: the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -69,6 +138,8 @@ notes: |
   FlowFinderQuery finder-ac-prefix, status_text field), not from the scenario. The one-target
   rule is the clause most likely to be built wrong: a search that pools all of a step's text
   matches more steps and still passes the 'selected option' example.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: finderSearch

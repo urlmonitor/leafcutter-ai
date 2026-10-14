@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "'I/O not yet defined' lists exactly the 102 steps in 9 flows whose inputs or outputs are not defined yet"
 component: ux-prototyping
@@ -46,7 +46,48 @@ estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: UXP-617-1-iii
-  contract: "Facet selection, chips and recounting, which the io facet joins with its one value gap."
+  contract: Facet selection, chips and recounting; io joins as a step facet with the one value gap.
+it_requirements:
+- A node meets io=gap if and only if its io_contracts declare missing_bindings; a flow's matching steps
+  under io=gap are exactly those nodes, never every node of a flow that has one.
+- 'The chip label rule for a facet with a single option (''I/O not yet defined'', never ''I/O: I/O not
+  yet defined'') is driven by the facet declaration''s option count, not by a hard-coded ''io'' name.'
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: 'io=gap and actor=llm&io=gap replays: ''9 flows, 102 steps match'' and ''6 flows, 8 steps match'''
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-io-gap and finder-io-gap-ai-agent over the fixture.
+- name: each flow's matching steps under io=gap equal its io_gap_nodes, none more and none fewer
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  must_catch:
+  - every node of a flow with one gap is counted
+- name: on the live store /flows?io=gap lists exactly the loaded nodes that declare missing_bindings
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: 'default export of leafcutter-web/app/flows/page.tsx with searchParams {io: ''gap''}'
+  description: 'No pinned number: the expectation is computed from the loaded flows'' io_contracts.'
+- name: the chip reads 'I/O not yet defined' and the 'Build a candidate query' row links /flows/leafcutter/retrieval-query-build?step=author
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+test_rationale: 'Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run`
+  (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest
+  tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
 amended_by: []
@@ -62,6 +103,8 @@ notes: |
   as undefined when its input/output contracts declare missing bindings. A field search can
   miss these steps, which is why the option exists. The 'none more and none fewer' clause
   guards against counting every step of a flow that has one gap.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: finderIoGap
