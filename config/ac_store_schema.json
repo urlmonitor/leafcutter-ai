@@ -452,6 +452,25 @@
                             "requires_db": {
                                 "type": "boolean",
                                 "description": "Whether the test needs a live database (drives slow-test marking)."
+                            },
+                            "proves_clause": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "ACD-2500c-3: the outcome clause this entry proves — the verbatim test_intent[].clause text, never trimmed or reworded by the writer. A reader matches it to intent with normalise_clause(entry['proves_clause']) == normalise_clause(intent['clause']) (scripts/ac_store/_test_intent.py); the schema neither normalises nor cross-checks it. Optional so legacy designs stay valid."
+                            },
+                            "code_file": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "ACD-2500c-3: repo-root-relative POSIX path of the code file this entry exercises. Whether it exists is judged by the test-design rule check, not by the schema."
+                            },
+                            "to_be_created": {
+                                "type": "boolean",
+                                "description": "ACD-2500c-3: true when code_file does not exist yet. Absent means false."
+                            },
+                            "convention_test_file": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "ACD-2500c-3: the neighbouring existing test file cited as the convention for a to-be-created code_file."
                             }
                         }
                     }
@@ -482,6 +501,55 @@
                     "type": "null"
                 }
             ]
+        },
+        "test_intent": {
+            "type": "array",
+            "minItems": 1,
+            "description": "ACD-2500b-1-i: what the IT PO says must be tested, one entry per outcome clause of criteria (a Then or an And after the first Then), including clauses that need no test. Intent only: it names no test, directory, framework, type, angle or strategy, and it is NOT a test contract (ADR-071). A plain closed array so both validators name the bad or missing key. Absent means no intent recorded; an empty list is not permitted.",
+            "items": {
+                "type": "object",
+                "required": ["clause", "needs_test", "reason"],
+                "additionalProperties": false,
+                "properties": {
+                    "clause": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "The outcome clause, matched to criteria under normalise_clause (scripts/ac_store/_test_intent.py)."
+                    },
+                    "needs_test": {
+                        "type": "boolean",
+                        "description": "Whether the clause needs a test."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "One sentence: why the clause does or does not need a test (one sentence is prompt-level, not machine-checked)."
+                    }
+                }
+            }
+        },
+        "test_design_authorship": {
+            "type": "object",
+            "required": ["step", "date"],
+            "additionalProperties": false,
+            "description": "ACD-2500c-3: the authorship mark of a test design produced by the code-aware step. Absent means a legacy design (scripts/ac_store/_test_intent.py is_legacy_design). Null is rejected.",
+            "properties": {
+                "step": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The code-aware agent id (working value test-designer). Agent ids are not enumerated here."
+                },
+                "date": {
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                    "not": {"type": ["null", "boolean", "integer", "number", "array", "object"]},
+                    "description": "YYYY-MM-DD. No type is declared on purpose: an unquoted YAML date loads as a native date object, which type string would reject; pattern applies to strings only and the not-clause rejects numbers, null and containers."
+                }
+            }
+        },
+        "test_design_opened_files": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "description": "ACD-2500c-3: the repo-root-relative POSIX paths of the files the code-aware step opened. An empty list is schema-valid on purpose: the test-design rule check reports it as not grounded."
         },
         "doc_links": {
             "type": "array",

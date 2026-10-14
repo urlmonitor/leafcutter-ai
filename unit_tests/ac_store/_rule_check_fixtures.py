@@ -112,6 +112,7 @@ FAMILY_CONTRACTS = "producer/consumer contract symmetry"
 FAMILY_DOC_TRIGGERS = "documentation trigger to documentation requirement mapping"
 FAMILY_RECORD_SCHEMA = "record schema"
 FAMILY_RECORD_READABLE = "record readable"
+FAMILY_TEST_INTENT = "test intent coverage"
 FIVE_FAMILIES = (
     FAMILY_BACKLINKS,
     FAMILY_COMPONENTS,
@@ -218,6 +219,49 @@ def unreadable_record_text(record_id: str = "ACD-9992") -> str:
         "status: active\n"
         "criteria: fine\n"
         "readiness: draft: oops: [x\n"
+    )
+
+
+# --------------------------------------------------------------------------
+# test intent (ACD-2500b-1-i): additive helpers, the API above is unchanged
+# --------------------------------------------------------------------------
+def intent_criteria(clauses: list[str]) -> str:
+    """Gherkin criteria whose Then/And outcome lines are exactly `clauses`, in order.
+
+    The first clause is the `Then`, every further one an `And`; lines end in `,`
+    except the last (`.`), as the real store's criteria do, so a clause added later
+    flips the old last clause's trailing punctuation (architect note, conflict 2).
+    """
+    lines = ["Given a fixture record,", "When the rule check runs,"]
+    for index, clause in enumerate(clauses):
+        keyword = "Then" if index == 0 else "And"
+        end = "." if index == len(clauses) - 1 else ","
+        lines.append(f"{keyword} {clause}{end}")
+    return "\n".join(lines) + "\n"
+
+
+def intent_entry(clause: str, needs_test: bool = True, reason: str = "The outcome needs proof.") -> dict:
+    """One `test_intent` entry: {clause, needs_test, reason} (the shape of ACD-2500b-1)."""
+    return {"clause": clause, "needs_test": needs_test, "reason": reason}
+
+
+def intent_record(
+    record_id: str,
+    clauses: list[str],
+    entries: list[dict] | None = None,
+    **overrides: Any,
+) -> dict:
+    """A valid record whose criteria carry `clauses` and whose test_intent is `entries`.
+
+    `entries` defaults to exactly one verbatim entry per clause (full coverage).
+    """
+    if entries is None:
+        entries = [intent_entry(clause) for clause in clauses]
+    return valid_record(
+        record_id,
+        criteria=intent_criteria(clauses),
+        test_intent=copy.deepcopy(entries),
+        **overrides,
     )
 
 

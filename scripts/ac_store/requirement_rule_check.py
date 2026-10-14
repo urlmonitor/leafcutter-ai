@@ -80,6 +80,7 @@ import _rc_declared
 import _rc_doc_triggers
 import _rc_readiness
 import _rc_record_schema
+import _rc_test_intent
 from _ac_components import load_registry_ids
 from _rc_edit import EditError, ProtectedFieldError, apply_edit
 from _rc_records import (
@@ -114,7 +115,7 @@ logger = logging.getLogger("requirement_rule_check")
 # Ordered rule-family registry; read at call time. See "HOW A RULE FAMILY REGISTERS".
 FAMILIES: list[Any] = [
     _rc_record_schema, _rc_backlinks, _rc_components, _rc_readiness, _rc_contracts, _rc_doc_triggers,
-    _rc_declared.FAMILY_SURFACE_RULE, _rc_declared.FAMILY_MODIFIES_RULE,
+    _rc_declared.FAMILY_SURFACE_RULE, _rc_declared.FAMILY_MODIFIES_RULE, _rc_test_intent,
 ]
 
 STAGES = ("po", "ba", "itpo", "test-design", "approval")

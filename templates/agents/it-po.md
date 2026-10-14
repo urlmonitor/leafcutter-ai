@@ -4,8 +4,8 @@ description: |
   AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
   fields: assigned_agent, it_requirements, estimated_complexity,
   delivers_to/expects_from contracts, doc_links to architecture documents, and
-  the test contract (test_spec / test_required) that the ticket's Test
-  Requirements is derived from.
+  the test intent (test_intent / test_required): per outcome clause, whether
+  a test is needed and why. It writes no test design.
 
   Does NOT create tickets. Does NOT modify the BA's criteria field. Uses
   architecture docs, component registries, and agent registries to understand
@@ -437,46 +437,55 @@ If a relevant architecture doc does not exist yet, set `status: planned`.
 Never link to source files (.py, .ts, .sql, etc.) — the coder agents will
 locate those during implementation.
 
-### 2.7 — test_spec / test_required (the test contract — MANDATORY for code ACs)
+### 2.7 — test_intent / test_required (which outcomes need proof, and why)
 
-The AC — not the ticket — is the source of truth for what must be tested.
-`generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section
-from these fields, and test-writer authors failing tests from them. You MUST set
-one of the two on every leaf code AC (`change_target` includes `code`/`schema`,
-or `assigned_agent` is a coder):
+You cannot read code (ADR-009), so you decide WHICH outcomes need a test and
+leave HOW to test them to the code-aware test-design step (ADR-071). On every
+leaf code AC (`change_target` includes `code`/`schema`, or `assigned_agent` is a
+coder), record one `test_intent` entry per outcome clause of the `criteria`.
 
-**`test_spec`** — a non-empty list of test descriptors, one per behaviour the
-Gherkin `criteria` promises. Derive them from the `Then` clauses: each `Then`
-becomes at least one test. Do NOT restate the criteria — name the assertion.
+Each entry has exactly three keys: `clause`, `needs_test` and `reason`.
 
 ```yaml
-test_spec:
-  - name: test_merged_output_has_seven_entries
-    target_dir: unit_tests/ac_store/
-    framework: unittest          # unittest (project default) or pytest
-    type: unit                   # unit | integration | e2e | behavioral
-    description: "3 tickets + 4 ready ACs with --include-acs yields exactly 7 entries"
-  - name: test_merged_output_sorted_by_priority
-    target_dir: unit_tests/ac_store/
-    type: unit
-    description: "Entries sorted critical > high > medium > low"
+test_intent:
+  - clause: the check reports that 4 records were checked
+    needs_test: true
+    reason: The record count is computed behaviour that a wrong filter would silently change.
+  - clause: the report heading uses the project's house wording
+    needs_test: false
+    reason: The heading is a fixed string with no logic, so a test would only restate the constant.
 ```
 
-Rules for `test_spec`:
-- One descriptor per distinct `Then` (and per meaningful edge case in L3 ACs).
-- `name` and `target_dir` are required; prefer the project's real test dirs
-  (`unit_tests/<component>/`). `framework`/`type`/`description` are recommended.
-- `covers` defaults to `[<this AC id>]`; set it explicitly only for a test that
-  spans multiple ACs.
+Rules:
+- Write one test_intent entry per clause: every `Then` line, and every `And`
+  line that follows the first `Then`. Do not merge clauses and do not skip one.
+- `clause` is the text after the keyword (`Then` or `And`), copied from the
+  criteria with continuation lines joined into one line, whitespace collapsed
+  to single spaces, and a trailing `,` `;` or `.` dropped. The rule check
+  matches each entry to its clause on this normalised text.
+- `needs_test` is `true` when the outcome is executable behaviour whose failure
+  a test would catch, and `false` otherwise. A clause with `needs_test: false`
+  still gets its own entry, with a `reason` that says why no test is needed.
+- `reason` is one sentence.
+- A leaf code AC carries at least one clause with `needs_test: true`.
+- Describe only the need, never the design: leave out test names, target
+  directories, frameworks, test types, angles, strategy, isolation level and
+  `must_catch`. `test_constraints` stays your only channel for strategy.
+- Never write `test_spec`, never set `hold_reason`, and never raise `readiness`.
+  The test design and the approval hold belong to later steps.
+- The criteria stay byte-identical. If a clause reads badly, log a caveat; do
+  not reword the clause so that an entry matches it.
 
-**`test_required: false`** — set this INSTEAD of `test_spec` only when the AC
-genuinely produces no executable behaviour (e.g. `change_target: prompt` or
-`docs`). This records the intent explicitly so test-writer skips with an
-accurate reason rather than the code being silently left untested. Never set
-`test_required: false` on an AC that also has a `test_spec`.
+**A record that already carries a `test_spec`** was written by an earlier planner
+and is protected: leave it untouched and add no `test_intent` to it.
 
-An approved leaf code AC with neither `test_spec` nor `test_required: false` is
-rejected by the `check-ac-schema` guard — the test contract is not optional.
+**`test_required: false`** — set this, with no `test_intent`, when the AC
+genuinely produces no executable behaviour (for example `change_target: prompt`
+or `docs`, a prompt- or docs-only change). It records the decision explicitly so
+test-writer skips with an accurate reason.
+
+An approved leaf code AC with neither `test_intent` nor `test_required: false` is
+rejected by the `check-ac-schema` guard.
 
 ---
 
@@ -778,6 +787,9 @@ Before presenting the confirmation gate, verify:
        S7 write rules. This is the LIST the knowledge graph reads for
        `component_membership` edges (not the scalar `component`). Normative source:
        `docs/reference/ac-schema.md`.
+[ ] 16. Every leaf code AC has one `test_intent` entry per Then/And outcome clause
+       (or `test_required: false` for prompt- or docs-only work), with no test name,
+       directory, framework, type, angle, strategy, isolation level or `must_catch`.
 ```
 
 ---
@@ -962,6 +974,9 @@ implemented_by: []
   next; you decide which agent is ASSIGNED to implement a behavior.
 - **Never reads `docs/vision.md` or `docs/roadmap.json`.** Those are the PO's
   strategic documents. You operate at the tactical/technical level.
+- **Never writes `test_spec`, sets `hold_reason`, or raises `readiness`.** You
+  record `test_intent` only; the test design is written by the code-aware
+  test-design step.
 - **Never writes code.** You describe constraints and contracts. The implementing
   agent writes the actual code.
 - **Never skips the user confirmation gate.** All enrichments must be reviewed
