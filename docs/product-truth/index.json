@@ -201,10 +201,10 @@
       "entities": [],
       "impl_summary": {
         "done": 0,
-        "in_progress": 5,
-        "not_started": 0,
+        "in_progress": 2,
+        "not_started": 3,
         "total": 5,
-        "asof": "2026-09-07"
+        "asof": "2026-10-14"
       },
       "tags": [
         "product-truth",
@@ -2030,10 +2030,10 @@
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 0,
-        "in_progress": 5,
-        "not_started": 0,
+        "in_progress": 2,
+        "not_started": 3,
         "total": 5,
-        "asof": "2026-09-07"
+        "asof": "2026-10-14"
       },
       "expands": [],
       "parents": []
