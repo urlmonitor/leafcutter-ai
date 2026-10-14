@@ -8,7 +8,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 criteria: |
   Given the AC store and the product-truth flows,
   When generate_product_truth.py runs,
