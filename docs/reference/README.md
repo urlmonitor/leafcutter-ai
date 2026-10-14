@@ -113,6 +113,13 @@ below by hand.
 | [product-truth-size-bounds.md](product-truth-size-bounds.md) | Every declared size bound on product-truth records (journey length, step count, dataset size, screen description length), its `shape_version`, and what a bound violation means. |
 | [example-content-separation.md](example-content-separation.md) | The product-root ownership rule that separates the fern-and-fig example product from the project's own record, every surface that honours it (the record, the store of work, the reading surfaces) and what each returns for example content, why it must keep existing, and how to add a new example artifact or product. |
 
+## Workspaces
+
+| Doc | What it's for |
+|---|---|
+| [workspace-maker-interface.md](workspace-maker-interface.md) | The one workspace maker's interface: verbs and flags, marker file fields, readiness checks, and the `WORKSPACE_MAKER_SCRIPTS` deploy entry. |
+| [workspace-maker-answers-and-codes.md](workspace-maker-answers-and-codes.md) | The one workspace maker's JSON answer shape, status and refusal codes, and exit codes. |
+
 ## Known Limitations
 
 | Doc | What it's for |
