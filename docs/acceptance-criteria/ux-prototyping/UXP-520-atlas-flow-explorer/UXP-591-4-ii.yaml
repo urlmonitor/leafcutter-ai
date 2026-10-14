@@ -98,7 +98,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-4-ii.md
 notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v5, step 'drawerClose' (FlowNavigation
   nav-drawer-replace-4 to -6, nav-drawer-in-history-4, nav-drawer-on-bare-flows-3). Owner

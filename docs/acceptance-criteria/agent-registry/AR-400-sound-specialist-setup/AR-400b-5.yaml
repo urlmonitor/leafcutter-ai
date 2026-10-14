@@ -1,0 +1,57 @@
+id: AR-400b-5
+title: "The reference states that an instruction is checked against the specialist's own grant, never a derived copy"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author reading the reference documentation for specialist
+    definitions after AR-400b-1 ships,
+  When they look up how an instruction to use an ability is checked against
+    what the specialist is granted,
+  Then the reference states that the grant compared is the `skills:` declaration
+    in the specialist's own definition, and that editing the central registry
+    neither causes nor clears the "not granted" finding,
+    And it states that a non-empty grant also requires the means to invoke an
+      ability among the specialist's permitted tools,
+    And it gives one worked example of fixing a "not granted" finding by adding
+      the grant, and one of fixing it by correcting the instruction.
+depends_on:
+  - AR-400b-1
+  - AR-400a-4
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "Same section AR-400a-4 adds; this record owns the grant-comparison paragraph within it."
+assigned_agent: reference-author
+estimated_complexity: S
+change_target: docs
+risk_surface: internal
+test_required: false
+it_requirements:
+  - "One paragraph inside the reference-check section AR-400a-4 creates in docs/reference/agent-template-frontmatter.md; no second page."
+  - "The two worked examples use finding lines copied from a real run (the add-the-grant fix and the correct-the-instruction fix)."
+  - "State the tool requirement by pointing at the existing AR-200b-2 rule (Skill in `tools:`), not by restating a second rule."
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-1
+  contract: "The 'not granted' finding line (subject, ability, file:line, declared grants) as the build prints it."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies AR-400b's documentation_triggers [reference-doc]. Scoped to the grant
+  half so it does not duplicate AR-400a-4, which documents the fault kinds and
+  the non-instruction list for both L1s.

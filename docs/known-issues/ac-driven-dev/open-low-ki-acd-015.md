@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-12'
 components:
   - ac_driven_dev
 related_docs:
@@ -58,5 +58,18 @@ decision produces two sources of truth for build order.
 **Detection cost today.** Nothing surfaces the discrepancy. It was found by diffing
 `expects_from.ac_id` against `depends_on` across the tree by hand. Whichever direction is
 chosen, a store rule should assert the invariant.
+
+**2026-10-12 — verification note: the sequencer half is fixed.** Commit `49d6139f` (2026-10-07,
+"order epics by expects_from edges and report cycles edge by edge") moved epic ordering onto
+`depends_on ∪ expects_from`. The code is `scripts/ac_store/epic_dependencies.py` `_scan_edges`
+(`:86-116`), reading through `_gtfa_store._prerequisite_ac_ids`. A child's parent link yields to
+its parent's `expects_from`. The `Where:` line above is stale: `goal_to_epic.py` was split into
+`epic_*.py` modules in `fb07b48d`. The open question was answered in code: `expects_from` is an
+ordering edge. Verified on 2026-10-12 by ordering the 48-id ACD-2500 set on origin/main
+`a104d934`. `ACD-2500c-1`'s edges came back as `{ACD-2500c: depends_on, ACD-2500b-1: depends_on,
+ACD-2500c-3: expects_from, ACD-2500d-5-i: expects_from}`, and the `expects_from`-only edges were in
+the leaf graph the sort used. What remains is the store rule this entry asked for. The commit-time
+cycle hook still reads `depends_on` only; that half is tracked in `KI-ACD-20260929` (Occurrence 3).
+This entry can move to `resolved/` once that is accepted as the remaining owner.
 
 ---

@@ -1,0 +1,79 @@
+id: AR-400b-2-v
+title: "An ability named with the wrong letter case stops the build with the correct spelling in the message"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-author" whose own definition grants
+    "write-c4-diagram", and whose instructions contain the heading
+    "Step 1 -- Load the Write-C4-Diagram Skill",
+  When the build runs,
+  Then the build stops with one finding classified "differs only in case",
+    naming "probe-author", the text "Write-C4-Diagram", the canonical identifier
+    "write-c4-diagram", the file and the line,
+    And the finding is not classified "ability does not exist" and not
+      "ability exists but is not granted",
+    And changing the heading to "Step 1 -- Load the write-c4-diagram Skill" makes
+      the same build pass with no finding about it.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance at line 170 (dated snapshot, 2026-10-12): 'Load the Write-C4-Diagram Skill'."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Orchestrator default Q1 applies: a case-only variant of a known ability id is a FAULT of its own kind ('differs only in case'), never silently matched and never classified 'does not exist' or 'not granted'. The message names the text as written and the canonical id (a 'did you mean' form)."
+  - "The case-mismatch kind takes precedence over the grant comparison: probe-author grants write-c4-diagram, so after case-folding the grant would match -- the finding must still be the case kind, exactly one finding."
+  - "Canonical ids come from the known ability set derived at run time (templates/skills/ directory names), never a hard-coded mapping."
+test_spec:
+  - name: test_miscased_heading_yields_one_case_finding_with_canonical_id
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-author grants write-c4-diagram and has heading 'Step 1 -- Load the Write-C4-Diagram Skill'; the validator CLI fails with exactly one 'differs only in case' finding naming probe-author, 'Write-C4-Diagram', 'write-c4-diagram', file and line."
+    must_catch:
+      - "case-folded match silently passes"
+      - "the miscased text is reported as 'ability does not exist'"
+  - name: test_correctly_cased_heading_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: 'Step 1 -- Load the write-c4-diagram Skill' makes the run pass with no finding."
+test_rationale: >-
+  Two wrong versions are plausible (silent fold, and 'does not exist'); the
+  criterion descriptor names both.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule's canonical_id for a case-variant reference."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION FLAGGED. The design names "case diagnostics" without saying whether a
+  case-only variant of a granted identifier is a fault or a silent match. This
+  record treats it as a FAULT WITH A DIAGNOSTIC, because (a) abilities are
+  invoked by identifier and the remediation list fixes the casing, and (b) a
+  silent case-fold match leaves the miscased text in place forever. If the user
+  prefers a silent match, the first and third clauses invert -- see BA report.

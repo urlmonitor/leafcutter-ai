@@ -42,7 +42,7 @@ from config import (
     DOC_LENGTH_MAX_LINES_ADR,
     DOC_LENGTH_MAX_SECTIONS,
     DOC_LENGTH_SEVERITY,
-    DOC_LENGTH_EXCLUDED_FILES,
+    DOC_LENGTH_SET_ASIDE_LOCATIONS,
 )
 from doc_length_helpers import (
     lookup_writer_agent,
@@ -50,6 +50,7 @@ from doc_length_helpers import (
 )
 from _file_size_ratchet import CurrentLengthUnmeasurableError, PreviousLengthSourceError
 from _doc_length_ratchet import (
+    SetAsideDeclarationError,
     classify_dimension,
     count_lines_and_sections,
     is_adr_file,
@@ -57,6 +58,11 @@ from _doc_length_ratchet import (
     read_doc_content,
     resolve_doc_ratchet,
     strip_frontmatter,
+)
+from _doc_length_set_aside import (
+    parse_declared_set_aside,
+    render_population_report,
+    select_set_aside_paths,
 )
 
 # ---------------------------------------------------------------------------
@@ -371,6 +377,32 @@ def format_growth_note(violation: dict) -> str | None:
 # Main
 # ---------------------------------------------------------------------------
 
+def _ensure_utf8_stdout() -> None:
+    """Reconfigure stdout to UTF-8 when it is not, so the report's emoji print."""
+    if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except AttributeError:
+            pass
+
+
+def select_checked_paths(staged_files: dict[str, str], set_aside_paths) -> list[str]:
+    """Return the staged, non-deleted paths the gate covers (not set aside).
+
+    Args:
+        staged_files: Mapping of filepath to git status from ``get_staged_files``.
+        set_aside_paths: The parsed set-aside declaration.
+
+    Returns:
+        list[str]: Paths to measure, in staged order.
+    """
+    return [
+        filepath
+        for filepath, status in staged_files.items()
+        if status != "D" and is_checked(filepath, set_aside_paths)
+    ]
+
+
 def main() -> int:
     """Run documentation length checks on all staged docs/*.md files.
 
@@ -381,13 +413,14 @@ def main() -> int:
         2 = INDETERMINATE — the previous-value source could not be reached or
         interpreted, or a staged doc's current content could not be read.
     """
-    if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
-        try:
-            sys.stdout.reconfigure(encoding="utf-8")
-        except AttributeError:
-            pass
+    _ensure_utf8_stdout()
 
-    excluded_files = set(DOC_LENGTH_EXCLUDED_FILES)
+    try:
+        set_aside_paths = parse_declared_set_aside(DOC_LENGTH_SET_ASIDE_LOCATIONS)
+    except SetAsideDeclarationError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
+
     try:
         staged_files = get_staged_files()
     except PreviousLengthSourceError as exc:
@@ -401,13 +434,9 @@ def main() -> int:
     # (same resolution pattern used for sys.path above).
     doc_types_path = project_root / "leafcutter" / "config" / "doc_types.json"
 
-    checked_paths = [
-        filepath
-        for filepath, status in staged_files.items()
-        if status != "D" and is_checked(filepath, excluded_files)
-    ]
+    checked_paths = select_checked_paths(staged_files, set_aside_paths)
 
-    previous_values, indeterminate_exit = resolve_doc_ratchet(checked_paths, excluded_files)
+    previous_values, indeterminate_exit = resolve_doc_ratchet(checked_paths, set_aside_paths)
     if indeterminate_exit is not None:
         return indeterminate_exit
     previous_lines, previous_sections = previous_values
@@ -432,7 +461,19 @@ def main() -> int:
         return 2
 
     checked_count = len(checked_paths)
+    try:
+        population_report = render_population_report(
+            checked_count,
+            select_set_aside_paths(staged_files, set_aside_paths),
+            DOC_LENGTH_SET_ASIDE_LOCATIONS,
+        )
+    except CurrentLengthUnmeasurableError as exc:
+        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
+        return 2
     if not violations:
+        # Reported on a COMPLETING run only: a refusal names the refused documents alone.
+        if population_report:
+            print(population_report + "\n")
         if checked_count > 0:
             print(f"✅ PASSED: compared {checked_count} doc files against their length limits")
         return 0

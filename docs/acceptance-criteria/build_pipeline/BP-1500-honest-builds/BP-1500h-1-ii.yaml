@@ -1,0 +1,71 @@
+id: BP-1500h-1-ii
+title: "An empty setting is announced once per build, however many steps read it"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the scratch project of BP-1500h-1, with one file-location setting empty
+    and read by at least two steps of the build,
+  When the build installs the package into that project,
+  Then the "not configured" statement for that setting appears exactly once in
+    the build's output, at informational severity, not as a warning,
+    And two different empty settings produce exactly two such statements, one
+      naming each.
+depends_on:
+  - BP-1500h-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h.yaml
+    relationship: related
+    status: exists
+    relevance: "'\"SAID ONCE\" IS DELIBERATE. The opposite of a silent skip is not a warning repeated by every reader.'"
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "One reporting point in scripts/config_paths.py records which keys were announced in this build (process-local state, reset per build invocation); readers ask the helper and never print their own line."
+  - "Informational severity: printed through scripts/build_colors.info, never build_colors.warn and never a [WARNING] prefix."
+  - "The statement names the setting key; two empty keys give exactly two statements."
+  - "Only an EMPTY value produces the statement (user decision 11): an ABSENT key resolves to the shipped default and prints no 'not configured' line."
+test_spec:
+  - name: test_empty_setting_read_by_two_steps_is_announced_once_at_info
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Scratch consumer with changelog_categories_path: \"\" (read by the scaffold-staleness and scaffold-install steps); build.py output contains exactly one 'not configured' line for it, and that line carries no warning prefix."
+    must_catch:
+      - "each reader prints its own line"
+      - "the line is printed as a warning"
+  - name: test_two_empty_settings_give_two_statements
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: "Also set precommit_autofix_config_path: \"\"; exactly two 'not configured' lines, one naming each key."
+test_rationale: >-
+  Cardinality and severity are the behaviour; counting lines in a real build's
+  output is the test.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500h-1
+  contract: "The helper's single 'not configured' reporting point."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Not a warning because leaving a feature unconfigured is a legitimate choice;
+  AR-400's "anything that is not a fault is not reported" posture applies. It is
+  still said, because a silent skip is the false account BP-1500h removes.

@@ -1,0 +1,94 @@
+id: AR-400a-3-ii
+title: "retrospective-agent routes a proposed knowledge item with route-knowledge, which it is granted and can invoke"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given retrospective-agent's definition in the package's real tree,
+  When the build compiles retrospective-agent's prompt,
+  Then every instruction that previously named "route-learning" -- the step
+    that classifies a proposed knowledge item, the routing line of the proposal
+    template, the deprecation note and the approval rule -- names
+    "route-knowledge" instead, and "route-learning" appears nowhere in the
+    compiled prompt,
+    And retrospective-agent's own definition grants "route-knowledge", so the
+      compiled prompt's abilities section lists it,
+    And the tools retrospective-agent is permitted to use include the means by
+      which an ability is invoked,
+    And the build reports no finding about retrospective-agent of the kind
+      "ability does not exist" or "ability exists but is not granted".
+depends_on:
+  - AR-400a-3
+  - AR-400b-1
+doc_links:
+  - path: templates/agents/retrospective-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "route-learning at lines 200, 242, 244, 248 (dated snapshot, 2026-10-12). Tools today: Bash, Read, Write, Agent -- no Skill tool, no skills: declaration."
+  - path: templates/skills/route-knowledge/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "The live successor named by ADR-034's retirement of route-learning."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Already requires that a non-empty grant be matched by the tool that invokes an ability -- adding the grant without the tool fails that existing check."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Retarget all four route-learning occurrences in templates/agents/retrospective-agent.md (lines ~200, 242, 244, 248, dated snapshot) to route-knowledge (ADR-034 retired route-learning)."
+  - "Add `skills:` frontmatter granting route-knowledge (mode and condition chosen to match the step that uses it) AND add `Skill` to `tools:` in the same edit -- AR-200b-2's existing tool-grant validator (scripts/skill_tool_grant_validator.py, wired into validate_agent_registry) refuses a non-empty grant without the invoking tool. Keep Bash, Read, Write, Agent."
+  - "The commit-time transform hook regenerates config/agent_registry.json from the new declaration; the committed registry must be that output (never hand-edited)."
+  - "Reconcile the step's '11-step' wording with route-knowledge's actual decision tree in the same edit if they disagree."
+test_spec:
+  - name: test_compiled_retrospective_agent_names_route_knowledge_not_route_learning
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile retrospective-agent from the real template; route-learning appears nowhere, route-knowledge is named at each former call site, and the delivered abilities section lists route-knowledge."
+  - name: test_retrospective_agent_permits_the_skill_tool
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "retrospective-agent's declared tools include Skill (exact token match) and still include Bash, Read, Write, Agent."
+    must_catch:
+      - "the grant is added without the Skill tool"
+  - name: test_validator_reports_no_ability_finding_for_retrospective_agent
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The registry validator over the real tree reports neither 'ability does not exist' nor 'not granted' for retrospective-agent; removing only the new grant from a copy produces a 'not granted' finding."
+test_rationale: >-
+  The three clauses are one fix; the tool descriptor exists because a grant
+  without the invoking tool trades one fault for another (AR-200b-2).
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-3.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  RETARGET, GRANT AND TOOL LAND TOGETHER. A rename alone converts a
+  "does not exist" fault into a "not granted" fault (AR-400b-1); a grant alone
+  fails AR-200b-2's tool check. The three clauses are one fix, which is why they
+  share one record.
+
+  WHETHER route-knowledge's decision tree still fits the retrospective's
+  "11-step" wording is for the implementer to reconcile in the same edit; the
+  criterion only requires the named target to be the live one.

@@ -397,6 +397,9 @@ const CLASSIFY_SCHEMA = {
 const MAX_RETRIES = 2;
 const MAX_HANDOFFS_PER_PAIR = 1;
 const MAX_HANDOFFS_PER_TICKET = 3;
+/* BO-3800d: engagements of the restructuring specialist per delivery. Its own constant, never MAX_RETRIES (a restructure that fell short is not transient). */
+const MAX_SPECIALIST_ENGAGEMENTS = 1;
+const describeDemand = (demand) => (Array.isArray(demand) ? demand : []).map((e) => e.function !== undefined ? `${e.function} in ${e.path} has complexity ${e.score} (ceiling ${e.ceiling})` : `${e.path} must lose ${e.lines_to_remove} line(s)`).join("; ");
 
 /**
  * Put `name` at the head of the pending list, removing any pending copy
@@ -1530,11 +1533,8 @@ async function concludeTicket(spec) {
 }
 
 // Phase 0 — Resolve target and worktree
-
 phase("Resolve Target");
-
 const target = (args && (args.target || args.userInput || "").trim()) || "";
-
 if (!target) {
   return {
     status: "error",
@@ -1545,7 +1545,6 @@ if (!target) {
       "  { target: 'tickets/01_todo/10_my_ticket.md' }",
   };
 }
-
 const resolveResult = await agent(
   `Resolve the /build-feature target and set up the worktree.\n\n` +
   `Target: "${target}"\n\n` +
@@ -1567,7 +1566,6 @@ const resolveResult = await agent(
     phase: "Resolve Target",
   }
 );
-
 if (!resolveResult) {
   return {
     status: "error",
@@ -1575,9 +1573,7 @@ if (!resolveResult) {
       "resolve-target agent returned null. Cannot determine build target.",
   };
 }
-
 const { target_type, epic_path, ticket_path } = resolveResult;
-
 /**
  * The resolved target this drive emits for its consumers.
  *
@@ -2069,6 +2065,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
   const attemptedPhases = new Set();
   const handoffChain = []; // BO-3000a: "from->to" steps, pushed before the cap check
   const handoffFrom = {}; // target -> {from, message, seen}; kept until the target completes verified
+  const restructureLog = []; // BO-3800d: {target, demand} per accepted specialist engagement; the count is read from here
 
   while (pendingPhases.length > 0) {
     const currentPhase = pendingPhases.shift();
@@ -2209,6 +2206,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         (from
           ? ` You are being RE-DISPATCHED because phase '${from.from}' returned 'status: handoff' naming you as the agent that must act before it can proceed. Handoff message: ${JSON.stringify(from.message)}.`
           : "") +
+        (from && from.brief ? ` Remedy demand: ${JSON.stringify(from.brief.demand)}.` + (from.brief.skills.length ? ` Apply the skill(s): ${from.brief.skills.join(", ")}.` : "") : "") +
         `\n\nYou WERE invoked with the arguments below. Your sign-off protocol is ` +
         `therefore in force: record your outcome in this ticket's own record before ` +
         `you return.\n` +
@@ -2219,6 +2217,7 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
           schema: PHASE_RESULT_SCHEMA,
           label: phaseName,
           phase: "Phase Dispatch",
+          ...(from && from.brief ? { brief: from.brief } : {}),
         }
       );
       phaseResult = phaseName === "commit"
@@ -2339,32 +2338,21 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
          * Case (a): the result named NO target (absent, empty, blank, not a string); also what
          * a deliberate targetless halt looks like. The ticket body is never read.
          */
-        if (normalizedTarget === "") {
-          return refuse(
-              `Phase '${phaseName}' returned 'status: handoff' but its result ` +
-              `was read and named no handoff target (handoff_target was ` +
-              `${JSON.stringify(handoffTarget)}). Refusing to guess a ` +
-              `re-dispatch target and refusing to advance to the next phase ` +
-              `in phaseOrder. This may be a deliberate targetless halt (a ` +
-              `contract-shrinkage guard or test-drift stop asking for user ` +
-              `authorization) rather than an omission — inspect '${phaseName}'` +
-              `'s message and the ticket's ## Comments for what it needs ` +
-              `before re-running /build-feature.`,
-          );
-        }
+        if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
 
-        /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
-        if (!phaseOrder.includes(normalizedTarget)) {
-          return refuse(
-              `Phase '${phaseName}' returned 'status: handoff' naming ` +
-              `'${normalizedTarget}' as its handoff_target, which is not an ` +
-              `agent this driver recognises as a phase agent. Refusing to ` +
-              `guess a re-dispatch target and refusing to advance to the ` +
-              `next phase in phaseOrder. Check '${normalizedTarget}' for a ` +
-              `misspelling or a name that does not exist, fix the emitter, ` +
-              `then re-run /build-feature.`,
-          );
+        /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
+        const remedy = phaseResult.remedy; let brief = null;
+        if (remedy && remedy.disposition === "engage-specialist") {
+          const decl = await agent(
+            `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
+            { agentType: "status-checker", schema: { "type": "object", "properties": { "status": { "type": "string" }, "disposition": { "type": "string" }, "agent": { "type": ["string", "null"] }, "skills": { "type": "array", "items": { "type": "string" } } } }, label: "remedy-declaration", phase: "Phase Dispatch" });
+          if (!decl || decl.status !== "ok" || decl.disposition !== "engage-specialist" || decl.agent !== normalizedTarget) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but the remedy declaration of '${remedy.hook_id}' could not be read as engage-specialist for that party (${JSON.stringify(decl)}). Stopping; nobody was engaged.`);
+          /* BO-3800c-1-i: a demand with no usable file/quantity stops the run, reproduced as given; never defaulted or re-derived. */
+          const usable = Array.isArray(remedy.demand) && remedy.demand.length > 0 && remedy.demand.every((e) => e && typeof e.path === "string" && e.path.trim() !== "" && (e.function !== undefined ? typeof e.function === "string" && e.function.trim() !== "" && Number.isFinite(e.score) && Number.isFinite(e.ceiling) : Number.isFinite(e.lines_to_remove) && e.lines_to_remove > 0)); if (!usable) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}'; the refusal was read and carried no usable demand (demand was ${JSON.stringify(remedy.demand === undefined ? null : remedy.demand)}). Stopping; nobody was engaged and delivery was not attempted again.`);
+          brief = { skills: decl.skills || [], demand: remedy.demand };
         }
+        /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
+        if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
 
         /*
          * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
@@ -2373,33 +2361,20 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         const unfit =
           normalizedTarget === phaseName
             ? "is a self handoff: the target is the handing phase itself"
-            : !orderedPhases.some((p) => p.agent === normalizedTarget)
+            : !brief && !orderedPhases.some((p) => p.agent === normalizedTarget)
               ? `names '${normalizedTarget}', which is not on this ticket (not a key of its agents map)`
               : deferredPhases.includes(normalizedTarget)
                 ? `names '${normalizedTarget}', which is deferred for this drive (pull-request is opened once per epic)`
                 : "";
-        if (unfit) {
-          return refuse(
-            `Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. ` +
-            `Nobody was dispatched and the ticket did not advance; fix the emitter ` +
-            `or the ticket's agents map, then re-run /build-feature.`
-          );
-        }
-
+        if (unfit) return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-feature.`);
+        /* BO-3800d: bound reached and the standard still refuses on the same terms: stop and account for it; never deliver, relax or roll back. */
+        const prior = restructureLog.filter((r) => r.target === normalizedTarget);
+        if (brief && prior.length >= MAX_SPECIALIST_ENGAGEMENTS) return refuse(`Restructuring handoff stopped at its bound: '${normalizedTarget}' was engaged ${prior.length} time(s) (bound ${MAX_SPECIALIST_ENGAGEMENTS}) after '${phaseName}' was refused by '${remedy.hook_id}'. Asked: ${describeDemand(prior[0].demand)}. The refusal stands on the same terms; the file now stands at: ${describeDemand(brief.demand)}. Whatever the specialist changed remains in place and has not been undone. The change was not delivered: nothing was delivered, and the standard was not relaxed.`, "restructuring_unmet", { specialist_engagements: prior.length });
+        if (brief) restructureLog.push({ target: normalizedTarget, demand: brief.demand });
         /* Caps: one chain array, pushed BEFORE the check so the refused step is named too. */
         const step = `${phaseName}->${normalizedTarget}`;
         handoffChain.push(step);
-        if (
-          handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR ||
-          handoffChain.length > MAX_HANDOFFS_PER_TICKET
-        ) {
-          return refuse(
-            `Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ` +
-            `${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. ` +
-            `Halting; '${normalizedTarget}' was not dispatched.`,
-            "handoff_loop"
-          );
-        }
+        if (handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR || handoffChain.length > MAX_HANDOFFS_PER_TICKET) return refuse(`Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. Halting; '${normalizedTarget}' was not dispatched.`, "handoff_loop");
 
         /*
          * Accepted: the target runs through the normal loop (guard, gate, read-back,
@@ -2408,19 +2383,22 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         handoffFrom[normalizedTarget] = {
           from: phaseName,
           message: phaseResult.message || "",
+          brief,
           /* An unreadable read-back proves nothing: Infinity means no old entry can confirm. */
           seen: phaseRecord && phaseRecord.readable === true
             ? signoffEntriesFor(phaseRecord, normalizedTarget).length
             : Infinity,
         };
         queuePhaseFirst(pendingPhases, normalizedTarget);
-        log(
-          `Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
-          `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`
-        );
+        log(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
+          `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`);
         break;
       }
 
+      if ((resultStatus === "blocker" || resultStatus === "failed") && from && from.brief) {
+        /* BO-3800d: the specialist itself failed: a machinery ending, told apart from a file that fell short. */
+        return refuse(`Restructuring specialist '${phaseName}' could not be engaged to a result for the refusal of '${from.from}' (it returned status '${resultStatus}'). This is a failure of the machinery, not evidence about the file, so the file's standing is unknown. The change was not delivered: nothing was delivered.`, "restructuring_unavailable");
+      }
       if (resultStatus === "blocker" || resultStatus === "failed") {
         const classifyResult = await agent(
           `Classify this blocker for ticket ${worktreeTicketPath}, failing phase ${phaseName}. ` +
@@ -2434,7 +2412,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             phase: "Phase Dispatch",
           }
         );
-
         const classification = classifyResult && classifyResult.classification;
 
         if (classification === "mechanical") {
@@ -2931,14 +2908,11 @@ function prerequisiteStateFromOutcome(outcome) {
 }
 
 // Phase 1 — Build: route to epic or single-ticket flow
-
 phase("Build");
-
 // BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
 // dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-ticket.js.
 const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-feature-$PPID" build-feature --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Build", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
 const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
-
 if (target_type === "epic") {
   // -----------------------------------------------------------------------
   // Epic path: planner + parallel batch dispatch (flattened per-phase driver)
@@ -2970,10 +2944,8 @@ if (target_type === "epic") {
   // -----------------------------------------------------------------------
   const worktreeEpicPath = toWorktreePath(repoRelativeTicketPath(epic_path || target), realWorktreePath);
   const inWorktree = (paths) => (paths || []).map((p) => toWorktreePath(p, realWorktreePath)).filter(Boolean);
-
   const BATCH_SIZE = 12;
   const completedBatches = [];
-
   // BO-100e-4 — run-level accumulators: a halt no longer ends the run, so
   // these carry across batches and looks into the one final return.
   const haltedAll = [], incompleteAll = [], unbuiltAll = [];
@@ -3334,13 +3306,10 @@ if (target_type === "epic") {
             chunkOutcomesByPath[ticket.path] = refusedOutcome;
             return () => refusedOutcome;
           }
-
           const worktreeTicketPath = toWorktreePath(ticket.path, realWorktreePath);
-
           const outcomePromise = (async () => {
             const dependencyRecord = await readTicketRecordBack(worktreeTicketPath);
             const dependsOn = (await Promise.all((Array.isArray(dependencyRecord && dependencyRecord.depends_on) ? dependencyRecord.depends_on : []).map((p) => resolveDependsOnPath(p, worktreeTicketPath, realWorktreePath)))).map((r) => r.resolved || r.reported).filter((p) => p && p !== worktreeTicketPath);
-
             const withheldBy = [];
             const prerequisiteStates = {};
             for (const depPath of dependsOn) {
@@ -3391,10 +3360,8 @@ if (target_type === "epic") {
                 withheldBy.push(depPath);
               }
             }
-
             // BO-100e-4 — files an earlier halt left modified in the worktree.
             const sharedFiles = (Array.isArray(dependencyRecord && dependencyRecord.files_touched) ? dependencyRecord.files_touched : []).filter((f) => leftoverFiles.has(f));
-
             if (withheldBy.length > 0 || sharedFiles.length > 0) {
               // WITHHELD. Never reaches driveTicketPhases — no phase agent
               // for this ticket is ever dispatched.
@@ -3407,7 +3374,6 @@ if (target_type === "epic") {
                 result: null,
               };
             }
-
             // Drive each ticket through its needed phases using the flattened
             // per-phase driver (driveTicketPhases) so each phase runs under its
             // own agent template. No ticket-supervisor is dispatched here.
@@ -3428,9 +3394,7 @@ if (target_type === "epic") {
           chunkOutcomesByPath[worktreeTicketPath] = outcomePromise;
           return () => outcomePromise;
         });
-
         const chunkResults = await parallel(chunkThunks);
-
         // parallel() resolves a thunk that threw to null: record it undetermined so the halt
         // filter below sees a failure, rather than dropping it and reporting a smaller batch.
         const settledChunk = chunkResults.map((r, idx) => r || { ticket_path: chunk[idx] && chunk[idx].path, status: "undetermined", result: null });

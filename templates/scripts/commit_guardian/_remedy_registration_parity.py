@@ -9,8 +9,9 @@ BUSINESS CONTEXT: A refusal with no declared remedy leaves the author guessing
     stops a declaration outliving the check it describes.
 ARCHITECTURE: Population is derived from the canonical manifest at run time:
     hooks_manifest members whose tier is ``judgment`` and whose stages include
-    ``pre-commit``. Declarations come from the shared loader
-    (``_remedy_declarations``), local table first, package seed per missing hook.
+    ``pre-commit``. At commit time declarations come from the committed package
+    table alone (templates/scripts/precommit-autofix.json, parsed by the shared
+    loader module); the local table is never read here (GE-132a-4).
     The excused list is ``hook_parity.undeclared_remedy_baseline`` in the canonical
     manifest; the ratchet compares it with the list in HEAD and in every
     MERGE_HEAD parent. FAIL CLOSED: any unreadable or malformed input raises
@@ -25,9 +26,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import _remedy_declaration_validity
 import check_outcome
-from _remedy_declarations import RemedyInputError, declared_view, load_tables
+from _remedy_declarations import SEED_RELS, RemedyInputError, declared_view
+from _remedy_declarations import _rules_of as rules_of
 
+COMMITTED_TABLE_REL = SEED_RELS[0]
 _GIT_TIMEOUT = 30
 
 
@@ -230,8 +234,32 @@ def _ratchet_violations(manifest: dict, excused: set[str], canonical_manifest: P
     ]
 
 
+def _committed_table(root: Path) -> list[tuple[Path, list[dict]]]:
+    """Load the package's committed declaration table alone (GE-132a-4).
+
+    The local table, skills_config and the deployed scripts/ copy are never read
+    at commit time; an absent committed table is could-not-check, not a fallback.
+
+    Args:
+        root: Project root (the process cwd).
+
+    Returns:
+        A single ``(path, rules)`` entry for the committed table.
+
+    Raises:
+        RemedyInputError: The committed table is absent, unreadable or malformed.
+    """
+    path = root / COMMITTED_TABLE_REL
+    if not path.is_file():
+        msg = f"committed package declaration table {COMMITTED_TABLE_REL} is missing ({path})"
+        raise RemedyInputError(msg)
+    return [(path, rules_of(path))]
+
+
 def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]:
     """Judge the three GE-132a-1 reasons and return one refusal line group per finding.
+
+    Declarations are read from the committed package table only (GE-132a-4).
 
     Args:
         canonical_manifest: Canonical commit_guardian.json (the file being committed).
@@ -258,7 +286,7 @@ def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]
     hooks = _hooks(manifest, canonical_manifest)
     registered = {h["id"] for h in hooks}
     gating = {h["id"] for h in hooks if h.get("tier") == "judgment" and "pre-commit" in (h.get("stages") or [])}
-    tables = load_tables(root)
+    tables = _committed_table(root)
     declared = declared_view(tables)
     excused = _excused_of(manifest, str(canonical_manifest), required=True) or set()
     violations: list[str] = []
@@ -280,6 +308,8 @@ def check_remedy_declarations(canonical_manifest: Path, root: Path) -> list[str]
                     f"for a check that is not registered in {canonical_manifest}.\n"
                     f"  Fix: remove the declaration or register the check."
                 )
+    # GE-132a-2: every declaration is valid (disposition, instruction, real agent and skills).
+    violations.extend(_remedy_declaration_validity.validate(declared, manifest, canonical_manifest, root))
     return violations
 
 

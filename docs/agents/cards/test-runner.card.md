@@ -119,7 +119,7 @@ flowchart TD
 | Key | Required | Description |
 |-----|----------|-------------|
 | `test_command_live_trader` | No | Command to run the fast unit test suite |
-| `test_output_dir` | No | Temp directory for test output files |
+| `test_output_dir` | No | Folder for test output; empty means the scratch home (scratch.py test-output-dir) |
 ---
 
 ## Contributor Notes

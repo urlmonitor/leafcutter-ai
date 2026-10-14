@@ -7,7 +7,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -42,6 +42,7 @@ it_requirements:
   - "Show the three rules as distinct edges: configuration resolves to the workspace's .leafcutter/config, guards to the worktree toplevel, logs to the declared operational_log_root. The diagram must not draw a single shared resolver."
   - "Show the declaration as config/knowledge_sink.json with the keys as built (INF-500d-4-iii), and show setup_ticket_worktree.py passing the inherited root to the build."
 test_required: false
+test_rationale: "No automated test: the deliverable is a component diagram (the C4 diagram in docs/architecture/components/feedback-collector.md), not executable behaviour. It is verified by the doc gates that run at commit (check-doc-length, check-doc-frontmatter, doc-links, mermaid complexity, identifier uniqueness), by the whole-epic review of 2026-10-12, and by a docs pass that checked every claim against the code at the time. The flow the diagram shows is covered by the covers-tagged tests of INF-500d-4-iii and its sibling writer and reader ACs."
 delivers_to: null
 expects_from:
   ac_id: INF-500d-4-iii
@@ -52,10 +53,14 @@ amended_by:
   - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved; criteria and work_status unchanged."
     by: BrainCandy
     at: 2026-10-09
+  - reason: "IT PO, approved by BrainCandy 2026-10-12. Added test_rationale (diagram-only deliverable; done-proof waiver needs test_required: false plus a non-empty test_rationale). Verified the feedback-collector.md component diagram against the criteria: build recording one root, setup_ticket_worktree.py passing the inherited root, every writer and reader reaching operational_log_root, and rules (a) config and (b) guards drawn as separate edges with no shared resolver. Spot-checked against setup_ticket_worktree.py, build_log_root.py, sink_resolution.py, emit_event.py, inline_work_guard.py and _resolve_root.py. work_status: todo -> done. implemented_by already lists the diagram file. Criteria unchanged."
+    by: it-po
+    at: 2026-10-12
 superseded_by: null
 covered_by: []
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/07_TICKET-20261009-INF-500d-4-viii.md
+- docs/architecture/components/feedback-collector.md
 change_target: docs
 risk_surface: internal
 notes: |

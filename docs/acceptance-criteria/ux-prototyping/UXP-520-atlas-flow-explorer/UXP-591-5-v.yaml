@@ -111,7 +111,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-5-v.md
 notes: |
   Owner ruling at the AC gate (2026-10-09), decision (2)(c): a Source, Kind or Realization change
   while the 'Flow not found' notice shows removes the notice, selects the first flow the selector

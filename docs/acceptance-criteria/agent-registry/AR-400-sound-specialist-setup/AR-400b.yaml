@@ -1,0 +1,66 @@
+id: AR-400b
+title: "A specialist is never told to use an ability it was not granted"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  What a specialist's instructions ask for, its own grant allows.
+
+  Every ability a specialist's instructions tell it to use is one the
+  specialist's own definition grants it. A mismatch stops the build and names
+  both sides, so a specialist never reaches for an ability it was never given.
+depends_on:
+  - AR-400
+doc_links:
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Told to use knowledge-query, not granted it. The instance hidden in today's noise."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c.yaml
+    relationship: related
+    status: exists
+    relevance: "Settled that a specialist's abilities are declared once, in its own definition. That declaration -- not any derived copy -- is the side this check compares against."
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b.yaml
+    relationship: related
+    status: exists
+    relevance: "Same shape for TOOLS. Reuse its rule: derive both sides from the specialist itself, never from a list of names."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400b-1
+  - AR-400b-2
+  - AR-400b-3
+  - AR-400b-4
+  - AR-400b-5
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  CHECKED AGAINST THE SPECIALIST'S OWN DECLARATION. The source analysis found
+  today's check compares instructions against the DERIVED central copy, not
+  the specialist's own grant. After AR-300c the own declaration is the truth;
+  comparing against a copy re-opens the two-records problem one level up.
+
+  CORRECTNESS OF RECOGNITION IS PART OF THE PROMISE. The current check misses
+  real references (narrow phrasing, case) and flags false ones (a sentence
+  saying NOT to use something, or describing another specialist). A check that
+  is a fault rather than a warning must be right about what counts as an
+  instruction, or it will be switched off. How it recognises one is the BA's.
+
+  WHICH WAY TO FIX A MISMATCH IS A JUDGEMENT, NOT A RULE. For research-agent the
+  grant is missing; elsewhere the instruction may be the error. The fix per
+  instance is decided at decomposition; the check only names the mismatch.

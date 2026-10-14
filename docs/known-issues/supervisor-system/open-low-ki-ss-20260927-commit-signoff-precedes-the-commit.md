@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-27'
-last_updated: '2026-10-10'
+last_updated: '2026-10-13'
 components:
   - supervisor_system
 related_docs:
@@ -23,10 +23,12 @@ related_docs:
   whole window between the sign-off and the commit, and the protocol cannot be followed at all
   under a permission classifier that refuses unverified success claims.
 - **Status:** open — no AC.
-- **Occurrences:** 2 builds. GE-120f-1 family, 5 commit attempts (PR #916, 2026-09-25 to
-  2026-09-27). BO-4300, 2 false ok entries: ticket 05 (2026-10-09) and ticket 06 (2026-10-10). See
-  "Observed again" below.
-- **First seen:** 2026-09-25 · **Last seen:** 2026-10-10
+- **Occurrences:** 3 builds. GE-120f-1 family, 5 commit attempts (PR #916, 2026-09-25 to
+  2026-09-27). BO-4300, 5 false ok entries: ticket 05 (2026-10-09), ticket 06 (2026-10-10), and
+  tickets 10, 11 and 13 (2026-10-12/13), plus one ok entry left behind for a dropped commit.
+  EPIC-RightJobRightAgent, 1 false ok entry that the driver then closed as `done`: ticket 46
+  (run `wf_54e15913-aea`, 2026-10-12). See "Observed again" below.
+- **First seen:** 2026-09-25 · **Last seen:** 2026-10-13
 - **Where:** `templates/skills/signoff/SKILL.md` (the atomic sign-off recipe, run before the phase's
   action completes); `templates/agents/commit.md` (signs off, stages the ticket, then commits, and
   on hook failure rewrites its own entry to `failed`).
@@ -133,3 +135,90 @@ the hook, which wants a `feedback-id` line the template did not give, and then t
 which refuses the made-up line the agent writes to satisfy the hook. Writing the record after the
 commit, as in the fix direction above, removes both: the entry is written once, with the real hash
 and a real feedback id, in a commit that already exists.
+
+## Observed again, 2026-10-12 — the false record became a `done` ticket
+
+**Where:** ticket `46_TICKET-20261012-TKT-600a-3.md` of EPIC-RightJobRightAgent, driven by
+`/build-feature`, run `wf_54e15913-aea`. Read from the run's dispatch record (the commit agent's
+own shell commands and reply), the ticket's staged copy and the branch reflog.
+`templates/agents/commit.md` at `b6249edd3`.
+
+**What the agent did.** In a single shell command, before the commit ran, it:
+
+- set `agents.commit: signed_off` and ticked the Sign-offs box;
+- appended `### 2026-10-12 19:00 — commit (status: ok)`, with `completion_manifest:
+  pre_commit_hooks_pass: true, commit_message_valid: true, ticket_staged: true` and the Step 3
+  audit line "Auto-authorized commit gate: subject 'feat(ac-store): generated ticket surface is
+  the requirement's declared files'";
+- staged ten files and ran the pathspec commit.
+
+`check-doc-length` refused it, because `docs/reference/ac-schema.md`, already over its limit,
+grew from 916 to 944 lines. No commit was written. The branch reflog has no entry after the
+attempt, and HEAD stayed at the scaffold commit `32a542a65`.
+
+**Why the Background Commit Safety rule did not catch it.** It did catch the failed commit;
+it just could not repair the record. After the attempt the agent ran the rule's check
+(`git log -1`, commit.md :456-458), saw HEAD unchanged, and replied `status: blocker`: "The
+commit did not land. HEAD is still 32a542a65". Three things kept that correct finding out of
+the record the driver trusts:
+
+1. **The rule's only remedy is to retry.** Section :452-466 (Background Commit Safety) was written for a backgrounded
+   commit that was killed after its hooks passed: "Inspect stderr and retry synchronously — a
+   second attempt typically succeeds." It does not cover a commit that a hook refused, and it
+   says nothing about a sign-off already written. It checks HEAD and records the answer
+   nowhere.
+2. **The order is prescribed.** The supervised path (:284-301) writes a `(status: ok)` audit
+   entry before Step 4 commits. The Commit-Agent Sign-off Step (:493-505) says "After writing
+   the sign-off ... immediately stage and commit". Both put the `ok` before the event.
+3. **The failed-path line was not followed.** :514 reads "On failure: follow the failed-path
+   recipe; set status to `failed` and append a `blocker` comment". The agent did neither. It
+   left the `ok` entry and wrote, in its return only, "If the retry needs to wait, that status
+   should be changed to blocker."
+
+So the HEAD check's result lived only in the reply. The driver classified the reply
+`cross_agent`, skipped the phase, decided completion from the record, and wrote `status: done`.
+The run reported `tickets_completed: 1`
+(`KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed`, occurrence 2026-10-12).
+
+**What this adds.** In the earlier occurrences the false entry was caught by a person reading
+the ticket against the log, or the drive halted. This is the first time it was **consumed as
+truth**: a ticket was closed `done` on a commit that does not exist. That breaks this entry's
+severity premise, "the ticket record is untrue for the whole window" with no worse effect. No
+false commit reached `main`, but a phantom `done` did reach the ticket store. The combined
+defect is graded `blocker` in the build-orchestration entry. This entry keeps its own grading so
+that its file name and inbound links stay stable. A re-grade to `high` is recommended to
+whoever next owns it.
+
+**Fix, sharpened.** Besides recording after the commit (above), the HEAD check should write its
+result. When HEAD did not move, the agent must rewrite its own entry to `failed`/`blocker`
+before returning, and the driver must re-check HEAD itself (2026-10-09 note). Neither may rely
+on the reply alone.
+
+## Observed again, 2026-10-13
+
+**Where:** tickets 10, 11 and 13 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-12/13,
+driven by `/build-feature`. The sequence is from the coordinator's session account. The ticket files
+on the epic branch (tip `cc3c85edc`) hold the corrected records.
+
+**What happened.** Each time, the commit agent wrote `agents.commit: signed_off` and a
+`commit (status: ok)` entry, then ran the commit, and a hook refused it. In tickets 10 and 11 the
+sign-off was left in place. In ticket 13 the agent left the work staged and reported the blocker in its
+reply, but the record still claimed the commit. Ticket 10's record names `check-workflow-meta`,
+`check-file-size` and output drift among its commit blockers, and ticket 11's names `check-file-size`.
+Ticket 10 keeps one honest entry for a refused attempt:
+`### 2026-10-12 23:59 — commit (status: failed)`, "No commit made; HEAD unchanged at 4def0f1e0"
+(`10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md:1238-1240`).
+
+**A new variant: an ok record that outlives its commit (verified).** Ticket 11's
+`### 2026-10-13 19:00 — commit (status: ok)` says "Committed as c4abedd02"
+(`11_TICKET-20260928-BO-4300-workflow-routes.md:921-928`). That commit did land. The user then had it
+dropped by a soft reset, because it had gamed the file-size ratchet
+(`KI-CG-20261013-file-size-measure-can-be-gamed-by-comment-style`). `c4abedd02` is no longer an
+ancestor of the epic branch. The work landed again as `880e15455`, with a second commit entry
+(`:999-1003`), and the first entry was never annotated. The ticket now records a commit that is not in
+its own branch.
+
+**Fix, sharpened again.** A commit record should be checkable against the branch, and should be
+checked when the ticket closes: every hash a `commit (status: ok)` entry names must pass
+`git merge-base --is-ancestor <hash> HEAD`. That catches the pre-written entry, which names no hash or
+a stale one, and the stranded entry, whose hash was rewritten away.

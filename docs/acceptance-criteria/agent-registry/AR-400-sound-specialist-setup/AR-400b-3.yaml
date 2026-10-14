@@ -1,0 +1,103 @@
+id: AR-400b-3
+title: "Every real mismatch between what a package specialist is told to use and what it is granted is resolved, one way or the other"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree, with the grant check of AR-400b-1 and the
+    recognition rule of AR-400b-2 (including its L3s) in force,
+  When the build runs over it,
+  Then the check reports zero findings of the kinds "ability exists but is not
+    granted", "differs only in case" and "names an agent, not an ability",
+    And its examined count equals the number of specialist definitions in the
+      tree,
+    And for each of research-agent, python-coder, architecture-diagram-author
+      and sql-coder -- the four specialists with a real mismatch on 2026-10-12 --
+      the fix recorded in its L3 below is what made the finding go away, not a
+      change to the recognition rule.
+depends_on:
+  - AR-400b
+  - AR-400b-1
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Grant missing (knowledge-query)."
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Instruction wrong ('sign-off' skill; the granted ability is 'signoff')."
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: modifies
+    status: exists
+    relevance: "Instruction miscased (Write-C4-Diagram)."
+  - path: templates/agents/sql-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Instruction names a specialist as an ability (sql-query)."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "SAME PULL REQUEST AS THE GRANT CHECK (AR-400b-1/-2): the four instance fixes land with the check that would otherwise fail on them."
+  - "Evidence is the wired check's run on the REAL tree reporting zero findings of the three kinds with a definitions-examined count equal to the specialist definitions present; plus, per instance, a copy of the real tree with only that instance's fix reverted failing with the expected kind (proving the fix, not a recognition-rule change, cleared it)."
+  - "The other 2026-10-12 lines (ticket-supervisor/webapp-testing, brainstorm-worker/signoff, frontend-coder/frontend-design, onboard/webapp-testing, live-surface-tester / business-analyst / it-po signoff) are cleared by recognition, NOT by template edits; none of those templates is edited by this AC."
+test_spec:
+  - name: test_real_tree_has_zero_ungranted_case_or_agent_findings
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The registry validator over the checked-out package reports zero 'not granted', 'differs only in case' and 'names an agent' findings, with definitions examined equal to the definitions present."
+  - name: test_reverting_each_instance_fix_reproduces_its_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "For each of research-agent, python-coder, architecture-diagram-author and sql-coder, a copy of the real tree with only that template restored to its 2026-10-12 text fails with the expected kind for that specialist."
+    must_catch:
+      - "a finding was cleared by loosening the recognition rule instead of fixing the template"
+test_rationale: >-
+  The criterion's last clause asks which change made each finding go away; the
+  per-instance revert is the only mechanical way to answer it.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-1
+  contract: "The refusing grant check whose clean real-tree run is this AC's evidence."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400b-3-i
+  - AR-400b-3-ii
+  - AR-400b-3-iii
+  - AR-400b-3-iv
+implemented_by: []
+notes: |
+  WHICH SIDE WAS FIXED, PER INSTANCE (AR-400b notes: a judgement, not a rule):
+    - research-agent: the GRANT was wrong (missing)         -> AR-400b-3-i
+    - python-coder:   the INSTRUCTION was wrong (spelling)  -> AR-400b-3-ii
+    - architecture-diagram-author: INSTRUCTION (casing)    -> AR-400b-3-iii
+    - sql-coder:      INSTRUCTION (a specialist, not an ability) -> AR-400b-3-iv
+  The remaining 2026-10-12 "references X but does not declare it" lines are
+  NOT mismatches and are cleared by recognition, not by edits:
+    ticket-supervisor/webapp-testing (other-agent subject, AR-400b-2-ii),
+    brainstorm-worker/signoff and frontend-coder/frontend-design (negation,
+    AR-400b-2-i), onboard/webapp-testing (installer step, AR-400b-2-iv),
+    live-surface-tester, business-analyst, it-po /signoff (granted in the own
+    declaration, AR-400b-1 control clause). Python-coder/collector-enforcer and
+    sql-coder/postgres, sql-test are AR-400d's. retrospective-agent is
+    AR-400a-3-ii. research-agent's three trading ids are AR-400a-3-i.

@@ -7,7 +7,7 @@ machine. Useful when GitHub-hosted runners are unavailable, or as a fast
 pre-push self-check.
 
 Gates (blocking ones fail the overall run; informational ones only report):
-  - lint            : ruff check scripts tests unit_tests          [blocking]
+  - lint            : check_lint_gate.py --mode full (leafcutter-lint.json) [blocking]
   - component-vocab : python scripts/check_component_vocab.py       [blocking]
   - tests           : pytest tests/ unit_tests/ (collection-tolerant) [informational]
   - typecheck       : mypy on scripts (informational)              [informational]
@@ -30,6 +30,10 @@ from pathlib import Path
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _SCRIPT_DIR.parent
+
+# Exactly the command ci.yml's `lint` job runs (BP-1300e-1-i): what is linted and by which
+# rules is declared once in leafcutter-lint.json, so this mirror holds no tree list of its own.
+LINT_GATE_COMMAND = ["templates/scripts/commit_guardian/check_lint_gate.py", "--mode", "full"]
 
 
 def _gate(name: str, argv: list[str], blocking: bool) -> dict:
@@ -61,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     py = sys.executable
 
     gates = [
-        _gate("lint (ruff)", ["ruff", "check", "scripts", "tests", "unit_tests"], blocking=True),
+        _gate("lint (ruff)", [py, *LINT_GATE_COMMAND], blocking=True),
         _gate("component-vocab", [py, "scripts/check_component_vocab.py"], blocking=True),
     ]
     if args.include_informational:

@@ -1,0 +1,65 @@
+id: AR-400b-3-iii
+title: "architecture-diagram-author names write-c4-diagram in its real casing everywhere it is told to load it"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given architecture-diagram-author's definition in the package's real tree,
+    whose own definition grants "write-c4-diagram",
+  When the build compiles architecture-diagram-author's prompt,
+  Then every instruction in the compiled prompt to load that ability names it
+    "write-c4-diagram", including the step heading that read "Load the
+    Write-C4-Diagram Skill",
+    And the build reports no "differs only in case" finding for
+      architecture-diagram-author.
+depends_on:
+  - AR-400b-3
+  - AR-400b-2-v
+doc_links:
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: modifies
+    status: exists
+    relevance: "Heading at line 170 (dated snapshot, 2026-10-12)."
+assigned_agent: llm-expert
+estimated_complexity: XS
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Fix the heading at templates/agents/architecture-diagram-author.md ~line 170 and every other instruction in that template that names the ability in a non-canonical case."
+test_spec:
+  - name: test_compiled_diagram_author_names_write_c4_diagram_in_canonical_case
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile architecture-diagram-author from the real template; every recognised instruction naming the ability uses 'write-c4-diagram' exactly."
+  - name: test_validator_has_no_case_finding_for_diagram_author
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The validator over the real tree reports no 'differs only in case' finding for architecture-diagram-author; a copy with the old heading restored produces one."
+test_rationale: >-
+  As with the sibling instance fixes, the revert control is what makes the
+  clean run evidence.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-3.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  If the user overturns AR-400b-2-v (silent case-fold match instead of a fault),
+  this record still stands as a one-off tidy, but its second clause becomes
+  vacuous.

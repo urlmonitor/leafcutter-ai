@@ -20,14 +20,14 @@ from __future__ import annotations
 
 import os
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+from unit_tests.feedback import _inf_500d_4_helpers as h
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SOURCE_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "feedback" / "submit_feedback.py"
-_SOURCE_CATEGORIES = _REPO_ROOT / "templates" / "config" / "feedback_categories.yaml"
 
 _SINK_PREFIX = "[submit_feedback] sink: "
 _FEEDBACK_ID_RE = re.compile(r"^fb_\d{4}-\d{2}-\d{2}_[0-9a-f]{8}$")
@@ -88,13 +88,21 @@ class TestSinkIsReported:
         # covers: INF-500d-4-ii
         work, tmpdir = _dirs(tmp_path)
         project = tmp_path / "proj"
-        (project / ".claude").mkdir(parents=True)
-        deployed = project / ".leafcutter" / "scripts" / "feedback" / "submit_feedback.py"
-        deployed.parent.mkdir(parents=True)
-        shutil.copy2(_SOURCE_SCRIPT, deployed)
-        config_dir = project / ".leafcutter" / "config"
-        config_dir.mkdir(parents=True)
-        shutil.copy2(_SOURCE_CATEGORIES, config_dir / "feedback_categories.yaml")
+        project.mkdir()
+        # INF-500d-4-i: the default sink is no longer <project>/debugging/logs
+        # found by walking up to .claude/ (that walk is retracted, KI-FC-001).
+        # It is the feedback_sink the build declared in
+        # <output_root>/config/knowledge_sink.json. The install is the whole
+        # deployed scripts/feedback directory plus a declaration written by the
+        # real build helper, naming an enduring root that is NOT under the
+        # project, so the retracted walk could not have produced it.
+        out_root = h.deploy_install(project, git=False)
+        enduring = tmp_path / "enduring"
+        enduring.mkdir()
+        h.declare(out_root, enduring / "logs")
+        deployed = h.submit_script(out_root)
+        expected = Path(h.read_declaration(out_root)["feedback_sink"]).resolve()
+        assert not expected.is_relative_to(project), "setup error: declared sink must lie outside the project"
 
         result = _run(deployed, work, tmpdir, None)
         assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
@@ -102,9 +110,9 @@ class TestSinkIsReported:
         lines = _sink_lines(result.stderr)
         assert len(lines) == 1, f"expected exactly one sink line on stderr, got: {result.stderr!r}"
         reported = Path(lines[0][len(_SINK_PREFIX):])
-        expected = (project / "debugging" / "logs" / "feedback.jsonl").resolve()
-        assert reported == expected, f"reported {reported}, default sink is {expected}"
+        assert reported == expected, f"reported {reported}, declared feedback_sink is {expected}"
         assert result.stdout.strip() in reported.read_text(encoding="utf-8")
+        assert not (project / "debugging").exists(), "the retracted <project>/debugging/logs default was used"
 
 
 class TestExistingCallerContractsUnchanged:
@@ -147,4 +155,7 @@ class TestExistingCallerContractsUnchanged:
 #   script as a subprocess; the relative-override case uses the literal
 #   --jsonl ticket-supervisor.md passes, the default case runs a copied
 #   deployed layout so no test touches a real sink. (#INF-500d-4-ii)
+# - 2026-10-12 [test-writer/INF-500d-4-i]: test_default_sink_is_reported now
+#   declares the install (real build helper) and expects the declared
+#   feedback_sink; the retracted .claude/-walk default is gone. (#INF-500d-4-i)
 # ====================================================================

@@ -26,7 +26,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_JSONL_DEFAULT = Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl"
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)  # trend_report and tests load this file by path
+
+import feedback_reader  # noqa: E402
+
+_OUTPUT_ROOT = Path(__file__).resolve().parents[2]
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +373,7 @@ def main(argv: list[str] | None = None) -> int:
         argv: Argument list. When None, uses sys.argv[1:].
 
     Returns:
-        int: Exit code (0 always — read-only, no validation failures).
+        int: Exit code (0 on success, 1 when no declared sink can be determined).
     """
     parser = argparse.ArgumentParser(
         description="Query and aggregate feedback.jsonl entries.",
@@ -388,7 +394,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--jsonl",
         default=None,
-        help=f"Override JSONL input path. Default: {_JSONL_DEFAULT}",
+        help="Override JSONL input path. Default: feedback_sink from the build-time declaration.",
     )
     parser.add_argument(
         "--format",
@@ -418,8 +424,12 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    jsonl_path = Path(args.jsonl) if args.jsonl else _JSONL_DEFAULT
+    paths = feedback_reader.resolve(_OUTPUT_ROOT, "aggregate", feedback_sink=args.jsonl)
+    if paths is None:
+        return 1
+    jsonl_path = paths["feedback_sink"]
     all_entries = _read_jsonl(jsonl_path)
+    feedback_reader.report("aggregate", jsonl_path, len(all_entries), None if args.jsonl else _OUTPUT_ROOT)
 
     filtered = filter_entries(
         all_entries,

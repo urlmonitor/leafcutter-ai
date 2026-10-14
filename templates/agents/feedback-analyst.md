@@ -90,6 +90,10 @@ python .claude/skills/feedback-analysis/scripts/trend_report.py \
   [--top-tags 5]
 ```
 
+`trend_report.py` reads the install's declared feedback sink and states the file and
+record count on stderr (`read N records from <path>`). Quote that statement in the report;
+do not open a log path of your own.
+
 **If exit code is non-zero or stdout is empty:**
 - Note the error in the report under "Analysis Errors".
 - Proceed with partial data if any output was produced.
@@ -97,7 +101,8 @@ python .claude/skills/feedback-analysis/scripts/trend_report.py \
 
 **If output is `(no feedback data found)`:**
 - Return immediately: "No feedback data found. The feedback log at
-  `debugging/logs/feedback.jsonl` is absent or empty for the requested filters."
+  sink the analysis read (as stated by `trend_report.py` on stderr) is absent or
+  empty for the requested filters."
 
 ---
 

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-10-09'
+last_updated: '2026-10-14'
 components:
   - commit_guardian
 related_docs:
@@ -21,9 +21,9 @@ related_docs:
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium. The gate refuses a correct commit, and nothing a docs-only AC could honestly contain satisfies it. The two easy ways out are to write a synthetic `# covers:` tag or to leave the AC at `todo` after the work is done, and both make the AC store less truthful.
-- **Status:** open. The leaf half is fixed (PRs #861/#878). The composite half is still open; see Occurrences 2 and 3.
-- **Occurrences:** 3 (hit 2026-09-14 while closing `UXP-700e-4`, a documentation-only AC, and with it its parent `UXP-700e`; 2026-09-28 closing `INF-1100d`, see Occurrence 2; 2026-10-09 closing `INF-700a`, see Occurrence 3)
-- **First seen:** 2026-09-14 · **Last seen:** 2026-10-09
+- **Status:** open. The leaf half is fixed (PRs #861/#878). The composite half is fixed at source by PR #1165 (`e93eda09a`), but installs built before it still refuse; see Occurrence 4.
+- **Occurrences:** 4 (hit 2026-09-14 while closing `UXP-700e-4`, a documentation-only AC, and with it its parent `UXP-700e`; 2026-09-28 closing `INF-1100d`, see Occurrence 2; 2026-10-09 closing `INF-700a`, see Occurrence 3; 2026-10-14 closing `INF-500d-4` through a stale install, see Occurrence 4)
+- **First seen:** 2026-09-14 · **Last seen:** 2026-10-14
 - **Where:** the original filing's line numbers are stale. On `origin/main` `4a5dfc1a5`, the composite half is in:
   - `scripts/ac_store/_done_proof_composite.py:194-268` `_unproven_composite_children()`. The leaf-child decision is at `:265-266`.
   - `templates/scripts/commit_guardian/check_done_proof.py:442-455`, the composite branch of `check_staged_done_proofs()`.
@@ -133,3 +133,43 @@ The flip was then discarded and not committed. `INF-700a-3` and `INF-700a-4` are
 - BO-2500a-1-ii: the shared waiver predicate. BO-2500a-6: composite classification.
 
 **Pattern:** an exemption fixed at the leaf level, with the derivation that aggregates leaves left unfixed. The aggregate's refusal message ("unproven") names the exempt children, so the gap reads as missing work rather than a gate defect.
+
+---
+
+**Occurrence 4 — 2026-10-14: `INF-500d-4` refused, but by a stale deployed hook. The composite half is fixed at source.**
+
+- **Occurrences:** 4. **Last seen:** 2026-10-14.
+- **Fixed at source.** PR #1165 (merge `e93eda09a`, fix commit `f8a4995ef`, 2026-10-12) added the
+  waiver to both composite paths. On `origin/main` `435c11395`:
+  - `scripts/ac_store/_done_proof_composite.py:269`. A done leaf child is proven when it is in
+    `all_covered_ids` or `is_covers_tag_waived(child_data)` accepts it.
+  - `scripts/ac_store/_done_proof_composite.py:320-324` (`_verify_composite_eligible`, CI). Waived
+    leaves are dropped from `uncovered_children`.
+- **The 2026-10-14 refusal.** Flipping `INF-500d-4` to `done` was refused with:
+
+  ```text
+  composite INF-500d-4 is marked done but its covered_by children are not all done-and-covered — unproven: INF-500d-4-vii, INF-500d-4-viii
+  ```
+
+  Both children are `done`, `test_required: false`, with a non-blank `test_rationale`. A
+  read-only run of `_unproven_composite_children`, with `INF-500d-4` flipped to `done`, gives:
+
+  | Copy of `_done_proof_composite.py` | `INF-500d-4` | `INF-700a` (Occurrence 3) |
+  |---|---|---|
+  | `origin/main` `435c11395` source | `[]` | `[]` |
+  | workspace install `.leafcutter/scripts/ac_store/`, built 2026-10-08 | `INF-500d-4-vii, INF-500d-4-viii` | `INF-700a-3, INF-700a-4` |
+
+  So this refusal is the pre-#1165 code still deployed, not a live gap on `main`. Rebuild the
+  install, or flip from a worktree whose hook is built from current `main`. CI runs the source
+  copy and accepts it.
+- **Status.** The entry is left open here. Moving it to `resolved/` belongs to whoever confirms
+  #1165 against the acceptance conditions in Occurrence 3. A stale install will keep refusing
+  until it is rebuilt.
+
+**The composite refusal that is still live on `main` is a different cause: a superseded child.**
+`INF-400c-4` is refused on the `origin/main` source with `unproven: INF-400c-4-ii`, because
+`INF-400c-4-ii` is `req_status: superseded` (`superseded_by: [INF-700c-2]`) and `work_status:
+todo`. `_unproven_composite_children` (`_done_proof_composite.py:260-262`) and
+`_resolve_all_child_ids` (`done_proof.py:1505-1516`) never look at `superseded_by` or
+`req_status`. That is recorded in its existing entry, KI-ACS-016, as Occurrence 4, with the 7
+composites in the store blocked only by it.

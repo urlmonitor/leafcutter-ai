@@ -41,6 +41,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import subprocess
@@ -247,10 +248,9 @@ def _run_git_log(epic_path: Path) -> list[str]:
             encoding="utf-8",
             errors="replace",
         )
-        lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
-        return lines
     except OSError:
         return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
 
 
 def _git_date_from_log(epic_path: Path, extra_flags: list[str]) -> str | None:
@@ -288,7 +288,8 @@ def _read_telemetry(telemetry_path: Path, epic_path_str: str) -> dict[str, int]:
     Args:
         telemetry_path: Path to agent_telemetry.jsonl.
         epic_path_str: String representation of the epic folder path (used
-            as a prefix filter on the ``ticket`` field).
+            as a prefix filter on the ``ticket_path`` field emit_event.py
+            writes, or the older ``ticket`` field).
 
     Returns:
         Dict mapping event type to count. Empty dict when file is absent.
@@ -307,7 +308,8 @@ def _read_telemetry(telemetry_path: Path, epic_path_str: str) -> dict[str, int]:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                ticket = entry.get("ticket", "")
+                # emit_event.py writes ``ticket_path``; ``ticket`` is the older key.
+                ticket = entry.get("ticket_path") or entry.get("ticket") or ""
                 if not isinstance(ticket, str):
                     continue
                 if not _ticket_under_epic(ticket, epic_path_str):
@@ -318,6 +320,50 @@ def _read_telemetry(telemetry_path: Path, epic_path_str: str) -> dict[str, int]:
         return {}
 
     return counts
+
+
+def _load_sink_resolution():
+    """Load the sibling ``scripts/knowledge/sink_resolution.py`` the build deploys beside this package."""
+    module_path = Path(__file__).resolve().parent.parent / "knowledge" / "sink_resolution.py"
+    spec = importlib.util.spec_from_file_location("sink_resolution", module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(module_path.name)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["sink_resolution"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _declared_telemetry_path() -> Path | None:
+    """Return the declared telemetry stream, or None after an ERROR on stderr (AC INF-500d-4-v).
+
+    Reads through ``sink_resolution.read_usable_stream`` -- the one reader of
+    ``config/knowledge_sink.json`` -- so a stream the declaration does not
+    anchor under ``operational_log_root`` is refused, never reported as a
+    quiet zero.
+    """
+    sink_resolution = _load_sink_resolution()
+    output_root = sink_resolution.deployed_output_root()
+    stream, why = sink_resolution.read_usable_stream(output_root, "operational_telemetry_stream")
+    if stream is None:
+        print(
+            "ERROR: no --telemetry given and "
+            + sink_resolution.refusal_message(output_root, "operational_telemetry_stream", why),
+            file=sys.stderr,
+        )
+    return stream
+
+
+def _state_telemetry_read(telemetry_path: Path) -> None:
+    """Say on stderr which telemetry file is read and how many records it holds."""
+    absolute = telemetry_path.resolve()
+    try:
+        with open(absolute, encoding="utf-8", errors="replace") as fh:
+            count = sum(1 for line in fh if line.strip())
+        note = ""
+    except OSError as exc:
+        count, note = 0, f" (not readable: {exc})"
+    print(f"[extract_epic_facts] read {count} records from {absolute}{note}", file=sys.stderr)
 
 
 def _ticket_under_epic(ticket_path: str, epic_path_str: str) -> bool:
@@ -404,7 +450,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--telemetry",
         default=None,
         metavar="PATH",
-        help="Path to agent_telemetry.jsonl. Default: debugging/logs/agent_telemetry.jsonl",
+        help=(
+            "Path to agent_telemetry.jsonl. Default: the operational_telemetry_stream "
+            "declared in this install's config/knowledge_sink.json; refuses when none "
+            "is usable (ADR-069)."
+        ),
     )
     parser.add_argument(
         "--format",
@@ -431,13 +481,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ERROR: Epic path does not exist: {epic_path}", file=sys.stderr)
         return 1
 
-    telemetry_path: Path | None = None
-    if args.telemetry:
-        telemetry_path = Path(args.telemetry)
-    else:
-        default_telemetry = Path("debugging") / "logs" / "agent_telemetry.jsonl"
-        if default_telemetry.exists():
-            telemetry_path = default_telemetry
+    telemetry_path = Path(args.telemetry) if args.telemetry else _declared_telemetry_path()
+    if telemetry_path is None:
+        return 1
+    _state_telemetry_read(telemetry_path)
 
     facts = extract_facts(epic_path, telemetry_path)
     print(json.dumps(facts, indent=2))

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from neo4j import ManagedTransaction
     from knowledge.adapters.neo4j_backend import Neo4jBackend
+    from knowledge.config import RetentionBound
     from knowledge.contracts import ProjectionSnapshot
 
 import hashlib
@@ -211,11 +212,113 @@ async def switch_active(
     return await db._transaction(transaction, True)
 
 
+async def evaluate_retention(
+    db: Neo4jBackend,
+    repository_id: str,
+    bound: RetentionBound,
+    now: float | None = None,
+) -> dict:
+    """Report which retained generations a declared bound permits reclaiming.
+
+    Read-only: it reports a verdict per generation and never reclaims, retires
+    or re-points anything. Count rank is by creation time, newest first, and the
+    active generation occupies one slot of the count limit.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        repository_id: Trusted repository namespace isolating all reads.
+        bound: Declared retention bound naming a generation count AND a
+            minimum retirement age; refused when absent.
+        now: Optional clock value for deterministic age checks.
+
+    Returns:
+        A report naming the bound, the ``assessed`` count of generation
+        records evaluated (whatever their publication outcome), and a
+        reclaimability verdict with a reason for every one of them.
+
+    Raises:
+        TypeError: When no declared RetentionBound is supplied (nothing is read).
+    """
+    from knowledge.config import RetentionBound
+
+    if not isinstance(bound, RetentionBound):
+        raise TypeError(_NO_BOUND)
+    clock = time.time() if now is None else now
+    facts = await db.retention_facts(repository_id)
+    ordered = sorted(facts, key=lambda f: (-f["created_at"], f["generation_id"]))
+    verdicts = [
+        {"generation_id": f["generation_id"], **_verdict(f, rank, bound, clock)}
+        for rank, f in enumerate(ordered)
+    ]
+    return {
+        "bound": bound.model_dump(),
+        "assessed": len(verdicts),
+        "generations": verdicts,
+        "reclaimable": [v["generation_id"] for v in verdicts if v["reclaimable"]],
+    }
+
+
+async def retention_facts(db: Neo4jBackend, repository_id: str) -> list[dict]:
+    """Read generation_id, publication_status, active, created_at, retired_at and pinned_until.
+
+    Every generation record is returned whatever its publication outcome
+    (ready, validated, building, failed); none is filtered out.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        repository_id: Trusted repository namespace isolating all reads.
+
+    Returns:
+        One row per generation record; pinned_until is None when no
+        continuation is pinned to it. Read-only.
+    """
+    return await db._run(
+        "OPTIONAL MATCH (r:Repository {repository_id:$repo}) "
+        "MATCH (g:Snapshot {repository_id:$repo}) "
+        "RETURN g.generation_id AS generation_id, g.status AS publication_status, "
+        "coalesce(g.key = r.active, false) AS active, "
+        "g.created_at AS created_at, g.retired_at AS retired_at, g.pinned_until AS pinned_until",
+        {"repo": repository_id},
+    )
+
+
+_NO_BOUND = "retention bound is not declared; evaluation refused"
+_NO_RETENTION = (
+    "retention bound is unset: retention_seconds must be declared by the caller; "
+    "no built-in value is used"
+)
+
+
+def _verdict(fact: dict, rank: int, bound: RetentionBound, now: float) -> dict:
+    """Decide one generation's reclaimability and the reason, in precedence order.
+
+    Args:
+        fact: Generation row with active, created_at, retired_at and pinned_until.
+        rank: Zero-based newest-first position among all retained generations.
+        bound: Declared RetentionBound.
+        now: Clock value for age and pin-expiry checks.
+
+    Returns:
+        Mapping with ``reclaimable`` and ``reason``.
+    """
+    if fact["active"]:
+        return {"reclaimable": False, "reason": "active_generation"}
+    if rank < bound.generation_limit:
+        return {"reclaimable": False, "reason": "inside_count_bound"}
+    retired = fact["retired_at"] if fact["retired_at"] is not None else fact["created_at"]
+    if now - retired < bound.minimum_age_seconds:
+        return {"reclaimable": False, "reason": "younger_than_minimum_age"}
+    pinned = fact["pinned_until"]
+    if pinned is not None and pinned > now:
+        return {"reclaimable": False, "reason": "pinned_continuation_unexpired"}
+    return {"reclaimable": True, "reason": "reclaimable"}
+
+
 async def cleanup(
     db: Neo4jBackend,
     repository_id: str,
     generation_id: str,
-    retention_seconds: int,
+    retention_seconds: int | None,
     now: float | None,
 ) -> bool:
     """Guard active publication and retention before deleting one owned generation.
@@ -230,6 +333,8 @@ async def cleanup(
     Returns:
         Whether the guarded operation succeeded.
     """
+    if retention_seconds is None:
+        raise ValueError(_NO_RETENTION)
     if retention_seconds < 0:
         raise ValueError("retention_seconds must be nonnegative")
     key = scope_key(repository_id, generation_id)
@@ -267,4 +372,5 @@ async def cleanup(
     return True
 
 
+# - 2026-10-14 [python-coder]: Assess every generation record regardless of publication outcome and report the assessed count. (#KM-400f-1-i)
 # - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)

@@ -1,0 +1,66 @@
+id: AR-400a-3-iii
+title: "The ability catalogue's introductory guide uses only abilities that exist as its examples"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the ability catalogue's introductory guide in the package's real tree,
+  When the build runs the existence check over it,
+  Then the check reports zero findings for that guide,
+    And its worked example of how an agent loads an ability names an ability the
+      package ships ("route-knowledge" in place of "route-learning"),
+    And none of its lists of example abilities -- the opening description, the
+      folder-naming rule and the cross-cutting examples -- names "route-learning"
+      or "capture-learning".
+depends_on:
+  - AR-400a-3
+doc_links:
+  - path: templates/skills/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Lines 5, 27, 36, 43 (dated snapshot, 2026-10-12). Line 36 is the imperative instance; the other three are descriptive examples of retired names."
+assigned_agent: llm-expert
+estimated_complexity: XS
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "templates/skills/README.md lines 5, 27, 36 and 43 (dated snapshot): replace route-learning / capture-learning with abilities the package ships; line 36's worked example loads route-knowledge."
+  - "Every replacement example must name a directory that exists under templates/skills/ at the time of the change."
+test_spec:
+  - name: test_skills_readme_has_zero_findings_and_no_retired_examples
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run the existence check over the real tree: zero findings for templates/skills/README.md; and no line of the deployed README names route-learning or capture-learning."
+  - name: test_readme_worked_example_names_a_shipped_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Every ability id named in the README's worked load example resolves to templates/skills/<id>/SKILL.md."
+test_rationale: >-
+  The descriptive mentions would not trip the gate, so the second descriptor
+  covers the clause the gate cannot.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-3.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The descriptive mentions (lines 5, 27, 43) would not stop the build under the
+  recognition rule (they are not instructions), so the first clause alone does
+  not force them out. The third clause does, because a guide that teaches
+  authors by example should not teach retired names.

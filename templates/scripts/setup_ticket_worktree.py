@@ -436,14 +436,8 @@ def _worktree_exists(branch: str) -> tuple[bool, Path | None]:
             refs_branch = line[len("branch "):].strip()
             # refs_branch is like refs/heads/feature/my-slug,
             # refs/heads/ticket/my-slug, or refs/heads/ac-authoring/my-slug
-            for prefix in (
-                f"refs/heads/feature/{branch}",
-                f"refs/heads/ticket/{branch}",
-                f"refs/heads/ac-authoring/{branch}",
-                f"refs/heads/fast-lane/{branch}",
-            ):
-                if refs_branch == prefix:
-                    return True, current_worktree_path
+            if refs_branch in {f"refs/heads/{p}/{branch}" for p in ("feature", "ticket", "ac-authoring", "fast-lane")}:
+                return True, current_worktree_path
     return False, None
 
 
@@ -611,55 +605,24 @@ def _create_ac_worktree(branch_name: str, worktrees_dir: Path, repo_root: Path) 
     # directory.
     branch_already_exists = _branch_exists(full_branch, repo_root)
 
+    # Reuse the existing branch (checkout-only, its commits incl. AC YAML preserved),
+    # else a fresh branch rooted at origin/main.
     if branch_already_exists:
-        # Reuse the existing branch — checkout-only, no new branch creation.
-        # The existing commits (including AC YAML files) are preserved.
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(repo_root),
-                    "worktree",
-                    "add",
-                    str(worktree_path),
-                    full_branch,
-                ],
-                check=True,
-            )
-        except (subprocess.CalledProcessError, OSError) as exc:
-            raise subprocess.SubprocessError(  # noqa: TRY003
-                f"Failed to add AC-authoring git worktree at {worktree_path} "
-                f"reusing existing branch '{full_branch}': {exc}"
-            ) from exc
+        add_args, how = [str(worktree_path), full_branch], f"reusing existing branch '{full_branch}'"
+    else:
+        add_args, how = ["-b", full_branch, str(worktree_path), "origin/main"], "from origin/main"
+    try:
+        subprocess.run(["git", "-C", str(repo_root), "worktree", "add", *add_args], check=True)
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise subprocess.SubprocessError(  # noqa: TRY003
+            f"Failed to add AC-authoring git worktree at {worktree_path} {how}: {exc}"
+        ) from exc
+    if branch_already_exists:
         print(
             f"INFO: Reusing existing branch '{full_branch}' in new worktree "
             f"at {worktree_path}. Existing AC YAML files are preserved.",
             file=sys.stderr,
         )
-    else:
-        # Fresh path — create a new branch rooted at origin/main.
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(repo_root),
-                    "worktree",
-                    "add",
-                    "-b",
-                    full_branch,
-                    str(worktree_path),
-                    "origin/main",
-                ],
-                check=True,
-            )
-        except (subprocess.CalledProcessError, OSError) as exc:
-            raise subprocess.SubprocessError(  # noqa: TRY003
-                f"Failed to add AC-authoring git worktree at {worktree_path} "
-                f"from origin/main: {exc}"
-            ) from exc
-
     return worktree_path
 
 
@@ -756,11 +719,7 @@ def _path_is_occupied(path: Path) -> bool:
     if path.is_symlink():
         return True
     try:
-        if not path.exists():
-            return False
-        if not path.is_dir():
-            return True
-        return any(path.iterdir())
+        return path.exists() and (not path.is_dir() or any(path.iterdir()))
     except OSError:
         return True
 
@@ -779,8 +738,7 @@ def _same_path(a: Path, b: Path) -> bool:
 
 def _short_branch_name(refs_branch: str) -> str:
     """Strip a leading ``refs/heads/`` from a porcelain branch line, if present."""
-    prefix = "refs/heads/"
-    return refs_branch[len(prefix):] if refs_branch.startswith(prefix) else refs_branch
+    return refs_branch.removeprefix("refs/heads/")
 
 
 def _determine_fastlane_occupancy(
@@ -1271,54 +1229,22 @@ def _create_fastlane_worktree(slug: str, worktrees_dir: Path, repo_root: Path) -
         # therefore the resulting worktree's HEAD, from the CURRENT
         # origin/main rather than checking out the branch at whatever stale
         # commit it already happened to point to.
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(repo_root),
-                    "worktree",
-                    "add",
-                    "-B",
-                    full_branch,
-                    str(worktree_path),
-                    "origin/main",
-                ],
-                check=True,
-            )
-        except (subprocess.CalledProcessError, OSError) as exc:
-            raise subprocess.SubprocessError(  # noqa: TRY003
-                f"Failed to reconnect fast-lane git worktree at {worktree_path} "
-                f"by resetting existing branch '{full_branch}' to origin/main: {exc}"
-            ) from exc
+        add_args = ["-B", full_branch, str(worktree_path), "origin/main"]
+        failure = (f"Failed to reconnect fast-lane git worktree at {worktree_path} "
+                   f"by resetting existing branch '{full_branch}' to origin/main")
+    else:
+        add_args = ["-b", full_branch, str(worktree_path), "origin/main"]
+        failure = f"Failed to add fast-lane git worktree at {worktree_path} from origin/main"
+    try:
+        subprocess.run(["git", "-C", str(repo_root), "worktree", "add", *add_args], check=True)
+    except (subprocess.CalledProcessError, OSError) as exc:
+        raise subprocess.SubprocessError(f"{failure}: {exc}") from exc  # noqa: TRY003
+    if branch_already_exists:
         print(
             f"INFO: Reconnected branch '{full_branch}' in new worktree "
             f"at {worktree_path}, rebuilt from the current origin/main.",
             file=sys.stderr,
         )
-    else:
-        # Fresh path — create a new branch rooted at origin/main.
-        try:
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    str(repo_root),
-                    "worktree",
-                    "add",
-                    "-b",
-                    full_branch,
-                    str(worktree_path),
-                    "origin/main",
-                ],
-                check=True,
-            )
-        except (subprocess.CalledProcessError, OSError) as exc:
-            raise subprocess.SubprocessError(  # noqa: TRY003
-                f"Failed to add fast-lane git worktree at {worktree_path} "
-                f"from origin/main: {exc}"
-            ) from exc
-
     return worktree_path
 
 
@@ -1368,7 +1294,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
     leafcutter_dst = worktree_path / ".leafcutter"
     pre_commit_dst = worktree_path / ".pre-commit-config.yaml"
 
-    # Step 1 — idempotent no-op: config already present.
     if leafcutter_dst.exists() or leafcutter_dst.is_symlink():
         return
     if pre_commit_dst.exists() or pre_commit_dst.is_symlink():
@@ -1376,7 +1301,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
 
     leafcutter_src = main_repo / ".leafcutter"
 
-    # Step 2 — symlink .leafcutter (preferred).
     if leafcutter_src.exists():
         try:
             os.symlink(leafcutter_src, leafcutter_dst)
@@ -1394,10 +1318,6 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
             )
             return
 
-    # Step 3 — copy .pre-commit-config.yaml (fallback).
-    # Resolve the source: the main repo may expose it directly as a file or as
-    # a symlink pointing into .leafcutter/.  shutil.copy follows symlinks by
-    # default, so both cases produce a plain file copy in the worktree.
     pre_commit_src = main_repo / ".pre-commit-config.yaml"
     if pre_commit_src.exists():
         try:
@@ -1417,13 +1337,37 @@ def _establish_pre_commit_config(main_repo: Path, worktree_path: Path) -> None:
             )
         return
 
-    # Step 4 — neither source exists; warn and continue.
     print(
         f"WARNING: neither {leafcutter_src} nor {pre_commit_src} found in "
         "the main repo.  Run build.py inside the worktree manually to "
         "materialise the pre-commit configuration before committing.",
         file=sys.stderr,
     )
+
+
+def _inherited_log_root_args(main_repo: Path) -> list[str]:
+    """Return the ``build.py`` arguments that hand the worktree the main install's log root.
+
+    AC INF-500d-4-iii (ADR-069): reads the root the main install already RECORDED in
+    ``<main_repo>/.leafcutter/config/knowledge_sink.json`` -- ``operational_log_root``, or
+    for a pre-feature declaration the parent of ``knowledge_emission_sink`` -- and never
+    derives it from ``main_repo``'s own path. When it cannot be read (absent, unreadable,
+    keyless or relative) a stderr WARNING names the path tried and the build is told
+    ``--no-log-root``, so no declaration silently names the worktree's own root.
+    """
+    declaration = main_repo / ".leafcutter" / "config" / "knowledge_sink.json"
+    why = "the recorded root is not an absolute path"
+    try:
+        data = json.loads(declaration.read_text(encoding="utf-8"))
+        root = data.get("operational_log_root") or str(Path(data["knowledge_emission_sink"]).parent)
+        absolute = Path(root).is_absolute()
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        absolute, why = False, str(exc)
+    if not absolute:
+        print(f"WARNING: no enduring log root readable from {declaration} ({why}); logs "
+              "written in this worktree will not survive its removal.", file=sys.stderr)
+        return ["--no-log-root"]
+    return ["--log-root", root]
 
 
 def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
@@ -1454,7 +1398,14 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     5. **``build.py`` run**: materialises ``.leafcutter/`` (workflows, agents,
        skills, hooks, and the pre-commit config shim).  Probes both the
        consumer layout (``leafcutter-ai/scripts/build.py``) and the
-       self-hosted layout (``scripts/build.py``).
+       self-hosted layout (``scripts/build.py``).  The build is handed the
+       main install's log root (``--log-root`` / ``--no-log-root``).  A
+       worktree whose own ``build.py`` predates those flags rejects them with
+       an argparse error (exit 2, ``unrecognized arguments``); the build is
+       then retried ONCE without the flag and a loud WARNING says the worktree
+       has no durable log root (what it logs will not survive its removal and
+       writers will refuse) -- never ``missing_config`` for that case (AC
+       INF-500d-4-iii, ADR-069).
 
     6. **Pre-commit config safety net** (``_establish_pre_commit_config``):
        ensures ``.leafcutter`` or ``.pre-commit-config.yaml`` is present in
@@ -1529,7 +1480,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     except FileNotFoundError:
         pass
 
-    # Populate submodules (like leafcutter) in the new worktree
     try:
         subprocess.run(["git", "submodule", "update", "--init"], cwd=worktree_path, check=True,
                        stdout=sys.stderr)
@@ -1538,13 +1488,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
             f"Failed to update submodules in {worktree_path}: {exc}"
         ) from exc
 
-    # Install Python dev dependencies. Detect the project's packaging style
-    # rather than assuming poetry: a poetry/PEP-621 project carries a
-    # pyproject.toml, while this package and many consumers pin dev deps in
-    # requirements-dev.txt (no pyproject.toml). Dependency install is treated
-    # as best-effort — a failure warns and continues, because the deps are
-    # frequently already present in the active environment and a hard failure
-    # here should not block the entire worktree setup.
     if (worktree_path / "pyproject.toml").exists():
         dep_cmd = ["poetry", "install", "--no-root"]
     elif (worktree_path / "requirements-dev.txt").exists():
@@ -1567,10 +1510,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
                 file=sys.stderr,
             )
 
-    # Populate .leafcutter/ build outputs so named workflow resolution works.
-    # Probe both layouts: the self-hosted package has scripts/build.py at the
-    # repo root, while a consumer install carries leafcutter-ai/scripts/build.py
-    # as a subdirectory.
     build_candidates = [
         worktree_path / "leafcutter-ai" / "scripts" / "build.py",
         worktree_path / "scripts" / "build.py",
@@ -1578,16 +1517,21 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
     build_script = next((c for c in build_candidates if c.exists()), None)
     build_exc: Exception | None = None
     if build_script is not None:
-        try:
-            subprocess.run([sys.executable, str(build_script), "--target-dir", str(worktree_path)],
-                           cwd=str(worktree_path), check=True, stdout=sys.stderr)
-        except subprocess.CalledProcessError as exc:
-            build_exc = exc
-            print(
-                f"WARNING: build.py run failed in new worktree ({exc}); "
-                "named-workflow resolution may fail until build.py is run manually.",
-                file=sys.stderr,
-            )
+        cmd = [sys.executable, str(build_script), "--target-dir", str(worktree_path)]
+        for flags in (_inherited_log_root_args(main_repo), []):
+            try:
+                proc = subprocess.run([*cmd, *flags], cwd=str(worktree_path), check=True, stdout=sys.stderr,
+                                      stderr=subprocess.PIPE, text=True)
+                build_exc, err = None, proc.stderr
+            except subprocess.CalledProcessError as exc:
+                build_exc, err = exc, exc.stderr or ""
+            print(err, end="", file=sys.stderr)
+            if not (build_exc and flags and build_exc.returncode == 2 and "unrecognized arguments" in err):
+                break
+            print(f"WARNING: this worktree's build.py does not accept {flags[0]}; retrying without it, so the worktree has no durable log root, what it logs will not survive its removal and writers will refuse.", file=sys.stderr)
+        if build_exc is not None:
+            print(f"WARNING: build.py run failed in new worktree ({build_exc}); "
+                  "named-workflow resolution may fail until build.py is run manually.", file=sys.stderr)
     else:
         print(
             "WARNING: build.py not found in worktree (probed "
@@ -1599,11 +1543,6 @@ def _bootstrap(main_repo: Path, worktree_path: Path) -> None:
 
     _establish_pre_commit_config(main_repo, worktree_path)
 
-    # AC-5 fail-fast safety net: _establish_pre_commit_config warns-and-continues
-    # when neither source exists in the main repo (its step 4). Convert that
-    # silent gap into a hard failure so the drive never proceeds with hooks
-    # disabled. Checks BOTH markers to match that function's success contract:
-    # a .leafcutter symlink alone is a valid established state.
     leafcutter_path = worktree_path / ".leafcutter"
     config_path = worktree_path / ".pre-commit-config.yaml"
     if not config_path.exists() and not (leafcutter_path.exists() or leafcutter_path.is_symlink()):

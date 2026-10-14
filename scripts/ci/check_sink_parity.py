@@ -96,6 +96,12 @@ fire regardless of whether every surface agrees with it:
   working directory, reproducing the per-working-directory split this AC
   exists to end, even with unanimous, verbatim surface agreement.
 
+A fourth declaration check (AC INF-500d-4-iii, ADR-069) follows those two and
+runs on the same terms: ``operational_log_root`` and ``feedback_sink`` must be
+present and absolute, every file-valued key must sit directly under
+``operational_log_root``, and ``feedback_sink`` must not equal another stream.
+A violation prints ``FAIL declared-log-root: <key>=<value> ...`` and exits 1.
+
 Exit codes::
 
     0   Exactly four surfaces were inspected and every one resolves -- via a
@@ -384,6 +390,32 @@ def _settlement_violation(declared_sink: str, operational_stream: str) -> str | 
     return None
 
 
+_FILE_KEYS = ("feedback_sink", "knowledge_emission_sink", "operational_telemetry_stream")
+
+
+def _log_root_violation(config_data: dict) -> str | None:
+    """Return a failure reason if the declaration splits or mis-anchors the log root.
+
+    AC INF-500d-4-iii (ADR-069): ``operational_log_root`` and ``feedback_sink``
+    must be present and absolute, every file-valued key must sit directly under
+    the root, and ``feedback_sink`` must not equal another stream. The reason
+    names the offending key and value. Pure function: no I/O.
+    """
+    for key in ("operational_log_root", *_FILE_KEYS):
+        value = config_data.get(key)
+        if not isinstance(value, str) or not Path(value).is_absolute():
+            return f"{key}={value!r} is missing or not an absolute path"
+    root = Path(config_data["operational_log_root"])
+    for key in _FILE_KEYS:
+        if Path(config_data[key]).parent != root:
+            return f"{key}={config_data[key]!r} does not sit directly under operational_log_root={str(root)!r}"
+    feedback = config_data["feedback_sink"]
+    for key in _FILE_KEYS[1:]:
+        if Path(config_data[key]) == Path(feedback):
+            return f"feedback_sink={feedback!r} equals {key}"
+    return None
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="check_sink_parity",
@@ -424,6 +456,16 @@ def main(argv: list[str] | None = None) -> int:
     settlement_failure = _settlement_violation(declared_sink, operational_stream)
     if settlement_failure is not None:
         print(f"FAIL declared-sink: {settlement_failure}")
+        return 1
+
+    config_path = _deployed_root(target_dir) / "config" / "knowledge_sink.json"
+    try:
+        log_root_failure = _log_root_violation(json.loads(config_path.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"ERROR: {config_path} could not be re-read: {exc}", file=sys.stderr)
+        return 2
+    if log_root_failure is not None:
+        print(f"FAIL declared-log-root: {log_root_failure}")
         return 1
 
     results = [
@@ -478,4 +520,8 @@ if __name__ == "__main__":
 #   sink it disagrees with, so the reported failure names both resolved
 #   values and which side produced each, per the AC's own wording.
 #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4)
+# - 2026-10-09 [python-coder/INF-500d-4-iii]: Added _log_root_violation, run
+#   after branches 2 and 3 (which are untouched): operational_log_root and
+#   feedback_sink present and absolute, every file key directly under the
+#   root, feedback_sink distinct from the other streams. (#INF-500d-4-iii)
 # ====================================================================

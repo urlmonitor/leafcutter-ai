@@ -70,7 +70,9 @@ Return shape, or `None` when neither table declares the hook:
 |---|---|---|
 | (a) No declaration | A gating check is not declared and not on the excused list. | Add a rule with a `disposition` for the hook to `templates/scripts/precommit-autofix.json`. |
 | (b) Addition to excused list | An id is in `undeclared_remedy_baseline` but in no parent's list. | Remove it from the list and give the check a declaration. |
-| (c) Declaration for an unregistered check | A rule with a `disposition`, in either table, has a `hook_id` not in `hooks_manifest.hooks`. | Remove the declaration or register the check. |
+| (c) Declaration for an unregistered check | A rule with a `disposition`, in the committed package table, has a `hook_id` not in `hooks_manifest.hooks`. | Remove the declaration or register the check. |
+
+Which table each reader judges: the `check-hook-parity` registration and validity legs judge only the committed package table `templates/scripts/precommit-autofix.json` (package checkout only; not applicable where the canonical manifest is absent). They never read the local table, `skills_config.json` or the deployed `scripts/` copy; an absent committed table is could-not-check. `check-complexity`'s refusal text and the BO-3800 run read the shared loader, local table first, seed per missing declaration.
 
 Reason (c) names the table the declaration came from. Reasons (a) and (b) have no declaration to source, so they name the manifest.
 
@@ -82,7 +84,7 @@ Reason (c) names the table the declaration came from. Reasons (a) and (b) have n
 
 Unreadable or malformed input raises `RemedyInputError`, which `run_leg` returns as a could-not-check reason instead of violations. `report()` then emits the GE-120 `could_not_check` outcome and exits 2. It is never a pass and never "no declaration". If real violations were also found, the exit is 1.
 
-Inputs that raise: an existing `.claude/skills_config.json` that cannot be read, cannot be parsed, or is not a JSON object; an existing routing table that cannot be read or parsed, or whose `rules` is not a list of objects with string `hook_id`; a canonical manifest that exists but cannot be read, is not UTF-8, is not valid JSON, or has no `hooks_manifest` object; a malformed `hooks_manifest.hooks`; an excused list that is not a list of strings, in the working tree or a parent; git failing to run; a parent manifest that is not valid JSON.
+Inputs that raise: the committed package table `templates/scripts/precommit-autofix.json` being absent (where the canonical manifest exists); for run-time readers of the shared loader, an existing `.claude/skills_config.json` that cannot be read, cannot be parsed, or is not a JSON object; an existing routing table that cannot be read or parsed, or whose `rules` is not a list of objects with string `hook_id`; a canonical manifest that exists but cannot be read, is not UTF-8, is not valid JSON, or has no `hooks_manifest` object; a malformed `hooks_manifest.hooks`; an excused list that is not a list of strings, in the working tree or a parent; git failing to run; a parent manifest that is not valid JSON.
 
 ## Code versus AC
 

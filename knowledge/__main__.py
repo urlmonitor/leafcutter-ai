@@ -43,6 +43,10 @@ async def run(args: argparse.Namespace, *, observer: object | None = None) -> di
         if payload.get("repository_id") != args.repository_id:
             invalid("assessment repository differs from configured scope")
         return assess(payload)
+    if args.command == "retention":
+        from .cli_retention import run as retention_run
+
+        return await retention_run(args)
     if args.command in COMMANDS:
         return await catalog_run(args)
     if args.command in {"capabilities", "retrieve", "evaluate"}:
@@ -129,8 +133,10 @@ def main(*, observer: object | None = None) -> int:
     assessment = sub.add_parser("assess")
     assessment.add_argument("--repository-id", default="leafcutter")
     assessment.add_argument("--request", required=True)
+    from .cli_retention import add_parser as add_retention_parser
     from .cli_sync import add_parser
 
+    add_retention_parser(sub)
     add_parser(sub)
     from .cli_catalog import add_parser as add_catalog_parser
 

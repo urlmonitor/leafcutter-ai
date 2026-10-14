@@ -116,7 +116,6 @@ Exit codes
 
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import logging
@@ -190,56 +189,19 @@ _harvest_cli = _load_required_sibling_module("harvest_cli", "harvest_cli.py")
 
 _harvest_status = _load_required_sibling_module("harvest_status", "harvest_status.py")
 
+_identity = _load_required_sibling_module("record_identity", "record_identity.py")
+
 
 # ---------------------------------------------------------------------------
 # State helpers (hash-based idempotency, per ADR-011)
 # ---------------------------------------------------------------------------
 
 
-# The idempotency key, per INF-400b-2-i / INF-400b-2-ii: exactly the fields
-# the reconciled record shape requires of every producer. `ticket` and
-# `text` are optional and MUST NOT appear here under any spelling -- not
-# even as a defaulted-to-empty lookup, which is the substitution path that
-# produced the original defect (a constant key component that silently
-# discriminated nothing).
-_REQUIRED_DIGEST_FIELDS: tuple[str, ...] = (
-    "timestamp",
-    "agent",
-    "component",
-    "destination",
-    "entry_kind",
-)
-
-
-def _event_hash(event: dict[str, Any]) -> str:
-    """Return a stable SHA-256 hex digest for a knowledge_captured event.
-
-    The hash key is built from exactly ``_REQUIRED_DIGEST_FIELDS`` --
-    ``(timestamp, agent, component, destination, entry_kind)`` -- the set of
-    fields the reconciled record shape requires of every producer
-    (INF-400b-2-ii). Optional fields (``ticket``, ``text``) are deliberately
-    excluded: they must never contribute to identity, either because they
-    carry no discriminating information (``ticket`` is absent from every
-    real record) or because they carry content rather than identity
-    (``text``). This is stable across file rotation and compaction.
-
-    Pure function: no I/O, no shared-state mutation, so per the project
-    error-handling policy it is not wrapped in try/except here. A record
-    missing one of the required fields raises ``KeyError`` naming that
-    field; the caller (``harvest()``, at the I/O boundary) is responsible
-    for catching it, reporting the record's line number, and leaving the
-    record unprocessed rather than silently substituting an empty string.
-
-    Raises
-    ------
-    KeyError
-        If *event* is missing any field in ``_REQUIRED_DIGEST_FIELDS``.
-    """
-    key = json.dumps(
-        {field: event[field] for field in _REQUIRED_DIGEST_FIELDS},
-        sort_keys=True,
-    )
-    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+# Identity (INF-400b-2-i, amended by INF-400b-2-iii): the required fields PLUS
+# the learning text, and the rule for reading state written before the text
+# joined it, both live in record_identity.py -- shared with completion_routing.
+# KeyError on a missing required field is still caught per record in harvest().
+_event_hash = _identity.event_hash
 
 
 def _is_no_learning_text(event: dict[str, Any]) -> bool:
@@ -603,6 +565,7 @@ def harvest(
         sys.exit(2)
 
     new_hashes: set[str] = set()
+    shared_legacy = _identity.shared_legacy_hashes(raw_lines)
 
     # enumerate() over raw_lines (from splitlines(), so no trailing newline
     # entry) gives the 1-based line number exactly as it appears on disk,
@@ -683,8 +646,8 @@ def harvest(
                 result.outstanding += 1
             continue
 
-        # Already processed?
-        if h in seen:
+        # Already processed? (new hash, or an unambiguous legacy hash)
+        if _identity.is_processed(event, seen, shared_legacy):
             result.previously_processed += 1
             continue
 

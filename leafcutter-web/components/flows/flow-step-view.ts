@@ -1,4 +1,5 @@
 /** Shared drawer view model and the pure projection from a loaded flow. */
+import * as React from "react";
 import type { FlowContractDefinition, FlowIoContracts } from "@/lib/data/flow-contracts";
 import type { AcRef, Flow, FlowRealization, FlowScenario, WorkStatus } from "@/lib/data/types";
 import type { ActorKind } from "@/lib/data/actor-kind";
@@ -84,4 +85,31 @@ export function buildStepViews(
     });
   }
   return m;
+}
+
+/**
+ * How the address and the explorer's drawer selection talk: `initialId` is the
+ * graph node id whose drawer the address opened with (`?step=`), read once;
+ * `onChange` hears every later open / switch / close. Provided by <FlowsView>.
+ */
+export interface StepAddress {
+  initialId: string | null;
+  onChange?: (nodeId: string | null) => void;
+}
+export const StepAddressContext = React.createContext<StepAddress>({ initialId: null });
+
+/** The drawer selection: seeded from the address, reporting each real change up. */
+export function useStepSelection() {
+  const { initialId, onChange } = React.useContext(StepAddressContext);
+  const [id, setId] = React.useState<string | null>(initialId);
+  const current = React.useRef(id);
+  const report = React.useRef(onChange);
+  report.current = onChange;
+  const select = React.useCallback((next: string | null) => {
+    if (next === current.current) return;
+    current.current = next;
+    setId(next);
+    report.current?.(next);
+  }, []);
+  return [id, select] as const;
 }

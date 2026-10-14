@@ -1039,6 +1039,20 @@ async function agent(prompt, opts = {}) {
     return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
   }
 
+  // --- remedy-declaration read (BO-3800b) -------------------------------------
+  // A label matching /remedy|declaration/ is the driver reading a check's
+  // remedy declaration (the shared GE-132a-1 loader) -- not a phase agent. It is
+  // answered from scenario.remedy_declarations[hook_id] (hook_id found in the
+  // prompt) and is NOT recorded as an engaged party. An ABSENT entry answers
+  // {status: "error"} so an unreadable declaration is a visible stop.
+  if (/remedy|declaration/i.test(label)) {
+    const table = scenario.remedy_declarations || {};
+    const hookId = Object.keys(table).find((h) => String(prompt).includes(h));
+    return hookId
+      ? Object.assign({ status: "ok" }, table[hookId])
+      : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
@@ -1058,6 +1072,9 @@ async function agent(prompt, opts = {}) {
     // whatever the agent template can key on has to be in here.
     prompt: typeof prompt === "string" ? prompt : String(prompt),
     opts_keys: Object.keys(opts || {}),
+    // BO-3800b/c: the machine-readable brief a refusal-originated engagement
+    // carries as an `opts.brief` field (null when the dispatch sent none).
+    opts_brief: opts && opts.brief !== undefined ? opts.brief : null,
     opts_ticket_path:
       opts && typeof opts.ticket_path === "string" ? opts.ticket_path : null,
   });
@@ -1123,6 +1140,9 @@ async function agent(prompt, opts = {}) {
   // Passed through only when the scenario sets it, so a handoff spec that omits
   // it reproduces the real defect shape: `status: handoff` with no target field.
   if (spec.handoff_target !== undefined) reply.handoff_target = spec.handoff_target;
+  // BO-3800a-2: the refusal's machine-readable remedy record, passed through
+  // verbatim only when the scenario sets it.
+  if (spec.remedy !== undefined) reply.remedy = spec.remedy;
   return reply;
 }
 

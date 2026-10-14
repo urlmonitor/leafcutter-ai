@@ -180,6 +180,69 @@ amended_by:
     added one. Recording that connection is what turns three incidents into one
     principle with an existing home, and the block is written so the next person finds
     BP-1600a rather than re-deriving it from scratch.
+- reason: fourth-true-looking-and-wrong-shape-added-to-the-canonical-list
+  by: business-analyst
+  at: '2026-10-12'
+  note: >-
+    ADDITIVE. criteria, status (deprecated), req_status, work_status (todo), readiness
+    (reviewed), test_spec, superseded_by, doc_links, covered_by, implemented_by and
+    every other field are UNTOUCHED. One section is added to the canonical-list block
+    in notes, plus this entry.
+
+
+    TWO SMALL NON-ADDITIVE EDITS, DECLARED RATHER THAN SLIPPED IN. The block's heading
+    read "THREE WAYS ... ALL THREE WERE FOUND IN FOUR DAYS" and its first paragraph
+    read "Each of the three was found on a different record". Both now read for four.
+    Leaving a hardcoded count beside a list that grew would have made this block an
+    instance of its own shape (3) — a stated inventory that stops matching the
+    population it describes — which is not a joke worth preserving in the one document
+    that explains the defect.
+
+
+    SHAPE (4): A CONDITION ON ONE RECORD'S WORK, EVALUATED AGAINST A TREE THAT OTHER
+    RECORDS' WORK CAN MOVE. The instance is `declared_files[].state`, found 2026-10-12
+    during a declared-files hygiene pass on TQ-600a-13. The field's subject and the
+    thing that can move it have different owners, so declared and observed diverge
+    WITHOUT ANYONE MAKING A MISTAKE — which distinguishes it from shape (2), where a
+    true fact about the past was deliberately parked in the wrong field and defended.
+    Shape (2) is cured by a decision at authoring time; this one cannot be, because the
+    divergence is caused by another record's work after the fact. The defect is not the
+    divergence but that the check cannot name WHICH of two opposite causes it is seeing,
+    and its wording names the blaming one.
+
+
+    THE FIRST VERSION OF THIS ENTRY WAS WRONG AND IS CORRECTED IN PLACE WITH THE ERROR
+    KEPT VISIBLE, because the error is instructive. It was filed as "a present-tense
+    field holding a statement about the past", and the semantics question was put to the
+    owner as a two-way choice — ownership versus historical note — with the historical
+    reading favoured. BOTH CANDIDATES WERE WRONG: the marker is a BUILD PRECONDITION,
+    live while the work is pending and spent once built. The refuting evidence was in the
+    field's own enforcement: `existing` + absent BLOCKS A MERGE, and nothing blocks a
+    merge over a stale dated note. Reading it as history pointed straight at silencing
+    the advisory, which would have reached into the branch that produces that refusal —
+    so the wrong semantics would have disarmed a live gate. ENFORCEMENT IS BETTER
+    EVIDENCE OF A FIELD'S MEANING THAN ITS NAME OR ITS PROSE.
+
+
+    WHY IT IS RECORDED AS THE MOST COMMON MEMBER OF THE FAMILY: every other shape on
+    the list needs somebody to get something wrong first. This one needs no error at
+    all. And it is the only one with no revealing event — (1) surfaced when a carrier
+    was removed, (2) tripped three gates in sequence, (3) went red in CI, while (4) is
+    EXEMPTED BY DESIGN once `work_status: done`, by an exemption that is itself correct.
+    The defect is therefore not the behaviour but its STATED REASON: ACD-1600c-4-i
+    absolves the exempted entries "because the finished work is what created it", which
+    is true of 3 and false of 9 of the 12 entries it absolves (measured across the three
+    paths TQ-600a-13-x declares: 15 declarations, 3 by a creator, 12 exempted, 3
+    visible). A complete-sounding reason is what stops anyone counting the population.
+
+
+    WHERE THE CURE AND THE EVIDENCE LIVE: ACD-1600c-4-v settles the marker's meaning as
+    authoring-time state and adds the missing count to the one store-wide
+    declared-files report (readiness draft, pending the user); ACD-1600c-4-i carries the
+    correction to its own rationale in an additive amendment and notes block;
+    TQ-600a-13-x records why its three visible instances are deliberately NOT tidied
+    away. Per this block's own precedent with TQ-600a-13-xix and shape (3), the incident
+    records keep their detail and point here for the family.
 - reason: retired-carrier-was-the-wrong-mechanism-and-the-other-half-was-never-built
   by: business-analyst
   at: '2026-10-09'
@@ -490,12 +553,12 @@ notes: |
   block was incomplete. Set all four fields together.
 
   ==========================================================================
-  THREE WAYS A RECORD OR A GUARD CAN BE TRUE-LOOKING AND WRONG.
-  THE CANONICAL LIST. ALL THREE WERE FOUND IN FOUR DAYS, IN ONE SUBTREE.
+  FOUR WAYS A RECORD OR A GUARD CAN BE TRUE-LOOKING AND WRONG.
+  THE CANONICAL LIST. THE FIRST THREE WERE FOUND IN FOUR DAYS, IN ONE SUBTREE.
   ==========================================================================
-  WHY THIS LIST LIVES HERE RATHER THAN ONE SHAPE PER RECORD. Each of the three was
+  WHY THIS LIST LIVES HERE RATHER THAN ONE SHAPE PER RECORD. Each of these was
   found on a different record, and each is individually easy to read as a one-off
-  mistake by whoever wrote that record. They are not. They are three forms of a single
+  mistake by whoever wrote that record. They are not. They are forms of a single
   failure — something that LOOKS verified and is not — and the value is in recognising
   the family, not any one member. A reader who arrives at the retirement-shape block
   above will not find the third shape in a record about timing lanes, so the set is
@@ -583,6 +646,139 @@ notes: |
   BP-1600a-2 already requires its count to be greater than zero and TQ-600a-13-xix's
   criteria already require that "a lane that collects no test at all also concludes
   red" — both clauses exist for this reason and neither survives a careless refactor.
+
+  ==========================================================================
+  (4) A PRESENT-TENSE-LOOKING FIELD HOLDING A STATEMENT ABOUT THE PAST.
+      ADDED 2026-10-12. THE MOST COMMON MEMBER OF THIS FAMILY, BECAUSE IT IS THE ONE
+      THAT NEEDS NO ERROR TO OCCUR.
+  ==========================================================================
+  THE INSTANCE IS `declared_files[].state`, the per-path marker ACD-1600c-4 introduced,
+  whose two values are `existing` and `to_be_created`. It states a CONDITION ON THE TREE
+  AT THIS RECORD'S BUILD TIME — "the work expects to find this" / "the work must not
+  assume this is present" — and it is EVALUATED against the tree AS IT NOW STANDS. The
+  two agree on the day the record is written and diverge the moment ANY OTHER RECORD'S
+  WORK touches the path. The subject of the field and the thing that can move it have
+  DIFFERENT OWNERS, and that is the whole shape.
+
+  A NOTE ON GETTING THIS ENTRY RIGHT, BECAUSE THE FIRST VERSION OF IT WAS WRONG IN AN
+  INSTRUCTIVE WAY. It was filed on 2026-10-12 as "a present-tense field holding a
+  statement about the past" — i.e. the marker read as a dated historical note. That is
+  refuted by the field's own refusal branch: `existing` + absent on an unfinished record
+  BLOCKS A MERGE, and nothing blocks a merge over a stale historical note. The field is
+  live, forward-looking, and consumed at build time. The lesson is worth more than the
+  correction: WHEN A FIELD LOOKS LIKE IT IS STORING HISTORY, CHECK WHETHER ANYTHING
+  ENFORCES IT BEFORE CONCLUDING IT IS INERT — because the remedy for an inert field
+  (stop checking it) is the one thing you must not do to a live one. Reading it as
+  history led directly to a proposal to silence the advisory, which would have reached
+  into the branch that produces the refusal.
+
+  WHAT SEPARATES THIS FROM SHAPE (2), BECAUSE THE TWO LOOK ALIKE AND THE DIFFERENCE IS
+  THE WHOLE REASON IT IS A SEPARATE ENTRY. In (2) somebody DELIBERATELY PARKED a true
+  fact about the past in a present-tense field and defended it — three fields, three
+  arguments, each resolved by writing the fact in prose and making the field honest.
+  Here nobody parked anything and nobody argued for anything: the declaration was
+  correct, IS STILL CORRECT as a condition, and merely got SATISFIED EARLY by sibling
+  work. So (2) is cured by a decision at authoring time; (4) CANNOT BE, because the
+  divergence happens later and in another record's work. IT DIVERGES WITHOUT ANYONE
+  MAKING A MISTAKE. That is why it is the most common member: every other shape on this
+  list requires somebody to get something wrong first.
+
+  AND THE DEFECT IS NOT THE DIVERGENCE — IT IS THAT THE CHECK CANNOT NAME ITS CAUSE.
+  "Marked to be created but already exists" describes BOTH a precondition a sibling
+  satisfied early (author right, and deliberately safe) and a declaration no record
+  accounts for (author wrong), in the same words, and reads as the second. So a correct
+  record looks negligent — which invites exactly two harmful tidy-ups: re-mark to
+  `existing` (asserts a precondition the record cannot guarantee and arms a blocking
+  refusal keyed on another record's build order) or silence the advisory (disarms the
+  live refusal branch). THE INABILITY TO DISTINGUISH IS THE BUG. Both causes are
+  derivable from the store with no new field: does any other record declare this path,
+  and is that record finished?
+
+  AND THE PART THAT MAKES IT UNFINDABLE: THE DRIFT IS EXEMPTED RATHER THAN FLAGGED.
+  ACD-1600c-4-i exempts a finished record's to-be-created path that now exists from both
+  refusal and report. The exemption is CORRECT — re-reporting a true-when-authored
+  declaration forever, on finished work nobody can act on, is pure noise. But it means
+  that once `work_status: done`, NO GATE WILL EVER SURFACE THE CONDITION. Compare the
+  other three: (1) surfaced when an unrelated change removed the live carrier, (2) was
+  caught by three gates in sequence, (3) went red in CI. This one has no event that
+  reveals it at all. It is not hidden by an accident of what a gate was handed — it is
+  hidden BY DESIGN, by a correct exemption.
+
+  THE COMPOUNDING FACTOR, WHICH IS WHERE THE DEFECT ACTUALLY LIVES: A RIGHT BEHAVIOUR
+  WITH A WRONG REASON. ACD-1600c-4-i states the exemption's reason as "because the
+  finished work is what created it". That is FALSE whenever a path is shared between
+  records, and shared paths are the ordinary case in any multi-record family that builds
+  one module. MEASURED 2026-10-12 across the three paths TQ-600a-13-x declares: 15
+  `to_be_created` declarations; 3 on the record that created the path; 12 on finished
+  records absolved by that sentence, of which it is true of 3 and false of 9; and 3 on
+  the one still-unfinished record, which are THE ONLY THREE ANYTHING REPORTS. The wrong
+  reason is what makes the condition look accounted-for: it reads as a complete
+  explanation of every exempted entry, so nobody asks how many entries there are or how
+  many the sentence holds for.
+
+  THE TELL, AND IT IS A DIFFERENT TELL FROM (3)'s:
+
+      A field that states a condition on ONE record's work, evaluated against a shared
+      resource that OTHER records' work can move, where the two possible causes of a
+      divergence have OPPOSITE meanings and the check's wording names only one of them.
+
+  Ask of any such field: WHO CAN CHANGE THE THING THIS FIELD DESCRIBES, AND IS IT THE
+  SAME PARTY THAT OWNS THE FIELD? When the answer is no — as it is here, where one
+  record's marker is overtaken by another record's work — divergence is guaranteed, and
+  the only questions that matter are whether the check can say WHY and whether anything
+  counts the cases it waives.
+
+  THE CURE IS TWO-PART, AND NEITHER PART IS A REFUSAL, BECAUSE NEITHER CONDITION IS AN
+  ERROR. (a) For finished records, keep the exemption — a SPENT precondition has nothing
+  left to check — but fix its stated REASON and make the waived population COUNTABLE in
+  the store-wide report. (b) For unfinished records, keep the advisory live and RELABEL
+  it so it names its cause. Refusing would hold unrelated commits hostage to another
+  record's file lifecycle, the exact failure ACD-1600c-4-iv exists to prevent; silencing
+  would disarm the refusal branch; re-marking would arm a blocking refusal keyed on
+  another record's build order. ACD-1600c-4-v is the record (readiness draft as at
+  2026-10-12, carrying one open question about how the field's consumers actually read
+  it); ACD-1600c-4-i carries the correction to its own rationale; TQ-600a-13-x records
+  why its three visible instances are deliberately left alone rather than tidied away.
+
+  AND A COLLISION WITH THE RETIREMENT BLOCK ABOVE, WHICH IS WHY THIS SHAPE IS FILED IN THE
+  SAME RECORD AS THAT BLOCK RATHER THAN SOMEWHERE TIDIER. The already-exists exemption is keyed
+  on `work_status: done`. The retirement shape this record documents MANDATES
+  `work_status: done -> todo`. So retiring a record UN-EXEMPTS its declared files and turns a
+  silent, correct exemption into a PERMANENT advisory report — and an unclearable one, because
+  the only work that would clear it is work that has been deliberately retired. Measured
+  2026-10-12: the store-wide validator emits six already-exists lines across four records, and
+  three of them are TQ-600a-11, -11-ii and -11-iii — a family retired BY THIS BLOCK'S OWN
+  RECIPE. This is a FOURTH gate with the property the retirement block already names for three
+  others: "each refusal offers remedies that are locally reasonable and globally wrong ...
+  every one of them is a way of making a retired record look alive". It is absent from that
+  list only because the list predates the `declared_files` field. ANYONE APPLYING THE
+  RETIREMENT SHAPE TO A RECORD THAT CARRIES `declared_files` SHOULD EXPECT THIS, and the fix is
+  specified in ACD-1600c-4-v (a separate "requirement retired" section, exempted at commit time
+  on the same ground as a finished record), not in the retired record.
+
+  A NOTE ON WHERE THE SEMANTICS WERE SETTLED, because the prior question had to be
+  answered before the rationale could be called wrong — and the two candidate answers
+  put to the BA were BOTH WRONG, which is the most transferable part of this entry. The
+  choice offered was: does `to_be_created` mean "my own work creates this" (ownership)
+  or "this did not exist when I was authored" (a historical note)? They disagree about
+  whether 12 declarations are wrong or 0 are. ACD-1600c-4-v settles it as NEITHER — the
+  marker is a BUILD PRECONDITION, live while the work is pending and spent once it is
+  built. Ownership dies twice over: the two-value enum leaves a record whose work EDITS
+  a file a sibling CREATES with NO HONEST VALUE (nine of the fifteen measured
+  declarations are that shape), and a false ownership claim would have to REFUSE where
+  this condition is advisory by explicit design. The historical reading dies on the
+  refusal branch, as described above.
+
+  TWO ORDERING LESSONS, AND THE SECOND IS THE ONE THAT NEARLY WENT WRONG HERE:
+    - SETTLE WHAT THE FIELD MEANS FIRST. Until that is settled you cannot tell a
+      diverged record from a wrong one, and every count you take is of an undefined
+      population.
+    - DO NOT ACCEPT A TWO-WAY FRAMING OF THAT QUESTION. Both candidates here were
+      plausible, one was favoured, and the right answer was outside the pair. The
+      diagnostic that found it was asking WHAT THE FIELD'S ENFORCEMENT IMPLIES rather
+      than what its name or its prose suggests: a field with a blocking refusal attached
+      cannot be inert, whatever the notes say about it. Enforcement is better evidence
+      of meaning than documentation, because it is what actually happens.
 
   THE SIBLING TO READ NEXT. INF-600b-3 requires the card to be assembled from the
   agent's own declared facts and nothing else, so that adding a criterion to the store

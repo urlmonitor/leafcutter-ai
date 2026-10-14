@@ -1,19 +1,19 @@
 ---
-title: "How to work with leafcutter end-to-end"
+title: How to work with leafcutter end-to-end
 type: how-to
 status: active
 created: 2026-06-03
 last_updated: 2026-06-03
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/ticket-lifecycle.md
-  - docs/architecture/agent_delivery_workflows.md
-  - docs/agents/README.md
-  - docs/how-to/drain-backlog-with-build-backlog.md
-  - docs/how-to/drive-epic-manually.md
+- docs/ticket-lifecycle.md
+- docs/architecture/agent_delivery_workflows.md
+- docs/agents/README.md
+- docs/how-to/drain-backlog-with-build-backlog.md
+- docs/how-to/drive-epic-manually.md
+description: Overview of How to work with leafcutter end-to-end.
 ---
-
 # How to work with leafcutter end-to-end
 
 This guide walks you through the full daily workflow lifecycle — from capturing
@@ -183,8 +183,10 @@ producing low-quality output.
 /feedback-report --since 2026-06-01
 ```
 
-The `feedback-analyst` agent reads `debugging/logs/agent_telemetry.jsonl` and
-returns a prioritized summary grouped by category (e.g. tooling-issue,
+The `feedback-analyst` agent runs `trend_report.py`, which reads the install's
+declared `feedback_sink` (`<operational_log_root>/feedback.jsonl`, recorded at build
+time in `.leafcutter/config/knowledge_sink.json`) and states on stderr which file it
+read and how many records it found. It returns a prioritized summary grouped by category (e.g. tooling-issue,
 slow-agent, wrong-output). Use the output to decide which agents or workflows
 to improve next.
 

@@ -1,0 +1,72 @@
+id: AR-400b-1-i
+title: "Adding an ability to the derived central record by hand does not satisfy the grant check"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the tree of AR-400b-1, in which "probe-agent" is told to load
+    "knowledge-query" and its own definition grants only "signoff",
+    And the central registry entry for "probe-agent" has been edited by hand to
+      list "knowledge-query",
+  When the build runs,
+  Then the build still stops with the "ability exists but is not granted"
+    finding for "probe-agent" / "knowledge-query",
+    And removing the hand edit from the central registry, with the definition
+      left unchanged, leaves the finding identical.
+depends_on:
+  - AR-400b-1
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Same discipline for delivery: editing only the derived copy changes nothing the agent sees. This applies it to the reference check."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The finding text is byte-identical with and without the hand edit to config/agent_registry.json; nothing about the registry entry appears in or alters the finding."
+  - "The check must not regenerate or rewrite the registry as a side effect of running (the build never writes the package source tree; the commit-time transform hook is the only writer)."
+test_spec:
+  - name: test_hand_edited_registry_does_not_satisfy_the_grant_check
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Copied package slice from AR-400b-1 plus knowledge-query added by hand to probe-agent's registry skills_invoked; the validator CLI still fails with the identical 'not granted' finding."
+    must_catch:
+      - "the grant side is the union of declaration and registry"
+  - name: test_finding_is_identical_with_and_without_the_registry_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run twice, with and without the hand edit; the finding lines are byte-identical and the registry file is unchanged by either run."
+test_rationale: >-
+  A union read passes AR-400b-1's positive clauses; only planting the ability
+  in the registry alone exposes it.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-1
+  contract: "The grant-coverage verdict computed from the declaration only."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The discrimination record for "against the own declaration". A check that
+  reads the declaration AND the registry (union) passes AR-400b-1's positive
+  clauses and fails this one.
