@@ -41,7 +41,7 @@ MAKER_VERSION = "1.0.0"
 SCHEMA_VERSION = 1
 PROTECTED = frozenset({"main", "master"})
 # Requests the maker declines (answer status "refused", exit 2) rather than fails.
-REFUSAL_CODES = frozenset({"TICKET_NOT_ON_BASE", "OCCUPIED"})
+REFUSAL_CODES = frozenset({"TICKET_NOT_ON_BASE", "OCCUPIED", "UNSENT_WORK"})
 KINDS = ("ticket", "feature", "ac", "fastlane", "epic", "scratch")
 _PREFIX = {"ticket": "ticket/", "feature": "feature/", "ac": "ac/",
            "fastlane": "fastlane/", "epic": "EPIC-", "scratch": ""}
@@ -113,8 +113,11 @@ def _on_rm_error(func: object, path: str, _exc: object) -> None:
 
 def discard_tree(path: Path) -> None:
     """Delete a workspace folder; a failure is logged and raised."""
+    target = str(path)
+    if os.name == "nt" and not target.startswith("\\\\?\\"):
+        target = "\\\\?\\" + os.path.abspath(target)  # extended-length: long paths
     try:
-        shutil.rmtree(path, onerror=_on_rm_error)
+        shutil.rmtree(target, onerror=_on_rm_error)
     except OSError as exc:
         log.warning("cannot delete %s: %s", path, exc)
         raise

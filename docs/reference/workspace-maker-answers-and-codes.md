@@ -60,7 +60,7 @@ Present on `ensure`, `locate`, `verify`, `remove`, and on each element of `list.
 | `ensure` with `--ticket` | `ticket_path_in_worktree` (string), `ticket_path_in_worktree_posix` (string); see [Ticket Location Fields](#ticket-location-fields). |
 | `locate` | Entry fields only. |
 | `list` | `workspaces` (array of entry objects). |
-| `remove` | Entry fields of the removed workspace, `removed` (boolean, `true`). |
+| `remove` | Entry fields of the removed workspace, `removed` (boolean, `true`), `removed_path` (string: the folder that was deleted; the answer is `ok` only after a post-check finds nothing left there), `discarded` (object `{commits, files}`: the unsent work thrown away under `--discard`; both lists empty for a clean workspace). |
 | `where` | `maker_path` (string). `where` carries no entry fields. |
 
 ### Ticket Location Fields
@@ -91,7 +91,7 @@ Example, `ensure --kind ticket --slug BO-4300a-1-ii --ticket tickets/00_inbox/t.
 
 ### Refused answer
 
-Returned for `TICKET_NOT_ON_BASE` and `OCCUPIED` (`workspace_core.REFUSAL_CODES`): the maker declined the request; nothing is broken.
+Returned for `TICKET_NOT_ON_BASE`, `OCCUPIED` and `UNSENT_WORK` (`workspace_core.REFUSAL_CODES`): the maker declined the request; nothing is broken.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -101,7 +101,8 @@ Returned for `TICKET_NOT_ON_BASE` and `OCCUPIED` (`workspace_core.REFUSAL_CODES`
 | `message` | string | Human-readable cause. |
 | `ticket_path` | string | `TICKET_NOT_ON_BASE` only: the `--ticket` value exactly as requested. |
 | `reason` | string | `TICKET_NOT_ON_BASE` only: `"absent"` (base or resumed `HEAD` lacks the file) or `"differs"` (new workspace only: base holds other bytes than the main copy). |
-| `workspace_path` | string | `OCCUPIED` only: the occupying folder. Never on `TICKET_NOT_ON_BASE`. |
+| `workspace_path` | string | `OCCUPIED` only: the occupying folder. Never on `TICKET_NOT_ON_BASE` or `UNSENT_WORK`. |
+| `unsent` | object | `UNSENT_WORK` only: `commits` (list of commit identifiers on the workspace's branch reachable from neither `origin/<branch>` nor `origin/main` after a fetch) and `files` (list of paths with uncommitted or untracked changes). |
 
 Like an error answer, a refused answer carries no `mechanism` or `maker_version`.
 
@@ -117,7 +118,7 @@ Like an error answer, a refused answer carries no `mechanism` or `maker_version`
 | `code` | string | Refusal code (see Status and Refusal Codes). |
 | `verb` | string | Verb requested; `"unknown"` when the first word is not a verb. |
 | `message` | string | Human-readable cause. |
-| `workspace_path` | string | Optional. Present on `WORKSPACE_INCOMPLETE`, `NOT_READY` (verify), `UNSAVED_WORK`, and `TICKET_NOT_FOUND` after creation. |
+| `workspace_path` | string | Optional. Present on `WORKSPACE_INCOMPLETE`, `NOT_READY` (verify), and `TICKET_NOT_FOUND` after creation. |
 | `checks` | object | Optional. Present on `NOT_READY` raised by `require_ready`. |
 | `candidates` | list | Optional. Present on `AMBIGUOUS_REPO`. |
 | `how`, `searched_from` | string | Optional. Carried over from the resolver result on `AMBIGUOUS_REPO` and `NO_REPO`. |
@@ -138,7 +139,7 @@ An error answer carries no `mechanism` or `maker_version`.
 
 ## Status and Refusal Codes
 
-Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspace_create.py`, `workspace_checks.py`. `OK` is the only ok code. The two codes in `REFUSAL_CODES` answer status `refused`; all others answer `error`.
+Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspace_create.py`, `workspace_checks.py`. `OK` is the only ok code. The three codes in `REFUSAL_CODES` answer status `refused`; all others answer `error`.
 
 | Code | Returned when | Raised in |
 |---|---|---|
@@ -154,7 +155,7 @@ Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspa
 | `NOT_FOUND` | `locate`, `verify` or `remove` matched no workspace in the landing place. | `_find`, `verb_locate` |
 | `IDENTITY_MISMATCH` | `verify` was given a `--kind` or `--slug` that differs from the marker. | `verb_verify` |
 | `NOT_READY` | A readiness check failed (`ensure`, `verify`), or `verify` found marker state other than `ready`. | `require_ready`, `verb_verify` |
-| `UNSAVED_WORK` | `remove` without `--discard` found uncommitted changes or unpushed commits. | `_refuse_unsaved` |
+| `UNSENT_WORK` | Answer status `refused`, exit 2. `remove` without `--discard` found unsent work: commits on the workspace's branch reachable from neither `origin/<branch>` nor `origin/main` after a fetch, or uncommitted or untracked changes. The answer carries `unsent.commits` (identifiers) and `unsent.files` (paths); nothing is deleted and the workspace is unchanged. `remove` never reads stdin or prompts, so an unattended caller always gets this answer rather than a stall. | `verb_remove`, `_unsent_work` |
 | `REMOTE_DELETE_FAILED` | `git push origin --delete <branch>` failed. | `verb_remove` |
 | `REMOVE_FAILED` | The workspace folder could not be deleted. | `verb_remove` |
 | `NO_CONFIG` | `--config-path` is not a file; the main checkout has no install config or it is unreadable; the derived build config cannot be written. | `derive_build`, `_main_config`, `_build` |
@@ -176,8 +177,8 @@ Source: `worktree.main`.
 | Exit code | Meaning |
 |---|---|
 | `0` | The verb answered `status: ok`. |
-| `1` | The verb answered `status: error` (any code above except the two refusals), including argument errors. |
-| `2` | The verb answered `status: refused` (`TICKET_NOT_ON_BASE`, `OCCUPIED`). |
+| `1` | The verb answered `status: error` (any code above except the three refusals), including argument errors. |
+| `2` | The verb answered `status: refused` (`TICKET_NOT_ON_BASE`, `OCCUPIED`, `UNSENT_WORK`). |
 
 The parser never exits with argparse's own status `2`; usage errors become a `BAD_ARGUMENT` answer with exit `1`, so exit `2` always means a refusal. Logger warnings go to stderr.
 
