@@ -1,0 +1,125 @@
+id: BO-4500
+title: "A fix to how work is committed, delivered or set up lands once, and every route gets it"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  Fix it once, fixed everywhere -- every route hands over your work the same way.
+
+  Whichever way work gets done on your behalf -- a full build, a quick fix, the fast
+  lane, planning requirements or wrapping up a feature -- the routine steps that save,
+  deliver and prepare that work behave identically, because there is only one of each.
+  When one of those steps is improved, every route gets the improvement the same day,
+  and no route is left carrying an old mistake that another route already outgrew. Moving
+  a route onto the shared step never makes it worse than it was: the shared step starts
+  from the best version that already exists, and every problem that version was fixed
+  for stays fixed.
+depends_on: []
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      EVIDENCE BASE -- cite, do not re-derive. Cluster C6 ("Commit, push, PR and merging
+      origin/main") inventories the 8+ commit recipes, five staging policies and three
+      retry policies, and names the consolidation targets (commit_changes.py,
+      sync_with_main.py, open_pr.py). Section 1 "fixed here, not there" (20+ cases) is
+      the origin of this goal's standing migration rule.
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The SET-UP half of this goal's title is already owned by BO-4300 (one door for
+      making, finding and clearing workspaces). BO-4500 does not re-specify it; it
+      extends the same "one way, every caller" promise to saving and delivering work.
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      What a single delivery must guarantee (complete, all-or-nothing, rolled back on
+      failure). BO-4500 makes that ONE shared step every route calls; it does not restate
+      the atomicity or rollback properties.
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      What kind of message a commit gets. Message authoring stays upstream of the shared
+      step; BO-4500 carries the message the caller wrote and never rewrites it.
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a]
+implemented_by: []
+notes: |
+  ORIGIN. BrainCandy, 2026-10-12: "yes, lets plan-feature the central commit handling",
+  answering a proposal to author BO-4500 on the 2026-09-25 duplication analysis, commit
+  step first, with a "start from the hardened copy, run the replaced KIs' tests" rule on
+  every migration AC. The L0 title is the one a BA placement audit recommended; kept
+  verbatim because it already passes the stakeholder test and names no single tool.
+
+  WHY A NEW L0 (Pattern A, ac-tree-split). BO-2400, GE-127 and ACD-300 L1s are at their
+  child caps (stated in the request). BO-200 is the nearest semantic parent but its subject
+  is the PROPERTIES of one delivery (envelope, atomic, rollback); this goal's subject is
+  that there is ONE shared step every route calls -- the same split BO-4300 made against
+  BO-4100/1700/1800 for workspaces. Rule for future requests: "what a delivery must
+  guarantee" -> BO-200; "what message it gets" -> BO-1100; "concurrent commits must not
+  corrupt a shared store" -> BO-1600; "that every route uses the one shared step, and a
+  fix to it reaches all of them" -> BO-4500.
+
+  STANDING RULE -- applies to EVERY child of this L0 that moves a route onto a shared step,
+  and must survive decomposition to L2/L3 as an explicit criterion, not a note:
+    (1) The shared step starts from the HARDENED copy of the logic, never a weaker
+        sibling's. The analysis found 20+ "fixed here, not there" cases, and the fast lane
+        is often the copy that WAS fixed (e.g. KI-BO-020; the hardened AC writer in
+        _fl_lifecycle). A route moving onto a shared step built from a weaker copy gets
+        those bugs back.
+    (2) The regression tests behind every known issue the shared step replaces are run
+        against the shared step itself, not left pointing at the retired copy.
+
+  SCOPE OF THIS RUN (2026-10-12). The L0 plus ONE L1 (BO-4500a, the commit step) and its
+  L2/L3. Deliberately fewer than the usual 3-7 L1s: the remaining siblings are named here so
+  the slots are reserved, and each needs its own /plan-feature run:
+    - delivering work for review (C6's open_pr.py: account from config, body from file;
+      KI-BO-20260925-templates-hardcode-a-personal-gh-account);
+    - catching up with the shared line safely (C6's sync_with_main.py: fetch, merge,
+      additive-only audit, halt on deletions -- today CLAUDE.md prose only);
+    - the shared-code mechanism that lets a workflow body reuse logic at all (the
+      "inliner"; ADR-030's no-require constraint).
+  The PR step, the inliner and any generalisation of command-step-runner are OUT OF SCOPE
+  here except as dependencies stated on BO-4500a.
+
+  FRAMEWORK NEUTRALITY. The promise is "one shared step, every route", not "one shared step
+  inside today's workflow engine". It must keep holding if the routes move to a different
+  orchestration framework (LangGraph, Claude Agent SDK). Children must not specify the step
+  in a way only the current engine can host.
+
+  NEIGHBOURS TO CITE, NOT DUPLICATE: BO-4300 (set-up, one door), BO-4400 (clean-up on every
+  route), BO-200 (delivery completeness / rollback), BO-1100 (message kind), BO-1600
+  (concurrent-commit safety in a shared store; prevention-only by design), BO-1800
+  (per-drive isolation; supersedes the shared-store assumption), BO-210 (hook-failure fix by
+  the originating coder), BO-3800 (a refusing standard summons a specialist), BO-3200f (open
+  PR #971, readiness draft: routine command steps go to the chartered executor
+  command-step-runner instead of an agent that may decline -- the MEANS by which a workflow
+  reaches this goal's shared step, not this goal), BO-2400a-1-i (owns command-step-runner).
+
+  IT PO 2026-10-14. The reserved "inliner" sibling is now a stated DEPENDENCY of BO-4500a, not
+  only a future slot: the depth-0 "engage the specialist on a handoff, then re-offer the commit"
+  loop introduced by BO-3800a's commit.js is needed by every workflow that commits, and typing it
+  into each one is the duplication this goal exists to stop. It must be shared through that L1,
+  generalising BO-4300c-3's build-inlined marker block to arbitrary shared blocks. Not authored
+  here; needs its own /plan-feature run.

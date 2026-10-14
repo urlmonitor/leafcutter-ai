@@ -1,0 +1,92 @@
+id: BO-4500a-3-ii
+title: "After the last allowed retry a failure is reported -- a fixer that never settles cannot loop the step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-3.yaml"
+criteria: |
+  Given on the first run of the checks a fixing check rewrites a.py,
+  And on the second run a judging check fails on a.py,
+  When the shared commit step continues,
+  Then no commit is recorded and the checks have run exactly twice,
+  And the answer is hook_failed naming the judging check, with a.py in failing_files.
+
+  Given a fixing check that rewrites a.py on every run, so its output never settles,
+  And the configured retry ceiling is the default of 3,
+  When the step has run the checks once and then retried 3 times,
+  Then it stops, no commit is recorded, the checks are not run a fifth time,
+  And the answer is hook_failed naming the fixing check, with a.py in failing_files.
+depends_on: [BO-4500a-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "States up to 3 retries; contradicts the single-retry budget. Flagged on BO-4500a-3."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - The check runner is invoked at most 1 + max_automated_fix_retries times per call (config/commit_step.json, default 3, so 4 runs), the ceiling read once before the loop starts and never derived from check output (KI-BO-20260914-autofix-depth is the recursion shape this bounds).
+  - >-
+    Codes (BO-4500a-4 enum): a judging check failing on any re-run is hook_failed with
+    check_failed; a fixing check still rewriting files on the last allowed run is hook_failed with
+    check_unsettled, hook_name naming the fixer, failing_files the files it rewrote. remedy carries
+    the fixer's declaration if it has one (disposition mechanical-autofix), else null.
+  - The fixer's last-run rewrite is kept in the working tree and not staged; nothing is committed.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence."
+test_required: true
+test_spec:
+  - name: test_judging_failure_on_second_run_stops_after_two_runs
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Fixer rewrites a.py on run 1, judging check fails a.py on run 2; check runner ran exactly twice, no commit, hook_failed with check_failed naming the judging check."
+  - name: test_never_settling_fixer_is_stopped_at_the_configured_ceiling
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A fixture fixer that rewrites a.py on every run yields hook_failed with check_unsettled naming the fixer and a.py. With the default ceiling the runner was invoked exactly 4 times (1 + 3); with max_automated_fix_retries set to 1 in a disposable config, exactly 2 times."
+    must_catch:
+      - "retry until the fixer settles"
+      - "a retry ceiling hard-coded in the step instead of read from config/commit_step.json"
+test_rationale: >-
+  A run count is countable only from a fixture check that logs each invocation during a real
+  run of the step. Running the never-settling case at two ceilings (default and 1) is what
+  proves the ceiling is read from config rather than hard-coded.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by:
+  - reason: retry-ceiling-configured-default-3
+    by: BrainCandy
+    at: 2026-10-14
+    note: >-
+      Follows BO-4500a-3's amendment of the same date. Title "After the one retry" became "After
+      the last allowed retry"; the never-settling-fixer scenario now stops after the first run
+      plus the configured ceiling (default 3) instead of after two runs. The first scenario
+      (a fixer then a judging failure stops at two runs) is unchanged.
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The run count is the countable form of "probe, then up to the configured number of retries";
+  a test counts check runs. (Before 2026-10-14 this read "exactly twice"; see amended_by.)
+  KI-BO-20260914-autofix-depth (cited in C6) is the recursion shape this bounds.

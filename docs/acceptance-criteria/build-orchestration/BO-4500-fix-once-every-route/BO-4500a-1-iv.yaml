@@ -1,0 +1,103 @@
+id: BO-4500a-1-iv
+title: "A named file that is missing, outside the workspace or unchanged gets a precise answer, not a guess"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-1.yaml"
+criteria: |
+  Given the caller names a.py (changed) and ../other-repo/z.py, a path outside the workspace,
+  When the shared commit step runs,
+  Then no commit is recorded, a.py is not left staged by the call,
+  And the answer is refused with a reason naming ../other-repo/z.py as outside the workspace.
+
+  Given the caller names a.py (changed) and never-existed.py, which is neither tracked nor
+    present on disk,
+  When the step runs,
+  Then no commit is recorded and the answer is refused with a reason naming never-existed.py.
+
+  Given the caller names only b.py, which is tracked and has no change,
+  When the step runs,
+  Then no commit is recorded,
+  And the answer is nothing_to_commit with an empty paths list and no commit id.
+
+  Given the caller names gone.py, which is tracked and has been deleted from the working tree,
+  When the step runs and every check passes,
+  Then the commit records the deletion of gone.py and the answer is committed with gone.py in
+    paths.
+depends_on: [BO-4500a-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Failure shape 2 ('could not check reads as a pass'): a request that names a wrong file must not come back looking like success or like nothing to do."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Every named path is validated before anything is staged and before any check runs; one invalid
+    entry refuses the whole call (all-or-nothing), naming every offending entry in the reason.
+  - >-
+    Codes (BO-4500a-4 enum): a path that resolves outside the workspace root after normalising
+    ".." and symlinks is policy_path_outside_workspace; a path neither tracked nor present is
+    policy_path_not_found; a call whose named paths are all valid but unchanged is
+    nothing_to_commit with reason_code nothing_changed.
+  - A tracked path deleted from the working tree is a valid entry and commits as a deletion.
+  - Path validation is resolved against the workspace the step was started in, never the process's parent directory or a main checkout.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-1
+  contract: "Explicit-path staging rule."
+test_required: true
+test_spec:
+  - name: test_path_outside_workspace_refuses_the_whole_call
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Naming a.py and ../other-repo/z.py answers refused, reason_code policy_path_outside_workspace, reason naming ../other-repo/z.py; no commit and a.py not staged."
+  - name: test_never_existed_path_is_refused_not_nothing_to_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Naming a.py and never-existed.py answers refused with policy_path_not_found naming never-existed.py."
+    must_catch:
+      - "skip the missing path and commit a.py"
+      - "answer nothing_to_commit for a misspelt path"
+  - name: test_unchanged_tracked_file_answers_nothing_to_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Naming only unchanged b.py answers nothing_to_commit, reason_code nothing_changed, paths [] and sha null."
+  - name: test_deleted_tracked_file_commits_as_a_deletion
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Naming deleted gone.py records its deletion and the answer is committed with gone.py in paths."
+test_rationale: >-
+  The record distinguishes a wrong request from an empty one; each test runs the real step on a
+  scratch repo and asserts status, reason_code and git state together, so a fallback that turns a
+  misspelt path into nothing to commit goes red.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  nothing_to_commit and refused are deliberately different answers (L1 notes: "distinct outcomes,
+  never a success"). A misspelt path must be refused, not reported as nothing to commit, or a caller
+  whose whole change was misnamed reads "nothing to do" and moves on with the work uncommitted.

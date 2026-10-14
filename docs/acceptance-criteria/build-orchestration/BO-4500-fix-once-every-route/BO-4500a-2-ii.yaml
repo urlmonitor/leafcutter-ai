@@ -1,0 +1,82 @@
+id: BO-4500a-2-ii
+title: "Trailers are the caller's to choose: none is added, several are kept, and a retry keeps the same message"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-2.yaml"
+criteria: |
+  Given a message file with a subject and a body and no Co-Authored-By line,
+  When the shared commit step commits,
+  Then the recorded message has no Co-Authored-By line.
+
+  Given a message file ending with two trailers, in this order:
+    "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>" and
+    "Co-Authored-By: BrainCandy <braincandy@example.com>",
+  When the step commits,
+  Then the recorded message ends with the same two lines in the same order.
+
+  Given a fixing check rewrites a named file during the first run of the checks,
+  When the step runs the checks a second time and records the commit,
+  Then the recorded message is identical to the caller's file, line for line, exactly as it
+    would have been without the fix.
+depends_on: [BO-4500a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "BO-200c-4 lets the BODY be amended after an autofix to reflect extra staged files. Under the shared step the staged set cannot grow (BO-4500a-1-iii), so no amendment is needed and the message stays whole. Flagged as a narrowing of BO-200c-4 for the IT PO."
+assigned_agent: python-coder
+estimated_complexity: XS
+package_surface: false
+it_requirements:
+  - The step adds no trailer of any kind (no Co-Authored-By, no sign-off line, no change-id) and reorders none.
+  - >-
+    The in-call retry after a fixing check (BO-4500a-3) re-uses the caller's file as is; the
+    message is never amended to describe a rewrite. This narrows BO-200c-4 (which lets the body be
+    amended after autofix): under the step the staged set cannot grow (BO-4500a-1-iii), so no
+    amendment is needed. Flagged for BO-200c-4's owner.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-2
+  contract: "Message-from-file rule."
+test_required: true
+test_spec:
+  - name: test_message_without_trailer_gains_none
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A message with subject and body and no Co-Authored-By line is recorded with no Co-Authored-By line."
+  - name: test_two_trailers_are_kept_in_order
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The recorded message ends with the Claude Opus 5.5 trailer then the BrainCandy trailer, in that order."
+  - name: test_message_after_fixer_retry_equals_the_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "When a fixture formatter rewrites a named file on the first run, the message recorded after the second run is identical to the file."
+    must_catch:
+      - "amend the body to mention the autofix"
+test_rationale: >-
+  Each test reads the real recorded commit message back from git; the retry case uses a real
+  fixture formatter so the message path through the retry is exercised, not assumed.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
