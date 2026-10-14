@@ -52,9 +52,10 @@ def load_set_aside() -> tuple[list[tuple[str, str]], list[str]]:
 def ground_for(folder: str, entries: list[tuple[str, str]]) -> str | None:
     """Return the ground of the declared location containing *folder*, else None.
 
-    Matching is exact on whole path components: ``docs/a`` contains
+    Matching is exact on whole path components (backslash separators are read as "/"): ``docs/a`` contains
     ``docs/a/b`` but not ``docs/a-archive``.
     """
+    folder = folder.replace("\\", "/")
     for path, ground in entries:
         if folder == path or folder.startswith(path + "/"):
             return ground

@@ -294,6 +294,6 @@ coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
 
 ## Folder Density Check (check-folder-density)
 
-Refuses a commit that takes a folder past 15 non-markdown files; a folder already over may not grow. Folders under a `folder_density.set_aside_locations` entry (`path` plus non-blank `ground`, matched by whole path
-components, never by name) are set aside: the shipped entry is `docs/acceptance-criteria/`, the AC store. Set-aside folders are listed with their ground and counted apart from judged ones, so
-a commit touching only them reports 0 judged. An absent or malformed declaration sets nothing aside and says so; an empty one sets nothing aside (GE-133a).
+Refuses a commit that takes a folder past 15 non-markdown files; a folder already over may not grow. Folders at or below a `folder_density.set_aside_locations` entry (`path` plus non-blank `ground`, matched by whole path components, never by name) are set aside, listed with their ground and counted apart from judged ones; 0 judged is reported, not passed. Shipped: `docs/acceptance-criteria/` (the AC store): records tools read and write and nobody navigates by hand; flat by design, one folder per feature family, bounded by the store's tree limits, not a file count.
+`docs/decisions/` (the decision kernel's record store): one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing.
+An absent or malformed declaration judges everything and says so; an empty one sets nothing aside (GE-133a).

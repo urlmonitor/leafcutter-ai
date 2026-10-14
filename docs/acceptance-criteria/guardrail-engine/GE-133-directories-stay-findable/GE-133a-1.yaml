@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: draft
 work_status: done
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -144,11 +144,15 @@ it_requirements:
     templates/scripts/commit_guardian/commit_guardian.json, beside max_files_per_folder and
     excluded_dirs, under the key set_aside_locations: a list of objects, each with a
     repo-relative directory `path` and a non-blank `ground` string. No new configuration
-    file. Ship exactly one entry: path docs/acceptance-criteria/, ground 'Holds
+    file. Ship exactly two entries: (1) path docs/acceptance-criteria/, ground 'Holds
     acceptance-criteria records that tools read and write and nobody navigates by hand. It
     is flat by design, one folder per feature family, and its folders are bounded by the
-    AC store''s tree limits rather than by a file count.' No size bound on the entry
-    (dropped by BrainCandy, 2026-10-12)."
+    AC store''s tree limits rather than by a file count.'; (2) path docs/decisions/, ground
+    'Holds kernel decision records, one file per decision, written and read by the
+    kernel''s publish, index and precedent tools; people review records in PRs, not by
+    browsing the folder.' Each ground ships as worded here; inside a quoted ground, ''
+    stands for one apostrophe. No size bound on either entry (dropped by BrainCandy,
+    2026-10-12)."
   - "SHARED WITH GE-127g: SHAPE AND KEY NAME, NOT THE LIST. Use the same key name, entry
     shape and blank-ground rule GE-127g's L1 pins for the doc_length section, so one
     configuration file expresses a set-aside one way. Keep a separate list in
@@ -267,6 +271,24 @@ test_spec:
       refused and the only folder named too dense is the store folder.
     must_catch:
       - "hard-code docs/acceptance-criteria/ in the check and ignore the declaration"
+  - name: test_shipped_declaration_sets_aside_both_record_stores
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: deployed
+    surface_invoked: scripts/commit_guardian/check_folder_density.py
+    description: >-
+      The shipped declaration, not a scratch one. RED on origin/main e93eda09a, which ships
+      only the docs/acceptance-criteria/ entry. The scratch repository uses the deployed
+      commit_guardian.json copied UNMODIFIED out of shared_reference_layout. At the parent
+      revision docs/decisions/ holds 15 countable files and a store feature folder holds 15;
+      the commit adds 2 decision records to docs/decisions/ (to 17) and 4 records to the
+      store folder (to 19). Assert git commit exits 0 and the outcome names both folders as
+      set aside, each with the ground the first it_requirement words for its entry.
+    must_catch:
+      - "ship only the docs/acceptance-criteria/ entry"
+      - "add decisions to the name-matched excluded_dirs list instead of declaring the location"
+      - "ship a ground other than the one the first it_requirement words for that entry"
 test_rationale: >-
   Every entry is a real git commit in a scratch repository whose pre-commit hook runs the
   deployed check copied out of the session-scoped shared_reference_layout, so the tests
@@ -275,7 +297,10 @@ test_rationale: >-
   commit_guardian.json passes on a check that never reads it, so none is written. The
   must_catch lists are the BA's named mutations (1)-(7), distributed to the arm that
   catches each. Red/green today: arms 1, 2, 3 and 5 RED; arm 4 GREEN by design as the
-  negative control that a switched-off or hard-coded check fails.
+  negative control that a switched-off or hard-coded check fails. The sixth entry
+  (added 2026-10-12, dec-e34583d93c00584f) is the only one that runs the SHIPPED
+  configuration unmodified: it proves the two shipped entries and their grounds by a real
+  commit, not by a presence test.
 delivers_to:
   agent: python-coder
   contract: >-
@@ -299,9 +324,37 @@ amended_by:
       BrainCandy slimmed GE-133a to two L2s. This record absorbed the deleted GE-133a-3's
       guarantees (second, third and fourth arms) and dropped its own standalone
       new-folder arm, which now rides in the first arm's commit.
+  - reason: second-shipped-set-aside-entry-and-approval-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores"). The first it_requirement (WHERE AND WHAT) now ships exactly two
+      set_aside_locations entries instead of one: docs/acceptance-criteria/ with its
+      ground unchanged, and docs/decisions/, the decision kernel's flat record store (one
+      file per decision, written and read by the kernel's publish, index and precedent
+      tools; past the limit of 15 it blocks merges). One sentence now says each ground
+      ships as worded and that '' inside a quoted ground stands for one apostrophe.
+      test_spec gained test_shipped_declaration_sets_aside_both_record_stores, the one
+      test that runs the shipped configuration unmodified; test_rationale says so.
+      readiness moved draft -> approved by the same decision. work_status moved done ->
+      todo: the build merged in PR #1168 ships one entry, and its docs/acceptance-criteria/
+      ground ("the AC store is flat by design: records read by tools and navigated by
+      nobody (GE-133a)") is not the one this requirement words, so the amended
+      requirement is not met on main. The done-proof gate cannot see that (every existing
+      test uses a scratch declaration), so the status has to say it. The record goes done
+      again when the second entry, the worded grounds and the new test land. criteria,
+      title, req_status and depends_on are unchanged.
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/commit_guardian/test_folder_density_set_aside.py
+  - unit_tests/commit_guardian/test_folder_density_windows_paths.py
+  - unit_tests/commit_guardian/test_folder_density_shipped_declaration.py
+implemented_by:
+  - templates/scripts/commit_guardian/check_folder_density.py
+  - templates/scripts/commit_guardian/_density_set_aside.py
+  - templates/scripts/commit_guardian/commit_guardian.json
+  - docs/pre-commit-hooks.md
 change_target:
   - code
   - config

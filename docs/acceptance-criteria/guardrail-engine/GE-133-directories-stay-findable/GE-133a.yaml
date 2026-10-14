@@ -8,7 +8,7 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -105,6 +105,17 @@ amended_by:
       absent or malformed declaration judges and says so, empty declaration sets nothing
       aside) were folded into GE-133a-1, and GE-133a-3 and GE-133a-4 were deleted.
       covered_by is now [GE-133a-1, GE-133a-2].
+  - reason: approved-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores") approved this L1 and its two L2s: readiness moved draft -> approved. In the
+      same decision GE-133a-1's shipped declaration grew to two set-aside locations,
+      docs/acceptance-criteria/ and docs/decisions/ (the decision kernel's flat record
+      store); GE-133a-1 and GE-133a-2 moved back from done to todo until the second entry
+      and its docs line ship. Nothing else in this record changed; criteria, title,
+      req_status, depends_on and work_status are untouched.
 superseded_by: null
 covered_by:
   - GE-133a-1
