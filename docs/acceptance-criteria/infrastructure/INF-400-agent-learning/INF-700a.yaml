@@ -7,7 +7,7 @@ title: "Captured learnings reach their knowledge surface without a manual run"
 component: infrastructure
 level: L1
 status: active
-work_status: todo
+work_status: done
 criteria: |
   Capture completes on its own -- and says so plainly when it has not.
 
