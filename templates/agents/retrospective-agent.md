@@ -17,7 +17,11 @@ description: 'Automated epic retrospective agent. Reads all completed tickets in
   '
 model: sonnet
 name: retrospective-agent
-tools: Bash, Read, Write, Agent
+tools: Bash, Read, Write, Agent, Skill
+skills:
+- skill_id: route-knowledge
+  mode: conditional
+  condition: Use in Step 5 to classify each proposed Knowledge Item and rule update into its target surface.
 portable: true
 signoff: false
 domain: null
@@ -205,7 +209,7 @@ python leafcutter/scripts/agent-health/generate_health_report.py
 ## Proposed Improvements
 ### KI: <title>
 <Proposed Knowledge Item text>
-Routing: <destination returned by route-learning>
+Routing: <target_surface and path returned by route-knowledge>
 
 ### Rule Update: <title>
 <Proposed rule change as a diff>
@@ -247,13 +251,13 @@ the section silently (do not hard-fail the retrospective).
 ## Step 5 — Route and Present Proposed Changes for Approval
 
 For each proposed KI or rule update:
-1. Load `.claude/skills/route-learning/SKILL.md` and apply the 11-step decision tree to determine the correct destination for the KI.
+1. Load the `route-knowledge` skill (`.claude/skills/route-knowledge/SKILL.md`) and apply it to determine the correct destination for the KI; it returns `{ target_surface, path, rationale }`.
    - Do NOT hardcode `.agents/rules/` as a destination — that directory is being retired.
-   - If the KI would have historically targeted `.agents/rules/`, include a deprecation note: "`.agents/rules/` is being retired; route-learning selected `<correct_destination>` instead."
+   - If the KI would have historically targeted `.agents/rules/`, include a deprecation note: "`.agents/rules/` is being retired; route-knowledge selected `<correct_destination>` instead."
 2. Include the routed destination in the diff shown to the user.
 3. Ask the user to type "yes" to apply, "skip" to skip, or "edit" to revise.
 
-**KIs are proposed (never auto-applied) per the user-approval pattern. The routing destination returned by `route-learning` is included in the diff shown to the user.**
+**KIs are proposed (never auto-applied) per the user-approval pattern. The routing destination returned by `route-knowledge` is included in the diff shown to the user.**
 
 **Do NOT modify any knowledge-home file — including `CLAUDE.md`, agent files, skill files, or READMEs — without explicit user confirmation per item.**
 

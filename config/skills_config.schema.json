@@ -118,12 +118,6 @@
       "description": "Name of the default/main branch for PR targets and merge operations.",
       "default": "main"
     },
-    "collector_enforcer_paths": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "List of path prefixes that trigger the collector-enforcer skill.",
-      "default": ["collector/"]
-    },
     "top_level_packages": {
       "type": "array",
       "items": {"type": "string"},

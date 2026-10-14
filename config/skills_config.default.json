@@ -24,7 +24,6 @@
   "precommit_autofix_config_path": ".claude/precommit-autofix.json",
   "default_branch": "main",
 
-  "collector_enforcer_paths": ["collector/"],
   "top_level_packages": [
     "live_trader",
     "collector",

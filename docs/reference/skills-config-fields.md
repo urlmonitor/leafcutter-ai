@@ -3,7 +3,7 @@ title: 'Reference: skills_config.json Fields'
 type: reference
 status: active
 created: 2026-05-27
-last_updated: 2026-09-28
+last_updated: 2026-10-14
 components:
 - infrastructure
 related_docs:
@@ -142,12 +142,10 @@ Controls the pre-removal process and log cleanup in the `close-worktree` flow.
 ## Code Structure
 
 Paths and identifiers that describe the consumer project's Python package
-structure. Used by import-scanner, blast-radius analysis, and the
-collector-enforcer skill.
+structure. Used by import-scanner and blast-radius analysis.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `collector_enforcer_paths` | string[] | `["collector/"]` | List of path prefixes that activate the collector-enforcer skill on commit. Paths are matched against changed files. |
 | `top_level_packages` | string[] | `["live_trader", "collector", "dashboards", "api", "model_trainer", "trades_aggregator", "sql_functions", "models", "scripts"]` | List of top-level Python packages in the project. Used by import-scanner and blast-radius analysis to scope cross-module impact detection. |
 
 ---

@@ -213,9 +213,9 @@ For every new SQL file (or non-trivial edit), run the `postgres` skill before
 declaring the SQL ready. The skill validates version-aware patterns for the target
 database engine.
 
-For new standard objects (functions, views, procedures), also invoke the
-`sql-query` skill if available — it scaffolds the object plus tests and docs to the
-project's conventions.
+For new standard objects (functions, views, procedures), also hand the query
+scaffolding to the `sql-query` sub-agent via the `Agent` tool — it scaffolds the
+object plus tests and docs to the project's conventions.
 
 ## Step 3 — Local-DB deploy (mandatory before tests)
 

@@ -46,9 +46,9 @@ new Python files (excluding .sql files — defer those to sql-coder).**
 |---------|--------|----------------|-------------|
 | 1 | Root CLAUDE.md | always | Project instructions, error handling policy, shell conventions |
 | 2 | Per-folder README.md | on-demand | Module-level context when cwd overlaps edited module folder |
-| 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction; collector-enforcer | on-demand | Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement |
+| 5 | [signoff SKILL.md](../../../templates/skills/signoff/SKILL.md); [doc-enforcer SKILL.md](../../../templates/skills/doc-enforcer/SKILL.md); complexity-reduction | on-demand | Sign-off protocol, docstring enforcement, complexity scoring |
 | 6 | Agent frontmatter | spawn-scoped | Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true |
-| 7 | [skills_config.json + settings.json](../../../templates/settings.json) | spawn-scoped | test_command, collector_enforcer_paths, file_size_limit_py |
+| 7 | [skills_config.json + settings.json](../../../templates/settings.json) | spawn-scoped | test_command, file_size_limit_py |
 | 8 | Ticket frontmatter | ticket-scoped | Agents map, files_touched, depends_on, ACs, Agent Contracts section |
 | 9 | Auto-memory (memory/*.md) | always | Persistent cross-session learnings |
 | 10 | MCP server prompts + tool descriptions | always | Available tool surface and usage guidance |
@@ -138,7 +138,6 @@ flowchart TD
 |-----|----------|-------------|
 | `test_command_live_trader` | No | Command to run the fast unit test suite |
 | `test_output_dir` | No | Folder for test output (outside project root); empty means the scratch home (scratch.py test-output-dir) |
-| `collector_enforcer_paths` | No | Paths that trigger the collector-enforcer skill |
 | `file_size_limit_py` | No | Maximum lines for new .py files; referenced as {{config.file_size_limit_py}} |
 | `testing_context.max_test_duration_seconds` | No | 5-second ceiling for auto-run tests |
 ---

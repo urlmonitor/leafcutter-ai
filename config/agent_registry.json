@@ -146,7 +146,6 @@
             "spawn_allowlist": [
                 "__ticket_phase_agents__",
                 "brainstorm-lead",
-                "llm-expert",
                 "test-breaker"
             ],
             "spawned_by": [
@@ -325,7 +324,13 @@
             "model": "sonnet",
             "skills_used": [],
             "category": "research",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "knowledge-query",
+                    "mode": "conditional",
+                    "condition": "Use when the question is about cross-surface knowledge graph queries (nodes, edges, surfaces) rather than code search."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -509,9 +514,9 @@
                 },
                 {
                     "channel": 5,
-                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer",
+                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction",
                     "injection_mode": "on-demand",
-                    "description": "Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement"
+                    "description": "Sign-off protocol, docstring enforcement, complexity scoring"
                 },
                 {
                     "channel": 6,
@@ -523,7 +528,7 @@
                     "channel": 7,
                     "source": "skills_config.json + settings.json",
                     "injection_mode": "spawn-scoped",
-                    "description": "test_command, collector_enforcer_paths, file_size_limit_py"
+                    "description": "test_command, file_size_limit_py"
                 },
                 {
                     "channel": 8,
@@ -1496,7 +1501,13 @@
             "model": "sonnet",
             "skills_used": [],
             "category": "supervisor",
-            "skills_invoked": [],
+            "skills_invoked": [
+                {
+                    "skill_id": "route-knowledge",
+                    "mode": "conditional",
+                    "condition": "Use in Step 5 to classify each proposed Knowledge Item and rule update into its target surface."
+                }
+            ],
             "knowledge_channels": [
                 {
                     "channel": 1,
@@ -2253,10 +2264,6 @@
                     "skill_id": "signoff",
                     "mode": "conditional",
                     "condition": "When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket."
-                },
-                {
-                    "skill_id": "doc-enforcer",
-                    "mode": "always"
                 }
             ],
             "knowledge_channels": [
@@ -3155,17 +3162,12 @@
             "template_path": "templates/agents/product-owner.md",
             "model": "opus",
             "skills_used": [
-                "signoff",
                 "knowledge-query",
                 "ac-tree-split"
             ],
             "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
             "category": "planning",
             "skills_invoked": [
-                {
-                    "skill_id": "signoff",
-                    "mode": "always"
-                },
                 {
                     "skill_id": "knowledge-query",
                     "mode": "conditional",

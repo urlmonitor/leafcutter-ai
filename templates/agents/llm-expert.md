@@ -359,8 +359,10 @@ When implementing a ticket that requires writing or editing a prompt:
    consistency.
 5. **Draft the body** — write each required section in declaration order:
    Pre-Flight Reads, Prompt-Quality Checklist (or domain-specific checklist),
-   Stop-and-Ask Rule, Skills, Implementation Sequence, Response Payload, Sign-off,
-   Constraints.
+   Stop-and-Ask Rule, Implementation Sequence, Response Payload, Sign-off,
+   Constraints. Do not hand-write a Skills section: abilities are
+   declared once in its `skills:` header and the abilities section is
+   delivered by the build.
 6. **Run the Prompt-Quality Checklist** — apply every item from the Checklist
    section to your draft. Fix any violation before writing the file.
 7. **Write the file** — use the `Write` tool to create a new file, or the `Edit`
@@ -369,7 +371,8 @@ When implementing a ticket that requires writing or editing a prompt:
 8. **Verify** — Read the written file and confirm the structure matches the
    acceptance criteria.
 9. **Promote (if required)** — if the ticket calls for package promotion, invoke
-   `add-agent-to-package` or `add-skill-to-package` per the Skills table above.
+   `add-agent-to-package` or `add-skill-to-package` as listed in the delivered
+   "Your Available Skills" abilities section.
 10. **Sign off** — invoke the `signoff` skill to complete the atomic sign-off
    recipe for this phase.
 
