@@ -208,6 +208,10 @@ amended_by:
   agent: it-po
   date: '2026-10-09'
   changed: "it_requirements.constraints: the TRANSFORM SCOPE line now names the derived declaration fields skills_used, skills_invoked AND spawn_allowlist (was: only skills_used / skills_invoked), still with no other byte of the registry changed and a byte-stable second run; it also names spawned_by and is_ticket_phase explicitly as bytes the hook must not touch. WHY: user decision 9 (BrainCandy, 2026-10-09) delivers the per-agent spawn allowlist in the AR-300 pull request with the same treatment as skills, and AR-300c-5-ii requires the same hook to regenerate the registry spawn_allowlist from the frontmatter declaration. Left unamended, this record's 'ONLY skills_used / skills_invoked' constraint and its pinning test would forbid exactly that. The pinning test unit_tests/prompt_assembly/test_ar_300c_3_ii_registry_transform.py must change with it; that update is a descriptor in AR-300c-5-ii's test_spec. criteria, title, req_status, depends_on, test_spec, the hook registration fragment and package_surface unchanged; readiness stays approved because no requirement-defining text changed."
+- reason: contradicted-by-later-decision
+  agent: business-analyst
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, it_requirements, test_spec, status and readiness unchanged. The TRANSFORM SCOPE constraint names skills_used AND skills_invoked as derived fields the transform-agent-registry hook regenerates. User decision 3 (BrainCandy, 2026-10-12) retires skills_used: after AR-400e-2 the hook regenerates skills_invoked (with any provided_by marking, AR-400d-3) and spawn_allowlist only, and writes no skills_used. Where this record and AR-400e-2 disagree on which fields the hook writes, AR-400e-2 governs; the pinning test test_ar_300c_3_ii_registry_transform.py must change with it. This record's own comparison promise (report a disagreeing derived copy; the declaration wins) is NOT contradicted."
 superseded_by: null
 covered_by:
   - AR-300c-3-i

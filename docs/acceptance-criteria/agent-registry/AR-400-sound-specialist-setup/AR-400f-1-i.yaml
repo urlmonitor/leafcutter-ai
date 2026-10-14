@@ -1,0 +1,70 @@
+id: AR-400f-1-i
+title: "The same specialist listed twice in one hand-off declaration is also a redundant entry"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-coder" whose `spawn_allowlist` declaration
+    lists "research-agent" twice and contains no covering entry,
+  When the build runs,
+  Then it stops with one finding naming "probe-coder" and "research-agent" as
+    listed twice,
+    And a declaration listing `__ticket_phase_agents__` twice stops the build the
+      same way.
+depends_on:
+  - AR-400f-1
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Documents spawn_allowlist and the ticket-phase covering entry."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Repeat detection runs on the raw frontmatter list BEFORE any de-duplication (_agent_ability_sync.declared_spawn and agent_spawn_declaration both normalise; neither may be the input to this check)."
+  - "The commit-time hook must not silently 'fix' a repeat by writing a de-duplicated registry copy while the build passes; the build's refusal is the signal."
+  - "One finding per repeated id, naming the specialist and the id as listed twice; the covering macro listed twice is the same finding kind."
+test_spec:
+  - name: test_entry_listed_twice_fails_naming_specialist_and_entry
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-coder declares spawn_allowlist [research-agent, research-agent]; the validator CLI fails with one finding naming probe-coder and research-agent as listed twice."
+    must_catch:
+      - "the check reads the de-duplicated registry copy and sees nothing"
+  - name: test_macro_listed_twice_fails_the_same_way
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A declaration listing __ticket_phase_agents__ twice fails with the same finding kind."
+test_rationale: >-
+  The derived copy erases repeats, so this record's only test is one that
+  feeds the raw declaration to the real validator.
+delivers_to: null
+expects_from:
+  ac_id: AR-400f-1
+  contract: "The redundant-entry check over raw frontmatter declarations."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400f-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BA extension: the L1 says "names someone the list already covers"; a literal
+  repeat is the simplest form of that. Not observed in the real tree on
+  2026-10-12.

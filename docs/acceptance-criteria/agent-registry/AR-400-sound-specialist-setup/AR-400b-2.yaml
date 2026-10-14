@@ -1,0 +1,119 @@
+id: AR-400b-2
+title: "Every way the package's instructions actually phrase 'use this ability' is recognised as an instruction"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-agent" that grants nothing, and whose
+    instructions contain exactly these eight lines, each naming a different
+    existing ability a1..a8:
+      1. "Load `.claude/skills/a1/SKILL.md` and follow it."
+      2. "Invoke the `a2` skill before writing."
+      3. "Skill: a3" (an ability-tool call written out)
+      4. "| Question | `.claude/skills/a4/SKILL.md` -- invoke via `Bash` |"
+      5. "Run the a5 skill on every new file."
+      6. "Resolve and load the a6 skill (read it in full before editing)."
+      7. "Apply the `a7` skill before writing the file."
+      8. "Step 1 -- Load the A8 Skill" (a heading, different letter case)
+  When the build runs,
+  Then the build stops with exactly eight findings, one per line, each naming
+    "probe-agent", the ability and the line,
+    And line 8's finding names the ability by its real identifier "a8",
+    And a ninth line "The a9 skill's output is a table." -- naming an existing
+      ability without telling the reader to use it -- produces no finding.
+depends_on:
+  - AR-400b
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the imperative-versus-descriptive discriminator the existing checker applies."
+  - path: templates/agents/architecture-diagram-author.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance of form 8: a heading naming an ability in a different letter case."
+  - path: templates/agents/python-coder.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance of form 6 ('Resolve and load the sign-off skill')."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "ONE RECOGNITION RULE, IN ITS OWN NEW MODULE (e.g. scripts/skill_ref_recognition.py): a pure function text -> list of recognised instructions. It replaces BOTH registry_validator._extract_skill_refs_from_template (deleted, AR-400a-1) and check_skill_refs._scan_text's imperative heuristic, and is the rule propose_agent_self_description.py reuses (AR-400e-3). No second regex set may remain anywhere in scripts/."
+  - "The eight phrasings in the criteria are a FLOOR (the real tree on 2026-10-12): path form (.claude/skills/<id>/SKILL.md and templates/skills/<id>/SKILL.md), 'invoke/run/apply/load/resolve and load the <id> skill' with or without backticks, a written-out 'Skill: <id>' tool call, a table row whose cell holds a SKILL.md path plus an invoke verb, and a heading 'Load the <Id> Skill'. A purely descriptive sentence naming an existing ability is not an instruction."
+  - "CASE: recognition is case-insensitive; each recognised instruction carries the text as written AND the canonical id it resolves to case-insensitively against the known ability set (or None). Whether a case-only variant is a fault is AR-400b-2-v's decision (orchestrator default Q1: fault with 'did you mean')."
+  - "LINE NUMBERS are 1-based and refer to the file on disk; HTML comment blocks are blanked with newlines preserved (AR-400a-1-ii)."
+  - "Recognition is applied to the template BODY only; frontmatter (including behavioral_patterns entries) is out of the body scan."
+  - "Must complete within 2 seconds over the full real tree (about 63 agent templates plus every templates/skills/**/*.md) on a developer machine; the validator is on the commit path."
+test_spec:
+  - name: test_eight_real_phrasings_each_yield_one_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice with abilities a1..a8 created but not granted; probe-agent's body holds exactly the eight criteria lines; the validator CLI reports exactly eight findings, one per line, each naming probe-agent, the ability and the line; line 8's finding names canonical id 'a8'."
+    must_catch:
+      - "only the path form is recognised (today's check_skill_refs behaviour)"
+      - "recognition is case-sensitive so 'A8' is missed"
+      - "the table-row form is missed"
+  - name: test_descriptive_mention_is_not_an_instruction
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "A ninth line 'The a9 skill's output is a table.' (a9 exists, not granted) produces no finding."
+  - name: test_recognition_over_real_tree_completes_within_budget
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Running the validator over the real tree completes within the 2-second recognition budget (measured around the recognition call, not the whole subprocess start-up)."
+test_rationale: >-
+  The eight lines are the real tree's own phrasings, so a rule that misses any
+  of them re-hides a real fault; the ninth line is the counterweight that keeps
+  the rule from flagging every mention.
+delivers_to:
+  - agent: python-coder
+    contract: "The recognition rule: given a definition or guide, the list of (ability_text, canonical_id_or_none, file, line) instructions it contains -- consumed by AR-400a-1 (existence) and AR-400b-1 (grant). Python shape: recognise(text: str, known_ids: set[str], agent_ids: set[str]) -> list[{'ability_text': str, 'canonical_id': str | None, 'line': int, 'names_agent': bool}]; file is attached by the caller."
+  - agent: python-coder
+    contract: "The same function reused by scripts/propose_agent_self_description.py (AR-400e-3) so the proposer and the gate agree on what an instruction is."
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400b-2-i
+  - AR-400b-2-ii
+  - AR-400b-2-iii
+  - AR-400b-2-iv
+  - AR-400b-2-v
+  - AR-400b-2-vi
+implemented_by: []
+notes: |
+  WHY THIS IS A SEPARATE L2. AR-400b's notes: "a check that is a fault rather
+  than a warning must be right about what counts as an instruction, or it will
+  be switched off". This record is the "misses real references" half (narrow
+  phrasing, letter case); its L3s are the "flags false ones" half and the two
+  diagnostics. The eight forms are the ones the real tree uses on 2026-10-12;
+  they are a floor, not a closed list.
+
+  WHAT HAPPENS TO A CASE-ONLY MISMATCH IS AR-400b-2-v. This record only requires
+  that it be recognised and attributed to the right identifier.
+
+  RECOGNITION FEEDS BOTH L1s. AR-400a-1 checks existence over exactly what this
+  rule recognises; housing it under AR-400b reflects where the L1 placed the
+  "correctness of recognition" promise.

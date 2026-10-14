@@ -1,0 +1,79 @@
+id: AR-400d
+title: "Your project can supply abilities of its own to the package's specialists"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Grant a specialist an ability your project provides, not the package.
+
+  A specialist's definition can say that one of its abilities comes from the
+  project it is installed into. Where the project has it, the specialist gets
+  it; where it does not, the build tells you so and carries on, rather than
+  refusing to install. Package-specific content that belonged to another
+  project is removed instead of being dressed up this way.
+depends_on:
+  - AR-400
+doc_links:
+  - path: templates/agents/sql-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "The first user: its database abilities (postgres, sql-test) are supplied by the project, not the package."
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a section about a collector-enforcer ability -- residue from a trading project. Removed, not converted (user decision 1)."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "SUPERSEDED. Resolved a project-local ability by falling back to a second location for ANY ability. This L1 makes it an explicit, per-grant declaration, looked up only in the project's own abilities area."
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-009.md
+    relationship: related
+    status: exists
+    relevance: "Adjacent, not merged: where an adopter's own abilities can live safely is an open problem. This L1 states where a project-supplied ability is looked for; it does not solve KI-BP-009's placement question."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400d-1
+  - AR-400d-2
+  - AR-400d-3
+  - AR-400d-4
+  - AR-400d-5
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - reference-doc
+documentation_rationale: null
+notes: |
+  USER DECISION 1 (BrainCandy, 2026-10-12), BINDING:
+    - The declaration is per grant: the ability is marked as provided by the
+      project.
+    - When absent, the build REPORTS and does not refuse.
+    - It is looked up ONLY in the project's own abilities area under
+      .leafcutter/skills -- never by silently falling back from the package.
+    - python-coder's collector-enforcer section is DELETED (trading residue).
+    - sql-coder keeps postgres and sql-test, declared this way.
+
+  WHY "REPORT, NOT REFUSE" DOES NOT CONTRADICT AR-400a. A package-supplied
+  ability that is missing is a package fault and stops the build. A
+  project-supplied one that is missing is the project's choice not to provide
+  it yet; the specialist simply does without, and the report says so. The two
+  must never be confused in either direction -- a typo in a package grant must
+  not be "rescued" by being treated as project-supplied.
+
+  REACH ACROSS SURFACES. The decision note lists every place the declaration
+  must be understood (shape check, commit-time check, the done verdict,
+  delivery, docs). A declaration understood by some and not others is the
+  split-record defect again.

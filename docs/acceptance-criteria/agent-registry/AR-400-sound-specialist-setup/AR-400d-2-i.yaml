@@ -1,0 +1,75 @@
+id: AR-400d-2-i
+title: "A project-supplied ability is looked for only in the project's own abilities area"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the setup of AR-400d-2 (probe-coder grants "postgres" marked
+    `provided_by: project`; the project's `.leafcutter/skills` area has no
+    "postgres"),
+    And an ability named "postgres" is present in the project's `.claude/skills`
+      directory instead,
+  When the build installs the package into that project,
+  Then the build still reports "postgres" as not found in the project's
+    `.leafcutter/skills` area, exactly as in AR-400d-2,
+    And probe-coder's compiled prompt does not offer it as available,
+    And the report names the location looked in, so an adopter who put it in the
+      wrong place can see where it is expected.
+depends_on:
+  - AR-400d-2
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The superseded fallback (package location, then .claude/skills) this record forbids."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The project lookup reads exactly one directory, <project_root>/<output_root>/skills; no fallback to .claude/skills, ~/.claude/skills, the packaged templates/skills or any other root."
+  - "FIXTURE TRAP: in a built layout .claude/skills is a SYMLINK to <output_root>/skills (verified in the self-host workspace 2026-10-12), and the build's shim step removes a real .claude/skills directory (KI-BP-009). A test that 'puts postgres in .claude/skills' in a built layout puts it in .leafcutter/skills too, or has it deleted. The test must construct .claude/skills as a real, separate directory in a layout the build does not re-shim during the assertion (e.g. assert on the gate/verdict call over that layout rather than on a full rebuild), and must assert the directory really is separate before asserting the verdict."
+  - "The informational line names the absolute location looked in."
+test_spec:
+  - name: test_ability_only_in_claude_skills_is_reported_not_found
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Layout with a REAL (non-symlink) .claude/skills/postgres/SKILL.md and an empty .leafcutter/skills; run the ability gate over the package copy with that project root: postgres is reported not found in the .leafcutter/skills path, by absolute path, and is not offered as available."
+    must_catch:
+      - "the lookup falls back to .claude/skills"
+  - name: test_fixture_claude_skills_is_not_a_symlink_to_the_project_area
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: boundary
+    description: "Guard on the fixture itself: .claude/skills is a real directory and its resolved path differs from .leafcutter/skills, so the first descriptor cannot pass vacuously."
+test_rationale: >-
+  In a real install the two locations are the same directory, so the only
+  meaningful test is one that first proves its own fixture separates them.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-2
+  contract: "The single project-area lookup and its informational not-found line."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision 1: "looked up only in <project>/.leafcutter/skills -- never by
+  silently falling back". .claude/skills is the package's own deploy target for
+  shipped abilities, which is why it is not a second home for project ones.
