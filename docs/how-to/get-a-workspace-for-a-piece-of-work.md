@@ -11,6 +11,8 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md
   - docs/architecture/components/worktree-manager.md
+  - docs/reference/workspace-maker-answers-and-codes.md
+  - docs/reference/workspace-maker-interface.md
 related_code:
   - templates/scripts/worktree.py
   - templates/scripts/workspace/workspace_core.py
@@ -49,7 +51,7 @@ The answer's `maker_path` is the absolute path to use in every later command:
 
 ### Step 2 — Ask for the workspace
 
-Pick the kind that matches your work: `ticket`, `feature`, `ac`, `fastlane`, `epic`, or `scratch`. The slug is the identity of the work. The same kind and slug from any route give the same folder and the same branch.
+Pick the kind that matches your work: `ticket`, `feature`, `ac`, `fastlane`, `epic`, or `scratch`. The slug is the identity of the work. The same kind and slug from any route give the same folder and the same branch. For an epic, the spellings `EPIC-FilesStayWorkable`, `epic/files-stay-workable` and `Files Stay Workable` all count as the same slug, so asking again by another spelling returns the existing workspace and never makes a twin (see [Epic spellings that name one workspace](../reference/workspace-maker-interface.md#epic-spellings-that-name-one-workspace-bo-4300a-2)).
 
 ```bash
 python <maker_path> ensure --kind feature --slug my-change
@@ -63,7 +65,9 @@ python <maker_path> ensure --kind epic --slug MyEpic --ticket tickets/00_inbox/e
 
 Optional flags: `--repo-root <path>`, `--config-path <file>` (use this file as the build config instead of the one derived from the main install), and `--allow-stale-base` (accept the existing `origin/main` when the hub cannot be reached).
 
-`ensure` is the only verb that creates. It is idempotent: asking again for the same work re-checks the existing workspace and does not rebuild it. The workspace lands in a `worktrees/` folder beside the main checkout.
+`ensure` is the only verb that creates, and this is the single way to request a workspace. The same request works unchanged from the project's top folder, from the folder above it, and from inside another workspace: the maker finds the project itself. If it cannot tell which project you mean, it refuses (`NO_REPO` or `AMBIGUOUS_REPO`); add `--repo-root <absolute path of the project's top folder>` and ask again.
+
+Asking again for the same work is always safe. `ensure` is idempotent: the same kind and slug give the same workspace, an existing ready workspace is re-checked and returned without being rebuilt or altered, and a failed earlier attempt left no half-made workspace behind. The workspace lands in a `worktrees/` folder beside the main checkout.
 
 ### Step 3 — Read the answer
 
@@ -83,6 +87,8 @@ A ready workspace answers with `"status": "ok"`. Take the location from `workspa
              "hooks_pre_commit_fired": true, "hooks_canary_rejected": true}
 }
 ```
+
+Do all the work inside the folder `workspace_path` names. Do not assume where it is; read it from the answer each time. The other fields are listed in the [answer reference](../reference/workspace-maker-answers-and-codes.md).
 
 When you passed `--ticket`, the answer also carries `ticket_path_in_worktree` and `ticket_path_in_worktree_posix`. Work on the ticket only at that path, never at the main-checkout copy. The `checks` object also gains one `hooks_<stage>_fired` key for each further hook stage the workspace's own `.pre-commit-config.yaml` declares under `default_install_hook_types`.
 
@@ -146,6 +152,14 @@ Expected: a JSON object with `"status": "ok"`, `"verb": "locate"` and `"state": 
 
 An error answer has `"status": "error"`, a `"code"`, a `"verb"` and a `"message"`, and the process exits 1. Some also carry `workspace_path` or `checks`.
 
+For any refusal, the recipe is the same: stop, remedy, ask again.
+
+1. Stop. Do not carry on as if you had a workspace, and do not make, link or set one up by hand.
+2. Remedy the cause the refusal names. The `code` and `message` say what is wrong; the list below and the [codes reference](../reference/workspace-maker-answers-and-codes.md) say what to do for each.
+3. Ask again with the same request. Asking again is always safe (see Step 2).
+
+The codes:
+
 1. **`NOT_READY`.** At least one readiness check was not true. The `checks` object in the answer names which one. `tree_clean: false` also makes `hooks_canary_rejected` false, so an existing workspace holding uncommitted work answers `NOT_READY` on `ensure` and `verify`. Commit or stash the work, then run `verify` again. If a different check is false (for example `precommit_config_present` or a `hooks_*_fired` key), fix that ingredient in the workspace and run `verify` again.
 2. **`WORKSPACE_INCOMPLETE`.** The folder exists but its marker is missing or not `ready`, typically from an interrupted `ensure`. Run `remove --path <path> --discard`, then run `ensure` again. A failed `ensure` cleans up its own half-made workspace, so this mostly follows a killed process.
 3. **`BUILD_FAILED`.** The workspace's install build exited non-zero. The message ends with the tail of the build output. Fix the build problem (it runs `scripts/build.py --target-dir <workspace> --config-path <config>`), then run `ensure` again. The failed attempt left no folder behind.
@@ -163,5 +177,7 @@ An error answer has `"status": "error"`, a `"code"`, a `"verb"` and a `"message"
 ## See Also
 
 - [ADR-070: single workspace maker and resolver](../architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md) — the decision this tool implements.
+- [Workspace maker answers and codes](../reference/workspace-maker-answers-and-codes.md) — the answer shape and refusal codes.
+- [Workspace maker interface](../reference/workspace-maker-interface.md) — verbs and flags.
 - [Worktree Manager component](../architecture/components/worktree-manager.md) — where the maker sits in the architecture.
 - [Documentation Index](../INDEX.md) — navigation entry point.
