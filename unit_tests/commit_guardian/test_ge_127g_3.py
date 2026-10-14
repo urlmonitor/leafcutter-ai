@@ -79,6 +79,7 @@ def _refused_names(result) -> set[str]:
 
 def test_hand_authored_document_with_the_generated_suffix_is_still_judged(tmp_path: Path) -> None:
     # covers: GE-127g-3
+    # covers: GE-127g
     # angle: discrimination
     """Arm 1. A hand-authored ``.card.md`` OUTSIDE the declared cards directory,
     over the limit, is refused and named -- while a generated card inside the
