@@ -55,6 +55,7 @@ class ScopedTest:
     function: str
     names: list[str] = field(default_factory=list)
     issue: str = ""
+    files: list[str] = field(default_factory=list)
 
     @property
     def versions(self) -> dict[str, str]:
@@ -102,7 +103,20 @@ def _must_catch_by_name(ac_ids: list[str], ac_root: Path) -> dict[str, list[str]
     return out
 
 
-def _scoped_test(tag: dict, must_catch: dict[str, list[str]]) -> ScopedTest:
+def _in_scope_by_name(ac_ids: list[str], ac_root: Path) -> dict[str, list[str]]:
+    """Collect the declared ``in_scope_files`` (TQ-500g-1-ix) per test_spec entry name."""
+    out: dict[str, list[str]] = {}
+    for ac_id in ac_ids:
+        record = _load_ac_by_id(ac_root, ac_id) or {}
+        for entry in record.get("test_spec") or []:
+            if isinstance(entry, dict) and entry.get("name"):
+                files = [f for f in (entry.get("in_scope_files") or []) if isinstance(f, str) and f.strip()]
+                bucket = out.setdefault(entry["name"], [])
+                bucket += [f for f in dict.fromkeys(files) if f not in bucket]
+    return out
+
+
+def _scoped_test(tag: dict, must_catch: dict[str, list[str]], in_scope: dict[str, list[str]] | None = None) -> ScopedTest:
     """Build one :class:`ScopedTest`, resolving the node id from the test's source."""
     file, function = Path(tag["file"]), tag["function"]
     label = f"{file.as_posix()}::{function}"
@@ -113,7 +127,8 @@ def _scoped_test(tag: dict, must_catch: dict[str, list[str]]) -> ScopedTest:
     if len(chains) != 1:
         return ScopedTest(None, label, function, issue=f"{function} resolves to {len(chains)} tests, not one")
     node = NodeSpec(file, chains[0])
-    return ScopedTest(node, f"{file.as_posix()}::{'::'.join(chains[0])}", function, list(must_catch.get(function, [])))
+    files = list((in_scope or {}).get(function, []))
+    return ScopedTest(node, f"{file.as_posix()}::{'::'.join(chains[0])}", function, list(must_catch.get(function, [])), files=files)
 
 
 def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
@@ -132,6 +147,7 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
         return Scope(problem=f"declared_ac_record_unavailable: {', '.join(unavailable)}")
     wanted = set(ac_ids)
     must_catch = _must_catch_by_name(ac_ids, ac_root)
+    in_scope = _in_scope_by_name(ac_ids, ac_root)
     scope, seen, found = Scope(), set(), set()
     for tag in _scan_test_root_for_covers_tags(test_root):
         if tag["ac_id"] not in wanted or not tag.get("function") or Path(tag["file"]).suffix != ".py":
@@ -142,7 +158,7 @@ def resolve_scope(ac_ids: list[str], test_root: Path, ac_root: Path) -> Scope:
         seen.add(key)
         found.add(_nodeid_function_name(f"{tag['file']}::{tag['function']}"))
         if _nodeid_function_name(f"{tag['file']}::{tag['function']}") in declared:
-            scope.tests.append(_scoped_test(tag, must_catch))
+            scope.tests.append(_scoped_test(tag, must_catch, in_scope))
         else:
             scope.out_of_scope.append(f"{Path(tag['file']).as_posix()}::{tag['function']}")
     scope.missing = sorted(declared - found)
@@ -189,22 +205,58 @@ def is_test_path(rel: str, test_root_rel: str | None) -> bool:
     )
 
 
-def _safe_rel(root: Path, raw: str) -> str | None:
-    """Return *raw* as a repo-relative POSIX path inside *root*, else ``None``.
+OUTSIDE = "outside the repository"
+VCS_FOLDER = "inside the version-control folder"
 
-    Rejects a drive or anchor, a leading slash or backslash, ``..``, any ``.git`` component
+
+def path_refusal(root: Path, raw: str) -> str | None:
+    """Return why *raw* is not a repo-relative path inside *root* (``OUTSIDE``/``VCS_FOLDER``), else ``None``.
+
+    Refuses a drive or anchor, a leading slash or backslash, ``..``, any ``.git`` component
     (case-insensitive) and anything whose resolved path leaves *root* (symlinks, junctions).
     """
     if not raw or raw[0] in "/\\":
-        return None
+        return OUTSIDE
     pure = PureWindowsPath(raw)
-    if pure.drive or pure.anchor or ".." in pure.parts or any(p.casefold() == ".git" for p in pure.parts):
-        return None
+    if pure.drive or pure.anchor or ".." in pure.parts:
+        return OUTSIDE
+    if any(p.casefold() == ".git" for p in pure.parts):
+        return VCS_FOLDER
     try:
         (root / pure.as_posix()).resolve().relative_to(root.resolve())
     except (ValueError, OSError):
-        return None
-    return pure.as_posix()
+        return OUTSIDE
+    return None
+
+
+def _safe_rel(root: Path, raw: str) -> str | None:
+    """Return *raw* as a repo-relative POSIX path inside *root*, else ``None`` (see :func:`path_refusal`)."""
+    return None if path_refusal(root, raw) else PureWindowsPath(raw).as_posix()
+
+
+@dataclass
+class OwedName:
+    """One owed wrong version and the source files it may alter."""
+
+    name: str
+    files: list[str] = field(default_factory=list)
+
+
+def owed_names(tests: list[ScopedTest], test_root_rel: str | None) -> list[OwedName]:
+    """List the owed wrong versions of *tests* with their per-name in-scope files (TQ-500g-1-ix).
+
+    Names come from the same ``ScopedTest.versions`` the runner holds the tests to, minus the
+    aliases, each once (first spelling) in order. A name's files are the union of its entries'
+    ``in_scope_files`` in order of first declaration, minus every test file.
+    """
+    owed: dict[str, OwedName] = {}
+    for test in tests:
+        for key, name in test.versions.items() if test.names else ():
+            if key == wrong_version_key(UNDONE_NAME):
+                continue
+            item = owed.setdefault(key, OwedName(name))
+            item.files += [f for f in dict.fromkeys(test.files) if f not in item.files and not is_test_path(f, test_root_rel)]
+    return list(owed.values())
 
 
 def build_alterations(entry: dict, root: Path, test_root_rel: str | None) -> tuple[dict[str, bytes], str]:

@@ -59,14 +59,12 @@ The diagrams below are generated from `config/agent_registry.json`. Run
 ### Spawn Graph
 
 <!-- BEGIN:AGENT_SPAWN_GRAPH -->
-<!-- registry-hash:7d2dc871 -->
+<!-- registry-hash:c47fe854 -->
 ```mermaid
 graph TD
     subgraph Supervisors
         epic_supervisor["Epic Supervisor"]
         ticket_supervisor["Ticket Supervisor"]
-        create_ticket["Create Ticket"]
-        create_epic["Create Epic"]
         sql_coder["SQL Coder"]
         workflow_architect["Workflow Architect"]
     end
@@ -76,19 +74,27 @@ graph TD
         test_writer["Test Writer"]
         test_runner["Test Runner"]
         documentation_expert["Documentation Expert"]
+        change_scope_reviewer["Change Scope Reviewer"]
         pr_reviewer["PR Reviewer"]
         commit["Commit"]
         pull_request["Pull Request"]
         status_checker["Status Checker"]
+        frontend_coder["Frontend Coder"]
         sql_query["SQL Query"]
         adr_author["ADR Author"]
         architecture_diagram_author["Architecture Diagram Author"]
         explanation_author["Explanation Author"]
         how_to_author["How-To Author"]
         reference_author["Reference Author"]
+        user_surface_smoker["User Surface Smoker"]
+        live_surface_tester["Live Surface Tester"]
+        documentation_verifier["Documentation Verifier"]
+        ac_validator["AC Validator"]
+        ac_fulfillment_gate["AC Fulfillment Gate"]
+        llm_expert["LLM Expert"]
+        restructuring_specialist["Restructuring Specialist"]
     end
     subgraph Utility Agents
-        business_analyst["Business Analyst"]
         brainstorm_lead["Brainstorm Lead"]
         brainstorm_worker["Brainstorm Worker"]
         research_agent["Research Agent"]
@@ -96,22 +102,29 @@ graph TD
         worktree_agent["Worktree Agent"]
         changelog_agent["Changelog Agent"]
         retrospective_agent["Retrospective Agent"]
-        refinement["Refinement"]
+        feedback_analyst["Feedback Analyst"]
         sql_table_creator["SQL Table Creator"]
         sql_test_writer["SQL Test Writer"]
         sql_procedure_creator["SQL Procedure Creator"]
         sql_function_creator["SQL Function Creator"]
         sql_index_creator["SQL Index Creator"]
         sql_view_creator["SQL View Creator"]
-        database_agent["Database Agent"]
-        prod_deploy["Prod Deploy"]
-        reporting_agent["Reporting Agent"]
-        strategy_builder["Strategy Builder"]
-        architect_review_deep["Architect Review Deep"]
-        architecture_author["Architecture Author"]
-        conflict_resolver_deep["Conflict Resolver Deep"]
-        onboarding_agent["Onboarding Agent"]
-        rollback_agent["Rollback Agent"]
+        glossary_triage["Glossary Triage"]
+        onboard["Onboard Install Wizard"]
+        onboard_config_section["Onboard Config Section Sub-agent"]
+        test_failure_triage["Test Failure Triage"]
+        product_owner["Product Owner"]
+        business_analyst["Business Analyst"]
+        it_po["IT Product Owner"]
+        build_ac["Build AC"]
+        ac_triage["AC Triage"]
+        knowledge_harvester["Knowledge Harvester"]
+        pt_classifier["Product-Truth Classifier"]
+        mock_data_author["Mock Data Author"]
+        mockup_author["Mockup Author"]
+        flow_author["Flow Author"]
+        command_step_runner["Command Step Runner"]
+        test_breaker["Test Breaker"]
     end
     epic_supervisor --> ticket_supervisor
     epic_supervisor --> retrospective_agent
@@ -122,40 +135,44 @@ graph TD
     ticket_supervisor --> test_writer
     ticket_supervisor --> test_runner
     ticket_supervisor --> documentation_expert
+    ticket_supervisor --> change_scope_reviewer
     ticket_supervisor --> pr_reviewer
     ticket_supervisor --> commit
     ticket_supervisor --> pull_request
     ticket_supervisor --> status_checker
     ticket_supervisor --> sql_coder
+    ticket_supervisor --> frontend_coder
     ticket_supervisor --> sql_query
     ticket_supervisor --> adr_author
     ticket_supervisor --> architecture_diagram_author
     ticket_supervisor --> explanation_author
     ticket_supervisor --> how_to_author
     ticket_supervisor --> reference_author
-    create_ticket --> business_analyst
-    create_ticket --> refinement
-    create_ticket --> architect_review
-    create_ticket --> create_epic
-    create_epic --> business_analyst
-    create_epic --> create_ticket
-    business_analyst --> research_agent
+    ticket_supervisor --> user_surface_smoker
+    ticket_supervisor --> live_surface_tester
+    ticket_supervisor --> documentation_verifier
+    ticket_supervisor --> ac_validator
+    ticket_supervisor --> ac_fulfillment_gate
+    ticket_supervisor --> llm_expert
+    ticket_supervisor --> restructuring_specialist
+    ticket_supervisor --> brainstorm_lead
+    ticket_supervisor --> llm_expert
+    ticket_supervisor --> test_breaker
     brainstorm_lead --> brainstorm_worker
     architect_review --> research_agent
-    architect_review --> architect_review_deep
     python_coder --> research_agent
     python_coder --> test_runner
     test_writer --> research_agent
     test_writer --> test_runner
     documentation_expert --> research_agent
     documentation_expert --> adr_author
-    documentation_expert --> architecture_author
     documentation_expert --> architecture_diagram_author
     documentation_expert --> explanation_author
     documentation_expert --> how_to_author
     documentation_expert --> reference_author
+    documentation_expert --> glossary_triage
+    pr_reviewer --> research_agent
     pull_request --> conflict_resolver
-    conflict_resolver --> conflict_resolver_deep
     status_checker --> research_agent
     sql_coder --> sql_table_creator
     sql_coder --> sql_procedure_creator
@@ -166,6 +183,7 @@ graph TD
     sql_coder --> sql_test_writer
     sql_coder --> research_agent
     sql_coder --> python_coder
+    frontend_coder --> research_agent
     sql_table_creator --> research_agent
     sql_query --> research_agent
     sql_test_writer --> research_agent
@@ -173,12 +191,13 @@ graph TD
     sql_function_creator --> research_agent
     sql_index_creator --> research_agent
     sql_view_creator --> research_agent
-    strategy_builder --> research_agent
+    reference_author --> research_agent
+    onboard --> onboard_config_section
+    llm_expert --> research_agent
+    business_analyst --> research_agent
+    build_ac --> ac_triage
     style epic_supervisor fill:#4a9eff,color:#fff
     style ticket_supervisor fill:#4a9eff,color:#fff
-    style create_ticket fill:#4a9eff,color:#fff
-    style create_epic fill:#4a9eff,color:#fff
-    style business_analyst fill:#888,color:#fff
     style brainstorm_lead fill:#888,color:#fff
     style brainstorm_worker fill:#888,color:#fff
     style research_agent fill:#888,color:#fff
@@ -187,7 +206,11 @@ graph TD
     style test_writer fill:#45b37a,color:#fff
     style test_runner fill:#45b37a,color:#fff
     style documentation_expert fill:#45b37a,color:#fff
+    style change_scope_reviewer fill:#45b37a,color:#fff
     style pr_reviewer fill:#45b37a,color:#fff
+    style code_review_architect fill:#ccc
+    style find_structural_smells fill:#ccc
+    style find_design_smells fill:#ccc
     style commit fill:#45b37a,color:#fff
     style pull_request fill:#45b37a,color:#fff
     style conflict_resolver fill:#888,color:#fff
@@ -195,8 +218,9 @@ graph TD
     style worktree_agent fill:#888,color:#fff
     style changelog_agent fill:#888,color:#fff
     style retrospective_agent fill:#888,color:#fff
-    style refinement fill:#888,color:#fff
+    style feedback_analyst fill:#888,color:#fff
     style sql_coder fill:#4a9eff,color:#fff
+    style frontend_coder fill:#45b37a,color:#fff
     style sql_table_creator fill:#888,color:#fff
     style sql_query fill:#45b37a,color:#fff
     style sql_test_writer fill:#888,color:#fff
@@ -204,116 +228,154 @@ graph TD
     style sql_function_creator fill:#888,color:#fff
     style sql_index_creator fill:#888,color:#fff
     style sql_view_creator fill:#888,color:#fff
-    style database_agent fill:#888,color:#fff
-    style prod_deploy fill:#888,color:#fff
-    style reporting_agent fill:#888,color:#fff
-    style strategy_builder fill:#888,color:#fff
     style workflow_architect fill:#4a9eff,color:#fff
     style adr_author fill:#45b37a,color:#fff
-    style architect_review_deep fill:#888,color:#fff
-    style architecture_author fill:#888,color:#fff
     style architecture_diagram_author fill:#45b37a,color:#fff
-    style conflict_resolver_deep fill:#888,color:#fff
     style explanation_author fill:#45b37a,color:#fff
     style how_to_author fill:#45b37a,color:#fff
-    style onboarding_agent fill:#888,color:#fff
     style reference_author fill:#45b37a,color:#fff
-    style rollback_agent fill:#888,color:#fff
-    style database_agent stroke-dasharray: 5 5
-    style prod_deploy stroke-dasharray: 5 5
-    style reporting_agent stroke-dasharray: 5 5
-    style strategy_builder stroke-dasharray: 5 5
-    style architect_review_deep stroke-dasharray: 5 5
-    style architecture_author stroke-dasharray: 5 5
-    style architecture_diagram_author stroke-dasharray: 5 5
-    style conflict_resolver_deep stroke-dasharray: 5 5
-    style onboarding_agent stroke-dasharray: 5 5
-    style reference_author stroke-dasharray: 5 5
-    style rollback_agent stroke-dasharray: 5 5
+    style glossary_triage fill:#888,color:#fff
+    style user_surface_smoker fill:#45b37a,color:#fff
+    style live_surface_tester fill:#45b37a,color:#fff
+    style documentation_verifier fill:#45b37a,color:#fff
+    style onboard fill:#888,color:#fff
+    style onboard_config_section fill:#888,color:#fff
+    style test_failure_triage fill:#888,color:#fff
+    style ac_validator fill:#45b37a,color:#fff
+    style ac_fulfillment_gate fill:#45b37a,color:#fff
+    style llm_expert fill:#45b37a,color:#fff
+    style product_owner fill:#888,color:#fff
+    style business_analyst fill:#888,color:#fff
+    style it_po fill:#888,color:#fff
+    style build_ac fill:#888,color:#fff
+    style ac_triage fill:#888,color:#fff
+    style knowledge_harvester fill:#888,color:#fff
+    style pt_classifier fill:#888,color:#fff
+    style mock_data_author fill:#888,color:#fff
+    style mockup_author fill:#888,color:#fff
+    style flow_author fill:#888,color:#fff
+    style command_step_runner fill:#888,color:#fff
+    style restructuring_specialist fill:#45b37a,color:#fff
+    style test_breaker fill:#888,color:#fff
 ```
 <!-- END:AGENT_SPAWN_GRAPH -->
 
 ### Skill Map
 
 <!-- BEGIN:AGENT_SKILL_MAP -->
-<!-- registry-hash:7d2dc871 -->
+<!-- registry-hash:c47fe854 -->
 ```mermaid
 graph LR
     subgraph Agents
         a_epic_supervisor["epic-supervisor"]
         a_ticket_supervisor["ticket-supervisor"]
-        a_create_ticket["create-ticket"]
-        a_create_epic["create-epic"]
         a_architect_review["architect-review"]
         a_python_coder["python-coder"]
         a_test_writer["test-writer"]
         a_test_runner["test-runner"]
         a_documentation_expert["documentation-expert"]
+        a_change_scope_reviewer["change-scope-reviewer"]
         a_pr_reviewer["pr-reviewer"]
+        a_find_structural_smells["find-structural-smells"]
+        a_find_design_smells["find-design-smells"]
         a_commit["commit"]
         a_pull_request["pull-request"]
         a_status_checker["status-checker"]
+        a_feedback_analyst["feedback-analyst"]
         a_sql_coder["sql-coder"]
+        a_frontend_coder["frontend-coder"]
         a_sql_query["sql-query"]
         a_sql_test_writer["sql-test-writer"]
-        a_database_agent["database-agent"]
-        a_prod_deploy["prod-deploy"]
-        a_reporting_agent["reporting-agent"]
-        a_strategy_builder["strategy-builder"]
         a_workflow_architect["workflow-architect"]
         a_architecture_diagram_author["architecture-diagram-author"]
+        a_reference_author["reference-author"]
+        a_user_surface_smoker["user-surface-smoker"]
+        a_live_surface_tester["live-surface-tester"]
+        a_documentation_verifier["documentation-verifier"]
+        a_ac_validator["ac-validator"]
+        a_ac_fulfillment_gate["ac-fulfillment-gate"]
+        a_llm_expert["llm-expert"]
+        a_product_owner["product-owner"]
+        a_business_analyst["business-analyst"]
+        a_it_po["it-po"]
     end
     subgraph Skills
+        s_ac_tree_split{{'ac-tree-split'}}
         s_add_agent_to_package{{'add-agent-to-package'}}
         s_add_skill_to_package{{'add-skill-to-package'}}
         s_building_epics{{'building-epics'}}
+        s_complexity_reduction{{'complexity-reduction'}}
         s_create_hook{{'create-hook'}}
-        s_db{{'db'}}
-        s_fetch_prod_logs{{'fetch-prod-logs'}}
-        s_find_context_candle{{'find-context-candle'}}
+        s_doc_enforcer{{'doc-enforcer'}}
+        s_feedback_analysis{{'feedback-analysis'}}
+        s_knowledge_query{{'knowledge-query'}}
         s_package_audit{{'package-audit'}}
+        s_precommit_autofix{{'precommit-autofix'}}
+        s_review_for_code_smells{{'review-for-code-smells'}}
+        s_review_for_design_code_smells{{'review-for-design-code-smells'}}
+        s_review_for_structural_code_smells{{'review-for-structural-code-smells'}}
+        s_route_knowledge{{'route-knowledge'}}
         s_signoff{{'signoff'}}
         s_sql_query_past_queries{{'sql-query-past-queries'}}
-        s_ticket_authoring{{'ticket-authoring'}}
+        s_webapp_testing{{'webapp-testing'}}
         s_write_c4_diagram{{'write-c4-diagram'}}
     end
     a_epic_supervisor --> s_building_epics
     a_epic_supervisor --> s_signoff
     a_ticket_supervisor --> s_building_epics
     a_ticket_supervisor --> s_signoff
-    a_create_ticket --> s_ticket_authoring
-    a_create_epic --> s_ticket_authoring
     a_architect_review --> s_signoff
     a_python_coder --> s_signoff
+    a_python_coder --> s_doc_enforcer
+    a_python_coder --> s_complexity_reduction
     a_test_writer --> s_signoff
     a_test_runner --> s_signoff
+    a_documentation_expert --> s_route_knowledge
     a_documentation_expert --> s_signoff
+    a_change_scope_reviewer --> s_signoff
     a_pr_reviewer --> s_signoff
+    a_find_structural_smells --> s_review_for_code_smells
+    a_find_structural_smells --> s_review_for_structural_code_smells
+    a_find_design_smells --> s_review_for_code_smells
+    a_find_design_smells --> s_review_for_design_code_smells
     a_commit --> s_signoff
+    a_commit --> s_precommit_autofix
     a_pull_request --> s_signoff
     a_status_checker --> s_signoff
+    a_feedback_analyst --> s_feedback_analysis
     a_sql_coder --> s_signoff
-    a_sql_query --> s_signoff
+    a_frontend_coder --> s_webapp_testing
+    a_frontend_coder --> s_signoff
     a_sql_query --> s_sql_query_past_queries
+    a_sql_query --> s_signoff
     a_sql_test_writer --> s_signoff
-    a_database_agent --> s_db
-    a_prod_deploy --> s_fetch_prod_logs
-    a_reporting_agent --> s_db
-    a_reporting_agent --> s_fetch_prod_logs
-    a_strategy_builder --> s_db
-    a_strategy_builder --> s_find_context_candle
+    a_workflow_architect --> s_package_audit
     a_workflow_architect --> s_create_hook
     a_workflow_architect --> s_add_agent_to_package
     a_workflow_architect --> s_add_skill_to_package
-    a_workflow_architect --> s_package_audit
     a_architecture_diagram_author --> s_write_c4_diagram
+    a_reference_author --> s_signoff
+    a_user_surface_smoker --> s_signoff
+    a_live_surface_tester --> s_signoff
+    a_documentation_verifier --> s_signoff
+    a_ac_validator --> s_signoff
+    a_ac_fulfillment_gate --> s_signoff
+    a_llm_expert --> s_signoff
+    a_llm_expert --> s_add_agent_to_package
+    a_llm_expert --> s_add_skill_to_package
+    a_product_owner --> s_signoff
+    a_product_owner --> s_knowledge_query
+    a_product_owner --> s_ac_tree_split
+    a_business_analyst --> s_knowledge_query
+    a_business_analyst --> s_ac_tree_split
+    a_it_po --> s_knowledge_query
 ```
 <!-- END:AGENT_SKILL_MAP -->
 
 ### Full Topology
 
 <!-- BEGIN:AGENT_TOPOLOGY -->
-<!-- registry-hash:7d2dc871 -->
+<!-- registry-hash:c47fe854 -->
 ```mermaid
 graph TD
     %% Combined spawn graph + skill map
@@ -327,24 +389,16 @@ graph TD
     ticket_supervisor --> architect_review
     ticket_supervisor --> python_coder
     ticket_supervisor --> test_writer
-    %% ... and 13 more phase agents
-    create_ticket["create-ticket"]
-    create_ticket --> business_analyst
-    create_ticket --> refinement
-    create_ticket --> architect_review
-    create_ticket --> create_epic
-    create_epic["create-epic"]
-    create_epic --> business_analyst
-    create_epic --> create_ticket
-    business_analyst["business-analyst"]
-    business_analyst --> research_agent
+    %% ... and 22 more phase agents
+    ticket_supervisor --> brainstorm_lead
+    ticket_supervisor --> llm_expert
+    ticket_supervisor --> test_breaker
     brainstorm_lead["brainstorm-lead"]
     brainstorm_lead --> brainstorm_worker
     brainstorm_worker["brainstorm-worker"]
     research_agent["research-agent"]
     architect_review["architect-review"]
     architect_review --> research_agent
-    architect_review --> architect_review_deep
     python_coder["python-coder"]
     python_coder --> research_agent
     python_coder --> test_runner
@@ -355,23 +409,27 @@ graph TD
     documentation_expert["documentation-expert"]
     documentation_expert --> research_agent
     documentation_expert --> adr_author
-    documentation_expert --> architecture_author
     documentation_expert --> architecture_diagram_author
     documentation_expert --> explanation_author
     documentation_expert --> how_to_author
     documentation_expert --> reference_author
+    documentation_expert --> glossary_triage
+    change_scope_reviewer["change-scope-reviewer"]
     pr_reviewer["pr-reviewer"]
+    pr_reviewer --> research_agent
+    code_review_architect["code-review-architect"]
+    find_structural_smells["find-structural-smells"]
+    find_design_smells["find-design-smells"]
     commit["commit"]
     pull_request["pull-request"]
     pull_request --> conflict_resolver
     conflict_resolver["conflict-resolver"]
-    conflict_resolver --> conflict_resolver_deep
     status_checker["status-checker"]
     status_checker --> research_agent
     worktree_agent["worktree-agent"]
     changelog_agent["changelog-agent"]
     retrospective_agent["retrospective-agent"]
-    refinement["refinement"]
+    feedback_analyst["feedback-analyst"]
     sql_coder["sql-coder"]
     sql_coder --> sql_table_creator
     sql_coder --> sql_procedure_creator
@@ -382,6 +440,8 @@ graph TD
     sql_coder --> sql_test_writer
     sql_coder --> research_agent
     sql_coder --> python_coder
+    frontend_coder["frontend-coder"]
+    frontend_coder --> research_agent
     sql_table_creator["sql-table-creator"]
     sql_table_creator --> research_agent
     sql_query["sql-query"]
@@ -396,20 +456,40 @@ graph TD
     sql_index_creator --> research_agent
     sql_view_creator["sql-view-creator"]
     sql_view_creator --> research_agent
-    database_agent["database-agent"]
-    prod_deploy["prod-deploy"]
-    reporting_agent["reporting-agent"]
-    strategy_builder["strategy-builder"]
-    strategy_builder --> research_agent
     workflow_architect["workflow-architect"]
     adr_author["adr-author"]
-    architecture_author["architecture-author"]
     architecture_diagram_author["architecture-diagram-author"]
     explanation_author["explanation-author"]
     how_to_author["how-to-author"]
-    onboarding_agent["onboarding-agent"]
     reference_author["reference-author"]
-    rollback_agent["rollback-agent"]
+    reference_author --> research_agent
+    glossary_triage["glossary-triage"]
+    user_surface_smoker["user-surface-smoker"]
+    live_surface_tester["live-surface-tester"]
+    documentation_verifier["documentation-verifier"]
+    onboard["onboard"]
+    onboard --> onboard_config_section
+    onboard_config_section["onboard-config-section"]
+    test_failure_triage["test-failure-triage"]
+    ac_validator["ac-validator"]
+    ac_fulfillment_gate["ac-fulfillment-gate"]
+    llm_expert["llm-expert"]
+    llm_expert --> research_agent
+    product_owner["product-owner"]
+    business_analyst["business-analyst"]
+    business_analyst --> research_agent
+    it_po["it-po"]
+    build_ac["build-ac"]
+    build_ac --> ac_triage
+    ac_triage["ac-triage"]
+    knowledge_harvester["knowledge-harvester"]
+    pt_classifier["pt-classifier"]
+    mock_data_author["mock-data-author"]
+    mockup_author["mockup-author"]
+    flow_author["flow-author"]
+    command_step_runner["command-step-runner"]
+    restructuring_specialist["restructuring-specialist"]
+    test_breaker["test-breaker"]
 ```
 <!-- END:AGENT_TOPOLOGY -->
 
@@ -524,6 +604,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [sql-query](coding/sql-query.md) | Sonnet | User-facing | `/sql-query` | Ad-hoc SELECT query authoring; invokes `sql-query-past-queries` skill to surface reusable prior queries; never executes autonomously. Portable. [EPIC-PortableSQLAgents ticket 05] |
 | [sql-test-writer](coding/sql-test-writer.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; authors SQL test files using transaction-rollback isolation (`unittest.TestCase`); reads PROJECT_CONTEXT for test_folder, framework, slow_test_marker. Portable. [EPIC-PortableSQLAgents ticket 06] |
 | [status-checker](coding/status-checker.md) | Sonnet | User-facing | `/status` | Investigates ticket state via git + prod-puller; closes confirmed-done tickets on explicit user request. [EPIC-CodingAgents ticket 08] |
+| [test-breaker](coding/test-breaker.md) | Sonnet | Internal | — | Read-only wrong-version preparer; for each named wrong version a guarding test must catch, replies with the minimal exact-match replacement or `could_not_prepare`. Dispatched by build routes ahead of the shared runner; the writer step makes the copies and manifest. [TQ-500g-1-iv] |
 | [test-runner](coding/test-runner.md) | Sonnet | User-facing | `/test` | Picks right suite from diff; structured failure report; auto-trigger for `python-coder`/`sql-coder` inner loops. Now runs after `test-writer` in the phase sequence. [EPIC-CodingAgents ticket 26] |
 | [test-writer](coding/test-writer.md) | Sonnet | Internal | — | Phase agent dispatched by `ticket-supervisor` when a ticket has a non-empty `test_requirements.tests` array; writes test files using the correct framework and setUp/tearDown pattern; runs after `python-coder`, before `test-runner`. [EPIC-PortableDevWorkflow ticket 36] |
 | [ticket-supervisor](coding/ticket-supervisor.md) | Sonnet | Internal | — | Drives a single ticket through its phase agents (read `agents:` map → spawn next `needed` → parse comment → route ok/handoff/blocker/question); runs failure-adjudication ladder; holds the commit-phase lock. Invoked only by `epic-supervisor`. [EPIC-AgentSupervisor ticket 08] |

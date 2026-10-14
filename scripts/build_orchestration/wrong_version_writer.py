@@ -1,0 +1,96 @@
+"""
+MODULE: scripts/build_orchestration/wrong_version_writer.py
+GOAL: The deterministic writer between the read-only test-breaker and the wrong-version
+    runner: ``list`` prints what is owed, ``write`` turns the preparer's reply into the
+    alterations manifest the runner reads (``wrong_version_runner.py --alterations``).
+BUSINESS CONTEXT: TQ-500g-1-ix. The preparer only RETURNS exact-match replacements; this
+    CLI applies each where it matches exactly once, computes every diff itself, records
+    every owed name once and refuses what it must (test files, paths outside the
+    repository or inside the version-control folder, files not in scope for the name).
+ARCHITECTURE: Public module with its own CLI (flags only; the runner's CLI is untouched).
+    Holds argument parsing and the one JSON object on stdout; the logic lives in the
+    siblings ``_wvw_list`` (owed names, via the runner's declared-scope reader),
+    ``_wvw_reply``, ``_wvw_prepare`` and ``_wvw_write``. ``list`` exits 0 when printed and
+    1 when the AC store or test root cannot be read; ``write`` exits 0 when the manifest
+    was written and 1 when the step stopped. Logging goes to stderr only. Never uses git stash.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import json
+import logging
+import sys
+from collections.abc import Callable
+from pathlib import Path
+
+from _wvw_list import Derived, derive_owed, list_payload
+from _wvw_write import run_write
+
+_LOG = logging.getLogger("wrong_version_writer")
+
+
+def _parser() -> argparse.ArgumentParser:
+    """Build the CLI parser."""
+    parser = argparse.ArgumentParser(description="Wrong-version writer (TQ-500g-1-ix)")
+    sub = parser.add_subparsers(dest="command", required=True)
+    for name, helptext in (("list", "Print the owed wrong versions and their in-scope files"),
+                           ("write", "Turn the preparer's reply into the alterations manifest")):
+        step = sub.add_parser(name, help=helptext)
+        if name == "write":
+            step.add_argument("--work-key", required=True)
+            step.add_argument("--reply", required=True, help="path of the raw reply, or - for stdin")
+        step.add_argument("--ac-ids", default="")
+        step.add_argument("--ac-root", required=True)
+        step.add_argument("--test-root", required=True)
+    return parser
+
+
+def _run_list(args: argparse.Namespace) -> tuple[dict, int]:
+    """Run the ``list`` step; an internal error still prints the shape."""
+    ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+    try:
+        derived = derive_owed(ids, Path(args.test_root), Path(args.ac_root))
+    except (OSError, ValueError) as exc:
+        _LOG.warning("the list step failed: %s", exc)
+        derived = Derived(error=f"internal error: {exc}")
+    return list_payload(derived), 1 if derived.error else 0
+
+
+def _guarded(step: Callable[[], tuple[dict, int]], command: str) -> tuple[dict, int]:
+    """Run *step*; any error, even KeyboardInterrupt, still gives the step's failure shape."""
+    try:
+        return step()
+    except BaseException as exc:  # noqa: BLE001 -- exactly one JSON object must print whatever went wrong
+        _LOG.warning("the %s step failed: %r", command, exc)
+        message = f"internal error: {exc!r}"
+        if command == "list":
+            return {"owed": [], "error": message}, 1
+        return {"written": False, "manifest_path": None, "error": message, "entries": [],
+                "ignored_reply_names": [], "preparer_anomalies": []}, 1
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry: print exactly one JSON object on stdout and return the exit code.
+
+    Args:
+        argv: Arguments (default ``sys.argv[1:]``).
+
+    Returns:
+        0 when the list was printed or the manifest was written, 1 when the step stopped.
+    """
+    logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(message)s")
+    args = _parser().parse_args(argv)
+    with contextlib.redirect_stdout(sys.stderr):
+        if args.command == "list":
+            payload, code = _guarded(lambda: _run_list(args), "list")
+        else:
+            ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
+            payload, code = _guarded(lambda: run_write(args.work_key, args.reply, ids, Path(args.test_root), Path(args.ac_root)), "write")
+    print(json.dumps(payload))
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
