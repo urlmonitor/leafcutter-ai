@@ -23,6 +23,15 @@ ARCHITECTURE: Stdlib-only, imported by name from the maker's own directory.
 # - 2026-10-14 18:00 [python-coder]: REFUSAL_CODES: a declined request answers
 #   status "refused" (TICKET_NOT_ON_BASE, OCCUPIED), not "error".
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
+# - 2026-10-14 19:00 [python-coder]: normalize_slug folds an epic's spellings
+#   (EPIC-Name, epic/kebab, display title) to one kebab identity, exact match
+#   only. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05) (BO-4300a-2)
+# - 2026-10-14 22:00 [python-coder]: run() forwards every child's output to
+#   stderr (stdout stays the one answer); every error/refused answer carries
+#   schema_version; a usage error exits 64. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/22) (BO-4300c-2)
+# - 2026-10-15 01:00 [python-coder]: must() answers GIT_FAILED (contract code)
+#   with the failing stage in `step` and no git output in the message.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/22) (BO-4300c-2)
 """
 from __future__ import annotations
 
@@ -33,6 +42,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 from workspace.workspace_root import LANDING_NAME, MARKER_NAME, resolve_project_root
@@ -46,7 +56,11 @@ KINDS = ("ticket", "feature", "ac", "fastlane", "epic", "scratch")
 _PREFIX = {"ticket": "ticket/", "feature": "feature/", "ac": "ac/",
            "fastlane": "fastlane/", "epic": "EPIC-", "scratch": ""}
 # Legacy spellings of one work identity, stripped before naming (the one table).
-_ALIASES = {"epic": ("EPIC-",)}
+_ALIASES = {"epic": ("EPIC-", "epic/")}
+# Kinds whose identity is folded to one canonical word-spelling (BO-4300a-2):
+# EPIC-<CamelName>, epic/<kebab> and the display title are the same work.
+_WORD_FOLDED = frozenset({"epic"})
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 
 log = logging.getLogger("worktree")
 
@@ -65,21 +79,51 @@ class MakerError(Exception):
 
     def payload(self, verb: str) -> dict:
         """Return the error or refused answer for this failure."""
-        return {"status": "refused" if self.refused else "error", "code": self.code,
+        return {"schema_version": SCHEMA_VERSION,
+                "status": "refused" if self.refused else "error", "code": self.code,
                 "verb": verb, "message": str(self), **self.extra}
+
+    @property
+    def exit_code(self) -> int:
+        """Return the process exit status: 2 refused, 64 usage error, 1 error."""
+        if self.refused:
+            return 2
+        return 64 if self.code == "USAGE" else 1
+
+
+def _forward(done: subprocess.CompletedProcess, echo_stdout: bool) -> None:
+    """Pass a child's own messages on to the maker's stderr, never its stdout.
+
+    stdout of the maker is reserved for the one answer (BO-4300c-2); a child's
+    stderr is always forwarded, its stdout only when it is progress text rather
+    than a value the maker reads (``echo_stdout``).
+    """
+    text = (done.stdout if echo_stdout else "") + (done.stderr or "")
+    if not text:
+        return
+    try:
+        sys.stderr.write(text if text.endswith("\n") else text + "\n")
+        sys.stderr.flush()
+    except (OSError, ValueError) as exc:
+        log.warning("cannot forward child output: %s", exc)
 
 
 def run(cmd: list[str], cwd: Path, timeout: int = 900,
-        extra_env: dict | None = None) -> subprocess.CompletedProcess:
-    """Run a command with stdin closed; failure to start is rc 127, logged."""
+        extra_env: dict | None = None, echo_stdout: bool = False) -> subprocess.CompletedProcess:
+    """Run a command with stdin closed; failure to start is rc 127, logged.
+
+    The child's output is captured and forwarded to stderr (see ``_forward``).
+    """
     env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", **(extra_env or {})}
     try:
-        return subprocess.run(  # noqa: S603
+        done = subprocess.run(  # noqa: S603
             cmd, cwd=str(cwd), stdin=subprocess.DEVNULL, capture_output=True,
             text=True, env=env, timeout=timeout, check=False)
     except (OSError, subprocess.SubprocessError) as exc:
         log.warning("could not run %s in %s: %s", cmd[:2], cwd, exc)
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+    _forward(done, echo_stdout)
+    return done
 
 
 def git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
@@ -93,11 +137,17 @@ def out(cwd: Path, *args: str) -> str | None:
     return done.stdout.strip() if done.returncode == 0 else None
 
 
-def must(cwd: Path, code: str, *args: str) -> str:
-    """Return git's stdout or raise a classified error."""
+def must(cwd: Path, step: str, *args: str) -> str:
+    """Return git's stdout or raise a GIT_FAILED error.
+
+    The answer is one sentence naming the cause and carries ``step`` (which
+    stage failed); git's own messages are not in it, they are on stderr
+    (BO-4300c-2: the tools' messages never appear in the answer).
+    """
     done = git(cwd, *args)
     if done.returncode != 0:
-        raise MakerError(code, f"git {args[0]} failed: {done.stderr.strip()[-600:]}")
+        raise MakerError("GIT_FAILED", f"git {args[0]} failed during {step.lower()}; "
+                         "git's own messages are on the maker's stderr", step=step)
     return done.stdout.strip()
 
 
@@ -129,10 +179,12 @@ def normalize_slug(kind: str, raw: str) -> str:
     for alias in _ALIASES.get(kind, ()):
         if slug.lower().startswith(alias.lower()):
             slug = slug[len(alias):]
+    if kind in _WORD_FOLDED:
+        slug = _CAMEL_BOUNDARY.sub("-", slug).lower()
     slug = re.sub(r"\.{2,}", ".", re.sub(r"[^A-Za-z0-9._-]+", "-", slug)).strip("-.")
     slug = re.sub(r"\.lock$", "", slug)
     if not slug:
-        raise MakerError("BAD_ARGUMENT", f"slug {raw!r} names no work identity")
+        raise MakerError("USAGE", f"slug {raw!r} names no work identity")
     return slug
 
 

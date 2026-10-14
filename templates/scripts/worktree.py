@@ -41,6 +41,12 @@ ARCHITECTURE: Stdlib-only CLI, run as ``python <install>/scripts/worktree.py
 #   uncommitted and untracked paths), refuses UNSENT_WORK (status refused, exit
 #   2) naming both, and answers ok only after a post-check finds nothing left.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/44) (BO-4300e-2)
+# - 2026-10-14 21:00 [python-coder]: Every workspace answer also carries
+#   repo_root (the resolved project). (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08) (ADR-001)
+# - 2026-10-14 22:00 [python-coder]: stdout is the one answer: every answer
+#   carries schema_version, child output goes to stderr, a usage error answers
+#   USAGE and exits 64 (was BAD_ARGUMENT, exit 1), -h is not accepted.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/22) (BO-4300c-2)
 """
 from __future__ import annotations
 
@@ -53,7 +59,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from workspace.workspace_checks import require_ready  # noqa: E402
 from workspace.workspace_core import (  # noqa: E402
-    KINDS, MAKER_VERSION, MakerError, dirname_for, discard_tree, git, log, make_plan,
+    KINDS, MAKER_VERSION, SCHEMA_VERSION, MakerError, dirname_for, discard_tree, git, log, make_plan,
     must, normalize_slug, out, plan_from_marker, read_marker, resolve_project, run, scan,
 )
 from workspace.workspace_create import (  # noqa: E402
@@ -68,13 +74,15 @@ def _entry(ws: Path, marker: dict) -> dict:
     return {"kind": marker.get("kind"), "slug": marker.get("slug"),
             "branch": marker.get("branch"), "state": marker.get("state"),
             "hub": marker.get("hub"), "project_root": marker.get("project_root"),
+            "repo_root": marker.get("project_root"),
             "base_commit": marker.get("base_commit"), "workspace_path": str(ws),
             "workspace_path_posix": ws.as_posix(), "worktree_path": str(ws)}
 
 
 def _ok(verb: str, **fields: object) -> dict:
     """Return an ok answer with the fields common to every verb."""
-    return {"status": "ok", "code": "OK", "verb": verb, "mechanism": "clone",
+    return {"schema_version": SCHEMA_VERSION, "status": "ok", "code": "OK", "verb": verb,
+            "message": f"{verb} succeeded", "mechanism": "clone",
             "maker_version": MAKER_VERSION, **fields}
 
 
@@ -135,7 +143,7 @@ def verb_locate(args: argparse.Namespace) -> dict:
         name = dirname_for(args.kind, normalize_slug(args.kind, args.slug))
         match = [(w, m) for w, m in found if w.name == name]
     else:
-        raise MakerError("BAD_ARGUMENT", "locate needs --path, --branch, or --kind and --slug")
+        raise MakerError("USAGE", "locate needs --path, --branch, or --kind and --slug")
     if not match:
         raise MakerError("NOT_FOUND", "no such workspace in the landing place")
     return _ok("locate", **_entry(*match[0]))
@@ -165,8 +173,8 @@ def _changed_files(ws: Path) -> list[str]:
     """Return every uncommitted or untracked path in the workspace (read-only)."""
     done = git(ws, "status", "--porcelain", "-uall", "-z")
     if done.returncode != 0:
-        raise MakerError("STATE_UNREADABLE", "cannot read the workspace's changes: "
-                         f"{done.stderr.strip()[-300:]}")
+        raise MakerError("STATE_UNREADABLE", "cannot read the workspace's changes; "
+                         "git's own messages are on the maker's stderr")
     entries, files, index = done.stdout.split("\x00"), [], 0
     while index < len(entries):
         entry = entries[index]
@@ -231,16 +239,16 @@ class _Parser(argparse.ArgumentParser):
     """An argument parser that raises a classified error instead of exiting."""
 
     def error(self, message: str) -> None:  # type: ignore[override]
-        raise MakerError("BAD_ARGUMENT", message)
+        raise MakerError("USAGE", message)
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Build the verb parser."""
-    top = _Parser(prog="worktree.py")
+    """Build the verb parser (no -h: help text would be a second thing on stdout)."""
+    top = _Parser(prog="worktree.py", add_help=False)
     sub = top.add_subparsers(dest="verb", required=True, parser_class=_Parser)
 
     def verb(name: str, *flags: str) -> argparse.ArgumentParser:
-        sp = sub.add_parser(name)
+        sp = sub.add_parser(name, add_help=False)
         for flag in ("--repo-root", *flags):
             sp.add_argument(flag)
         return sp
@@ -259,7 +267,7 @@ def _build_parser() -> argparse.ArgumentParser:
     rem.add_argument("--path", required=True)
     rem.add_argument("--discard", action="store_true")
     rem.add_argument("--delete-remote-branch", action="store_true")
-    sub.add_parser("where")
+    sub.add_parser("where", add_help=False)
     return top
 
 
@@ -268,14 +276,17 @@ _VERBS = {"ensure": verb_ensure, "locate": verb_locate, "list": verb_list,
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run one verb and print its single JSON answer; exit 0 only on ok."""
+    """Run one verb and print its single JSON answer.
+
+    Exit 0 ok, 2 refused, 1 error, 64 usage error; stdout carries only the answer.
+    """
     words = sys.argv[1:] if argv is None else argv
     verb = words[0] if words and words[0] in _VERBS else "unknown"
     try:
         args = _build_parser().parse_args(words)
         payload, code = _VERBS[args.verb](args), 0
     except MakerError as exc:
-        payload, code = exc.payload(verb), 2 if exc.refused else 1
+        payload, code = exc.payload(verb), exc.exit_code
     except Exception as exc:  # noqa: BLE001 - boundary: unclassified becomes an error answer
         log.warning("unclassified failure in %s: %r", verb, exc)
         payload = MakerError("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}").payload(verb)
