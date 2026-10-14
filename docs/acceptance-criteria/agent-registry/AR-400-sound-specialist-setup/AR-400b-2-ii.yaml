@@ -1,0 +1,86 @@
+id: AR-400b-2-ii
+title: "A sentence about what another specialist does is not an instruction to this one"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-supervisor" that grants only "building-epics",
+    whose instructions contain:
+      "**Note:** `frontend-coder` may invoke the `webapp-testing` skill
+       internally as part of its own phase."
+    And "frontend-coder" is the identifier of another specialist in the tree,
+  When the build runs,
+  Then the build reports no finding for "probe-supervisor" about
+    "webapp-testing",
+    And when the sentence is rewritten as "Invoke the `webapp-testing` skill
+      before dispatching frontend-coder.", the build stops with an "ability
+      exists but is not granted" finding for "probe-supervisor" /
+      "webapp-testing" on that line.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance at line 260 (dated snapshot): a note about frontend-coder's use of webapp-testing -- warned about on 2026-10-12 as if ticket-supervisor were told to use it."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The other-specialist test is DATA-DRIVEN: a sentence is about another specialist when its grammatical subject is an identifier from the registry's agent ids (derived at run time from config/agent_registry.json or templates/agents/), other than the referrer itself. No specialist is named in the rule."
+  - "An imperative addressed to the reader that merely mentions another specialist elsewhere in the sentence ('Invoke the `webapp-testing` skill before dispatching frontend-coder.') is still an instruction."
+  - "Body prose only: ticket-supervisor's frontmatter behavioral_patterns entry ('Delegates to webapp-testing via Agent tool', related_agent: webapp-testing) is out of scope of the body scan and must not be read by this check. Whether that entry is itself stale is flagged separately, not fixed here."
+test_spec:
+  - name: test_sentence_with_other_specialist_as_subject_is_not_an_instruction
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-supervisor grants only building-epics and its body has the frontend-coder/webapp-testing note; the validator CLI passes with no finding about webapp-testing for probe-supervisor."
+  - name: test_imperative_mentioning_another_specialist_is_still_an_instruction
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Rewrite the sentence as 'Invoke the `webapp-testing` skill before dispatching frontend-coder.'; the run fails with 'not granted' for probe-supervisor/webapp-testing."
+    must_catch:
+      - "any sentence containing another agent id is exempt"
+      - "the exemption is keyed on the literal name frontend-coder"
+test_rationale: >-
+  The exemption must hinge on the subject, not on co-occurrence of an agent id;
+  the rewritten sentence is the discriminating case.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule plus the set of specialist identifiers in the tree."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR ("a sentence about another agent").
+  The subject test is: the sentence's grammatical subject is another specialist's
+  identifier. The second clause is the discrimination half -- naming another
+  specialist in the same sentence does not by itself exempt an imperative
+  addressed to the reader.
+
+  ticket-supervisor's behaviour-catalogue entry "Delegates to webapp-testing via
+  Agent tool" (related_agent: webapp-testing) is a further real instance of a
+  non-instruction; it is a structured frontmatter catalogue entry, not body
+  prose, and is out of the body scan. Whether that entry is itself stale
+  (webapp-testing is an ability, not an agent) is raised in the BA report, not
+  decided here.

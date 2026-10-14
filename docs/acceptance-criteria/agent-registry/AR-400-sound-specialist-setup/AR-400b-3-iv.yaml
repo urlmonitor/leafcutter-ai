@@ -1,0 +1,70 @@
+id: AR-400b-3-iv
+title: "sql-coder hands query scaffolding to the sql-query specialist instead of calling it an ability"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given sql-coder's definition in the package's real tree, which permits
+    handing work to the specialist "sql-query",
+  When the build compiles sql-coder's prompt,
+  Then the compiled prompt's step that scaffolds an ad-hoc query tells sql-coder
+    to hand that work to the "sql-query" sub-agent,
+    And no instruction in the compiled prompt tells sql-coder to load an ability
+      named "sql-query",
+    And "sql-query" remains in sql-coder's hand-off list in the compiled prompt,
+    And the build reports no "names an agent, not an ability" finding for
+      sql-coder.
+depends_on:
+  - AR-400b-3
+  - AR-400b-2-vi
+doc_links:
+  - path: templates/agents/sql-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "'sql-query skill if available' at line 217 (dated snapshot); spawn_allowlist lists sql-query at line 19."
+assigned_agent: llm-expert
+estimated_complexity: XS
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Rewrite 'sql-query skill if available' (templates/agents/sql-coder.md ~line 217) as a hand-off to the sql-query sub-agent via the Agent tool; keep sql-query in sql-coder's `spawn_allowlist` frontmatter (line ~19)."
+  - "Do not touch sql-coder's postgres / sql-test references here -- they are AR-400d-1-i's."
+test_spec:
+  - name: test_compiled_sql_coder_hands_scaffolding_to_sql_query_sub_agent
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile sql-coder from the real template; the ad-hoc query scaffolding step names sql-query as a sub-agent, no recognised ability instruction names sql-query, and the compiled hand-off list still names sql-query."
+  - name: test_validator_has_no_names_an_agent_finding_for_sql_coder
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The validator over the real tree reports no 'names an agent' finding for sql-coder; a copy with the old sentence restored produces one."
+    must_catch:
+      - "sql-query is removed from spawn_allowlist instead of the sentence being rewritten"
+test_rationale: >-
+  The hand-off list assertion guards the over-correction of deleting the
+  permission along with the sentence.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-3.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Decided by the orchestrator's brief: "sql-coder sql-query = sub-agent". The
+  postgres and sql-test references in the same specialist are a different case
+  (abilities the consumer project supplies) and are AR-400d-1-i.

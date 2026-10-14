@@ -1,0 +1,62 @@
+id: AR-400f-3
+title: "The frontmatter reference states that a hand-off declaration names each specialist once"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author reading the reference documentation for `spawn_allowlist`,
+  When they look up how the "every ticket-phase agent" entry combines with
+    explicit entries,
+  Then the reference states that an explicit entry for a specialist the covering
+    entry already includes, or a repeated entry, stops the build,
+    And it shows the exact failure line the build prints for that case,
+    And it states that redundancy is judged against ticket-phase membership on
+      each build, with the example of a specialist later becoming a ticket-phase
+      agent,
+    And the example failure line matches, word for word, what the build prints
+      on a fixture reproducing it.
+depends_on:
+  - AR-400f-1
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "Documents spawn_allowlist and the __ticket_phase_agents__ covering entry."
+assigned_agent: reference-author
+estimated_complexity: S
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "Written after AR-400f-1 ships; the example failure line is copied from a real run."
+  - "Replace any existing text in docs/reference/agent-template-frontmatter.md that says redundant entries are tolerated or de-duplicated at declaration time; keep the statement that delivery names each agent once."
+test_spec:
+  - name: test_reference_redundant_entry_line_matches_build_output
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Build a fixture with a redundant ticket-phase entry, run the validator, and assert the printed redundant-entry line appears verbatim in the spawn_allowlist section of docs/reference/agent-template-frontmatter.md."
+test_rationale: >-
+  The criterion makes the example line falsifiable; comparing it with a real
+  run keeps it so.
+delivers_to: null
+expects_from:
+  ac_id: AR-400f-1
+  contract: "The exact redundant-entry failure line."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400f.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies AR-400f's documentation_triggers [reference-doc].

@@ -100,6 +100,29 @@ amended_by:
     either populate a real pin source the evaluator can read, or require the reclaiming
     path to treat an absent pin source as pin-state-unknown and decline to reclaim -
     never as not-pinned. Found by pr-reviewer on the KM-400f-1 drive (finding H-2)."
+  - "2026-10-12: business-analyst added a BLOCKING PRECONDITION note. This AC must NOT be
+    built against the completed-publication-only view of generations. Nothing in this AC's
+    own criteria or fields is changed by this note; it records a constraint on HOW it is
+    implemented. The retention policy it consumes from KM-400f-1 currently reads only
+    generations whose publication reached the completed state, and measured on the live
+    hosted store on 2026-10-12 that view was EMPTY — all 12 generation records recorded a
+    failed publication and none a completed one, while 123,810 reclaimable nodes sat in the
+    store. Built against that view, this AC's reclamation would correctly reclaim nothing
+    on every publication and would report a reclaimed count of zero as a success, which is
+    the exact failure that destroyed two hosted instances in four days. Build this AC only
+    on the widened population and the per-generation verdicts specified by KM-400f-1-i
+    (every generation assessed whatever its publication outcome), KM-400f-1-ii (age basis
+    for a generation that was never retired and carries no retirement time), KM-400f-1-iii
+    (the active generation is never reclaimable whatever its publication outcome — the live
+    store's active pointer references an incompletely published generation, so active and
+    completed are independent in practice), KM-400f-1-iv (the reclaimed set reports which
+    basis each generation was reclaimed on), KM-400f-1-v (entity nodes reconciled against
+    generation records) and KM-400f-1-vi (an unassessable store reported as such, never as
+    nothing to reclaim). This AC's own reclaimed-count reporting clause is unaffected and
+    remains load-bearing. Its test fixtures must reproduce the real observed shape — failed
+    publications, an active pointer to an incompletely published generation, and no
+    retirement time — because this AC's existing 27-generation fixture of completed and
+    retired generations is the same fixture bias that hid the defect in KM-400f-1."
 superseded_by: null
 covered_by: []
 implemented_by: []

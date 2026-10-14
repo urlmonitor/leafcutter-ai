@@ -1,0 +1,71 @@
+id: AR-400c
+title: "Everything the build reports about a specialist's abilities is a real problem"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  No more warnings about abilities that nobody needs to act on.
+
+  The build stops reporting things that are not faults, and the real faults
+  that noise was hiding are fixed: grants a specialist never uses are removed,
+  and authoring guidance no longer asks people to write by hand what the
+  system already delivers.
+depends_on:
+  - AR-400
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "Its second direction -- 'granted but never mentioned in the instructions' -- produced 11 of the 32 warnings and is obsolete now that AR-300 delivers granted abilities without prose. Superseded here."
+  - path: templates/agents/adr-author.md
+    relationship: modifies
+    status: exists
+    relevance: "Dead grant: doc-enforcer."
+  - path: templates/agents/product-owner.md
+    relationship: modifies
+    status: exists
+    relevance: "Dead grant: signoff."
+  - path: templates/agents/llm-expert.md
+    relationship: modifies
+    status: exists
+    relevance: "Tells authors to hand-write an abilities section in the body (and refers to a 'table above' that is no longer there). AR-300 delivers that section; the guidance now produces the duplicates AR-300d exists to prevent."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400c-1
+  - AR-400c-2
+  - AR-400c-3
+  - AR-400c-4
+  - AR-400c-5
+implemented_by: []
+documentation_triggers: []
+documentation_rationale: "Removes noise and stale guidance; no new user-facing surface. The authoring reference change is owned by AR-300c's existing reference-doc trigger."
+notes: |
+  WHY "DEAD GRANT" IS A REAL FAULT AND "NOT MENTIONED" IS NOT. A grant the
+  instructions never mention is normal after AR-300 -- the grant arrives on its
+  own. A grant the specialist has no use for is a different thing: it is
+  delivered, costs attention, and implies work the specialist does not do.
+  The two were indistinguishable in today's report. The dead grants named here
+  are the two the user identified; the BA decides whether a check should find
+  future ones or whether the cleanup is one-off.
+
+  THE ALTERNATIVE THE USER REJECTED. Keeping the obsolete direction as a
+  quieter message was not chosen -- "instead of printing noise". A message
+  nobody acts on is the defect, however quietly it is printed.
+
+  THE SAME-CLASS NEIGHBOUR LEFT OUT. The 14 "a human should verify" closure
+  warnings (rebuild log lines 280-294) are excluded by the design and are not
+  covered by this L1. See AR-400 notes.

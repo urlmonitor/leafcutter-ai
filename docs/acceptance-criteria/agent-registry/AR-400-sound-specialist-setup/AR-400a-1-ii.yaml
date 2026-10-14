@@ -1,0 +1,76 @@
+id: AR-400a-1-ii
+title: "A retired ability named inside a recorded decision history is not an instruction and does not stop the build"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a shared guide containing a commented-out "DECISION HISTORY" block that
+    reads "create-ac was retired into plan-feature",
+    And no ability named "create-ac" exists,
+  When the build runs,
+  Then the build reports no finding about "create-ac" and passes on that guide,
+    And when the same sentence "Load `.claude/skills/create-ac/SKILL.md`" is
+      moved out of the commented block into the guide's live text, the build
+      stops naming the guide, "create-ac" and the line.
+depends_on:
+  - AR-400a-1
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the create-ac control case and the two discriminators (comment blocks are history, only imperative lines are references)."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The exclusion is POSITIONAL: text inside an HTML comment block (<!-- ... -->) is history and is blanked before recognition, preserving newlines so reported line numbers still match the file on disk -- the existing check_skill_refs._scan_text behaviour. It must survive the move into the shared recognition rule (AR-400b-2)."
+  - "No allow-list of retired ability names may exist anywhere in the check; the same sentence outside a comment block must fail (second clause). A name-based exemption is a defect even if it makes the first clause pass."
+  - "The guide population this applies to includes the real templates/skills/plan-feature/SKILL.md, whose DECISION HISTORY block records the create-ac retirement; the package's real tree must still pass."
+test_spec:
+  - name: test_retired_ability_inside_decision_history_comment_is_not_a_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a copied package slice, add a shared guide with a commented DECISION HISTORY block reading 'create-ac was retired into plan-feature' and \"Load `.claude/skills/create-ac/SKILL.md`\" inside the comment; the validator CLI passes with no finding about create-ac."
+  - name: test_same_sentence_in_live_text_fails_naming_guide_ability_and_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Move the Load sentence out of the comment block; the run fails naming the guide, create-ac and the correct 1-based line."
+    must_catch:
+      - "an allow-list of retired names suppresses create-ac everywhere"
+      - "comment stripping shifts line numbers so the reported line is wrong"
+test_rationale: >-
+  The two descriptors are one experiment: the same sentence, moved across the
+  comment boundary, must flip the verdict. Only that pair distinguishes a
+  positional exclusion from a name-based one.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The reference check over shared guides, consuming the recognition rule's comment-blanked line stream (AR-400b-2)."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AR-400a's notes: "a reference inside a recorded decision history (not an
+  instruction) is not a reference; KI-BP-007 already documents that exclusion".
+  The second clause is the discrimination half: the exclusion is by position
+  (history block), not by name -- an allow-list of retired names passes the
+  first clause and fails the second.

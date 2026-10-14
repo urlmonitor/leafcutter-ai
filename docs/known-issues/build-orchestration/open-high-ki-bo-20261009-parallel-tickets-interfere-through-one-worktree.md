@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-13'
 components:
   - build_orchestration
 related_docs:
@@ -21,9 +21,10 @@ related_docs:
   agent can be sent to fix code that is not broken. The remedies that worked were all manual:
   re-ordering dependencies so the two tickets never share a batch.
 - **Status:** open, no AC. Observed and diagnosed in the ticket's own Comments.
-- **Occurrences:** 1 incident, tickets 02 and 05, 2026-09-30. The coordinator then serialised 02
-  after 05 (`731e7a930`) and 06 after 02 (`b30e18b94`) to stop it recurring.
-- **First seen:** 2026-09-30 · **Last seen:** 2026-09-30
+- **Occurrences:** 2 incidents. Tickets 02 and 05, 2026-09-30: the coordinator then serialised 02
+  after 05 (`731e7a930`) and 06 after 02 (`b30e18b94`) to stop it recurring. Tickets 07 and 08,
+  2026-10-12: committed from separate lane worktrees (see "Observed again" below).
+- **First seen:** 2026-09-30 · **Last seen:** 2026-10-12
 - **Where:** `templates/workflows-js/build-feature.js`: the planner's only physical-coupling rule is
   "no two tickets share any files_touched entry" (:3079). A batch's tickets are dispatched together
   through `parallel()` in chunks of `BATCH_SIZE` (:3305-3445), all in `realWorktreePath`.
@@ -86,3 +87,41 @@ more than one ticket. Or a failure that disappears when the batch is re-run one 
 **Related.** `KI-BO-20260901-0920` (no lock on the shared index; it predicted the staged-files
 half). `KI-CG-20260927-file-size-hook-read-another-worktrees-index` is the cross-worktree form of
 "a gate saw someone else's changes".
+
+## Observed again, 2026-10-13: path-limited commits do not isolate the gates
+
+**Where:** tickets 07 and 08 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-12. The
+refusals are from the coordinator's session account. Hook scope is verified on `origin/main`
+`964f23a60`, and the lanes are verified on the epic branch.
+
+**What happened.**
+
+- A path-limited commit of one ticket (`git commit --only <its paths>`) still failed
+  `check-build-drift` and `check-output-drift`, because another ticket had template edits in flight in
+  the same worktree.
+- A commit agent unstaged another ticket's newly added files to keep them out of its own commit. That
+  turned them into untracked files.
+- To get the two tickets in, the coordinator committed each from its own lane worktree and
+  fast-forwarded the epic branch onto them. Ticket 07 records "Committed ... in lane worktree
+  bo4300-lane07 (branch lane/bo4300-t07)" (`07_TICKET-...-safe-re-request.md:894`). Ticket 08 records
+  "clean lane worktree lane/bo4300-t08" (`08_TICKET-...-locate-and-clear.md:967`). Their commits
+  `c9f1a8a95` and `c0fa00e94` sit on the epic's first-parent line.
+
+**Why a pathspec does not help.** Both hooks are registered `pass_filenames: false` and
+`always_run: true`, and both read the worktree, not the commit:
+
+- `check-build-drift` compares every template in its scope (`templates/agents/`,
+  `templates/scripts/commit_guardian/`) with the install's build manifest
+  (`check_build_drift.py:37-42`).
+- `check-output-drift` hashes the output files it finds on disk (`check_output_drift.py:25-35`, `:216`).
+
+So `--only` narrows what is committed, not what is checked. A sibling's half-edited template fails
+every ticket's commit.
+
+**Why unstaging is unsafe.** A newly added file that is unstaged is held by nothing: not the index, not
+history. In a worktree that agents share, an untracked file can disappear in the next clean-up or
+restore.
+
+**What this adds.** It confirms the first fix direction above, one worktree per ticket: the lanes worked.
+It also rules out the two cheaper substitutes. Those were tried, and both failed. The lanes cost a
+manual set-up and a fast-forward per ticket, which the drive should do itself.

@@ -1,0 +1,89 @@
+id: AR-400a-1-i
+title: "An ability-reference check that examined no specialist definitions fails instead of passing"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the build is pointed at a tree whose specialist-definition location
+    resolves to an empty directory, or to a location that does not exist,
+  When the ability-reference check runs as part of the build,
+  Then the build stops with a failing result stating that zero specialist
+    definitions were examined and naming the location it looked in,
+    And it does not print a success line or a "no faults found" line for that
+      check,
+    And the same holds when the check is run on its own through the registry
+      validator rather than through a full build.
+depends_on:
+  - AR-400a-1
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "The checker this goal wires in was run by hand from the wrong directory before; a zero-input run must not read as clean."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry validation this zero-population refusal lives in."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "A universal over an empty set is not a pass: zero specialist definitions examined, or zero shared guides examined, is a failing result -- returned as an error by validate_agent_registry, not printed and ignored. The precedent is agent_ability_verdict.EmptyPopulationError; reuse its shape rather than inventing a second one."
+  - "The failure names the location that was looked in as an absolute path, and which population (definitions, guides) came back empty."
+  - "scripts/check_skill_refs.py's own success line ('OK: every imperative skill reference resolves (N skills known)') reports skills KNOWN, not files EXAMINED; whatever replaces it must report examined counts, and a zero count must never print an OK line."
+  - "A location that does not exist and a location that exists but is empty are both refusals; neither may be read as 'nothing to check' (the bare-directory no-op of KI-ACS-001)."
+test_spec:
+  - name: test_empty_agents_directory_fails_validator_stating_zero_examined
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Copy the real package slice, empty templates/agents/; run the registry validator CLI in a subprocess; assert non-zero exit, a message stating zero specialist definitions examined and naming the directory, and no 'OK'/'no faults' line."
+    must_catch:
+      - "an empty population returns an empty error list"
+      - "the zero-count run prints the success line"
+  - name: test_missing_agents_directory_fails_the_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "Remove templates/agents/ from the copy; scripts/build.py exits non-zero with the same zero-examined failure."
+  - name: test_populated_tree_reports_nonzero_counts_and_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: the unmodified copy passes and reports non-zero definitions and guides examined."
+test_rationale: >-
+  The defect class is a check that runs on nothing and reports clean; only
+  running the real entry point against a real empty and a real missing
+  directory, with the populated tree as control, distinguishes that from a
+  clean result.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The examined counts reported by the reference check: {'definitions_examined': int, 'guides_examined': int} on the verdict AR-400a-1 returns."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR: "a check that examined zero
+  templates fails". A universal over an empty set is true; a refusing check
+  that silently examines nothing is the false-green this repository has hit
+  three times (see the root CLAUDE.md, "A check that examined nothing must not
+  look like a check that found nothing").

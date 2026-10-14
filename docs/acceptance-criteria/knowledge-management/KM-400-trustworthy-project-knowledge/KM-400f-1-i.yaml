@@ -1,0 +1,168 @@
+id: KM-400f-1-i
+title: "Every generation is assessed, including one whose publication failed or never completed"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the repository holds 12 generation records, every one of which records a failed publication and none of which records a completed publication
+  And 123,810 entity nodes are tagged to those 12 generations
+  When the retention policy is evaluated
+  Then all 12 generation records are reported, each with its own reclaimability verdict and the reason for that verdict
+  And the evaluation reports that it assessed 12 generation records
+  And no generation record is left out of the report on the grounds that its publication did not complete
+
+  Given the repository holds 1 generation record whose publication completed and 11 whose publication failed
+  When the retention policy is evaluated
+  Then the evaluation reports that it assessed 12 generation records
+  And one further generation record whose publication failed is added, and on the next evaluation the reported figure is 13
+  And the reported figure moves with the number of generation records present, for every publication outcome a record can carry
+
+  Given the repository holds no generation record at all
+  When the retention policy is evaluated
+  Then the evaluation reports that it assessed 0 generation records and found 0 reclaimable
+  And that result is distinguishable in the report from an evaluation that assessed 12 generation records and found 0 reclaimable
+depends_on: [KM-400f-1]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Supplies the declared bound and the per-generation reclaimability
+      report this record fixes the population of; the bound itself is not restated here.
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: Describes the generation lifecycle whose publication outcomes this record
+      requires the evaluation to span.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The assessed-generation figure is operator-visible output of the retention
+      evaluation documented here.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: The full generation population and its per-generation verdicts, which
+    KM-400f-2's reclamation and KM-400f-4's operator listing both consume; neither
+    re-filters the population by publication outcome.
+expects_from:
+  ac_id: KM-400f-1
+  contract: The declared bound and the reclaimability determination this record widens
+    the input set of; the bound's two bases are unchanged.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-1-i.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12 against measurement, not inference. KM-400f-1 shipped a declared
+  bound and a working per-generation evaluator, and it is aimed at the wrong population:
+  the read behind it admits only generations whose publication reached the completed
+  state, and its criteria describe one active generation plus retired ones, all completed.
+
+  Measured on the live hosted store, 2026-10-12: 12 generation records, every one of them
+  recording a failed publication and not one recording a completed publication; 123,810
+  entity nodes tagged to generations and not one of them tagged to a generation whose
+  publication completed. The evaluator therefore correctly reports zero generations and
+  zero reclaimable while 123,810 reclaimable nodes sit in the store. The same shape held
+  on the instance destroyed four days earlier: 25 of 32 generations recorded a failed
+  publication and held 137,980 of 189,950 nodes.
+
+  Two hosted instances were destroyed in four days by this accumulation. Each filled until
+  the store latched read-only, and because reclaiming space itself needs writes, neither
+  could be recovered — both were deleted and recreated and all history was lost. KM-400f-1
+  and KM-400f-2 as specified would not have prevented either incident, because the
+  population they govern was empty on both instances at the moment they would have run.
+
+  What already works and is deliberately not re-specified: the pre-existing cleanup
+  operation CAN reclaim a generation whose publication failed — it guards on
+  active-ness and elapsed retention, not on publication outcome. A dry run on 2026-10-09
+  found 29 of 32 generations eligible and cross-checked every stored key against its
+  generation scope. The capability exists; the retention policy filters it out of view.
+  The defect is in the criteria, not in that operation.
+
+  The varying-population clause in the second scenario is load-bearing and is not a
+  restatement of the first. A stated figure on its own is satisfiable by a literal, and a
+  figure that moves only when a completed-publication generation is added is satisfiable
+  by the very filter this record exists to remove.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_every_generation_is_assessed_whatever_its_publication_outcome
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Build a 12-generation fixture in which every generation records a failed
+      publication and none records a completed one, evaluate the policy through its public
+      entry point, and assert all 12 appear with a verdict and a reason and that the
+      assessed figure is 12.
+    covers: [KM-400f-1-i]
+    must_catch:
+      - "admit only generations whose publication completed, reporting 0 assessed and 0 reclaimable"
+      - "report the generations but omit the per-generation verdict for the failed ones"
+      - "hardcode the assessed figure instead of deriving it from the records present"
+    requires_db: false
+  - name: test_assessed_figure_moves_when_a_failed_generation_is_added
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: Evaluate against 12 generations, add a thirteenth that records a failed
+      publication, evaluate again and assert the reported assessed figure rises from 12 to
+      13.
+    covers: [KM-400f-1-i]
+    must_catch:
+      - "count only generations whose publication completed, so the figure does not move"
+      - "return a literal figure that never moves"
+    requires_db: false
+  - name: test_empty_store_is_distinguishable_from_a_store_with_nothing_reclaimable
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Evaluate against a repository holding no generation record and against one
+      holding 12 with none reclaimable, and assert the two results are distinguishable
+      rather than both reading as nothing to reclaim.
+    covers: [KM-400f-1-i]
+    must_catch:
+      - "return the same empty result for both, so an unseen population reads as a clean one"
+    requires_db: false
+  - name: test_live_evaluation_sees_the_real_stores_failed_generations
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database seeded only with generations that record failed
+      publications, assert the evaluation reports every one of them with a verdict and that
+      the assessed figure equals the backend's own count of generation records.
+    covers: [KM-400f-1-i]
+    requires_db: true
+test_rationale: >-
+  KM-400f-1's own tests pass against a hand-built 32-generation fixture of completed and
+  retired generations, and that fixture bias is exactly why they did not catch this: under
+  a population where every generation's publication completed, a policy that admits only
+  completed publications is indistinguishable from a correct one. Every fixture here
+  therefore reproduces the REAL observed shape instead — generations whose publication
+  failed, no retirement time, and an active pointer that does not point at a completed
+  publication — because a fixture rebuilding the completed-and-retired bias would rebuild
+  the blind spot along with it. The assessed figure is asserted as a MOVING value against a
+  changing population rather than as a value, since a stated figure alone is satisfiable by
+  a literal and a figure that moves only on completed publications is satisfiable by the
+  filter this record removes. The empty-store case is its own test because an unassessed
+  population and an assessed population with nothing in it were the same observable result
+  on the live store, which is how 123,810 reclaimable nodes read as nothing to reclaim.

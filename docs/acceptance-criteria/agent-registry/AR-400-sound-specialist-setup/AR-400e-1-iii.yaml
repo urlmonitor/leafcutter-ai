@@ -1,0 +1,81 @@
+id: AR-400e-1-iii
+title: "A specialist's published card and its abilities done-verdict agree with its declaration"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree,
+  When the specialist cards are regenerated, and the abilities done-verdict is
+    computed for every specialist,
+  Then each specialist's card lists, in its abilities section, exactly its
+    declared abilities, with each one's mode and condition,
+    And the done verdict for each specialist is computed over exactly its
+      declared abilities,
+    And a fixture specialist whose declaration grants "a1" while a hand-planted
+      older-field entry lists "a2" gets a card listing only "a1" and a verdict
+      that mentions only "a1".
+depends_on:
+  - AR-400e-1
+doc_links:
+  - path: docs/agents/cards/python-coder.card.md
+    relationship: describes
+    status: exists
+    relevance: "An example published card whose abilities section is generated."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Card: scripts/generate_agent_cards.render_skills (~429-483) reads the specialist's own frontmatter `skills:` declaration (normalised by agent_ability_verdict.normalize_entries) -- today it reads a frontmatter 'skills_invoked' key that no template has, then registry skills_invoked, then legacy skills_used. Remove the legacy branch; generate_agent_cards.py is 744 content lines and may not grow."
+  - "Done verdict: agent_ability_verdict._record_abilities (~113-134) stops reading skills_used; the comparison is declaration vs registry skills_invoked only."
+  - "Cards are generated artefacts (docs/agents/cards/*.card.md); regenerate them with the generator and commit its output, never hand-edit."
+  - "unit_tests/test_generate_agent_cards.py uses a skills_used / collector-enforcer fixture (~37, ~73); update it in the same change."
+test_spec:
+  - name: test_cards_list_exactly_declared_abilities_with_mode_and_condition
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Regenerate cards from the real tree into a temp dir; each card's abilities section lists exactly the specialist's declared ids with mode and condition."
+  - name: test_verdict_is_computed_over_declared_abilities_only
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Run the ability verdict over the real tree: abilities_examined equals the total declared grants, and no finding mentions an id only present in a registry skills_used field."
+  - name: test_planted_older_field_entry_is_ignored_by_card_and_verdict
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Fixture specialist declares a1; its registry entry has a hand-planted skills_used ['a2']; the card lists only a1 and the verdict mentions only a1."
+    must_catch:
+      - "the card falls back to skills_used"
+      - "_record_abilities still unions skills_used"
+test_rationale: >-
+  The planted-a2 fixture is the discriminator the criteria name; it fails any
+  reader that still consults the retired field.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "Registry with skills_invoked only."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The design lists "cards" and "verdict" among the readers to move. Which field
+  each reads today was not measured by the BA; the third clause is the
+  discriminator either way.

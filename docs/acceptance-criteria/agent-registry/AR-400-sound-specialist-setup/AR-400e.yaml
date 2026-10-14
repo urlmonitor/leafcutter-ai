@@ -1,0 +1,77 @@
+id: AR-400e
+title: "Every view of a specialist shows the same abilities"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - knowledge_system
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  One list of a specialist's abilities, wherever you look it up.
+
+  The specialist's briefing, its published card, the architecture diagrams and
+  the knowledge graph all show the same abilities for every specialist,
+  because there is only one derived list for them to read. Which list a
+  specialist happens to appear in no longer depends on its history.
+depends_on:
+  - AR-400
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "Still carries two derived ability lists. On 2026-10-12: 4 specialists in only the older one, 12 in only the newer one, 27 in both. Readers each pick one, so the same specialist shows different abilities in different views."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c.yaml
+    relationship: related
+    status: exists
+    relevance: "OVERLAP, FLAGGED. AR-300c promised 'two records of the same grant can no longer disagree' and is work_status done. It settled the AUTHORED side (one declaration in the specialist's own definition); the DERIVED side still carries two copies that disagree. This L1 finishes that promise. AR-300c is done and its L2s are at the cap, so it cannot host this."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTION TO RECONCILE. Its constraint names both derived fields as the ones regenerated. Decision 3 leaves one. Amend explicitly."
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTION TO RECONCILE. Keeps the older field 'as an alias for backward compatibility'. Decision 3 retires it. Amend or supersede explicitly."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400e-1
+  - AR-400e-2
+  - AR-400e-3
+  - AR-400e-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  USER DECISION 3 (BrainCandy, 2026-10-12), BINDING: RETIRE the older derived
+  field in this round -- not normalise both. One derived field remains
+  (skills_invoked). Every reader moves to it.
+
+  THE READERS ARE THE TEST. The source analysis names the readers that pick
+  one field each (briefing, diagram, knowledge graph edges, validation, cards,
+  the done verdict, the migration helper). Removing the field while one reader
+  still looks for it silently empties that view -- the opposite of this
+  promise. Evidence must show each view's list for every specialist, not that
+  the field is gone.
+
+  THE WRITER THAT RE-SPLITS IT. A helper that proposes a specialist's
+  self-description currently writes the derived list from prose (and adds a
+  default ability). Left as is, it reintroduces a second source the next time
+  it runs. Retarget it to the specialist's own declaration.
+
+  WHY THIS IS NOT JUST "FINISH AR-300c". It could be argued as a defect in a
+  done record. It is authored as a new L1 because AR-300c is done with its L2
+  slots full, re-opening it would turn an approved done record into a
+  composite with unfinished work, and the benefit here (every VIEW agrees) is
+  stated from the reader's side, which AR-300c never did.

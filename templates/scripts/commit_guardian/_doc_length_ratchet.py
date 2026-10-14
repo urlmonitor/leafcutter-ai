@@ -3,7 +3,7 @@ MODULE: commit_guardian._doc_length_ratchet
 GOAL: Supply check_doc_length.py with everything its ratchet needs that is
     SPECIFIC to documentation — the counting rules (lines after YAML
     frontmatter; top-level ``##`` sections), the covered-set predicates
-    (under ``docs/``, ends ``.md``, basename not excluded), the per-file
+    (under ``docs/``, ends ``.md``, not in a declared set-aside location), the per-file
     limit selection (ADRs get their own), and the pass/grew/over verdict —
     while deliberately owning NONE of the git plumbing. Parent-revision
     resolution, merge awareness, the two-situation INDETERMINATE floor and
@@ -204,36 +204,84 @@ def is_adr_file(filepath: str) -> bool:
     return filepath.startswith("docs/architecture/adrs/")
 
 
-def is_excluded(filepath: str, excluded_files: set[str]) -> bool:
-    """Check whether a file should be excluded from checking.
+class SetAsideDeclarationError(ValueError):
+    """A ``doc_length.set_aside_locations`` entry is malformed or lacks a ground."""
+
+    def __init__(self, index: int, problem: str) -> None:
+        super().__init__(f"doc_length.set_aside_locations[{index}] {problem}")
+        self.reason = f"doc_length.set_aside_locations[{index}] {problem}"
+
+
+def parse_set_aside_locations(entries: list[dict]) -> tuple[str, ...]:
+    """Validate the declared set-aside locations and return their paths.
+
+    Each entry must be an object with a non-blank repo-relative ``path`` and a
+    non-blank ``ground`` (the stated reason the location is not judged). An
+    entry without a ground is REJECTED, never silently accepted.
 
     Args:
-        filepath: Relative file path from the project root.
-        excluded_files: Set of filenames (basenames) to exclude.
+        entries: The ``doc_length.set_aside_locations`` list from the config.
 
     Returns:
-        bool: True if the file should be skipped.
+        The declared paths, in declaration order.
+
+    Raises:
+        SetAsideDeclarationError: an entry is not an object, or has a blank
+            path or ground.
     """
-    return Path(filepath).name in excluded_files
+    paths: list[str] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            raise SetAsideDeclarationError(index, "is not an object")
+        path = entry.get("path")
+        ground = entry.get("ground")
+        if not isinstance(path, str) or not path.strip():
+            raise SetAsideDeclarationError(index, "has no path")
+        if not isinstance(ground, str) or not ground.strip():
+            raise SetAsideDeclarationError(index, f"({path!r}) has no stated ground")
+        paths.append(path)
+    return tuple(paths)
 
 
-def is_checked(filepath: str, excluded_files: set[str]) -> bool:
+def is_excluded(filepath: str, set_aside_paths: tuple[str, ...]) -> bool:
+    """Check whether a document sits in a declared set-aside location.
+
+    The ONE membership test. A path ending in ``/`` matches every document
+    beneath it at any depth; any other path matches that one document exactly.
+    The document's basename plays no part.
+
+    Args:
+        filepath: Repo-relative file path.
+        set_aside_paths: Declared paths from ``parse_set_aside_locations``.
+
+    Returns:
+        bool: True if the document is set aside.
+    """
+    for declared in set_aside_paths:
+        if declared.endswith("/"):
+            if filepath.startswith(declared):
+                return True
+        elif filepath == declared:
+            return True
+    return False
+
+
+def is_checked(filepath: str, set_aside_paths: tuple[str, ...]) -> bool:
     """Check whether *filepath* is in this gate's covered set.
 
     The single definition of "a file this gate judges", used both to filter
     the staged set and — via ``resolve_doc_ratchet`` — to decide whether
-    HEAD holds any covered file at all. One predicate for both keeps the
-    empty-history classification honest about the same population the run
-    actually checks.
+    HEAD holds any covered file at all. It is consulted before either the
+    crossing or the growth comparison, so a set-aside document escapes both.
 
     Args:
         filepath: Relative file path from the project root.
-        excluded_files: Set of basenames to exclude.
+        set_aside_paths: Declared set-aside paths.
 
     Returns:
         bool: True if the file is checked by this gate.
     """
-    return is_doc_file(filepath) and not is_excluded(filepath, excluded_files)
+    return is_doc_file(filepath) and not is_excluded(filepath, set_aside_paths)
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +289,7 @@ def is_checked(filepath: str, excluded_files: set[str]) -> bool:
 # ---------------------------------------------------------------------------
 
 def resolve_doc_ratchet(
-    paths: list[str], excluded_files: set[str]
+    paths: list[str], set_aside_paths: tuple[str, ...]
 ) -> tuple[tuple[dict[str, int], dict[str, int]] | None, int | None]:
     """Resolve previous line and section counts for *paths*, or the INDETERMINATE exit.
 
@@ -255,7 +303,7 @@ def resolve_doc_ratchet(
 
     Args:
         paths: Staged, covered doc paths to resolve previous values for.
-        excluded_files: Set of basenames excluded from this gate.
+        set_aside_paths: Declared set-aside paths excluded from this gate.
 
     Returns:
         A (previous_values, exit_code) pair. On success (including empty
@@ -269,7 +317,7 @@ def resolve_doc_ratchet(
 
     try:
         covered_at_head = resolve_head_matching_paths(
-            lambda path: is_checked(path, excluded_files)
+            lambda path: is_checked(path, set_aside_paths)
         )
     except PreviousLengthSourceError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)

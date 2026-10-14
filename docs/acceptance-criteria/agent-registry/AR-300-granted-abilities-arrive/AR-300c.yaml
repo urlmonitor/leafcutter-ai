@@ -42,7 +42,11 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-30
-amended_by: []
+amended_by:
+  - reason: contradicted-by-later-decision
+    agent: business-analyst
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria, status, work_status, readiness and covered_by unchanged; no child added. This record promised 'two records of the same grant can no longer disagree'. It settled the AUTHORED side; the DERIVED side still carried two disagreeing fields (skills_used / skills_invoked: 4 / 12 / 27 on 2026-10-12). User decision 3 (BrainCandy, 2026-10-12) finishes the promise by retiring skills_used -- carried by AR-400e (L1) and its children, hosted outside this done record so it does not become a done composite with unfinished work."
 superseded_by: null
 covered_by:
   - AR-300c-1

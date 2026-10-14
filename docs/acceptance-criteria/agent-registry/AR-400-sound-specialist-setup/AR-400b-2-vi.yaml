@@ -1,0 +1,84 @@
+id: AR-400b-2-vi
+title: "Calling a specialist an ability stops the build and says it is a specialist to hand work to"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-coder" whose definition permits handing work to
+    the specialist "sql-query", and whose instructions say "Use the `sql-query`
+    skill if available to scaffold the object",
+    And no ability named "sql-query" exists, while a specialist with that
+      identifier does,
+  When the build runs,
+  Then the build stops with one finding classified "names an agent, not an
+    ability", naming "probe-coder", "sql-query", the file and the line, and
+    stating that "sql-query" is a specialist "probe-coder" may hand work to,
+    And the finding is not classified "ability does not exist",
+    And rewriting the sentence as "Hand the scaffolding to the `sql-query`
+      sub-agent" makes the same build pass with no finding about it.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/sql-coder.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance at line 217 (dated snapshot): 'sql-query skill if available', while sql-query is in sql-coder's spawn_allowlist and is a specialist."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "When a recognised ability text matches no ability id but DOES match a specialist id (derived at run time from the registry/agent templates), the finding kind is 'names an agent, not an ability', never 'does not exist'."
+  - "The message states whether the named specialist is in the referrer's hand-off list; that list is read from the referrer's own frontmatter `spawn_allowlist` declaration with __ticket_phase_agents__ resolved against registry is_ticket_phase (agent_spawn_declaration.resolve_spawn_ids), not from the derived registry copy."
+  - "When an id is BOTH an ability and a specialist (possible in principle), the ability interpretation wins and the normal existence/grant rules apply; state this in AR-400a-4."
+test_spec:
+  - name: test_specialist_named_as_ability_yields_names_an_agent_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-coder's spawn_allowlist declares sql-query and its body says 'Use the `sql-query` skill if available to scaffold the object' (no ability sql-query exists); the validator CLI fails with one 'names an agent, not an ability' finding stating sql-query is a specialist probe-coder may hand work to."
+    must_catch:
+      - "the finding is classified 'ability does not exist'"
+  - name: test_hand_off_sentence_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Rewriting it as 'Hand the scaffolding to the `sql-query` sub-agent' passes with no finding."
+  - name: test_names_an_agent_outside_hand_off_list_says_so
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "With sql-query removed from probe-coder's spawn_allowlist, the finding is still 'names an agent' and additionally states sql-query is not in probe-coder's hand-off list."
+test_rationale: >-
+  The diagnostic's value is telling the author which mechanism they meant;
+  the three descriptors cover the kind, the fix, and the hand-off qualifier.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule plus the set of specialist identifiers in the tree."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "AGENT-ID DIAGNOSTIC" from the design. The finding tells the author which
+  mechanism they meant, which "does not exist" would not. When the named
+  specialist is NOT one the referrer may hand work to, the finding still says
+  "names an agent", and additionally says it is not in the referrer's hand-off
+  list.
