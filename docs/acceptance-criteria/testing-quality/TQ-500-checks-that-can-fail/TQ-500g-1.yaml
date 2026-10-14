@@ -75,8 +75,9 @@ expects_from:
     contract: "must_catch on a requirement's test entry: a validated, non-empty list of named wrong versions, carried verbatim onto the generated work."
 it_requirements:
 - 'Build order. TQ-500g-4 and -4-i are done first. Then -1-i. Then -1-ii and -1-iii. Then -1-iv (the preparer).
-  Then the route wiring: -1-v, -1-vi, and the pair -1-vii + TQ-500f-3-iv, which ships in ONE change with
-  -1-viii.'
+  Then -1-ix (the writer that turns the preparer''s reply into the manifest; it can be built alongside
+  -1-iv from reply fixtures). Then the route wiring: -1-v, -1-vi, and the pair -1-vii + TQ-500f-3-iv,
+  which ships in ONE change with -1-viii.'
 - One runner with one CLI entry, called by every route and by the TQ-200d-1-i eval. No route and no eval
   carries a copy of the rule.
 - 'Placement on every route: immediately before the commit dispatch. In the fast lane that is after verify_green_and_coverage
@@ -109,7 +110,11 @@ test_rationale: The children carry the rule and the per-route wiring. What only 
   against one fixture, never by comparing command strings.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+- reason: "Add child TQ-500g-1-ix (the deterministic writer from Decision Kernel run run-92227a2a275f44ff; the preparer test-breaker is now read-only). It is added to covered_by, to the notes child list, and to the build-order it_requirement between -1-iv and the route wiring. Criteria unchanged."
+  date: '2026-10-11'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by:
   - TQ-500g-1-i
@@ -120,6 +125,7 @@ covered_by:
   - TQ-500g-1-vi
   - TQ-500g-1-vii
   - TQ-500g-1-viii
+  - TQ-500g-1-ix
 implemented_by: []
 change_target:
   - pipeline
@@ -139,6 +145,9 @@ notes: |
                                                                  python-coder
     -iv   named wrong versions are turned into concrete alterations
           (agent conduct, PROMPT-ONLY)                           llm-expert
+    -ix   the preparer's reply becomes the alterations manifest through
+          a deterministic writer (copies, diffs, owed names once;
+          run-92227a2a275f44ff)                                python-coder
     -v    fast-lane wiring                                       python-coder
     -vi   /build-feature and its build-ticket.js twin wiring     python-coder
     -vii  /build-epic wiring (ticket-supervisor / building-epics, PROMPT-ONLY)
