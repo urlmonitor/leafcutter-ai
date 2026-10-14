@@ -1,0 +1,15 @@
+{
+  "receipt_count": 312,
+  "unique_original_paths": 312,
+  "unique_archive_paths": 312,
+  "receipt_hashes_preserved": true,
+  "navigation_links_checked": 78,
+  "embedded_local_receipt_references_checked": 50,
+  "maximum_non_markdown_files_per_folder": 14,
+  "errors": [],
+  "provider_calls": 0,
+  "graph_writes": 0,
+  "staged_git_blobs_checked": 312,
+  "staged_git_blob_hashes_preserved": true,
+  "git_byte_preservation": "Scoped .gitattributes -text rule; explicit staged refresh after applying attribute."
+}

@@ -8,11 +8,13 @@
   "description": "A trusted missing-query need supplied to a coding host.",
   "properties": {
     "attempt_id": {
+      "description": "Id of this authoring attempt, so retries are told apart.",
       "minLength": 1,
       "title": "Attempt Id",
       "type": "string"
     },
     "available_queries": {
+      "description": "Queries that already exist, so the host reuses rather than duplicates them.",
       "items": {
         "additionalProperties": {
           "$ref": "#/$defs/JsonValue"
@@ -24,6 +26,7 @@
       "type": "array"
     },
     "component_ids": {
+      "description": "Components the query may read.",
       "items": {
         "type": "string"
       },
@@ -34,20 +37,24 @@
     },
     "expected_result": {
       "default": "Attributable canonical entities for the original evidence need",
+      "description": "What a good query should return, as a check for the author.",
       "title": "Expected Result",
       "type": "string"
     },
     "generation_id": {
+      "description": "Immutable generation of the repository knowledge graph the query will run against.",
       "minLength": 1,
       "title": "Generation Id",
       "type": "string"
     },
     "need_id": {
+      "description": "The evidence need that found no query.",
       "minLength": 1,
       "title": "Need Id",
       "type": "string"
     },
     "question": {
+      "description": "The evidence question no existing query could answer.",
       "maxLength": 8000,
       "minLength": 1,
       "title": "Question",
@@ -57,10 +64,12 @@
       "additionalProperties": {
         "$ref": "#/$defs/JsonValue"
       },
+      "description": "What the host may still spend on authoring, so it stays within limits.",
       "title": "Remaining Budget",
       "type": "object"
     },
     "repository_id": {
+      "description": "Repository the new query is for.",
       "minLength": 1,
       "title": "Repository Id",
       "type": "string"
@@ -68,10 +77,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "source_sha": {
+      "description": "Immutable commit the query is authored and checked against.",
       "pattern": "^[a-f0-9]{40}$",
       "title": "Source Sha",
       "type": "string"

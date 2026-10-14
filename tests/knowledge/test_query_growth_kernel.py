@@ -121,8 +121,11 @@ class TestQueryGrowthRun(ScenarioCase):
         from tests.kernel.helpers import make_scope
         need = EvidenceNeed(id="need.tests",category="task_context",priority="required",
                             question="Which tests cover this component through its acceptance criteria?")
+        # This admission test starts after needs were established. Separate public
+        # interpretation tests cover callers who supply only a natural question.
         request = ResearchRequestPayload(question=need.question,evidence_needs=[need],
-                                        evidence_needs_only=True)
+            evidence_needs_only=True, answer_requirements={"original_question": need.question,
+                "required_fields": ["canonical_id"], "scope": {"population": "returned_entities"}})
         task = TaskInput(goal=need.question,caller=Actor(id="tester",kind=ActorKind.HOST),
             scope=make_scope(self.repo),permissions=["read_repo","write_query_catalog"],
             input_payload_schema=schema_ids.RESEARCH_REQUEST,
@@ -169,7 +172,9 @@ class TestQueryGrowthRun(ScenarioCase):
         self.port=KnowledgeService(self.db,source_resolver=Source(),query_catalog=self.catalog)
         need=EvidenceNeed(id="need.tests",category="task_context",priority="required",
                           question="Which tests cover the component through acceptance criteria?")
-        request=ResearchRequestPayload(question=need.question,evidence_needs=[need],evidence_needs_only=True)
+        request=ResearchRequestPayload(question=need.question,evidence_needs=[need],evidence_needs_only=True,
+            answer_requirements={"original_question": need.question, "required_fields": ["canonical_id"],
+                "scope": {"population": "returned_entities"}})
         task=TaskInput(goal=need.question,caller=Actor(id="tester",kind=ActorKind.HOST),
             scope=make_scope(self.repo),permissions=["read_repo", "write_query_catalog"] if grant else ["read_repo"],
             input_payload_schema=schema_ids.RESEARCH_REQUEST,input_payload=request.model_dump(mode="json"),

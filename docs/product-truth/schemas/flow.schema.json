@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Flow artifact",
-  "description": "A reviewable user journey. Machine-readable for agents AND human-readable via summary/human fields. business-analyst derives L2/L3 Gherkin ACs from steps + branches; each step links back to those ACs via `implements`, and impl_status is derived from the ACs' work_status.",
+  "description": "A reviewable user journey. Machine-readable for agents AND human-readable via the summary and each step's description. business-analyst derives L2/L3 Gherkin ACs from steps + branches; each step links back to those ACs via `implements`, and impl_status is derived from the ACs' work_status.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -136,7 +136,8 @@
         "required": [
           "id",
           "label",
-          "human",
+          "description",
+          "actor_kind",
           "order"
         ],
         "properties": {
@@ -147,9 +148,10 @@
             "type": "string",
             "description": "Short title (tab-label)."
           },
-          "human": {
+          "description": {
             "type": "string",
-            "description": "HUMAN: one-line 'what the user is doing/seeing' on this step."
+            "minLength": 1,
+            "description": "One plain sentence (at most 200 characters) saying WHAT happens in this step and who or what does it, in words a product person understands. NEVER code paths or file names, symbol/function/field names, build or implementation status, design notes, ticket/AC/ADR ids, or contract dumps: handoff detail belongs in io_contracts, the runner in agent/actor_kind, build status in realization and the linked ACs. Checked by the validator's description gate (product_truth_descriptions.py)."
           },
           "order": {
             "type": "integer"
@@ -160,7 +162,17 @@
           },
           "agent": {
             "type": "string",
-            "description": "The actor that runs this step — an agent id (config/agent_registry.json) or a script/workflow name. The subject of the handoff."
+            "description": "The named actor that runs this step — an agent id (config/agent_registry.json) or a script/workflow name. The subject of the handoff. Its mechanism is actor_kind."
+          },
+          "actor_kind": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human"
+            ],
+            "description": "Which of the four mechanisms (ADR-053) runs this step: deterministic = scripts, hooks, workflows and other code; jev = Jev; llm = an LLM agent (an agent template, Claude Code, a host model); human = a person. Record the mechanism that does the work described, not who approves it later."
           },
           "produces": {
             "type": "array",
@@ -256,8 +268,10 @@
           "label": {
             "type": "string"
           },
-          "human": {
-            "type": "string"
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One plain sentence (at most 200 characters) saying WHAT happens on this branch and who or what does it, in words a product person understands. NEVER code paths or file names, symbol/function/field names, build or implementation status, design notes, ticket/AC/ADR ids, or contract dumps: handoff detail belongs in io_contracts, the runner in agent/actor_kind, build status in realization and the linked ACs. Checked by the validator's description gate (product_truth_descriptions.py)."
           },
           "screen": {
             "type": "string"
@@ -265,6 +279,16 @@
           "agent": {
             "type": "string",
             "description": "The actor that runs this branch — an agent id or a script/workflow name."
+          },
+          "actor_kind": {
+            "type": "string",
+            "enum": [
+              "deterministic",
+              "jev",
+              "llm",
+              "human"
+            ],
+            "description": "Which of the four mechanisms (ADR-053) runs this branch: deterministic = scripts, hooks, workflows and other code; jev = Jev; llm = an LLM agent (an agent template, Claude Code, a host model); human = a person. Record the mechanism that does the work described, not who approves it later."
           },
           "produces": {
             "type": "array",

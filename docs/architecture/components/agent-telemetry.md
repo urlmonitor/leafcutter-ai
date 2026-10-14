@@ -5,9 +5,12 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-06-08
-last_updated: 2026-07-22
+last_updated: 2026-10-12
 components:
   - agent_telemetry
+related_docs:
+  - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+  - docs/architecture/feedback-lifecycle.md
 ---
 
 # Agent Telemetry
@@ -16,14 +19,53 @@ components:
 
 Agent Telemetry is a per-invocation JSONL emit module. After each phase-agent call
 completes, the calling harness (or the phase agent itself) invokes
-`emit_agent_telemetry` to append one structured record to
-`debugging/logs/agent_telemetry.jsonl`. Records carry the invocation's lane tag,
+`emit_agent_telemetry` to append one structured record to the sink path it is given.
+Records carry the invocation's lane tag,
 agent identifier, wall-clock duration, and token counts (input, output, and
 cache-read). A companion report function (`build_lane_comparison_report`) reads the
 sink and returns per-lane aggregates for the fast-lane vs heavy-pipeline comparison.
 
-There is no separate event-based emission path. The earlier `emit_event.py` entry
-point no longer exists; all telemetry flows through `scripts/agent-health/agent_telemetry.py`.
+## Where the telemetry stream is kept
+
+The install's telemetry stream is the `operational_telemetry_stream` value in the
+build-time declaration `<output_root>/config/knowledge_sink.json`, i.e.
+`<operational_log_root>/agent_telemetry.jsonl`. It sits beside the feedback sink in one
+directory that outlives per-drive worktrees
+([ADR-069](../adrs/ADR-069-durable-log-root-for-workspaces.md); full description in
+[Feedback Lifecycle — Where every log is kept](../feedback-lifecycle.md#where-every-log-is-kept--one-declared-log-root-adr-069)).
+
+- **A usable stream.** The stream counts only when the declaration also records an absolute
+  `operational_log_root` and the stream sits directly under it
+  (`sink_resolution.read_usable_stream`). A build with `--no-log-root` records an empty
+  declaration, so there is no stream and every writer refuses.
+- **Stale versus first write.** Stale means the enduring root is gone: the directory holding
+  `operational_log_root` (its parent, or the project above `debugging`). A log directory
+  missing under a live root is a fresh install, and the first write creates it.
+- **Event writer.** The supervisor-event emitter
+  `.claude/skills/agent-telemetry/scripts/emit_event.py` writes to the stream named by
+  its own deployed workspace's declaration when `--log` is omitted. It finds that
+  declaration from its own resolved location, never from the caller's directory; the
+  `.gemini` copy steps out of the `gemini` directory and reads the same install's
+  declaration. It stays standard-library only, so `_declared_stream` carries an inline copy
+  of the usable-stream and staleness rules. If the declaration is unusable or stale, it
+  warns on stderr naming it, writes and creates nothing, and exits 0. Otherwise it creates
+  only up to the log directory and appends the record as one `os.write` on an `O_APPEND`
+  descriptor. Shipped prompts no longer pass `--log` (INF-500d-4-vi).
+- **Other writers.** `inline_work_guard.py` (and its `.gemini` copy) appends its audit record
+  to `<operational_log_root>/inline_work_guard.jsonl`. It applies the same staleness rule
+  inline and creates only up to the log directory under a live root; otherwise it warns and
+  writes nothing, and the block/warn exit code is unchanged. `plan-feature.js` gets the
+  stream from `sink_resolution.py --print-location telemetry`, creates the log directory
+  only when the enduring root is live, and does not compose a path itself.
+- **Readers.** `generate_health_report.py` defaults `--telemetry` and `--feedback` to the
+  declared values. `weekly_health.py` defaults `--telemetry` the same way, through
+  `generate_health_report.resolve_telemetry_stream`. `extract_epic_facts.py` defaults
+  `--telemetry` to the declared stream through `sink_resolution.read_usable_stream`. Each
+  prints `read N records from <path>` per stream, and exits 1 when no usable declaration
+  exists and no explicit path was given. An explicit path is used as given.
+- **Location query.**
+  `python3 .leafcutter/scripts/knowledge/sink_resolution.py --print-location telemetry`
+  prints the stream without writing, or refuses with exit 1 when it is not usable.
 
 ## Responsibilities
 
@@ -45,7 +87,9 @@ point no longer exists; all telemetry flows through `scripts/agent-health/agent_
 - `scripts/agent-health/generate_health_report.py` — report module
   - `build_lane_comparison_report(sink_path: Path) -> dict` — per-lane aggregate report
   - CLI: `python generate_health_report.py [--telemetry PATH] [--feedback PATH] [--agent AGENT_ID] [--format markdown|json]`
-- `debugging/logs/agent_telemetry.jsonl` — telemetry sink (JSONL, one record per line, append-only)
+  (`--telemetry` / `--feedback` default to the declared stream and sink)
+- `templates/skills/agent-telemetry/scripts/emit_event.py` — supervisor-event emitter (see above)
+- declared `operational_telemetry_stream` — telemetry sink (JSONL, one record per line, append-only)
 
 ## JSONL Record Schema
 
@@ -77,7 +121,8 @@ permission is denied):
 
 After a drive, inspect `get_failed_write_count()` to detect dropped records. A non-zero
 value means the sink was unreachable for some invocations. The pre-drive sink-reachability
-probe in `CLAUDE.md` (§ "Feedback sink reachable") provides a pre-flight check.
+probe in `CLAUDE.md` (§ "Feedback sink reachable") provides a read-only pre-flight check
+of the declared stream.
 
 ## Cross-links
 

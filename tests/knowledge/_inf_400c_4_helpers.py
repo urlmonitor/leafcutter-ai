@@ -31,6 +31,7 @@ _HARVESTER_REQUIRED_SIBLINGS: tuple[str, ...] = (
     "capture_write.py",
     "harvest_cli.py",
     "harvest_status.py",
+    "record_identity.py",
 )
 
 _REAL_SURFACES: tuple[tuple[str, Path, tuple[str, ...]], ...] = (
@@ -92,11 +93,19 @@ def _write_declaration(
 ) -> Path:
     config_path = deployed_root / "config" / "knowledge_sink.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
+    # INF-500d-4-iii (ADR-069): a current declaration also records the one
+    # operational log root (the directory the telemetry stream sits directly
+    # under -- an absolute path at every call site) and the feedback sink
+    # beneath it. A pre-feature two-key declaration is rejected by the
+    # declared-log-root parity check, so the fixture must write all four.
+    log_root = Path(operational_telemetry_stream).parent
     config_path.write_text(
         json.dumps(
             {
                 "knowledge_emission_sink": knowledge_emission_sink,
                 "operational_telemetry_stream": operational_telemetry_stream,
+                "operational_log_root": str(log_root),
+                "feedback_sink": str(log_root / "feedback.jsonl"),
             },
             indent=2,
         )

@@ -18,6 +18,7 @@
       "description": "A piece of evidence the run still needs, with its resolution status.",
       "properties": {
         "acceptable_source_kinds": {
+          "description": "Source kinds the requester would accept for this need; empty means any (not yet used to filter sources).",
           "items": {
             "$ref": "#/$defs/SourceKind"
           },
@@ -25,23 +26,28 @@
           "type": "array"
         },
         "category": {
-          "$ref": "#/$defs/EvidenceCategory"
+          "$ref": "#/$defs/EvidenceCategory",
+          "description": "Which kind of evidence would satisfy the need."
         },
         "id": {
+          "description": "Stable id of the need; answers and coverage are keyed by it.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "priority": {
           "$ref": "#/$defs/Priority",
-          "default": "required"
+          "default": "required",
+          "description": "Whether the need blocks resolution (required) or only improves it (supporting)."
         },
         "question": {
+          "description": "What the evidence must tell the run.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
         },
         "resolution": {
+          "description": "Notes on how the need was resolved, such as why no source could serve it.",
           "items": {
             "type": "string"
           },
@@ -51,12 +57,14 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "status": {
           "$ref": "#/$defs/NeedStatus",
-          "default": "open"
+          "default": "open",
+          "description": "Whether the need is open, satisfied, partly met or cannot be met."
         }
       },
       "required": [
@@ -103,11 +111,13 @@
             }
           ],
           "default": null,
+          "description": "Most characters of evidence to return in total; null uses the configured default.",
           "title": "Max Chars"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -122,10 +132,182 @@
             }
           ],
           "default": null,
+          "description": "Most evidence items to return; null uses the configured default.",
           "title": "Top K"
         }
       },
       "title": "RetrievalLimits",
+      "type": "object"
+    },
+    "RetrievalNeedsOutput": {
+      "additionalProperties": false,
+      "description": "Host interpretation, never a retrieved answer or approval of a classifier.",
+      "properties": {
+        "completeness": {
+          "description": "Whether the question wants one entity, chosen entities, a full set, a count, or just examples.",
+          "enum": [
+            "single_entity",
+            "selected_entities",
+            "exhaustive_set",
+            "exhaustive_count",
+            "examples",
+            "unknown"
+          ],
+          "title": "Completeness",
+          "type": "string"
+        },
+        "detail_mode": {
+          "description": "How much of each selected item the question needs: requested fields, the whole document, or bounded surroundings.",
+          "enum": [
+            "fields",
+            "full_document",
+            "bounded_context",
+            "unknown"
+          ],
+          "title": "Detail Mode",
+          "type": "string"
+        },
+        "engine": {
+          "const": "host_llm",
+          "default": "host_llm",
+          "description": "Which interpreter produced the output; always the host language model.",
+          "title": "Engine",
+          "type": "string"
+        },
+        "hierarchy_levels": {
+          "description": "Explicit hierarchy level filter; empty means all levels, never an inferred level restriction.",
+          "items": {
+            "enum": [
+              "L0",
+              "L1",
+              "L2",
+              "L3"
+            ],
+            "type": "string"
+          },
+          "maxItems": 4,
+          "title": "Hierarchy Levels",
+          "type": "array"
+        },
+        "hierarchy_scope": {
+          "description": "Whether a population answer includes or excludes the chosen root and its parents.",
+          "enum": [
+            "not_applicable",
+            "exclude_root",
+            "exclude_parents",
+            "include_root",
+            "unknown"
+          ],
+          "title": "Hierarchy Scope",
+          "type": "string"
+        },
+        "model_id": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Model that produced the interpretation, when known; reported usage is authoritative.",
+          "title": "Model Id"
+        },
+        "original_question": {
+          "description": "The question echoed back unchanged, so the output can be matched to its request.",
+          "maxLength": 8000,
+          "minLength": 1,
+          "title": "Original Question",
+          "type": "string"
+        },
+        "rationale": {
+          "default": "",
+          "description": "Brief reason for the interpretation, for human review.",
+          "maxLength": 4000,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "scope_resolution": {
+          "description": "Whether retrieval may start, needs discovery first, or lacks a user choice.",
+          "enum": [
+            "sufficient",
+            "discovery_needed",
+            "user_choice_missing",
+            "unknown"
+          ],
+          "title": "Scope Resolution",
+          "type": "string"
+        },
+        "selections": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "For each dimension, the offered labels the host judges the question needs.",
+          "title": "Selections",
+          "type": "object"
+        },
+        "source_scope": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "The request's source scope echoed back unchanged; the host may not widen it.",
+          "title": "Source Scope",
+          "type": "object"
+        },
+        "status": {
+          "default": "decided",
+          "description": "Whether the interpretation is usable (decided) or needs resolution before retrieval.",
+          "enum": [
+            "decided",
+            "needs_resolution"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "uncertain": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "For each dimension, the offered labels the host could not decide on.",
+          "title": "Uncertain",
+          "type": "object"
+        },
+        "unresolved": {
+          "description": "Meanings the catalog could not express, unknowns and contradictions, left for resolution.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32,
+          "title": "Unresolved",
+          "type": "array"
+        }
+      },
+      "required": [
+        "original_question",
+        "source_scope",
+        "selections",
+        "uncertain",
+        "detail_mode",
+        "completeness",
+        "hierarchy_scope",
+        "scope_resolution"
+      ],
+      "title": "RetrievalNeedsOutput",
       "type": "object"
     },
     "SourceKind": {
@@ -190,6 +372,7 @@
         }
       ],
       "default": null,
+      "description": "Preserved across research, clarification and progressive source disclosure.",
       "title": "Answer Requirements"
     },
     "assessment": {
@@ -205,10 +388,12 @@
         }
       ],
       "default": null,
+      "description": "Scoped supplied evidence interpreted conditionally by the neutral retrieval port.",
       "title": "Assessment"
     },
     "detail": {
       "default": "excerpt",
+      "description": "How much of each hit to return: an excerpt, a summary, or its locator only.",
       "enum": [
         "excerpt",
         "summary",
@@ -218,6 +403,7 @@
       "type": "string"
     },
     "explicit_locators": {
+      "description": "Exact places to fetch before ranking: `path`, `path#Lx-Ly`, `path#heading`, `path::Symbol`.",
       "items": {
         "type": "string"
       },
@@ -226,6 +412,7 @@
     },
     "jev_reserve": {
       "default": 0,
+      "description": "Jev calls retained for the requester; graph planning must not spend this reserve.",
       "minimum": 0,
       "title": "Jev Reserve",
       "type": "integer"
@@ -243,10 +430,12 @@
         }
       ],
       "default": null,
+      "description": "Neutral knowledge request fields, fully validated by the capability adapter.",
       "title": "Knowledge"
     },
     "limits": {
-      "$ref": "#/$defs/RetrievalLimits"
+      "$ref": "#/$defs/RetrievalLimits",
+      "description": "Bounds on how much evidence the request may return."
     },
     "max_rerank_batches": {
       "anyOf": [
@@ -259,25 +448,42 @@
         }
       ],
       "default": null,
+      "description": "Most rerank batches this request may judge (the requester's Jev budget affords no more than this beside its reserve); null means the configured `retrieval.rerank_max_batches`.",
       "title": "Max Rerank Batches"
     },
     "need": {
-      "$ref": "#/$defs/EvidenceNeed"
+      "$ref": "#/$defs/EvidenceNeed",
+      "description": "The evidence need to retrieve for; its question and category steer the search."
     },
     "query_hints": {
+      "description": "Texts to search for before the need's own wording: the goal first, then criteria, options.",
       "items": {
         "type": "string"
       },
       "title": "Query Hints",
       "type": "array"
     },
+    "retrieval_needs": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RetrievalNeedsOutput"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Accepted interpretation of the original question, retained across retrieval and catalog selection."
+    },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "source_ids": {
+      "description": "Sources to search; empty means every eligible source.",
       "items": {
         "type": "string"
       },

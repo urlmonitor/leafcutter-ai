@@ -1,0 +1,301 @@
+{
+  "case_id": "N05",
+  "original_rejected_receipt": "../N05.result.json",
+  "response_sha256": "130c39284eee6ed2ebfbcf9179fe71b621e3d656783b68b40e5c18e1a2441ec5",
+  "response_unchanged": true,
+  "envelope": {
+    "schema_version": "1.0",
+    "run_id": "run-e96b76d0238940ef",
+    "root_task_id": "task-1c2bf9809a744417",
+    "state_revision": 3,
+    "status": "completed",
+    "output": {
+      "schema_version": "1.0",
+      "schema_id": "leafcutter.retrieval_needs_output.v1",
+      "payload": {
+        "schema_version": "1.0",
+        "original_question": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+        "source_scope": {
+          "allow_retrieval": false,
+          "read_roots": [
+            "docs",
+            "kernel",
+            "knowledge",
+            "integrations"
+          ],
+          "repository": "leafcutter",
+          "source_revision": "planning-probe-only"
+        },
+        "selections": {
+          "entity_types": [
+            "ac"
+          ],
+          "target_ids": [
+            "KM-500c-2"
+          ],
+          "required_fields": [
+            "content",
+            "criteria",
+            "parent"
+          ],
+          "document_types": [
+            "ac_yaml"
+          ],
+          "relationships": [
+            "parent_direct"
+          ]
+        },
+        "uncertain": {
+          "entity_types": [],
+          "target_ids": [],
+          "required_fields": [],
+          "document_types": [],
+          "relationships": []
+        },
+        "detail_mode": "bounded_context",
+        "completeness": "selected_entities",
+        "hierarchy_scope": "not_applicable",
+        "hierarchy_levels": [],
+        "scope_resolution": "sufficient",
+        "unresolved": [],
+        "rationale": "Retrieve the whole named acceptance criterion, including its acceptance clauses, with its uniquely determined immediate parent as the requested surroundings. This does not request descendants or broader repository context.",
+        "engine": "host_llm",
+        "status": "decided",
+        "model_id": null
+      }
+    },
+    "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-needs-llm-host-7s6471h9\\kernel-runs\\runs\\run-e96b76d0238940ef\\artifacts\\report.md",
+    "decision_ids": [],
+    "evidence_ids": [],
+    "open_questions": [],
+    "pending_interaction": null,
+    "limitations": [
+      "host-reported; not verified by the kernel",
+      "Interpretation only; no retrieval executed and no answer correctness or classifier approval established."
+    ],
+    "gaps": [
+      {
+        "schema_version": "1.0",
+        "id": "gap-d0cde03b72a572c2",
+        "created_at": "2026-10-09T15:35:04.205040Z",
+        "updated_at": "2026-10-09T15:35:04.205040Z",
+        "created_seq": 0,
+        "gap_key": "8f3a57a27f1b80b01642e748c55cb0066b0b47d3bbe1ff26de0e26e866f0974e",
+        "gap_type": "host_only",
+        "goal": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+        "normalized_need": "2 500c acceptance can context criterion full i immediate its km parent",
+        "request_kind": "capability",
+        "input_schema": "leafcutter.retrieval_needs_request.v1",
+        "output_schema": "leafcutter.retrieval_needs_output.v1",
+        "scope_component_ids": [],
+        "registry_snapshot_hash": "6254ab0e7d0f4b5762d692522440d7a3b484f0c67dfe16bc699d49ea1f5fe6c9",
+        "candidates_considered": [
+          "host.retrieval_needs"
+        ],
+        "candidate_exclusions": {},
+        "need_title": "Show the full KM-500c-2 acceptance criterion together with its immediate pare...",
+        "why_insufficient": "host-backed only; no native implementation exists",
+        "occurrence_count": 1,
+        "example_run_ids": [
+          "run-e96b76d0238940ef"
+        ],
+        "example_trace_urls": [],
+        "fallback_outcome": "host_completed",
+        "missing_native_capability": "native implementation of host.retrieval_needs",
+        "proposal": {
+          "schema_version": "1.0",
+          "author": "template",
+          "title": "Capability for: Show the full KM-500c-2 acceptance criterion together with its immediate pare...",
+          "purpose": "host_only need",
+          "draft_ref": "drafts/8f3a57a27f1b80b01642e748c55cb0066b0b47d3bbe1ff26de0e26e866f0974e.md"
+        },
+        "first_seen": "2026-10-09T15:35:04.205040Z",
+        "last_seen": "2026-10-09T15:35:04.205040Z"
+      }
+    ],
+    "usage_summary": {
+      "schema_version": "1.0",
+      "jev_calls": 0,
+      "host_operations": 1,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd_known": null,
+      "cost_unknown_calls": 1,
+      "usage": [
+        {
+          "schema_version": "1.0",
+          "provider": "host",
+          "model_id": null,
+          "input_tokens": null,
+          "output_tokens": null,
+          "duration_ms": 449797,
+          "cost_usd": null,
+          "cost_provenance": "unavailable",
+          "calls": 1
+        }
+      ]
+    },
+    "trace_refs": {
+      "schema_version": "1.0",
+      "trace_id": "02ad173987b4ab59e4e07d1bebd41762",
+      "trace_url": null,
+      "observability": "ok"
+    },
+    "errors": []
+  },
+  "result": {
+    "schema_version": "1.0",
+    "original_question": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+    "source_scope": {
+      "allow_retrieval": false,
+      "read_roots": [
+        "docs",
+        "kernel",
+        "knowledge",
+        "integrations"
+      ],
+      "repository": "leafcutter",
+      "source_revision": "planning-probe-only"
+    },
+    "selections": {
+      "entity_types": [
+        "ac"
+      ],
+      "target_ids": [
+        "KM-500c-2"
+      ],
+      "required_fields": [
+        "content",
+        "criteria",
+        "parent"
+      ],
+      "document_types": [
+        "ac_yaml"
+      ],
+      "relationships": [
+        "parent_direct"
+      ]
+    },
+    "uncertain": {
+      "entity_types": [],
+      "target_ids": [],
+      "required_fields": [],
+      "document_types": [],
+      "relationships": []
+    },
+    "detail_mode": "bounded_context",
+    "completeness": "selected_entities",
+    "hierarchy_scope": "not_applicable",
+    "hierarchy_levels": [],
+    "scope_resolution": "sufficient",
+    "unresolved": [],
+    "rationale": "Retrieve the whole named acceptance criterion, including its acceptance clauses, with its uniquely determined immediate parent as the requested surroundings. This does not request descendants or broader repository context.",
+    "engine": "host_llm",
+    "status": "decided",
+    "model_id": null
+  },
+  "shared_semantics": {
+    "passed": true,
+    "checks": [
+      {
+        "name": "original_question",
+        "passed": true,
+        "actual": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context.",
+        "expected": "Show the full KM-500c-2 acceptance criterion together with its immediate parent so I can understand the context."
+      },
+      {
+        "name": "include.entity_types",
+        "passed": true,
+        "actual": [
+          "ac"
+        ],
+        "expected": [
+          "ac"
+        ]
+      },
+      {
+        "name": "include.target_ids",
+        "passed": true,
+        "actual": [
+          "KM-500c-2"
+        ],
+        "expected": [
+          "KM-500c-2"
+        ]
+      },
+      {
+        "name": "include.document_types",
+        "passed": true,
+        "actual": [
+          "ac_yaml"
+        ],
+        "expected": [
+          "ac_yaml"
+        ]
+      },
+      {
+        "name": "include.relationships",
+        "passed": true,
+        "actual": [
+          "parent_direct"
+        ],
+        "expected": [
+          "parent_direct"
+        ]
+      },
+      {
+        "name": "exclude.relationships",
+        "passed": true,
+        "actual": [
+          "parent_direct"
+        ],
+        "expected": {
+          "forbidden": [
+            "children_direct",
+            "all_descendants"
+          ]
+        }
+      },
+      {
+        "name": "detail_mode",
+        "passed": true,
+        "actual": "bounded_context",
+        "expected": [
+          "full_document",
+          "bounded_context"
+        ]
+      },
+      {
+        "name": "completeness",
+        "passed": true,
+        "actual": "selected_entities",
+        "expected": [
+          "single_entity",
+          "selected_entities"
+        ]
+      },
+      {
+        "name": "hierarchy_scope",
+        "passed": true,
+        "actual": "not_applicable",
+        "expected": [
+          "not_applicable",
+          "include_root"
+        ]
+      },
+      {
+        "name": "status",
+        "passed": true,
+        "actual": "decided",
+        "expected": [
+          "decided"
+        ]
+      }
+    ]
+  },
+  "overlay": {
+    "applicable": false,
+    "passed": true,
+    "checks": []
+  }
+}

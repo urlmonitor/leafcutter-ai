@@ -115,8 +115,14 @@ __all__ = ["SharedReferenceLayoutError", "get_or_produce_shared_layout"]
 
 _log = logging.getLogger(__name__)
 
+# Env var naming the tree to build the layout from instead of this file's own checkout.
+# Set ONLY by the post-merge fix proof's child session (scripts/ci/post_merge_fix_proof.py,
+# TQ-600a-13-xvi), whose code is main's but whose code under test is a pull request's head;
+# unset or empty, the root below is exactly what it always was (the post-merge run).
+SOURCE_ROOT_ENV_VAR = "LEAFCUTTER_SHARED_LAYOUT_SOURCE_ROOT"
+
 # scripts/suite_performance/_shared_layout_producer.py -> parents[2] == worktree root
-_WORKTREE_ROOT = Path(__file__).resolve().parents[2]
+_WORKTREE_ROOT = Path(os.environ.get(SOURCE_ROOT_ENV_VAR) or Path(__file__).resolve().parents[2])
 
 # Generous timeout for the real ~60s package deploy (see TQ-600.yaml).
 _DEPLOY_SUBPROCESS_TIMEOUT_S = 240

@@ -28,8 +28,10 @@ from typing import NamedTuple
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
+from ._app_fake import _LOCAL, AppService
+from ._app_harness import SECRET_PREFIX, app_secrets, secrets_as_env
 from ._ending_harness import CHECK
-from ._hold_harness import DNC_JOBS, HOLD_MODULE, JOB_NAME, OBSERVER, RED_JOBS, WORKFLOW, HoldRun, HoldService, HoldTestCase, JobOutcome, make_run, scratch_default_branch
+from ._hold_harness import DNC_JOBS, HOLD_MODULE, JOB_NAME, OBSERVER, RED_JOBS, WORKFLOW, HoldRun, HoldTestCase, JobOutcome, make_run, scratch_default_branch
 from ._notice_fakes import REPO, _Handler, import_production, make_verdict
 
 MARKER = "<!-- post-merge-suite-status v1 -->"
@@ -65,8 +67,8 @@ class _LinkHandler(_Handler):
         self.wfile.write(data)
 
 
-class CommentService(HoldService):
-    """``HoldService`` plus paginated, recorded pull-request comments."""
+class CommentService(AppService):
+    """``AppService`` (the hold App's token exchange and check runs) plus paginated, recorded pull-request comments."""
 
     def __init__(self):  # noqa: PLR0913 -- same shape as the base class, with a Link-aware handler
         self._server = ThreadingHTTPServer(("127.0.0.1", 0), _LinkHandler)
@@ -108,12 +110,16 @@ class CommentService(HoldService):
         parsed = urlparse(raw_path)
         listed, one = _LIST.fullmatch(parsed.path), _ONE.fullmatch(parsed.path)
         if not (listed or one):
+            _LOCAL.auth = auth.removeprefix("Bearer ").removeprefix("token ").strip()  # the App plane authorises by bearer
             code, payload = self.handle(method, raw_path, body)
             return code, payload, {}
         self.requests.append((method, raw_path))
         self.comment_auth.append(auth)
         if method == "GET" and listed:
             return self._page(int(listed.group(1)), parse_qs(parsed.query), raw_path)
+        if method == "GET" and one:  # one comment: the client reads it before it edits it (TQ-600a-13-xi); a read, never a write
+            current = [c for comments in self.pr_comments.values() for c in comments if c["id"] == int(one.group(1))]
+            return (200, current[0], {}) if current else (404, {"message": "Not Found"}, {})
         record = {"kind": {"POST": "create", "PATCH": "edit", "DELETE": "delete"}.get(method, method), "path": parsed.path, "body": (body or {}).get("body")}
         if listed:
             record["pr"] = int(listed.group(1))
@@ -289,7 +295,8 @@ def run_job_with_event(svc, base, payload):
     (observer / "sitecustomize.py").write_text(OBSERVER, encoding="utf-8")
     event, log = write_event(base, payload), base / "observed.json"
     env = {"GITHUB_EVENT_PATH": str(event), "GITHUB_EVENT_NAME": "pull_request_target", "PYTHONPATH": str(observer), "PYTHONDONTWRITEBYTECODE": "1", "HOLD_OBSERVER_LOG": str(log), "HOME": str(state_dir)}
-    run = HoldRun(WORKFLOW, default, None, base / "scratch", env, svc.url)
+    env.update({f"{SECRET_PREFIX}{name}": value for name, value in app_secrets().items()})  # the job mints the hold App's token
+    run = HoldRun(secrets_as_env(WORKFLOW, base / "workflow-under-test.yml"), default, None, base / "scratch", env, svc.url)
     result = run.execute_job(JOB_NAME)
     events = [e for part in sorted(base.glob(f"{log.name}.*")) for e in json.loads(part.read_text(encoding="utf-8"))]
     return JobOutcome(result, run, events, None, state_dir), event

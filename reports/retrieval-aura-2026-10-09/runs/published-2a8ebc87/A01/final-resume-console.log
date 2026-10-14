@@ -1,0 +1,3 @@
+C:\Users\Hendrik\Code\leafcutter\worktrees\typed-research-binding-v01\kernel\providers\jev.py:103: LangChainBetaWarning: The class `TypeSafeClassifier` is in beta. It is actively being worked on, so the API may change.
+  self._classifier = lts.TypeSafeClassifier(**kwargs)
+{"case": "A01", "status": "partial", "actual_jev_calls": 7, "accepted_host_results": 5, "usage_incomplete_cases": []}

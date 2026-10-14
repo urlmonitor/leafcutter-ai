@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-14'
-last_updated: '2026-09-14'
+last_updated: '2026-10-12'
 components:
   - ac_driven_dev
 related_docs:
@@ -82,3 +82,12 @@ checks against reality.
 
 **Pattern:** a tool that is handed the correct value, uses it for a secondary purpose, and
 derives the primary one from a path it happens to be holding.
+
+**2026-10-12 — a second route to the same state.** This entry's occurrence count is not changed,
+because the producer is different. `goal_to_epic.py` deliberately records the staging path and
+repoints it after assembly. On Windows that repoint never matches, so all 48 ACs of a real
+`--ids` run were left naming deleted staging files. That defect is recorded as `KI-BO-014`,
+Occurrence 2. Re-checked the same day: `validate_ac_schema.py` still has no `implemented_by` check
+and exits 0 on a dangling entry. The third fix direction above, a store-level check that every
+`implemented_by` entry resolves and that reads the working tree, is the one defence that covers
+both producers.

@@ -3,6 +3,7 @@ import { repoRoot, repoPath, walk, readFileSafe, rel } from "./repo";
 import { acById } from "./ac-store";
 import { deriveImplSummary } from "./flow-impl-summary";
 import { parseContractDefinitions, parseIoContracts } from "./flow-contracts";
+import { parseActorKind } from "./actor-kind";
 import type {
   AcRef,
   ArtifactGraphEdge,
@@ -121,10 +122,11 @@ function parseStep(raw: Record<string, unknown>, definitions: unknown): FlowStep
   return {
     id: String(raw.id ?? ""),
     label: String(raw.label ?? raw.id ?? ""),
-    human: String(raw.human ?? ""),
+    description: String(raw.description ?? ""),
     order: Number(raw.order ?? 0),
     screen: raw.screen ? String(raw.screen) : null,
     agent: raw.agent ? String(raw.agent) : null,
+    actorKind: parseActorKind(raw.actor_kind),
     produces: asArray(raw.produces),
     consumes: asArray(raw.consumes),
     ioContracts: parseIoContracts(raw.io_contracts, definitions),
@@ -147,9 +149,10 @@ function parseBranch(raw: Record<string, unknown>, definitions: unknown): FlowBr
     from: String(raw.from ?? ""),
     condition: String(raw.condition ?? ""),
     label: String(raw.label ?? raw.id ?? ""),
-    human: String(raw.human ?? ""),
+    description: String(raw.description ?? ""),
     screen: raw.screen ? String(raw.screen) : null,
     agent: raw.agent ? String(raw.agent) : null,
+    actorKind: parseActorKind(raw.actor_kind),
     produces: asArray(raw.produces),
     consumes: asArray(raw.consumes),
     ioContracts: parseIoContracts(raw.io_contracts, definitions),

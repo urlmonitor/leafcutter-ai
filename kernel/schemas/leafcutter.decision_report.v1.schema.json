@@ -16,10 +16,12 @@
       "description": "Outcome of assessing one option (or the evidence) against one criterion.",
       "properties": {
         "criterion_id": {
+          "description": "The criterion that was assessed.",
           "title": "Criterion Id",
           "type": "string"
         },
         "evidence_ids": {
+          "description": "Evidence the verdict rests on, so the reader can check it.",
           "items": {
             "type": "string"
           },
@@ -27,6 +29,7 @@
           "type": "array"
         },
         "limitations": {
+          "description": "Caveats on this verdict (thin evidence, cut-off retrieval) that the reader should weigh.",
           "items": {
             "type": "string"
           },
@@ -43,9 +46,11 @@
             }
           ],
           "default": null,
+          "description": "The option assessed against the criterion; null when the evidence as a whole was assessed.",
           "title": "Option Id"
         },
         "outcome": {
+          "description": "Verdict for this pair: pass, fail, or uncertain when the evidence does not settle it.",
           "enum": [
             "pass",
             "fail",
@@ -63,11 +68,13 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "The raw provider distribution behind the verdict, kept for audit."
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -115,6 +122,7 @@
             }
           ],
           "default": null,
+          "description": "The answer label the provider picked.",
           "title": "Choice"
         },
         "confidence": {
@@ -129,18 +137,21 @@
             }
           ],
           "default": null,
+          "description": "The provider's own confidence in its answer (0 to 1), compared with the routing and decision thresholds.",
           "title": "Confidence"
         },
         "probabilities": {
           "additionalProperties": {
             "type": "number"
           },
+          "description": "The provider's probability for each answer label, kept so the derived outcome can be audited.",
           "title": "Probabilities",
           "type": "object"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         }
@@ -153,6 +164,7 @@
       "description": "Concise explanation; origin labels who wrote it (never Jev hidden reasoning).",
       "properties": {
         "origin": {
+          "description": "Who wrote the text: a kernel template or the host, never the provider's hidden reasoning.",
           "enum": [
             "template",
             "host"
@@ -163,10 +175,12 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "text": {
+          "description": "The explanation of why the option was chosen, short enough to read in a report.",
           "minLength": 1,
           "title": "Text",
           "type": "string"
@@ -185,11 +199,13 @@
       "properties": {
         "observability": {
           "$ref": "#/$defs/ObservabilityStatus",
-          "default": "ok"
+          "default": "ok",
+          "description": "Whether trace export is healthy, so a missing trace can be told from a failed export."
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -203,6 +219,7 @@
             }
           ],
           "default": null,
+          "description": "Id of the run's trace in the observability backend, for looking it up.",
           "title": "Trace Id"
         },
         "trace_url": {
@@ -215,6 +232,7 @@
             }
           ],
           "default": null,
+          "description": "Link to the run's trace, when the backend provides one.",
           "title": "Trace Url"
         }
       },
@@ -229,9 +247,11 @@
   "properties": {
     "approval_status": {
       "$ref": "#/$defs/ApprovalStatus",
-      "default": "not_required"
+      "default": "not_required",
+      "description": "Whether a human has approved the outcome, for decisions that require approval."
     },
     "contradicting_evidence_ids": {
+      "description": "Evidence that argues against the recommendation, kept visible rather than dropped.",
       "items": {
         "type": "string"
       },
@@ -239,6 +259,7 @@
       "type": "array"
     },
     "criterion_assessments": {
+      "description": "How options fared against each criterion, so the choice can be audited.",
       "items": {
         "$ref": "#/$defs/CriterionAssessment"
       },
@@ -246,6 +267,7 @@
       "type": "array"
     },
     "limitations": {
+      "description": "Known weaknesses of the result (cut-off retrieval, missing sources) the reader should weigh.",
       "items": {
         "type": "string"
       },
@@ -253,6 +275,7 @@
       "type": "array"
     },
     "open_questions": {
+      "description": "What is still unanswered; an unresolved report lists what would settle it.",
       "items": {
         "type": "string"
       },
@@ -268,7 +291,8 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "description": "Short explanation of why the option was chosen, with who wrote it."
     },
     "recommendation": {
       "anyOf": [
@@ -280,11 +304,13 @@
         }
       ],
       "default": null,
+      "description": "The plain-language answer to the question, shown to the caller when there is one.",
       "title": "Recommendation"
     },
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
@@ -298,12 +324,15 @@
         }
       ],
       "default": null,
+      "description": "Id of the option the decision picked; set only on a resolved report.",
       "title": "Selected Option Id"
     },
     "status": {
-      "$ref": "#/$defs/DecisionStatus"
+      "$ref": "#/$defs/DecisionStatus",
+      "description": "Where the decision stands, so the caller knows whether to act, supply more, or wait for a human."
     },
     "supporting_evidence_ids": {
+      "description": "Evidence that backs the recommendation, for the caller to inspect.",
       "items": {
         "type": "string"
       },
@@ -319,7 +348,8 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "description": "Where to inspect this run's trace, for finding out how the result came about."
     }
   },
   "required": [

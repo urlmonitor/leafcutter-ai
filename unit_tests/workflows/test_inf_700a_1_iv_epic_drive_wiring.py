@@ -199,12 +199,13 @@ class TestTheWiringDeclarationStaysHonest(unittest.TestCase):
         result = check_knowledge_routing_wiring(_REPO_ROOT / "templates" / "workflows-js", self.config)
         self.assertEqual(result["unwired"], [], result)
 
-    def test_build_feature_exclusion_no_longer_claims_it_completes_nothing(self) -> None:
-        # covers: INF-700a-1-i
+    def test_build_feature_is_wired_and_no_longer_excluded(self) -> None:
+        # covers: INF-700a-1-i, INF-700a-1-v
         # angle: criterion
-        reason = self.excluded["build-feature.js"]["reason"].lower()
-        self.assertNotIn("completes nothing", reason)
-        self.assertIn("commit", reason)
+        # It once carried an exclusion that had to name its commit honestly; INF-700a-1-v
+        # wires it, so it must now be declared wired and carry no exclusion at all.
+        self.assertIn("build-feature.js", self.section["wired"])
+        self.assertNotIn("build-feature.js", self.excluded)
 
 
 if __name__ == "__main__":

@@ -354,12 +354,12 @@ class TestGenuineContentionStillReportedWithMembers(unittest.TestCase):
         # covers: BO-2400f-7-iv
         # angle: criterion
         held = ["BO-STUB-1", "BO-STUB-2"]
-        contention_reply = {
-            "claimed": [],
-            "excluded_claimed": held,
-            "target_refused": True,
-            "message": "members already in_progress",
-        }
+        contention_reply = _claim_fx.claim_ran(
+            [],
+            excluded_claimed=held,
+            target_refused=True,
+            message="members already in_progress",
+        )
         result = _run_lane(contention_reply)
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")

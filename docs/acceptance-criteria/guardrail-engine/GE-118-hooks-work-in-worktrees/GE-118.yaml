@@ -36,6 +36,28 @@ expects_from: null
 origin_agent: BrainCandy
 created: 2026-08-11
 amended_by:
+  - reason: adopt-seventh-child
+    date: '2026-10-09'
+    by: business-analyst
+    entry: >-
+      covered_by gained GE-118g ("The decision-numbering tools act on the repository they
+      belong to, not on whichever directory they were started in"), taking this L0 from 6
+      of 7 children to 7 of 7. THIS L0 IS NOW AT ITS CAP with no child_limit_override; the
+      next record of this shape needs a new L0 or a split. GE-118g is a new L1 rather than
+      a child of an existing one because every existing child is about ONE named hook and
+      ONE named dependency — GE-118a the check-secrets scanner directory, GE-118b the
+      drift hooks' manifest, GE-118c the declared document-type file, GE-118d/e/f the
+      accepted shapes of a path-bearing frontmatter entry — and filing a defect in the
+      decision-numbering tools under any of them would file it under a record about a
+      different hook. It extends the register of resolution point fixes with the one anchor
+      it does not yet hold: the invoking process's working directory, rather than a
+      hardcoded path, a hand-counted ancestor, or a hardcoded package-directory name. Two
+      alternatives were considered and rejected on the merits, with the reasoning recorded
+      in GE-118g's notes: GE-126, whose L1s are about truthfulness, which both of these
+      tools already have; and leaving the records under GE-118a, which would repeat the
+      BP-600f mis-filing. Per the standing rule quoted in the next entry, this is a point
+      fix joining a register of point fixes and does not invert the containment that rule
+      protects.
   - reason: adopt-renumbered-child
     date: '2026-08-18'
     by: business-analyst
@@ -58,7 +80,7 @@ amended_by:
       reasoning, including why GE-120 — the semantically closer parent — is
       mechanically forbidden.'
 superseded_by: null
-covered_by: [GE-118a, GE-118b, GE-118c, GE-118d, GE-118e, GE-118f]
+covered_by: [GE-118a, GE-118b, GE-118c, GE-118d, GE-118e, GE-118f, GE-118g]
 implemented_by: []
 change_target: code
 risk_surface: internal

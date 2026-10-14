@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -123,7 +123,10 @@ amended_by:
 superseded_by: null
 covered_by:
   - AR-300a-1-i
-implemented_by: []
+implemented_by:
+  - scripts/agent_grant_delivery.py
+  - scripts/agent_grant_delivery_gate.py
+  - scripts/template_compiler.py
 notes: |
   THE EVIDENCE RULE IS THE WHOLE CRITERION. The measured defect is that the
   abilities section is computed correctly per agent and then dropped, for all 60

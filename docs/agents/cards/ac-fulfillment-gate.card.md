@@ -96,13 +96,14 @@ flowchart TD
 | `Bash` |
 | `Read` |
 | `Edit` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration

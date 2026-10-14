@@ -6,6 +6,7 @@ ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers
 DECISION HISTORY
 ========================================
 - 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
+- 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
 """
 
 from __future__ import annotations
@@ -30,6 +31,25 @@ from knowledge.errors import BackendUnavailable
 def scope_key(repository_id: str, generation_id: str) -> str:
     """Return a collision-resistant projector-only compound key."""
     return hashlib.sha256(json.dumps([repository_id, generation_id]).encode()).hexdigest()
+
+
+_MAX_CAUSE_CHARS = 300
+
+
+def describe_failure(error: BaseException) -> str:
+    """Summarize a driver fault as class, optional Neo4j code and bounded server text.
+
+    Args:
+        error: Infrastructure exception raised by the driver or transport.
+
+    Returns:
+        A secret-free single-line diagnostic; never includes the URI or credentials.
+    """
+    code = getattr(error, "code", None)
+    detail = getattr(error, "message", None) or str(error)
+    label = f"{type(error).__name__} [{code}]" if code else type(error).__name__
+    text = " ".join(str(detail).split())[:_MAX_CAUSE_CHARS]
+    return f"backend unavailable: {label}: {text}"
 
 
 def entity_from_row(row: dict) -> Entity:
@@ -122,7 +142,7 @@ class Neo4jBackend:
         try:
             return await asyncio.to_thread(execute)
         except (OSError, TimeoutError, DriverError, Neo4jError) as error:
-            raise BackendUnavailable() from error
+            raise BackendUnavailable(describe_failure(error)) from error
 
     async def setup(self) -> None:
         """Apply idempotent, versioned Community-compatible projection constraints."""
@@ -361,7 +381,7 @@ class Neo4jBackend:
         self,
         repository_id: str,
         generation_id: str,
-        retention_seconds: int = 3600,
+        retention_seconds: int | None = None,
         now: float | None = None,
     ) -> bool:
         """Remove only an inactive owned generation after its retention deadline.
@@ -369,7 +389,8 @@ class Neo4jBackend:
         Args:
             repository_id: Trusted repository namespace that isolates all reads and writes.
             generation_id: Immutable generation identifier within the repository.
-            retention_seconds: Minimum elapsed retirement time before removal is permitted.
+            retention_seconds: Declared minimum retirement time; there is no built-in
+                value, so omitting it is refused with ValueError.
             now: Optional clock value for deterministic retention checks.
 
         Returns:
@@ -378,6 +399,19 @@ class Neo4jBackend:
         from knowledge.adapters.neo4j_projection import cleanup
 
         return await cleanup(self, repository_id, generation_id, retention_seconds, now)
+
+    async def retention_facts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, the per-generation facts a retention policy decides on.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per retained ready generation.
+        """
+        from knowledge.adapters.neo4j_projection import retention_facts
+
+        return await retention_facts(self, repository_id)
 
     async def close(self) -> None:
         """Close the configured driver's pool."""

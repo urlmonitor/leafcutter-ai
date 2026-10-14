@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -81,8 +81,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300b_1_i_clean_path.py
+implemented_by:
+  - scripts/agent_preparation_delivery.py
+  - scripts/build.py
 notes: |
   A GATE THAT ALWAYS FIRES GETS TURNED OFF, WHICH IS THE SAME OUTCOME AS NO
   GATE. This is the negative control for AR-300b-1 and the reason the counts are

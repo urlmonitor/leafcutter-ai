@@ -34,12 +34,17 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import subprocess
 import sys
 from pathlib import Path
 
-_JSONL_DEFAULT = Path(__file__).resolve().parents[3] / "debugging" / "logs" / "feedback.jsonl"
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)  # tests and callers load this file by path
+
+import feedback_reader  # noqa: E402
+
+_OUTPUT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -79,7 +84,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--jsonl",
         default=None,
-        help=f"Override JSONL path. Default: {_JSONL_DEFAULT}",
+        help="Override JSONL path. Default: feedback_sink from the build-time declaration.",
     )
     return parser
 
@@ -114,61 +119,6 @@ def _ref_key(ref: dict) -> tuple[str, str]:
         tuple[str, str]: (type, ref) pair used for equality checks.
     """
     return (ref.get("type", ""), ref.get("ref", ""))
-
-
-def _load_jsonl(path: Path) -> list[dict]:
-    """Load all lines from a JSONL file as a list of dicts.
-
-    Args:
-        path: Path to the JSONL file.
-
-    Returns:
-        list[dict]: Parsed list of entry dicts (one per line).
-
-    Raises:
-        SystemExit(2): On filesystem or parse error.
-    """
-    try:
-        with open(path, encoding="utf-8") as fh:
-            lines = fh.readlines()
-    except OSError as exc:
-        print(f"ERROR: Cannot read {path}: {exc}", file=sys.stderr)
-        sys.exit(2)
-
-    entries: list[dict] = []
-    for lineno, line in enumerate(lines, start=1):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            entries.append(json.loads(stripped))
-        except json.JSONDecodeError as exc:
-            print(
-                f"ERROR: Malformed JSON on line {lineno} of {path}: {exc}",
-                file=sys.stderr,
-            )
-            sys.exit(2)
-    return entries
-
-
-def _write_jsonl(path: Path, entries: list[dict]) -> None:
-    """Write a list of entry dicts back to a JSONL file (one JSON object per line).
-
-    Args:
-        path: Target path. Parent directories are created if needed.
-        entries: List of entry dicts to serialise.
-
-    Raises:
-        SystemExit(2): On filesystem write error.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with open(path, "w", encoding="utf-8") as fh:
-            for entry in entries:
-                fh.write(json.dumps(entry, separators=(",", ":")) + "\n")
-    except OSError as exc:
-        print(f"ERROR: Cannot write {path}: {exc}", file=sys.stderr)
-        sys.exit(2)
 
 
 _RESOLVE_SCRIPT = Path(__file__).resolve().parent / "resolve_feedback.py"
@@ -238,44 +188,50 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    jsonl_path = Path(args.jsonl) if args.jsonl else _JSONL_DEFAULT
-    entries = _load_jsonl(jsonl_path)
-
-    # Locate the target entry
-    target_idx: int | None = None
-    for idx, entry in enumerate(entries):
-        if entry.get("feedback_id") == args.feedback_id:
-            target_idx = idx
-            break
-
-    if target_idx is None:
-        print(
-            f"ERROR: feedback_id '{args.feedback_id}' not found in {jsonl_path}.",
-            file=sys.stderr,
-        )
+    paths = feedback_reader.resolve(_OUTPUT_ROOT, "link_feedback", feedback_sink=args.jsonl)
+    if paths is None:
         return 1
+    jsonl_path = paths["feedback_sink"]
 
-    target = entries[target_idx]
+    # The whole read-modify-write holds the lock submit_feedback.py takes, so a concurrent append survives.
+    with feedback_reader.exclusive_sink(jsonl_path) as fh:
+        entries = feedback_reader.load_entries(fh, jsonl_path)
+        feedback_reader.report("link_feedback", jsonl_path, len(entries), None if args.jsonl else _OUTPUT_ROOT)
 
-    # Merge new refs, skipping duplicates (idempotent)
-    existing_refs: list[dict] = target.get("addressed_by", [])
-    existing_keys: set[tuple[str, str]] = {_ref_key(r) for r in existing_refs}
+        # Locate the target entry
+        target_idx: int | None = None
+        for idx, entry in enumerate(entries):
+            if entry.get("feedback_id") == args.feedback_id:
+                target_idx = idx
+                break
 
-    added: list[dict] = []
-    for ref in new_refs:
-        if _ref_key(ref) not in existing_keys:
-            existing_refs.append(ref)
-            existing_keys.add(_ref_key(ref))
-            added.append(ref)
+        if target_idx is None:
+            print(
+                f"ERROR: feedback_id '{args.feedback_id}' not found in {jsonl_path}.",
+                file=sys.stderr,
+            )
+            return 1
 
-    if not added:
-        print(f"no-op {args.feedback_id} (all refs already present)")
-        return 0
+        target = entries[target_idx]
 
-    target["addressed_by"] = existing_refs
-    entries[target_idx] = target
+        # Merge new refs, skipping duplicates (idempotent)
+        existing_refs: list[dict] = target.get("addressed_by", [])
+        existing_keys: set[tuple[str, str]] = {_ref_key(r) for r in existing_refs}
 
-    _write_jsonl(jsonl_path, entries)
+        added: list[dict] = []
+        for ref in new_refs:
+            if _ref_key(ref) not in existing_keys:
+                existing_refs.append(ref)
+                existing_keys.add(_ref_key(ref))
+                added.append(ref)
+
+        if not added:
+            print(f"no-op {args.feedback_id} (all refs already present)")
+            return 0
+
+        target["addressed_by"] = existing_refs
+        entries[target_idx] = target
+        feedback_reader.replace_entries(fh, jsonl_path, entries)
 
     added_desc = ", ".join(f"{r['type']}:{r['ref']}" for r in added)
     print(f"linked {args.feedback_id} -> {added_desc}")
@@ -284,8 +240,8 @@ def main(argv: list[str] | None = None) -> int:
     # as resolved. Gated on --ticket only (commits and PRs do not signify that
     # a ticket was created; --ticket is the resolution ref of record).
     if args.ticket:
-        explicit_jsonl = Path(args.jsonl) if args.jsonl else None
-        _call_resolve_feedback(args.feedback_id, args.ticket, explicit_jsonl)
+        # The lock is released above; the child resolves the very file this run rewrote.
+        _call_resolve_feedback(args.feedback_id, args.ticket, jsonl_path)
 
     return 0
 

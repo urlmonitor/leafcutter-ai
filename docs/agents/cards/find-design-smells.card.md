@@ -97,8 +97,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `review-for-code-smells` | — | — |
-| `review-for-design-code-smells` | — | — |
+| `review-for-code-smells` | always | — |
+| `review-for-design-code-smells` | always | — |
 ---
 
 ## Configuration

@@ -1,0 +1,205 @@
+id: KM-400f-4
+title: "Retained generations and remaining capacity are visible to an operator"
+component: knowledge-management
+components: [knowledge_management]
+level: L2
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f
+criteria: |
+  Given the repository holds active generation G32 and retained generations G31 down to G28
+  And an unexpired pinned continuation is held against G28
+  And the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the backend reports a capacity ceiling of 200,000 nodes and 400,000 relationships
+  When an operator requests status
+  Then every retained generation is listed, not only the active one
+  And each listed generation states its identifier, its source revision, its retirement time and whether it is reclaimable under the current declared bound
+  And G28 is listed as not reclaimable, giving its unexpired pinned continuation as the reason
+  And the status states the declared retention bound that reclaimability was evaluated against
+  And the status reports measured node and relationship usage for this repository and for the whole backend against the reported ceiling
+  And a ceiling the backend does not report is shown as unknown rather than omitted
+
+  Given 32 generations are retained and the declared bound is at most 3
+  When an operator requests status
+  Then all 32 are listed with their reclaimability
+  And the count of retained generations and the count exceeding the declared bound are both reported
+
+  Given generations are reclaimable under the declared bound
+  When an operator requests reclamation without naming a generation identifier
+  Then every generation reclaimable under that bound is reclaimed in one operation
+  And the result names the identifiers reclaimed and the identifiers retained, each with the reason it was retained
+  And the active generation and every generation with an unexpired pinned continuation are among those retained
+
+  Given no generation is reclaimable under the declared bound
+  When an operator requests reclamation without naming a generation identifier
+  Then the operation succeeds, reclaims nothing, and reports a reclaimed count of zero with the reason each generation was retained
+
+  Given an operator follows the operational instructions for this backend
+  When they reach the capacity and retention section
+  Then the instructions demonstrate listing retained generations, reading remaining headroom and reclaiming without naming a generation
+  And they state the declared retention bound and the headroom thresholds the operator can configure
+depends_on: [KM-400f, KM-400f-1, KM-400f-3]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: Target of the operational-instructions clause; must gain a capacity and retention section covering listing, headroom and sweep reclamation.
+  - path: docs/architecture/components/knowledge-retrieval.md
+    relationship: context
+    status: exists
+    relevance: The operator surface described here is the existing standalone operation, not a new product.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the declared bound and the reclaimability determination this surface reports; the surface does not recompute the policy.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-3.yaml
+    relationship: context
+    status: exists
+    relevance: Supplies the measured usage and reported ceiling this surface displays.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-5.yaml
+    relationship: context
+    status: exists
+    relevance: The existing status operation reports published revision and lag; this AC extends the same surface rather than adding a parallel one.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: An unreported ceiling is shown as unknown rather than omitted or defaulted.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: documentation-expert
+  contract: The listing, headroom and sweep-reclamation behaviour this AC specifies is
+    what the operational instructions must demonstrate.
+expects_from:
+  ac_id: KM-400f-3
+  contract: Measured node and relationship usage, the reported ceiling and the headroom
+    verdict, plus the reclaimability determination relayed from KM-400f-1.
+origin_agent: business-analyst
+created: '2026-10-09'
+amended_by:
+  - "2026-10-09: product-owner re-parented this AC from KM-400e to the new KM-400f,
+    where retention and capacity now live. It was authored as KM-400e-7 and is renamed
+    to KM-400f-4 because parentage in this store is derived from the id string. The
+    rename is safe only because the id was one day old and referenced nowhere outside
+    this file and its parents — no test covers tag, no ticket, no implemented_by entry.
+    Criteria, test_spec, test_rationale and must_catch are unchanged; the id, parent,
+    depends_on, the references in doc_links and the delivers_to/expects_from contracts,
+    the covers tags and the approval fields were updated, and two notes paragraphs were
+    corrected because they asserted a placement rationale that the split made untrue
+    (sweep mode sitting under KM-400e rather than KM-400b, and the documentation clause
+    being folded in to avoid pushing KM-400e past its child cap). The doc_link to
+    KM-400e-5 is retained deliberately: this AC still extends that existing status
+    operation rather than adding a parallel one. readiness moved to approved and
+    priority to high at the user's approval gate."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: [code, docs]
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-09. No operator command would have revealed the 32-generation pile
+  before it filled the instance. The status operation returns only the active manifest,
+  cleanup requires an explicit generation identifier, and there is no sweep mode and no
+  listing command — so the accumulation was unobservable from the outside right up to the
+  point where the backend latched read-only and recovery became impossible.
+
+  The sweep mode (reclamation without naming a generation) is the operator-facing
+  counterpart to the automatic reclamation in KM-400f-2: the automatic path keeps a
+  healthy instance bounded, and the sweep is what an operator reaches for when they find
+  one that is not.
+
+  The operational-instructions clause carries the parent L1's how-to documentation
+  trigger for this work. KM-400f declares documentation_triggers of how-to and
+  reference-doc; the documentation obligation is written as a clause of the AC whose
+  behaviour it documents rather than as a separate documentation child AC, and the
+  cleanup half of the runbook obligation is added to KM-400e-5 by amendment. The
+  original wording justified that choice by KM-400e's child cap; under KM-400f no cap
+  pressure remains, but keeping the obligation attached to the behaviour it documents is
+  the better form regardless.
+
+  Settled design decision, not to be reopened: immutable generations are KEPT. This
+  surface makes retention observable; it does not replace generations with in-place
+  upserting, and reclamation stays subordinate to KM-400b-3's pinning guarantee.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_status_lists_every_retained_generation_with_reclaimability
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Invoke the real status operation against a fixture of 32 retained
+      generations including one pin-protected; assert all 32 appear with identifier,
+      source revision, retirement time and reclaimability, that the pinned one gives its
+      continuation as the reason, and that the declared bound and measured usage against
+      the ceiling are reported.
+    covers: [KM-400f-4]
+    must_catch:
+      - "return only the active manifest and omit retained generations"
+      - "list generations without a reclaimability verdict"
+      - "report usage without the ceiling it is measured against"
+    requires_db: false
+  - name: test_sweep_reclamation_without_a_generation_id_reclaims_the_whole_set
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Invoke reclamation with no generation identifier against 32 retained
+      generations; assert every reclaimable one is reclaimed in a single operation, the
+      active and pin-protected generations survive, and the result names reclaimed and
+      retained identifiers with per-generation retention reasons.
+    covers: [KM-400f-4]
+    must_catch:
+      - "require an explicit generation id and reclaim nothing when none is given"
+      - "reclaim only the oldest generation per invocation"
+      - "reclaim the active or the pin-protected generation"
+    requires_db: false
+  - name: test_unknown_ceiling_is_shown_as_unknown_in_status
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With a backend that does not report a ceiling, assert status shows the
+      ceiling as unknown and still reports measured usage, rather than omitting the field.
+    covers: [KM-400f-4]
+    must_catch:
+      - "omit the ceiling row entirely when it cannot be determined"
+    requires_db: false
+  - name: test_operational_instructions_demonstrate_listing_headroom_and_sweep
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: Execute the commands the capacity and retention section of the
+      operational instructions gives, against a seeded backend, and assert each produces
+      the listing, headroom and sweep behaviour the section claims.
+    covers: [KM-400f-4]
+    must_catch:
+      - "document a command whose flag or mode does not exist"
+    requires_db: false
+  - name: test_live_status_matches_a_real_backends_own_counts
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database holding several published generations, assert the
+      status listing and usage figures equal the backend's own counts and that requesting
+      status changes nothing.
+    covers: [KM-400f-4]
+    requires_db: true
+test_rationale: >-
+  The defect being closed is that an operator could not see an accumulation, so the tests
+  assert what the surface SHOWS against a fixture large enough for the accumulation to
+  exist — 32 generations, the measured incident count — rather than the 2-node snapshot
+  used elsewhere in this family, under which a status that lists only the active manifest
+  looks indistinguishable from a correct one. The instructions test executes the commands
+  the runbook gives instead of searching the document for their names: this repository has
+  already shipped a done AC in this family whose workflow coverage string-parses YAML, and
+  a documented command with a flag that does not exist passes that shape of test while
+  failing the operator.

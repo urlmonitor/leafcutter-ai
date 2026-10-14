@@ -34,8 +34,8 @@ class DecisionQuery(BaseModel):
     change_target: list[str] = Field(default_factory=list)
     risk_surface: list[str] = Field(default_factory=list)
     limit: int = Field(default=3, ge=1)
-    #: Records scoring below this text match are not candidates.
     min_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    """Records scoring below this text match are not candidates."""
 
 
 @dataclass(frozen=True)
@@ -45,8 +45,8 @@ class DecisionHit:
     record: DecisionRecord
     score: float
     path: str
-    #: Ids of records that supersede this one (derived from the others' `supersedes`).
     superseded_by: tuple[str, ...] = field(default_factory=tuple)
+    """Ids of records that supersede this one (derived from the others' `supersedes`)."""
 
     @property
     def superseded(self) -> bool:

@@ -39,7 +39,6 @@ export interface FlowIoContracts {
 }
 
 const JSON_TYPES = new Set(["object", "array", "string", "integer", "number", "boolean", "null"]);
-export const CONTRACT_PRESENTATION_MARKER = "\n\nContract fields and examples (generated)\n";
 const own = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const text = (value: unknown): value is string => typeof value === "string" && value.trim().length > 0;
@@ -65,7 +64,7 @@ export function parseContractDefinitions(value: unknown): Record<string, FlowCon
   return value as Record<string, FlowContractDefinition>;
 }
 
-/** Do not suppress the legacy text unless every displayed reference can be resolved. */
+/** Accept metadata only when every displayed reference resolves; otherwise the drawer keeps the legacy label fallback. */
 export function parseIoContracts(value: unknown, definitions: unknown): FlowIoContracts | undefined {
   if (!record(value)) return undefined;
   if (own(value, "not_applicable")) {

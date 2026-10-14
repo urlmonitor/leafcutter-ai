@@ -1,0 +1,280 @@
+id: GE-127g-2-i
+title: "A declaration that cannot be read is said so and the documents are judged, never set aside on the strength of a declaration nobody could read"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the declaration of set-aside locations is absent,
+  And a commit stages one generated document standing at 2,809 lines that would
+    be set aside were the declaration present,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and what it reports states that the
+    declaration could not be read and names it,
+  And the document is reported among those judged and over their permitted
+    length — it is not reported as set aside, and it is not reported as within
+    its permitted length.
+
+  And given instead that the declaration is present but malformed, so its
+  entries cannot be interpreted,
+  When the author performs an ordinary commit staging the same document,
+  Then the commit does not complete, and what it reports states that the
+    declaration could not be interpreted and names it, and the document is again
+    reported among those judged.
+
+  And given the declaration is present and readable but contains no entries at
+  all,
+  When the author performs an ordinary commit staging the same document,
+  Then the commit does not complete and the document is reported among those
+    judged, and what it reports does NOT state that the declaration could not be
+    read — an empty declaration is a decision that nothing is set aside, and is
+    reported differently from a declaration that could not be read.
+depends_on:
+  - GE-127g-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-2.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SAME DEFECT, ALREADY RECORDED ONCE IN THIS COMPONENT, AND THE REASON THIS
+      RECORD IS NOT SPECULATIVE. Its fourth criterion requires a guard that cannot read
+      its declaring file to say so and fail rather than continue against a narrower
+      built-in list, "because a guard that silently substitutes its own answer for the one
+      it was configured with is enforcing a rule nobody wrote". Its own notes record that
+      the miss happened at an existence test before any exception could be raised, so the
+      error-handling arm never ran and nothing was ever logged. That is the exact shape
+      this record forbids for the opposite substitution — a built-in exemption standing in
+      for a declaration nobody read.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127a-1-i.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE TREE'S ESTABLISHED SHAPE FOR THIS CLASS: a file whose length cannot be
+      established is refused and named, never reported as within its permitted length.
+      This record applies the same rule one level up — to the declaration that decides
+      which files are measured at all — and resolves toward judging rather than toward
+      exempting, which is the conservative direction for an exclusion mechanism.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Its third arm empties the declaration's entry for the cards directory and requires
+      the over-limit documents to be named. That arm and this record's third arm are
+      deliberately consistent: an empty or entry-less declaration judges everything. The
+      difference this record adds is that an UNREADABLE declaration must be distinguishable
+      from an empty one, which GE-127g-1's arm does not reach.
+  - path: templates/scripts/commit_guardian/_doc_length_ratchet.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The component's fail-open convention is inherited and not repealed by this record,
+      and GE-127's L0 notes draw the line this record sits on: failing open on one bad
+      input while the check still ran is acceptable, reporting success for a check that
+      never ran is not. An unreadable exclusion declaration is the second case for every
+      document in the commit at once, which is why this record resolves toward judging
+      rather than toward exempting.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-2
+    contract: >-
+      The run's reporting of judged and set-aside populations. This record adds the two
+      further conditions that reporting must be able to express — unreadable and
+      uninterpretable — and fixes which verdict each produces.
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "Three outcomes of reading the declaration must be distinguishable at the point of
+    the read, not reconstructed downstream from how many entries came back: the file
+    could not be read, its entries could not be interpreted, and it was read and holds no
+    entries. _doc_length_ratchet.resolve_doc_ratchet() already establishes this pattern
+    for the previous-value source — classifying by which function raised or what it
+    returned, 'never downstream by inspecting how many previous values came back' — and
+    that classification point is the precedent to follow."
+  - "The error path must be REACHABLE for the absent case. Guarding the read with an
+    existence test places the absent case on a branch that never raises, so the
+    error-handling code is never entered and nothing is reported — which is exactly the
+    miss GE-118c's notes record for the declared document types. Attempt the read and
+    handle its failure; do not pre-test for existence."
+  - "No built-in set of set-aside locations may exist anywhere in the implementation,
+    not even as a last-resort default. Its presence is the substitution the first two
+    arms forbid, and a default that is never reached in testing is still a default."
+  - "An unreadable declaration must resolve toward JUDGING every staged document, not
+    toward exempting any. This is a deliberate departure from the component's fail-open
+    convention for this one input, on the ground the record states: an exclusion
+    mechanism failing toward exemption turns one unreadable file into a repository-wide
+    amnesty, which is a check that never ran reporting success."
+  - "The refusal must name the declaration it could not read or interpret. A message that
+    states only that something went wrong is the condition CLAUDE.md records being
+    misread as a real finding three separate times."
+  - "An empty-but-readable declaration must NOT emit the could-not-be-read text. It is a
+    completing read whose result is 'nothing is set aside'; the commit still refuses,
+    but for the document's length and not for the declaration."
+  - "The commit_guardian.json read already happens once for max_lines and the severity.
+    Do not introduce a second, separate read of the same file for the declaration — one
+    read with one classified outcome, or the two reads can disagree about whether the
+    file is readable."
+  - "Must handle errors gracefully per the project error handling policy."
+test_spec:
+  - name: test_absent_declaration_refuses_names_it_and_judges_the_document
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    surface_invoked: templates/scripts/commit_guardian/check_doc_length.py
+    description: >-
+      Arm 1, and the arm that proves the error path is reachable. Remove the declaration
+      entirely, stage one generated document far above the limit, and invoke the gate.
+      Assert non-zero exit; that the output states the declaration could not be read and
+      names it; that the document is reported among those JUDGED and over its limit; and
+      that it is reported neither as set aside nor as within its permitted length. Four
+      assertions kept separate. No build.py spawn and no layout fixture, so no marker.
+    must_catch:
+      - "on an unreadable or uninterpretable declaration, fall back to a built-in set of set-aside locations and continue"
+      - "on an unreadable declaration, set aside every document and complete the commit"
+      - "guard the read with an existence test so the error-handling path cannot be reached"
+  - name: test_malformed_declaration_refuses_names_it_and_judges_the_document
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: >-
+      Arm 2. The declaration present but uninterpretable — truncated JSON, or entries of
+      the wrong shape. Same staged document. Assert non-zero exit, that the report states
+      the declaration could not be interpreted and names it, and that the document is
+      again reported among those judged. Stated separately from arm 1 because an
+      implementation can handle the malformed case correctly and never reach the absent
+      one. No marker.
+    must_catch:
+      - "on an unreadable or uninterpretable declaration, fall back to a built-in set of set-aside locations and continue"
+      - "on an unreadable declaration, set aside every document and complete the commit"
+  - name: test_empty_declaration_judges_without_claiming_an_unreadable_declaration
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: >-
+      Arm 3, the narrowest in the subtree. The declaration present, readable, with zero
+      entries. Same staged document. Assert non-zero exit; that the document is reported
+      among those judged; and — the point of the entry — that the output does NOT contain
+      the could-not-be-read text. The negative assertion is what makes the diagnostic
+      usable at all. No marker.
+    must_catch:
+      - "report an empty declared set with the same could-not-be-read message as an unreadable declaration"
+  - name: test_declaration_entry_with_a_blank_ground_is_rejected_not_honoured
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      Enrichment's own entry, for the parent L1's requirement that an entry whose ground
+      is absent, empty or whitespace-only be rejected rather than honoured silently.
+      Declare the cards directory with a blank ground, stage an over-limit generated
+      document, and assert the document is JUDGED and the output names the offending
+      entry. This is the uninterpretable case at entry granularity rather than file
+      granularity, and it is the one an implementation that validates only the file's
+      JSON shape lets through. No marker.
+    must_catch:
+      - "honour a declared entry whose ground is blank or absent"
+      - "validate only that the file parses, never that each entry carries a ground"
+test_rationale: >-
+  Each entry drives one real gate run over a real staged index with the declaration put
+  into a specific state, and reads the verdict and the diagnostic out of the run's own
+  output. The four entries are not interchangeable: the record's mutations redden disjoint
+  subsets — the silent substitution and the quiet exemption both redden arms 1 and 2 and
+  leave arm 3 green, the conflation reddens arm 3 alone, and the unreached-error-path
+  mutation reddens arm 1 and leaves arm 2 green. That last asymmetry is the whole reason
+  the absent and the malformed cases are two entries and not one, and it is also why the
+  absent-case entry must be constructed by actually removing the file rather than by
+  monkeypatching the loader to raise: a patched loader is entered, so it cannot reproduce
+  the existence-test miss it exists to catch. Arm 3's assertion is NEGATIVE — the absence
+  of the could-not-be-read text — which is unusual and deliberate: with it, a deliberate
+  empty declaration and a real fault are distinguishable; without it, neither can be
+  acted on, and the verdict is identical in both cases so the verdict alone proves
+  nothing. The fourth entry is enrichment's own; it closes the granularity gap between
+  'the file is interpretable' and 'this entry is interpretable', which the record's arms
+  reach only at file level. Markers: no entry requests shared_reference_layout and none
+  spawns build.py, so all four sit outside the marker-routing mechanism; the
+  deployed-layout proof for this family is paid once by GE-127g-2's deployed entry.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THE RESOLUTION IS TOWARD JUDGING AND NOT TOWARD EXEMPTING, STATED AS A DECISION AND
+  NOT AN INSTINCT. An exclusion mechanism that fails toward exempting turns one unreadable
+  file into a repository-wide amnesty, and under a silent failure the amnesty is
+  indistinguishable from a clean run — which is the precise composition of the two
+  failures this subtree exists to prevent. Judging everything on an unreadable declaration
+  is loud, immediately diagnosable, and recoverable by fixing the declaration. The cost is
+  that a genuine configuration accident refuses a commit; that is the right cost, and it is
+  the direction GE-127a-1-i already chose one level down.
+
+  WHY THE THIRD ARM IS HERE AND IS NOT PEDANTRY. An implementation that reports "could not
+  read the declaration" whenever the declared set is empty makes the diagnostic useless: a
+  deliberate decision that nothing is set aside is reported as a fault, and a real fault is
+  reported identically, so neither can be acted on. This is the same confusion as "0 judged"
+  versus "nothing exceeded its limit" that the parent's fourth arm separates — one level
+  further out. The verdict is the same in both of this record's and the parent's cases; what
+  must differ is what the run says about why.
+
+  WHY THIS IS AN L3 AND NOT A SIBLING L2. It is entirely about what the run REPORTS and
+  which population a document is reported in, which is GE-127g-2's subject. Its named
+  mutation reddens this record alone and leaves every one of the parent's four arms green,
+  because the parent's arms all run with a readable declaration.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE SILENT SUBSTITUTION. MUTATION: on an unreadable or uninterpretable declaration,
+      fall back to a built-in set of set-aside locations and continue.
+      MUST GO RED: the first and second arms.
+      MUST STAY GREEN: the third arm, and every arm of GE-127g-1, GE-127g-1-i, GE-127g-2
+      and GE-127g-3. This is the GE-118c defect reproduced with the sign reversed, and no
+      other record in this subtree catches it.
+
+  (2) THE QUIET EXEMPTION. MUTATION: on an unreadable declaration, set aside every document
+      and complete the commit.
+      MUST GO RED: the first and second arms.
+      MUST STAY GREEN: the third arm and every parent arm. Stated separately from mutation
+      one because it is the shape a fail-open convention produces by default, and because
+      it is the one that scales a single bad file into a repository-wide amnesty.
+
+  (3) THE CONFLATION. MUTATION: report an empty declared set with the same
+      could-not-be-read message as an unreadable declaration.
+      MUST GO RED: the third arm only.
+      MUST STAY GREEN: the first and second arms and every parent arm. This is the narrowest
+      mutation in the subtree and the reason the third arm is stated at all.
+
+  (4) THE UNREACHED ERROR PATH. MUTATION: guard the read with an existence test so the
+      error-handling path cannot be reached, as GE-118c records happening for the declared
+      document types.
+      MUST GO RED: the first arm, where the declaration is absent rather than malformed.
+      MUST STAY GREEN: the second arm, where the file exists and parsing fails. The two arms
+      are stated separately for exactly this reason: an implementation can handle the
+      malformed case correctly and never reach it for the absent one.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

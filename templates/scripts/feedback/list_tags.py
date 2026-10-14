@@ -22,17 +22,13 @@ from collections import Counter
 from pathlib import Path
 
 
-def _find_project_root() -> Path:
-    """Walk up from this file to find the project root (directory containing .claude/)."""
-    current = Path(__file__).resolve().parent
-    for _ in range(6):
-        if (current / ".claude").is_dir():
-            return current
-        current = current.parent
-    return Path(__file__).resolve().parents[2]
+_HERE = str(Path(__file__).resolve().parent)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)  # trend_report and tests load this file by path
 
+import feedback_reader  # noqa: E402
 
-_JSONL_DEFAULT = _find_project_root() / "debugging" / "logs" / "feedback.jsonl"
+_OUTPUT_ROOT = Path(__file__).resolve().parents[2]
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         argv: Argument list. When None, uses sys.argv[1:].
 
     Returns:
-        int: Exit code (0 always — read-only).
+        int: Exit code (0 on success, 1 when no declared sink can be determined).
     """
     parser = argparse.ArgumentParser(
         description="List most common feedback tags, optionally filtered by category.",
@@ -121,13 +117,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--jsonl",
         default=None,
-        help=f"Override JSONL input path. Default: {_JSONL_DEFAULT}",
+        help="Override JSONL input path. Default: feedback_sink from the build-time declaration.",
     )
 
     args = parser.parse_args(argv)
 
-    jsonl_path = Path(args.jsonl) if args.jsonl else _JSONL_DEFAULT
+    paths = feedback_reader.resolve(_OUTPUT_ROOT, "list_tags", feedback_sink=args.jsonl)
+    if paths is None:
+        return 1
+    jsonl_path = paths["feedback_sink"]
     entries = _read_jsonl(jsonl_path)
+    feedback_reader.report("list_tags", jsonl_path, len(entries), None if args.jsonl else _OUTPUT_ROOT)
     counter = count_tags(entries, category=args.category)
 
     most_common = counter.most_common(args.top)

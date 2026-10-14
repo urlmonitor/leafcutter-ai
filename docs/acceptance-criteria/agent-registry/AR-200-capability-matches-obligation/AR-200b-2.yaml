@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -61,7 +61,7 @@ it_requirements:
   - "State how many agents were examined and how many held a non-empty grant. A comparison that resolved to no agents must not read as one that found no violations, and this AC's core clause is a universal over a derived population."
   - "GRANT THE CAPABILITY, DO NOT DELETE THE GRANT. The cheapest way to make this comparison pass is to empty the ability declarations of the 25 agents, which satisfies the rule and leaves every one of them doing raw text search for answers an ability already holds. The remediation this AC enables is adding the tool, never removing the grant -- state this in the finding's suggested action so a future implementer is not led the wrong way."
   - "The mutating-tools scope AR-200b-1 applies is deliberately NOT inherited here (the leaf states its own derivation). Do not let a shared helper re-impose it -- if AR-200b-1's detector and this comparison share code, the scope filter must be a parameter of the caller, not a property of the helper."
-  - "Refuse rather than warn (ADR-050)."
+  - "Refuse rather than warn: a shortfall is a registry validation error, so the build stops. This follows from AR-200b ('The contradiction is caught when the specialist is defined, not discovered by the specialist mid-task') and from the fact that the fix (adding the invoking tool) sits in the same frontmatter block as the grant, so refusing demands no second edit elsewhere -- unlike AR-300c-3's derived registry copy, which reports rather than refuses for exactly that reason. (Corrected 2026-10-09: this line previously cited ADR-050, which is the runtime reachability guard ADR and does not govern agent capabilities.)"
 test_spec:
   - name: test_agent_with_a_grant_but_without_the_invoking_tool_is_reported
     target_dir: unit_tests/agents/
@@ -129,10 +129,16 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: citation-correction
+  agent: orchestrator
+  date: '2026-10-09'
+  changed: "it_requirements: the 'Refuse rather than warn (ADR-050)' line keeps its requirement (refuse) but its justification is corrected. ADR-050 is the runtime reachability guard ADR and does not govern agent capabilities; the same misapplied citation was removed from AR-300c-3 earlier the same day. The refusal now rests on AR-200b's 'caught when the specialist is defined' and on the fix sitting in the same frontmatter block as the grant. criteria, title, req_status, depends_on unchanged; readiness stays approved."
 superseded_by: null
 covered_by:
   - AR-200b-2-i
-implemented_by: []
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
 notes: |
   THIS LEAF STATES ITS OWN DERIVATION AND DOES NOT INHERIT AR-200b-1's.
 

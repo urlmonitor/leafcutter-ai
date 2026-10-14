@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -90,8 +90,12 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/agents/test_ar_200b_2_i_absent_tools_empty_grant.py
+  - unit_tests/agents/test_ar_200b_2_skill_tool_grant.py
+implemented_by:
+  - scripts/skill_tool_grant_validator.py
+  - scripts/registry_validator.py
 notes: |
   ABSENT IS NOT PERMISSIVE. The failure this first clause prevents is the quiet
   one: a comparison that reads a missing tools declaration as "no constraint

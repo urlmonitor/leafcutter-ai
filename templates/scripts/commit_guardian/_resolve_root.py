@@ -119,6 +119,55 @@ def find_project_root() -> Path:
     return _PROJECT_ROOT
 
 
+class _NoRepo:
+    """Type of the NO_REPO sentinel: the working directory is not in a repository."""
+
+    def __repr__(self) -> str:
+        return "NO_REPO"
+
+    def __bool__(self) -> bool:
+        return False
+
+
+NO_REPO = _NoRepo()
+
+
+def find_git_toplevel_strict(cwd: Path | None = None) -> Path | _NoRepo:
+    """Return the git toplevel of *cwd*, or ``NO_REPO``; never guess.
+
+    Unlike ``find_project_root()`` this has NO ``__file__`` ancestor walk and
+    NO module-level cache (BP-1300e-1-iv, KI-CG-20260925): a hook that must
+    judge the working copy being committed from would, through that fallback,
+    land in the shared install tree of a worktree, or accept a non-repository
+    directory that merely holds an empty ``.git``/``CLAUDE.md``.
+
+    Args:
+        cwd: Directory to ask git from; the process working directory if None.
+
+    Returns:
+        The absolute toplevel Path, or ``NO_REPO`` when git says the directory
+        is not inside a work tree.
+
+    Raises:
+        OSError: If git itself cannot be launched (the caller decides policy).
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=str(cwd) if cwd is not None else None,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        logger.warning("cannot launch git to resolve the repository root: %s", exc)
+        raise
+    top = proc.stdout.strip()
+    if proc.returncode != 0 or not top:
+        return NO_REPO
+    return Path(top)
+
+
 def _deploy_root_for(hook_file: Path) -> Path:
     """Derive the deploy root (e.g. ``.leafcutter`` or ``templates``) from *hook_file*.
 
@@ -312,6 +361,12 @@ def resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-12 [python-coder/BP-1300e-1-iv]: Added ``find_git_toplevel_strict()``
+#   and the ``NO_REPO`` sentinel -- a git-only variant of ``find_project_root()``
+#   with no ``__file__`` fallback and no cache, so a hook that must judge the
+#   working copy it is committing from (check_lint_gate.py) cannot resolve into
+#   the install tree of a worktree. ``find_project_root()`` itself is unchanged:
+#   its ~30 callers keep their behaviour (KI-CG-20260925 remains open for them).
 # - 2026-09-28 07:45 [python-coder/GE-113c-1-vi, pr-reviewer follow-up H-2]:
 #   Added ``candidate_manifest_roots()`` / ``resolve_manifest_path()`` here,
 #   extracted from check_build_drift.py's / check_output_drift.py's

@@ -31,6 +31,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from _density_parents import get_merge_parent_files
+from _density_set_aside import ground_for, load_set_aside, report as report_set_aside
 from _resolve_root import find_project_root
 
 project_root = find_project_root()
@@ -309,7 +311,6 @@ def main() -> int:
     Returns:
         Exit code (0 = success, 1 = failure).
     """
-    # Ensure emoji output works on Windows
     if sys.stdout.encoding.lower() != "utf-8":
         try:
             sys.stdout.reconfigure(encoding="utf-8")
@@ -331,18 +332,28 @@ def main() -> int:
     if not affected_dirs:
         return 0
 
-    # BEFORE = the parent commit's tree; AFTER = the index. The two are read
+    # BEFORE = the parent commit's tree (all parents during a merge); AFTER = the index. The two are read
     # independently (AFTER is never derived from BEFORE) so staged deletions
     # and rename sources are correctly absent from AFTER.
     before_counts = count_files_per_folder(get_all_tracked_files())
+    # In a merge, a folder already dense in ANY MERGE_HEAD parent is
+    # pre-existing too (max over parents); no MERGE_HEAD => unchanged.
+    for parent_files in get_merge_parent_files():
+        for folder, count in count_files_per_folder(parent_files).items():
+            before_counts[folder] = max(before_counts.get(folder, 0), count)
     all_files = get_index_files()
     after_counts = count_files_per_folder(all_files)
+
+    # GE-133a: declared set-aside locations are reported, not judged.
+    entries, problems = load_set_aside()
+    set_aside = {d: g for d in affected_dirs if (g := ground_for(d, entries))}
+    affected_dirs -= set(set_aside)
 
     # Classify folders: only BLOCK if this commit causes the threshold crossing
     violations, warnings = _classify_folders(affected_dirs, before_counts, after_counts)
 
-    # Output results
     print(f"\n📁 Folder Density Check (max {MAX_FILES_PER_FOLDER} non-markdown files per folder)\n")
+    report_set_aside(set_aside, len(affected_dirs), problems)
 
     if warnings:
         _print_warnings(warnings)
@@ -350,6 +361,10 @@ def main() -> int:
     if violations:
         _print_violations(violations, all_files)
         return 1
+
+    if not affected_dirs:
+        print("Nothing was judged: every touched folder is set aside.")
+        return 0
 
     checked_count = len(affected_dirs)
     print(f"✅ PASSED: {checked_count} folder(s) checked, all within limits")
@@ -375,5 +390,10 @@ DECISION HISTORY
   modularity sweet spot). Only checks folders touched by the commit.
   Excludes .md, __init__.py, hidden dirs, and __pycache__.
 - 2026-05-01 20:30 [AI]: Updated failure message to mandate agent-led refactoring for folder density violations.
+- 2026-10-12 [AI/python-coder]: Merge commits count a folder as pre-existing when
+  it is over the limit in HEAD OR any MERGE_HEAD parent (BEFORE = max over parents,
+  via _density_parents.py). Previously a merge of main refused every folder that
+  crossed the limit on main since the branch point. Only a folder the merge result
+  itself pushes over the limit (under it in every parent) is still blocked.
 ====================================================================
 """

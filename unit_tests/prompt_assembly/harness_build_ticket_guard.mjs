@@ -246,6 +246,12 @@ const enumerations = [];
 const planReplies = [];
 const dirtyReads = [];
 const logs = [];
+// INF-700a-1-v: the knowledge-routing CLI calls, and ONE ordered timeline of
+// phase dispatches and routing calls together, so a test can see whether a
+// ticket's stage -> commit -> observe ran without another ticket's in between.
+const routingCalls = [];
+const timeline = [];
+const routingCallCounts = {};
 const unreadableOnce = new Set(); // BO-3000a: one-shot unreadable read-backs
 const attemptCounts = {}; // "<ticket>::<phase>" -> n
 
@@ -1006,10 +1012,52 @@ async function agent(prompt, opts = {}) {
     return { classification, reason: "harness classification" };
   }
 
+  // --- knowledge-routing CLI (INF-700a-1-v) ---------------------------------
+  // Labels "knowledge-routing-step" (stage) and "knowledge-routing-observe".
+  // Answered from scenario.knowledge_routing[label] as the repo-facts
+  // envelope: an object is served as its JSON, a string as raw (unparseable)
+  // output, an array one entry per call (the last repeated). An ABSENT entry
+  // answers a failed command, so a scenario that does not mention routing
+  // sees the step not run and every pre-existing outcome is unchanged.
+  if (label === "knowledge-routing-step" || label === "knowledge-routing-observe") {
+    const index = routingCallCounts[label] || 0;
+    routingCallCounts[label] = index + 1;
+    let spec = (scenario.knowledge_routing || {})[label];
+    if (Array.isArray(spec)) spec = spec[Math.min(index, spec.length - 1)];
+    routingCalls.push({ label, prompt: String(prompt) });
+    timeline.push({ kind: "routing", label, ticket_path: null });
+    if (spec === undefined || spec === null) return { output: "", exit_code: 1 };
+    return { output: typeof spec === "string" ? spec : JSON.stringify(spec), exit_code: 0 };
+  }
+
+  // --- scratch item (BO-4400f-1) --------------------------------------------
+  // Label "scratch-item": the shell step that creates the run's labelled
+  // scratch folder. Not a phase agent. Answered from scenario.scratch_item; an
+  // ABSENT entry answers {item: null} (the workflow's fail-open path: no
+  // scratch note), so every pre-existing scenario is unchanged.
+  if (label === "scratch-item") {
+    return { item: scenario.scratch_item === undefined ? null : scenario.scratch_item };
+  }
+
+  // --- remedy-declaration read (BO-3800b) -------------------------------------
+  // A label matching /remedy|declaration/ is the driver reading a check's
+  // remedy declaration (the shared GE-132a-1 loader) -- not a phase agent. It is
+  // answered from scenario.remedy_declarations[hook_id] (hook_id found in the
+  // prompt) and is NOT recorded as an engaged party. An ABSENT entry answers
+  // {status: "error"} so an unreadable declaration is a visible stop.
+  if (/remedy|declaration/i.test(label)) {
+    const table = scenario.remedy_declarations || {};
+    const hookId = Object.keys(table).find((h) => String(prompt).includes(h));
+    return hookId
+      ? Object.assign({ status: "ok" }, table[hookId])
+      : { status: "error", error: "harness: no remedy declaration for this prompt" };
+  }
+
   // --- everything else is a phase-agent dispatch ----------------------------
   dispatched.push(label);
 
   const ticketPath = recordMode ? ticketFromPrompt(prompt) : null;
+  timeline.push({ kind: "phase", label, ticket_path: ticketPath });
   const key = `${ticketPath}::${label}`;
   attemptCounts[key] = (attemptCounts[key] || 0) + 1;
   const attempt = attemptCounts[key];
@@ -1024,6 +1072,9 @@ async function agent(prompt, opts = {}) {
     // whatever the agent template can key on has to be in here.
     prompt: typeof prompt === "string" ? prompt : String(prompt),
     opts_keys: Object.keys(opts || {}),
+    // BO-3800b/c: the machine-readable brief a refusal-originated engagement
+    // carries as an `opts.brief` field (null when the dispatch sent none).
+    opts_brief: opts && opts.brief !== undefined ? opts.brief : null,
     opts_ticket_path:
       opts && typeof opts.ticket_path === "string" ? opts.ticket_path : null,
   });
@@ -1089,6 +1140,9 @@ async function agent(prompt, opts = {}) {
   // Passed through only when the scenario sets it, so a handoff spec that omits
   // it reproduces the real defect shape: `status: handoff` with no target field.
   if (spec.handoff_target !== undefined) reply.handoff_target = spec.handoff_target;
+  // BO-3800a-2: the refusal's machine-readable remedy record, passed through
+  // verbatim only when the scenario sets it.
+  if (spec.remedy !== undefined) reply.remedy = spec.remedy;
   return reply;
 }
 
@@ -1175,6 +1229,8 @@ console.log(
     enumerations,
     plan_replies: planReplies,
     dirty_reads: dirtyReads,
+    routing_calls: routingCalls,
+    timeline,
     logs,
     records,
     result,

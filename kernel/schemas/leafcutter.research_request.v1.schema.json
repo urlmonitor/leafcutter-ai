@@ -18,6 +18,7 @@
       "description": "A piece of evidence the run still needs, with its resolution status.",
       "properties": {
         "acceptable_source_kinds": {
+          "description": "Source kinds the requester would accept for this need; empty means any (not yet used to filter sources).",
           "items": {
             "$ref": "#/$defs/SourceKind"
           },
@@ -25,23 +26,28 @@
           "type": "array"
         },
         "category": {
-          "$ref": "#/$defs/EvidenceCategory"
+          "$ref": "#/$defs/EvidenceCategory",
+          "description": "Which kind of evidence would satisfy the need."
         },
         "id": {
+          "description": "Stable id of the need; answers and coverage are keyed by it.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "priority": {
           "$ref": "#/$defs/Priority",
-          "default": "required"
+          "default": "required",
+          "description": "Whether the need blocks resolution (required) or only improves it (supporting)."
         },
         "question": {
+          "description": "What the evidence must tell the run.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
         },
         "resolution": {
+          "description": "Notes on how the need was resolved, such as why no source could serve it.",
           "items": {
             "type": "string"
           },
@@ -51,12 +57,14 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "status": {
           "$ref": "#/$defs/NeedStatus",
-          "default": "open"
+          "default": "open",
+          "description": "Whether the need is open, satisfied, partly met or cannot be met."
         }
       },
       "required": [
@@ -84,6 +92,7 @@
       "description": "One option the decision researches for: what it is and what it already cites.",
       "properties": {
         "cited_refs": {
+          "description": "Evidence ids plus any file paths or symbol names the option's text mentions.",
           "items": {
             "type": "string"
           },
@@ -100,14 +109,17 @@
             }
           ],
           "default": null,
+          "description": "What the option means, used as query text beside the title.",
           "title": "Description"
         },
         "human_added": {
           "default": false,
+          "description": "True for an option a human added: its claims are unverified and research checks them.",
           "title": "Human Added",
           "type": "boolean"
         },
         "option_id": {
+          "description": "Id of the option research is gathering evidence for.",
           "minLength": 1,
           "title": "Option Id",
           "type": "string"
@@ -115,10 +127,12 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "title": {
+          "description": "The option's short name, used as query text.",
           "minLength": 1,
           "title": "Title",
           "type": "string"
@@ -202,6 +216,7 @@
         }
       ],
       "default": null,
+      "description": "Original answer obligations; the neutral adapter validates their typed contract.",
       "title": "Answer Requirements"
     },
     "assessment": {
@@ -217,9 +232,11 @@
         }
       ],
       "default": null,
+      "description": "Scoped supplied evidence interpreted conditionally by the neutral retrieval port.",
       "title": "Assessment"
     },
     "criteria_context": {
+      "description": "The approved criteria's questions, used as query text beside the goal.",
       "items": {
         "type": "string"
       },
@@ -227,6 +244,7 @@
       "type": "array"
     },
     "evidence_needs": {
+      "description": "Specific pieces of evidence to find; empty means Jev chooses the categories to search.",
       "items": {
         "$ref": "#/$defs/EvidenceNeed"
       },
@@ -235,10 +253,12 @@
     },
     "evidence_needs_only": {
       "default": false,
+      "description": "Research exactly the given needs: Jev adds no further evidence categories.",
       "title": "Evidence Needs Only",
       "type": "boolean"
     },
     "existing_evidence_ids": {
+      "description": "Evidence already held, so research does not fetch or count it twice.",
       "items": {
         "type": "string"
       },
@@ -247,6 +267,7 @@
     },
     "expected_coverage": {
       "default": "all_required",
+      "description": "Whether every required need must be satisfied (all_required) or partial coverage is acceptable (best_effort).",
       "enum": [
         "all_required",
         "best_effort"
@@ -255,6 +276,7 @@
       "type": "string"
     },
     "gaps": {
+      "description": "Open unknowns (synthesis gaps, research unknowns, option-design feasibility facts); the first research.max_targeted_needs of them become targeted needs.",
       "items": {
         "type": "string"
       },
@@ -263,11 +285,13 @@
     },
     "jev_reserve": {
       "default": 0,
+      "description": "Jev calls the requester keeps for itself afterwards (its final assessment); research plans no more needs than the rest of its budget affords and never spends into this reserve.",
       "minimum": 0,
       "title": "Jev Reserve",
       "type": "integer"
     },
     "option_context": {
+      "description": "The options the decision has so far (empty before options exist); research reads it.",
       "items": {
         "$ref": "#/$defs/OptionContext"
       },
@@ -275,6 +299,7 @@
       "type": "array"
     },
     "question": {
+      "description": "The question research must find evidence for.",
       "minLength": 1,
       "title": "Question",
       "type": "string"
@@ -282,10 +307,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "source_restrictions": {
+      "description": "Ids of the only sources research may use; empty means no restriction beyond the run's scope.",
       "items": {
         "type": "string"
       },

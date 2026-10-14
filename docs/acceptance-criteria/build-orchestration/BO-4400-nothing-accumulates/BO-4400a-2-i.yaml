@@ -1,0 +1,88 @@
+id: BO-4400a-2-i
+title: "A run that fails after its pull request opened, with nothing unsent, still clears and still reports the failure"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given the quick fix has pushed its commits and opened its pull request, and a step it
+    runs after that fails without creating any new commit or changing any file in the
+    workspace,
+  When the run returns its final result,
+  Then no folder remains at the location its workspace occupied,
+  And the final result reports the run as failed and names the failing step,
+  And the final result also contains the one shared clearing door's answer reporting
+    the workspace removed,
+  And given instead the step after the pull request creates one new commit and then
+    fails before pushing it,
+  When the run returns its final result,
+  Then the workspace still exists and the final result names that one commit as kept.
+depends_on: [BO-4400a-2]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300e-2.yaml
+    relationship: constrains
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4400a-2
+  contract: "Halt-path handling that keeps work and names it."
+package_surface: false
+it_requirements:
+  - >-
+    quick-fix.js issues the route-end clearing request after a post-pull-request step fails, using
+    BO-4400a-1's shared step; the final result reports status failed, names the failing step, and
+    carries the door's answer (removed, or UNSENT_WORK relayed as kept work).
+  - >-
+    The run's failure status is never overwritten by a successful clear, and a refused clear never
+    turns the run's failure into a second, different error.
+  - >-
+    PROOF: deployed quick-fix workflow under unit_tests/_workflow_engine_harness.py; the failing
+    post-PR step is a scripted reply (one variant with no file change, one that makes a real commit
+    in the workspace and then fails); maker executed for real. Isolation and no-build.py rules as
+    BO-4400a-1.
+test_required: true
+test_spec:
+  - name: test_post_pr_failure_with_nothing_unsent_clears_and_reports_failure
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "No folder remains; the result is failed, names the failing step and contains the door's removed answer."
+    must_catch:
+      - "only clear on success (workspace left behind holding nothing)"
+  - name: test_post_pr_failure_with_new_unpushed_commit_keeps_workspace
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The workspace still exists and the result names the one new commit as kept."
+    must_catch:
+      - "clear on any post-PR failure without consulting the verdict"
+test_rationale: >-
+  The rule is that clearing follows the verdict, not the success flag. Two scripted failures that
+  differ only in whether a commit was left unsent are the minimal pair that separates the two
+  plausible wrong versions.
+origin_agent: business-analyst
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The decision to clear follows the workspace's verdict, not the run's success flag.
+  Named wrong versions: (1) "only clear on success" -- first half red (workspace left behind
+  with nothing in it, exactly the pile-up this L0 exists to stop); (2) "clear on any
+  post-PR failure" without consulting the verdict -- the second half is still protected by
+  the door's refusal, so the run must report the refusal as work kept, not as a clearing
+  error.

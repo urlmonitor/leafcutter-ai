@@ -12,9 +12,11 @@ ARCHITECTURE: ``GitHubClient(api_url, token)`` offers ``get`` / ``post`` /
     ``Link``); ``same_origin_path`` turns a ``Link`` target into a request only when
     it stays on the API's origin, so the token never leaves it. Every failure that
     crosses the process boundary (HTTP status, connection, undecodable body) is raised as
-    ``GitHubError`` with the HTTP status (0 when none) so callers decide what a
-    failed call means; this module never swallows one. The token is never
-    logged or put in an exception message.
+    ``GitHubError`` with the HTTP status (0 when none), a ``kind`` (``KINDS``: http,
+    timeout, connection, tls, not_json, shape, other, refused) and the ``Retry-After`` text (TQ-600a-13-ix) so callers
+    decide what a failed call means; this module never swallows one. The token is never
+    logged or put in an exception message. ``get_bytes`` (TQ-600a-13-xiii) is the
+    one method that follows a redirect, exactly once and without the token.
 """
 
 from __future__ import annotations
@@ -22,29 +24,75 @@ from __future__ import annotations
 import http.client
 import json
 import logging
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+
+from scripts.ci._write_policy import WriteGuard, WritePolicy, path_refusal
+
+__all__ = ["GitHubClient", "GitHubError", "KINDS", "WritePolicy"]
 
 logger = logging.getLogger("github_rest")
 
 API_VERSION = "2022-11-28"
 DEFAULT_TIMEOUT_SECONDS = 30
 ALLOWED_SCHEMES = frozenset({"http", "https"})
+REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follows a redirect on its own: a 3xx surfaces as an ``HTTPError`` the caller inspects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001, ARG002
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 
 class GitHubError(RuntimeError):
-    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received."""
+    """A request to the service failed; ``status`` is the HTTP status, or 0 when none was received.
 
-    def __init__(self, message: str, status: int = 0) -> None:
+    ``kind`` says what failed, one of ``KINDS``: ``http`` (a status came back), ``timeout``, ``connection`` (refused, reset,
+    protocol error), ``tls`` (certificate not verified; never worth a retry), ``not_json``, ``shape`` (parsed, but not the
+    shape the caller needs; raised by callers, not by this client) or ``other``. ``retry_after`` is the response's
+    ``Retry-After`` header text (None when absent), so a caller can classify the failure without parsing the message.
+    """
+
+    def __init__(self, message: str, status: int = 0, *, kind: str = "other", retry_after: str | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.kind = kind
+        self.retry_after = retry_after
+
+
+KINDS = frozenset({"http", "timeout", "connection", "tls", "not_json", "shape", "other", "refused"})
+
+
+def _transport_kind(exc: BaseException) -> str:
+    """``timeout``, ``tls`` (a certificate that did not verify) or ``connection`` for a failure below HTTP."""
+    reason = getattr(exc, "reason", None)
+    if isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError):
+        return "timeout"
+    if isinstance(exc, ssl.SSLCertVerificationError) or isinstance(reason, ssl.SSLCertVerificationError):
+        return "tls"
+    return "connection"
 
 
 class GitHubClient:
     """Authenticated JSON client for one GitHub API root."""
 
-    def __init__(self, api_url: str, token: str, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        token: str,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
+        policy: WritePolicy | None = None,
+        *,
+        read_with: GitHubClient | None = None,
+    ) -> None:
         scheme = urllib.parse.urlparse(api_url).scheme
         if scheme not in ALLOWED_SCHEMES:
             message = f"refusing API URL with scheme {scheme!r}"
@@ -52,6 +100,24 @@ class GitHubClient:
         self._root = api_url.rstrip("/")
         self._token = token
         self._timeout = timeout
+        # ``read_with``: the client that makes the pre-checks of a write (a run's workflow, an issue's labels), so a write-only
+        # credential (the App's installation token) is never used to read.
+        self._guard = WriteGuard(policy or WritePolicy(), (read_with or self)._read_or_none)  # noqa: SLF001 -- the same class
+
+    def _read_or_none(self, path: str):
+        """GET ``path`` for a write's pre-check; None when it cannot be read (the failure is logged by ``request``)."""
+        try:
+            return self.get(path)
+        except GitHubError:
+            return None
+
+    def _enforce(self, method: str, path: str, body: dict | None) -> None:
+        """Raise ``GitHubError(kind="refused")``, before anything is sent, for a write the policy does not grant."""
+        reason = path_refusal(path) or self._guard.refusal(method, path, body)
+        if reason is not None:
+            logger.warning("refused %s", reason)
+            message = f"refused {reason}"
+            raise GitHubError(message, kind="refused")
 
     def request(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return the decoded JSON body (None for an empty body)."""
@@ -73,6 +139,7 @@ class GitHubClient:
 
     def request_with_headers(self, method: str, path: str, body: dict | None = None, query: dict | None = None):
         """Send one request and return ``(decoded JSON body, response headers)``; header names are lower-cased."""
+        self._enforce(method, path, body)
         url = f"{self._root}{path}"
         if query:
             url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -98,12 +165,14 @@ class GitHubClient:
         except urllib.error.HTTPError as exc:
             logger.warning("%s %s -> HTTP %s", method, path, exc.code)
             message = f"{method} {path} failed with HTTP {exc.code}"
-            raise GitHubError(message, exc.code) from exc
+            raise GitHubError(message, exc.code, kind="http", retry_after=exc.headers.get("Retry-After") if exc.headers else None) from exc
         except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
             logger.warning("%s %s -> %s", method, path, exc)
             message = f"{method} {path} failed: {exc}"
-            raise GitHubError(message) from exc
-        return self._decode(method, path, raw), headers
+            raise GitHubError(message, kind=_transport_kind(exc)) from exc
+        decoded = self._decode(method, path, raw)
+        self._guard.record(method, path, decoded)
+        return decoded, headers
 
     @staticmethod
     def _decode(method: str, path: str, raw: bytes):
@@ -114,7 +183,7 @@ class GitHubClient:
             return json.loads(raw)
         except (ValueError, RecursionError) as exc:  # a hostile body nested past the interpreter's limit is not JSON we can read
             message = f"{method} {path} returned a body that is not JSON"
-            raise GitHubError(message) from exc
+            raise GitHubError(message, kind="not_json") from exc
 
     def get(self, path: str, query: dict | None = None):
         """GET ``path`` with an optional query mapping."""
@@ -123,6 +192,70 @@ class GitHubClient:
     def get_with_headers(self, path: str, query: dict | None = None):
         """GET ``path``; return ``(decoded JSON body, response headers)`` (for a paginated ``Link`` header)."""
         return self.request_with_headers("GET", path, query=query)
+
+    def get_bytes(self, path: str, max_bytes: int = MAX_DOWNLOAD_BYTES) -> bytes:
+        """GET ``path`` and return the raw body; follows EXACTLY ONE redirect, without the token.
+
+        The artifact zip endpoint answers with a 302 to a signed blob URL on another origin. The JSON
+        ``request`` path refuses every redirect (the token must never leave the API); this method is the one
+        exception: the first hop carries the token, the single redirect hop is a fresh request with no
+        ``Authorization`` header (the signed URL is its own credential), and a second redirect is an error.
+        A body longer than ``max_bytes`` is an error, never a truncated answer.
+        """
+        body, location = self._fetch(f"{self._root}{path}", True, max_bytes, path)
+        if body is not None:
+            return body
+        target = urllib.parse.urljoin(f"{self._root}{path}", location or "")
+        if urllib.parse.urlparse(target).scheme not in self._redirect_schemes():
+            message = f"GET {path} redirected to a URL with a scheme this client refuses"
+            raise GitHubError(message)
+        body, location = self._fetch(target, False, max_bytes, path)
+        if body is None:
+            message = f"GET {path} was redirected more than once; refusing to follow"
+            raise GitHubError(message)
+        return body
+
+    def _redirect_schemes(self) -> frozenset[str]:
+        """The schemes a redirect target may have: https only, unless the configured API root is itself plain http."""
+        return ALLOWED_SCHEMES if urllib.parse.urlparse(self._root).scheme == "http" else frozenset({"https"})
+
+    @staticmethod
+    def _failure(path: str, exc: Exception, first_hop: bool) -> GitHubError:
+        """Log and build the error for a failed hop. The redirect hop names only the exception TYPE: its text can hold the signed URL."""
+        status = getattr(exc, "code", 0) if isinstance(exc, urllib.error.HTTPError) else 0
+        if not first_hop:
+            logger.warning("GET %s redirect hop failed: %s", path, type(exc).__name__)
+            return GitHubError(f"GET {path} redirect hop failed: {type(exc).__name__}", status)
+        if status:
+            logger.warning("GET %s -> HTTP %s", path, status)
+            return GitHubError(f"GET {path} failed with HTTP {status}", status)
+        logger.warning("GET %s -> %s", path, exc)
+        return GitHubError(f"GET {path} failed: {exc}")
+
+    def _fetch(self, url: str, send_token: bool, max_bytes: int, path: str) -> tuple[bytes | None, str | None]:
+        """One no-redirect GET: ``(body, None)`` on success, ``(None, Location)`` on a redirect; else ``GitHubError``.
+
+        The URL of a redirect target is never logged (a signed URL is a credential); ``path`` names the request.
+        """
+        headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": API_VERSION, "User-Agent": "leafcutter-post-merge-notice"}
+        req = urllib.request.Request(url, headers=headers if send_token else {"User-Agent": headers["User-Agent"]}, method="GET")  # noqa: S310 -- scheme checked
+        if send_token:
+            req.add_unredirected_header("Authorization", f"Bearer {self._token}")
+        try:
+            with _NO_REDIRECT_OPENER.open(req, timeout=self._timeout) as response:
+                raw = response.read(max_bytes + 1)
+        except urllib.error.HTTPError as exc:
+            location = exc.headers.get("Location") if exc.code in REDIRECT_STATUSES else None
+            exc.close()
+            if location:
+                return None, location
+            raise self._failure(path, exc, send_token) from (exc if send_token else None)
+        except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
+            raise self._failure(path, exc, send_token) from (exc if send_token else None)
+        if len(raw) > max_bytes:
+            message = f"GET {path} returned more than {max_bytes} bytes; refusing it"
+            raise GitHubError(message)
+        return raw, None
 
     def post(self, path: str, body: dict):
         """POST a JSON ``body`` to ``path``."""

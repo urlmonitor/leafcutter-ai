@@ -106,13 +106,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | absent or `# covers: UNKNOWN` | set `covers_tag` to `null` | `None` |
 | Conditional Behavior | the file does not exist | log a warning and | `None` |
----
-
-## AC Assignments
-
-### test-failure-triage
-
-- FIN-100c-1: Failures present in baseline are classified as pre-existing
-- FIN-100c-2: Failures absent from baseline are classified as regressions
-- FIN-100c-7: Failures that also fail on main HEAD are pre_existing; only failures that pass on main are regressions
-- FIN-100c-8: Only real regressions block finalization; pre_existing failures do not halt

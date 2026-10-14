@@ -132,8 +132,8 @@
     },
     "test_output_dir": {
       "type": "string",
-      "description": "Directory for test output files. Must be outside the project root.",
-      "default": "%TEMP%/leafcutter-tests/"
+      "description": "Directory for longer-lived test output. Empty (default) means the scratch home: `python <output_root>/scripts/scratch.py test-output-dir` returns a fresh labelled folder in worktree_cleanup.scratch_root that expires like any other scratch. A legacy system-temp value (%TEMP%/..., /tmp/...) is treated as empty. Any other explicit value is used as given and should be outside the project root (BO-4400f-1).",
+      "default": ""
     },
     "worktree_base_path": {
       "type": "string",
@@ -185,6 +185,22 @@
           "items": {"type": "string"},
           "description": "Path substrings — any process whose cmdline matches any entry aborts the cleanup instead of being killed. Use to protect production processes (e.g. live trader).",
           "default": []
+        },
+        "scratch_root": {
+          "type": "string",
+          "description": "The one designated scratch location for throwaway files. Empty means <user cache dir>/leafcutter/scratch (outside the project root, the system temp folder and every durable folder).",
+          "default": ""
+        },
+        "scratch_max_age_hours": {
+          "type": "number",
+          "description": "Age limit in hours after which a scratch item whose owner has ended or cannot be identified is expired.",
+          "default": 24
+        },
+        "durable_paths": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Project-relative folders that hold logs and evidence. Nothing under them is ever treated as scratch, and a test-runner scratch base may not point inside them.",
+          "default": ["debugging/logs", "test-logs"]
         }
       },
       "additionalProperties": false

@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -86,8 +86,12 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300a_3_no_section_when_ungranted.py
+implemented_by:
+  - scripts/agent_grant_delivery.py
+  - scripts/agent_grant_delivery_gate.py
+  - scripts/template_compiler.py
 notes: |
   WHY THIS EARNS ITS OWN CRITERION. The cheapest way to satisfy AR-300a-1 is to
   append a section unconditionally and let it come out empty for the 29 agents

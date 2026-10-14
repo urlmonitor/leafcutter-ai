@@ -36,11 +36,9 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
 // JSON Schemas for agent() responses
 // The E2 engine enforces these and returns already-parsed objects.
 // Do NOT call JSON.parse() on agent() results when schema is provided.
-// ---------------------------------------------------------------------------
 
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -237,9 +235,7 @@ const COMPLETION_WRITE_SCHEMA = {
   required: ['status'],
 }
 
-// ---------------------------------------------------------------------------
 // Constants and helper functions (pure — no I/O)
-// ---------------------------------------------------------------------------
 
 /**
  * Maximum number of retry attempts for a single phase agent on a mechanical
@@ -249,6 +245,9 @@ const COMPLETION_WRITE_SCHEMA = {
 const MAX_RETRIES = 2;
 const MAX_HANDOFFS_PER_PAIR = 1;
 const MAX_HANDOFFS_PER_TICKET = 3;
+/* BO-3800d: engagements of the restructuring specialist per delivery. Its own constant, never MAX_RETRIES (a restructure that fell short is not transient). */
+const MAX_SPECIALIST_ENGAGEMENTS = 1;
+const describeDemand = (demand) => (Array.isArray(demand) ? demand : []).map((e) => e.function !== undefined ? `${e.function} in ${e.path} has complexity ${e.score} (ceiling ${e.ceiling})` : `${e.path} must lose ${e.lines_to_remove} line(s)`).join("; ");
 
 /**
  * Put `name` at the head of the pending list, removing any pending copy
@@ -279,16 +278,12 @@ const phaseOrder = [
   "architect-review",            // priority 4
   "test-writer",                 // priority 5
   "python-coder",                // priority 6
-  "sql-coder",                   // priority 7
-  "sql-query",                   // priority 7
+  "sql-coder", "sql-query",      // priority 7
   "frontend-coder",              // priority 8
   "llm-expert",                  // priority 8 — implements agent-template / skill / slash-command prompt work
+  "restructuring-specialist",    // priority 8.5 — restructures code after a refusal; default not_needed
   "test-runner",                 // priority 9
-  "change-scope-reviewer",       // priority 10
-  "documentation-expert",        // priority 10
-  "explanation-author",          // priority 10
-  "how-to-author",               // priority 10
-  "reference-author",            // priority 10
+  "change-scope-reviewer", "documentation-expert", "explanation-author", "how-to-author", "reference-author", // priority 10
   "pr-reviewer",                 // priority 11
   "ac-validator",                // priority 11.5 — AC coverage gate, MUST precede commit
   "user-surface-smoker",         // priority 11.5
@@ -474,7 +469,6 @@ function absorbPromotedPhases(record, pending, known, attempted, deferred) {
   return added;
 }
 
-// ---------------------------------------------------------------------------
 // Record adjudication — pure functions over a ticket record read back off disk
 //
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
@@ -485,7 +479,6 @@ function absorbPromotedPhases(record, pending, known, attempted, deferred) {
 // own success is therefore never sufficient: the verdict the drive carries
 // forward is derived from the record that was read back, never from the gate's
 // own report of itself (BO-2900f-1-i).
-// ---------------------------------------------------------------------------
 
 /**
  * Sign-off statuses that count as a gate having PASSED.
@@ -933,7 +926,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
 // The plan reply the drive cannot use (BO-1900a-4-ii)
 //
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
@@ -945,7 +937,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
 // the drive concludes the ticket needs no phase, takes its no-phases exit, and
 // arrives at a completion decision with an empty required set. Nothing throws,
 // because every step did exactly what it was written to do.
-// ---------------------------------------------------------------------------
 
 /**
  * Why the drive cannot use this plan reply — or null when it can.
@@ -1047,9 +1038,7 @@ function buildPlanHoldback(recordPath, reason, resolved) {
   };
 }
 
-// ---------------------------------------------------------------------------
 // Prose-tolerant reply reader (BP-300e)
-// ---------------------------------------------------------------------------
 
 function parseAgentJson(raw, ctx) {
   const stage = ctx.stage;
@@ -1068,9 +1057,7 @@ function parseAgentJson(raw, ctx) {
     const code = raw.charCodeAt(i);
     if (code !== 123 && code !== 91) { continue; }
     const closeCode = closeFor[code];
-    let depth = 0;
-    let inString = false;
-    let j = i;
+    let depth = 0, inString = false, j = i;
     while (j < raw.length) {
       const ch = raw.charCodeAt(j);
       if (inString) {
@@ -1085,16 +1072,13 @@ function parseAgentJson(raw, ctx) {
         else if (ch === closeCode) {
           depth--;
           if (depth === 0) {
-            try {
-              return JSON.parse(raw.slice(i, j + 1));
-            } catch (_) {
-              break;
-            }
+            try { return JSON.parse(raw.slice(i, j + 1)); } catch (_) { i = j; break; }
           }
         }
       }
       j++;
     }
+    if (depth > 0) { break; }
   }
   throw new Error(
     "[" + stage + "] " + agent +
@@ -1103,10 +1087,8 @@ function parseAgentJson(raw, ctx) {
   );
 }
 
-// ---------------------------------------------------------------------------
 // Record I/O — the drive's only channel to the ticket's own record
 // TWIN: mirrors build-feature.js. Keep in sync with that file.
-// ---------------------------------------------------------------------------
 
 /**
  * Read the ticket's record back off disk after a gate has run.
@@ -1334,12 +1316,10 @@ function buildTicketOutcome(spec) {
  */
 async function concludeTicket(spec) {
   const record = spec.record;
-
   const requiredPhases = requiredPhasesForCompletion(
     demandedPhasesFromRecord(spec.demandedRecord),
     spec.deferredPhases
   );
-
   const verdict = completionVerdictFromRecord(record, {
     requiredPhases,
     unverifiedReasons: spec.unverifiedReasons || {},
@@ -1349,7 +1329,6 @@ async function concludeTicket(spec) {
 
   let writeApplied = false;
   let writeError = null;
-
   if (verdict.completed) {
     const writeResult = await writeTicketCompletion(spec.recordPath, requiredPhases);
     if (writeResult && writeResult.status === "ok") {
@@ -1360,7 +1339,6 @@ async function concludeTicket(spec) {
         "the completion write returned no usable result";
     }
   }
-
   return buildTicketOutcome({
     recordPath: spec.recordPath,
     title: spec.title,
@@ -1375,18 +1353,13 @@ async function concludeTicket(spec) {
   });
 }
 
-// ---------------------------------------------------------------------------
 // Phase 0 — Worktree guard
-// ---------------------------------------------------------------------------
 // Read the worktree path from args if provided. If args.worktree_path is set,
 // the caller already resolved the worktree context — skip the ambient CWD check.
 // This fixes the false-halt that occurred when build-ticket was invoked from
 // the session root (where CWD is the main clone, not the worktree).
-
 phase('Worktree Guard')
-
 const ticketPath = (args && (args.ticket_path || args.userInput || '').trim()) || '';
-
 if (!ticketPath) {
   return {
     status: "error",
@@ -1394,7 +1367,6 @@ if (!ticketPath) {
       "No ticket_path provided. Pass args: { ticket_path: '<path>' }",
   };
 }
-
 // If the caller already provided worktree_path in args, trust it — no ambient check.
 const callerWorktreePath = (args && args.worktree_path) || null;
 
@@ -1415,9 +1387,7 @@ const resolvedTarget = {
   ticket_path: ticketPath,
   worktree_path: null,
 };
-
 let gitInfo = null;
-
 if (callerWorktreePath) {
   resolvedTarget.worktree_path = callerWorktreePath;
 } else {
@@ -1437,9 +1407,7 @@ if (callerWorktreePath) {
     "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<absolute path, omit if unknown>\" }",
     { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
   );
-
   gitInfo = worktreeCheck;
-
   if (gitInfo && (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master")) {
     return {
       status: "error",
@@ -1456,7 +1424,6 @@ if (callerWorktreePath) {
       action_required: "create_worktree",
     };
   }
-
   if (gitInfo && gitInfo.git_type === "file") {
     resolvedTarget.worktree_path = gitInfo.worktree_path || null;
   }
@@ -1491,14 +1458,11 @@ if (!resolvedTarget.worktree_path) {
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read ticket frontmatter → ordered_phases JSON
 // -------------------------------------------------------------------------
-
 phase('Planner')
-
 const plannerResult = await agent(
   `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
-
 // BO-1900a-4-ii — an unusable plan reply holds the ticket back. It is never
 // reduced to a blank record and then to a blank list, which is what turned a
 // dead planner into a `status: done` write.
@@ -1506,7 +1470,6 @@ const planReason = unusablePlanReason(plannerResult);
 if (planReason) {
   return buildPlanHoldback(ticketPath, planReason, resolvedTarget);
 }
-
 const plan = plannerResult;
 const orderedPhases = plan.ordered_phases;
 const filesTouched = plan.files_touched || [];
@@ -1528,7 +1491,6 @@ const existingTestFiles = Array.isArray(plan.existing_test_files)
   : []
 let hasTestRequirements =
   plan.has_test_requirements === true || existingTestFiles.length > 0;
-
 // TQ-500f-3-ii: source_ac id(s); empty skips the red-baseline gate. TWIN of build-feature.js.
 const sourceAcIds = Array.isArray(plan.source_ac)
   ? plan.source_ac.filter((x) => typeof x === 'string' && x.trim())
@@ -1537,7 +1499,6 @@ const sourceAcIds = Array.isArray(plan.source_ac)
     : [];
 let redBaselineGateOutcome = null; // carried into the final payload below
 let redBaselineGateChecked = false; // TQ-500f-3-ii H-3: runs once, before the FIRST coder dispatch on every path
-
 // Agents that produce production code — must NOT run without Test Requirements.
 const CODER_PHASES = new Set(["python-coder", "sql-coder", "frontend-coder"]);
 
@@ -1615,6 +1576,11 @@ if (neededPhases.length === 0) {
   });
 }
 
+// BO-4400f-1: a shell step (ADR-030) creates this run's labelled scratch item, owned by $PPID; process-starting
+// dispatches get scratchEnvNote so temp files land there. Fail-open: no item, no note. TWIN: build-feature.js.
+const scratchItem = ((await agent('Run this one command and return its JSON {"item": "<abs path>"} verbatim, or {"item": null} if it fails: python {{config.output_root}}/scripts/scratch.py new-item "build-ticket-$PPID" build-ticket --owner-pid $PPID', { agentType: "status-checker", label: "scratch-item", phase: "Phase Dispatch", schema: { "type": "object", "properties": { "item": { "type": ["string", "null"] } } } })) || {}).item;
+const scratchEnvNote = typeof scratchItem === "string" && scratchItem ? `\n\nSCRATCH (BO-4400f-1): start every process with TMPDIR, TEMP and TMP set to "${scratchItem}"; never write scratch into the project root, debugging/logs/, test-logs/ or the system temp folder.` : "";
+
 const retryCounts = {};
 const completedPhases = [];
 const skippedPhases = [];
@@ -1669,6 +1635,7 @@ const plannedPhaseNames = new Set(neededPhases.map((p) => p.agent));
 const attemptedPhases = new Set();
 const handoffChain = []; // BO-3000a: "from->to" steps, pushed before the cap check
 const handoffFrom = {}; // target -> {from, message, seen}; kept until the target completes verified
+const restructureLog = []; // BO-3800d: {target, demand} per accepted specialist engagement; the count is read from here
 
 while (pendingPhases.length > 0) {
   const currentPhase = pendingPhases.shift();
@@ -1754,7 +1721,7 @@ while (pendingPhases.length > 0) {
         `--test-root ${resolvedTarget.worktree_path} --ac-root ${gateAcStoreRoot} --ticket ${ticketPath}`;
       const gateReply = await agent(
         `Run the following command and return ONLY its raw stdout:\n${gateCommand}\n` +
-        `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }`,
+        `Return JSON: { "output": "<raw stdout>", "exit_code": <number> }` + scratchEnvNote,
         { agentType: "status-checker", schema: RED_BASELINE_GATE_ENVELOPE_SCHEMA, label: "red-baseline-gate", phase: "Phase Dispatch" }
       );
       let gateVerdict = null;
@@ -1815,12 +1782,13 @@ while (pendingPhases.length > 0) {
       (from
         ? ` You are being RE-DISPATCHED because phase '${from.from}' returned 'status: handoff' naming you as the agent that must act before it can proceed. Handoff message: ${JSON.stringify(from.message)}.`
         : "") +
+      (from && from.brief ? ` Remedy demand: ${JSON.stringify(from.brief.demand)}.` + (from.brief.skills.length ? ` Apply the skill(s): ${from.brief.skills.join(", ")}.` : "") : "") +
       `\n\nYou WERE invoked with the arguments below. Your sign-off protocol is ` +
       `therefore in force: record your outcome in this ticket's own record before ` +
       `you return.\n` +
       `ticket_path: ${ticketPath}\n` +
-      `worktree_path: ${resolvedTarget.worktree_path}`,
-      { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch' }
+      `worktree_path: ${resolvedTarget.worktree_path}` + scratchEnvNote,
+      { agentType: phaseName, schema: PHASE_RESULT_SCHEMA, label: phaseName, phase: 'Phase Dispatch', ...(from && from.brief ? { brief: from.brief } : {}) }
     );
 
     /*
@@ -1946,32 +1914,21 @@ while (pendingPhases.length > 0) {
        * Case (a): the result named NO target (absent, empty, blank, not a string); also what
        * a deliberate targetless halt looks like. The ticket body is never read.
        */
-      if (normalizedTarget === "") {
-        return refuse(
-            `Phase '${phaseName}' returned 'status: handoff' but its result ` +
-            `was read and named no handoff target (handoff_target was ` +
-            `${JSON.stringify(handoffTarget)}). Refusing to guess a ` +
-            `re-dispatch target and refusing to advance to the next phase ` +
-            `in phaseOrder. This may be a deliberate targetless halt (a ` +
-            `contract-shrinkage guard or test-drift stop asking for user ` +
-            `authorization) rather than an omission — inspect '${phaseName}'` +
-            `'s message and the ticket's ## Comments for what it needs ` +
-            `before re-running /build-ticket.`,
-        );
-      }
+      if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-ticket.`);
 
-      /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
-      if (!phaseOrder.includes(normalizedTarget)) {
-        return refuse(
-            `Phase '${phaseName}' returned 'status: handoff' naming ` +
-            `'${normalizedTarget}' as its handoff_target, which is not an ` +
-            `agent this driver recognises as a phase agent. Refusing to ` +
-            `guess a re-dispatch target and refusing to advance to the ` +
-            `next phase in phaseOrder. Check '${normalizedTarget}' for a ` +
-            `misspelling or a name that does not exist, fix the emitter, ` +
-            `then re-run /build-ticket.`,
-        );
+      /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
+      const remedy = phaseResult.remedy; let brief = null;
+      if (remedy && remedy.disposition === "engage-specialist") {
+        const decl = await agent(
+          `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
+          { agentType: "status-checker", schema: { "type": "object", "properties": { "status": { "type": "string" }, "disposition": { "type": "string" }, "agent": { "type": ["string", "null"] }, "skills": { "type": "array", "items": { "type": "string" } } } }, label: "remedy-declaration", phase: "Phase Dispatch" });
+        if (!decl || decl.status !== "ok" || decl.disposition !== "engage-specialist" || decl.agent !== normalizedTarget) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but the remedy declaration of '${remedy.hook_id}' could not be read as engage-specialist for that party (${JSON.stringify(decl)}). Stopping; nobody was engaged.`);
+        /* BO-3800c-1-i: a demand with no usable file/quantity stops the run, reproduced as given; never defaulted or re-derived. */
+        const usable = Array.isArray(remedy.demand) && remedy.demand.length > 0 && remedy.demand.every((e) => e && typeof e.path === "string" && e.path.trim() !== "" && (e.function !== undefined ? typeof e.function === "string" && e.function.trim() !== "" && Number.isFinite(e.score) && Number.isFinite(e.ceiling) : Number.isFinite(e.lines_to_remove) && e.lines_to_remove > 0)); if (!usable) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}'; the refusal was read and carried no usable demand (demand was ${JSON.stringify(remedy.demand === undefined ? null : remedy.demand)}). Stopping; nobody was engaged and delivery was not attempted again.`);
+        brief = { skills: decl.skills || [], demand: remedy.demand };
       }
+      /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
+      if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-ticket.`);
 
       /*
        * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
@@ -1980,33 +1937,20 @@ while (pendingPhases.length > 0) {
       const unfit =
         normalizedTarget === phaseName
           ? "is a self handoff: the target is the handing phase itself"
-          : !orderedPhases.some((p) => p.agent === normalizedTarget)
+          : !brief && !orderedPhases.some((p) => p.agent === normalizedTarget)
             ? `names '${normalizedTarget}', which is not on this ticket (not a key of its agents map)`
             : deferredPhases.includes(normalizedTarget)
               ? `names '${normalizedTarget}', which is deferred for this drive (pull-request is opened once per epic)`
               : "";
-      if (unfit) {
-        return refuse(
-          `Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. ` +
-          `Nobody was dispatched and the ticket did not advance; fix the emitter ` +
-          `or the ticket's agents map, then re-run /build-ticket.`
-        );
-      }
-
+      if (unfit) return refuse(`Phase '${phaseName}' returned 'status: handoff' but it ${unfit}. Nobody was dispatched and the ticket did not advance; fix the emitter or the ticket's agents map, then re-run /build-ticket.`);
+      /* BO-3800d: bound reached and the standard still refuses on the same terms: stop and account for it; never deliver, relax or roll back. */
+      const prior = restructureLog.filter((r) => r.target === normalizedTarget);
+      if (brief && prior.length >= MAX_SPECIALIST_ENGAGEMENTS) return refuse(`Restructuring handoff stopped at its bound: '${normalizedTarget}' was engaged ${prior.length} time(s) (bound ${MAX_SPECIALIST_ENGAGEMENTS}) after '${phaseName}' was refused by '${remedy.hook_id}'. Asked: ${describeDemand(prior[0].demand)}. The refusal stands on the same terms; the file now stands at: ${describeDemand(brief.demand)}. Whatever the specialist changed remains in place and has not been undone. The change was not delivered: nothing was delivered, and the standard was not relaxed.`, "restructuring_unmet", { specialist_engagements: prior.length });
+      if (brief) restructureLog.push({ target: normalizedTarget, demand: brief.demand });
       /* Caps: one chain array, pushed BEFORE the check so the refused step is named too. */
       const step = `${phaseName}->${normalizedTarget}`;
       handoffChain.push(step);
-      if (
-        handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR ||
-        handoffChain.length > MAX_HANDOFFS_PER_TICKET
-      ) {
-        return refuse(
-          `Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ` +
-          `${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. ` +
-          `Halting; '${normalizedTarget}' was not dispatched.`,
-          "handoff_loop"
-        );
-      }
+      if (handoffChain.filter((s) => s === step).length > MAX_HANDOFFS_PER_PAIR || handoffChain.length > MAX_HANDOFFS_PER_TICKET) return refuse(`Handoff loop on '${phaseName}': ${handoffChain.join(", ")} exceeds ${MAX_HANDOFFS_PER_PAIR} handoff per pair / ${MAX_HANDOFFS_PER_TICKET} per ticket. Halting; '${normalizedTarget}' was not dispatched.`, "handoff_loop");
 
       /*
        * Accepted: the target runs through the normal loop (guard, gate, read-back,
@@ -2015,25 +1959,27 @@ while (pendingPhases.length > 0) {
       handoffFrom[normalizedTarget] = {
         from: phaseName,
         message: phaseResult.message || "",
+        brief,
         /* An unreadable read-back proves nothing: Infinity means no old entry can confirm. */
         seen: phaseRecord && phaseRecord.readable === true
           ? signoffEntriesFor(phaseRecord, normalizedTarget).length
           : Infinity,
       };
       queuePhaseFirst(pendingPhases, normalizedTarget);
-      log(
-        `Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
-        `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`
-      );
+      log(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}'. ` +
+        `'${normalizedTarget}' is queued first; the ticket continues once the record confirms it.`);
       break;
     }
 
+    if ((resultStatus === "blocker" || resultStatus === "failed") && from && from.brief) {
+      /* BO-3800d: the specialist itself failed: a machinery ending, told apart from a file that fell short. */
+      return refuse(`Restructuring specialist '${phaseName}' could not be engaged to a result for the refusal of '${from.from}' (it returned status '${resultStatus}'). This is a failure of the machinery, not evidence about the file, so the file's standing is unknown. The change was not delivered: nothing was delivered.`, "restructuring_unavailable");
+    }
     if (resultStatus === "blocker" || resultStatus === "failed") {
       const classifyResult = await agent(
         `Classify this blocker for ticket ${ticketPath}, failing phase ${phaseName}. Retry count: ${retryCounts[phaseName]}/${MAX_RETRIES}. Blocker detail: ${JSON.stringify(phaseResult)}. Return classification as one of: mechanical | cross_agent | design | halt.`,
         { agentType: "brainstorm-lead", schema: CLASSIFY_SCHEMA, label: 'failure-classifier', phase: 'Phase Dispatch' }
       );
-
       const classification = classifyResult && classifyResult.classification;
 
       if (classification === "mechanical") {

@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -43,18 +43,98 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "Documents the cross-reference validation of ability records already envisaged for this channel -- the posture this criterion re-points at the declaration."
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: "Where the transform-agent-registry hook is registered, beside transform-doc-index. A watched package-surface registry, hence package_surface: true on this record."
 assigned_agent: python-coder
 estimated_complexity: M
 change_target: code
 risk_surface: contract_boundary
+package_surface: true
 it_requirements:
-  - "The comparison population is the UNION of agents holding a declaration and agents holding a central entry, so an agent present on one side only is a DISAGREEMENT rather than a skipped comparison. Iterating either side alone is how 12 agents became invisible to one side of the store in the first place."
-  - "Report the count examined, so a comparison that reached no agents is not read as one that found no disagreements. The whole AC is a universal over a derived population, and a universal over an empty set is true."
-  - "The compiled prompt continues to name the declaration's abilities regardless of the central record's content -- the hand edit changes nothing the agent sees. Assert this at the compiled prompt, not by inspecting which variable the compiler reads."
-  - "An agent whose central record agrees is NOT reported. Roughly half the tree holds no grant at all; a comparison that reports agreement is reporting most of what it examines, and AR-200b-1 records in this component what happens to a rule that fires across the registry -- it gets switched off."
-  - "This is what makes 'derived' enforceable rather than aspirational. AR-300c-1 alone makes the central record inert, not correct: it can drift arbitrarily while the several consumers that still read it keep believing it. Enumerate those consumers as part of this work and state whether each reads the derived copy or the declaration."
-  - "The comparison must be a set comparison in both directions over ability ids AND their mode/condition values, not a string compare of two serialised blobs -- a formatting difference must not read as a disagreement, and a mode change must not read as agreement."
-  - "Refuse rather than warn on a genuine disagreement (ADR-050)."
+  config_schema_fragment:
+    _declares: >-
+      NOT A NEW TOP-LEVEL CONFIGURATION KEY. This AC registers ONE new member of the
+      EXISTING hooks_manifest.hooks array of
+      templates/scripts/commit_guardian/commit_guardian.json -- the pre-commit TRANSFORM
+      hook `transform-agent-registry`, placed immediately after `transform-doc-index`,
+      whose script is templates/scripts/commit_guardian/transform_agent_registry.py (with
+      its helper _agent_ability_sync.py in the same directory). It exists because of the
+      user decision recorded 2026-10-09 (BrainCandy): the registry's ability fields are a
+      derived copy regenerated at commit time by a transform hook; the build never writes
+      the package source tree and reports, rather than refuses, a disagreeing copy. No
+      settings section and no top-level key is added. The fragment below is the schema of
+      that ONE array member, read off the staged entry; every property is one
+      transform-doc-index already carries, and
+      unit_tests/prompt_assembly/test_ar_300c_3_ii_registry_transform.py asserts
+      language/stages/pass_filenames/change_set_source equal transform-doc-index's and
+      that entry equals transform-doc-index's with the script name swapped.
+    type: object
+    required:
+      - id
+      - tier
+      - name
+      - entry
+      - language
+      - files
+      - stages
+      - pass_filenames
+      - change_set_source
+      - always_run
+    properties:
+      id:
+        const: transform-agent-registry
+      tier:
+        const: transform
+      name:
+        type: string
+        minLength: 1
+      entry:
+        const: "python {{config.output_root}}/scripts/commit_guardian/run_hook.py {{config.output_root}}/scripts/commit_guardian/transform_agent_registry.py"
+      language:
+        const: system
+      files:
+        const: "^(templates/agents/.*\\.md|config/agent_registry\\.json)$"
+        description: >-
+          Fires when an agent template or the registry itself is staged; must not match
+          unrelated docs such as docs/INDEX.md (asserted by the registration test).
+      stages:
+        const:
+          - pre-commit
+      pass_filenames:
+        const: false
+      change_set_source:
+        const: handed_by_commit_path
+      always_run:
+        const: false
+  reference_file_path: templates/scripts/commit_guardian/commit_guardian.json
+  n_location_rule: >-
+    1 -- one new member of the single hooks_manifest.hooks array in
+    templates/scripts/commit_guardian/commit_guardian.json, immediately after
+    transform-doc-index (the precedent it mirrors, script
+    templates/scripts/commit_guardian/transform_doc_index.py). No top-level key is added,
+    renamed or removed. The canonical script and helper live under
+    templates/scripts/commit_guardian/ and reach <output_root>/scripts/commit_guardian/
+    through build_commit_guardian's directory copy -- that deployed copy is a build output,
+    never hand-edited, and the generated .pre-commit-config.yaml likewise comes from the
+    build.
+  required_skills:
+    - python-coder
+  post_write_commands:
+    - "python3 scripts/build.py"
+    - "python3 -m pytest unit_tests/prompt_assembly/test_ar_300c_3_ii_registry_transform.py unit_tests/prompt_assembly/test_ar_300c_3_derived_copy_comparison.py"
+    - "python3 scripts/registry_validator.py"
+  constraints:
+    - "The comparison population is the UNION of agents holding a declaration and agents holding a central entry, so an agent present on one side only is a DISAGREEMENT rather than a skipped comparison. Iterating either side alone is how 12 agents became invisible to one side of the store in the first place."
+    - "Report the count examined, so a comparison that reached no agents is not read as one that found no disagreements. The whole AC is a universal over a derived population, and a universal over an empty set is true."
+    - "The compiled prompt continues to name the declaration's abilities regardless of the central record's content -- the hand edit changes nothing the agent sees. Assert this at the compiled prompt, not by inspecting which variable the compiler reads."
+    - "An agent whose central record agrees is NOT reported. Roughly half the tree holds no grant at all; a comparison that reports agreement is reporting most of what it examines, and AR-200b-1 records in this component what happens to a rule that fires across the registry -- it gets switched off."
+    - "This is what makes 'derived' enforceable rather than aspirational. AR-300c-1 alone makes the central record inert, not correct: it can drift arbitrarily while the several consumers that still read it keep believing it. Enumerate those consumers as part of this work and state whether each reads the derived copy or the declaration."
+    - "The comparison must be a set comparison in both directions over ability ids AND their mode/condition values, not a string compare of two serialised blobs -- a formatting difference must not read as a disagreement, and a mode change must not read as agreement."
+    - "Report, do not refuse, a central record that disagrees with the declarations: the build prints the disagreement (agent, declared abilities, recorded abilities), compiles from the declaration, and continues. A grant or revocation must reach the agent on the next build with no second edit (AR-300d-2, AR-300d-3), which a refusing build would break. An unresolvable declared skill id still refuses (AR-300c-3-i). Decided by BrainCandy 2026-10-09; this replaces an earlier 'refuse rather than warn (ADR-050)' line, which misapplied ADR-050 (the runtime reachability guard ADR)."
+    - "TRANSFORM SCOPE (user decision, BrainCandy 2026-10-09; scope widened by IT PO 2026-10-09 for user decision 9): the transform-agent-registry hook regenerates ONLY the derived declaration fields of config/agent_registry.json -- skills_used and skills_invoked from each agent template's frontmatter `skills:` declaration, and spawn_allowlist from its frontmatter `spawn_allowlist:` declaration (AR-300c-5-ii). Every other byte of the registry -- other fields (spawned_by and is_ticket_phase included), other agents' records, entries with no template -- is left unchanged, a second run is byte-stable, and the build itself never writes the package source tree. Pinned by test_ar_300c_3_ii_registry_transform.py, whose 'every other byte unchanged' assertion is widened to the three fields by AR-300c-5-ii's test contract."
+    - "DEPLOYED-LAYOUT REACHABILITY: the hook runs from <output_root>/scripts/commit_guardian/, so its helper _agent_ability_sync.py must stay inside templates/scripts/commit_guardian/ (deployed by the directory copy). A dependency imported from outside that directory must be added to the build deploy map in the same change, or the deployed hook fails while source-tree tests stay green. Evidence must include the deployed-layout test, not only the source-tree run."
 test_spec:
   - name: test_hand_edited_central_record_is_reported_with_both_ability_sets
     target_dir: unit_tests/prompt_assembly/
@@ -116,10 +196,25 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: it-po-technical-enrichment
+  agent: it-po
+  date: '2026-10-09'
+  changed: "package_surface: true set; it_requirements converted from a list to the structured object (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands) with all seven prior requirement strings preserved verbatim under constraints, plus two surface constraints (transform scope, deployed-layout reachability); doc_link to templates/scripts/commit_guardian/commit_guardian.json added. WHY: under the user decision of 2026-10-09 (BrainCandy) the registry's ability fields are regenerated by a new pre-commit transform hook, transform-agent-registry, registered in commit_guardian.json -- a new package surface -- and check-package-surface-declaration (ACS-100i-8) requires the owning criterion to declare it. criteria unchanged; title, req_status and depends_on unchanged. readiness stays approved because no requirement-defining text changed."
+- reason: apply-user-decision
+  agent: orchestrator
+  date: '2026-10-09'
+  changed: "it_requirements.constraints: the line 'Refuse rather than warn on a genuine disagreement (ADR-050).' replaced by a report-not-refuse constraint. WHY: BrainCandy decided on 2026-10-09 that the build REPORTS a disagreeing central record and continues (an unresolvable skill id still refuses). The old line contradicted the criteria text, which already says 'reports' and 'the compiled prompt continues to name the declaration's abilities', and contradicted AR-300d-2/d-3's no-second-edit promise; it also misapplied ADR-050, which is the runtime reachability guard ADR. This entry corrects the preceding it-po entry's 'preserved verbatim' for that one line. criteria, title, req_status, depends_on unchanged; readiness stays approved."
+- reason: transform-scope-widened-for-spawn-allowlist
+  agent: it-po
+  date: '2026-10-09'
+  changed: "it_requirements.constraints: the TRANSFORM SCOPE line now names the derived declaration fields skills_used, skills_invoked AND spawn_allowlist (was: only skills_used / skills_invoked), still with no other byte of the registry changed and a byte-stable second run; it also names spawned_by and is_ticket_phase explicitly as bytes the hook must not touch. WHY: user decision 9 (BrainCandy, 2026-10-09) delivers the per-agent spawn allowlist in the AR-300 pull request with the same treatment as skills, and AR-300c-5-ii requires the same hook to regenerate the registry spawn_allowlist from the frontmatter declaration. Left unamended, this record's 'ONLY skills_used / skills_invoked' constraint and its pinning test would forbid exactly that. The pinning test unit_tests/prompt_assembly/test_ar_300c_3_ii_registry_transform.py must change with it; that update is a descriptor in AR-300c-5-ii's test_spec. criteria, title, req_status, depends_on, test_spec, the hook registration fragment and package_surface unchanged; readiness stays approved because no requirement-defining text changed."
 superseded_by: null
 covered_by:
   - AR-300c-3-i
-implemented_by: []
+implemented_by:
+  - scripts/agent_ability_gate.py
+  - templates/scripts/commit_guardian/transform_agent_registry.py
+  - templates/scripts/commit_guardian/_agent_ability_sync.py
 notes: |
   'DERIVED' WITHOUT A COMPARISON IS JUST 'IGNORED'. AR-300c-1 says the compiled
   prompt reads only the declaration. That alone makes the central record inert,

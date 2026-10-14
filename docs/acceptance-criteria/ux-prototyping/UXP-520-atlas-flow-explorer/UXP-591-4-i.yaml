@@ -113,7 +113,8 @@ amended_by:
   date: '2026-10-09'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261012-UXP-591-4-i.md
 notes: |
   Derived from flow leafcutter/explore-flows-in-atlas v5, branch 'drawerSwitch' (from
   'drawerUrl'; FlowNavigation nav-drawer-replace-3). Open build detail recorded by the flow

@@ -1,0 +1,176 @@
+id: GE-118g-1-i
+title: "Run from inside a worktree, the pre-flight judges that worktree's pending changes and not the clone's or a sibling's"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+  - worktree_manager
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given a checkout of this repository and two linked git worktrees of it, A and B,
+  And a new decision record claiming an unclaimed number is staged in worktree A
+    and in no other tree,
+  And a different new decision record claiming an already-claimed number is
+    staged in worktree B and in no other tree,
+  When the author runs the collision pre-flight with worktree A as the working
+    directory and no argument naming a repository,
+  Then it completes successfully and reports no collision — worktree B's staged
+    collision is not attributed to worktree A,
+  And when the author runs it with worktree B as the working directory,
+  Then it does not complete successfully and names the collision staged in B.
+
+  And given a worktree whose administrative git data lives outside the worktree
+    directory, as a linked worktree's does,
+  When the pre-flight is run with that worktree as the working directory,
+  Then it reads that worktree's own pending changes — the tree it reports about
+    is the one the author is standing in, not the directory the shared
+    administrative data lives under.
+depends_on:
+  - GE-118g-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-118-hooks-work-in-worktrees/GE-118g-1.yaml
+    relationship: parent
+    status: exists
+  - path: templates/scripts/commit_guardian/check_adr_collision.py
+    relationship: modifies
+    status: exists
+  - path: templates/scripts/commit_guardian/_resolve_root.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The recorded reason this resolver is correct for the worktree case rather than
+      merely convenient: GE-118c's amended second technical requirement states that it
+      prefers the invoking tree's own top-level, which is exactly the property the second
+      arm above needs and exactly the property that made it WRONG for GE-118c's
+      package-bundled file. The two records want opposite anchors, which is why both
+      reasonings are correct.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-022.md
+    relationship: context
+    status: exists
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      Behavioural verification is binding here too. Both arms require real linked
+      worktrees with real staged content; a test that asserts a resolved path string
+      without running the pre-flight against two separately-staged trees cannot tell the
+      two arms apart.
+delivers_to: null
+expects_from:
+  - ac_id: GE-118g-1
+    contract: >-
+      The resolved repository context and the staged-set read built on it. This record
+      adds no second resolution route; it constrains which tree the single route must
+      land on when more than one candidate exists.
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "Where the invoking directory IS inside a work tree, that tree's own top level is
+    the anchor — resolved by a git read performed against the invoking directory, never
+    by an ancestor walk from the program's own file location and never by resolving the
+    shared administrative directory's parent."
+  - "A linked worktree's administrative git data lives outside the worktree directory;
+    the resolution must therefore not assume .git is a directory inside the tree it is
+    resolving. The existing shared resolver's fallback ancestor walk tests
+    (ancestor / '.git').exists(), which a linked worktree's .git FILE satisfies by
+    accident rather than by design — do not rely on that coincidence."
+  - "The anchor actually used must be reported, so a verdict reached from the wrong one
+    of several candidate trees is attributable rather than invisible."
+  - "Must introduce no second resolution route. This record constrains which tree the
+    single route lands on; a separate worktree-specific branch would be a second route
+    and would reintroduce the drift this subtree exists to remove."
+  - "Record in the implementation's decision history which anchor was chosen and why,
+    because GE-118c deliberately chose the OPPOSITE anchor for a package-bundled file
+    and the next reader needs both reasons side by side."
+test_spec:
+  - name: test_two_linked_worktrees_are_judged_separately
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    surface_invoked: templates/scripts/commit_guardian/check_adr_collision.py
+    description: >-
+      Arm 1, both halves in one test because the discrimination IS the pairing. Create a
+      real clone and two real linked worktrees A and B via git worktree add. Stage an
+      unclaimed-number ADR in A only and an already-claimed-number ADR in B only. Run
+      the pre-flight with cwd=A and assert exit 0 with no collision reported; run it with
+      cwd=B and assert non-zero with B's collision named. Neither run may attribute the
+      other tree's staged content. No build.py spawn and no layout fixture, so no marker.
+    must_catch:
+      - "resolve the repository by walking ancestors from the program's own file location"
+      - "resolve to the shared administrative directory's parent, so both worktrees are reported against the clone"
+  - name: test_linked_worktree_with_external_git_data_reads_its_own_index
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: >-
+      Arm 2. A linked worktree whose .git is a FILE pointing at administrative data under
+      the clone's .git/worktrees/. Stage a colliding ADR in that worktree, run with it as
+      the working directory, and assert the tree reported about is the worktree itself —
+      specifically that the committed set it compared against is the worktree's checked-out
+      branch and not the clone's. No marker.
+    must_catch:
+      - "treat the resolved administrative directory's parent as the tree under examination"
+      - "assume .git is a directory inside the tree being resolved"
+test_rationale: >-
+  Both entries require REAL linked worktrees made with git worktree add and real staged
+  content in each, because that is the only configuration in which two candidate trees
+  exist at once — and this record is the only place in the subtree where they do. A test
+  that asserts a resolved path string, or that compares a resolver's return value against
+  an expected directory, cannot tell the two arms apart: it passes on a resolver that
+  returns the right path for the single-tree case and the wrong one of two. The first
+  entry is deliberately ONE test spanning both halves of arm 1 rather than two tests, so
+  that a run which passes A and fails B cannot be reported as half-green — the assertion
+  is that the two trees are judged separately, which is not expressible as two independent
+  tests. Neither entry requests shared_reference_layout; the deployed-layout import chain
+  is proved once, by GE-118g-1's own deployed entry, and duplicating it here would pay a
+  second cost for nothing. Both are therefore outside the marker-routing mechanism and
+  carry no marker. Pinned for the test author: the mutation in the record's notes reddens
+  these two entries and leaves every GE-118g-1 arm green, so a run in which GE-118g-1 is
+  green and these are red is the expected signature of that mutation, not a harness fault.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  WHY THIS IS A SEPARATE RECORD AND NOT A CLAUSE OF ITS PARENT. The parent's arms are all
+  satisfiable by a resolution that walks to the enclosing repository by any means —
+  including one that lands on the shared clone or on a fixed ancestor. This record is the
+  only place where two candidate trees exist at once, so it is the only place a
+  resolution that picks the wrong one of several goes red. Its named mutation reddens this
+  record alone and leaves every parent arm green, which is the asymmetry that justifies
+  the separate file.
+
+  WHY IT BELONGS IN THIS L0 SPECIFICALLY. GE-118's own title names git worktrees. This is
+  the clause that makes the new L1 an instance of that L0 rather than a general
+  cwd-hygiene record that happens to be filed there: 77 sibling worktrees exist under
+  this workspace's parent directory today, so "which of several trees" is the live
+  condition here, not a hypothetical.
+
+  NAMED MUTATION — EXECUTE IT, DO NOT MERELY DESCRIBE IT. MUTATION: resolve the
+  repository by walking ancestors from the program's own file location, or by resolving
+  to the shared administrative directory's parent, instead of from the invoking tree.
+  MUST GO RED: both arms here — worktree A would be reported as carrying B's collision,
+  or both would be reported against the clone.
+  MUST STAY GREEN: every arm of GE-118g-1, which exercises exactly one candidate tree and
+  cannot distinguish the two resolutions. This is the same trap GE-118c recorded from the
+  other direction, where an invoking-tree-anchored resolver was wrong for a
+  package-bundled file. Record which anchor the implementation uses and why.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect.

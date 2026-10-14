@@ -21,7 +21,6 @@ visibility: internal
 domain: null
 produces: analysis
 config_keys: {}
-skills_used: []
 adopter_notes: |
   Internal. The routing gate of the product-truth authoring pipeline. Scored against
   the gold eval set docs/product-truth/classifier/eval.jsonl. Never invoke to write

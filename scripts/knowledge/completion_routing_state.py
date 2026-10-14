@@ -19,10 +19,11 @@ ARCHITECTURE: Required sibling module for the Knowledge System component
 
 from __future__ import annotations
 
-import hashlib
+import importlib.util
 import json
 import logging
 import os
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -30,16 +31,22 @@ from typing import Any
 
 logger = logging.getLogger("completion_routing")
 
-# The idempotency key: the same required-field set harvest_learnings.py's
-# own `_event_hash` uses (INF-400b-2-ii's reconciled record shape). `text`
-# is deliberately excluded -- it is content, not identity.
-REQUIRED_DIGEST_FIELDS: tuple[str, ...] = (
-    "timestamp",
-    "agent",
-    "component",
-    "destination",
-    "entry_kind",
-)
+def _load_identity() -> Any:
+    """Load the sibling ``record_identity`` module by path (see module docstring)."""
+    module_path = Path(__file__).resolve().parent / "record_identity.py"
+    spec = importlib.util.spec_from_file_location("record_identity", module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"could not build an import spec for {module_path}")  # noqa: TRY003
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["record_identity"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+# The idempotency key and the legacy-state rule are record_identity's: the
+# SAME module harvest_learnings.py loads, so stage, claim and harvest agree
+# (INF-400b-2-iii). The key now includes the learning text.
+_identity = _load_identity()
 
 # How long _claim_without_arbitration sleeps between its read and its write
 # when deliberately un-arbitrated. Long enough that two callers released from
@@ -61,16 +68,13 @@ UNARBITRATED_RACE_WINDOW_SECONDS = 0.05
 def record_hash(event: dict[str, Any]) -> str:
     """Return a stable SHA-256 hex digest for a knowledge_captured event.
 
+    Delegates to ``record_identity.event_hash`` (required fields plus text).
     Pure function: no I/O, no shared-state mutation. Raises ``KeyError``
     (named field) if *event* is missing a required digest field -- the
     caller is responsible for skipping such a record rather than hashing
     it on a substituted value.
     """
-    key = json.dumps(
-        {field: event[field] for field in REQUIRED_DIGEST_FIELDS},
-        sort_keys=True,
-    )
-    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return _identity.event_hash(event)
 
 
 def has_real_text(event: dict[str, Any]) -> bool:
@@ -87,6 +91,21 @@ def has_real_text(event: dict[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def read_sink_lines(sink_path: Path) -> list[str]:
+    """Return the sink's lines, or ``[]`` if it is absent or unreadable.
+
+    External I/O: a read failure is logged and degrades to an empty result
+    rather than raising (fail-open, as ``read_eligible_sink_records``).
+    """
+    if not sink_path.exists():
+        return []
+    try:
+        return sink_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        logger.warning("Cannot read knowledge sink %s: %s", sink_path, exc)
+        return []
+
+
 def read_eligible_sink_records(sink_path: Path) -> list[tuple[str, str, str]]:
     """Read every eligible (text-bearing) knowledge_captured record.
 
@@ -96,16 +115,8 @@ def read_eligible_sink_records(sink_path: Path) -> list[tuple[str, str, str]]:
     policy this AC family requires of the routing step -- a routing
     failure must never fail the unit of work.
     """
-    if not sink_path.exists():
-        return []
-    try:
-        raw_lines = sink_path.read_text(encoding="utf-8").splitlines()
-    except OSError as exc:
-        logger.warning("Cannot read knowledge sink %s: %s", sink_path, exc)
-        return []
-
     records: list[tuple[str, str, str]] = []
-    for raw_line in raw_lines:
+    for raw_line in read_sink_lines(sink_path):
         line = raw_line.strip()
         if not line:
             continue
@@ -151,6 +162,35 @@ def load_state_set(state_path: Path) -> set[str]:
         logger.warning("Routing state %s is not a JSON list (treated as empty)", state_path)
         return set()
     return {str(item) for item in raw}
+
+
+def load_confirmed(sink_path: Path, state_path: Path) -> set[str]:
+    """Return the confirmed ids for the sink's records, legacy state included.
+
+    The state file's own hashes, plus the new hash of every sink record the
+    harvester's rule (``record_identity.is_processed``) also counts as
+    processed: a legacy hash in state confirms its record only when no other
+    record in the sink shares it. Same fail-open reads as ``load_state_set``.
+    """
+    state = load_state_set(state_path)
+    if not state:
+        return state
+    lines = read_sink_lines(sink_path)
+    shared = _identity.shared_legacy_hashes(lines)
+    confirmed = set(state)
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict) or event.get("event") != "knowledge_captured":
+            continue
+        try:
+            if _identity.is_processed(event, state, shared):
+                confirmed.add(_identity.event_hash(event))
+        except KeyError:
+            continue
+    return confirmed
 
 
 def persist_state_set(state_path: Path, hashes: set[str]) -> None:

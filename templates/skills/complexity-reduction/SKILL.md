@@ -39,10 +39,11 @@ The limits are project settings, not constants of this skill. Both live in
 A score above the limit fails; a score equal to it passes. Paths under any directory
 listed in the section's `excluded_dirs` are skipped (shipped: `alembic`, `legacy`).
 
-`check-sql-complexity` is in the default hook manifest and refuses commits.
-`check-complexity` ships with the package but is not registered in the default
-manifest, so it only runs where a project has switched it on. Coder agents still hold
-Python functions to `complexity.max_score`.
+`check-sql-complexity` and `check-complexity` are both registered in the default hook
+manifest and both refuse commits. `check-complexity` applies a ratchet: a new or
+crossing function is refused above `complexity.max_score`, and a function already over
+it is refused only when its score rises above its previous committed score. Coder
+agents hold Python functions to `complexity.max_score`.
 
 Print the limits that apply in this project:
 
@@ -55,7 +56,9 @@ python -c "import sys; sys.path.insert(0, '{{config.output_root}}/scripts/commit
 1. **Measure**: get the current score with the commands below.
 2. **Find the cost**: use the "what counts" tables to find the constructs that carry it.
 3. **Reduce**: apply a technique from the catalogue.
-4. **Re-measure**: confirm the score is at or under the limit.
+4. **Re-measure**: confirm the score is one the check accepts: at or under the limit
+   for a new or crossing function, and at or under its previous committed score for
+   one already over the limit.
 5. **Verify**: run the tests and confirm that no logging, `RAISE NOTICE` or error
    handling was removed to get there.
 
@@ -74,8 +77,7 @@ python -c "import sys; sys.path.insert(0, '{{config.output_root}}/scripts/commit
 ```
 
 To see the gate's own verdict, stage the file and run the hook. It reads staged files
-only: `pre-commit run check-sql-complexity` (or `check-complexity` where it is
-registered).
+only: `pre-commit run check-sql-complexity` (or `pre-commit run check-complexity`).
 
 ---
 

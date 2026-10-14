@@ -1,0 +1,310 @@
+id: GE-127g-4
+title: "An author can find out before committing whether their document is judged for length, and on what stated ground it would not be"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - doc_compliance
+  - documentation_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the project's published description of the document-length standard,
+  When an author who is about to add a new document reads it,
+  Then it states that some document locations are not judged for length, lists
+    each such declared location, and gives for each the stated ground on which it
+    is not judged,
+  And it states the ground as the property that earns the exemption — that the
+    documents there are regenerated whole and have no human author — rather than
+    as the name of the generator that writes them, so an author can tell whether
+    a location they are about to create would qualify,
+  And it states what a run reports for a document that is not judged, so an
+    author who sees that report knows the document was set aside rather than
+    found to be within its permitted length,
+  And it states that an author adding a document to an already-declared location
+    need not change the declaration.
+
+  And given a location the description has stated is not judged for length,
+  When the same author reads on to ask how large a document there may become,
+  Then the description states that a bound nonetheless applies to that location —
+    the size beyond which a document there is reported — so a reader does not
+    leave the text believing documents there may grow without limit,
+  And it states what happens when a document stands above that size: that it is
+    reported and the commit still completes, so a reader does not expect to be
+    refused for a length they did not write,
+  And it states that declaring a location set aside requires declaring that size
+    as well as its stated ground, so a reader about to add a declaration knows
+    the bound is mandatory rather than optional.
+
+  And given an author whose new document sits in no declared location,
+  When they read the same description,
+  Then it states that their document is judged, and states the limit that
+    applies to it, without their having to read any program to find out.
+depends_on:
+  - GE-127g
+  - GE-127g-1
+  - GE-127g-2
+  - GE-127g-5
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g.yaml
+    relationship: parent
+    status: exists
+  - path: docs/pre-commit-hooks.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE PUBLISHED SURFACE FOR THIS GATE AND THE LIKELY HOME OF THIS RECORD'S TEXT. It
+      currently describes the gate in one line ("docs under line limits") and says nothing
+      about any exclusion, which is why an author today cannot answer this record's
+      question from any published source. Whether the text lands here, in a reference doc
+      of its own, or in both is a documentation-authoring decision and not fixed by this
+      record.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF, AND THE BOUNDARY MATTERS. GE-127d owns HONESTY — the limit that is
+      published is the limit that is applied, and the number quoted about a file is one the
+      author can reproduce. This record owns the EXISTENCE and CONTENT of a published
+      statement about what is judged at all. It asserts no parity property and may not be
+      satisfied by one, and GE-127d may not be satisfied by this text existing. Noted for
+      the IT PO: a parity check exists for the code-side rule and there is no equivalent
+      for the document-side one, so parity here currently rests on review rather than on a
+      gate. That gap is real, it is not this record's work, and it should not be
+      specified here by implication.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PRECEDENT FOR THE OBLIGATION. GE-127c carries the same reference-doc trigger for
+      the mirror-image decision — which kinds of file ARE in scope — on the same reasoning:
+      a scope decision that is not published is not reviewable. Follow its resolution for
+      where the text lands.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: related
+    status: exists
+    relevance: >-
+      Holds the declaration and its stated reasons. The published text must agree with it.
+      Read it rather than restating the implementer's summary of it.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127e.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED OFF. GE-127e owns what a REFUSAL says at the moment of refusal. This record
+      owns what an author can read BEFORE committing, which is why its criteria are about a
+      published document and not about a message.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-5.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      THE MECHANISM THIS RECORD'S THIRD ARM DESCRIBES, AND THE BOUNDARY IS EXACT. GE-127g-5
+      OWNS THE MECHANISM: that each declared set-aside entry carries its own ceiling far
+      above the authored limit, that a document standing above its ceiling is REPORTED with
+      the measured size, the ceiling and the source its stated ground identifies while the
+      commit still COMPLETES, and that an entry declaring no ceiling is REJECTED. THIS
+      RECORD OWNS ITS PUBLISHED DESCRIPTION — that an author can learn from published text
+      that the bound exists, what standing above it produces, and that declaring one is
+      mandatory. NEITHER DISCHARGES THE OTHER: a gate that implements the ceiling perfectly
+      and publishes nothing fails this record, and published text that describes a ceiling
+      no gate consumes fails GE-127g-5. Read GE-127g-5 for the mechanism's wording rather
+      than inventing a second account of it; the numeric ceiling for each location is the
+      IT PO's and is expected to differ per location, so the text states THAT a bound
+      applies and not what it equals.
+delivers_to: null
+expects_from:
+  - ac_id: GE-127g-1
+    contract: >-
+      The declared set of locations and the stated reason each carries. The published text
+      describes that declaration; it is not a second declaration and must not become one.
+  - ac_id: GE-127g-2
+    contract: >-
+      What a run reports for a set-aside document, including the two separate populations.
+      The published text describes that report so an author can interpret it; it does not
+      define it.
+assigned_agent: documentation-expert
+estimated_complexity: M
+it_requirements:
+  - "ENRICHMENT DECISION 3 — WHERE THE TEXT LANDS: BOTH, asymmetrically. The substance
+    goes in a NEW reference doc under docs/reference/ (suggested
+    docs/reference/document-length-standard.md); docs/pre-commit-hooks.md gets a
+    one-line pointer to it beside its existing 'docs under line limits' entry."
+  - "The reason is measured, not stylistic. docs/pre-commit-hooks.md stands at 292 lines
+    against the 300-line limit (measured 2026-10-09) — EIGHT lines of headroom. This
+    record requires a statement of: the exclusion mechanism; each declared location; each
+    location's stated ground; what a run reports for an unjudged document; the no-edit
+    property; that a bound nonetheless applies to each set-aside location, being the size
+    beyond which a document there is reported; what standing above that size produces —
+    reported, with the commit still completing; that declaring a location set aside
+    requires declaring that size as well as its ground, so the bound is mandatory rather
+    than optional; and the limit that applies to every document in no declared location.
+    That is far more than eight lines, so landing the substance there takes the file across
+    its limit and the doc-length gate refuses the very commit that documents the doc-length
+    gate. A one-line pointer fits inside eight lines; the substance does not."
+  - "THE ENUMERATION ABOVE GREW WITH GE-127g-5's CEILING AND THE CONCLUSION IS UNCHANGED —
+    recorded so the line-budget argument is not re-litigated as if it had been made against
+    a smaller deliverable. The three ceiling-related statements were added to the list after
+    the record's third arm landed; they make the substance larger, not smaller, so the
+    conclusion that it cannot fit in eight lines is strengthened rather than affected. The
+    complexity band was re-judged at the same time and stays M: the marginal deliverable is
+    about a paragraph plus a per-location figure INSIDE a reference doc that was already
+    being created, and the file count is unchanged at two — the new doc and the one-line
+    pointer. Nothing here approaches a new module or a fourth file."
+  - "The new reference doc must carry frontmatter satisfying check_doc_frontmatter's
+    docs/** requirements — title, type, status, created, last_updated, components — with
+    type: reference and components drawn from docs/components.json. A new document with
+    absent or invalid frontmatter is refused at commit time."
+  - "The stated ground for each location must be the PROPERTY that earns the exemption —
+    regenerated whole, no human author — and must not be reducible to the name of the
+    generator that writes it. This is the record's second clause and the enrichment
+    decision that makes it checkable: an author with a new generated surface must be able
+    to reach the right answer from the text without a discussion."
+  - "The grounds published must be the grounds the declaration carries, read from the
+    doc_length section of templates/scripts/commit_guardian/commit_guardian.json. Quote
+    or paraphrase that source rather than the implementer's summary of it; the text is a
+    description of the declaration and must not become a second declaration."
+  - "All three declared locations must be listed — docs/agents/cards/, docs/roadmap.md
+    and docs/INDEX.md — because listing only the agent-card directory is the stale half
+    the record's notes warn about, and docs/INDEX.md at 289 lines against 300 is the live
+    demonstration that a second and third generated surface already exist."
+  - "The text must state the limits as they are configured — 300 lines for a document,
+    400 for a decision record, 25 sections — and must not restate the ratchet rule as if
+    it were this record's subject; one sentence that an already-over document is judged
+    against its own previous size is enough to make the reported figures interpretable."
+  - "HOW THE PER-LOCATION CEILINGS ARE TO BE EXPRESSED, since the authored limits above are
+    global and the ceilings are not. The text MUST state THAT a bound applies to each
+    set-aside location and that declaring a location requires declaring its size — those
+    two are what the criteria ask for. It must NOT present the bound as a single global
+    number: the ceiling is per entry and the values differ per location, so one figure
+    offered for all three would be false for at least two of them. Publishing each
+    location's actual figure beside that location's ground is PERMITTED and recommended —
+    an author who must open a configuration file to learn the number has only half the
+    answer this record exists to give them — but it is not required by any clause, so a
+    deliverable that states the bound qualitatively per location is complete. If a figure
+    IS published it must be read from the doc_length declaration in
+    templates/scripts/commit_guardian/commit_guardian.json, never restated from the
+    implementer's summary or from this record."
+  - "THE ABOVE-CEILING OUTCOME MUST BE STATED IN THE DIRECTION THE MECHANISM ACTUALLY
+    WORKS: a document above its location's ceiling is REPORTED and the commit STILL
+    COMPLETES. Do not write it as a refusal, a block, or a failure, and do not leave the
+    outcome implicit for a reader to assume. The whole point of the set-aside class is that
+    nobody is refused for length they did not write, so an inverted statement here tells an
+    author the opposite of the truth about the one behaviour they came to the page for.
+    GE-127g-5 owns the mechanism's own wording — read it rather than inventing a second
+    account of it."
+  - "Do not add a parity assertion, a published-versus-configured check, or any claim that
+    the text and the configuration are mechanically held in step. GE-127d owns honesty and
+    the record's own doc_links fence this off explicitly: there is no document-side parity
+    gate today, that gap is real, and specifying it here by implication would file it in
+    the wrong record."
+  - "No diagram and no how-to is required. The obligation is that the information exists
+    on a published surface an author would reach."
+test_spec: null
+test_required: false
+test_rationale: >-
+  No executable test contract, and the reason is specific rather than procedural. Every
+  clause in this record is a property of published prose — what the text STATES — so the
+  only machine-checkable shapes available are a grep for a path string in a markdown file
+  (which passes on text that lists the locations and omits the grounds, the exact failure
+  the record's notes name as most likely) or a parity check between the published text and
+  the declaration. The second is the better test and it is explicitly out of scope: the
+  record's own doc_links state that no document-side parity gate exists, that the gap is
+  real, that it is not this record's work, and that it must not be specified here by
+  implication. Writing it into test_spec would do precisely that. Verification therefore
+  runs through the documentation-verifier phase agent against EVERY clause of ALL THREE
+  arms — the arm about what is not judged and on what ground, the arm about the bound that
+  nonetheless applies to a set-aside location, and the arm about a document in no declared
+  location. Deliberately not scoped to a clause count: the record gained an arm after its
+  first enrichment pass and a fixed count is the thing that went stale.
+  TWO CLAUSES ARE PASS/FAIL, AND THEY FAIL IN DIFFERENT DIRECTIONS. The first is the
+  ground stated as the earning PROPERTY rather than as the generator's name: a deliverable
+  that restates the declaration verbatim satisfies the listing clause and fails this one,
+  and it is the clause the record's own notes name as most likely to be dropped. The
+  second is 'a document above its location's ceiling is reported AND the commit still
+  completes', and it is the clause most likely to be delivered BACKWARDS rather than
+  omitted — a reader's default assumption about any gate is that exceeding a threshold
+  gets you refused, so a writer working from that assumption produces a sentence that
+  reads naturally and is the opposite of the truth. The asymmetry is why both are
+  pass/fail and why the second deserves its own read: dropping the ground clause leaves an
+  author where they started, whereas inverting the ceiling clause actively misinforms them
+  about the one behaviour the set-aside class exists to provide — that nobody is refused
+  for length they did not write. An omission is a gap; an inversion is a wrong answer
+  delivered confidently, and this record's whole purpose is to be the place an author gets
+  the right one.
+  THE FOLLOW-UP GAP IS NOW PARTLY DISCHARGED, AND HERE IS WHAT REMAINS. GE-127g-5 closed
+  the half that was about the DECLARATION going silently wrong: an entry declaring no
+  ceiling is rejected, so the declaration can no longer be incomplete unnoticed, and a
+  document above its ceiling is reported, so unchecked growth inside a set-aside location
+  is surfaced rather than invisible. What is still unaddressed is the half this record
+  sits on — PUBLISHED TEXT versus CONFIGURATION. Nothing checks that the reference doc
+  still describes the declaration after the declaration changes, so a location added or a
+  ceiling altered leaves the published description quietly stale, which is the same
+  reviewable-by-nobody condition the parent L1 exists to end. A document-side
+  published-versus-configured parity gate, mirroring the code-side rule's existing one,
+  would close it. It needs its own record under GE-127d and must not be smuggled in here
+  — see the eighth it_requirement — and there is now LESS room than when this was first
+  noted: GE-127 holds 7 of 7 L1s and GE-127g holds 5 of 5 permitted children, so it needs
+  a split or a new L0 rather than a sibling anywhere in this subtree.
+declares_side_effect: false
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+- action: amended
+  agent: business-analyst
+  date: '2026-10-09'
+  detail: 'THE PUBLISHED-SURFACE LIST PREDATED THE CEILING, AND THE CEILING WAS ADDED
+    TO IT. This record''s enumeration of what the published description must state
+    was authored before GE-127g-5 introduced a per-location ceiling — the size beyond
+    which a document in a set-aside location is reported — so a published description
+    satisfying this record exactly would have told an author that documents in these
+    locations are not judged for length while giving no published answer to the reader''s
+    next question, how large one of them may get and what happens then. One arm was
+    ADDED requiring the description to state that a bound applies to each set-aside
+    location, that a document standing above it is reported while the commit still
+    completes, and that declaring a location set aside requires declaring that size.
+    GE-127g-5 was added to depends_on and to doc_links with the boundary stated: GE-127g-5
+    owns the mechanism, this record owns its published description, and neither discharges
+    the other. No existing clause was removed or reworded, no numeric ceiling value
+    is required of the text, and readiness and the IT PO''s technical fields were
+    left untouched. The amendment lands here rather than in a new sibling because
+    GE-127g holds 5 of 5 permitted children and GE-127 holds 7 of 7 L1s, which is
+    the no-headroom condition GE-127g-5''s own notes record.'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  WHY THIS RECORD IS NOT A FORMALITY DISCHARGING A TRIGGER. The parent L1 carries a
+  reference-doc trigger because its whole promise is that whether a document is judged is a
+  STATED, REVIEWABLE property. An unpublished scope decision is reviewable by nobody and
+  the promise is half-kept. That is also the concrete reason this defect recurred: the
+  present exclusion list is readable only by opening a configuration file, so each time a
+  card was refused the next person rediscovered the mechanism rather than reading about it.
+
+  THE SECOND CLAUSE IS THE ONE THAT MATTERS AND THE ONE MOST LIKELY TO BE DROPPED. Listing
+  the declared locations is the easy half and goes stale the moment a second generated
+  surface appears. Stating the PROPERTY that earns an exemption — regenerated whole, no
+  human author — is what lets the next author with a generated surface reach the right
+  answer without a discussion. The project already has a second instance waiting: a
+  generated roadmap mirror stood at 286 lines against a 300-line limit when this was
+  authored, under the limit and climbing. If the published text names only the agent-card
+  directory, that case will be rediscovered rather than looked up.
+
+  WHAT IS DELIBERATELY NOT REQUIRED HERE. No diagram, no how-to, and no new document is
+  mandated — the obligation is that the information exists on a published surface an author
+  would reach, and the parent's other children define the behaviour it describes. A
+  documentation deliverable that restates the declaration verbatim and nothing else
+  satisfies the first clause and fails the second.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.
