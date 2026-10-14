@@ -87,7 +87,7 @@ doc_links:
     relationship: related
     status: exists
     relevance: "The positive write this refusal must not cross. A genuine completion still records done."
-  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20261009-completion-write-closes-a-ticket-whose-gate-failed.md
     relationship: context
     status: exists
     relevance: "The two recorded occurrences (2026-09-30 ac-fulfillment-gate, 2026-10-12 commit) and the four mechanisms. This record fixes mechanisms 3 and 4; mechanism 1 (a level-2 heading inside ## Comments misplacing new entries) and an ordering key for 'latest' are follow-ups."

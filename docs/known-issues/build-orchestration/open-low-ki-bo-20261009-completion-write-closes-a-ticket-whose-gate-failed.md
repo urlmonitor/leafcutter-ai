@@ -1,11 +1,11 @@
 ---
 title: "KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — /build-feature wrote status: done on a ticket whose ac-fulfillment-gate had just failed and whose AC was still todo, because the completion decision takes the gate's last entry by file position and a blocker entry was inserted above an older ok"
-description: "blocker — phantom-done at the orchestration layer. On 2026-09-30, ticket 02 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace was set to status: done while agents.ac-fulfillment-gate read failed and its source AC BO-4300f-4 read work_status: todo. The gate's new blocker entry had been written above its older ok entry (just before a level-2 '## Escalation' heading inside an earlier comment), and completionVerdictFromRecord reads the last entry in file order, so the gate counted as passed. A frontmatter value of failed only adds a phase to the required set; it never makes it outstanding."
+description: "low since 2026-10-14 (was blocker) — the phantom-done routes are closed by BO-400a-2-v (PR #1201) and the misplacing level-2 headings are gone from the agent templates; what remains is that 'latest entry' still means last in file order. Original: phantom-done at the orchestration layer. On 2026-09-30, ticket 02 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace was set to status: done while agents.ac-fulfillment-gate read failed and its source AC BO-4300f-4 read work_status: todo. The gate's new blocker entry had been written above its older ok entry (just before a level-2 '## Escalation' heading inside an earlier comment), and completionVerdictFromRecord reads the last entry in file order, so the gate counted as passed. A frontmatter value of failed only adds a phase to the required set; it never makes it outstanding."
 type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 components:
   - build_orchestration
   - supervisor_system
@@ -19,11 +19,17 @@ related_docs:
 
 # KI-BO-20261009-completion-write-closes-a-ticket-whose-gate-failed — a ticket was recorded done with its gate failed and its AC todo
 
-- **Severity:** blocker. This is the phantom-done failure the package exists to prevent, and it
-  happened in the driver's own completion decision. Nothing in the run output says that a failed
-  gate was overridden. The ticket simply reads `done`, and `done` releases its dependants.
-- **Status:** open, no AC. Mechanism verified by reading `origin/main` `c373b005e` and the ticket's
-  committed history. The insertion cause (below) is inferred from the file positions.
+- **Severity:** low since 2026-10-14 (filename bucket moved from `blocker` to `low`). The original
+  grading, kept as written: blocker. This is the phantom-done failure the package exists to
+  prevent, and it happened in the driver's own completion decision. Nothing in the run output
+  says that a failed gate was overridden. The ticket simply reads `done`, and `done` releases its
+  dependants.
+- **Status:** open, mostly fixed. See "Status update, 2026-10-14" at the end. Mechanisms 3 and 4
+  are fixed by BO-400a-2-v (PR #1201). Mechanism 1's cause, level-2 headings that agent templates
+  told agents to write into their comments, is removed by BO-400a-2-vi. Mechanism 2 (the latest
+  entry is the last one in file order) is still open. Original status line: open, no AC.
+  Mechanism verified by reading `origin/main` `c373b005e` and the ticket's committed history.
+  The insertion cause (below) is inferred from the file positions.
 - **Occurrences:** 2. Ticket `02_TICKET-20260928-BO-4300-deployed-maker-test-support.md`,
   2026-09-30, the run between commits `08d190daf` (22:50 UTC) and `45e6f2268` (23:06 UTC) on branch
   `epic/every-piece-of-separate-work-gets-its-workspace`. Then ticket
@@ -178,3 +184,33 @@ record, the ticket's staged copy and the branch reflog.
 `commit`, or refuse the ticket. It must never fall through to the completion decision. The
 driver-side HEAD check that `KI-SS-20260927` asks for (2026-10-09 note) would also have caught
 this on its own.
+
+## Status update, 2026-10-14 — mostly fixed, downgraded to low
+
+**Fixed: mechanisms 3 and 4, by BO-400a-2-v (PR #1201, merge `26ed98ef2`).** Both drivers
+(`build-feature.js` and its twin `build-ticket.js`) now consult `failureSignalFor()` for every
+required phase before reading its Comments entries. A phase whose frontmatter reads `failed`, or
+that this drive skipped after a `cross_agent` blocker, is outstanding whatever entries the record
+carries, and the not-completed report names the phase and the signal. Both recorded occurrences
+are covered by behavioural tests that drive the real scripts
+(`unit_tests/prompt_assembly/test_bo_400a_2_v.py`). A skipped `commit` phase can no longer reach
+the completion write, which is the "Fix, in addition to the above" asked for in the 2026-10-12
+section.
+
+**Not changed, by decision: frontmatter `needed`.** A phase still marked `needed` is not treated
+as a failure signal. The BO-400e-1 contract counts `needed` with a passing entry as satisfied, and
+`scripts/set_ticket_status.py` already refuses to write `done` while any phase reads `needed`, so
+that case cannot become a phantom done. In that case the drive still attempts the write and then
+reports `outstanding_phases: []`, which is misleading. Not yet filed.
+
+**Fixed: mechanism 1's cause, by BO-400a-2-vi.** `architect-review.md`, `conflict-resolver.md`
+and `pr-reviewer.md` no longer tell the agent to append a level-2 `## Escalation` heading to its
+output. They use a bold `**Escalation**` label instead, so no agent writes a level-2 heading into
+a ticket's `## Comments` that a writer can mistake for the end of the section.
+
+**Still open: mechanism 2.** "Latest entry" still means the last `### ` heading in file order.
+An entry that lands out of order, for any other reason, is still read as the latest. With the two
+signals above deciding first, the remaining exposure is a phase whose frontmatter does not say
+`failed` and which this drive did not skip. That is why the bucket is now `low`. The fix direction
+above (append through a script, or have the read-back return each heading's line number and refuse
+when an older entry follows a newer one) still applies.

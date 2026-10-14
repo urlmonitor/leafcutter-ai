@@ -179,7 +179,7 @@ none (the field is kept so the report shape is unchanged; no escalation tier exi
 
 ## Escalation section (required on every run)
 
-Append `## Escalation` to your output naming the chosen branch and the
+Append an `**Escalation**` label line to your output naming the chosen branch and the
 one-line reason. Never skip this section.
 
 Example (all line-by-line): `line-by-line: all conflicts matched line-by-line triggers`
