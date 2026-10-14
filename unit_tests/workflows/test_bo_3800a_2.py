@@ -123,6 +123,7 @@ class TestBo3800a2(_Base):
 
     def test_bo3800a2_drive_commit_refusal_engages_specialist_between_refusal_and_retry(self):
         # covers: BO-3800a-2
+        # covers: BO-3800a
         # angle: criterion
         # reachability surface: unit_tests/prompt_assembly/_driver_harness.py executing build-feature.js (TWIN_DRIVERS)
         """Arm 1. The commit phase returns the payload the REAL helper produced from real
