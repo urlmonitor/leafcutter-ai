@@ -146,7 +146,8 @@
             "spawn_allowlist": [
                 "__ticket_phase_agents__",
                 "brainstorm-lead",
-                "llm-expert"
+                "llm-expert",
+                "test-breaker"
             ],
             "spawned_by": [
                 "user",
@@ -3661,6 +3662,48 @@
             "produces": "production_code",
             "components": [
                 "infrastructure"
+            ]
+        },
+        {
+            "id": "test-breaker",
+            "name": "Test Breaker",
+            "tier": "utility",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "fast-lane-ship.js",
+                "build-feature.js",
+                "build-ticket.js",
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-breaker.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "Wrong-version preparer (TQ-500g-1-iv). Reads the finished code and, for each named wrong version a guarding test must catch, replies with the minimal exact-match replacement that does what the name says and nothing else; a name it cannot act on is reported as could_not_prepare with a one-line reason, never dropped. Read-only: it writes no file, never runs tests and never says whether a test would catch anything. A deterministic writer step turns its reply into altered copies and the alterations manifest.",
+            "permits_shell": false,
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "dispatch inputs from the build route (work_key, repo_root, requirement_ids, wrong_versions)"
+                },
+                {
+                    "channel": 6,
+                    "source": "source files read during execution"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
             ]
         }
     ]

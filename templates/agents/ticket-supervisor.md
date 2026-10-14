@@ -18,6 +18,7 @@ spawn_allowlist:
 - __ticket_phase_agents__
 - brainstorm-lead
 - llm-expert
+- test-breaker
 skills:
 - skill_id: building-epics
   mode: always
