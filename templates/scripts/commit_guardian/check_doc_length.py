@@ -37,33 +37,37 @@ from _resolve_root import find_project_root
 
 project_root = find_project_root()
 
-from config import (
-    DOC_LENGTH_MAX_LINES,
-    DOC_LENGTH_MAX_LINES_ADR,
-    DOC_LENGTH_MAX_SECTIONS,
-    DOC_LENGTH_SEVERITY,
-    DOC_LENGTH_SET_ASIDE_LOCATIONS,
-)
 from doc_length_helpers import (
     lookup_writer_agent,
     read_frontmatter_type,
 )
 from _file_size_ratchet import CurrentLengthUnmeasurableError, PreviousLengthSourceError
 from _doc_length_ratchet import (
-    SetAsideDeclarationError,
     classify_dimension,
     count_lines_and_sections,
     is_adr_file,
-    is_checked,
     read_doc_content,
     resolve_doc_ratchet,
     strip_frontmatter,
 )
 from _doc_length_set_aside import (
-    parse_declared_set_aside,
+    counts_line,
+    format_growth_note,
+    load_doc_length_settings,
+    render_declaration_problem,
     render_population_report,
+    select_checked_paths,
     select_set_aside_paths,
 )
+
+# ONE read of commit_guardian.json with ONE classified outcome (GE-127g-2-i): the
+# limits and the set-aside declaration come from the same read, never two.
+_SETTINGS = load_doc_length_settings()
+DOC_LENGTH_MAX_LINES = _SETTINGS.max_lines
+DOC_LENGTH_MAX_LINES_ADR = _SETTINGS.max_lines_adr
+DOC_LENGTH_MAX_SECTIONS = _SETTINGS.max_sections
+DOC_LENGTH_SEVERITY = _SETTINGS.severity
+DOC_LENGTH_SET_ASIDE_LOCATIONS = _SETTINGS.entries
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -347,32 +351,6 @@ def analyze_file(
     }
 
 
-def format_growth_note(violation: dict) -> str | None:
-    """Describe a ratchet refusal, or None when neither dimension grew.
-
-    A "grew" refusal needs different wording from a "crossed the limit" one:
-    the author is not being told to get under 300 lines, they are being told
-    not to make an already-long doc longer in this commit.
-
-    Args:
-        violation: A violation dict from ``analyze_file``.
-
-    Returns:
-        The explanatory line, or None when no dimension grew.
-    """
-    grew = []
-    if violation.get("lines_verdict") == "grew":
-        grew.append(f"lines {violation['previous_lines']} → {violation['line_count']}")
-    if violation.get("sections_verdict") == "grew":
-        grew.append(f"sections {violation['previous_sections']} → {violation['section_count']}")
-    if not grew:
-        return None
-    return (
-        f"   📈 Already over its limit and grew further in this commit ({', '.join(grew)}).\n"
-        "      Shrinking it, or leaving its size unchanged, is allowed — growing it is not."
-    )
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -386,21 +364,53 @@ def _ensure_utf8_stdout() -> None:
             pass
 
 
-def select_checked_paths(staged_files: dict[str, str], set_aside_paths) -> list[str]:
-    """Return the staged, non-deleted paths the gate covers (not set aside).
+def collect_violations(checked_paths, previous_lines, previous_sections, doc_types_path) -> list:
+    """Measure each checked doc and return the violation dicts.
 
     Args:
-        staged_files: Mapping of filepath to git status from ``get_staged_files``.
-        set_aside_paths: The parsed set-aside declaration.
+        checked_paths: Paths to measure.
+        previous_lines: Mapping of path to previous line count.
+        previous_sections: Mapping of path to previous section count.
+        doc_types_path: Path to doc_types.json for autofix-agent lookup.
 
     Returns:
-        list[str]: Paths to measure, in staged order.
+        list: Violation dicts, each carrying an ``autofix_agent`` entry.
+
+    Raises:
+        CurrentLengthUnmeasurableError: When a doc's current content cannot be read.
     """
-    return [
-        filepath
-        for filepath, status in staged_files.items()
-        if status != "D" and is_checked(filepath, set_aside_paths)
-    ]
+    violations = []
+    for filepath in checked_paths:
+        content = read_doc_content(filepath)
+        result = analyze_file(
+            filepath,
+            content,
+            previous_lines.get(filepath),
+            previous_sections.get(filepath),
+        )
+        if result:
+            # Compute the autofix agent from frontmatter type before content was stripped.
+            doc_type = read_frontmatter_type(content)
+            result["autofix_agent"] = lookup_writer_agent(doc_type, doc_types_path)
+            violations.append(result)
+    return violations
+
+
+def print_violation_reports(violations: list) -> None:
+    """Print each refused document's report, followed by its growth note when it has one."""
+    for v in violations:
+        print(format_violation(
+            filepath=v["filepath"],
+            line_count=v["line_count"],
+            max_lines=v["max_lines"],
+            section_count=v["section_count"],
+            max_sections=v["max_sections"],
+            extractable=v["extractable"],
+            autofix_agent=v.get("autofix_agent", "documentation-expert"),
+        ))
+        growth_note = format_growth_note(v)
+        if growth_note:
+            print(growth_note)
 
 
 def main() -> int:
@@ -415,11 +425,12 @@ def main() -> int:
     """
     _ensure_utf8_stdout()
 
-    try:
-        set_aside_paths = parse_declared_set_aside(DOC_LENGTH_SET_ASIDE_LOCATIONS)
-    except SetAsideDeclarationError as exc:
-        print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
-        return 2
+    set_aside_paths = _SETTINGS.paths
+    problem = _SETTINGS.problem
+    if problem:
+        # Unreadable / uninterpretable: say so, then JUDGE every staged document
+        # (no paths are set aside) and never complete — see GE-127g-2-i.
+        print(render_declaration_problem(problem), file=sys.stderr)
 
     try:
         staged_files = get_staged_files()
@@ -441,35 +452,27 @@ def main() -> int:
         return indeterminate_exit
     previous_lines, previous_sections = previous_values
 
-    violations = []
     try:
-        for filepath in checked_paths:
-            content = read_doc_content(filepath)
-            result = analyze_file(
-                filepath,
-                content,
-                previous_lines.get(filepath),
-                previous_sections.get(filepath),
-            )
-            if result:
-                # Compute the autofix agent from frontmatter type before content was stripped.
-                doc_type = read_frontmatter_type(content)
-                result["autofix_agent"] = lookup_writer_agent(doc_type, doc_types_path)
-                violations.append(result)
+        violations = collect_violations(
+            checked_paths, previous_lines, previous_sections, doc_types_path
+        )
     except CurrentLengthUnmeasurableError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
         return 2
 
     checked_count = len(checked_paths)
+    aside_paths = select_set_aside_paths(staged_files, set_aside_paths)
     try:
         population_report = render_population_report(
-            checked_count,
-            select_set_aside_paths(staged_files, set_aside_paths),
-            DOC_LENGTH_SET_ASIDE_LOCATIONS,
+            checked_count, aside_paths, DOC_LENGTH_SET_ASIDE_LOCATIONS
         )
     except CurrentLengthUnmeasurableError as exc:
         print(f"INDETERMINATE: reason={exc.reason}", file=sys.stderr)
         return 2
+    if not violations and problem:
+        # A completing verdict over a declaration nobody could use is refused outright.
+        print(counts_line(checked_count, len(aside_paths)))
+        return 1
     if not violations:
         # Reported on a COMPLETING run only: a refusal names the refused documents alone.
         if population_report:
@@ -477,6 +480,8 @@ def main() -> int:
         if checked_count > 0:
             print(f"✅ PASSED: compared {checked_count} doc files against their length limits")
         return 0
+    # A refusal states the two counts only; it names the refused documents alone.
+    print(counts_line(checked_count, len(aside_paths)))
 
     # Report violations
     is_blocking = DOC_LENGTH_SEVERITY == "block"
@@ -494,27 +499,14 @@ def main() -> int:
         "sections into separate docs and replace with a one-line link.\n"
     )
 
-    for v in violations:
-        report = format_violation(
-            filepath=v["filepath"],
-            line_count=v["line_count"],
-            max_lines=v["max_lines"],
-            section_count=v["section_count"],
-            max_sections=v["max_sections"],
-            extractable=v["extractable"],
-            autofix_agent=v.get("autofix_agent", "documentation-expert"),
-        )
-        print(report)
-        growth_note = format_growth_note(v)
-        if growth_note:
-            print(growth_note)
+    print_violation_reports(violations)
 
     print()
     print(
         f"📊 Summary: {len(violations)} file(s) refused out of {checked_count} compared"
     )
 
-    if is_blocking:
+    if is_blocking or problem:
         print(
             "\n🛑 Commit blocked. Split the file(s) above before committing.\n"
             "   DO NOT simply delete content to bypass this check.\n"
