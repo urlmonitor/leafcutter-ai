@@ -142,9 +142,11 @@ def _load_build_phases_module(package_root: Path):
     module_path = package_root / "scripts" / "build_phases.py"
     unique_name = f"_build_helpers_dyn_build_phases_{abs(hash(str(module_path)))}"
     spec = importlib.util.spec_from_file_location(unique_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(str(module_path), path=str(module_path))
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    spec.loader.exec_module(module)
     return module
 
 
@@ -429,7 +431,7 @@ def _compute_output_mappings(
     # package_root without a full scripts/ tree (e.g. a minimal fixture that
     # only exercises one of the other families below) degrades to skipping
     # just this section instead of aborting the whole computation.
-    build_phases_mod = None
+    build_phases_mod: Any = None
     phase_mappings: list[tuple[Path, Path]] = []
     try:
         build_phases_mod = _load_build_phases_module(package_root)
@@ -498,15 +500,12 @@ def _compute_output_mappings(
                     "deploy this phase)"
                 )
             continue
-
         canonical_output = _canonicalize_output_path(target, output_root, target_root)
         if canonical_output is None:
             continue  # no canonical shim for this family (e.g. cursor/copilot)
-
         content = _render_phase_source(source, _template_family(source, templates_dir))
         if content is None:
             continue
-
         _add(source, canonical_output, content)
 
     # --- skills (.md compiled; every other real file copied verbatim) ---
@@ -651,7 +650,7 @@ def _compute_output_mappings(
             if canonical_output is None:
                 continue
             if text_suffixes is None or tpl.suffix in text_suffixes:
-                content = inject_config(tpl.read_text(encoding="utf-8"), config)
+                content: str | bytes = inject_config(tpl.read_text(encoding="utf-8"), config)
             else:
                 content = tpl.read_bytes()
             _add(tpl, canonical_output, content)
@@ -1499,11 +1498,7 @@ def install_shims(
 
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         method = _create_shim(canonical_path, source_path, strategy)
-        results.append({
-            "canonical": canonical_rel,
-            "target": output_rel,
-            "method": method,
-        })
+        results.append({"canonical": canonical_rel, "target": output_rel, "method": method})
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     for canonical_rel, output_rel in file_shims:  # single-file shims
@@ -1521,11 +1516,7 @@ def install_shims(
                 results.append(veto)
                 continue
             if not force:
-                results.append({
-                    "canonical": canonical_rel,
-                    "target": output_rel,
-                    "method": "skipped (exists)",
-                })
+                results.append({"canonical": canonical_rel, "target": output_rel, "method": "skipped (exists)"})
                 continue
             if not dry_run:
                 try:
@@ -1546,11 +1537,7 @@ def install_shims(
 
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         method = _create_file_shim(canonical_path, source_path, strategy)
-        results.append({
-            "canonical": canonical_rel,
-            "target": output_rel,
-            "method": method,
-        })
+        results.append({"canonical": canonical_rel, "target": output_rel, "method": method})
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     return results

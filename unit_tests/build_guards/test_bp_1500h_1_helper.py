@@ -89,7 +89,7 @@ def test_empty_survives_real_config_merge_and_absent_becomes_default(tmp_path):
     resolve = _resolver()
     from config_loader import load_config  # real producer
 
-    def merged(settings: dict) -> dict:
+    def merged(settings: dict) -> tuple[Path, dict]:
         project = tmp_path / ("p" + str(len(settings)))
         (project / ".claude").mkdir(parents=True)
         with (project / ".claude" / "skills_config.json").open("w", encoding="utf-8") as fh:
