@@ -60,6 +60,9 @@ def entity_from_row(row: dict) -> Entity:
 class Neo4jBackend:
     """Optional Neo4j read/write adapter with one explicitly closed connection pool."""
 
+    # Expected and kept counts of the last publication's build, set by neo4j_projection.publish.
+    publication_counts: dict | None = None
+
     def __init__(
         self,
         uri: str,
