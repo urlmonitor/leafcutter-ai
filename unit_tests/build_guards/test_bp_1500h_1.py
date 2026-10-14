@@ -95,6 +95,7 @@ def test_absent_setting_uses_the_shipped_default_path():
 @pytest.mark.shared_layout_mutator
 def test_empty_setting_output_has_no_directory_read_and_one_not_configured_line():
     # covers: BP-1500h-1
+    # covers: BP-1500h
     # angle: deployed
     """Empty-value build output: no 'Is a directory', no 'could not read
     <project folder>', exactly one 'not configured' line naming the setting."""
