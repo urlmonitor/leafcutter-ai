@@ -5,6 +5,7 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 21:00 [python-coder]: Report a refused removal as not/partially removed, naming repository and generation, the refusal and what remains. (#KM-400b-5-ii)
 - 2026-10-14 19:00 [python-coder]: Guard the failed-status write so removal always runs and the original error is re-raised with a never-empty cause. (#KM-400b-5-i/02)
 - 2026-10-14 18:00 [python-coder]: Remove a failed publication's own generation by key and report it with the original cause. (#KM-400b-5-i)
 - 2026-10-14 15:00 [python-coder]: Count check names each mismatched kind with expected and kept figures and publishes them. (#KM-400b-2-ii)
@@ -102,7 +103,9 @@ async def publish(
                 db, key, len(snapshot.nodes), len(snapshot.edges)
             )
         except (ValueError, BackendUnavailable) as error:
-            await _record_failed_generation(db, key, error)
+            await _record_failed_generation(
+                db, key, error, (snapshot.repository_id, snapshot.generation_id)
+            )
             raise
         await db._run(
             'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="validated", g.validated_at=$now',
@@ -115,7 +118,7 @@ async def publish(
 
 
 async def _record_failed_generation(
-    db: Neo4jBackend, key: str, error: ValueError | BackendUnavailable
+    db: Neo4jBackend, key: str, error: ValueError | BackendUnavailable, ids: tuple[str, str]
 ) -> None:
     """Mark a failed attempt, remove its own generation, and append the outcome to its cause.
 
@@ -126,6 +129,7 @@ async def _record_failed_generation(
         db: Scoped Neo4j adapter owning the driver and transaction policy.
         key: Trusted hashed repository/generation scope key of the failed attempt.
         error: The original publication failure; its message gains the removal outcome.
+        ids: The repository id and generation id the key was derived from.
     """
     try:
         await db._run(
@@ -135,26 +139,21 @@ async def _record_failed_generation(
         )
     except BackendUnavailable as status_error:
         logger.warning("failed generation could not be marked failed: %s", status_error)
-    removal = await _remove_own_generation(db, key)
+    removal = await _remove_own_generation(db, key, ids)
     db.publication_removal = removal
     cause = str(error) or type(error).__name__
     error.args = (f"{cause}; {_removal_statement(removal)}", *error.args[1:])
 
 
-async def _remove_own_generation(db: Neo4jBackend, key: str) -> dict:
-    """Remove the nodes and relationships tagged to one failed attempt's own generation key.
-
-    Matching is by the attempt's generation key only, never by failed status, so no other
-    generation or repository is touched. A failure of the removal itself never replaces
-    the publication failure being reported.
+async def _count_tagged(db: Neo4jBackend, key: str) -> dict | None:
+    """Count the nodes and relationships tagged to one generation key.
 
     Args:
         db: Scoped Neo4j adapter owning the driver and transaction policy.
-        key: Trusted hashed repository/generation scope key of the failed attempt.
+        key: Trusted hashed repository/generation scope key.
 
     Returns:
-        ``removed`` with node and relationship figures taken before deleting, or
-        ``not_removed`` with the removal failure reason.
+        ``{"nodes": n, "relationships": m}``, or None when the store refused to count.
     """
     params = {"key": key}
     try:
@@ -165,16 +164,70 @@ async def _remove_own_generation(db: Neo4jBackend, key: str) -> dict:
             "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() RETURN count(r) AS count",
             params,
         )
-        await db._run(
-            "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() DELETE r", params, True
-        )
-        await db._run(
-            "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) DETACH DELETE n", params, True
-        )
-    except BackendUnavailable as removal_error:
-        logger.warning("failed generation could not be removed: %s", removal_error)
-        return {"outcome": "not_removed", "reason": str(removal_error)}
-    return {"outcome": "removed", "nodes": nodes[0]["count"], "relationships": links[0]["count"]}
+    except BackendUnavailable as count_error:
+        logger.warning("tagged records could not be counted: %s", count_error)
+        return None
+    return {"nodes": nodes[0]["count"], "relationships": links[0]["count"]}
+
+
+async def _delete_tagged(db: Neo4jBackend, key: str) -> dict[str, str]:
+    """Attempt both deletes of one generation's records, whatever the first one's outcome.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        key: Trusted hashed repository/generation scope key.
+
+    Returns:
+        The refusal text per kind (``relationships`` / ``nodes``) whose delete was refused.
+    """
+    params = {"key": key}
+    statements = {
+        "relationships": "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() DELETE r",
+        "nodes": "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) DETACH DELETE n",
+    }
+    refused: dict[str, str] = {}
+    for kind, statement in statements.items():
+        try:
+            await db._run(statement, params, True)
+        except BackendUnavailable as removal_error:
+            logger.warning("failed generation %s could not be removed: %s", kind, removal_error)
+            refused[kind] = str(removal_error)
+    return refused
+
+
+async def _remove_own_generation(db: Neo4jBackend, key: str, ids: tuple[str, str]) -> dict:
+    """Remove the nodes and relationships tagged to one failed attempt's own generation key.
+
+    Matching is by the attempt's generation key only, never by failed status, so no other
+    generation or repository is touched. A failure of the removal itself never replaces
+    the publication failure being reported.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        key: Trusted hashed repository/generation scope key of the failed attempt.
+        ids: The repository id and generation id the key was derived from.
+
+    Returns:
+        ``removed`` with figures taken before deleting; ``partially_removed`` or
+        ``not_removed`` naming repository, generation, refusal and what remains
+        (``undetermined`` when it could not be counted, never 0).
+    """
+    before = await _count_tagged(db, key)
+    refused = await _delete_tagged(db, key)
+    if not refused:
+        figures = before or {"nodes": "undetermined", "relationships": "undetermined"}
+        return {"outcome": "removed", **figures}
+    remaining = await _count_tagged(db, key)
+    outcome: dict[str, object] = {
+        "outcome": "partially_removed" if len(refused) < 2 else "not_removed",
+        "repository_id": ids[0],
+        "generation_id": ids[1],
+        "refusal": "; ".join(dict.fromkeys(refused.values())),
+        "remaining": remaining or "undetermined",
+    }
+    if len(refused) < 2:
+        outcome["remaining_kinds"] = list(refused)
+    return outcome
 
 
 def _removal_statement(removal: dict) -> str:
@@ -186,11 +239,24 @@ def _removal_statement(removal: dict) -> str:
     Returns:
         A sentence fragment appended after the original failure cause.
     """
-    if removal["outcome"] != "removed":
-        return "failed generation not removed: " + removal["reason"]
+    if removal["outcome"] == "removed":
+        return (
+            f"failed generation removed: {removal['nodes']} entity records, "
+            f"{removal['relationships']} relationships"
+        )
+    if removal["outcome"] == "partially_removed":
+        head = "failed generation partially removed"
+        head += f" ({' and '.join(removal['remaining_kinds'])} remain)"
+    else:
+        head = "failed generation not removed"
+    left = removal["remaining"]
+    if left == "undetermined":
+        amount = "remaining amount undetermined"
+    else:
+        amount = f"{left['nodes']} entity records, {left['relationships']} relationships remain"
     return (
-        f"failed generation removed: {removal['nodes']} entity records, "
-        f"{removal['relationships']} relationships"
+        f"{head}: repository {removal['repository_id']} generation {removal['generation_id']}; "
+        f"refused: {removal['refusal']}; {amount}"
     )
 
 
