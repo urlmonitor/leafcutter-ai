@@ -9,7 +9,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -129,7 +129,67 @@ doc_links:
     status: exists
     relevance: "Owns the prompt surfaces that carry the two probe snippets."
 assigned_agent: python-coder
-estimated_complexity: null
+estimated_complexity: L
+test_required: true
+test_spec:
+  - name: test_every_copy_gives_the_canonical_verdict_on_every_row
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: deployed
+    surface_invoked: "all six copies taken from the shared_reference_layout fixture (@pytest.mark.shared_layout_reader): the deployed sink_resolution.py (read_usable_stream / enduring_holder / enduring_root_exists, the canonical rule), the deployed emit_event.py (_declared_stream), the deployed inline_work_guard.py (_resolve_audit_path), the command emitPtTelemetry in the deployed plan-feature.js dispatches, the pre-drive-reachability-check snippet in the deployed building-epics SKILL.md section 1.0, and the same snippet in the deployed epic-supervisor.md check 7"
+    description: "Extend unit_tests/feedback/test_inf_500d_4_iv_usable_stream_parity.py. Build the full row table from the criteria as cheap temp installs (one declaration plus filesystem layout per row): no declaration file; {} (the --no-log-root shape); unparseable JSON; no operational_log_root; relative operational_log_root; stream missing; stream relative; stream outside the root; stream two levels under the root; valid with log dir present; valid with log dir missing under a live enduring root, once in the <project>/debugging/logs layout and once in a flat layout whose log root is not under debugging/; valid with the enduring root vanished, in both layouts. Feed every row to every copy. Load the two Python inline copies from their deployed files and call them. Extract the three shell copies from the deployed text and execute them with a real shell against the row, never matching words in the text. Read each shell copy's verdict from what it does: the probe's reachable-or-unreachable outcome, and the telemetry command's exit status plus whether the declared stream gained exactly one line. Assert every copy's usable/unusable verdict equals the canonical verdict on every row. Compare the inline-work guard against the canonical verdict for <operational_log_root>/inline_work_guard.jsonl under that row's declared root (option A), not against the telemetry stream's verdict. On every row the canonical rule finds usable, assert each copy that reports a location reports the same absolute path the canonical rule returns."
+    must_catch:
+      - "a shell copy whose holder computation hard-codes the debugging/logs layout (agrees on every conventional row, wrong on the flat vanished-root row)"
+      - "a shell copy that drops the holder check and treats a vanished enduring root as usable"
+      - "an inline copy that accepts a stream two levels under the root"
+      - "the inline-work guard compared against the telemetry stream's verdict, which falsely reports it as drifted on the outside/nested/relative stream rows"
+      - "a shell copy verified by grepping its text instead of executing it"
+  - name: test_parity_table_is_not_vacuous
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Assert the canonical rule finds exactly the valid rows whose enduring root is live usable (log dir present, and log dir missing under a live root in both layouts) and every other row unusable. Then feed the check a stand-in copy that always answers unusable, and separately one that always answers usable, and assert the check fails on each instead of passing."
+    must_catch:
+      - "a table where every copy and the canonical rule agree that everything is unusable"
+      - "a table where every copy and the canonical rule agree that everything is usable"
+  - name: test_no_copy_creates_anything_on_an_unusable_row
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "For every unusable row, snapshot the row's whole temp tree before and after running each copy (including the executed shell copies and the dispatched plan-feature telemetry command). Assert neither the log directory nor the enduring root was brought into existence and no new file appeared anywhere in the tree."
+    must_catch:
+      - "a shell copy that runs mkdir -p before the holder check, recreating a vanished root"
+      - "an inline copy that creates the log directory on an unusable declaration"
+  - name: test_check_names_copy_row_and_verdicts_when_the_canonical_rule_flips
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: discrimination
+    description: "Run the parity check with a mutated canonical rule, never by editing the shared layout: load a private copy of the deployed sink_resolution.py into a temp dir (or substitute the canonical callable in-process) and flip one row. Case 1: a stream two levels under the root becomes usable. Case 2: a missing log directory under a live enduring root is treated as stale. Leave all five copies as deployed. Assert the check fails, and the failure message names the disagreeing copy, the row, and both verdicts (canonical vs copy). Assert the shared layout is byte-identical after the test."
+    must_catch:
+      - "a check that compares copies only to each other and so passes when the canonical rule alone changes"
+      - "a failure message that says 'mismatch' without naming the copy, row and verdicts"
+  - name: test_check_fails_and_names_a_copy_it_cannot_find_or_run
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: failure
+    description: "Point the check at a private temp copy of the deployed files needed (never the shared layout) where, in turn, one copy is absent: emit_event.py removed; inline_work_guard.py removed; the plan-feature.js telemetry command made unextractable; the building-epics section 1.0 snippet removed; the epic-supervisor check 7 snippet removed. Assert each run fails and names the copy it could not find or run, and that the check does not silently skip it."
+    must_catch:
+      - "an extractor that returns an empty command, which the shell runs successfully and reports as agreement"
+      - "a missing copy that is skipped and the run still reports agreement"
+  - name: test_check_reports_how_many_copies_and_rows_it_compared
+    target_dir: unit_tests/feedback/
+    framework: pytest
+    type: behavioral
+    angle: criterion
+    description: "Assert every run of the check reports the number of copies compared against the canonical rule (five on the deployed layout) and the number of rows, and that a run whose compared copy or row count is zero fails rather than reporting agreement."
+    must_catch:
+      - "a run that compared nothing and reports agreement"
+test_rationale: "Five of the six copies exist to restate one rule, and three of them are prompt or workflow text, so the only proof of agreement is to run every copy as it is deployed against the same rows and read what it does. Per CLAUDE.md, a grep of the text passes on dead or drifted snippets. The copies are read from the shared_reference_layout fixture (reader), because the probe snippets carry a build-resolved {{config.output_root}} token and inject_config can rewrite literals at deploy time. The row installs are temp declarations and need no build of their own. The mutation and missing-copy scenarios work on private copies so the shared layout is never changed. The non-vacuity and count assertions stop a table where everything agrees on one answer, or a run that compared nothing, from reporting agreement. These tests must run unskipped and un-xfailed in the CI pytest gate that guards a merge."
 delivers_to: null
 expects_from:
   - ac_id: INF-500d-4-iv
@@ -138,7 +198,13 @@ expects_from:
     contract: "The pre-drive reachability probe snippets in building-epics section 1.0 and epic-supervisor check 7, as deployed."
 origin_agent: BrainCandy
 created: 2026-10-14
-amended_by: []
+amended_by:
+  - reason: "BrainCandy approved readiness on 2026-10-14 (relayed via the orchestrating session) with option A: the inline-work guard is compared against the canonical verdict for its own file under the declared root, not against the telemetry stream's verdict. readiness: draft -> approved; criteria and work_status unchanged."
+    by: BrainCandy
+    at: 2026-10-14
+  - reason: "IT PO technical enrichment: added test_required: true, a six-entry behavioral test_spec derived from the four Gherkin scenarios (every copy executed from the deployed shared_reference_layout, never grepped), test_rationale, and estimated_complexity L. criteria, readiness and work_status unchanged."
+    by: it-po
+    at: 2026-10-14
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -190,9 +256,8 @@ notes: |
   nested, relative, missing) don't change what the guard sees. The criteria
   therefore compare the guard against the canonical verdict for its own file under
   the declared root. They do not compare it against the telemetry stream's verdict,
-  which would wrongly report it as drifted. BrainCandy: confirm this is the intended
-  reading, or say if the guard should refuse whenever the declared stream is
-  unusable.
+  which would wrongly report it as drifted. BrainCandy confirmed this reading on
+  2026-10-14 (option A).
 
   WRITABILITY IS OUT OF SCOPE. The two probes also test that the nearest existing
   directory is writable. That is not part of the usable-stream or stale-root rule.
