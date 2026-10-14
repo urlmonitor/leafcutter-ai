@@ -1,0 +1,191 @@
+id: UXP-617-1
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: approved
+priority: medium
+title: "The bare /flows address opens the finder overview with every flow listed and counted filters"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the store holds 28 flows the Flows view can draw, 25 under Leafcutter and 3 under
+    Fern & Fig,
+  When a person opens /flows from the sidebar 'Flows' link,
+  Then the finder shows an empty search box and the summary '28 flows',
+  And all 28 flows are listed, the Leafcutter flows first and the Fern & Fig flows after,
+    each product's flows ordered by name with case ignored,
+  And the Product filter shows Leafcutter 25 and Fern & Fig 3,
+  And the Actor filter shows Code 23, AI agent 17, Person 12 and Jev 8, Jev being its own
+    option and never counted under AI agent,
+  And the Kind filter shows User 6, Data 20 and Architecture 2, the Realization filter shows
+    Built 17, Spec 8 and Sample 3, and the Level filter shows Journey 14, Pipeline 13 and
+    Agent 1,
+  And the 'I/O not yet defined' option shows 9,
+  And every count is the number of flows that option alone would list, not a number of steps,
+  And no flow is drawn, no flow is selected, no breadcrumb shows and no drawer is open.
+depends_on:
+  - UXP-617
+  - UXP-591-1-i
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderOverview and its acceptance_scenario."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery record finder-overview (status_text, facet_counts) and the Flow records it counts."
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+delivers_to:
+- agent: frontend-coder
+  contract: 'Finder core in leafcutter-web/lib/flow-finder/: buildFinderIndex(flows) -> FinderIndex {flows:
+    [{id, name, product, kind, realization, level, entities: string[], screens: [{id, title}]}], nodes:
+    [{flowId, nodeId, nodeKind: ''step'' | ''branch'', order: number | null, label, text, condition: string
+    | null, actorKind: ''deterministic'' | ''llm'' | ''human'' | ''jev'' | null, acIds: string[], uses:
+    string[], produces: string[], screen: {id, title} | null, entities: string[], ioGap: boolean}]}; runFinder(index,
+    state) -> {statusText, resultCount: {flows, steps}, results, facetCounts, appliedChips, clearAllHref:
+    string | null, emptyState} in the FlowFinderQuery field shapes; state = {q: string | null, facets:
+    {product, actor, kind, realization, level, uses, produces, io, entity, screen: string[]}} holding
+    stored values. Used by UXP-617-1-i to -v, UXP-617-2 and UXP-617-2-i.'
+- agent: frontend-coder
+  contract: Finder screen components in leafcutter-web/components/flows/finder/ (search box, facet panel,
+    chips, result list, empty state, live-region summary), mounted by app/flows/page.tsx with the index
+    and the initial finder state.
+expects_from:
+  ac_id: UXP-591-1-i
+  contract: The bare /flows route answering 200 for /flows with or without a finder query, with no redirect
+    and no rewrite, and app/flows/page.tsx free of the default-entry flow render.
+it_requirements:
+- 'Finder core is one pure, isomorphic module set in a new folder leafcutter-web/lib/flow-finder/ (no
+  node:fs, no ''server-only'', no React): index building, search, facet filtering and counting, result
+  grouping and ordering, status text, and finder-address parse/build. app/flows/page.tsx (server) and
+  the client finder call the same functions, so the server HTML and the hydrated client agree (no hydration
+  mismatch).'
+- The finder index is built from the flow set lib/data/flows.ts already loads for the Flows view (the
+  stored flows plus leafcutter/artifact-knowledge-graph); no second loader and no hard-coded flow list.
+  If a node field the finder needs (actor kind, screen, entities, AC ids, io_contracts missing_bindings,
+  used/produced field keys) is not exposed yet, extend the existing loader. lib/data/ already holds 21
+  non-markdown files, so no new file goes there.
+- Facet vocabularies (facet order, stored values, labels, product labels) are declared once in leafcutter-web/lib/flow-finder/
+  and read by the facet panel, chips, address builder and counts; no per-component copy. The same declaration
+  is the source the UXP-617-5 reference documents.
+- 'Every facet count is a flow count: the number of flows the listing function returns with that option
+  alone in its facet, q and the other facets kept. Counts reuse the listing function; there is no second
+  counting rule that can drift.'
+- app/flows/page.tsx renders the finder from its searchParams on the server and answers 200; the bare-/flows
+  default-entry render and its default flow constant are deleted, not left as dead code (UXP-591-1-i).
+- 'New finder UI goes in a new folder leafcutter-web/components/flows/finder/: components/flows/ holds
+  14 non-markdown files against the 15-file cap. The finder is not grown into flow-explorer.tsx (635 lines)
+  or flow-drawer.tsx (438) or flow-nodes.tsx (429), all over the 400-line ratchet; flows-view.tsx (210)
+  must stay under 400.'
+- 'No server request per search or facet change: the client recomputes from the index it received with
+  the page.'
+- The result summary sits in one polite live region (role status) that is present in the server HTML and
+  is updated in place, not re-mounted.
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: 'bare /flows route renders the finder overview: empty search, ''<n> flows'' summary, no flow,
+    breadcrumb or drawer'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: default export of leafcutter-web/app/flows/page.tsx with empty searchParams, reading
+    the real on-disk flow store
+  description: Awaits the default export of app/flows/page.tsx with no searchParams and renders it; n
+    is the flow count the loader returns, so no live number is pinned.
+  must_catch:
+  - the bare route still renders a flow
+  - the finder renders client-only and the summary is missing from the server output
+- name: 'finder-overview replay: status_text, result order and every facet_counts value match the record'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: 'Replays FlowFinderQuery finder-overview from docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    through runFinder over the frozen finder-index fixture: ''28 flows'', Leafcutter before Fern & Fig,
+    name order ignoring case, Product, Actor, Kind, Realization, Level and io counts.'
+- name: overview counts are flow counts, not step counts, and Jev is never counted under AI agent
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  description: Over the fixture, each count equals the number of flows listed with that option alone.
+  must_catch:
+  - a count sums matching steps instead of flows
+  - jev nodes are folded into the llm count
+- name: finder screen shows the summary in a polite live region and lists every flow with no selection
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+  description: Renders the finder component with the fixture index and an empty state.
+test_rationale: 'The route test proves the finder is what the bare /flows serves; the overview replay
+  pins the approved counts without depending on the live store; the discrimination test names the two
+  likeliest wrong counts. Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest
+  run` (180 s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read
+  vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No
+  Playwright: the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by:
+  - UXP-617-1-i
+  - UXP-617-1-ii
+  - UXP-617-1-iii
+  - UXP-617-1-iv
+  - UXP-617-1-v
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderOverview'
+  (FlowFinderQuery finder-overview in the leafcutter/atlas-flows v4 dataset). The Kind,
+  Realization and Level counts come from that record, not from the scenario. The tab
+  title 'Flows · Leafcutter Atlas' that the scenario also names is specified once, in
+  UXP-617-3-ii. The routing half of the bare /flows (200, no redirect, no notice) stays
+  in the amended UXP-591-1-i, which the flow's 'bareFlows' branch still implements.
+  The counts are the store as measured for the dataset; tests should replay the
+  dataset record, or derive the expected counts from the Flow records, rather than pin
+  28 against a live store that grows.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderOverview
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+    source: real
+    asof: '2026-10-14'

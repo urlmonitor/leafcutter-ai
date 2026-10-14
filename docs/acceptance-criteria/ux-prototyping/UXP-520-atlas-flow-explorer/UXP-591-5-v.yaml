@@ -1,5 +1,5 @@
 id: UXP-591-5-v
-title: "A filter change while 'Flow not found' shows clears the notice, re-picks a flow and replaces the address in place"
+title: "A filter change while 'Flow not found' shows keeps the notice and the address and draws no flow"
 component: ux-prototyping
 components:
   - ux_prototyping
@@ -15,19 +15,17 @@ criteria: |
     history entry and shows the 'Flow not found' notice with no flow drawn, an empty breadcrumb
     and the filters Real, User, All,
   When the person sets the Kind filter to 'Architecture',
-  Then the 'Flow not found' notice disappears,
-  And "Product-truth in the leafcutter architecture", the only flow the selector lists under
-    Real, Architecture, All, is drawn with a breadcrumb of only that flow and no drawer,
-  And the address bar becomes /flows/leafcutter/product-truth-architecture with no ?step=: the
-    unknown flow's ?step=resolve is not carried over,
-  And the tab still has one history entry, because the current entry was replaced rather than a
-    new one added,
-  And when several flows match the new filters, the first one the selector lists is picked:
-    setting the Source filter to 'Mock' from the same 'Flow not found' state draws
-    "Checkout & pay (inside the buy-a-plant checkout step)" at /flows/fern-and-fig/checkout-and-pay,
-  And after the person then picks "Customer buys a plant" in the flow selector and presses Back,
-    the Atlas shows /flows/fern-and-fig/checkout-and-pay with that flow drawn, never
-    /flows/leafcutter/flow-render-pipline and never the 'Flow not found' notice.
+  Then the 'Flow not found' notice stays and no flow is drawn, because a filter change never
+    picks or swaps a flow,
+  And the address bar stays /flows/leafcutter/flow-render-pipline?step=resolve and the tab still
+    has one history entry,
+  And the flow selector lists only "Product-truth in the leafcutter architecture", the only flow
+    under Real, Architecture, All,
+  And when the person then picks that flow in the selector, one history entry is added at
+    /flows/leafcutter/product-truth-architecture with that flow drawn and a breadcrumb of only
+    that flow,
+  And Back from there returns /flows/leafcutter/flow-render-pipline?step=resolve with the
+    'Flow not found' notice and the Kind filter at 'Architecture'.
 depends_on:
   - UXP-591-5
   - UXP-591-5-iii
@@ -51,56 +49,58 @@ doc_links:
     status: exists
     relevance: Atlas routes table and how the app reads the repo; gains the /flows/<product>/<flow> addresses.
 assigned_agent: frontend-coder
-estimated_complexity: M
+estimated_complexity: S
 change_target:
-  - code
-  - ui
+- code
+- ui
 risk_surface: internal
 it_requirements:
-  - The not-found state's filter controls are live and use the UXP-591-5-iii re-pick function (first flow
-    the selector lists under the new filters).
-  - 'The change is one replace to flowHref(repicked) with no ?step= (the unknown flow''s ?step= is dropped)
-    and entry state {crumbs: [repicked], filters: new}; never a push.'
-  - The 404 view turns into a drawn flow client-side, in the same history entry. If the not-found UI is
-    the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx, the entry state written
-    by the replace wins over that boundary's server-rendered not-found props whenever the entry is shown
-    again, so Back after a later push draws fern-and-fig/checkout-and-pay, never the notice.
-  - A reload of the replaced entry renders the re-picked flow through the catch-all route with a 200.
+- On the 'Flow not found' state, a Source, Kind or Realization change rewrites the current entry with
+  the same URL (the unknown ?step= kept) and the new filters through the UXP-591-4 replace path; nothing
+  is drawn, the notice stays, and no entry is added.
+- The selector re-lists under the new filters with the same filter function the flow page uses.
+- When that entry is shown again (Back after a push), its stored filters win over the not-found boundary's
+  server-rendered defaults (Real, User, All) while the notice still shows.
+- Picking a flow from the not-found selector is the ordinary UXP-591-5 select push.
+- Behaviour inferred by the BA (not modelled by flow v6 or dataset v4); it awaits owner confirmation,
+  so readiness stays draft.
 delivers_to: null
 expects_from:
-  - ac_id: UXP-591-1-ii
-    contract: Not-found mode of the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx
-      with the full flow catalogue in the selector and filters real/user/all.
-  - ac_id: UXP-591-5-iii
-    contract: 'Re-pick function returning the first Flow id the selector lists under the new filters,
-      applied with replaceEntry(flowHref(id), {crumbs: [id], filters}).'
+- ac_id: UXP-591-1-ii
+  contract: Not-found mode of the Flows view rendered by leafcutter-web/app/flows/[...id]/not-found.tsx
+    with the full flow catalogue in the selector and filters real/user/all.
+- ac_id: UXP-591-5-iii
+  contract: A filter change as a same-URL replace carrying the new filters.
 test_spec:
-  - name: setting Kind to Architecture on the 'Flow not found' state draws product-truth-architecture
-      and replaces the address with /flows/leafcutter/product-truth-architecture at one history entry
-    target_dir: leafcutter-web/components/flows/__tests__/
-    framework: vitest
-    type: component
-    angle: criterion
-    must_catch:
-      - the unknown flow's ?step=resolve is carried to the new address
-      - the filter change pushes an entry
-      - the 'Flow not found' notice stays
-  - name: setting Source to Mock on the 'Flow not found' state picks fern-and-fig/checkout-and-pay as
-      the first listed flow
-    target_dir: leafcutter-web/components/flows/__tests__/
-    framework: vitest
-    type: component
-    angle: boundary
-  - name: after picking Customer buys a plant and pressing Back the entry shows checkout-and-pay and never
-      the 'Flow not found' notice
-    target_dir: leafcutter-web/components/flows/__tests__/
-    framework: vitest
-    type: component
-    angle: seam
-    must_catch:
-      - Back re-renders the not-found boundary's server props instead of the stored entry state
-test_rationale: The risk is the not-found boundary reasserting itself after the replace; the Back test
-  is the one that catches it.
+- name: Kind Architecture on 'Flow not found' keeps the notice, the address and one entry, and the selector
+    lists only product-truth-architecture
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: component
+  angle: criterion
+  must_catch:
+  - the filter change draws a flow
+  - the unknown ?step=resolve is dropped
+  - the filter change pushes an entry
+  - the notice is cleared
+- name: picking Product-truth in the leafcutter architecture pushes its canonical address with a one-flow
+    breadcrumb
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: component
+  angle: criterion
+- name: Back from there returns the 'Flow not found' entry with Kind Architecture
+  target_dir: leafcutter-web/__tests__/uxp-591-5/
+  framework: vitest
+  type: component
+  angle: seam
+  must_catch:
+  - the not-found boundary's server defaults overwrite the stored filters
+test_rationale: 'The risk is the not-found boundary reasserting Real, User, All on Back; the seam test
+  catches it. Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180
+  s timeout). Known gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest tests
+  yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright:
+  the harness is deferred by the owner.'
 test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
@@ -109,6 +109,23 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: '2026-10-14 business-analyst: criteria REPLACED for UXP-617. Owner decision
+    2026-10-12: a filter change never swaps the drawn flow. Old behaviour (owner ruling
+    at the AC gate 2026-10-09, decision (2)(c)): a filter change on ''Flow not found''
+    cleared the notice, drew the first flow the selector lists and replaced the address.
+    New behaviour, inferred by the BA from the never-swap rule because neither flow
+    v6 nor dataset v4 models a filter change on ''Flow not found'' (the dataset''s
+    filter invariant requires the previous state to show a graph): the notice and
+    the address stay, no flow is drawn, the selector re-lists under the new filters
+    and no entry is added. NEEDS OWNER CONFIRMATION before readiness goes back up.
+    Title changed. Readiness lowered approved -> draft; it_requirements, expects_from
+    (the re-pick function of UXP-591-5-iii) and the test_spec describe the rejected
+    behaviour.'
+  agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -125,3 +142,6 @@ notes: |
   filter change adds no history entry. UXP-591-5-ii's Back-onto-an-unknown-id clause concerns a
   'Flow not found' entry nobody changed a filter on; once a filter change replaces that entry, it
   returns as the re-picked flow.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): the re-pick behaviour above is retired; see
+  amended_by. Still no flow node maps to this AC.

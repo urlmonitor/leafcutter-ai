@@ -1,5 +1,5 @@
 id: UXP-591-1-i
-title: "The bare /flows address keeps its address and opens the default entry flow"
+title: "The bare /flows address keeps its address and opens the finder, not a flow"
 component: ux-prototyping
 components:
   - ux_prototyping
@@ -11,13 +11,14 @@ work_status: todo
 readiness: approved
 priority: medium
 criteria: |
-  Given flows can be opened by their canonical addresses,
+  Given flows can be opened by their own addresses,
   When a person opens /flows from the sidebar 'Flows' link,
-  Then the address bar stays /flows, with no redirect,
-  And the default entry flow leafcutter/deliver-a-feature ("Deliver a feature end-to-end") is
-    drawn with Source Real, Kind User and Realization All,
-  And the breadcrumb shows only "Deliver a feature end-to-end",
-  And no drawer is open and neither a 'Flow not found' nor a 'Step not found' notice shows.
+  Then the Atlas answers 200 with no redirect and the address bar stays /flows,
+  And the finder overview of UXP-617-1 shows instead of a flow: no flow is drawn or selected,
+  And no breadcrumb shows, no drawer is open, and neither a 'Flow not found' nor a
+    'Step not found' notice shows,
+  And /flows?q=selected+option&actor=human likewise answers 200 with no redirect, keeps that
+    address and opens the finder with the search 'selected option' and the Actor value Person.
 depends_on:
   - UXP-591-1
 doc_links:
@@ -40,51 +41,67 @@ doc_links:
 assigned_agent: frontend-coder
 estimated_complexity: S
 change_target:
-  - code
-  - ui
+- code
+- ui
 risk_surface: contract_boundary
 it_requirements:
-  - 'No redirect for the bare /flows: neither leafcutter-web/middleware.ts nor leafcutter-web/next.config.mjs
-    may redirect or rewrite /flows when the request carries no ''flow'' query parameter; the legacy 308
-    of UXP-591-2-iii keys on that parameter alone.'
-  - The default entry flow id (leafcutter/deliver-a-feature) is defined in exactly one place and shared
-    by the bare-/flows render (leafcutter-web/app/flows/page.tsx) and the drawer replace on bare /flows
-    (UXP-591-4, UXP-591-4-ii); no second literal.
-  - The bare entry goes through the same FlowsView initial-props path as a canonical address (flow = default
-    entry, crumbs = [default entry], filters Real/User/All, step null), so the two entries cannot drift.
-  - 'The client must not rewrite /flows on mount: the address only changes on a drawer action (UXP-591-4)
-    or a navigation (UXP-591-5).'
-delivers_to: null
+- 'No redirect and no rewrite for /flows with or without a finder query: neither leafcutter-web/middleware.ts
+  nor next.config.mjs redirects or rewrites /flows unless a ''flow'' parameter is present (the UXP-591-2-iii
+  legacy 308).'
+- app/flows/page.tsx renders the finder of UXP-617-1 from its searchParams. The default-entry flow constant
+  and the bare-/flows FlowsView initial-props path are removed; no default flow id remains in app/flows/page.tsx,
+  components/flows/flow-view-model.ts or lib/flow-url.ts.
+- The bare /flows never calls notFound() and never shows the 'Flow not found' or 'Step not found' notice.
+- The client does not rewrite /flows on mount, including not canonicalising a finder query; the address
+  changes only on a finder edit (UXP-617-2) or a navigation.
+delivers_to:
+  agent: frontend-coder
+  contract: The /flows route (leafcutter-web/app/flows/page.tsx) answering 200 for /flows with or without
+    a finder query and no 'flow' parameter, keeping its address and mounting the finder with the initial
+    state parsed from searchParams. UXP-617-1 and UXP-617-2 build on it.
 expects_from:
   ac_id: UXP-591-1
-  contract: FlowsView initial props {flowId, crumbs, filters, step} as the canonical route passes them,
-    and flowHref from the edge-safe address module.
+  contract: 'The canonical route split: app/flows/page.tsx for the bare /flows and app/flows/[...id]/page.tsx
+    for /flows/<flow id>, with flowHref from leafcutter-web/lib/flow-url.ts.'
 test_spec:
-  - name: middleware passes the bare /flows through without a redirect or rewrite
-    target_dir: leafcutter-web/__tests__/
-    framework: vitest
-    type: integration
-    angle: criterion
-    surface_invoked: default export of leafcutter-web/middleware.ts with a NextRequest for http://localhost/flows
-    must_catch:
-      - the legacy-link 308 fires on /flows without a flow parameter
-  - name: bare /flows route renders Deliver a feature end-to-end with Real, User, All, a one-flow breadcrumb,
-      no drawer and no notice
-    target_dir: leafcutter-web/__tests__/
-    framework: vitest
-    type: integration
-    angle: reachability
-    surface_invoked: default export of leafcutter-web/app/flows/page.tsx
-    description: Neither the 'Flow not found' nor the 'Step not found' notice is rendered.
-  - name: the bare /flows entry keeps window.location at /flows after mount
-    target_dir: leafcutter-web/components/flows/__tests__/
-    framework: vitest
-    type: component
-    angle: failure
-    must_catch:
-      - FlowsView replaces /flows with /flows/leafcutter/deliver-a-feature on mount
-test_rationale: The no-redirect promise can break in two places, the middleware and the client mount,
-  so each gets its own test; the bare route render is the reachability proof for the default entry.
+- name: middleware passes /flows and /flows?q=selected+option&actor=human through with no redirect or
+    rewrite
+  target_dir: leafcutter-web/__tests__/uxp-591-1/
+  framework: vitest
+  type: integration
+  angle: criterion
+  surface_invoked: default export of leafcutter-web/middleware.ts with NextRequests for both addresses
+  must_catch:
+  - the legacy 308 fires on /flows without a flow parameter
+- name: 'bare /flows route renders the finder: no flow drawn or selected, no breadcrumb, drawer or notice'
+  target_dir: leafcutter-web/__tests__/uxp-591-1/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: default export of leafcutter-web/app/flows/page.tsx
+  must_catch:
+  - the bare route still draws leafcutter/deliver-a-feature
+- name: /flows?q=selected+option&actor=human opens the finder with the search and the Person value
+  target_dir: leafcutter-web/__tests__/uxp-591-1/
+  framework: vitest
+  type: integration
+  angle: criterion
+  surface_invoked: 'default export of leafcutter-web/app/flows/page.tsx with searchParams {q: ''selected
+    option'', actor: ''human''}'
+- name: the address stays /flows, and stays a non-canonical finder query as typed, after mount
+  target_dir: leafcutter-web/__tests__/uxp-591-1/
+  framework: vitest
+  type: component
+  angle: failure
+  must_catch:
+  - the client replaces /flows with a flow address on mount
+  - the client canonicalises the finder query on mount
+test_rationale: 'The no-redirect promise can break in the middleware and on client mount, so each gets
+  a test; the route render is the reachability proof that the finder replaced the default entry. Tests
+  are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known
+  gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest tests yet, so build
+  by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is
+  deferred by the owner.'
 test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
@@ -93,6 +110,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: '2026-10-14 business-analyst: criteria amended for UXP-617 (Atlas Flow finder;
+    flow leafcutter/explore-flows-in-atlas v6, branch bareFlows). Owner decision 2026-10-12:
+    bare /flows is the finder overview, not the default entry flow leafcutter/deliver-a-feature.
+    Kept: 200, no redirect, address unchanged, no breadcrumb, drawer or notice. Removed:
+    the default flow drawn with Real, User, All and its one-flow breadcrumb. Added:
+    a /flows address with a finder query also opens without a redirect. Readiness
+    lowered approved -> draft; it_requirements, expects_from and test_spec still describe
+    the default-entry render and need IT-PO re-enrichment.'
+  agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -102,6 +132,12 @@ notes: |
   'openByLink'; FlowRoute route-bare-flows). Keeps today's entry behaviour deliberately now
   that flows have their own addresses. What happens to /flows once a drawer opens there is
   owner ruling 1, covered by UXP-591-4 and UXP-591-4-ii.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): flow v6 rewrote 'bareFlows' so the bare /flows
+  opens the finder; the flow keeps this AC's id as the branch's implementer, so the AC is amended
+  rather than superseded. The finder's content is UXP-617-1; this AC keeps the route half. The
+  paragraph above about keeping today's entry behaviour and owner ruling 1 is history: ruling 1 has
+  nothing left to act on (no drawer opens on the finder).
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: bareFlows

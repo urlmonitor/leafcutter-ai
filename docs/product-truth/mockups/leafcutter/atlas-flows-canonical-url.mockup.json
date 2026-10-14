@@ -2,13 +2,14 @@
   "id": "leafcutter/atlas-flows-canonical-url",
   "component": "ux-prototyping",
   "screen": "atlas-flows-canonical-url",
-  "title": "Atlas Flows: canonical flow URLs",
-  "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. From leafcutter/atlas-flows v2.",
+  "title": "Atlas Flows: canonical flow URLs, actor badges and filters",
+  "summary": "Atlas /flows with canonical URLs: /flows/<flow id> and /flows/<flow id>?step=<id>. Shows shared, default and mock links, step and branch deep links with drawers, 'Step not found', a legacy link redirected (308), 404 'Flow not found' states, AC-drawer links, and history sessions. Drawer open/close writes ?step= with history replace (no Back entries); drill and select push. Open build detail: the drawer scrim blocks a direct drawer switch. Flow-page quick wins (leafcutter/atlas-flows v4): every step card shows an actor badge (Code, AI agent, Person or Jev) and an accessible name; Enter opens a step's drawer; the drawer close button is named 'Close step details'; changing a filter never swaps the drawn flow and raises an 'Outside the current filters' notice instead; each flow page has its own tab title. The bare /flows address is no longer a drawn default flow: it is the finder, screen atlas-flows-finder. From leafcutter/atlas-flows v4.",
   "entities": [
     "Flow",
     "FlowRoute",
     "FlowAppearance",
-    "FlowNavigation"
+    "FlowNavigation",
+    "FlowNode"
   ],
   "source": "mock",
   "realization": "spec",
@@ -16,7 +17,7 @@
   "status": "active",
   "superseded_by": null,
   "readiness": "draft",
-  "version": 1,
+  "version": 2,
   "shape_version": 1,
   "tags": [
     "atlas",
@@ -27,7 +28,12 @@
     "legacy-redirect",
     "browser-history",
     "not-found",
-    "drawer-history"
+    "drawer-history",
+    "actor-badge",
+    "keyboard-access",
+    "page-title",
+    "filter-keeps-flow",
+    "ac-deep-link"
   ],
   "mock_data_ref": "leafcutter/atlas-flows",
   "provenance": [
@@ -42,6 +48,12 @@
       "by": "mockup-author",
       "date": "2026-10-09",
       "note": "Extended the same day, still before the first commit (version stays 1), to dataset v2 and the owner's mockup-gate decision of 2026-10-09: opening a step drawer writes ?step=<id> and closing removes it, with history replace (no new Back entries); drill and select still push. Added the drawer-history sessions (nav-drawer-replace, nav-drawer-in-history, nav-select-from-open-drawer) with address bar and history stack per action, and labelled the FlowDrawer scrim drawer-to-drawer switch as an open build detail."
+    },
+    {
+      "action": "extended",
+      "by": "mockup-author",
+      "date": "2026-10-13",
+      "note": "Extended to dataset v4 (UXP-591 findability): replaced the 'Bare /flows keeps the default entry' section, which v4 retires, with a pointer to the finder screen; added actor badges and accessible card names (FlowNode), Enter-to-open and the 'Close step details' button, the 'Outside the current filters' notice (filter-replace session), and a tab title on every panel plus a titles table. Styled from the Atlas tokens via docs/ui-context.md (globals.css, layout.tsx)."
     }
   ]
 }

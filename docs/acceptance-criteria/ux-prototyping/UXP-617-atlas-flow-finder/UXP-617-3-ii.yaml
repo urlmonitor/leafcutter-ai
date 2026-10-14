@@ -1,0 +1,131 @@
+id: UXP-617-3-ii
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: approved
+priority: medium
+title: "Every flow page, the finder and 'Flow not found' have their own tab title"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the flows How a flow renders in the Atlas and Deliver a feature end-to-end exist and
+    no flow has the id leafcutter/flow-render-pipline,
+  When a person opens /flows/leafcutter/flow-render-pipeline,
+    /flows/leafcutter/flow-render-pipeline?step=resolve, /flows and
+    /flows/leafcutter/flow-render-pipline,
+  Then the tab title reads 'How a flow renders in the Atlas · Flows · Leafcutter Atlas' for
+    both flow addresses,
+  And it reads 'Flows · Leafcutter Atlas' for the finder,
+  And it reads 'Flow not found · Flows · Leafcutter Atlas' for the unknown id,
+  And after drilling from /flows/leafcutter/deliver-a-feature into 'Build' the title becomes
+    'How a ticket is built (the phase chain) · Flows · Leafcutter Atlas',
+  And Back restores 'Deliver a feature end-to-end · Flows · Leafcutter Atlas'.
+depends_on:
+  - UXP-617-3
+  - UXP-591-1-ii
+  - UXP-591-5
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step pageTitle and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowRoute.page_title invariant."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+- ac_id: UXP-591-5
+  contract: Push and popstate paths, on which the title follows the drawn flow.
+- ac_id: UXP-617-2-i
+  contract: The finder/flow mode switch in one client tree.
+it_requirements:
+- One title builder produces '<flow name> · Flows · Leafcutter Atlas', 'Flows · Leafcutter Atlas' and
+  'Flow not found · Flows · Leafcutter Atlas'; the server metadata and the client updates both use it.
+- The title is correct in the server HTML for a flow address, a step address, the finder and an unknown
+  flow id. Next.js 14 handles not-found metadata differently from page metadata, so the unknown-id title
+  must be proven on the server output, not assumed.
+- Client-side pushes, finder/flow mode switches and pops set document.title to what is shown; a drawer
+  replace does not change it.
+test_spec:
+- name: server metadata gives the flow title for /flows/leafcutter/flow-render-pipeline with and without
+    ?step=resolve, and the finder title for /flows
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: integration
+  angle: reachability
+  surface_invoked: metadata / generateMetadata exports of leafcutter-web/app/flows/[...id]/page.tsx and
+    app/flows/page.tsx
+- name: an unknown flow id gets 'Flow not found · Flows · Leafcutter Atlas' in the server output
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: integration
+  angle: failure
+  surface_invoked: leafcutter-web/app/flows/[...id] route for leafcutter/flow-render-pipline
+  must_catch:
+  - the not-found render keeps the root layout title
+- name: drilling into Build sets the sub-flow title and Back restores 'Deliver a feature end-to-end ·
+    Flows · Leafcutter Atlas'
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: component
+  angle: seam
+  must_catch:
+  - document.title is set on push but not on popstate
+- name: every FlowRoute and FlowNavigation page_title in atlas-flows.mock.json equals the title builder's
+    output
+  target_dir: leafcutter-web/__tests__/uxp-617-3/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+test_rationale: 'The server and client title paths are different code, so each gets its own test. Tests
+  are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known
+  gap: the build pipeline''s red-baseline and done-proof checks cannot read vitest tests yet, so build
+  by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is
+  deferred by the owner.'
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'pageTitle'. Placed under
+  UXP-617-3 for the cap reasons that AC records. The title must be right on first load
+  (server-rendered) as well as after client-side drills and Back, which are two different
+  paths.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: pageTitle
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+      - FlowRoute
+    source: real
+    asof: '2026-10-14'

@@ -1,0 +1,158 @@
+id: UXP-617-1-i
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: approved
+priority: medium
+title: "Searching 'selected option' lists the 5 flows and 27 steps whose names, text, fields, criteria, screens or entities match every word"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the store as measured on 2026-10-12, in which several decision flows have steps that
+    use or produce the field decision_record.selected_option_id,
+  When the person types 'selected option' into the search box on /flows,
+  Then the summary reads '5 flows, 27 steps match',
+  And the listed flows are, in this order, Publishing the decision record (7 matching steps),
+    Retrieving a decision as precedent (6), Forming a decision in a kernel run (5), Staging the
+    decision record (5) and How a decision is formed, saved, stored and reused (4),
+  And typing 'Selected Option' lists the same 5 flows and 27 steps, because case is ignored,
+  And a step matches only when every typed word starts a word of one single target of that
+    step: its label, its text together with its condition, one of its AC ids, one input or
+    output field name, its screen id together with its screen title, or one entity it reads or
+    writes,
+  And words are split at every character that is not a letter or a digit, so 'selected option'
+    matches the field decision_record.selected_option_id,
+  And a step whose label contains 'selected' while only its text contains 'option' does not
+    match,
+  And typing 'UXP-210d' lists 2 flows with 8 matching steps, found by their AC ids,
+  And each new summary is announced to screen readers as a polite status update.
+depends_on:
+  - UXP-617-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderSearch and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-selected-option and finder-ac-prefix; the search-matching invariant."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-617-1
+  contract: runFinder(index, state) and the FinderIndex node shape {label, text, condition, acIds, uses,
+    produces, screen, entities}, plus the search box and live-region summary.
+it_requirements:
+- 'One tokenizer is shared by the query and every target: case-insensitive, splitting at every character
+  that is not a letter or a digit (Unicode-aware), so snake_case, kebab-case, dotted field keys and AC
+  ids split.'
+- 'The one-target rule is enforced per target: a node matches only when every query word starts a word
+  of one single target. Targets are never pooled or concatenated per node.'
+- 'Targets are exactly the dataset''s list: label; text with condition; each AC id; each used and each
+  produced field key; screen id with screen title; each entity read or written. A flow''s own targets
+  are its name with its id, and each declared entity.'
+- Used/produced field keys and their labels come from the same derivation the drawer's Inputs/Outputs
+  tables use (<contract>.<JSON-pointer segments joined by '.'>); one implementation, moved into a pure
+  shared module if it currently lives inside a component.
+- Results recompute on each edit of the search box without a server request; the search text is trimmed
+  and an empty search shows the overview.
+- Each new summary is written into the existing polite live region; the region is not re-created per change.
+- Expected values come from the leafcutter/atlas-flows v4 dataset records, replayed against a frozen finder-index
+  fixture in leafcutter-web/fixtures/flow-finder/ produced by the finder's own index builder from docs/product-truth/flows/
+  at the dataset's measurement commit (provenance recorded in the fixture); tests never pin counts against
+  the live store, which grows. fixtures/** is already excluded from vitest collection.
+test_spec:
+- name: '''selected option'' replay: ''5 flows, 27 steps match'' with the five flows in record order and
+    their matching step counts'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-selected-option over the frozen fixture.
+- name: '''Selected Option'' returns the same flows and steps as ''selected option'''
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: criterion
+  must_catch:
+  - the search is case-sensitive
+- name: a node with 'selected' only in its label and 'option' only in its text does not match
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: discrimination
+  description: Built from a two-target node so the pooled-text implementation is caught.
+  must_catch:
+  - words are matched against the node's targets pooled into one string
+  - a word may match anywhere in a word rather than at its start
+- name: the tokenizer splits decision_record.selected_option_id and UXP-210d into their words
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: boundary
+- name: '''UXP-210d'' replay lists 2 flows with 8 matching steps found by AC id'
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: unit
+  angle: real_artifact
+  description: Replays FlowFinderQuery finder-ac-prefix.
+- name: typing into the search box updates the polite live region with the new summary
+  target_dir: leafcutter-web/__tests__/uxp-617-1/
+  framework: vitest
+  type: component
+  angle: criterion
+  description: Renders the finder with the fixture index; asserts the role status region text changes
+    in place.
+test_rationale: 'The one-target clause is the one most likely to be built wrong while still passing the
+  headline example, so it gets its own discrimination test. Tests are vitest under leafcutter-web/__tests__/,
+  run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline''s red-baseline and
+  done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest,
+  as the UXP-591 epic was. No Playwright: the harness is deferred by the owner.'
+test_required: true
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderSearch'. The one-target
+  rule (every word must hit the same target), the AC-id example and the live-region
+  announcement come from the leafcutter/atlas-flows v4 dataset (search invariant,
+  FlowFinderQuery finder-ac-prefix, status_text field), not from the scenario. The one-target
+  rule is the clause most likely to be built wrong: a search that pools all of a step's text
+  matches more steps and still passes the 'selected option' example.
+
+  IT-PO 2026-10-14: Tests are vitest under leafcutter-web/__tests__/, run host-side with `npx vitest run` (180 s timeout). Known gap: the build pipeline's red-baseline and done-proof checks cannot read vitest tests yet, so build by direct phase dispatch with host-run vitest, as the UXP-591 epic was. No Playwright: the harness is deferred by the owner. Expected numbers come from replaying the leafcutter/atlas-flows v4 records against the frozen finder-index fixture (leafcutter-web/fixtures/flow-finder/), never from pinning counts against the live store.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderSearch
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+      - FlowNode
+    source: real
+    asof: '2026-10-14'
