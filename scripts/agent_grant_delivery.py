@@ -71,7 +71,7 @@ def _classify(stem: str, root: str, text: str, want: set[str], known: set[str]) 
     if not accounts:
         return [{**base, "kind": "undelivered", "missing": sorted(want)}]
     named = {i for account in accounts for i in account["ids"]}
-    findings = []
+    findings: list[dict[str, Any]] = []
     if want - named:
         findings.append({**base, "kind": "short-section", "missing": sorted(want - named)})
     if named - want:

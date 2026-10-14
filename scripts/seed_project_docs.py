@@ -51,9 +51,8 @@ def _resolve_target_dir(project_root: Path) -> Path:
         sys.path.insert(0, str(scripts_dir))
     try:
         from path_resolver import resolve_path  # type: ignore[import]
-        rel = resolve_path("docs.architecture", package_root=_PACKAGE_ROOT)
-        return (project_root / rel).resolve()
-    except Exception:
+        return resolve_path("docs.architecture", project_root=project_root).resolve()
+    except (ImportError, KeyError):
         # Graceful fallback when path_resolver is unavailable.
         return (project_root / "docs" / "architecture").resolve()
 

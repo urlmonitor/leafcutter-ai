@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -89,8 +89,12 @@ amended_by:
     date: '2026-10-12'
     changed: "criteria, last clause: 'when the setting is absent altogether the compiled step is identical to the empty-value one' REPLACED by 'when the setting is absent altogether the compiled step tells changelog-agent to read the shipped default rules location and apply its rules -- it is not the empty-value step'. Other clauses unchanged. WHY: user decision 11 (BrainCandy, 2026-10-12): \"\" = feature off (changelog-agent uses its built-in categories); an ABSENT key = the shipped default path from config/skills_config.default.json. assigned_agent was also changed llm-expert -> python-coder at enrichment (no conditional template syntax exists; the choice is made at compile time)."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_1500h_2.py
+implemented_by:
+  - scripts/compile_computed_steps.py
+  - scripts/template_compiler.py
+  - templates/agents/changelog-agent.md
 notes: |
   BP-1500h names this as "the one place instructions describe the case". The
   instruction today works only because the failed read is discarded -- an

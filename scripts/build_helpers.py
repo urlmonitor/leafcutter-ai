@@ -55,6 +55,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import config_paths
 from build_colors import dry_run as _dry_run
 from build_colors import info as _info
 from build_colors import success as _success
@@ -141,9 +142,11 @@ def _load_build_phases_module(package_root: Path):
     module_path = package_root / "scripts" / "build_phases.py"
     unique_name = f"_build_helpers_dyn_build_phases_{abs(hash(str(module_path)))}"
     spec = importlib.util.spec_from_file_location(unique_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(str(module_path), path=str(module_path))
     module = importlib.util.module_from_spec(spec)
     sys.modules[unique_name] = module
-    spec.loader.exec_module(module)  # type: ignore[union-attr]
+    spec.loader.exec_module(module)
     return module
 
 
@@ -428,7 +431,7 @@ def _compute_output_mappings(
     # package_root without a full scripts/ tree (e.g. a minimal fixture that
     # only exercises one of the other families below) degrades to skipping
     # just this section instead of aborting the whole computation.
-    build_phases_mod = None
+    build_phases_mod: Any = None
     phase_mappings: list[tuple[Path, Path]] = []
     try:
         build_phases_mod = _load_build_phases_module(package_root)
@@ -497,15 +500,12 @@ def _compute_output_mappings(
                     "deploy this phase)"
                 )
             continue
-
         canonical_output = _canonicalize_output_path(target, output_root, target_root)
         if canonical_output is None:
             continue  # no canonical shim for this family (e.g. cursor/copilot)
-
         content = _render_phase_source(source, _template_family(source, templates_dir))
         if content is None:
             continue
-
         _add(source, canonical_output, content)
 
     # --- skills (.md compiled; every other real file copied verbatim) ---
@@ -650,7 +650,7 @@ def _compute_output_mappings(
             if canonical_output is None:
                 continue
             if text_suffixes is None or tpl.suffix in text_suffixes:
-                content = inject_config(tpl.read_text(encoding="utf-8"), config)
+                content: str | bytes = inject_config(tpl.read_text(encoding="utf-8"), config)
             else:
                 content = tpl.read_bytes()
             _add(tpl, canonical_output, content)
@@ -767,18 +767,14 @@ def _compute_output_mappings(
         if on_disk != content:
             return  # Customised by the project — not this build's to register.
         _add(template_path, output_path, content)
-
     precommit_autofix_tpl = templates_dir / "scripts" / "precommit-autofix.json"
-    if precommit_autofix_tpl.is_file():
-        precommit_autofix_rel = config.get(
-            "precommit_autofix_config_path", ".claude/precommit-autofix.json"
-        )
+    precommit_autofix_path = config_paths.scaffold_target(precommit_autofix_tpl, config, "precommit_autofix_config_path", target_root)
+    if precommit_autofix_path is not None:
         _register_scaffold_if_unmodified(
             precommit_autofix_tpl,
-            target_root / precommit_autofix_rel,
+            precommit_autofix_path,
             precommit_autofix_tpl.read_text(encoding="utf-8"),
         )
-
     # changelog_categories.md has no template FILE of its own — its content
     # is a hardcoded string constant in build_config_scaffolds.py — so the
     # constant is imported (never duplicated as a second, driftable literal
@@ -788,11 +784,9 @@ def _compute_output_mappings(
     # already active is safe even though build_config_scaffolds.py, like
     # build_phases.py, resolves other (unused-here) constants from its own
     # ``__file__`` at import time.
-    changelog_categories_rel = config.get(
-        "changelog_categories_path", ".claude/changelog_categories.md"
-    )
     build_config_scaffolds_src = package_root / "scripts" / "build_config_scaffolds.py"
-    if build_config_scaffolds_src.is_file():
+    changelog_categories_path = config_paths.scaffold_target(build_config_scaffolds_src, config, "changelog_categories_path", target_root)
+    if changelog_categories_path is not None:
         try:
             from build_config_scaffolds import (  # type: ignore[import]
                 _CHANGELOG_CATEGORIES_SCAFFOLD,
@@ -802,10 +796,9 @@ def _compute_output_mappings(
         else:
             _register_scaffold_if_unmodified(
                 build_config_scaffolds_src,
-                target_root / changelog_categories_rel,
+                changelog_categories_path,
                 _CHANGELOG_CATEGORIES_SCAFFOLD,
             )
-
     # --- committed .claude/ scaffold mirror (BP-100k-5-ii) ---
     # BP-100k-5's longest-prefix-first canonicalisation put ".claude" itself
     # into check_output_drift.py's scan set: ANY bare-".claude"-parented key
@@ -843,7 +836,6 @@ def _compute_output_mappings(
     # owned by the project, so a pristine-render comparison would only ever
     # buy one commit before flipping back to an unregistered gap).
     _claude_tickets_dir = target_root / ".claude" / "tickets"
-
     ticket_lifecycle_manifest_tpl = package_root / "config" / "ticket_lifecycle.json"
     if ticket_lifecycle_manifest_tpl.is_file():
         _register_scaffold_if_unmodified(
@@ -1506,11 +1498,7 @@ def install_shims(
 
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         method = _create_shim(canonical_path, source_path, strategy)
-        results.append({
-            "canonical": canonical_rel,
-            "target": output_rel,
-            "method": method,
-        })
+        results.append({"canonical": canonical_rel, "target": output_rel, "method": method})
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     for canonical_rel, output_rel in file_shims:  # single-file shims
@@ -1528,11 +1516,7 @@ def install_shims(
                 results.append(veto)
                 continue
             if not force:
-                results.append({
-                    "canonical": canonical_rel,
-                    "target": output_rel,
-                    "method": "skipped (exists)",
-                })
+                results.append({"canonical": canonical_rel, "target": output_rel, "method": "skipped (exists)"})
                 continue
             if not dry_run:
                 try:
@@ -1553,11 +1537,7 @@ def install_shims(
 
         canonical_path.parent.mkdir(parents=True, exist_ok=True)
         method = _create_file_shim(canonical_path, source_path, strategy)
-        results.append({
-            "canonical": canonical_rel,
-            "target": output_rel,
-            "method": method,
-        })
+        results.append({"canonical": canonical_rel, "target": output_rel, "method": method})
         _info(f"shim: {canonical_rel} -> {output_rel} ({method})")
 
     return results
