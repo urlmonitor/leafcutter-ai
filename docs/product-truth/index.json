@@ -202,9 +202,9 @@
       "version": 3,
       "entities": [],
       "impl_summary": {
-        "done": 4,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 1,
+        "not_started": 0,
         "total": 5,
         "asof": "2026-10-14"
       },
@@ -2111,11 +2111,11 @@
       "level": "pipeline",
       "entities": [],
       "path": "flows/leafcutter/generate-product-truth.flow.json",
-      "impl_status": "in_progress",
+      "impl_status": "done",
       "impl_summary": {
-        "done": 4,
+        "done": 5,
         "in_progress": 0,
-        "not_started": 1,
+        "not_started": 0,
         "total": 5,
         "asof": "2026-10-14"
       },
