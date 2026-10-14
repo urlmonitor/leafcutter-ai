@@ -135,7 +135,8 @@ amended_by:
     in-progress generation that is outside both bounds and must survive."
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-2.md
 change_target: code
 risk_surface: contract_boundary
 notes: |
