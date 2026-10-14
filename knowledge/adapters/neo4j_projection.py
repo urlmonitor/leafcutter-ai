@@ -5,6 +5,8 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 19:00 [python-coder]: Guard the failed-status write so removal always runs and the original error is re-raised with a never-empty cause. (#KM-400b-5-i/02)
+- 2026-10-14 18:00 [python-coder]: Remove a failed publication's own generation by key and report it with the original cause. (#KM-400b-5-i)
 - 2026-10-14 15:00 [python-coder]: Count check names each mismatched kind with expected and kept figures and publishes them. (#KM-400b-2-ii)
 - 2026-10-14 14:00 [python-coder]: Collapse identical relationships in publish, before the first write. (#KM-400b-2-i/01)
 - 2026-10-01 12:00 [python-coder]: Separate build transactions from publication CAS. (#TICKET-KM-400b-3)
@@ -22,6 +24,7 @@ if TYPE_CHECKING:
 
 import hashlib
 import json
+import logging
 import time
 
 from knowledge.adapters.domain_schema import EDGE_TYPES, NODE_LABELS
@@ -29,6 +32,7 @@ from knowledge.adapters.neo4j_backend import scope_key
 from knowledge.projection.validation import collapse_identical_edges, validate_snapshot
 from knowledge.errors import BackendUnavailable
 
+logger = logging.getLogger(__name__)
 
 # Control records are separate from the generation-scoped native domain nodes.
 _CONTROL_SCHEMA_QUERY = (
@@ -56,6 +60,8 @@ async def publish(
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     # Counts belong to this publication only; an already-ready generation reports none.
     db.publication_counts = None
+    # Nothing is stored until the build starts; a failure before then removes nothing.
+    db.publication_removal = {"outcome": "nothing_stored"}
     collapse_identical_edges(snapshot)  # in place, before any node or relationship is written
     validate_snapshot(snapshot)
     unsupported = await db._run(_CONTROL_SCHEMA_QUERY, {"repo": snapshot.repository_id})
@@ -96,11 +102,7 @@ async def publish(
                 db, key, len(snapshot.nodes), len(snapshot.edges)
             )
         except (ValueError, BackendUnavailable) as error:
-            await db._run(
-                'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="failed",g.error_code=$code,g.failed_at=$now',
-                {"key": key, "code": type(error).__name__, "now": time.time()},
-                True,
-            )
+            await _record_failed_generation(db, key, error)
             raise
         await db._run(
             'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="validated", g.validated_at=$now',
@@ -109,6 +111,86 @@ async def publish(
         )
     return await switch_active(
         db, snapshot.repository_id, snapshot.generation_id, expected_generation
+    )
+
+
+async def _record_failed_generation(
+    db: Neo4jBackend, key: str, error: ValueError | BackendUnavailable
+) -> None:
+    """Mark a failed attempt, remove its own generation, and append the outcome to its cause.
+
+    The status write is best effort: its own failure is logged and the removal still runs,
+    so the caller always re-raises the original publication failure.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        key: Trusted hashed repository/generation scope key of the failed attempt.
+        error: The original publication failure; its message gains the removal outcome.
+    """
+    try:
+        await db._run(
+            'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="failed",g.error_code=$code,g.failed_at=$now',
+            {"key": key, "code": type(error).__name__, "now": time.time()},
+            True,
+        )
+    except BackendUnavailable as status_error:
+        logger.warning("failed generation could not be marked failed: %s", status_error)
+    removal = await _remove_own_generation(db, key)
+    db.publication_removal = removal
+    cause = str(error) or type(error).__name__
+    error.args = (f"{cause}; {_removal_statement(removal)}", *error.args[1:])
+
+
+async def _remove_own_generation(db: Neo4jBackend, key: str) -> dict:
+    """Remove the nodes and relationships tagged to one failed attempt's own generation key.
+
+    Matching is by the attempt's generation key only, never by failed status, so no other
+    generation or repository is touched. A failure of the removal itself never replaces
+    the publication failure being reported.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        key: Trusted hashed repository/generation scope key of the failed attempt.
+
+    Returns:
+        ``removed`` with node and relationship figures taken before deleting, or
+        ``not_removed`` with the removal failure reason.
+    """
+    params = {"key": key}
+    try:
+        nodes = await db._run(
+            "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) RETURN count(n) AS count", params
+        )
+        links = await db._run(
+            "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() RETURN count(r) AS count",
+            params,
+        )
+        await db._run(
+            "MATCH ()-[r:" + EDGE_TYPES + " {generation_key:$key}]->() DELETE r", params, True
+        )
+        await db._run(
+            "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) DETACH DELETE n", params, True
+        )
+    except BackendUnavailable as removal_error:
+        logger.warning("failed generation could not be removed: %s", removal_error)
+        return {"outcome": "not_removed", "reason": str(removal_error)}
+    return {"outcome": "removed", "nodes": nodes[0]["count"], "relationships": links[0]["count"]}
+
+
+def _removal_statement(removal: dict) -> str:
+    """State the removal outcome of a failed generation for the failure message.
+
+    Args:
+        removal: Outcome returned by ``_remove_own_generation``.
+
+    Returns:
+        A sentence fragment appended after the original failure cause.
+    """
+    if removal["outcome"] != "removed":
+        return "failed generation not removed: " + removal["reason"]
+    return (
+        f"failed generation removed: {removal['nodes']} entity records, "
+        f"{removal['relationships']} relationships"
     )
 
 
