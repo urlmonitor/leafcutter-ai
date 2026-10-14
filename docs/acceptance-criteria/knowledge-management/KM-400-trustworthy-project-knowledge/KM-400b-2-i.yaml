@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400b-2
 criteria: |
   Given valid generation A is active for the repository
@@ -58,7 +58,11 @@ origin_agent: business-analyst
 created: '2026-10-14'
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_km_400b_2_i.py::test_identical_relationships_from_real_ac_yaml_collapse_before_any_write
+- tests/knowledge/test_km_400b_2_i.py::test_relationships_differing_in_provenance_are_not_collapsed
+- tests/knowledge/test_km_400b_2_i.py::test_zero_collapsed_relationships_is_reported_explicitly
+- tests/knowledge/test_km_400b_2_i.py::test_km_400b_2_i_reachable_from_entry_point
 implemented_by:
 - tickets/00_inbox/TICKET-20261014-KM-400b-2-i.md
 change_target: code

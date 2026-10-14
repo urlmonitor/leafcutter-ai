@@ -5,6 +5,7 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 14:00 [python-coder]: Collapse identical relationships in publish, before the first write. (#KM-400b-2-i/01)
 - 2026-10-01 12:00 [python-coder]: Separate build transactions from publication CAS. (#TICKET-KM-400b-3)
 """
 
@@ -24,7 +25,7 @@ import time
 
 from knowledge.adapters.domain_schema import EDGE_TYPES, NODE_LABELS
 from knowledge.adapters.neo4j_backend import scope_key
-from knowledge.projection.validation import validate_snapshot
+from knowledge.projection.validation import collapse_identical_edges, validate_snapshot
 from knowledge.errors import BackendUnavailable
 
 
@@ -49,12 +50,15 @@ async def publish(
     Returns:
         Whether the guarded operation succeeded.
     """
+    # The digest names the loaded source content, so it is taken before the collapse: a
+    # generation record left by an earlier attempt on the same revision keeps its identity.
+    digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
+    collapse_identical_edges(snapshot)  # in place, before any node or relationship is written
     validate_snapshot(snapshot)
     unsupported = await db._run(_CONTROL_SCHEMA_QUERY, {"repo": snapshot.repository_id})
     if unsupported[0]["count"]:
         raise ValueError("repository control records require native storage")
     key = scope_key(snapshot.repository_id, snapshot.generation_id)
-    digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
     kinds = snapshot.supported_kinds or sorted({n.kind for n in snapshot.nodes})
     metadata = {
         "key": key,
