@@ -4,14 +4,14 @@
   "product": "Leafcutter",
   "name": "Exploring product-truth flows in the Atlas",
   "level": "journey",
-  "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a step to inspect its acceptance criteria's live status plus the mock records and mockup it uses, and cross-jump from an acceptance criterion back to the flows it appears in. This is how a person sees product truth visually rather than reading JSON. Each flow and step also gets one shareable address (/flows/<flow id>, ?step=<id>); this address layer is specified, not yet built.",
+  "summary": "The user journey through the Atlas /flows view. The bare /flows address opens a finder: search across flow names, step text, input and output field names, AC ids, entities and screens, narrow with facets and counts, share the search by its address, and open a result at its flow or step address. On a flow page the person filters by source, kind and realization without the drawn flow changing, selects a flow, sees who runs each step, opens a step (also with Enter) to inspect its ACs' live status, inputs and outputs, mock records and mockup, and cross-jumps between ACs and flows. Each flow and step has one shareable address and its own tab title; the finder and this address layer are specified, not yet built.",
   "kind": "user",
   "source": "real",
   "realization": "built",
   "status": "active",
-  "readiness": "approved",
+  "readiness": "draft",
   "superseded_by": null,
-  "version": 5,
+  "version": 6,
   "tags": [
     "product-truth",
     "atlas",
@@ -19,21 +19,1205 @@
     "explorer",
     "canonical-url",
     "deep-link",
-    "browser-history"
+    "browser-history",
+    "finder",
+    "search",
+    "facets",
+    "actor-badge",
+    "keyboard-access",
+    "page-title",
+    "ac-deep-link"
   ],
   "entities": [
     "Flow",
     "FlowRoute",
     "FlowAppearance",
-    "FlowNavigation"
+    "FlowNavigation",
+    "FlowNode",
+    "FlowFinderQuery"
   ],
   "steps": [
     {
-      "id": "open",
-      "label": "Open the Flows view",
-      "description": "The person opens the Flows view and sees the list of flows that match the current source, kind and realization filters.",
-      "actor_kind": "human",
+      "id": "finderOverview",
+      "label": "Open the Flows finder",
+      "description": "When someone opens the plain Flows address, Atlas shows the finder with a search box, filters with counts and every flow listed, and draws no flow.",
       "order": 1,
+      "screen": "atlas-flows-finder",
+      "agent": "Atlas Flows finder (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "view_props",
+            "fields": [
+              {
+                "path": "/flows",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/realization",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/level",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/actorKind",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/branches/*/actorKind",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screenTitles",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/url",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/q",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status_text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facet_counts/product",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facet_counts/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facet_counts/io",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "view_props",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: one of the listed flows, reconstructed from the stored leafcutter/deliver-a-feature",
+            "value": {
+              "flows": [
+                {
+                  "id": "leafcutter/deliver-a-feature",
+                  "name": "Deliver a feature end-to-end",
+                  "kind": "user",
+                  "realization": "built",
+                  "level": "journey",
+                  "entities": [],
+                  "steps": [
+                    {
+                      "actorKind": "llm"
+                    },
+                    {
+                      "actorKind": "llm"
+                    },
+                    {
+                      "actorKind": "deterministic"
+                    }
+                  ],
+                  "branches": []
+                }
+              ],
+              "screenTitles": {}
+            }
+          },
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the finder overview of the bare address; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/0"
+            },
+            "value": {
+              "url": "/flows",
+              "q": null,
+              "status_text": "28 flows",
+              "result_count": {
+                "flows": 28
+              },
+              "facet_counts": {
+                "product": {
+                  "leafcutter": 25,
+                  "fern-and-fig": 3
+                },
+                "actor": {
+                  "deterministic": 23,
+                  "llm": 17,
+                  "human": 12,
+                  "jev": 8
+                },
+                "io": {
+                  "gap": 9
+                }
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "view_props/flows: array (required)",
+        "view_props/flows/*/id: string (required)",
+        "view_props/flows/*/name: string (required)",
+        "view_props/flows/*/kind: string (required)",
+        "view_props/flows/*/realization: string (required)",
+        "view_props/flows/*/level: string (required)",
+        "view_props/flows/*/entities: array (required)",
+        "view_props/flows/*/steps/*/actorKind: null|string (required)",
+        "view_props/flows/*/branches/*/actorKind: null|string (required)",
+        "view_props/screenTitles: object (optional; default {})"
+      ],
+      "produces": [
+        "finder_query/url: string (required)",
+        "finder_query/q: null|string (required)",
+        "finder_query/status_text: string (required)",
+        "finder_query/result_count/flows: integer (required)",
+        "finder_query/results: array (required)",
+        "finder_query/facet_counts/product: object (required)",
+        "finder_query/facet_counts/actor: object (required)",
+        "finder_query/facet_counts/io: object (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finderSearch",
+      "label": "Search flows and steps",
+      "description": "The person types into the search box and Atlas lists the flows whose names, step text, input or output field names, criteria ids, entities or screens match every word.",
+      "order": 2,
+      "screen": "atlas-flows-finder",
+      "actor_kind": "human",
+      "reads": [
+        "Flow",
+        "FlowNode",
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "view_props",
+            "fields": [
+              {
+                "path": "/flows/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/description",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/implements",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/screen",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/reads",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/writes",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/ioContracts",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              },
+              {
+                "path": "/flows/*/branches/*/condition",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/screenTitles",
+                "types": [
+                  "object"
+                ],
+                "required": false,
+                "default": {}
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/q",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status_text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/flow_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/flow_match",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/matching_steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "view_props",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: one stored step that 'selected option' matches through its input field, reconstructed from leafcutter/decision-retrieval (one step, one binding shown)",
+            "value": {
+              "flows": [
+                {
+                  "id": "leafcutter/decision-retrieval",
+                  "name": "Retrieving a decision as precedent",
+                  "entities": [
+                    "Decision"
+                  ],
+                  "steps": [
+                    {
+                      "id": "offer-reuse",
+                      "label": "Reuse it, or decide anew?",
+                      "description": "When a precedent scores 0.8 or more, is not superseded and the decision has no options of its own, you are asked whether to reuse it or decide anew.",
+                      "implements": [
+                        "DK-600e-3"
+                      ],
+                      "screen": "decision-reuse-or-decide-anew",
+                      "reads": [
+                        "Decision"
+                      ],
+                      "writes": [],
+                      "ioContracts": {
+                        "consumes": [
+                          {
+                            "contract": "decision_record",
+                            "fields": [
+                              {
+                                "path": "/selected_option_id",
+                                "types": [
+                                  "string"
+                                ],
+                                "required": true
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ],
+              "screenTitles": {
+                "decision-reuse-or-decide-anew": "Reuse it, or decide anew?"
+              }
+            }
+          },
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the results of the search 'selected option'; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/1"
+            },
+            "value": {
+              "q": "selected option",
+              "status_text": "5 flows, 27 steps match",
+              "result_count": {
+                "flows": 5,
+                "steps": 27
+              },
+              "results": [
+                {
+                  "flow_id": "leafcutter/decision-publishing",
+                  "flow_match": null,
+                  "matching_steps": 7
+                },
+                {
+                  "flow_id": "leafcutter/decision-retrieval",
+                  "flow_match": null,
+                  "matching_steps": 6
+                },
+                {
+                  "flow_id": "leafcutter/decision-forming",
+                  "flow_match": null,
+                  "matching_steps": 5
+                },
+                {
+                  "flow_id": "leafcutter/decision-staging",
+                  "flow_match": null,
+                  "matching_steps": 5
+                },
+                {
+                  "flow_id": "leafcutter/decision-lifecycle",
+                  "flow_match": null,
+                  "matching_steps": 4
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "view_props/flows/*/id: string (required)",
+        "view_props/flows/*/name: string (required)",
+        "view_props/flows/*/entities: array (required)",
+        "view_props/flows/*/steps/*/label: string (required)",
+        "view_props/flows/*/steps/*/description: string (required)",
+        "view_props/flows/*/steps/*/implements: array (required)",
+        "view_props/flows/*/steps/*/screen: null|string (required)",
+        "view_props/flows/*/steps/*/reads: array (required)",
+        "view_props/flows/*/steps/*/writes: array (required)",
+        "view_props/flows/*/steps/*/ioContracts: object (optional)",
+        "view_props/flows/*/branches/*/condition: string (required)",
+        "view_props/screenTitles: object (optional; default {})"
+      ],
+      "produces": [
+        "finder_query/q: null|string (required)",
+        "finder_query/status_text: string (required)",
+        "finder_query/result_count/flows: integer (required)",
+        "finder_query/result_count/steps: integer (required)",
+        "finder_query/results/*/flow_id: string (required)",
+        "finder_query/results/*/flow_match: null|string (required)",
+        "finder_query/results/*/matching_steps: integer (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finderFacets",
+      "label": "Narrow the list with facets",
+      "description": "The person ticks facet values such as Product, Actor, Kind, Realization, Level, a used or produced field, Entity or Screen, and each value shows how many flows it would list.",
+      "order": 3,
+      "screen": "atlas-flows-finder",
+      "actor_kind": "human",
+      "reads": [
+        "Flow",
+        "FlowNode",
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "view_props",
+            "fields": [
+              {
+                "path": "/flows/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/realization",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/level",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/entities",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/actorKind",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/screen",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/flows/*/steps/*/ioContracts",
+                "types": [
+                  "object"
+                ],
+                "required": false
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/facets/actor",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status_text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/applied_chips/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/applied_chips/*/remove_href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/clear_all_href",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facet_counts/actor",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "view_props",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the facet values of one flow, reconstructed from the stored leafcutter/decision-retrieval (steps only)",
+            "value": {
+              "flows": [
+                {
+                  "id": "leafcutter/decision-retrieval",
+                  "kind": "data",
+                  "realization": "built",
+                  "level": "pipeline",
+                  "entities": [
+                    "Decision"
+                  ],
+                  "steps": [
+                    {
+                      "actorKind": "deterministic",
+                      "screen": null
+                    },
+                    {
+                      "actorKind": "jev",
+                      "screen": null
+                    },
+                    {
+                      "actorKind": "deterministic",
+                      "screen": null
+                    },
+                    {
+                      "actorKind": "human",
+                      "screen": "decision-reuse-or-decide-anew"
+                    },
+                    {
+                      "actorKind": "deterministic",
+                      "screen": null
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: 'selected option' narrowed to Actor Person; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/2"
+            },
+            "value": {
+              "facets": {
+                "actor": [
+                  "human"
+                ]
+              },
+              "status_text": "2 flows, 5 steps match",
+              "result_count": {
+                "flows": 2,
+                "steps": 5
+              },
+              "applied_chips": [
+                {
+                  "label": "Actor: Person",
+                  "remove_href": "/flows?q=selected+option"
+                }
+              ],
+              "clear_all_href": "/flows?q=selected+option",
+              "facet_counts": {
+                "actor": {
+                  "deterministic": 5,
+                  "llm": 1,
+                  "human": 2,
+                  "jev": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "view_props/flows/*/id: string (required)",
+        "view_props/flows/*/kind: string (required)",
+        "view_props/flows/*/realization: string (required)",
+        "view_props/flows/*/level: string (required)",
+        "view_props/flows/*/entities: array (required)",
+        "view_props/flows/*/steps/*/actorKind: null|string (required)",
+        "view_props/flows/*/steps/*/screen: null|string (required)",
+        "view_props/flows/*/steps/*/ioContracts: object (optional)"
+      ],
+      "produces": [
+        "finder_query/facets/actor: array (required)",
+        "finder_query/status_text: string (required)",
+        "finder_query/result_count/flows: integer (required)",
+        "finder_query/result_count/steps: integer (required)",
+        "finder_query/applied_chips/*/label: string (required)",
+        "finder_query/applied_chips/*/remove_href: string (required)",
+        "finder_query/clear_all_href: null|string (required)",
+        "finder_query/facet_counts/actor: object (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finderUrl",
+      "label": "Keep the search in the address",
+      "description": "Atlas rewrites the Flows address in place as the search and filters change, so it can be shared or bookmarked and reopens the same results, without adding Back entries.",
+      "order": 4,
+      "screen": "atlas-flows-finder",
+      "agent": "Atlas Flows finder (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowFinderQuery",
+        "FlowRoute",
+        "FlowNavigation"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/q",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facets",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/url",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input and output: the search, the chosen facet values and the canonical address they give; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/2"
+            },
+            "value": {
+              "url": "/flows?q=selected+option&actor=human",
+              "q": "selected option",
+              "facets": {
+                "product": [],
+                "actor": [
+                  "human"
+                ],
+                "kind": [],
+                "realization": [],
+                "level": [],
+                "uses": [],
+                "produces": [],
+                "io": [],
+                "entity": [],
+                "screen": []
+              }
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Finder search and filters handed from the /flows address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes the canonical finder address of every finder state (FlowFinderQuery url, q and facets; FlowRoute resolution 'finder' and finder_query) and what each shows, but defines no route-parameter or FlowsView prop shape that carries the parsed search and facet values from the address to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "finder_query/q: null|string (required)",
+        "finder_query/facets: object (required)"
+      ],
+      "produces": [
+        "finder_query/url: string (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finderResults",
+      "label": "See results grouped by flow",
+      "description": "Atlas groups the matches by flow, each flow card showing up to three matching step rows with the step's actor badge and why it matched, and how many more steps match.",
+      "order": 5,
+      "screen": "atlas-flows-finder",
+      "agent": "Atlas Flows finder (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowNode",
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow_node",
+            "fields": [
+              {
+                "path": "/node_id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/results/*/flow_name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/matching_steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/more_steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/step_rows/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/step_rows/*/actor_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/step_rows/*/reason",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/step_rows/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow_node",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: the indexed step behind one result row; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowNode/records/3"
+            },
+            "value": {
+              "node_id": "offer-reuse",
+              "label": "Reuse it, or decide anew?",
+              "actor_label": "Person",
+              "href": "/flows/leafcutter/decision-retrieval?step=offer-reuse"
+            }
+          },
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: 'selected option' with Actor Person, grouped by flow; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/2"
+            },
+            "value": {
+              "results": [
+                {
+                  "flow_name": "Publishing the decision record",
+                  "href": "/flows/leafcutter/decision-publishing",
+                  "matching_steps": 4,
+                  "more_steps": 1,
+                  "step_rows": [
+                    {
+                      "label": "Decide to publish",
+                      "actor_label": "Person",
+                      "reason": "Input · Decision record › selected_option_id",
+                      "href": "/flows/leafcutter/decision-publishing?step=decide-to-publish"
+                    },
+                    {
+                      "label": "Commit and review in git",
+                      "actor_label": "Person",
+                      "reason": "Input · Decision record › selected_option_id",
+                      "href": "/flows/leafcutter/decision-publishing?step=review"
+                    },
+                    {
+                      "label": "Merge to main",
+                      "actor_label": "Person",
+                      "reason": "Output · Decision record › selected_option_id",
+                      "href": "/flows/leafcutter/decision-publishing?step=merge"
+                    }
+                  ]
+                },
+                {
+                  "flow_name": "Retrieving a decision as precedent",
+                  "href": "/flows/leafcutter/decision-retrieval",
+                  "matching_steps": 1,
+                  "more_steps": 0,
+                  "step_rows": [
+                    {
+                      "label": "Reuse it, or decide anew?",
+                      "actor_label": "Person",
+                      "reason": "Input · Decision record › selected_option_id",
+                      "href": "/flows/leafcutter/decision-retrieval?step=offer-reuse"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow_node/node_id: string (required)",
+        "flow_node/label: string (required)",
+        "flow_node/actor_label: string (required)",
+        "flow_node/href: string (required)"
+      ],
+      "produces": [
+        "finder_query/results/*/flow_name: string (required)",
+        "finder_query/results/*/href: string (required)",
+        "finder_query/results/*/matching_steps: integer (required)",
+        "finder_query/results/*/more_steps: integer (required)",
+        "finder_query/results/*/step_rows/*/label: string (required)",
+        "finder_query/results/*/step_rows/*/actor_label: string (required)",
+        "finder_query/results/*/step_rows/*/reason: string (required)",
+        "finder_query/results/*/step_rows/*/href: string (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "openResult",
+      "label": "Open a result at its flow or step",
+      "description": "The person opens a flow card or a step row and Atlas goes to that flow's address or the step's address with its drawer open, adding one Back entry that returns to the finder as left.",
+      "order": 6,
+      "screen": "atlas-flows-finder",
+      "actor_kind": "human",
+      "reads": [
+        "Flow",
+        "FlowFinderQuery",
+        "FlowNavigation"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/results/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results/*/step_rows/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: the flow and step addresses a result offers; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/2"
+            },
+            "value": {
+              "results": [
+                {
+                  "href": "/flows/leafcutter/decision-publishing",
+                  "step_rows": [
+                    {
+                      "href": "/flows/leafcutter/decision-publishing?step=decide-to-publish"
+                    },
+                    {
+                      "href": "/flows/leafcutter/decision-publishing?step=review"
+                    },
+                    {
+                      "href": "/flows/leafcutter/decision-publishing?step=merge"
+                    }
+                  ]
+                },
+                {
+                  "href": "/flows/leafcutter/decision-retrieval",
+                  "step_rows": [
+                    {
+                      "href": "/flows/leafcutter/decision-retrieval?step=offer-reuse"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "finder_query/results/*/href: string (required)",
+        "finder_query/results/*/step_rows/*/href: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "open",
+      "label": "Open a flow page",
+      "description": "The person opens a flow's page and sees the flow drawn beside the list of flows that match the current source, kind and realization filters.",
+      "actor_kind": "human",
+      "order": 7,
       "implements": [
         "UXP-520"
       ],
@@ -128,7 +1312,7 @@
       "label": "Choose source (mock/real) and kind (user/data/architecture)",
       "description": "The person filters the loaded flows by source, kind and realization, and the visible list updates at once without saving anything.",
       "actor_kind": "human",
-      "order": 2,
+      "order": 8,
       "implements": [
         "UXP-521"
       ],
@@ -199,7 +1383,7 @@
       "label": "Select a flow to render its graph",
       "description": "The person picks one of the filtered flows and Atlas draws its graph.",
       "actor_kind": "human",
-      "order": 3,
+      "order": 9,
       "implements": [
         "UXP-522"
       ],
@@ -305,11 +1489,243 @@
       "produces": []
     },
     {
+      "id": "actorBadge",
+      "label": "Each step card shows who runs it",
+      "description": "Atlas shows on every step and branch card a badge naming who runs it, Code, AI agent, Person or Jev, in the same words the finder uses.",
+      "order": 10,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNode"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/steps/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/order",
+                "types": [
+                  "number"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/actorKind",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/branches/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/branches/*/actorKind",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "flow_node",
+            "fields": [
+              {
+                "path": "/actor_kind",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/actor_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/card_label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the steps of leafcutter/decision-retrieval with their runners, reconstructed from the stored flow (steps only)",
+            "value": {
+              "id": "leafcutter/decision-retrieval",
+              "steps": [
+                {
+                  "id": "lookup",
+                  "label": "Look up matching records",
+                  "order": 1,
+                  "actorKind": "deterministic"
+                },
+                {
+                  "id": "judge",
+                  "label": "Ask Jev whether each applies",
+                  "order": 2,
+                  "actorKind": "jev"
+                },
+                {
+                  "id": "cite",
+                  "label": "Cite it as evidence",
+                  "order": 3,
+                  "actorKind": "deterministic"
+                },
+                {
+                  "id": "offer-reuse",
+                  "label": "Reuse it, or decide anew?",
+                  "order": 4,
+                  "actorKind": "human"
+                },
+                {
+                  "id": "reuse",
+                  "label": "Reuse the earlier choice",
+                  "order": 5,
+                  "actorKind": "deterministic"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "flow_node",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the badge and card name of a step Jev runs; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowNode/records/1"
+            },
+            "value": {
+              "actor_kind": "jev",
+              "actor_label": "Jev",
+              "card_label": "Step 2 of 5: Ask Jev whether each applies (Jev)"
+            }
+          },
+          {
+            "contract": "flow_node",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the badge and card name of a step a person runs; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowNode/records/3"
+            },
+            "value": {
+              "actor_kind": "human",
+              "actor_label": "Person",
+              "card_label": "Step 4 of 5: Reuse it, or decide anew? (Person)"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/steps/*/label: string (required)",
+        "atlas_flow/steps/*/order: number (required)",
+        "atlas_flow/steps/*/actorKind: null|string (required)",
+        "atlas_flow/branches/*/label: string (required)",
+        "atlas_flow/branches/*/actorKind: null|string (required)"
+      ],
+      "produces": [
+        "flow_node/actor_kind: string (required)",
+        "flow_node/actor_label: string (required)",
+        "flow_node/card_label: string (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "pageTitle",
+      "label": "Each page has its own tab title",
+      "description": "Atlas titles the browser tab after what is on screen, the drawn flow's name, the finder or Flow not found, so tabs and history entries can be told apart.",
+      "order": 11,
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "Flow",
+        "FlowRoute",
+        "FlowNavigation"
+      ],
+      "implements": [],
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/name",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the drawn flow's id and name, reconstructed from the stored flow",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline",
+              "name": "How a flow renders in the Atlas"
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/id: string (required)",
+        "atlas_flow/name: string (required)"
+      ],
+      "produces": [],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
       "id": "inspect",
       "label": "Open a step to see its ACs' live status + mock records + mockup",
       "description": "The person opens a step's drawer to see the live status of its acceptance criteria, its inputs and outputs with examples, and the mock records and mockup it uses.",
       "actor_kind": "human",
-      "order": 4,
+      "order": 12,
       "implements": [
         "UXP-523",
         "UXP-523-1",
@@ -530,7 +1946,7 @@
       "label": "Jump from an AC to the flows it appears in",
       "description": "From an acceptance criterion's details, the person follows a link to each flow step or branch where that criterion appears.",
       "actor_kind": "human",
-      "order": 5,
+      "order": 13,
       "implements": [
         "UXP-524"
       ],
@@ -604,7 +2020,7 @@
       "id": "acStepLink",
       "label": "'Appears in flows' links open the step itself",
       "description": "Each 'Appears in flows' link in the criterion's drawer points at the step or branch that realizes the criterion, using its flow's own address with that step named.",
-      "order": 6,
+      "order": 14,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas AC detail drawer (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -691,7 +2107,7 @@
       "id": "openByLink",
       "label": "Open a flow from its canonical link",
       "description": "When someone opens a flow's own address, Atlas shows that flow selected and drawn, with filters set to match it, no drawer open and a breadcrumb naming only that flow.",
-      "order": 7,
+      "order": 15,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas /flows route (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -767,7 +2183,7 @@
       "id": "openStepLink",
       "label": "Open a step link with its drawer open",
       "description": "When someone opens a step link, Atlas shows the flow as for a flow link with the named step's or branch's drawer already open, keeping the step in the address.",
-      "order": 8,
+      "order": 16,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas /flows route (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -862,8 +2278,8 @@
     {
       "id": "drawerUrl",
       "label": "Opening a drawer writes ?step= in place",
-      "description": "When the person opens a step's or branch's drawer, Atlas rewrites the address in place to name that step without adding a Back entry, even from the bare Flows page.",
-      "order": 9,
+      "description": "When the person opens a step's or branch's drawer, Atlas rewrites the flow's address in place to name that step without adding a Back entry.",
+      "order": 17,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas Flows view (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -886,7 +2302,7 @@
       "id": "drawerClose",
       "label": "Closing the drawer removes ?step= in place",
       "description": "When the person closes the drawer, Atlas removes the step from the address in place, leaving the flow's own address and adding no Back entry.",
-      "order": 10,
+      "order": 18,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas Flows view (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -908,7 +2324,7 @@
       "id": "navPush",
       "label": "Select, drill and breadcrumb push the flow's URL",
       "description": "Picking a flow, drilling into a sub-flow or clicking a breadcrumb makes Atlas add a history entry with the target flow's address, while filter changes never add one.",
-      "order": 11,
+      "order": 19,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas Flows view (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -937,8 +2353,8 @@
     {
       "id": "backForward",
       "label": "Back and Forward move between flows",
-      "description": "The browser's Back and Forward buttons move between flow entries, and Atlas restores each one's address, flow, breadcrumb trail, open drawer and filters as they were left.",
-      "order": 12,
+      "description": "The browser's Back and Forward buttons move between flow and finder entries, and Atlas restores each one as it was left, with its flow, trail, drawer, filters or search.",
+      "order": 20,
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas Flows view (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -969,8 +2385,8 @@
       "id": "filterRepicksFlow",
       "from": "filter",
       "condition": "the new Source, Kind or Realization filters no longer include the entry flow",
-      "label": "Filter change re-picks the flow: address replaced",
-      "description": "Atlas draws the first flow the new filters list, with a fresh breadcrumb and no drawer, and replaces the current address with that flow's address without adding a Back entry.",
+      "label": "Filter change excludes the entry flow: it stays drawn with a notice",
+      "description": "Atlas keeps the drawn flow, its breadcrumb trail, any open drawer and the address unchanged and shows an 'Outside the current filters' notice until the person picks another flow.",
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas Flows view (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -1024,12 +2440,12 @@
             "contract": "atlas_flow",
             "mode": "projection",
             "origin": "reconstructed",
-            "label": "Input: the flow the Spec filter leaves in scope, reconstructed from the stored flow",
+            "label": "Input: the entry flow that the Spec filter leaves out, reconstructed from the stored flow",
             "value": {
-              "id": "leafcutter/define-a-feature",
+              "id": "leafcutter/deliver-a-feature",
               "source": "real",
               "kind": "user",
-              "realization": "spec"
+              "realization": "built"
             }
           }
         ],
@@ -1142,9 +2558,9 @@
     {
       "id": "bareFlows",
       "from": "openByLink",
-      "condition": "the address is the bare /flows, with no flow id",
-      "label": "Bare /flows keeps its address",
-      "description": "Atlas keeps the plain Flows address and draws the default flow with the default filters and a breadcrumb naming only that flow.",
+      "condition": "the address is /flows with no flow id, with or without a search in its query",
+      "label": "Bare /flows opens the finder",
+      "description": "Atlas keeps the plain Flows address and opens the finder instead of drawing a flow, with no breadcrumb, no drawer and no notice.",
       "screen": "atlas-flows-canonical-url",
       "agent": "Atlas /flows route (leafcutter-web)",
       "actor_kind": "deterministic",
@@ -1157,37 +2573,79 @@
       ],
       "outcome_kind": "alternative",
       "io_contracts": {
-        "consumes": [
+        "consumes": [],
+        "produces": [
           {
-            "contract": "atlas_flow",
+            "contract": "finder_query",
             "fields": [
               {
-                "path": "/id",
+                "path": "/url",
                 "types": [
                   "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/q",
+                "types": [
+                  "null",
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facets",
+                "types": [
+                  "object"
                 ],
                 "required": true
               }
             ]
           }
         ],
-        "produces": [],
         "examples": [
           {
-            "contract": "atlas_flow",
+            "contract": "finder_query",
             "mode": "projection",
-            "origin": "reconstructed",
-            "label": "Input: the default entry flow's id, reconstructed from the stored flow",
+            "origin": "observed",
+            "label": "Output: the empty finder state the bare address opens; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/0"
+            },
             "value": {
-              "id": "leafcutter/deliver-a-feature"
+              "url": "/flows",
+              "q": null,
+              "facets": {
+                "product": [],
+                "actor": [],
+                "kind": [],
+                "realization": [],
+                "level": [],
+                "uses": [],
+                "produces": [],
+                "io": [],
+                "entity": [],
+                "screen": []
+              }
             }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Finder search and filters handed from the /flows address to the Flows view",
+            "direction": "consumes",
+            "reason": "The dataset fixes the canonical finder address of every finder state (FlowFinderQuery url, q and facets; FlowRoute resolution 'finder' and finder_query) and what each shows, but defines no route-parameter or FlowsView prop shape that carries the parsed search and facet values from the address to the client view. Today's FlowsView props are only flows, mocks and screenTitles, and the view reads no address.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
           }
         ]
       },
-      "consumes": [
-        "atlas_flow/id: string (required)"
+      "consumes": [],
+      "produces": [
+        "finder_query/url: string (required)",
+        "finder_query/q: null|string (required)",
+        "finder_query/facets: object (required)"
       ],
-      "produces": [],
       "impl_asof": "2026-10-09",
       "impl_status": "not_started"
     },
@@ -1450,21 +2908,482 @@
       "produces": [],
       "impl_asof": "2026-10-09",
       "impl_status": "not_started"
+    },
+    {
+      "id": "finderNoMatch",
+      "from": "finderSearch",
+      "condition": "nothing matches the search together with the chosen filters",
+      "label": "No flows match: suggest removing a filter",
+      "description": "Atlas says no flows match, quoting the search, and offers to remove each chosen filter with the number of flows that would then be listed.",
+      "screen": "atlas-flows-finder",
+      "agent": "Atlas Flows finder (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "outcome_kind": "failure",
+      "io_contracts": {
+        "consumes": [],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/status_text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/results",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/empty_state",
+                "types": [
+                  "null",
+                  "object"
+                ],
+                "required": true
+              },
+              {
+                "path": "/empty_state/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/empty_state/suggestions/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/empty_state/suggestions/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/empty_state/suggestions/*/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the empty state of 'tracking' with Actor Jev; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/10"
+            },
+            "value": {
+              "status_text": "No flows match",
+              "result_count": {
+                "flows": 0
+              },
+              "results": [],
+              "empty_state": {
+                "title": "No flows match 'tracking'",
+                "suggestions": [
+                  {
+                    "label": "Remove Actor: Jev",
+                    "href": "/flows?q=tracking",
+                    "flows": 3
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [],
+      "produces": [
+        "finder_query/status_text: string (required)",
+        "finder_query/result_count/flows: integer (required)",
+        "finder_query/results: array (required)",
+        "finder_query/empty_state: null|object (required)",
+        "finder_query/empty_state/title: string (required)",
+        "finder_query/empty_state/suggestions/*/label: string (required)",
+        "finder_query/empty_state/suggestions/*/href: string (required)",
+        "finder_query/empty_state/suggestions/*/flows: integer (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "finderIoGap",
+      "from": "finderFacets",
+      "condition": "the person picks 'I/O not yet defined'",
+      "label": "Find steps whose inputs or outputs are not defined yet",
+      "description": "Atlas lists only the steps and branches whose inputs or outputs are still undefined, which a field search can miss, grouped by flow as usual.",
+      "screen": "atlas-flows-finder",
+      "agent": "Atlas Flows finder (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNode",
+        "FlowFinderQuery"
+      ],
+      "implements": [],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "flow_node",
+            "fields": [
+              {
+                "path": "/io_gap",
+                "types": [
+                  "boolean"
+                ],
+                "required": true
+              },
+              {
+                "path": "/missing_io",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "finder_query",
+            "fields": [
+              {
+                "path": "/facets/io",
+                "types": [
+                  "array"
+                ],
+                "required": true
+              },
+              {
+                "path": "/status_text",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/flows",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/result_count/steps",
+                "types": [
+                  "integer"
+                ],
+                "required": true
+              },
+              {
+                "path": "/applied_chips/*/label",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/facet_counts/io",
+                "types": [
+                  "object"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "flow_node",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Input: a step with an undefined output binding; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowNode/records/16"
+            },
+            "value": {
+              "node_id": "author",
+              "io_gap": true,
+              "missing_io": [
+                {
+                  "name": "General authored-query contract",
+                  "direction": "produces"
+                }
+              ]
+            }
+          },
+          {
+            "contract": "finder_query",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: every flow with undefined inputs or outputs, as measured on 2026-10-13; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowFinderQuery/records/8"
+            },
+            "value": {
+              "facets": {
+                "io": [
+                  "gap"
+                ]
+              },
+              "status_text": "9 flows, 102 steps match",
+              "result_count": {
+                "flows": 9,
+                "steps": 102
+              },
+              "applied_chips": [
+                {
+                  "label": "I/O not yet defined"
+                }
+              ],
+              "facet_counts": {
+                "io": {
+                  "gap": 9
+                }
+              }
+            }
+          }
+        ]
+      },
+      "consumes": [
+        "flow_node/io_gap: boolean (required)",
+        "flow_node/missing_io: array (required)"
+      ],
+      "produces": [
+        "finder_query/facets/io: array (required)",
+        "finder_query/status_text: string (required)",
+        "finder_query/result_count/flows: integer (required)",
+        "finder_query/result_count/steps: integer (required)",
+        "finder_query/applied_chips/*/label: string (required)",
+        "finder_query/facet_counts/io: object (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "acChipLink",
+      "from": "inspect",
+      "condition": "the person clicks an acceptance-criterion chip in a step's or branch's drawer",
+      "label": "AC chip opens that criterion in the Atlas",
+      "description": "Atlas follows the chip to the Atlas page with that criterion selected and its details open, instead of the component overview.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNode"
+      ],
+      "implements": [],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "consumes": [
+          {
+            "contract": "atlas_flow",
+            "fields": [
+              {
+                "path": "/steps/*/acs/*/id",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/acs/*/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "produces": [
+          {
+            "contract": "flow_node",
+            "fields": [
+              {
+                "path": "/ac_chips/*/ac",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ac_chips/*/title",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/ac_chips/*/href",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              }
+            ]
+          }
+        ],
+        "examples": [
+          {
+            "contract": "atlas_flow",
+            "mode": "projection",
+            "origin": "reconstructed",
+            "label": "Input: the resolved criteria of the step 'resolve', reconstructed from the stored flow and AC store",
+            "value": {
+              "id": "leafcutter/flow-render-pipeline",
+              "steps": [
+                {
+                  "id": "resolve",
+                  "acs": [
+                    {
+                      "id": "UXP-411",
+                      "title": "Each flow step resolves to its acceptance criterion's live work_status"
+                    },
+                    {
+                      "id": "UXP-411a",
+                      "title": "A step whose acceptance-criteria id does not resolve renders as an unknown/fallback status"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "contract": "flow_node",
+            "mode": "projection",
+            "origin": "observed",
+            "label": "Output: the step's AC chips and their links; stored design sample from leafcutter/atlas-flows v4, not live Atlas data",
+            "source": {
+              "path": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json",
+              "pointer": "/entities/FlowNode/records/12"
+            },
+            "value": {
+              "node_id": "resolve",
+              "ac_chips": [
+                {
+                  "ac": "UXP-411",
+                  "title": "Each flow step resolves to its acceptance criterion's live work_status",
+                  "href": "/atlas?ac=UXP-411"
+                },
+                {
+                  "ac": "UXP-411a",
+                  "title": "A step whose acceptance-criteria id does not resolve renders as an unknown/fallback status",
+                  "href": "/atlas?ac=UXP-411a"
+                }
+              ]
+            }
+          }
+        ],
+        "missing_bindings": [
+          {
+            "name": "Requested AC id handed from the /atlas?ac=<id> address to the Atlas AC view",
+            "direction": "consumes",
+            "reason": "The dataset fixes each chip's link (FlowNode ac_chips href == '/atlas?ac=' + ac) and that following it opens the Atlas with that AC selected and its detail open, instead of today's component overview that ignores ?ac=, but it defines no route-parameter or Atlas page prop shape that carries the requested AC id to the view.",
+            "source": "docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json"
+          }
+        ]
+      },
+      "consumes": [
+        "atlas_flow/steps/*/acs/*/id: string (required)",
+        "atlas_flow/steps/*/acs/*/title: string (required)"
+      ],
+      "produces": [
+        "flow_node/ac_chips/*/ac: string (required)",
+        "flow_node/ac_chips/*/title: string (required)",
+        "flow_node/ac_chips/*/href: string (required)"
+      ],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "drawerByKey",
+      "from": "drawerUrl",
+      "condition": "the person presses Enter on a focused step or branch card",
+      "label": "Enter on a step card opens its drawer",
+      "description": "Atlas opens that card's drawer and names its step in the address in place, exactly as a click on the card does.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNode",
+        "FlowNavigation"
+      ],
+      "implements": [],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "not_applicable": "A keypress of Enter on a focused step or branch card triggers the same open-drawer state change and in-place history replace of the address (<canonical URL>?step=<id>) as a click on it. No request is made and no JSON payload is passed; the card's accessible name is documented on actorBadge and the drawer's contents on inspect."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
+    },
+    {
+      "id": "drawerCloseByKey",
+      "from": "drawerClose",
+      "condition": "the person presses Enter on the drawer's 'Close step details' button",
+      "label": "Enter on 'Close step details' closes the drawer",
+      "description": "Atlas closes the drawer and removes the step from the address in place, exactly as a click on the close button does.",
+      "screen": "atlas-flows-canonical-url",
+      "agent": "Atlas Flows view (leafcutter-web)",
+      "actor_kind": "deterministic",
+      "reads": [
+        "FlowNavigation"
+      ],
+      "implements": [],
+      "outcome_kind": "alternative",
+      "io_contracts": {
+        "not_applicable": "A keypress of Enter on the drawer's close button, whose accessible name is 'Close step details', clears the open-drawer state and rewrites the current history entry's URL to the flow's canonical URL without a query (history replace), as a click does. No request is made and no JSON payload is passed."
+      },
+      "consumes": [],
+      "produces": [],
+      "impl_asof": "2026-10-13",
+      "impl_status": "not_started"
     }
   ],
   "impl_summary": {
     "done": 5,
     "in_progress": 0,
-    "not_started": 16,
-    "total": 21,
-    "asof": "2026-10-09"
+    "not_started": 29,
+    "total": 34,
+    "asof": "2026-10-13"
   },
   "acceptance_scenarios": [
     {
       "for": "open",
       "given": "the product-truth store has flows",
-      "when": "the person opens the Atlas /flows view",
-      "then": "the current filters determine the visible flows and the selected flow renders as a graph"
+      "when": "the person opens a flow's page in the Atlas",
+      "then": "the current filters determine the flows the selector lists and the opened flow renders as a graph"
     },
     {
       "for": "filter",
@@ -1510,9 +3429,9 @@
     },
     {
       "for": "bareFlows",
-      "given": "flows can be opened by their canonical links",
-      "when": "the person opens /flows from the sidebar 'Flows' link",
-      "then": "the address bar stays /flows, the default flow leafcutter/deliver-a-feature renders with Source Real, Kind User and Realization All, and the breadcrumb shows only that flow"
+      "given": "flows can be opened by their own addresses",
+      "when": "a person opens /flows from the sidebar 'Flows' link",
+      "then": "the Atlas answers 200 with no redirect, the address bar stays /flows and the finder overview shows instead of a flow, with no breadcrumb, no drawer and neither a 'Flow not found' nor a 'Step not found' notice; /flows?q=selected+option&actor=human likewise opens the finder with that search and that Actor value"
     },
     {
       "for": "flowNotFound",
@@ -1540,9 +3459,9 @@
     },
     {
       "for": "drawerUrl",
-      "given": "the tab has one history entry showing leafcutter/deliver-a-feature with no drawer, either at /flows/leafcutter/deliver-a-feature or at the bare /flows",
+      "given": "the tab has one history entry showing /flows/leafcutter/deliver-a-feature with no drawer",
       "when": "the person clicks the 'Plan' step",
-      "then": "the 'Plan' drawer opens, the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan in both cases, and the tab still has one history entry because the entry was replaced, not pushed"
+      "then": "the 'Plan' drawer opens, the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan, and the tab still has one history entry because the entry was replaced, not pushed; the finder at /flows draws no flow, so no drawer can open there"
     },
     {
       "for": "drawerSwitch",
@@ -1570,15 +3489,15 @@
     },
     {
       "for": "backForward",
-      "given": "the person opened /flows, drilled into 'Build' (/flows/leafcutter/how-acs-are-built) and then into 'Coders make it green (prio 6-8)' (/flows/leafcutter/python-coder-internal)",
+      "given": "the person opened a bookmarked /flows/leafcutter/deliver-a-feature, drilled into 'Build' (/flows/leafcutter/how-acs-are-built) and then into 'Coders make it green (prio 6-8)' (/flows/leafcutter/python-coder-internal)",
       "when": "they press Back twice and then Forward once",
-      "then": "the view shows How a ticket is built with the breadcrumb Deliver a feature end-to-end > How a ticket is built, then the default flow at /flows, then How a ticket is built again with that same breadcrumb, and each time the address bar matches the screen"
+      "then": "the view shows How a ticket is built with the breadcrumb Deliver a feature end-to-end > How a ticket is built, then Deliver a feature end-to-end at /flows/leafcutter/deliver-a-feature with a one-flow breadcrumb, then How a ticket is built again with that same breadcrumb, and each time the address bar and the tab title match the screen"
     },
     {
       "for": "filterRepicksFlow",
       "given": "the person drilled from /flows/leafcutter/deliver-a-feature into How a ticket is built and opened the 'Coders make it green (prio 6-8)' drawer, so the tab has two history entries and the address is /flows/leafcutter/how-acs-are-built?step=code with filters Real, User, All",
       "when": "they set the Realization filter to 'Spec'",
-      "then": "'Define a feature the product-truth way' renders with a one-flow breadcrumb and no drawer, the current entry is replaced with /flows/leafcutter/define-a-feature so the tab still has two entries, and Back returns to /flows/leafcutter/deliver-a-feature"
+      "then": "How a ticket is built stays drawn with the breadcrumb Deliver a feature end-to-end > How a ticket is built and its drawer open, the address bar stays /flows/leafcutter/how-acs-are-built?step=code, the tab still has two entries, and an 'Outside the current filters' notice says that 'Deliver a feature end-to-end' is not a Real · User · Spec flow and stays on screen until another flow is picked; Back returns to /flows/leafcutter/deliver-a-feature with Real, User, All and no notice, and Forward brings back the Spec filter with the notice"
     },
     {
       "for": "filterKeepsFlow",
@@ -1591,6 +3510,84 @@
       "given": "/flows/leafcutter/python-coder-internal?step=lint is open with the 'Step not found' notice and no drawer, and the tab has one history entry",
       "when": "the person clicks the 'Doc-enforcer' step",
       "then": "the notice disappears, the 'Doc-enforcer' drawer opens, the address bar becomes /flows/leafcutter/python-coder-internal?step=docenforce, and the tab still has one history entry, so no later Back press returns to ?step=lint"
+    },
+    {
+      "for": "finderOverview",
+      "given": "the store holds 28 flows the Flows view can draw, 25 under Leafcutter and 3 under Fern & Fig",
+      "when": "a person opens /flows from the sidebar 'Flows' link",
+      "then": "the finder shows an empty search box, the summary '28 flows' and every flow listed, ordered by product (Leafcutter, then Fern & Fig) and then by name; Product shows Leafcutter 25 and Fern & Fig 3, Actor shows Code 23, AI agent 17, Person 12 and Jev 8, and 'I/O not yet defined' shows 9; no flow is drawn, no breadcrumb shows and the tab title reads 'Flows · Leafcutter Atlas'"
+    },
+    {
+      "for": "finderSearch",
+      "given": "the store as measured on 2026-10-12, in which several decision flows have steps that use or produce the field decision_record.selected_option_id",
+      "when": "the person types 'selected option' into the search box on /flows",
+      "then": "the summary reads '5 flows, 27 steps match' and lists Publishing the decision record (7 matching steps), Retrieving a decision as precedent (6), Forming a decision in a kernel run (5), Staging the decision record (5) and How a decision is formed, saved, stored and reused (4); the search is case-insensitive and a step matches when every typed word starts a word of one of its label, text, AC ids, input or output field names, screen or entities"
+    },
+    {
+      "for": "finderFacets",
+      "given": "/flows?q=selected+option lists 5 flows and 27 steps",
+      "when": "the person ticks 'Person' under Actor",
+      "then": "the summary reads '2 flows, 5 steps match' and only steps a person runs are listed, an 'Actor: Person' chip with a 'Remove filter Actor: Person' button and a 'Clear all' link appear above the results, and Actor shows Code 5, AI agent 1, Person 2 and Jev 0, the 0 value staying listed but disabled; values combine with OR within a facet and AND across facets"
+    },
+    {
+      "for": "finderUrl",
+      "given": "/flows is open in a tab with one history entry",
+      "when": "the person types 'selected option' and then ticks 'Person' under Actor",
+      "then": "the address bar becomes /flows?q=selected+option and then /flows?q=selected+option&actor=human, the tab still has one history entry, and opening /flows?q=selected+option&actor=human in a new tab answers 200 with the same search, the 'Actor: Person' chip and the same '2 flows, 5 steps match' results; the address uses stored values such as actor=human, never labels, and never carries a flow or step parameter"
+    },
+    {
+      "for": "finderResults",
+      "given": "/flows?q=selected+option&actor=human is open",
+      "when": "the results show",
+      "then": "Publishing the decision record comes first with 4 matching steps and three rows, 'Decide to publish', 'Commit and review in git' and 'Merge to main', each with a 'Person' badge and why it matched ('Input · Decision record › selected_option_id' or 'Output · Decision record › selected_option_id'), followed by '1 more step'; Retrieving a decision as precedent follows with its one row 'Reuse it, or decide anew?'"
+    },
+    {
+      "for": "openResult",
+      "given": "/flows?q=selected+option&actor=human is open with one history entry",
+      "when": "the person clicks the step row 'Reuse it, or decide anew?' under Retrieving a decision as precedent",
+      "then": "a second history entry /flows/leafcutter/decision-retrieval?step=offer-reuse is added and that flow is drawn with the 'Reuse it, or decide anew?' drawer open, filters Real, Data, All and a one-flow breadcrumb, and Back returns to /flows?q=selected+option&actor=human with the same search, chip and results; a flow card instead opens /flows/leafcutter/decision-retrieval with no drawer"
+    },
+    {
+      "for": "actorBadge",
+      "given": "leafcutter/decision-retrieval has steps run by code, by Jev and by a person",
+      "when": "a person opens /flows/leafcutter/decision-retrieval",
+      "then": "every step and branch card carries an actor badge, 'Ask Jev whether each applies' showing 'Jev', 'Reuse it, or decide anew?' showing 'Person' and 'Look up matching records' showing 'Code', and the 'Reuse it, or decide anew?' card is named 'Step 4 of 5: Reuse it, or decide anew? (Person)'; Jev is never shown as AI agent"
+    },
+    {
+      "for": "pageTitle",
+      "given": "the flows How a flow renders in the Atlas and Deliver a feature end-to-end exist and no flow has the id leafcutter/flow-render-pipline",
+      "when": "a person opens /flows/leafcutter/flow-render-pipeline, /flows/leafcutter/flow-render-pipeline?step=resolve, /flows and /flows/leafcutter/flow-render-pipline",
+      "then": "the tab titles read 'How a flow renders in the Atlas · Flows · Leafcutter Atlas' for both flow addresses, 'Flows · Leafcutter Atlas' for the finder and 'Flow not found · Flows · Leafcutter Atlas' for the unknown id; after drilling from /flows/leafcutter/deliver-a-feature into 'Build' the title becomes 'How a ticket is built (the phase chain) · Flows · Leafcutter Atlas', and Back restores 'Deliver a feature end-to-end · Flows · Leafcutter Atlas'"
+    },
+    {
+      "for": "finderNoMatch",
+      "given": "no step that matches 'tracking' is run by Jev",
+      "when": "a person opens /flows?q=tracking&actor=jev",
+      "then": "the summary reads 'No flows match', no result is listed, and the empty state is titled \"No flows match 'tracking'\" and offers 'Remove Actor: Jev', which links /flows?q=tracking and says it would list 3 flows; without a search the title reads 'No flows match these filters'"
+    },
+    {
+      "for": "finderIoGap",
+      "given": "on the store as measured on 2026-10-13, 102 of the 306 stored steps and branches, in 9 flows, have an input or output that is not defined yet, and the overview's 'I/O not yet defined' shows 9",
+      "when": "a person ticks 'I/O not yet defined' on /flows, or opens /flows?io=gap",
+      "then": "the summary reads '9 flows, 102 steps match', each listed flow's matching steps are exactly its steps and branches with an undefined input or output, the chip reads 'I/O not yet defined' and never 'I/O: I/O not yet defined', and adding 'AI agent' under Actor (/flows?actor=llm&io=gap) narrows it to '6 flows, 8 steps match', among them 'Build a candidate query', which opens /flows/leafcutter/retrieval-query-build?step=author"
+    },
+    {
+      "for": "acChipLink",
+      "given": "the step 'resolve' of leafcutter/flow-render-pipeline implements UXP-411 and UXP-411a",
+      "when": "the person opens /flows/leafcutter/flow-render-pipeline?step=resolve and clicks the 'UXP-411' chip in its drawer",
+      "then": "the drawer shows one chip per linked criterion in stored order, each with the criterion's title, the 'UXP-411' chip links /atlas?ac=UXP-411, and following it opens the Atlas with UXP-411 selected and its detail open rather than the component overview"
+    },
+    {
+      "for": "drawerByKey",
+      "given": "/flows/leafcutter/flow-render-pipeline is open with no drawer and the tab has one history entry",
+      "when": "the person tabs to the card named 'Step 2 of 3: Resolve each step to its AC's live work_status (Code)' and presses Enter",
+      "then": "the 'resolve' drawer opens, the address bar becomes /flows/leafcutter/flow-render-pipeline?step=resolve and the tab still has one history entry, exactly as a click on the card gives"
+    },
+    {
+      "for": "drawerCloseByKey",
+      "given": "the 'resolve' drawer is open at /flows/leafcutter/flow-render-pipeline?step=resolve and the tab has one history entry",
+      "when": "the person tabs to the drawer's close button, which is named 'Close step details', and presses Enter",
+      "then": "the drawer closes, the address bar becomes /flows/leafcutter/flow-render-pipeline with no query and the tab still has one history entry, exactly as a click on the button gives"
     }
   ],
   "provenance": [
@@ -1623,6 +3620,12 @@
       "by": "flow-author (/plan-feature, ux-prototyping)",
       "date": "2026-10-09",
       "note": "v5: canonical, shareable Atlas flow URLs, from the owner-approved dataset leafcutter/atlas-flows v2 (commit e7c04e5f8) and the mockup leafcutter/atlas-flows-canonical-url (screen atlas-flows-canonical-url, commit 46255a446). Set entities to Flow, FlowRoute, FlowAppearance and FlowNavigation; the steps reach the dataset leafcutter/atlas-flows through the canonical-URL mockup. The flow-level mock_data_ref was left unset so this product-truth commit does not rewrite the back-references of done UXP-520 ACs, whose missing test coverage is ticketed separately. Added steps acStepLink, openByLink, openStepLink, drawerUrl, drawerClose, navPush and backForward, and branches bareFlows, flowNotFound, stepNotFound, legacyRedirect, drawerSwitch and pushFromOpenDrawer, each wired to the mockup screen with one acceptance scenario and empty implements for the business-analyst. Updated the cross step's narrative with today's legacy link form; kept its scenario and its UXP-524 link. Existing step ids, orders, contracts and AC links are unchanged. Approved by the owner at the flow gate on 2026-10-09 with three rulings that keep the URL matching the screen: (1) opening a drawer on bare /flows replaces the URL with the default flow's canonical URL plus ?step=<id>; (2) opening a real step's drawer after 'Step not found' clears the notice and replaces the unknown ?step=; (3) when a Source, Kind or Realization filter change makes a different flow render, the URL is replaced (no new Back entry) with that flow's canonical URL, and a filter change that keeps the flow leaves the URL unchanged. Same day, still v5, the rulings were wired from dataset v3 (uncommitted at the time; FlowNavigation nav-drawer-on-bare-flows-1..3, nav-clear-step-notice-1..4, nav-filter-replace-1..7): the drawerUrl scenario and the drawerUrl, drawerClose, stepNotFound, navPush and backForward narratives now state the rulings; branches stepNoticeCleared (from openStepLink), filterRepicksFlow and filterKeepsFlow (from filter) were added; the history-entry missing binding now also covers filters, which the dataset assumes travel with each entry (not an owner ruling). Readiness, lowered to draft for the gate, is approved again."
+    },
+    {
+      "action": "extended",
+      "by": "flow-author (/plan-feature, ux-prototyping)",
+      "date": "2026-10-13",
+      "note": "v6: the Atlas Flow finder, from the owner-approved dataset leafcutter/atlas-flows v4 (commit bb878207a) and the mockups leafcutter/atlas-flows-finder (new screen atlas-flows-finder) and leafcutter/atlas-flows-canonical-url v2 (commit cd4359cba). The bare /flows address now opens a finder instead of drawing the default entry flow, and a Source, Kind or Realization filter change never swaps the drawn flow but raises an 'Outside the current filters' notice, replacing owner ruling 3 of 2026-10-09; owner ruling 1 (a drawer opened on the bare /flows) has nothing left to act on. Added steps finderOverview, finderSearch, finderFacets, finderUrl, finderResults, openResult (screen atlas-flows-finder), actorBadge and pageTitle, and branches finderNoMatch, finderIoGap, acChipLink, drawerByKey and drawerCloseByKey, each with one acceptance scenario and empty implements for the business-analyst. Rewrote in place, keeping ids, AC links, screens and reads: open (now a flow page), bareFlows (now opens the finder), filterRepicksFlow (now keeps the flow and shows the notice; the id is kept for its AC link and step address), and the drawerUrl and backForward narratives and scenarios, which no longer start from a default flow on the bare /flows. Steps were re-ordered so the finder comes first. Added the illustrative_design contracts finder_query and flow_node, transcribed from the dataset's FlowFinderQuery and FlowNode, with observed examples pointing at their stored records. Entities gain FlowNode and FlowFinderQuery; the flow-level mock_data_ref stays unset so this product-truth change does not rewrite AC back-references. Readiness is lowered to draft for the flow gate."
     }
   ],
   "contract_definitions": {
@@ -1640,6 +3643,16 @@
       "schema": "docs/product-truth/schemas/atlas-flow-appearances.schema.json",
       "authority": "source_reviewed",
       "note": "Source-reviewed documentation of leafcutter-web/lib/data/types.ts, flow-contracts.ts and flows.ts; no runtime registration or automatic TypeScript/schema parity check."
+    },
+    "finder_query": {
+      "schema": "docs/product-truth/schemas/atlas-flow-finder-query.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: finder-state shape transcribed from docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json entities.FlowFinderQuery (v4). id is the dataset's fixture handle. No finder, route parameter, view prop or runtime validation exists; the matching, ordering and counting rules live in the dataset's invariants."
+    },
+    "flow_node": {
+      "schema": "docs/product-truth/schemas/atlas-flow-node.schema.json",
+      "authority": "illustrative_design",
+      "note": "PROPOSED, not implemented: step and branch card shape transcribed from docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json entities.FlowNode (v4). No finder index, card view model or runtime validation exists; its derivation rules live in the dataset's invariants."
     }
   }
 }

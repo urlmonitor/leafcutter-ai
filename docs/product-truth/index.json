@@ -219,26 +219,28 @@
       "id": "leafcutter/explore-flows-in-atlas",
       "type": "flow",
       "title": "Exploring product-truth flows in the Atlas",
-      "summary": "The user journey through the Atlas /flows view: open the view to see every flow listed, filter by source (mock vs real) and kind (user/data/architecture), select a flow to render its graph, open a…",
+      "summary": "The user journey through the Atlas /flows view. The bare /flows address opens a finder: search across flow names, step text, input and output field names, AC ids, entities and screens, narrow with…",
       "kind": "user",
       "source": "real",
       "component": "ux-prototyping",
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
       "status": "active",
-      "readiness": "approved",
-      "version": 5,
+      "readiness": "draft",
+      "version": 6,
       "entities": [
         "Flow",
         "FlowRoute",
         "FlowAppearance",
-        "FlowNavigation"
+        "FlowNavigation",
+        "FlowNode",
+        "FlowFinderQuery"
       ],
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 16,
-        "total": 21,
-        "asof": "2026-10-09"
+        "not_started": 29,
+        "total": 34,
+        "asof": "2026-10-13"
       },
       "tags": [
         "product-truth",
@@ -247,7 +249,14 @@
         "explorer",
         "canonical-url",
         "deep-link",
-        "browser-history"
+        "browser-history",
+        "finder",
+        "search",
+        "facets",
+        "actor-badge",
+        "keyboard-access",
+        "page-title",
+        "ac-deep-link"
       ]
     },
     {
@@ -1588,7 +1597,11 @@
       "canonical_mock_data": {
         "ux-prototyping": "leafcutter/atlas-flows"
       },
-      "flows": {}
+      "flows": {
+        "ux-prototyping": [
+          "leafcutter/explore-flows-in-atlas"
+        ]
+      }
     },
     "FlowNavigation": {
       "canonical_mock_data": {
@@ -1604,7 +1617,11 @@
       "canonical_mock_data": {
         "ux-prototyping": "leafcutter/atlas-flows"
       },
-      "flows": {}
+      "flows": {
+        "ux-prototyping": [
+          "leafcutter/explore-flows-in-atlas"
+        ]
+      }
     },
     "FlowRoute": {
       "canonical_mock_data": {
@@ -2036,16 +2053,18 @@
         "Flow",
         "FlowRoute",
         "FlowAppearance",
-        "FlowNavigation"
+        "FlowNavigation",
+        "FlowNode",
+        "FlowFinderQuery"
       ],
       "path": "flows/leafcutter/explore-flows-in-atlas.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
         "done": 5,
         "in_progress": 0,
-        "not_started": 16,
-        "total": 21,
-        "asof": "2026-10-09"
+        "not_started": 29,
+        "total": 34,
+        "asof": "2026-10-13"
       },
       "expands": [],
       "parents": []
