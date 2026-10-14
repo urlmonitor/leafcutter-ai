@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: todo
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -168,6 +168,9 @@ amended_by:
   - reason: "The four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py (all pass against main). work_status flipped to done. History: a local pre-commit check-done-proof from a deployed hook built 2026-10-08 refused the flip over the test_required:false documentation children INF-500d-4-vii and INF-500d-4-viii (KI-CG-20260914-done-proof-precommit-ignores-test-required); PR #1165 fixed that waiver gap in source and the source composite check reports no unproven children. Criteria unchanged; covered_by and implemented_by link fields added."
     by: test-writer
     at: 2026-10-14
+  - reason: "work_status done -> todo, set while merging origin/main. PR #1193 (merge 2832c5357) added the child INF-500d-4-ix (rule-copies parity, approved, work_status todo), so the composite cannot be done until -ix is built. The four end-to-end tests and the covered_by/implemented_by links stay. Criteria unchanged."
+    by: orchestrator
+    at: 2026-10-14
 superseded_by: null
 covered_by:
   - INF-500d-4-i
@@ -178,6 +181,7 @@ covered_by:
   - INF-500d-4-vi
   - INF-500d-4-vii
   - INF-500d-4-viii
+  - INF-500d-4-ix
   - unit_tests/portability/test_inf_500d_4_e2e.py
   - unit_tests/portability/_inf_500d_4_e2e_helpers.py
 implemented_by:

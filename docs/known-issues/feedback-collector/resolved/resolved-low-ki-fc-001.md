@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-25'
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 components:
   - feedback_collector
 related_docs:
@@ -14,18 +14,19 @@ related_docs:
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
   - docs/architecture/feedback-lifecycle.md
   - reports/feedback-snapshots/README.md
+  - docs/known-issues/build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md
 ---
 
 # KI-FC-001 — The sink is resolved from `__file__` while callers pass a CWD-relative override, so one drive splits its feedback across two corpora
 
 > One known issue, split out of `docs/known-issues/feedback-collector.md` on
-> 2026-09-14. Index: [feedback-collector.md](../feedback-collector.md).
+> 2026-09-14. Index: [feedback-collector.md](../../feedback-collector.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open — fix built on `epic/one-durable-log-root-for-every-workspace`
-  (INF-500d-4, ADR-069), not yet merged or verified. See the 2026-10-12 amendment below.
+- **Status:** **RESOLVED** — PR #1169 (merge `818c301c0`, 2026-10-12), INF-500d-4 / ADR-069.
+  Verified on `origin/main` `435c11395` on 2026-10-14. See the resolution section at the end.
 - **Occurrences:** 1
 - **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
 - **Where:** `scripts/feedback/submit_feedback.py` — `_find_project_root()` (`:65-77`),
@@ -155,7 +156,7 @@ aggregate above is reproducible from the `find` command at the top of this secti
 
 **What the fix is.** The work follows the "one declared sink per install" direction above.
 It does not use the `git rev-parse` anchor proposed in the original fix direction.
-[ADR-069](../../architecture/adrs/ADR-069-durable-log-root-for-workspaces.md) records why
+[ADR-069](../../../architecture/adrs/ADR-069-durable-log-root-for-workspaces.md) records why
 git-based discovery was rejected. The commits are on the epic branch:
 
 | Commit | AC | Change |
@@ -177,7 +178,7 @@ above now leads to the main install's declaration, which names the same enduring
 
 **Migration decision: none.** No sink is moved, merged or deleted. Reports written into
 per-drive worktrees before this change stay where they are. The one-off rescue is
-[`reports/feedback-snapshots/`](../../../reports/feedback-snapshots/README.md).
+[`reports/feedback-snapshots/`](../../../../reports/feedback-snapshots/README.md).
 
 **Why this entry stays open.** INF-500d-4-vii requires that this entry not be closed until
 INF-500d-4-iii through -vi are done, and never on the strength of a documentation record
@@ -193,7 +194,7 @@ under `AC_ENFORCE_STRICT=1`. The entry still stays open until the epic PR is mer
 **Still open after the epic:**
 
 - The BO-100d probe ACs still pin the relative `debugging/logs/agent_telemetry.jsonl`. See
-  [KI-BO-20261009](../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
+  [KI-BO-20261009](../../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md).
   Their owner has to change them.
 - The harvester's record identity collides. `harvest_learnings._event_hash` keys a record on
   `(timestamp, agent, component, destination, entry_kind)` and leaves out `text`. The
@@ -206,3 +207,34 @@ Fixed on the branch since the first amendment, and no longer open:
 `knowledge-harvester.md` no longer names `debugging/logs` (`9ce8d8052`).
 
 ---
+
+## Resolution (2026-10-14)
+
+**Fixed by** PR #1169, `epic/one-durable-log-root-for-every-workspace`, merged to `main` as
+`818c301c0` on 2026-10-12. The close condition in INF-500d-4-vii is met. It was checked on
+`origin/main` `435c11395`, against the AC records and the code, not a documentation record:
+
+- **The ACs are done on `main`.** `INF-500d-4-i`, `-iii`, `-iv`, `-v`, `-vi` and `-vii` all carry
+  `work_status: done` under
+  `docs/acceptance-criteria/infrastructure/INF-500-operational-observability/`.
+- **Both anchors in the root cause are gone.** `templates/scripts/feedback/submit_feedback.py`
+  no longer defines `_find_project_root` or `_JSONL_DEFAULT`; its decision history records the
+  removal (`:442`). Without `--jsonl`, the sink is `feedback_sink.resolve_feedback_sink(...)`
+  (`:336`), the build-time declaration in `config/knowledge_sink.json` (ADR-069).
+
+**Remainders.** The amendment above listed two. Neither keeps this entry open:
+
+- **The harvester identity collision is fixed.** PR #1175 (`fix/harvest-identity-includes-text`,
+  merge `3af00c0b6`, INF-400b-2-iii, `work_status: done`) moved record identity into
+  `scripts/knowledge/record_identity.py`. There `event_hash` digests the five required fields
+  **plus `text`** (`:55-63`), so distinct learnings that share the five fields no longer collapse
+  into one processed record.
+- **The BO-100d probe ACs are still open, and are tracked elsewhere.** They still describe an
+  appending probe pinned to the relative `debugging/logs/agent_telemetry.jsonl` (for example
+  `BO-100d.yaml`, `BO-100d-1.yaml` and `BO-100d-2.yaml` under
+  `docs/acceptance-criteria/build-orchestration/BO-100-smart-sequencing/`). That is owned by
+  [KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path](../../build-orchestration/open-high-ki-bo-20261009-bo100d-probe-pins-a-relative-telemetry-path.md),
+  which stays open.
+
+**Not done here.** No sink was moved or merged. The 2026-09-30 census records stay where they
+are, as the 2026-10-12 migration decision says.

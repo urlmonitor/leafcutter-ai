@@ -9,7 +9,7 @@ last_updated: '2026-10-09'
 components:
   - feedback_collector
 related_docs:
-  - docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
 ---
 
 # Feedback corpus snapshots

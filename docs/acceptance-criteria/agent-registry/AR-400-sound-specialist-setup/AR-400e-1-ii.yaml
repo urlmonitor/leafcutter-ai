@@ -1,0 +1,100 @@
+id: AR-400e-1-ii
+title: "The architecture diagram and the knowledge graph show the abilities of the twelve specialists that were only in the newer list"
+component: agent-registry
+components:
+  - agent_registry
+  - knowledge_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the twelve specialists whose derived registry entry carried only the
+    newer abilities field on 2026-10-12, each with a non-empty `skills:`
+    declaration,
+  When the architecture diagram of specialists and abilities is generated, and
+    the knowledge graph's edges are built,
+  Then for each of the twelve, the diagram draws one specialist-to-ability link
+    per declared ability and no others,
+    And the knowledge graph holds one specialist-to-ability edge per declared
+      ability for each of the twelve and no others,
+    And for the remaining specialists the diagram's links and the graph's edges
+      are unchanged from before the change, except where the two derived fields
+      previously disagreed, in which case they now equal the declaration,
+    And neither view reads the retired field: adding a stray older-field entry
+      to a fixture copy of the registry by hand changes neither output.
+depends_on:
+  - AR-400e-1
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The twelve skills_invoked-only entries."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "The knowledge graph whose agent edges are built from config/paths.json edge_fields."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - config
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "Diagram: scripts/generate_agent_diagram.py ~160-182 moves from skills_used (string list) to skills_invoked (dict list), keyed on skill_id, excluding descriptive_only; the 'No skills_used data in registry yet' note text changes with it."
+  - "Knowledge graph -- name BOTH enforcement points and fix the load-bearing one: config/paths.json surfaces.agents.edge_fields (authoritative, read by load_surfaces_with_meta) AND scripts/knowledge_edges.py:72 _SURFACE_EDGE_FIELDS (legacy fallback). Changing only knowledge_edges.py is a no-op."
+  - "EDGE LABEL STAYS 'skills_used' (user decision 12), SOURCE BECOMES skills_invoked skill ids. Today the label is simply the field name (knowledge_edges.extract_edges: edge_type = field, except components -> component_membership), and validate_knowledge_map (scripts/knowledge_query.py ~525-590) only accepts edge types equal to a declared edge_field or a known remap. So the paths.json change is: agents.edge_fields replaces 'skills_used' with 'skills_invoked', and the agents surface entry gains a DECLARED per-field mapping -- the edge label for skills_invoked ('skills_used') and the item key to read from object entries ('skill_id'), with descriptive_only items skipped. extract_edges and validate_knowledge_map read that declaration (data, not a hard-coded special case like _COMPONENT_FIELDS); knowledge_edges._SURFACE_EDGE_FIELDS (the fallback) is updated to match."
+  - "DICT ENTRIES RESOLVE: with the item key declared, each skills_invoked object yields its skill_id string, which is what resolve_frontmatter_path_entry / the target resolver receives; a dict is never handed to the path-entry resolver (which would refuse it and count it 'declined')."
+  - "Adding keys inside the existing agents entry of config/paths.json registers no new surface (check_package_surface_declaration counts only new entry keys of surfaces/paths), so package_surface stays false."
+  - "The knowledge sync to the hosted graph is read-only at present, so verify locally via scripts/knowledge_query.py; an unchanged edge label means no downstream consumer change."
+  - "Population: derive 'specialists that carried only the newer field' from the 2026-10-12 registry snapshot, not hard-coded twelve names."
+test_spec:
+  - name: test_diagram_draws_one_link_per_declared_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "Generate the agent-skill diagram from the real registry: for each specialist, the agent->skill links equal its declared ids (descriptive_only excluded), including those that held only skills_invoked on 2026-10-12."
+  - name: test_knowledge_graph_has_one_edge_per_declared_ability
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Build the knowledge-graph edges from the real config/paths.json and registry: agent->ability edges per specialist, all with edge type 'skills_used', equal its declared ids (descriptive_only excluded); zero declined entries; validate_knowledge_map reports the agents surface valid."
+    must_catch:
+      - "only knowledge_edges.py's fallback is changed and paths.json still names skills_used"
+      - "dict entries are declined by the path-entry resolver"
+      - "the edge label changes to skills_invoked"
+      - "validate_knowledge_map rejects the relabelled edge type"
+  - name: test_stray_older_field_entry_changes_neither_view
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Add a stray skills_used entry to a copy of the registry; the diagram and the edge set are byte-identical before and after."
+test_rationale: >-
+  These two views silently empty if they move late; the paths.json descriptor
+  exists because the obvious edit (knowledge_edges.py) is the inert gate.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "Registry with skills_invoked dict entries for every declared specialist."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria unchanged. it_requirements: the open edge-label question replaced by the decided rule (label stays 'skills_used', sourced from skills_invoked skill ids via a declared field->label and item-key mapping in config/paths.json agents surface); test_spec asserts the label and validate_knowledge_map. WHY: user decision 12 (BrainCandy, 2026-10-12)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The diagram and the graph are the two views that silently EMPTY if the field
+  is removed before they move -- the exact failure AR-400e's notes warn about.
+  The third clause guards the 27 "both" specialists against a regression.

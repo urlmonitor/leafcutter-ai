@@ -1,0 +1,89 @@
+id: AR-400b-2-i
+title: "A sentence telling the specialist NOT to use an ability is not an instruction to use it"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-agent" that grants nothing, whose instructions
+    contain these three sentences about existing abilities:
+      "You do not invoke the `signoff` skill."
+      "Embeds design principles directly (does NOT load the legacy a1 skill)."
+      "Do NOT read `.claude/skills/a2/SKILL.md` -- even if that file exists."
+  When the build runs,
+  Then the build reports no finding for any of the three sentences,
+    And when the third sentence is changed to "Read `.claude/skills/a2/SKILL.md`
+      -- even if that file exists.", the build stops with an "ability exists but
+      is not granted" finding for "a2" on that line,
+    And a sentence with two clauses -- "Do not skip this step; load the `a3`
+      skill first." -- produces a finding for "a3", because the negation governs
+      a different clause than the instruction.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/brainstorm-worker.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance: 'You do not invoke the `signoff` skill.' -- warned about on 2026-10-12."
+  - path: templates/agents/frontend-coder.md
+    relationship: describes
+    status: exists
+    relevance: "Real instances: 'does NOT load the legacy frontend-design skill' and 'Do NOT read .claude/skills/frontend-design/SKILL.md' -- warned about on 2026-10-12."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Negation is scoped to the CLAUSE that contains the instruction verb: a negator ('not', 'do not', 'does NOT', 'never', 'don't') governs only its own clause; clause boundaries include ';' and sentence ends. A line-wide 'any negation word suppresses the line' rule is forbidden."
+  - "Negation detection is case-insensitive ('NOT', 'Do NOT')."
+  - "The real-tree instances (brainstorm-worker 'You do not invoke the `signoff` skill.'; frontend-coder 'does NOT load the legacy frontend-design skill' and 'Do NOT read .claude/skills/frontend-design/SKILL.md') must produce no finding on the real tree."
+test_spec:
+  - name: test_three_negated_sentences_produce_no_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-agent (grants nothing) carries the three negated sentences about existing abilities; the validator CLI passes with no finding for any of them."
+  - name: test_removing_the_negation_produces_a_not_granted_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Change the third sentence to 'Read `.claude/skills/a2/SKILL.md` -- even if that file exists.'; the run fails with 'ability exists but is not granted' for a2 on that line."
+  - name: test_negation_in_another_clause_does_not_suppress_the_instruction
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "'Do not skip this step; load the `a3` skill first.' produces a finding for a3."
+    must_catch:
+      - "any negation word anywhere on the line suppresses the line"
+test_rationale: >-
+  Negation is the exclusion most likely to be implemented too broadly; the
+  two-clause sentence is the specific wrong version this record exists to
+  catch.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule (clause-scoped negation is part of it)."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR ("a sentence that negates a
+  skill"). The third clause stops the cheap implementation -- "any negation word
+  anywhere on the line suppresses the line" -- which would hide real instructions
+  that merely share a line with an unrelated "do not".

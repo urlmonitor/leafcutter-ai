@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-13'
 components:
   - build_pipeline
   - commit_guardian
@@ -27,9 +27,11 @@ related_docs:
   side effects have to be undone by hand before every commit. On an unattended drive, a phase
   agent will either stop or sweep the generated files into the ticket's commit.
 - **Status:** open, no AC.
-- **Occurrences:** recurring through the BO-4300 drive (ticket 05's template changes, 2026-10-09).
-  The rebuild churn reproduced on 2026-10-09 in a fresh worktree off `origin/main` `c373b005e`.
-- **First seen:** during the BO-4300 drive · **Last seen:** 2026-10-09
+- **Occurrences:** recurring through the BO-4300 drive (ticket 05's template changes, 2026-10-09;
+  every rebuild through tickets 10-13, 2026-10-12/13). The rebuild churn reproduced on 2026-10-09 in a
+  fresh worktree off `origin/main` `c373b005e`. The card half no longer reproduces on `origin/main`
+  `964f23a60` (see "Observed again, 2026-10-13").
+- **First seen:** during the BO-4300 drive · **Last seen:** 2026-10-13
 - **Where:** `templates/scripts/commit_guardian/check_build_drift.py` (compares
   `templates/agents/*.md` and `templates/scripts/commit_guardian/*.py` against
   `.build_manifest.json`; module docstring, SCOPE); `scripts/build.py` (rewrites tracked generated
@@ -83,3 +85,36 @@ agent stages the regenerated cards or `docs/INDEX.md` into a ticket commit (comp
 **Related.** `KI-BP-004` (stale deployed hooks after a merge, which this gate now catches).
 `KI-BP-002` and `KI-BP-015` (cards dirtied by every build). `KI-BP-20260831-1333` (the readme-marker
 GAP).
+
+## Observed again, 2026-10-13: card churn on the epic, already fixed on main
+
+**On the epic (coordinator's session account).** Every rebuild in the epic worktree regenerated many
+tracked `docs/agents/cards/*.card.md` from the AC store. It added AC lists to cards for agents whose
+templates had not changed, and they had to be restored by hand each time. One such change,
+`python-coder.card.md` at +402 lines, refused a commit. Ticket 10's commit entry (2026-10-12 23:59,
+`10_TICKET-20260928-BO-4300-workflow-runtime-and-shell-runner.md:1240`) says the attempt "also hit
+check-file-size on modified generated agent cards (python-coder/documentation-expert/llm-expert grew)".
+`check-file-size` does not measure `.md` (`file_size.checked_extensions` is `.py .sql .js .mjs .ts .tsx
+.sh`). `docs/**/*.md` is `check-doc-length`'s scope (300 lines), and the card is 2,525 lines on the epic.
+Inferred: the refusing gate was `check-doc-length`'s growth ratchet, and the entry named the wrong hook.
+
+**On main the card half is fixed (verified).**
+
+- `cce885645` (2026-10-09, "an agent card is a picture of its agent, not a cached query") removed the
+  `## AC Assignments` section and the AC-store walk from `scripts/generate_agent_cards.py`.
+  `python-coder.card.md` went from 2,809 to 160 lines, and a second regeneration writes nothing.
+- `16ee9eb6c` (2026-10-12) committed cards regenerated to match their templates.
+- Rebuilding this filing worktree's install on `origin/main` `964f23a60`
+  (`build.py --target-dir <worktree>`) dirtied only `docs/INDEX.md`: two rows re-sorted by case
+  (`KI-KM-20260928-doc-index-order-depends-on-host-os`). No card changed, and neither did
+  `LEAFCUTTER_VERSION`.
+
+**The epic does not have the fix.** `cce885645` is not an ancestor of
+`epic/every-piece-of-separate-work-gets-its-workspace`. The epic's last merge of main (`f65e2ca33`,
+merge base `a104d934c`) came before that change reached main. The epic still carries the long cards
+(`python-coder.card.md`: 2,525 lines at tip `cc3c85edc`, 164 on main). The churn there stops at its
+next merge of main.
+
+**Still open here.** The drift gate's cost on every template-editing ticket, the manual rebuild, and the
+`docs/INDEX.md` re-sort. The card half can move to resolved once no long-lived branch predates
+`cce885645`.

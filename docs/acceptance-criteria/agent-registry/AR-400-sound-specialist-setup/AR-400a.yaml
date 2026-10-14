@@ -1,0 +1,71 @@
+id: AR-400a
+title: "A specialist is never told to use an ability that does not exist"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Every ability named in a specialist's instructions is a real one.
+
+  If a specialist's instructions, or a shared guide it reads, tell it to load
+  an ability that does not exist, the build stops and names the specialist,
+  the ability and where it was named. The references that point nowhere today
+  are corrected or removed, so the first build after this change is clean.
+depends_on:
+  - AR-400
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "The open defect this closes. Its own measurement: references to abilities that were never written, the build printing success every time. Close it when this L1 is done."
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Names three abilities inherited from another project that do not exist in this package (find-context-candle, import-scanner, trade-analysis)."
+  - path: templates/agents/retrospective-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Names route-learning, retired by ADR-034."
+  - path: templates/skills/README.md
+    relationship: modifies
+    status: exists
+    relevance: "Names route-learning at line 36; a shared guide is in scope, not only specialist instructions."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400a-1
+  - AR-400a-2
+  - AR-400a-3
+  - AR-400a-4
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  A FAULT, NOT A WARNING. The user's wording: "failing the build instead of
+  printing noise". A reference to a nonexistent ability stops the build.
+
+  THE CHECK THAT ALREADY EXISTS. The source analysis notes a better check is
+  already in the repository and wired to nothing (KI-BP-007). Prefer wiring
+  that over writing a third check; the BA/IT PO decide.
+
+  SCOPE OF "INSTRUCTIONS". Specialist definitions and the shared guides they
+  are pointed at both count -- the README instance is in a shared guide.
+  A reference inside a recorded decision history (not an instruction) is not
+  a reference; KI-BP-007 already documents that exclusion.
+
+  ABILITIES THE PROJECT SUPPLIES are not "nonexistent" just because the
+  package does not ship them -- AR-400d owns that case and this L1 must
+  respect it.

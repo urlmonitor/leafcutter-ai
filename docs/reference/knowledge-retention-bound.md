@@ -4,7 +4,7 @@ description: "Lookup for the declared generation retention bound of the knowledg
 type: reference
 status: active
 created: 2026-10-12
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 components:
   - knowledge_management
   - decision_kernel
@@ -94,7 +94,8 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | Key | Type | Description |
 |---|---|---|
 | `bound` | object | The reported bound: `generation_limit`, `minimum_age_seconds`, `source`. |
-| `generations` | list of verdicts | One entry per retained ready generation, newest first by `created_at`, ties by `generation_id` ascending. |
+| `assessed` | integer | Count of generation records evaluated. Equals the length of `generations`. |
+| `generations` | list of verdicts | One entry per generation record, whatever its publication outcome, newest first by `created_at`, ties by `generation_id` ascending. |
 | `reclaimable` | list of strings | `generation_id` of each verdict whose `reclaimable` is `true`. |
 
 ### Per-generation verdict
@@ -107,15 +108,22 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 
 ### Generation facts read
 
-`retention_facts` (`knowledge/adapters/neo4j_projection.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per generation with status `ready`.
+`retention_facts` (`knowledge/adapters/neo4j_projection.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per `Snapshot` record for the repository. It applies no status filter: every generation is assessed, whatever its publication outcome.
 
 | Column | Meaning |
 |---|---|
 | `generation_id` | Generation identifier. |
+| `publication_status` | The Snapshot's `status`: `ready`, `validated`, `building` or `failed`. |
 | `active` | `true` when the generation is the repository's active one. |
 | `created_at` | Creation time; orders the count rank. |
-| `retired_at` | Retirement time; `created_at` is used when it is null. |
+| `retired_at` | Retirement time; `created_at` is used when it is null. A failed generation has no `retired_at`, so it is currently aged from `created_at`. |
 | `pinned_until` | Expiry of a pinned continuation; null when none is pinned. |
+
+The active-generation verdict keeps precedence (reason order 1), so an active generation whose publication never completed is still reported not reclaimable.
+
+Not established: the age basis is implicit. A generation that was never retired falls back from `retired_at` to `created_at` without the report saying so. Stating that basis explicitly is a separate criterion, `KM-400f-1-ii`, that is not built.
+
+Grounding: on the live store on 2026-10-12 every generation record was a failed publication and none was ready, so before this change the evaluation reported zero generations while the store was full.
 
 ---
 
@@ -162,7 +170,7 @@ Defined in `knowledge/cli_retention.py`, registered in `knowledge/__main__.py`. 
 
 The `source` reported by this command is the constant `BOUND_SOURCE`: `command line (--retention-max-generations, --retention-min-age-seconds)`.
 
-Output: `{"status": "ok", "bound": {...}, "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added.
+Output: `{"status": "ok", "bound": {...}, "assessed": N, "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added.
 
 ---
 

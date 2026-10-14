@@ -87,7 +87,7 @@ ARCHITECTURE: select_batch reuses scan_ac_store filter/sort helpers so readiness
     would still "pass" against the real implementation, not the intended
     stub). Every OTHER name each of these two functions calls as a bare
     global (_build_id_index, _drain_cycles, _is_leaf, _walk_ac_yamls,
-    derive_parent_id, _topo_order_build_set, _scan_test_root_for_covers_tags,
+    _is_structural_parent, _topo_order_build_set, _scan_test_root_for_covers_tags,
     _resolve_git_baseline_context, _partition_newly_added,
     _classify_newly_added, _report_preexisting, _red_baseline_verdict,
     _RedBaselineGitError) is NOT patched via "fast_lane.<name>" anywhere in
@@ -115,7 +115,6 @@ from _fl_common import (
     _run_pytest_and_parse_with_kind,
     _scan_test_root_for_covers_tags,
     _walk_ac_yamls,
-    derive_parent_id,
     traverse_ac_tree,
     verify_done_eligible,
 )
@@ -142,7 +141,7 @@ from _fl_red_baseline_support import (
     _resolve_git_baseline_context,
 )
 from _fl_heavy_lane_gate import heavy_lane_gate  # noqa: F401 — re-exported, used by main()
-from _fl_selection import _topo_order_build_set, select_batch
+from _fl_selection import _is_structural_parent, _topo_order_build_set, select_batch
 
 # ---------------------------------------------------------------------------
 # Public API — resolve_connected_build_set and verify_red_baseline remain
@@ -183,9 +182,12 @@ def resolve_connected_build_set(
         ac_id: The target AC id to resolve the connected set for.
         ac_root: Root directory of the AC YAML store.
         exclude_structural_parent: When ``True``, any ``depends_on`` entry that
-            equals ``derive_parent_id(node)`` (i.e. the structural parent of the
-            node being expanded) is skipped and NOT added to the build set during
-            the transitive closure walk.  Genuine (non-structural-parent)
+            is the structural parent of the node being expanded is skipped and
+            NOT added to the build set during the transitive closure walk. A dep
+            is the structural parent when it equals ``derive_parent_id(node)``
+            (the id shape shows the link) or when its own ``covered_by`` lists
+            the node (the recorded edge, for ids whose shape does not show it;
+            BO-2600b-4). The rule applies at every node the walk reaches.  Genuine (non-structural-parent)
             dependencies are still walked normally.  The subtree union step
             (``traverse_ac_tree``) is unaffected — the AC's own children always
             enter the set via the subtree, independent of this flag.  Defaults to
@@ -241,9 +243,9 @@ def resolve_connected_build_set(
         if rec is None:
             continue
         for dep in rec.get("depends_on") or []:
-            if exclude_structural_parent and dep == derive_parent_id(node):
-                continue  # skip structural parent dep — not expanded into build set
             dep_rec = id_index.get(dep)
+            if exclude_structural_parent and _is_structural_parent(dep, dep_rec, node):
+                continue  # skip structural parent dep — not expanded into build set
             if dep_rec is None or dep_rec.get("work_status", "") == "done":
                 continue  # unknown or already-met prerequisite
             if _is_leaf(dep_rec):

@@ -51,6 +51,14 @@ amended_by:
       central record becomes derived and a disagreement is reported). Never
       implemented -- work_status was todo for 117 days -- so there is no shipped
       behaviour to preserve by amendment.
+  - reason: >-
+      2026-10-12, business-analyst: NOTE, no change to status, criteria or
+      superseded_by. This record's 'skills_used retained as an alias for
+      backward compatibility' clause is now also contradicted by user decision 3
+      (BrainCandy, 2026-10-12): skills_used is RETIRED, leaving skills_invoked as
+      the only derived abilities field. Carried by AR-400e (AR-400e-2 retires the
+      field; AR-400e-1 moves every reader). Recorded so the alias arrangement is
+      not revived from this record.
 superseded_by:
   - AR-300c-1
   - AR-300c-3

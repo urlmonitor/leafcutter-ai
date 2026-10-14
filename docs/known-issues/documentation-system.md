@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: 2026-09-08
+last_updated: 2026-10-14
 components:
   - documentation_system
 related_docs:
@@ -55,7 +55,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`documentation-system/resolved/`](documentation-system/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 4** (0 blocker, 3 high, 1 low) · **Resolved: 0**
+**Open: 5** (0 blocker, 3 high, 2 low) · **Resolved: 0**
 
 ## Open
 
@@ -65,6 +65,7 @@ Fixed issues move to [`documentation-system/resolved/`](documentation-system/res
 | `high` | KI-DS-002 — The doc conventions the specialists require are repo documentation, not templates, so none of them is deployed to an adopter | [open-high-ki-ds-002.md](documentation-system/open-high-ki-ds-002.md) |
 | `high` | KI-DS-003 — Nothing resolves the paths in `pre_flight_reads`, so an agent can require a file that has never existed | [open-high-ki-ds-003.md](documentation-system/open-high-ki-ds-003.md) |
 | `low` | KI-DS-20260908-1535 — the documented ADR-index command regenerates `docs/architecture/adrs/README.md` with frontmatter that fails a required gate, so following the instruction breaks the commit | [open-low-ki-ds-20260908-1535.md](documentation-system/open-low-ki-ds-20260908-1535.md) |
+| `low` | KI-DS-20261014-token-scan-flags-f-string-fields-in-source-targets — documentation-verifier runs its unfilled-token check (6c) on every required path, so a `.py` target's f-string fields block the phase as placeholders | [open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md](documentation-system/open-low-ki-ds-20261014-token-scan-flags-f-string-fields-in-source-targets.md) |
 
 ## Resolved
 

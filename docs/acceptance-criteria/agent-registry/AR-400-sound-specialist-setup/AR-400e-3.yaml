@@ -1,0 +1,96 @@
+id: AR-400e-3
+title: "Proposing a specialist's self-description changes its own declaration, never the derived list"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fixture specialist whose instructions say "load the `doc-enforcer`
+    skill" and whose `skills:` declaration grants nothing,
+  When the self-description proposer is run for that specialist,
+  Then any abilities it proposes are expressed as a change to the specialist's
+    own `skills:` declaration, and it proposes no edit to the central registry's
+    derived abilities field,
+    And it proposes only abilities the specialist's instructions are recognised
+      (AR-400b-2) as telling it to use -- here "doc-enforcer" -- and does not add
+      "signoff" or any other ability by default,
+    And applying the proposal and then running the commit-time regeneration
+      produces a registry entry whose `skills_invoked` equals the new
+      declaration.
+depends_on:
+  - AR-400e
+  - AR-400e-2
+  - AR-400b-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The derived field the proposer currently writes."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "scripts/propose_agent_self_description.py _extract_skills_invoked (~101-130) is retargeted: it proposes a change to the specialist's frontmatter `skills:` block, and proposes NO registry skills_invoked edit. Its three private regexes (~105-107) are replaced by a call to the shared recognition rule (AR-400b-2)."
+  - "Remove the default-signoff branch (~124-128: adds signoff whenever frontmatter `signoff:` is truthy). signoff is proposed only when the body is recognised as instructing its use."
+  - "propose_agent_self_description.py is 418 content lines (2026-10-12) and may not grow; the regex deletion and default-branch removal are the room, and new logic goes in the shared module."
+  - "Existing proposals under scripts/proposals/agent_self_description_*.yaml carry skills_invoked proposals in the old shape; regenerate or delete them in the same change so no stale proposal targets the derived field."
+  - "The proposer must not write any file it was not asked to (dry-run/print by default as today)."
+test_spec:
+  - name: test_proposer_proposes_declaration_change_not_registry_edit
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Fixture specialist whose body says 'load the `doc-enforcer` skill' and whose `skills:` grants nothing; run the proposer CLI in a subprocess: the proposal is a `skills:` frontmatter change adding doc-enforcer and contains no edit to config/agent_registry.json."
+  - name: test_proposer_adds_no_default_signoff
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Same fixture with `signoff: true` in its frontmatter and no body instruction to load signoff: the proposal does not add signoff."
+    must_catch:
+      - "the default-signoff branch is left in place (it only fires when signoff: true, so a fixture without it would pass vacuously)"
+  - name: test_applied_proposal_regenerates_to_matching_skills_invoked
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: seam
+    description: "Apply the proposal to the fixture template, run the transform-agent-registry hook logic: the registry entry's skills_invoked equals the new declaration."
+  - name: test_proposer_and_gate_recognise_the_same_instructions
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For every real agent template, the ability ids the proposer would propose equal the canonical ids the reference check recognises as instructions."
+test_rationale: >-
+  The default-signoff wrong version only shows with `signoff: true` present,
+  so the discriminating fixture must carry it; the real-tree parity
+  descriptor holds the proposer and the gate to one rule.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule, so the proposer and the reference check agree on what an instruction is."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE WRITER THAT RE-SPLITS IT (AR-400e notes; design core issue 1: the
+  proposer writes registry skills_invoked from prose and adds a default
+  signoff). Left as is, it reintroduces a second source the next time it runs.
+
+  SHARED RECOGNITION. A proposer with its own regex would propose grants the
+  reference check rejects (or miss ones it requires); the expects_from pins one
+  rule.

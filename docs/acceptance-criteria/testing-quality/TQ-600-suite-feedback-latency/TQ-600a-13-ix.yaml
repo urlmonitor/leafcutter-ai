@@ -214,7 +214,6 @@ implemented_by:
 - scripts/ci/_hold_publish.py
 - scripts/ci/post_merge_fix_proof.py
 - scripts/ci/_github_rest.py
-- scripts/ci/_hold_exempt.py
 change_target: pipeline
 risk_surface: auth
 notes: |

@@ -37,14 +37,27 @@
     ]
   },
   "doc_length": {
-    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files are pinned to their previous implicit defaults, so this change alters ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population.",
+    "_comment": "check_doc_length.py — Length limits for docs/**.md (2026-09-14). severity 'block' (was the 'warn' default, under which this gate ALWAYS exited 0 — the reason three known-issues registers reached ~4,500 lines against a 300-line limit without one commit being stopped). Blocking is survivable only because the gate now ratchets exactly as check-file-size does for code (GE-127a-1 crossing refusal + GE-127b-1 growth ratchet, merge-aware, INDETERMINATE on an unresolvable previous value): a doc may not CROSS its limit, and a doc already over may not GROW, but shrinking or holding steady always passes. That matters here — 59 of 339 tracked docs are already over, and an absolute block would freeze every one of them including the append-heavy registers. max_lines/max_lines_adr/max_sections/excluded_files were pinned to their previous implicit defaults, so THAT change altered ENFORCEMENT only, not which docs are judged or where the thresholds sit. max_sections has zero current violations (the registers use ### per entry, not ##), so its dimension blocks with no grandfathered population. SUPERSEDED IN PART (2026-10-12, GE-127g-1): excluded_files no longer exists — it is replaced by set_aside_locations below, and unlike the 2026-09-14 change that one DOES alter which docs are judged. Membership is now by declared location carrying a stated ground, not by basename: a path ending '/' matches every document beneath it, anything else matches one document exactly. The old key matched basenames alone, so its two entries exempted every README.md and CHANGELOG.md anywhere under docs/; those hand-authored READMEs are back in scope, two of them already over the limit and grandfathered by the growth ratchet. Nothing reads excluded_files any more and nothing warns about it, so a config still carrying that key has a dead setting. GE-127g-5: every set_aside_locations entry must also declare report_above_lines, the per-document size above which the run REPORTS the document (size, ceiling, headroom, and the source its ground names) while the commit still completes; an entry without it is rejected, never defaulted. It is a report threshold, not a refusal limit, which is why it is not named max_lines.",
     "severity": "block",
     "max_lines": 300,
     "max_lines_adr": 400,
     "max_sections": 25,
-    "excluded_files": [
-      "README.md",
-      "CHANGELOG.md"
+    "set_aside_locations": [
+      {
+        "path": "docs/agents/cards/",
+        "ground": "Regenerated whole from templates/agents/ by the build's agent-card phase. No human author decides the length of any document here and no hand edit survives the next regeneration, so a length refusal names work nobody wrote and prescribes a remedy nobody can apply.",
+        "report_above_lines": 1500
+      },
+      {
+        "path": "docs/roadmap.md",
+        "ground": "Regenerated whole from docs/roadmap.json. The document carries its own do-not-edit-by-hand marker and names its source; its length is a function of the roadmap's size, which no author of this file controls.",
+        "report_above_lines": 1500
+      },
+      {
+        "path": "docs/INDEX.md",
+        "ground": "Regenerated whole by the build's doc-index phase from the contents of docs/. Its length is a function of how many documents the project has, so it grows whenever an unrelated document is added.",
+        "report_above_lines": 2000
+      }
     ]
   },
   "complexity": {
