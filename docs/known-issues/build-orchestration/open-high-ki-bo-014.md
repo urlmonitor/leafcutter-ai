@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-09-25'
+last_updated: '2026-10-12'
 components:
   - build_orchestration
 related_docs:
@@ -46,6 +46,9 @@ related_docs:
   which got `'tickets\\00_inbox\\epics\\EPIC-TestAcBo5d1\\01_TICKET-BO-5D1.md'` where it
   expects the `tickets/` prefix. The helper is shared, so both entry paths are affected. The
   "10/10 green" result below was presumably a POSIX run.
+  **2026-10-12: (c) is worse than recorded here.** With the real generator, nothing is
+  repointed on Windows at all, so every back-reference is left naming the deleted staging
+  file. 48 of 48 in a real run. See Occurrence 2 at the end of this entry.
   *Original 2026-09-14 status, kept as the historical record:* **RESOLVED 2026-09-14 — verified behaviourally on both entry paths, with one
   residual noted below.** Both symptoms were closed on `main` *before* this register's
   citations were retargeted: TKT-016 (`4711c9c79`) relativised the `implemented_by` pair in
@@ -79,8 +82,9 @@ related_docs:
   **Do not delete this entry** — acceptance criteria and commit messages cite it by id.
   The filename still reads `open-` because residual (a) is a live behavioural difference;
   rename to `resolved-` only when that is closed or explicitly accepted.
-- **Occurrences:** 1
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-25
+- **Occurrences:** 2 (2026-08-25, the original report; 2026-10-12, residual (c) in a real
+  48-ticket `--ids` run on Windows, see Occurrence 2)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-10-12
 - **Where:** `scripts/ac_store/epic_pipeline.py` — `run()` (`:60`), against
   `build_epic_from_ids()` (`:175`). The `_apply_epic_backrefs` call sites are at `:146-150`
   and `:243-247` (re-checked 2026-09-25). The helper is in `scripts/ac_store/epic_phases.py`
@@ -154,5 +158,66 @@ exercises every entrypoint will notice.
 (truncation ends on a dangling stopword), KI-ACD-012 (the generated Master_Plan fails
 `ticket_frontmatter_guard`). KI-ACD-012 and this entry are the same shape from opposite
 sides — a generator emitting artifacts its own repository's gates reject.
+
+---
+
+**Occurrence 2 — 2026-10-12: residual (c) in a real run. On Windows the repoint never happens,
+so every `implemented_by` back-reference dangles.** This was a `goal_to_epic.py --ids` run with
+48 ids, scaffolding `EPIC-RightJobRightAgent` (branch `ac-authoring/itpo-split-epic`, PR #1145).
+After the run, all 48 source ACs still held the staging path
+`implemented_by: [tickets/00_inbox/TICKET-20261012-<id>.md]`, and
+`_remove_loose_inbox_tickets()` had deleted those files. They were repointed by hand in
+`32a542a6`.
+
+*Mechanism, verified in code on origin/main `a104d934`:*
+
+1. The generator records the back-reference with forward slashes. `_gtfa_cli.py:356`
+   relativises with `str(...)`, but `_write_implemented_by()` canonicalises the result
+   (`_gtfa_implemented_by.py:233`) through `_gtfa_paths._canonicalise_to_repo_relative`, whose
+   first step is `path.replace("\\", "/")` (`_gtfa_paths.py:139`). So the store holds
+   `tickets/00_inbox/TICKET-….md`.
+2. The repoint builds its lookup key with `str(Path(loose_path).relative_to(worktree_root))`
+   (`epic_phases.py:165`). On Windows that gives `tickets\00_inbox\TICKET-….md`.
+3. `_replace_implemented_by_entry()` tests `if old_path not in implemented_by: continue`
+   (`epic_assembly.py:330`). The key never matches, so nothing is rewritten. Nothing is logged
+   either: `warn_unrelativisable` covers a path that cannot be made relative, not a lookup that
+   matches no record.
+4. `_remove_loose_inbox_tickets()` then deletes the files that the unchanged entries name.
+
+*Probe (scratch store, Windows, Python 3.14).* The AC was seeded with the generator's own
+canonical form, and `_apply_epic_backrefs(..., warn_unrelativisable=True)` was called on it. The
+lookup pair came back as `('tickets\\00_inbox\\TICKET-…', 'tickets\\00_inbox\\epics\\EPIC-X\\01_TICKET-…')`.
+The AC line stayed `- tickets/00_inbox/TICKET-…`, and no WARNING was printed.
+
+*Both routes are affected.* `run()` (`epic_pipeline.py:146-152`) and `build_epic_from_ids()`
+(`:254-262`) call the same `_apply_epic_backrefs()` → `_relativise_backref_pair()`, so `--ac` has
+the same defect on Windows. That conclusion comes from reading the code; `--ac` was not run on the
+real store. On POSIX, `str(Path)` uses `/`, the key matches and the repoint works, which agrees
+with the POSIX verifications above.
+
+*Why (c) understated it.* The regression test's fake generator seeds the back-reference with the
+same rendering the repoint uses, `str(abs_ticket_path.relative_to(worktree_root))`
+(`test_bo_2600a_5.py:205`). On Windows both are backslashed, so seed and lookup agree, and the
+test sees only the separators in the recorded value. Re-run on 2026-10-12, the same three test
+files gave the same result: **1 failed, 9 passed**. The real generator writes forward slashes. A
+fake that renders paths the way the code under test does cannot observe this.
+
+*Nothing downstream catches it.* `scripts/ac_store/validate_ac_schema.py` has no reference to
+`implemented_by`, and `config/ac_store_schema.json` types the field only as an array of strings.
+A scratch copy of `ACD-1600c-1.yaml` with
+`implemented_by: [tickets/00_inbox/TICKET-20261012-ACD-1600c-1.md]`, a file that does not exist,
+validated `OK` with exit 0. The how-to promises "Back-references written into source AC YAMLs
+start with `tickets/`" (`docs/how-to/goal-to-epic.md:275-276`). The strings do; on Windows they
+just name a deleted file.
+
+*Fix direction, in addition to the above.*
+
+- Render both halves of the pair with `.as_posix()`, or pass them through the generator's own
+  canonicaliser, so that the key and the stored value share one spelling.
+- Have `_replace_implemented_by_entry()` return the number of records it rewrote, and make
+  `_apply_epic_backrefs()` fail, or at least warn, when a ticket's repoint matched zero records.
+- Make the test fake call the real canonicaliser.
+- The store-level check that every `implemented_by` entry resolves, proposed in
+  `KI-ACD-20260914-generated-implemented-by-records-the-staging-path`, would have caught all 48.
 
 ---

@@ -53,34 +53,58 @@ class KeptRouting(KernelModel):
     """The routing the item would have taken as one decision (bundled_accepted / mid_run)."""
 
     capability_id: str
+    """The capability the item would have used had it stayed one decision."""
     capability_version: str
+    """Version of that capability, so the kept route can be reproduced."""
     routing_assessment_id: str
+    """The routing assessment that chose this route, so the choice can be audited."""
 
 
 class Decomposition(KernelModel):
     """The split record: one per split work item (leafcutter.decomposition.v1, detection part)."""
 
     id: str = Field(pattern=r"^dcp-[0-9a-f]{16}$")
+    """Identifier of this split, derived from the owning work item so a restart never makes a second one."""
     run_id: str
+    """The run this split belongs to."""
     work_item_id: str
+    """The work item that was split into parts."""
     subject_kind: SubjectKind
+    """What kind of request was split (goal, research request or decision question)."""
     subject_text: str = Field(min_length=1)
+    """The exact text that was judged bundled and offered for splitting."""
     found_at: FoundAt
+    """Whether the bundle was found at routing or in the middle of a run."""
     work_item_depth: int = Field(ge=0)
+    """Depth of the split work item in the run's tree; 0 exactly when found at routing."""
     trigger: SplitTrigger | None = None
+    """The routing outcome the bundle judgement was combined with; null when found mid run."""
     kept_routing: KeptRouting | None = None
+    """The route the item would have taken whole, used when the person refuses the split."""
     state: str | None = None
+    """Where the split stands; null until the host's proposal arrives."""
     parts: list[dict[str, JsonValue]] = Field(default_factory=list)
+    """The parts offered to the person, each with its text, quoted words, dependencies and capability."""
     dropped: list[dict[str, JsonValue]] = Field(default_factory=list)
+    """Proposed parts the conversion left out, each with the reason it was dropped."""
     not_covered: list[dict[str, JsonValue]] = Field(default_factory=list)
+    """Valid parts cut because the part limit was reached, so the person sees what is left over."""
     one_question_rewording: str | None = None
+    """The host's suggestion for asking the request as one bounded question; shown as a hint after a jev_none rejection, never run."""
     gate_answer: str | None = None
+    """The person's answer at the split gate (approved or rejected); null until answered."""
     gate_by: str | None = None
+    """Who gave the gate answer."""
     gate_at: str | None = None
+    """When the gate answer was given."""
     gate_note: str | None = None
+    """The person's free-text note on the answer."""
     whole_decision_id: str | None = None
+    """The staged decision record of the subject when it was decided whole, as one question; null otherwise."""
     capability_gap_recorded: bool = False
+    """Whether this split already counted as a capability gap, so the gap is never counted twice."""
     report_lines: list[str] = Field(default_factory=list)
+    """Plain-language lines shown to the person about this split in the run report."""
 
     @model_validator(mode="after")
     def _consistent(self) -> Decomposition:
@@ -100,22 +124,33 @@ class GoalDecompositionRequestPayload(KernelModel):
     """leafcutter.goal_decomposition_request.v1: what the host is asked to split (ADR-067 4.1)."""
 
     split_id: str = Field(pattern=r"^dcp-[0-9a-f]{16}$")
+    """The split this request belongs to, so the host's reply can be matched to it."""
     subject_kind: SubjectKind
+    """What kind of request is to be split, so the host phrases the parts to fit."""
     subject_text: str = Field(min_length=1)
+    """The exact text the host must split into separate questions."""
     allowed_capabilities: list[ChildCapability] = Field(
         default_factory=lambda: ["decision", "research"], min_length=1)
+    """The capabilities a part may use; the host picks one for each part."""
     min_parts: int = Field(default=2, ge=2, le=2)
+    """Fewest parts a split may offer; fewer than two is no split."""
     max_parts: int = Field(ge=2, le=5)
+    """Most parts the host should offer; the kernel cuts anything above split.max_parts."""
 
 
 class PartProposal(KernelModel):
     """One proposed part: its id, text, the verbatim span it quotes, dependencies and capability."""
 
     id: str = Field(min_length=1)
+    """Short id other parts cite in depends_on."""
     text: str = Field(min_length=1)
+    """The part written as one question that stands alone."""
     covers: str = Field(min_length=1)
+    """The words of the request this part quotes verbatim; a part whose quote is not found is dropped."""
     depends_on: list[str] = Field(default_factory=list)
+    """Ids of parts that must be settled before this one runs."""
     child_capability: ChildCapability
+    """Whether the part is run as a decision or as research."""
 
 
 class GoalDecompositionPayload(KernelModel):
@@ -126,7 +161,9 @@ class GoalDecompositionPayload(KernelModel):
     """
 
     parts: list[PartProposal] = Field(max_length=MAX_PROPOSED_PARTS)
+    """The parts the host proposes; a proposal the kernel checks, never a fact."""
     one_question_rewording: str | None = None
+    """The host's suggestion for asking the request as one bounded question; shown as a hint after a jev_none rejection, never run."""
 
 
 __all__ = ["MAX_PROPOSED_PARTS", "ChildCapability", "Decomposition", "FoundAt", "GoalDecompositionPayload",

@@ -1,0 +1,63 @@
+id: AR-400f
+title: "Who a specialist may hand work to is stated once, with nothing repeated"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  A hand-off permission that repeats itself is a setup fault.
+
+  When a specialist's list of who it may hand work to names someone the list
+  already covers, the build stops and says which entry is redundant, instead
+  of quietly tidying it up. The redundant entry that exists today is removed.
+depends_on:
+  - AR-400
+doc_links:
+  - path: templates/agents/ticket-supervisor.md
+    relationship: modifies
+    status: exists
+    relevance: "Names llm-expert explicitly beside 'every ticket-phase agent', which already covers it. Leftover since June (65602f9ad); removed per user decision 4."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-5.yaml
+    relationship: related
+    status: exists
+    relevance: "CONTRADICTION TO RECONCILE. States that resolution de-duplicates, so an explicit entry also covered by the 'every ticket-phase agent' entry is named once -- i.e. tolerated. Decision 4 makes such a declaration a fault. De-duplication at delivery may stay; accepting the declaration may not."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3100-delegated-work-completes/BO-3100a.yaml
+    relationship: related
+    status: exists
+    relevance: "FENCED. BO-3100a owns whether hand-off AUTHORITY is bounded -- the means to hand off matches the declared permission. This L1 owns the SHAPE of the declaration -- it says each thing once. A redundant entry grants no extra authority, so BO-3100a's check passes on it."
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400f-1
+  - AR-400f-2
+  - AR-400f-3
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+documentation_rationale: null
+notes: |
+  USER DECISION 4 (BrainCandy, 2026-10-12), BINDING: ticket-supervisor's
+  llm-expert entry is a leftover -- remove it; redundancy becomes a
+  declaration-shape error.
+
+  WHY A FAULT AND NOT A NOTE. A redundant entry is harmless the day it is
+  written and misleading the day the covering entry changes: if llm-expert
+  stopped being a ticket-phase agent, the explicit entry would silently keep a
+  permission nobody meant to keep. Today it surfaces as an unowned warning
+  nobody acts on -- the class of message this goal removes.
+
+  PLACEMENT CONSIDERED. Hosting this as an L2 under BO-3100a was considered
+  and rejected for the reason in doc_links: BO-3100a is about authority, and
+  this record is about declarations being coherent, which is AR-400's promise.
+  AR-300c-5 would have been the nearest host but is done.

@@ -101,8 +101,9 @@ def _extract_frontmatter_block(content: str) -> tuple[str, str, str] | None:
 
     Returns:
         A tuple of (pre_yaml, yaml_block, post_yaml) where pre_yaml is the
-        leading '---' line, yaml_block is the content between delimiters, and
-        post_yaml is everything from the closing '---' onward.
+        leading '---' line (with its own LF or CRLF ending), yaml_block is
+        the content between delimiters, and post_yaml is everything from the
+        closing '---' onward.
         Returns None if no frontmatter block is detected.
     """
     if not content.startswith("---"):
@@ -110,9 +111,10 @@ def _extract_frontmatter_block(content: str) -> tuple[str, str, str] | None:
     end_idx = content.find("\n---", 3)
     if end_idx == -1:
         return None
-    pre_yaml = content[: 4]  # "---\n"
-    yaml_block = content[4 : end_idx + 1]  # YAML content (includes trailing newline)
-    post_yaml = content[end_idx + 1:]  # "---\n..." onward
+    open_end = content.find("\n") + 1  # opening line whole, keeps its own ending
+    pre_yaml = content[:open_end]
+    yaml_block = content[open_end : end_idx + 1]
+    post_yaml = content[end_idx + 1:]
     return (pre_yaml, yaml_block, post_yaml)
 
 
@@ -184,20 +186,21 @@ def _replace_status_line(yaml_block: str, new_status: str) -> str:
         The updated YAML block with the status: field replaced or inserted.
     """
     if re.search(r"^status:\s*.+$", yaml_block, re.MULTILINE):
-        return re.sub(r"^(status:\s*)(.+)$", rf"\g<1>{new_status}", yaml_block, flags=re.MULTILINE)
+        return re.sub(r"^(status:\s*)[^\r\n]+", rf"\g<1>{new_status}", yaml_block, flags=re.MULTILINE)
 
     # Insert status: after title: if present
     if re.search(r"^title:", yaml_block, re.MULTILINE):
         return re.sub(
-            r"^(title:.+\n)",
-            rf"\g<1>status: {new_status}\n",
+            r"^(title:[^\r\n]+)(\r?\n)",
+            rf"\g<1>\g<2>status: {new_status}\g<2>",
             yaml_block,
             count=1,
             flags=re.MULTILINE,
         )
 
     # Fallback: prepend
-    return f"status: {new_status}\n{yaml_block}"
+    eol = "\r\n" if "\r\n" in yaml_block else "\n"
+    return f"status: {new_status}{eol}{yaml_block}"
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +385,8 @@ def set_ticket_status(
     """
     # --- Read ---
     try:
-        content = ticket_path.read_text(encoding="utf-8")
+        with open(ticket_path, encoding="utf-8", newline="") as fh:
+            content = fh.read()
     except OSError as exc:
         print(f"Error: cannot read ticket file: {exc}", file=sys.stderr)
         return 2
@@ -440,7 +444,7 @@ def set_ticket_status(
     new_content = pre_yaml + updated_yaml + post_yaml
 
     try:
-        ticket_path.write_text(new_content, encoding="utf-8")
+        ticket_path.write_text(new_content, encoding="utf-8", newline="")
     except OSError as exc:
         print(f"Error: cannot write ticket file: {exc}", file=sys.stderr)
         return 2

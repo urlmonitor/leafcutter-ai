@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -92,8 +92,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-01'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300a_1_i_empty_population.py
+implemented_by:
+  - scripts/agent_grant_delivery.py
+  - scripts/agent_ability_accounts.py
 notes: |
   WHY THIS IS NOT PARANOIA. The defect this whole tree exists for is a correct
   computation whose result reached nobody while the build reported success. The

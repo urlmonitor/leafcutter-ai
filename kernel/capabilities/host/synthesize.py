@@ -13,12 +13,13 @@ ARCHITECTURE: Extends HostOperation. The request is synthesis_request.v1 (whose 
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 from kernel.capabilities.host.base import HostOperation
 from kernel.capabilities.host.sanitize import completed_result, convert_findings
 from kernel.capabilities.host.spec import HostConversion
-from kernel.contracts import CapabilityResult, schema_ids
+from kernel.contracts import CapabilityResult, Finding, schema_ids
 from kernel.contracts.payloads import FindingsPayload, SynthesisRequestPayload
 
 
@@ -56,7 +57,10 @@ class Synthesize(HostOperation):
         """Return the findings as host-reported inferences within the requested maximum."""
         request = self.parse_request(ctx.invocation.input_payload)
         cap = request.limits.max_findings if request else None
-        findings, notes = convert_findings(ctx, payload.findings, self.capability_id, {}, cap)
+        handed = set(request.evidence_ids) if request and request.evidence_ids else None
+        accepted, notes = _cite_only_handed(payload.findings, handed)
+        findings, converted = convert_findings(ctx, accepted, self.capability_id, {}, cap)
+        notes += converted
         body = FindingsPayload(
             findings=findings, agreements=list(payload.agreements),
             disagreements=list(payload.disagreements), constraints=list(payload.constraints),
@@ -66,10 +70,37 @@ class Synthesize(HostOperation):
                                              "verified facts", *notes])
 
 
+def _cite_only_handed(findings: Sequence[Finding], handed: set[str] | None
+                      ) -> tuple[list[Finding], list[str]]:
+    """Keep only findings that cite handed evidence and nothing else (DK-600a-3).
+
+    A finding citing any id outside `handed`, or citing nothing, is refused with a note. A request
+    that hands no ids (`None`) keeps the conversion's own check: unknown citations are dropped.
+    """
+    if handed is None:
+        return list(findings), []
+    kept: list[Finding] = []
+    notes: list[str] = []
+    for index, item in enumerate(findings):
+        outside = [i for i in [*item.supporting_evidence_ids, *item.contradicting_evidence_ids]
+                   if i not in handed]
+        if outside or not item.supporting_evidence_ids:
+            reason = (f"cites evidence it was not handed ({', '.join(outside)})" if outside
+                      else "cites none of the handed evidence")
+            notes.append(f"finding {index} was not accepted: it {reason}")
+        else:
+            kept.append(item)
+    return kept, notes
+
+
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
 # - 2026-10-01 11:25 [python-coder]: The requester's own output_requirements are rendered as
 #   `Requester: ...` lines, so they read as a quoted request and cannot be mistaken for the
 #   kernel's rules. (#KernelBootstrapV0/P8)
+# - 2026-10-10 [python-coder]: A finding citing any evidence outside the synthesis request's
+#   handed ids, or citing nothing, is refused with a note instead of kept with the citation
+#   stripped; the user chose the AC over its ticket. A request with no handed ids keeps the
+#   old drop-the-citation check. (DK-600a-3, dec-ea83c3989d1b7199)
 # ====================================================================

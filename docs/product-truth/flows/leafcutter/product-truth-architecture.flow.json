@@ -23,7 +23,8 @@
     {
       "id": "store",
       "label": "Product-truth store lives beside the AC store",
-      "human": "The product-truth store (flows, mock data, mockups) lives under docs/product-truth, right next to the acceptance-criteria store it links into.\n\nI/O boundary: The store consists of separately schema-checked JSON artifacts, joined by index.json. There is no single combined store DTO; examples show distinct artifact projections.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/component: string (required)\n  flow/steps: array (required)\n  flow/readiness: string (required)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n  mock_data/id: string (required)\n  mock_data/entities: object (required)\n  Schema: [mock_data](docs/product-truth/schemas/mock-data.schema.json)\n  mockup/id: string (required)\n  mockup/screen: string (required)\n  mockup/renders: null|string (required)\n  Schema: [mockup](docs/product-truth/schemas/mockup.schema.json)\nProduces:\n  SOURCE-REVIEWED DOCUMENTATION: Projection of generate_product_truth.py write_index/build_by_ac/build_by_flow. Documents index.json lookups, not a complete runtime validator or automatic source parity.\n  index/artifacts: array (optional)\n  index/by_component: object (optional)\n  index/by_entity: object (optional)\n  index/by_flow: object (optional)\n  index/by_ac: object (optional)\n  Schema: [index](docs/product-truth/schemas/product-truth-index-projection.schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"component\": \"ux-prototyping\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nInput illustrative mock_data projection; not an execution receipt — mock_data; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"entities\": {\n    \"Ac\": {\n      \"fields\": {\n        \"id\": \"string; stable acceptance criterion identifier\"\n      },\n      \"records\": [\n        {\n          \"id\": \"ACD-300\"\n        }\n      ]\n    }\n  }\n}\n\nInput illustrative mockup projection; not an execution receipt — mockup; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/feature-review\",\n  \"screen\": \"feature-review\",\n  \"renders\": null\n}\n\nOutput illustrative index projection; not an execution receipt — index; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"artifacts\": [\n    {\n      \"id\": \"leafcutter/define-a-feature\",\n      \"type\": \"flow\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"version\": 3\n    }\n  ],\n  \"by_component\": {\n    \"ux-prototyping\": {\n      \"flows\": [\n        \"leafcutter/define-a-feature\"\n      ],\n      \"mock_data\": [],\n      \"mockups\": []\n    }\n  },\n  \"by_entity\": {\n    \"Ac\": {\n      \"canonical_mock_data\": {},\n      \"flows\": {\n        \"ux-prototyping\": [\n          \"leafcutter/define-a-feature\"\n        ]\n      }\n    }\n  },\n  \"by_flow\": {\n    \"leafcutter/define-a-feature\": {\n      \"component\": \"ux-prototyping\",\n      \"path\": \"flows/leafcutter/define-a-feature.flow.json\",\n      \"entities\": [\n        \"Ac\"\n      ],\n      \"expands\": [],\n      \"parents\": [],\n      \"impl_status\": \"not_started\"\n    }\n  },\n  \"by_ac\": {\n    \"ACD-300\": [\n      {\n        \"flow\": \"leafcutter/deliver-a-feature\",\n        \"node\": \"plan\",\n        \"node_kind\": \"step\",\n        \"flow_kind\": \"user\",\n        \"screen\": null,\n        \"mock_data\": null,\n        \"entities\": [],\n        \"source\": \"real\",\n        \"asof\": \"2026-10-03\"\n      }\n    ]\n  }\n}",
+      "description": "The product-truth store keeps flows, mock data and mockups right beside the acceptance criteria store it links into.",
+      "actor_kind": "deterministic",
       "order": 1,
       "implements": [
         "UXP-420",
@@ -170,7 +171,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -298,7 +299,8 @@
     {
       "id": "atlas",
       "label": "The Atlas reads it live and renders flows",
-      "human": "The Leafcutter Atlas reads the product-truth store and renders its flows. Its current getFlows cache persists for the repository root during the server process; edits do not imply automatic polling or immediate freshness, and this preview is restarted after final generation.\n\nI/O boundary: getFlows() reads flow JSON and adapts it into the existing UI view model. The visible browser tree is rendered React/HTML; it is not the flow JSON sent back as a new result. This process caches parsed flows per repository root, so a running preview may need refresh/restart after source changes.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/name: string (required)\n  flow/kind: string (required)\n  flow/source: string (required)\n  flow/steps/*/id: string (required)\n  flow/steps/*/label: string (required)\n  flow/steps/*/human: string (required)\n  flow/steps/*/io_contracts: object (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  No checked JSON binding documented in this direction.\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"name\": \"Define a feature\",\n  \"kind\": \"user\",\n  \"source\": \"real\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}",
+      "description": "Atlas reads the product-truth store and draws its flows, holding what it read until it is refreshed or restarted.",
+      "actor_kind": "deterministic",
       "order": 2,
       "implements": [
         "UXP-421",
@@ -354,7 +356,14 @@
                 "required": true
               },
               {
-                "path": "/steps/*/human",
+                "path": "/steps/*/description",
+                "types": [
+                  "string"
+                ],
+                "required": true
+              },
+              {
+                "path": "/steps/*/actor_kind",
                 "types": [
                   "string"
                 ],
@@ -387,7 +396,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -406,7 +415,8 @@
         "flow/source: string (required)",
         "flow/steps/*/id: string (required)",
         "flow/steps/*/label: string (required)",
-        "flow/steps/*/human: string (required)",
+        "flow/steps/*/description: string (required)",
+        "flow/steps/*/actor_kind: string (required)",
         "flow/steps/*/io_contracts: object (optional)"
       ],
       "produces": []
@@ -414,7 +424,8 @@
     {
       "id": "agents",
       "label": "Agents produce & extend the artifacts",
-      "human": "Leafcutter's agents produce and extend the product-truth artifacts — drafting flows, seeding mock data, and generating ACs — keeping the layer alive.\n\nI/O boundary: Agents author flow JSON and parsed AC YAML. This diagram shows artifact ownership, not automatic implementation or approval.\n\nContract fields and examples (generated)\nConsumes:\n  flow/id: string (required)\n  flow/readiness: string (required)\n  flow/steps: array (required)\n  flow/acceptance_scenarios: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\nProduces:\n  flow/id: string (required)\n  flow/version: integer (required)\n  flow/steps: array (required)\n  flow/provenance: array (optional)\n  Schema: [flow](docs/product-truth/schemas/flow.schema.json)\n  ac/id: string (required)\n  ac/criteria: string (required)\n  ac/readiness: string (optional)\n  Schema: [ac](config/ac_store_schema.json)\n\nInput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"readiness\": \"draft\",\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ],\n  \"acceptance_scenarios\": [\n    {\n      \"given\": \"A feature draft exists\",\n      \"when\": \"The person reviews it\",\n      \"then\": \"Their decision is retained\",\n      \"for\": \"approve\"\n    }\n  ]\n}\n\nOutput illustrative flow projection; not an execution receipt — flow; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"leafcutter/define-a-feature\",\n  \"version\": 3,\n  \"steps\": [\n    {\n      \"id\": \"approve\",\n      \"order\": 1,\n      \"label\": \"Approve the feature\",\n      \"human\": \"Review the proposed behavior.\",\n      \"implements\": [\n        \"UXP-531\"\n      ],\n      \"impl_status\": \"not_started\",\n      \"screen\": \"feature-review\"\n    }\n  ]\n}\n\nOutput illustrative ac projection; not an execution receipt — ac; illustrative; selected fields only; full required/defaulted fields in linked contract:\n{\n  \"id\": \"ACD-300\",\n  \"criteria\": \"Given an approved requirement, When delivery finishes, Then its evidence is recorded.\",\n  \"readiness\": \"approved\"\n}",
+      "description": "Leafcutter's AI agents draft flows, seed mock data and write acceptance criteria, keeping the product-truth layer alive.",
+      "actor_kind": "llm",
       "order": 3,
       "implements": [
         "UXP-422",
@@ -533,7 +544,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],
@@ -564,7 +575,7 @@
                   "id": "approve",
                   "order": 1,
                   "label": "Approve the feature",
-                  "human": "Review the proposed behavior.",
+                  "description": "Review the proposed behavior.",
                   "implements": [
                     "UXP-531"
                   ],

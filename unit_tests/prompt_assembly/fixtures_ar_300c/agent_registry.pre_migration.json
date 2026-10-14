@@ -1,0 +1,3589 @@
+{
+    "$schema": "./agent_registry.schema.json",
+    "_comment": "Single source of truth for all agents in the leafcutter ecosystem. When adding a new agent: (1) add an entry here, (2) create the template file, (3) run build.py --validate to confirm bidirectional consistency. business-analyst reads this file to build the agents: map for new tickets. trigger_conditions use the two-tier format per ADR-018: type=dsl for mechanically-evaluable rules, type=llm for natural-language judgment calls.",
+    "self_description_enforcement": "error",
+    "agent_categories": {
+        "_comment": "Defines the five canonical agent categories and their default constraints. Each agent entry may carry a 'category' field referencing one of these keys. Per-agent explicit field values always override these category defaults. The 'category' field is additive to (not a replacement for) the existing 'tier' field: 'tier' describes supervisor-hierarchy role (phase/supervisor/utility); 'category' describes functional domain for capability inference. Category mapping for common agents: python-coder/sql-coder/frontend-coder/documentation-expert -> implementation; architect-review/pr-reviewer/business-analyst/it-po -> planning; test-writer/test-runner -> testing; research-agent -> research; ticket-supervisor/create-epic/create-ticket -> supervisor.",
+        "implementation": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write",
+                "Agent"
+            ],
+            "required_inputs": [
+                "ticket_path"
+            ],
+            "signoff_capable": true,
+            "spawn_constraints": {
+                "allowed": [
+                    "research-agent",
+                    "test-runner"
+                ]
+            }
+        },
+        "planning": {
+            "default_tools": [
+                "Read",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "all"
+            }
+        },
+        "testing": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write"
+            ],
+            "required_inputs": [
+                "ticket_path"
+            ],
+            "signoff_capable": true,
+            "spawn_constraints": {
+                "allowed": "none"
+            }
+        },
+        "research": {
+            "default_tools": [
+                "Read",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "none"
+            }
+        },
+        "supervisor": {
+            "default_tools": [
+                "Bash",
+                "Read",
+                "Edit",
+                "Write",
+                "Agent"
+            ],
+            "required_inputs": [],
+            "signoff_capable": false,
+            "spawn_constraints": {
+                "allowed": "all"
+            }
+        }
+    },
+    "agents": [
+        {
+            "id": "epic-supervisor",
+            "name": "Epic Supervisor",
+            "tier": "supervisor",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "ticket-supervisor",
+                "retrospective-agent",
+                "worktree-agent",
+                "changelog-agent"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/epic-supervisor.md",
+            "model": "sonnet",
+            "skills_used": [
+                "building-epics",
+                "signoff"
+            ],
+            "deprecated": true,
+            "legacy_only": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "supervisor_system"
+            ]
+        },
+        {
+            "id": "ticket-supervisor",
+            "name": "Ticket Supervisor",
+            "tier": "supervisor",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "__ticket_phase_agents__",
+                "brainstorm-lead",
+                "llm-expert"
+            ],
+            "spawned_by": [
+                "user",
+                "epic-supervisor"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/ticket-supervisor.md",
+            "model": "sonnet",
+            "skills_used": [
+                "building-epics",
+                "signoff"
+            ],
+            "description": "Drives a single ticket from needed agents to fully signed off. Dispatched directly at depth-0 by /build-feature (the user-facing entrypoint) or by the deprecated epic-supervisor during the deprecation window. Phase agents run at depth-1.",
+            "legacy_only": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "supervisor_system"
+            ]
+        },
+        {
+            "id": "brainstorm-lead",
+            "name": "Brainstorm Lead",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "brainstorm-worker"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/brainstorm-lead.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "supervisor_system"
+            ]
+        },
+        {
+            "id": "brainstorm-worker",
+            "name": "Brainstorm Worker",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "brainstorm-lead"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/brainstorm-worker.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [
+                {
+                    "skill_id": "building-epics",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "supervisor_system"
+            ]
+        },
+        {
+            "id": "research-agent",
+            "name": "Research Agent",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "architect-review",
+                "business-analyst",
+                "python-coder",
+                "documentation-expert",
+                "reference-author",
+                "status-checker",
+                "sql-coder",
+                "sql-query",
+                "sql-table-creator",
+                "sql-test-writer",
+                "sql-procedure-creator",
+                "sql-function-creator",
+                "sql-index-creator",
+                "sql-view-creator",
+                "test-writer",
+                "frontend-coder",
+                "llm-expert",
+                "pr-reviewer"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/research-agent.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "research_analysis"
+            ]
+        },
+        {
+            "id": "architect-review",
+            "name": "Architect Review",
+            "tier": "phase",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent",
+                "architect-review-deep"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket changes interfaces, module boundaries, shared contracts, or introduces new cross-cutting patterns.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds a new public interface, class, or module"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket modifies a shared contract (e.g. API schema, DB schema, skill protocol)"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket crosses two or more component boundaries"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new design pattern or architectural abstraction"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains models/*.py OR files_touched contains alembic/versions/ OR files_touched contains api/api.py OR files_touched contains docs/architecture/"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/architect-review.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 4,
+            "priority_rationale": "Runs after ADR and diagram authors; shapes design before any implementation begins",
+            "requires_ticket_section": false,
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "python-coder",
+            "name": "Python Coder",
+            "tier": "phase",
+            "category": "implementation",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "sql-coder"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket involves creating, modifying, or refactoring Python code.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains *.py"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves creating, modifying, or refactoring Python code"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires new unit tests"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves Python configuration or build scripts"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/python-coder.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "doc-enforcer",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "run-tests",
+                    "mode": "conditional",
+                    "descriptive_only": true
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "Root CLAUDE.md",
+                    "injection_mode": "always",
+                    "description": "Project instructions, error handling policy, shell conventions"
+                },
+                {
+                    "channel": 2,
+                    "source": "Per-folder README.md",
+                    "injection_mode": "on-demand",
+                    "description": "Module-level context when cwd overlaps edited module folder"
+                },
+                {
+                    "channel": 5,
+                    "source": "signoff SKILL.md; doc-enforcer SKILL.md; complexity-reduction; collector-enforcer",
+                    "injection_mode": "on-demand",
+                    "description": "Sign-off protocol, docstring enforcement, complexity scoring, collector pattern enforcement"
+                },
+                {
+                    "channel": 6,
+                    "source": "Agent frontmatter",
+                    "injection_mode": "spawn-scoped",
+                    "description": "Model: sonnet, tools: Bash/Read/Edit/Write/Agent, signoff: true, config_keys, portable: true"
+                },
+                {
+                    "channel": 7,
+                    "source": "skills_config.json + settings.json",
+                    "injection_mode": "spawn-scoped",
+                    "description": "test_command, collector_enforcer_paths, file_size_limit_py"
+                },
+                {
+                    "channel": 8,
+                    "source": "Ticket frontmatter",
+                    "injection_mode": "ticket-scoped",
+                    "description": "Agents map, files_touched, depends_on, ACs, Agent Contracts section"
+                },
+                {
+                    "channel": 9,
+                    "source": "Auto-memory (memory/*.md)",
+                    "injection_mode": "always",
+                    "description": "Persistent cross-session learnings"
+                },
+                {
+                    "channel": 10,
+                    "source": "MCP server prompts + tool descriptions",
+                    "injection_mode": "always",
+                    "description": "Available tool surface and usage guidance"
+                },
+                {
+                    "channel": 11,
+                    "source": "Glossary (docs/glossary.md)",
+                    "injection_mode": "always",
+                    "description": "Project jargon definitions via CLAUDE.md ref"
+                }
+            ],
+            "priority": 6,
+            "priority_rationale": "Primary implementation agent; runs after architectural review is complete",
+            "requires_ticket_section": true,
+            "owns_file_extensions": [
+                ".py",
+                ".js"
+            ],
+            "owns_file_extensions_rationale": "'.js' is an EXPEDIENT, not a judgement that a Python agent is the right owner of JavaScript. Leafcutter's own orchestration layer is ~8800 lines of workflow JS under templates/workflows-js/, and its covering tests are pytest driving a Node harness (unit_tests/_workflow_engine_harness.py) — so the executable contract really is Python, and every AC touching those files has assigned python-coder by convention already. Before this entry, no agent in the registry claimed '.js' at all: the convention was held together by imitation, the intent-vs-surface check (BP-1100f-3) flagged every such AC as a technology contradiction, and an agent with no precedent to copy had nothing to route on. KNOWN LIMITATION for consumer installs: a consumer whose own application code is JavaScript will have it assigned here too, which is wrong for them. The blast radius is advisory only — the commit-guardian hooks that read this field (check_complexity.py, check_exception_handling.py) both look up '.py' explicitly, so nothing mechanical routes on '.js'. The proper fix is a dedicated workflow-author agent, with ownership driven by per-consumer configuration rather than a hardcoded list; ACs for that are being authored. Revisit this entry when they land.",
+            "produces": "production_code",
+            "doc_links": [
+                {
+                    "path": "docs/architecture/agent_knowledge_plane.md",
+                    "label": "Agent Knowledge Plane"
+                },
+                {
+                    "path": "docs/agents/conventions.md",
+                    "label": "Agent Conventions"
+                }
+            ],
+            "components": [
+                "python_coding"
+            ]
+        },
+        {
+            "id": "test-writer",
+            "name": "Test Writer",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent",
+                "test-runner"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket includes test_requirements with a non-empty tests array.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket body contains a non-empty test_requirements.tests array"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies testable Python or SQL logic"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains unit_tests/"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/test-writer.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 5,
+            "priority_rationale": "Writes failing tests before coders implement; ensures tests exist and are red before any production code is written",
+            "requires_ticket_section": true,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "test-runner",
+            "name": "Test Runner",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "test-writer",
+                "finalize-feature.js"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket adds or modifies Python code that has testable logic.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies Python functions or classes with non-trivial logic"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces new behavior that should be regression-tested"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains unit_tests/ OR files_touched contains test_*.py"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/test-runner.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 9,
+            "priority_rationale": "Validates test suite after test-writer completes; must run after tests are written",
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "documentation-expert",
+            "name": "Documentation Expert",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent",
+                "adr-author",
+                "architecture-diagram-author",
+                "explanation-author",
+                "how-to-author",
+                "reference-author",
+                "glossary-triage"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires documentation changes in docs/ or adds/modifies agents/skills that need README entries.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds a new agent, skill, or workflow"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket changes a public interface that is documented in docs/"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains docs/*.md"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket is a docs-only change"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/documentation-expert.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 10,
+            "priority_rationale": "Documents changes after code and tests are complete; runs before final PR review",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "route-knowledge",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "direct-write",
+                    "mode": "conditional",
+                    "descriptive_only": true
+                }
+            ],
+            "behavioral_patterns": [
+                {
+                    "pattern_id": "delegate-to-specialist",
+                    "trigger": "Request requires a full diataxis-typed document (how-to guide, ADR, C4 diagram, explanation, or reference page), OR the guide or doc exceeds 5 implementation steps, OR the user explicitly requests a named doc type",
+                    "action": "Classify intent → dispatch matching specialist (how-to-author, adr-author, architecture-diagram-author, explanation-author, reference-author) via Agent tool",
+                    "decision_boundary": "Delegates when: (1) output is a standalone doc file requiring its own diataxis genre structure, (2) guide exceeds ~5 steps, (3) ADR-level decision record is needed, (4) C4 diagram at any flight level is requested"
+                },
+                {
+                    "pattern_id": "direct-write",
+                    "trigger": "Request is a simple inline doc update — e.g. adding a paragraph to an existing doc, updating a table row, fixing a factual error, or appending a short note — AND the change does not require a new diataxis-structured document",
+                    "action": "Write or edit the documentation file directly using Bash/Read/Edit/Write tools without spawning a specialist sub-agent",
+                    "decision_boundary": "Handles directly when: (1) change targets an existing doc file (not a new standalone doc), (2) no diataxis genre routing is required, (3) change is a single-file patch of low structural complexity"
+                },
+                {
+                    "pattern_id": "glossary-coverage-lint",
+                    "trigger": "After any doc write, agent detects novel project terms in the output",
+                    "action": "Spawn glossary-triage to classify candidate terms",
+                    "decision_boundary": "Always runs post-write; glossary-triage is always a conditional delegation"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "change-scope-reviewer",
+            "name": "Change Scope Reviewer",
+            "tier": "phase",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket has a non-empty out_of_scope list or touches multiple components where scope drift is a concern.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter contains out_of_scope field with at least one entry"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket touches multiple top-level components and scope drift is a meaningful risk"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/change-scope-reviewer.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 10,
+            "priority_rationale": "Runs after coder phase and before pr-reviewer; verifies the actual change set matches the planned scope",
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "pr-reviewer",
+            "name": "PR Reviewer",
+            "tier": "phase",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to every ticket that produces a code or documentation change — this is the final quality gate before commit.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "any code, SQL, configuration, or documentation file is modified"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket produces any artifact that will be committed"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/pr-reviewer.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11,
+            "priority_rationale": "Final quality gate; runs after all implementation and documentation is complete",
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "code-review-architect",
+            "name": "Code Review Architect",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/code-review-architect.md",
+            "model": "opus",
+            "skills_used": [],
+            "requires_ticket_section": false,
+            "requires_verification": true,
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "find-structural-smells",
+            "name": "Find Structural Smells",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/find-structural-smells.md",
+            "model": "sonnet",
+            "skills_used": [
+                "review-for-code-smells",
+                "review-for-structural-code-smells"
+            ],
+            "requires_ticket_section": false,
+            "requires_verification": false,
+            "category": "supervisor",
+            "skills_invoked": [
+                "review-for-code-smells",
+                "review-for-structural-code-smells"
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "find-design-smells",
+            "name": "Find Design Smells",
+            "tier": "standalone",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/find-design-smells.md",
+            "model": "opus",
+            "skills_used": [
+                "review-for-code-smells",
+                "review-for-design-code-smells"
+            ],
+            "requires_ticket_section": false,
+            "requires_verification": false,
+            "category": "supervisor",
+            "skills_invoked": [
+                "review-for-code-smells",
+                "review-for-design-code-smells"
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "commit",
+            "name": "Commit",
+            "tier": "phase",
+            "role": "commit",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to every ticket that produces a committed artifact.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "any file will be committed to the git repository"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/commit.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 12,
+            "priority_rationale": "Atomic commit phase; runs after PR review approves the change",
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "precommit-autofix",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
+        },
+        {
+            "id": "pull-request",
+            "name": "Pull Request",
+            "tier": "phase",
+            "role": "commit",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "conflict-resolver"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "finalize-feature.js"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to every ticket that produces a committed artifact requiring a pull request.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket produces commits that should be reviewed via PR before merging"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/pull-request.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 13,
+            "priority_rationale": "Pushes branch and opens PR; final step in the ticket lifecycle",
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
+        },
+        {
+            "id": "conflict-resolver",
+            "name": "Conflict Resolver",
+            "tier": "utility",
+            "role": "commit",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "conflict-resolver-deep"
+            ],
+            "spawned_by": [
+                "pull-request"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/conflict-resolver.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
+        },
+        {
+            "id": "status-checker",
+            "name": "Status Checker",
+            "tier": "phase",
+            "role": "analysis",
+            "permits_shell": false,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "finalize-feature.js"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires verifying existing system state before changes can be planned.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves debugging or diagnosing an existing system issue"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires checking current state before deciding implementation approach"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/status-checker.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 1,
+            "priority_rationale": "Runs before any author or coder; verifies current system state is as expected",
+            "requires_ticket_section": false,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ticket_lifecycle"
+            ]
+        },
+        {
+            "id": "worktree-agent",
+            "name": "Worktree Agent",
+            "tier": "utility",
+            "role": "orchestration",
+            "permits_shell": true,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user",
+                "epic-supervisor",
+                "finalize-feature.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/worktree-agent.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "feature",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "worktree_manager"
+            ]
+        },
+        {
+            "id": "changelog-agent",
+            "name": "Changelog Agent",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user",
+                "epic-supervisor"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/changelog-agent.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "changelog"
+            ]
+        },
+        {
+            "id": "retrospective-agent",
+            "name": "Retrospective Agent",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "epic-supervisor",
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/retrospective-agent.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "feedback_collector"
+            ]
+        },
+        {
+            "id": "feedback-analyst",
+            "name": "Feedback Analyst",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/feedback-analyst.md",
+            "model": "sonnet",
+            "skills_used": [
+                "feedback-analysis"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "feedback-analysis",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "feedback_collector"
+            ]
+        },
+        {
+            "id": "sql-coder",
+            "name": "SQL Coder",
+            "tier": "supervisor",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "sql-table-creator",
+                "sql-procedure-creator",
+                "sql-function-creator",
+                "sql-index-creator",
+                "sql-view-creator",
+                "sql-query",
+                "sql-test-writer",
+                "research-agent",
+                "python-coder"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket involves SQL objects: tables, procedures, functions, views, or indexes.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains sql_functions/ OR files_touched contains alembic/versions/"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket creates or modifies SQL stored procedures, functions, or views"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves database schema changes"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies database hypertables or continuous aggregates"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/sql-coder.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 7,
+            "priority_rationale": "Database implementation; co-equal with python-coder but sequential by default (priority 7 vs 6)",
+            "requires_ticket_section": true,
+            "owns_file_extensions": [
+                ".sql"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "frontend-coder",
+            "name": "Frontend Coder",
+            "tier": "phase",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket involves creating or modifying frontend/UI components, markup, or styles; or when files_touched contains frontend file extensions.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains *.tsx OR files_touched contains *.jsx OR files_touched contains *.vue OR files_touched contains *.svelte OR files_touched contains *.html OR files_touched contains *.css OR files_touched contains *.scss"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves creating or modifying frontend/UI components, markup, or styles"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires visual changes to a web interface"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/frontend-coder.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff",
+                "webapp-testing"
+            ],
+            "priority": 8,
+            "priority_rationale": "Frontend implementation; runs after sql-coder (7) so database schema changes are complete before UI is built, and before test-runner (9) so tests can verify the rendered output",
+            "requires_ticket_section": true,
+            "requires_verification": true,
+            "owns_file_extensions": [
+                ".tsx",
+                ".jsx",
+                ".vue",
+                ".svelte",
+                ".html",
+                ".css",
+                ".scss"
+            ],
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "webapp-testing",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 5,
+                    "source": "skills_config.json config_keys"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "frontend_coding"
+            ]
+        },
+        {
+            "id": "sql-table-creator",
+            "name": "SQL Table Creator",
+            "tier": "utility",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-table-creator.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-query",
+            "name": "SQL Query",
+            "tier": "phase",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "sql-coder"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires authoring or refining ad-hoc SQL queries for analysis, reporting, or debugging.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket asks to write or refine a SQL SELECT query for analysis or reporting"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket involves debugging a query or understanding query performance"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/sql-query.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff",
+                "sql-query-past-queries"
+            ],
+            "priority": 7,
+            "priority_rationale": "Ad-hoc query authoring; co-equal with sql-coder (both priority 7) but for read-only queries",
+            "requires_ticket_section": true,
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "sql-query-past-queries",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-test-writer",
+            "name": "SQL Test Writer",
+            "tier": "utility",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-test-writer.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-procedure-creator",
+            "name": "SQL Procedure Creator",
+            "tier": "utility",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-procedure-creator.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-function-creator",
+            "name": "SQL Function Creator",
+            "tier": "utility",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-function-creator.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-index-creator",
+            "name": "SQL Index Creator",
+            "tier": "utility",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-index-creator.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "sql-view-creator",
+            "name": "SQL View Creator",
+            "tier": "utility",
+            "role": "coding",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "sql-coder"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/sql-view-creator.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "production_code",
+            "components": [
+                "sql_coding"
+            ]
+        },
+        {
+            "id": "workflow-architect",
+            "name": "Workflow Architect",
+            "tier": "supervisor",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/workflow-architect.md",
+            "model": "sonnet",
+            "skills_used": [
+                "create-hook",
+                "add-agent-to-package",
+                "add-skill-to-package",
+                "package-audit"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "package-audit",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "agent_registry"
+            ]
+        },
+        {
+            "id": "adr-author",
+            "name": "ADR Author",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "documentation-expert"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires authoring or updating an Architecture Decision Record.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "requires_adr: true in ticket frontmatter"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new cross-cutting policy, constraint, or architectural decision"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/adr-author.md",
+            "model": "opus",
+            "skills_used": [],
+            "priority": 2,
+            "priority_rationale": "ADR must exist before coders or diagram authors reference architectural decisions",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                },
+                {
+                    "skill_id": "doc-enforcer",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "architect-review-deep",
+            "name": "Architect Review Deep",
+            "tier": "utility",
+            "role": "review",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "architect-review"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": null,
+            "model": "opus",
+            "skills_used": [],
+            "produces": "review_verdict",
+            "components": [
+                "review_system"
+            ]
+        },
+        {
+            "id": "architecture-diagram-author",
+            "name": "Architecture Diagram Author",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "documentation-expert"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires authoring a C4 mermaid architecture diagram.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "requires_diagram: true in ticket frontmatter"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new data flow, container, context, or component-level architectural view"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/architecture-diagram-author.md",
+            "model": "opus",
+            "skills_used": [
+                "write-c4-diagram"
+            ],
+            "priority": 3,
+            "priority_rationale": "Diagram must exist before coders reference the architecture; runs after ADR author",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "write-c4-diagram",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "conflict-resolver-deep",
+            "name": "Conflict Resolver Deep",
+            "tier": "utility",
+            "role": "commit",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "conflict-resolver"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": null,
+            "model": "opus",
+            "skills_used": [],
+            "produces": "orchestration",
+            "components": [
+                "git_vcs_operations"
+            ]
+        },
+        {
+            "id": "explanation-author",
+            "name": "Explanation Author",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "documentation-expert"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires a new explanation document in docs/explanation/.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "requires_documentation contains explanation in ticket frontmatter"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new concept, design rationale, or architectural tradeoff that needs an understanding-oriented explanation"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/explanation-author.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "priority": 10,
+            "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "how-to-author",
+            "name": "How-To Author",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "documentation-expert"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires a new how-to guide in docs/how-to/.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "requires_documentation contains how_to in ticket frontmatter"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new workflow, procedure, or tool that needs a step-by-step guide"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/how-to-author.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "priority": 10,
+            "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "reference-author",
+            "name": "Reference Author",
+            "tier": "phase",
+            "role": "documentation",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor",
+                "documentation-expert"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires a new reference document in docs/reference/.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "requires_documentation contains reference in ticket frontmatter"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new configuration, schema, or API surface that needs a reference table"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/reference-author.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 10,
+            "priority_rationale": "Documentation specialist; runs in the documentation phase alongside documentation-expert",
+            "requires_ticket_section": true,
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "documentation",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "glossary-triage",
+            "name": "Glossary Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "documentation-expert"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/glossary-triage.md",
+            "model": "haiku",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "glossary"
+            ]
+        },
+        {
+            "id": "user-surface-smoker",
+            "name": "User Surface Smoker",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket declares a durable observable side-effect OR introduces/modifies a user-facing surface (slash command, pre-commit hook, agent-orchestrated entrypoint, or cron script). Automatic (data-driven) routing: emitted as needed in the agents: map when (1) ticket frontmatter declares_side_effect == true, OR (2) user_facing_surface != null in the ticket frontmatter. The declares_side_effect path is mandatory (BP-1100f-5); the user_facing_surface path is the legacy opt-in trigger. Items with neither field set are exempt (BP-1100f-5-i).",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter declares_side_effect == true",
+                        "source": "BP-1100f-5",
+                        "routing": "automatic — generator includes user-surface-smoker in agents: map when AC declares_side_effect: true"
+                    },
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter user_facing_surface != null",
+                        "source": "legacy",
+                        "routing": "opt-in — ticket must manually set user_facing_surface and include user-surface-smoker in agents: map"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces a new slash command, pre-commit hook, or agent-orchestrated entrypoint"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket modifies the production dispatch path of an existing user-facing surface"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/user-surface-smoker.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.5,
+            "priority_rationale": "Runs after pr-reviewer (11) confirms tests green, before commit (12) locks the worktree. Invokes the surface end-to-end with production wiring and asserts observable side-effects.",
+            "conditional": true,
+            "conditional_field": "declares_side_effect",
+            "conditional_field_legacy": "user_facing_surface",
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "live-surface-tester",
+            "name": "Live Surface Tester",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires live HTTP or browser surface testing. Conditional: only emitted in the agents: map when live_surface_test: true in ticket frontmatter AND live_surface_testing.enabled: true in skills_config.json.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter live_surface_test == true"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket introduces or modifies an HTTP endpoint or browser-rendered surface that should be verified with live requests"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/live-surface-tester.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.8,
+            "priority_rationale": "Runs after user-surface-smoker (11.5) confirms surface is reachable, before commit (12) locks the worktree. Issues structured HTTP assertions against live fixtures. See ADR-020.",
+            "conditional": true,
+            "conditional_field": "live_surface_test",
+            "requires_ticket_section": true,
+            "category": "testing",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "documentation-verifier",
+            "name": "Documentation Verifier",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket introduces or modifies documentation surfaces, agent templates, skill bodies, or any content requiring documentation coverage verification. Conditional: only emitted in the agents: map when requires_documentation_verification is non-null in the ticket frontmatter. This is the documentation analogue of the BP-1100 phantom-done enforcement family — do NOT fold into it.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "ticket frontmatter requires_documentation_verification != null"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies agent templates, skills, or documentation that requires coverage verification"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket changes a public interface or workflow that requires documentation to be accurate and complete before commit"
+                    }
+                ],
+                "default_status": "needed"
+            },
+            "template_path": "templates/agents/documentation-verifier.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.9,
+            "priority_rationale": "Documentation coverage gate; runs after coder (6/7/8), test-runner (9), documentation-expert (10), pr-reviewer (11), user-surface-smoker (11.5), and live-surface-tester (11.8), and BEFORE commit (12). Verifies that documentation produced by coders and documentation-expert is complete and accurate. See BO-2200b-1.",
+            "conditional": true,
+            "conditional_field": "requires_documentation_verification",
+            "requires_ticket_section": false,
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 9,
+                    "source": "agent memory store"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "documentation_system"
+            ]
+        },
+        {
+            "id": "onboard",
+            "name": "Onboard Install Wizard",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "onboard-config-section"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/onboard.md",
+            "model": "sonnet",
+            "skills_used": [
+                "webapp-testing"
+            ],
+            "category": "supervisor",
+            "skills_invoked": [
+                {
+                    "skill_id": "webapp-testing",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "onboarding"
+            ]
+        },
+        {
+            "id": "onboard-config-section",
+            "name": "Onboard Config Section Sub-agent",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "onboard"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/onboard-config-section.md",
+            "model": "haiku",
+            "skills_used": [],
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "onboarding"
+            ]
+        },
+        {
+            "id": "test-failure-triage",
+            "name": "Test Failure Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "finalize-feature.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-failure-triage.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "testing",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "ac-validator",
+            "name": "AC Validator",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to any ticket that has an ## Agent Contracts or ## Acceptance Criteria section with AC-N lines, to gate commit on verified AC coverage.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket body contains an ## Agent Contracts or ## Acceptance Criteria section with at least one - [ ] AC-N: line"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires proof that every acceptance criterion has implementation and test evidence before commit"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/ac-validator.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.5,
+            "priority_rationale": "Final AC coverage gate; runs after pr-reviewer (11) and before commit (12) to verify all ACs are evidenced before the worktree is locked",
+            "requires_ticket_section": false,
+            "description": "Reads ticket ACs, the working diff, and test output; produces a coverage verdict (ok / blocker / question). Never implements — read-only on code files, edits only the ticket file.",
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "testing_quality"
+            ]
+        },
+        {
+            "id": "ac-fulfillment-gate",
+            "name": "AC Fulfillment Gate",
+            "tier": "phase",
+            "role": "quality",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign to any ticket that has an ac_traceability frontmatter key referencing L2/L3 AC YAML files, to gate commit on verified AC store field accuracy.",
+                "trigger_conditions": [
+                    {
+                        "type": "llm",
+                        "expression": "ticket frontmatter contains ac_traceability with l2 or l3 AC IDs referencing AC YAML files"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires verification that AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/ac-fulfillment-gate.md",
+            "model": "sonnet",
+            "skills_used": [
+                "signoff"
+            ],
+            "priority": 11.7,
+            "priority_rationale": "AC store fulfillment gate; runs after ac-validator (11.5) and before commit (12) to verify AC YAML store fields are accurate and up-to-date",
+            "requires_ticket_section": false,
+            "description": "Verifies AC YAML store fields (work_status, implemented_by, covered_by) are accurate before commit. Auto-fixes when diff evidence exists (append-only, idempotent). Returns ok if all ACs pass or ac_traceability absent; blocker with per-AC details if any AC fails after auto-fix.",
+            "category": "testing",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "test_artifact",
+            "components": [
+                "ac_store"
+            ]
+        },
+        {
+            "id": "llm-expert",
+            "name": "LLM Expert",
+            "tier": "phase",
+            "role": "authoring",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [
+                "ticket-supervisor"
+            ],
+            "is_ticket_phase": true,
+            "selection_criteria": {
+                "description": "Assign when the ticket requires authoring, editing, or auditing agent templates, skill bodies, or slash-command markdown files.",
+                "trigger_conditions": [
+                    {
+                        "type": "dsl",
+                        "expression": "files_touched contains templates/agents/*.md OR files_touched contains templates/skills/*/SKILL.md OR files_touched contains templates/workflows/*.md"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket adds or modifies an agent template, skill body, or slash-command workflow file"
+                    },
+                    {
+                        "type": "llm",
+                        "expression": "ticket requires applying the Prompt-Quality Checklist to an agent or skill"
+                    }
+                ],
+                "default_status": "not_needed"
+            },
+            "template_path": "templates/agents/llm-expert.md",
+            "model": "sonnet",
+            "skills_used": [
+                "add-agent-to-package",
+                "add-skill-to-package",
+                "signoff"
+            ],
+            "priority": 6,
+            "priority_rationale": "Authoring phase agent; runs after architectural review and before test-runner/pr-reviewer",
+            "requires_ticket_section": true,
+            "description": "Authors, edits, and audits agent templates, skill bodies, and slash-command markdown files. Applies the Prompt-Quality Checklist.",
+            "category": "implementation",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "add-agent-to-package",
+                    "mode": "conditional"
+                },
+                {
+                    "skill_id": "add-skill-to-package",
+                    "mode": "conditional"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 3,
+                    "source": "ticket_path from ticket-supervisor"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "prompt",
+            "components": [
+                "llm_authoring"
+            ]
+        },
+        {
+            "id": "product-owner",
+            "name": "Product Owner",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/product-owner.md",
+            "model": "opus",
+            "skills_used": [
+                "knowledge-query"
+            ],
+            "description": "Product Owner for v3 ticket-creation pipeline. Operates at L0/L1 flight level: translates user requests into customer value propositions and feature benefit statements. Speaks customer language, never engineering jargon.",
+            "category": "planning",
+            "skills_invoked": [
+                {
+                    "skill_id": "signoff",
+                    "mode": "always"
+                }
+            ],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "product_ownership"
+            ]
+        },
+        {
+            "id": "business-analyst",
+            "name": "Business Analyst",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "research-agent"
+            ],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/business-analyst.md",
+            "model": "opus",
+            "skills_used": [
+                "knowledge-query"
+            ],
+            "description": "Business Analyst for v3 ticket-creation pipeline. Operates at L2/L3 flight level: decomposes L1 feature ACs into testable Gherkin behaviors and edge-case specifications. Produces AC YAML files.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ticket_creation_pipeline"
+            ]
+        },
+        {
+            "id": "it-po",
+            "name": "IT Product Owner",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/it-po.md",
+            "model": "opus",
+            "skills_used": [
+                "knowledge-query"
+            ],
+            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                },
+                {
+                    "channel": 8,
+                    "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "product_ownership"
+            ]
+        },
+        {
+            "id": "build-ac",
+            "name": "Build AC",
+            "tier": "utility",
+            "role": "orchestration",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [
+                "ac-triage"
+            ],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/build-ac.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "AC-to-ticket-to-build entry-point coordinator. Calls ac_prioritizer.py to find the top-ranked ready AC, generates a ticket via generate_ticket_from_ac.py, surfaces the ticket to the user for confirmation (yes / review / skip), and documents how to mark the AC done after a successful build. Does NOT call /build-feature inline — depth-cap constraint (ADR-006). Invoked by /build-ac slash command.",
+            "produces": "orchestration",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (ac_prioritizer.py, generate_ticket_from_ac.py, build_ac_mode_detection.py, goal_to_epic.py)"
+                }
+            ],
+            "components": [
+                "ac_store"
+            ]
+        },
+        {
+            "id": "ac-triage",
+            "name": "AC Triage",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "build-ac",
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/ac-triage.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Haiku-pinned AC store triage agent. Stage 0 of the /plan-feature workflow. Reads active ACs for the relevant component, classifies the user's request as strategic / behavioral / technical / covered, and returns a structured JSON routing decision. Read-only — never writes files. Must complete in < 3s for ≤200 ACs.",
+            "produces": "analysis",
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "AC YAML files read from docs/acceptance-criteria/"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (ls docs/acceptance-criteria/)"
+                }
+            ],
+            "components": [
+                "ac_store"
+            ]
+        },
+        {
+            "id": "knowledge-harvester",
+            "name": "Knowledge Harvester",
+            "tier": "utility",
+            "role": "knowledge-management",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "ticket-supervisor",
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/knowledge-harvester.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 4,
+                    "source": "pre-flight file reads"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (git, build, tests)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "knowledge_system"
+            ]
+        },
+        {
+            "id": "pt-classifier",
+            "name": "Product-Truth Classifier",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/pt-classifier.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Product-truth request classifier. Given a plain-language feature request, decides needs_flow / needs_mock_data / needs_mockup (a boolean each), derives the routing outcome (full-set / mockup+data / mockup-only / mock-data-only / none), and names the target component, entities, and add-vs-create decision. Read-only — returns a structured JSON decision the authoring pipeline routes on so only the needed authoring agents run. Scored against docs/product-truth/classifier/eval.jsonl.",
+            "category": "research",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, eval.jsonl, schemas, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (reads of docs/product-truth/)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
+        },
+        {
+            "id": "mock-data-author",
+            "name": "Mock Data Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/mock-data-author.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Mock-data authoring agent for the product-truth store. Given a classified request naming a component and entities, drafts or EXTENDS the one canonical dataset for those entities (realistic *.mock.json records conforming to mock-data.schema.json), enforcing the add-vs-create rule: one canonical dataset per entity per component, extended in place, never duplicated. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
+        },
+        {
+            "id": "mockup-author",
+            "name": "Mockup Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/mockup-author.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "Mockup authoring agent for the product-truth store. Given drafted mock data and a request that involves screens, drafts or extends in place a mockup per screen (*.mockup.json conforming to mockup.schema.json plus a self-contained HTML rendering), populated from the mock records rather than placeholder text, registering a screen id the flow's steps resolve. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py; never hand-edits derived index maps.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, mock data, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
+        },
+        {
+            "id": "flow-author",
+            "name": "Flow Author",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/flow-author.md",
+            "model": "opus",
+            "skills_used": [],
+            "description": "Flow authoring agent for the product-truth store. Given drafted mock data and mockups for a multi-step request, assembles a draft flow (*.flow.json conforming to flow.schema.json): ordered steps wired to their screens and read/write entities, with one acceptance_scenario per step for the business-analyst to turn into ACs. Follows the add-vs-create rule (extends an existing journey rather than creating a new flow). Leaves step.implements and impl_status to the business-analyst / generator. Registers the artifact in index.json artifacts[] and runs generate_product_truth.py.",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "product-truth store files read during execution (README, schema, gold seed, mockups, mock data, index.json)"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (generate_product_truth.py, validate_product_truth.py)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "ux_prototyping"
+            ]
+        },
+        {
+            "id": "command-step-runner",
+            "name": "Command Step Runner",
+            "tier": "utility",
+            "role": "orchestration",
+            "permits_shell": true,
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "user",
+                "fast-lane-ship.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/command-step-runner.md",
+            "model": "haiku",
+            "skills_used": [],
+            "description": "Runs exactly one given command, once, in one named workspace, and hands back that command's exit status, stdout and stderr untouched. Holds no allow-list of lane commands or step names and no judgement about whether a command is wise — the fast lane's dedicated executor for command steps (BO-2400a-1-i). Declines only requests outside its role: no workspace named, a request to edit files by hand, write code or tests, act as another agent's role, or run a command aimed somewhere other than the named workspace. Adopted by fast-lane-ship.js for the claim command step; further dispatch classes are listed as residual in KI-BO-20260927-status-checker-runs-workflow-shell-commands.",
+            "category": "supervisor",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (the one dispatched command, verbatim)"
+                }
+            ],
+            "produces": "orchestration",
+            "components": [
+                "build_orchestration"
+            ],
+            "step_kinds": [
+                "reads_store",
+                "changes_store",
+                "changes_repository",
+                "publishes"
+            ]
+        }
+    ]
+}

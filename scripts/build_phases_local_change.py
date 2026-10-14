@@ -61,6 +61,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import config_paths
 from build_helpers import _canonicalize_output_path
 
 _log = logging.getLogger(__name__)
@@ -96,6 +97,9 @@ def set_local_change_baseline(target_root: Path, output_root: Path) -> None:
     _local_change_target_root = target_root
     _local_change_output_root = output_root
     _previous_output_mappings = {}
+    # BP-1500h-1-ii: this is the once-per-build entry point, so it also starts the
+    # build's file-location-setting announcements and registers the project root.
+    config_paths.begin_build(target_root)
 
     manifest_path = target_root / ".build_manifest.json"
     if not manifest_path.exists():
@@ -305,4 +309,7 @@ def announce_if_local_change_replaced(target: Path) -> None:
 #   so build_retired_outputs attributes a retired command file from this same
 #   previous-install record instead of reading the manifest a second time.
 #   (#TICKET-20260930-RetireRenamedCommandOutputs)
+# - 2026-10-14 12:00 [python-coder]: set_local_change_baseline also calls
+#   config_paths.begin_build (once-per-build reset and project root).
+#   (#BP-1500h/1)
 # ===========================================================================

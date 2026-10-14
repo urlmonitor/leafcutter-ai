@@ -60,7 +60,7 @@ For each failing `hook_id`:
 3. If no matching rule, fall back to `defaults`.
 4. Check whether the `hook_id` appears in `blocking_hook_ids` (from the config). If it does not appear in `blocking_hook_ids`, the hook is **non-gating** — skip it entirely, do not dispatch any fixer.
 5. For hooks in `blocking_hook_ids`, classify the **tier** from the matching `rules[]` entry's `category` field (already loaded from `.claude/precommit-autofix.json` in Step 1 — no other file is read):
-   - `category: structural` — judgment is required; use the **originator re-dispatch path** (see Step 4a below). Every hook in `blocking_hook_ids` ships as `category: structural`, so the seven gating hooks (`check-complexity`, `check-docstrings`, `check-exception-handling`, `check-file-size`, `check-ac-schema`, `check-ac-limits`, `check-contract-shrinking`) all route here.
+   - `category: structural` — judgment is required; use the **originator re-dispatch path** (see Step 4a below). Every hook in `blocking_hook_ids` ships as `category: structural`, so the five gating hooks (`check-complexity`, `check-exception-handling`, `check-file-size`, `check-ac-schema`, `check-contract-shrinking`) all route here.
    - `category: mechanical` — use the **generic light-model route** (see Step 4b below).
    - `category` absent / no matching rule — default to the **generic light-model route** (Step 4b); never block on an unclassified hook.
 
@@ -73,6 +73,10 @@ Group **non-judgment** hooks by `(effective_model, subagent_type)` so a single a
 ## Step 4a — Originator re-dispatch (structural-category gating hooks)
 
 For each failing hook whose rule `category` is `structural` (judgment-tier) and whose `hook_id` is in `blocking_hook_ids`:
+
+### Step 4a.0 — Specialist handoff (before any dispatch)
+
+If the failing hook's declared remedy disposition is `engage-specialist` (today: `check-complexity` → `restructuring-specialist`, `complexity-reduction`), **do not dispatch** — this skill runs at depth 1 and ADR-019 drops nested `Agent` calls. Run `python scripts/commit_guardian/remedy_handoff.py --hook-id <hook_id>` with the hook output on stdin and return its `status: handoff` JSON unchanged to the caller; the depth-0 dispatcher engages the specialist. If it exits 1, return a blocker with its stderr reason. Skip Steps 4a.1-4a.4 and 5 for this hook, and never reset, stash, checkout, restore or bypass hooks.
 
 ### Step 4a.1 — Parse the originating agent
 

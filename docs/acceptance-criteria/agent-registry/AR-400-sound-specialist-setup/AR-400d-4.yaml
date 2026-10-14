@@ -1,0 +1,83 @@
+id: AR-400d-4
+title: "A how-to shows an adopter how to supply an ability of their own to a package specialist"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an adopter whose project uses the package's sql-coder and has its own
+    database ability,
+  When they follow the how-to for supplying a project ability,
+  Then the guide tells them where to put the ability (the project's
+    `.leafcutter/skills/<id>/` area) and nothing else,
+    And it shows the build output line they will see before they add it and
+      confirms the line disappears after the next build once it is added,
+    And it states that a package specialist's grant must be marked
+      `provided_by: project` for this to apply, and that an unmarked grant to an
+      ability the package does not ship stops the build,
+    And it states that once any package specialist marks an ability
+      `provided_by: project`, the build never overwrites or removes the
+      project's copy (including on a cleaning build), and that the copy is used
+      by every specialist granting that ability,
+    And every command and output line in the guide, run against a scratch
+      consumer project, produces the result the guide states.
+depends_on:
+  - AR-400d-1
+  - AR-400d-2
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-009.md
+    relationship: related
+    status: exists
+    relevance: "The guide must not promise the placement is safe across rebuilds beyond what BP-1500g delivers; cross-reference the known issue if it is still open."
+assigned_agent: how-to-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "Written after AR-400d-1/-2/-2-ii ship; every command and output line is captured from a run against a scratch consumer, not composed."
+  - "State the protection exactly as decided (user decision 10): a MARKED id's directory under <project>/.leafcutter/skills is never deployed over or deleted, including by --clean; an UNMARKED project ability placed there is still exposed to KI-BP-009 and the guide says so while the known issue is open."
+  - "Cover the deliberate-override case (decisions 5 and 10) as a short section: marking a packaged ability provided_by: project delivers the project's copy to every specialist granting it, and if the project does not supply it the packaged copy is used; both cases print one informational line, quoted from a real run."
+  - "Location: a new how-to under docs/how-to/ registered in docs/INDEX.md per the doc-index convention."
+test_spec:
+  - name: test_project_ability_howto_commands_reproduce_stated_output
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: e2e
+    angle: real_artifact
+    description: "Extract the how-to's command blocks and quoted output lines; run them against a scratch consumer in order; each quoted 'before' line appears in the first build's output and is absent from the build after the ability is added."
+    must_catch:
+      - "the guide's quoted output line differs from what the build prints"
+  - name: test_project_ability_howto_survival_claim_holds_under_clean_build
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: e2e
+    angle: real_artifact
+    description: "Following the guide's steps, run a --clean build on the scratch consumer; the marked project ability is still present, as the guide states."
+test_rationale: >-
+  The criterion makes the guide falsifiable against a real run; extracting and
+  running its own commands is the only way to keep that true.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-2
+  contract: "The informational not-found line and its disappearance once the ability is supplied."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: one clause ADDED -- the guide states that once any package specialist marks an ability provided_by: project the build never overwrites or removes the project's copy (including on a cleaning build), and that the copy is used by every specialist granting it. it_requirements: the 'must not promise survival of --clean' item replaced by the decided protection; test_spec adds a --clean survival check of the guide's claim. WHY: user decision 10 (BrainCandy, 2026-10-12)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies AR-400d's documentation_triggers [how-to]. The last clause makes the
+  guide falsifiable against a real run.

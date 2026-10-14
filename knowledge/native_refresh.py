@@ -15,16 +15,14 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from knowledge.adapters.neo4j_backend import Neo4jBackend, scope_key
-from knowledge.adapters.neo4j_domain_migration import inspect, _validate
+from knowledge.adapters.neo4j_inspection import inspect, validate_records, INSPECTION_MANIFEST_QUERY
 from knowledge.cli_sync import writer_backend
 from knowledge.config import KnowledgeConfig
 from knowledge.environment import resolve_database, resolve_neo4j
 from knowledge.projection.canonical_loader import load_snapshot
 
 
-_MANIFEST_QUERY = (
-    "MATCH (g:KRGeneration {repository_id:$repo}) RETURN properties(g) AS props ORDER BY g.key"
-)
+_MANIFEST_QUERY = INSPECTION_MANIFEST_QUERY
 _STAGING_STATES = frozenset({"building", "failed", "validated"})
 
 
@@ -95,7 +93,7 @@ async def _inspect_refresh(db, repository_id: str) -> dict:
             raise ValueError("native refresh staging count or current marker mismatch")
         # A partial stage may have fewer records than intended, but each existing
         # record still needs the ordinary identity, provenance and endpoint checks.
-        _validate({**meta, "node_count": len(nodes), "edge_count": len(edges)}, nodes, edges)
+        validate_records({**meta, "node_count": len(nodes), "edge_count": len(edges)}, nodes, edges)
         stages.append({"metadata": meta, "nodes": nodes, "edges": edges})
     plan["staged_generations"] = stages
     return plan

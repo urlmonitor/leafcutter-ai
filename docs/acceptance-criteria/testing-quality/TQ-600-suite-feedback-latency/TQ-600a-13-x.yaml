@@ -24,21 +24,37 @@ criteria: |
   And the defect this record exists to prevent in two directions: "the check exists and
     fails" being read as "merges are held", and a required check that cannot report — or
     that holds on noise — freezing every merge,
+  And the owner's decision of 2026-10-09 that the required context is sourced from the
+    repository's dedicated hold App (App ID 5249547), not from GitHub Actions, because any
+    Actions job — including one a pull request adds — can report under any name, and the
+    ruleset's source pin is the only thing that tells the two apart,
   When the hold is moved from advisory to required, or described as protecting the main
     branch, or kept required,
   Then it is added to the ruleset only after each of these has been observed on the real
     repository and recorded with its date and evidence, in this order: the correctness
     workflow has at least one completed run on main; the labels the family uses exist; an
     Actions event policy explicitly allowing `pull_request_target` exists, read back from
-    the repository; the hold has reported under exactly `Post-merge suite status` on a
-    pull request opened after the hold workflow reached main, on pull requests touching
-    only documentation, only tests, and only a workflow file, and on opened, synchronize
-    and edited events; a re-evaluation by TQ-600a-13-xv has been observed; the owner's
-    break-glass procedure of TQ-600a-13-xvii is documented; and an advisory period of at least 7 days has produced at least 20 hold evaluations whose verdict
-    matched the run history, including at least one hold and one lift,
-  And the ruleset entry is added with its source set to GitHub Actions, like the other six,
+    the repository; the App's credential is stored where only the hold's evaluation job
+    on the default branch can read it, and a workflow added by a pull request from a
+    branch of this repository has been observed unable to read it; the check run
+    `Post-merge suite status` has been observed posted by App 5249547 — the creating app
+    read back from the check run itself — on a pull request opened after the hold
+    workflow reached main, on pull requests touching only documentation, only tests, and
+    only a workflow file, and on opened, synchronize and edited events; a re-evaluation by
+    TQ-600a-13-xv has been observed, including one of a head commit that already carried
+    an App verdict, where the pull request's merge status follows the newer App check
+    run; the owner's break-glass procedure of TQ-600a-13-xvii is documented; and an
+    advisory period of at least 7 days has produced at least 20 hold evaluations whose
+    verdict matched the run history, including at least one hold and one lift,
+  And the ruleset entry for `Post-merge suite status` is added with its source set to the
+    dedicated hold App's integration id (App 5249547), never to GitHub Actions (15368) or
+    to any source, unlike the other six,
   And after the entry is added, with the run red, a pull request carrying no exemption is
     observed reported unmergeable by the hosting service, and the observation is recorded,
+  And after the entry is added, with the run red, a pull request that adds its own
+    workflow with a job named `Post-merge suite status` that exits zero is observed
+    reported unmergeable by the hosting service, its passing same-named check
+    notwithstanding, and the observation is recorded,
   And until that last observation is recorded, and at any time the entry is absent, every
     description of the hold — in this family's closure, in documentation, in a change note
     — states that the hold is advisory,
@@ -47,11 +63,15 @@ criteria: |
     verdicts in any later 14 days, are not reproduced at the same commit — that is, a red
     run on main is followed by a green run with the same head commit — and that count is
     reported where the owner reads the notice,
-  And the hold check reports its status under the single name `Post-merge suite status` on
-    every pull request that targets the main branch, whatever files it changes,
-  And the name and every-pull-request clauses are demonstrated by observing a status under
-    exactly that name on the real pull requests named above, never by reading the
-    workflow's triggers.
+  And the dedicated App reports the hold under the single name `Post-merge suite status`
+    on every pull request that targets the main branch, whatever files it changes,
+  And the enforcement state is reported as enforced only when the ruleset lists
+    `Post-merge suite status` pinned to the dedicated App; the same context pinned to
+    GitHub Actions or to any source is reported as advisory, naming the spoofable source
+    as the reason,
+  And the name, source and every-pull-request clauses are demonstrated by observing a
+    check run under exactly that name, created by App 5249547, on the real pull requests
+    named above, never by reading the workflow's triggers.
 depends_on:
   - TQ-600a-13
   - TQ-600a-13-vi
@@ -100,8 +120,13 @@ it_requirements:
   - >-
     THE ENFORCEMENT-STATE READER IS PURE AND EXACT. "enforced" only when a
     required_status_checks rule lists a context exactly equal to `Post-merge suite status`
-    pinned to integration 15368; anything else, including an unreadable response,
-    "advisory" with a reason.
+    pinned to the dedicated hold App's integration id (5249547 — for a GitHub App the
+    ruleset's integration id is its App ID; confirm by the read-back observation);
+    anything else, including an unreadable response, "advisory" with a reason. AMENDED
+    2026-10-09: SUPERSEDED "pinned to integration 15368"; the context pinned to 15368 is
+    now advisory with reason "spoofable source (GitHub Actions)". Where the reader gets
+    the expected id (the tunables file, or the `HOLD_APP_ID` value) is for the IT PO; it
+    must not be a literal in code, per the tunables rule below.
   - >-
     THE EVENT POLICY IS A HARD PREREQUISITE — VERIFIED (GitHub expert, docs, 2026-10-08):
     "For public repositories that do not already have an applicable Actions event policy,
@@ -111,29 +136,41 @@ it_requirements:
     blocked run looks like is UNVERIFIED, and whether an event policy can be created on a
     personal-account repository is UNVERIFIED. If the policy cannot be created, or a run
     is not observed after it exists, the FALLBACK is a `workflow_run`-triggered job on the
-    default branch that computes the verdict and posts a check run named `Post-merge
-    suite status` on the PR head via `POST /check-runs` (`checks: write`); adopting it
-    requires amending TQ-600a-13-xi's allowed writes, which this record does not
-    pre-authorise. Do not add the check to the ruleset on either route until a run of
-    that route has been observed reporting.
+    default branch that computes the verdict and has the dedicated App post the check
+    run `Post-merge suite status` on the PR head. AMENDED 2026-10-09: the App-created
+    check run is now the PRIMARY route's publication too (TQ-600a-13-vi), and
+    TQ-600a-13-xi's allowed writes are amended for it, so the fallback changes only the
+    trigger, not the publisher or the write set. Do not add the check to the ruleset on
+    either route until a run of that route has been observed reporting through the App.
   - >-
     ROLLOUT ORDER (user decisions H and J; VERIFIED that a `pull_request_target` check
     does not run on the PR that introduces it). TQ-600a-13-xix (with its minimal timing
     workflow) may land before step (1) and is independent of everything below. (1) merge the
     correctness workflow; dispatch it once on main; (2) owner pre-creates labels
     `post-merge-red`, `post-merge-timing`, `post-merge-flaky`; (3) owner creates the event
-    policy; read it back; (4) merge the hold and follow-up workflows; (5) observe the hold
-    on later PRs and a re-evaluation; (6) advisory period, with the break-glass procedure
-    documented (TQ-600a-13-xvii); (7) add to the ruleset; (8)
-    observe a held PR reported unmergeable; (9) rehearse the break-glass within the first
-    day (TQ-600a-13-xvii). Steps (3) to (8) before 2026-11-02 if
-    possible; after that date (3) blocks everything after it.
+    policy; read it back; (3a) [added 2026-10-09] owner moves `HOLD_APP_ID` and
+    `HOLD_APP_PRIVATE_KEY` from repository secrets to secrets of an environment that only
+    `main` may deploy to (see TQ-600a-13-vi), deletes the repository-level copies, and
+    observes a throwaway same-repository PR whose added `pull_request` workflow tries to
+    read them get nothing; (4) merge the hold and follow-up workflows; (5) observe the
+    App's check run (creating app 5249547, read back from the check run) on later PRs and
+    a re-evaluation, including one of an already-judged head commit; (6) advisory period,
+    with the break-glass procedure documented (TQ-600a-13-xvii); (7) add to the ruleset
+    with source = the hold App; (8) observe a held PR reported unmergeable, and a red-run
+    PR carrying a passing PR-added job named `Post-merge suite status` reported
+    unmergeable; (9) rehearse the break-glass within the first day (TQ-600a-13-xvii).
+    Steps (3) to (8) before 2026-11-02 if possible; after that date (3) blocks everything
+    after it.
   - >-
     THE REPORTED NAME CANNOT DRIFT OR BE SKIPPED — VERIFIED (GitHub expert): a skipped job
     reports success even when required; a job whose `needs:` failed is skipped; path,
     branch or commit-message filtering leaves the check pending; a matrix suffixes the
-    name. So: `name: Post-merge suite status`, no matrix, no job-level `if:`, no `needs:`,
-    no path filter, and no branch filter that could exclude a PR to main.
+    name. So: `name: Post-merge hold evaluation` (AMENDED 2026-10-09; SUPERSEDED `name:
+    Post-merge suite status` — that name now belongs only to the App's check run), no
+    matrix, no job-level `if:`, no `needs:`, no path filter, and no branch filter that
+    could exclude a PR to main. A skipped or never-started evaluation job now publishes
+    no App check at all, which blocks rather than passes once required — safe, but it
+    still breaks the every-pull-request clause, so the rules stay.
   - >-
     DEMOTION AND ADVISORY NUMBERS — ACCEPTED BY THE OWNER AS TUNABLE DEFAULTS (2026-10-08):
     demote when more than one in three red verdicts in the first 14 days, or three in any
@@ -192,25 +229,30 @@ delivers_to:
 expects_from:
   - ac_id: TQ-600a-13-vi
     contract: >-
-      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge suite
-      status`, under `pull_request_target`, no matrix, no job-level `if:`, no `needs:`,
-      no path filter.
+      One job in .github/workflows/post-merge-hold.yml named exactly `Post-merge hold
+      evaluation`, under `pull_request_target`, no matrix, no job-level `if:`, no
+      `needs:`, no path filter, which on every evaluation has App 5249547 create one check
+      run named exactly `Post-merge suite status` on the PR head commit. (Amended
+      2026-10-09.)
 test_spec:
   - name: test_tq600a_13_x_the_status_is_reported_under_one_name
     target_dir: unit_tests/suite_performance/
     framework: unittest
     type: integration
     angle: seam
-    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/post-merge-hold.yml by the exact name `Post-merge suite status` and executing it with one synthetic event against the recording fake server"
+    surface_invoked: "the shared workflow-step executor locating the job in .github/workflows/post-merge-hold.yml by the exact name `Post-merge hold evaluation` and executing it with one synthetic event against the recording fake server acting as the App token and check-run endpoints"
     must_catch:
-      - "the job is renamed or reported under a different case"
+      - "the App's check run is created under a different name or case"
+      - "the evaluation job still carries the name `Post-merge suite status`, so the Actions-sourced check shares the required name"
       - "the job gains a matrix"
-      - "the job gains a job-level `if:` or a `needs:`, so a skip reports as passing"
+      - "the job gains a job-level `if:` or a `needs:`, so the evaluation can be skipped"
     description: >-
-      The executor finds exactly one job with that exact name and executes it to a
-      verdict; it refuses a matrix; the test fails if the executor reports a job-level
-      condition or a dependency for this job. Covers the NAME half only; the
-      every-pull-request half is a recorded live observation.
+      The executor finds exactly one job named `Post-merge hold evaluation`, no job named
+      `Post-merge suite status`, and executes it to a verdict; the fake records exactly one
+      check-run create named `Post-merge suite status` authorised by the App token; it
+      refuses a matrix; the test fails if the executor reports a job-level condition or a
+      dependency for this job. Covers the NAME half only; the every-pull-request and
+      creating-app halves are recorded live observations.
   - name: test_tq600a_13_x_enforcement_is_claimed_only_from_an_observed_ruleset
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -220,12 +262,14 @@ test_spec:
     must_catch:
       - "the family is closed as protecting main with the ruleset never read"
       - "a near-miss context ('post-merge suite status', a trailing space, a suffix) is accepted"
-      - "the context is accepted with source 'any' rather than integration 15368"
+      - "the context is accepted with source 'any' rather than the hold App's integration id"
+      - "the context pinned to GitHub Actions (15368) is accepted as enforced — the spoofable source this amendment exists to retire"
       - "an empty, malformed or unreadable response is reported as enforced"
     description: >-
-      The six-context response: advisory. With `Post-merge suite status` pinned to 15368
-      added: enforced. Each near-miss, an unpinned entry, an empty list and a malformed
-      body: advisory with a reason.
+      The six-context response: advisory. With `Post-merge suite status` pinned to the
+      hold App (5249547) added: enforced. The same context pinned to 15368: advisory,
+      reason names the spoofable source. Each near-miss, an unpinned entry, an empty list
+      and a malformed body: advisory with a reason.
   - name: test_tq600a_13_x_not_reproduced_reds_are_counted_from_run_history
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -281,20 +325,177 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: 'OWNER DECISION 2026-10-09 (BrainCandy): CLOSE THE CHECK-NAME SPOOF GAP
+    WITH A DEDICATED GITHUB APP (App ID 5249547). SUPERSEDED criterion "the ruleset
+    entry is added with its source set to GitHub Actions, like the other six" -> source
+    set to the hold App''s integration id, never GitHub Actions or any source. Added:
+    the owner decision as a Given; two prerequisites before the ruleset change (the
+    App credential reachable only by the evaluation job on main, observed unreadable
+    from a PR-added workflow; the check run observed posted BY App 5249547 on the
+    named real PRs, and a re-evaluation of an already-judged head observed with the
+    newer App check governing); a post-entry observation that a red-run PR carrying
+    a passing PR-added job named `Post-merge suite status` is unmergeable; enforcement
+    reported only for the App-pinned context, 15368-pinned reported advisory. The
+    name and every-PR clauses now read "the dedicated App reports". it_requirements
+    amended (reader pin, fallback, rollout step 3a, job name); expects_from and two
+    test descriptors amended. readiness approved -> reviewed: must be re-approved
+    before building. depends_on unchanged.'
+  by: business-analyst
+  at: 2026-10-09
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+- reason: >-
+    ADDITIVE ONLY -- A RECORDED DECISION NOT TO CHANGE ANYTHING. criteria, declared_files (all
+    three entries left at `to_be_created`), it_requirements, test_spec, depends_on,
+    work_status (todo), readiness (approved) and every other field are UNTOUCHED. One notes
+    block is added and this entry. NO RE-APPROVAL IS OWED: nothing this record requires has
+    changed, and the entry exists so three standing advisory reports are not read as neglect.
+
+
+    THE QUESTION. This record declares scripts/ci/post_merge_hold.py,
+    scripts/ci/post_merge_notice.py and scripts/ci/post_merge_tunables.json as
+    `to_be_created`. All three now exist, none was created by this record's own work (hold.py
+    by -vi, notice.py by -iii, tunables.json by -ii), and this record's own it_requirements
+    describe it as EXTENDING the tunables file rather than creating it. So each of the three
+    produces a standing "marked to be created but already exists" advisory report. Whether to
+    flip them to `existing` was escalated to the owner on 2026-10-12 and delegated back to
+    the BA to decide.
+
+
+    DECIDED: LEAVE ALL THREE AS `to_be_created`. Four reasons, in descending weight; the full
+    argument is in the notes block added by this entry.
+
+    (1) THE MARKER IS A BUILD PRECONDITION -- "the work must not assume this path is present"
+    -- not a claim that this record's own work creates the path, and not a historical note
+    (settled in ACD-1600c-4-v). `to_be_created` is therefore the CORRECT AND SAFE declaration
+    here: this record's build order relative to -vi, -iii and -ii is not guaranteed (it
+    depends_on -vi only, and not on -iii or -ii at all), so it must not assume any of the three
+    files is present. Flipping to `existing` would assert a precondition this record cannot
+    guarantee. THIS REASON SURVIVES ALL THREE CANDIDATE READINGS OF THE FIELD, which is why the
+    decision did not have to wait on the semantics: under the historical reading the
+    declarations were true when made, under the precondition reading they are still true, and
+    only under the ownership reading would they be wrong -- and that reading is dead (the
+    two-value enum leaves nine such records unencodable, and a false ownership claim would have
+    to refuse rather than report).
+
+    (2) `existing` + absent + not-done is a BLOCKING REFUSAL in the declared-files check,
+    where `to_be_created` + present + not-done is only advisory. Flipping arms a merge blocker
+    on three files whose lifecycle this record does not control: if any is renamed or removed
+    by revision of -vi, -iii or -ii before this record is built, every commit staging this
+    record is refused. This record is `work_status: todo` against a hard 2026-11-02 deadline,
+    which is the worst available moment to arm that.
+
+    (3) These three are the ONLY VISIBLE INSTANCES of a condition measured at 15 declarations
+    across the same three paths, 12 of which sit on `done` records and are silently exempted.
+    Flipping them takes the count visible to a reader from 3 to 0 while the specification
+    defect behind the exemption is still open in draft.
+
+    (4) The advisory report is ACCURATE AND BENIGN here. ACD-1600c-4-i's own notes say the
+    report covers both a stale marker AND the legitimate mid-build case where "the file was
+    created by the work in progress". This is that legitimate case, one family member over.
+  by: business-analyst
+  at: '2026-10-12'
 superseded_by: null
 covered_by: []
 implemented_by: []
 change_target:
   - pipeline
   - infrastructure
-risk_surface: internal
+risk_surface: auth
 notes: |
   RESOLVED: the ruleset is readable without admin rights (VERIFIED twice, 2026-10-08).
 
   OBSERVATIONS TO RECORD HERE, each with date and evidence (none recorded yet): first
-  completed correctness run on main; labels present; event policy read back; hold
-  reported on a docs-only, a tests-only and a workflow-only PR; opened / synchronize /
-  edited evaluations seen; a re-evaluation seen; advisory-period tally; ruleset entry
-  added; held PR reported unmergeable.
+  completed correctness run on main; labels present; event policy read back; App
+  secrets moved to a main-only environment and observed unreadable from a PR-added
+  workflow; App check run (creating app 5249547) reported on a docs-only, a tests-only
+  and a workflow-only PR; opened / synchronize / edited evaluations seen; a re-evaluation
+  seen, including one of an already-judged head commit; advisory-period tally; ruleset
+  entry added with source = the hold App, read back; held PR reported unmergeable;
+  red-run PR with a passing PR-added `Post-merge suite status` job reported unmergeable.
+
+  CLOSES the check-name spoof gap recorded as accepted under user decision H (see
+  TQ-600a-13-vi notes) once the ruleset entry above is added and both unmergeable
+  observations are recorded. risk_surface raised internal -> auth on 2026-10-09: this
+  record now owns which identity may satisfy a merge gate.
 
   DEADLINE: 2026-11-02, when the default `pull_request_target` block is enforced.
+
+  ==========================================================================
+  THE THREE DECLARED FILES ARE DELIBERATELY LEFT AT `to_be_created` (2026-10-12).
+  READ THIS BEFORE "CORRECTING" THEM.
+  ==========================================================================
+  THREE STANDING ADVISORY REPORTS ON THIS RECORD ARE A DECISION, NOT NEGLECT. All three
+  declared paths -- scripts/ci/post_merge_hold.py, scripts/ci/post_merge_notice.py,
+  scripts/ci/post_merge_tunables.json -- now exist, and none was created by this record's own
+  work: hold.py by TQ-600a-13-vi, notice.py by -iii, tunables.json by -ii (whose
+  it_requirement already says the tunables file is "created by whichever family record lands
+  first that reads a tunable (normally -ii, for the window), EXTENDED BY THE REST" -- this
+  record is one of the extenders). So each path yields a "marked to be created but already
+  exists" report for as long as this record is unfinished. That is expected and correct.
+
+  WHAT THE MARKER MEANS, WHICH IS THE WHOLE BASIS OF THE DECISION. `to_be_created` states a
+  BUILD PRECONDITION -- "the work must not assume this path is present at the moment it is
+  built" -- and is neither a claim of ownership nor a dated historical note. Settled in
+  ACD-1600c-4-v: ownership dies on the two-value enum (a record whose work EDITS a file a
+  sibling CREATES has no honest value available) and on severity (a false ownership claim would
+  have to refuse, and this condition is advisory by design); the historical reading dies on the
+  refusal branch (nothing blocks a merge over a stale dated note, so `existing` + absent
+  refusing proves the field is live).
+
+  SO THIS RECORD'S THREE DECLARATIONS ARE NOT STALE -- THEY ARE CORRECT AND DELIBERATELY SAFE.
+  This record depends_on TQ-600a-13-vi only; it does NOT depend on -iii or -ii, which are the
+  records that create notice.py and tunables.json. Its build order relative to those two is
+  therefore not guaranteed by anything in the store, and `to_be_created` is exactly the
+  declaration that says so. The asymmetry below exists so that this safe choice is never
+  punished: a precondition that turns out to be already satisfied is only reported, while an
+  unsatisfiable one refuses. WHAT THE REPORT CANNOT CURRENTLY SAY is that these three were
+  satisfied EARLY BY SIBLING WORK rather than declared wrongly -- that relabelling is
+  ACD-1600c-4-v's clause (b), and it is the actual fix for the noise, not a re-marking here.
+
+  THE ASYMMETRY THAT MAKES THE FLIP ACTIVELY UNSAFE, AND IT IS THE REASON A READER SHOULD NOT
+  TIDY THIS. The declared-files check treats the two markers very differently for an
+  unfinished record:
+
+      `to_be_created` + path present  ->  ADVISORY REPORT (non-blocking, ACD-1600c-4-i)
+      `existing`      + path absent   ->  BLOCKING REFUSAL (ACD-1600c-4-i)
+
+  This record does not own the lifecycle of any of the three files. Marking them `existing`
+  arms a merge blocker that fires if -vi's, -iii's or -ii's work is revised and any path is
+  renamed or removed before this record is built -- and it fires on every commit that stages
+  this record, for a fact this record's author cannot fix. This record is still
+  `work_status: todo` with a hard 2026-11-02 deadline above, so it would be arming that
+  blocker at precisely the wrong moment. Three non-blocking lines are the cheap side of that
+  trade by a wide margin.
+
+  AND THE FLIP WOULD DELETE THE ONLY EVIDENCE OF A LARGER, OPEN CONDITION. Measured 2026-10-12
+  across these same three paths: 15 `to_be_created` declarations in total (hold.py 7, notice.py
+  6, tunables.json 2); 3 on the creating record; 12 on `done` records, which
+  ACD-1600c-4-i exempts from the report entirely; and 3 on this record -- THE ONLY THREE
+  ANYTHING REPORTS FOR THESE THREE PATHS, because this is the only one of the twelve declaring
+  records still unfinished. Of the 12 exempted, the exemption's stated reason ("the finished
+  work is what created it") is true of 3 and false of 9. Quieting this record's three takes the
+  visible count for these paths to zero while that specification defect is still open in draft
+  (ACD-1600c-4-v), so the only smoke detector for a 15-instance condition would be switched off
+  to stop it beeping.
+
+  STORE-WIDE, FOR SCOPE: `validate_ac_schema.py` over all 5,036 records on 2026-10-12 emits six
+  such report lines across four records -- this record's three, plus one each on TQ-600a-11,
+  -11-ii and -11-iii. Those three are a DIFFERENT case and are not evidence that this one is
+  routine: that family is `status: deprecated`, and the retirement convention's
+  `work_status: done -> todo` demotion un-exempted its declared files, so those reports are
+  permanent and unclearable (the only work that would clear them is work deliberately
+  retired). Written up in ACD-1600c-4-v, which proposes a separate report section for them.
+  This record's three are the ordinary mid-build case and WILL clear themselves the moment
+  this record is built.
+
+  THE GENERAL SHAPE, for a reader who arrives here from somewhere else:
+  `declared_files[].state` states a condition on THIS record's build, but it is evaluated
+  against the tree as it now stands, and the tree is moved by OTHER RECORDS' WORK. So declared
+  and observed diverge WITHOUT ANYONE MAKING A MISTAKE; the check cannot name which of the two
+  causes it is looking at, and its wording picks the wrong one; and once `work_status: done`
+  the condition is EXEMPTED rather than flagged, so no gate ever surfaces it. It is the fourth
+  entry on INF-600b-2's canonical list of true-looking-and-wrong shapes and the most common
+  member precisely because it needs no error to occur. Go there for the family;
+  ACD-1600c-4-v is the record that fixes both the relabelling and the countability.

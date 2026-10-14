@@ -1,0 +1,256 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-f53b769b410b47af",
+  "root_task_id": "task-c81392f2ade14f34",
+  "state_revision": 7,
+  "status": "completed",
+  "output": {
+    "schema_version": "1.0",
+    "schema_id": "leafcutter.evidence_bundle.v1",
+    "payload": {
+      "schema_version": "1.0",
+      "request_id": null,
+      "evidence_ids": [
+        "ev-b680fc14fad3954a",
+        "ev-1b487094cfeda610"
+      ],
+      "finding_ids": [],
+      "coverage": {
+        "need.question": "satisfied"
+      },
+      "assessments": {
+        "need.question": {
+          "kind": "retrieval_answer",
+          "status": "fulfilled",
+          "original_question": "For KM-500c-2, what must tests demonstrate?",
+          "required_fields": [
+            "criteria",
+            "test_spec"
+          ],
+          "scope": {
+            "population": "returned_entities",
+            "root_id": null,
+            "levels": null,
+            "inclusion": null
+          },
+          "missing_fields": [],
+          "completeness": {
+            "complete": true,
+            "known_count": 1,
+            "exact_total": 1,
+            "limitations": []
+          },
+          "work_status_counts": null,
+          "known_work_status_counts": {},
+          "limitations": []
+        }
+      },
+      "attempted_sources": [
+        "knowledge.graph"
+      ],
+      "unavailable_sources": [],
+      "contradictions": [],
+      "limitations": [
+        "knowledge status: ok",
+        "retrieval choice: Jev selected a supported registered operation and authorized target",
+        "Retrieved evidence requires the existing research sufficiency assessment."
+      ],
+      "truncated": false,
+      "evidence": [
+        {
+          "schema_version": "1.0",
+          "id": "ev-b680fc14fad3954a",
+          "created_at": "2026-10-09T16:03:58.031776Z",
+          "updated_at": "2026-10-09T16:03:58.031776Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "Given the original research has obtained results from an existing or newly verified query\nWhen its existing evidence evaluation decides whether the question can be answered\nThen the answer or evidence bundle cites the actual source revision and retrieved items and states which required needs remain unsatisfied\nAnd a successful build, successful query execution and successful answer assessment remain separate recorded outcomes\nAnd zero matches, contradictory evidence and insufficient evidence remain distinguishable with their limitations intact\nAnd any bounded synthesis or follow-up uses the existing research policy rather than silently treating query availability as answer quality.\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Fcriteria",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T16:03:58.031776Z",
+            "observed_modified_at": null,
+            "section_locator": "/criteria"
+          },
+          "content_hash": "9cfea912e97757a50beaab42e39ccfd82dd6f2bbf0d6e9425daf3e1d9e2617d3",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-c6e92be5935141d6",
+            "strategy": "knowledge:e148a489-b76f-465b-ae89-cb5623f527b2",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        },
+        {
+          "schema_version": "1.0",
+          "id": "ev-1b487094cfeda610",
+          "created_at": "2026-10-09T16:03:58.031687Z",
+          "updated_at": "2026-10-09T16:03:58.031687Z",
+          "created_seq": 0,
+          "category": "task_context",
+          "semantic_type": "documentation_fact",
+          "excerpt": "- name: test_km500_c_2_behavior\n  target_dir: tests/knowledge/\n  framework: pytest\n  type: integration\n  angle: criterion\n  description: Use actual research answer assessment to show relevant but insufficient evidence remains partial,\n    contradictions persist, and newly retrieved evidence answers the original question without false certainty.\n  covers:\n  - KM-500c-2\n  requires_db: false\n",
+          "artifact_ref": null,
+          "source": {
+            "schema_version": "1.0",
+            "id": "knowledge.retrieval",
+            "kind": "knowledge_node",
+            "locator": "knowledge://public-needs-acceptance@fb7c073bbc93ac4751685c5b45d1b4efeb108ac2/KM-500c-2?path=docs/acceptance-criteria/knowledge-management/KM-500-research-capability-growth/KM-500c-2.yaml&locator=%2Ftest_spec",
+            "title": "Judge the original question against the evidence actually retrieved",
+            "source_version": {
+              "schema_version": "1.0",
+              "commit": "fb7c073bbc93ac4751685c5b45d1b4efeb108ac2",
+              "dirty": false
+            },
+            "retrieved_at": "2026-10-09T16:03:58.031687Z",
+            "observed_modified_at": null,
+            "section_locator": "/test_spec"
+          },
+          "content_hash": "0135126d0fdad3635c10e8dba48a9f0193aa89c4bee56f8085c3c690490398cf",
+          "provenance": {
+            "schema_version": "1.0",
+            "producer": "knowledge.retrieval",
+            "invocation_id": "inv-c6e92be5935141d6",
+            "strategy": "knowledge:e148a489-b76f-465b-ae89-cb5623f527b2",
+            "query": null,
+            "terms": [],
+            "rank": null,
+            "relevance": null,
+            "actor": null,
+            "relayed_by": null
+          },
+          "access": "internal",
+          "verification": "unverified",
+          "limitations": [],
+          "truncated": false
+        }
+      ],
+      "findings": [],
+      "unknowns": [],
+      "need_evidence": {
+        "need.question": [
+          "ev-b680fc14fad3954a",
+          "ev-1b487094cfeda610"
+        ]
+      },
+      "need_limitations": {}
+    }
+  },
+  "report_ref": "C:\\Users\\Hendrik\\AppData\\Local\\Temp\\leafcutter-public-repair-9904vj04\\kernel\\P02\\runs\\run-f53b769b410b47af\\artifacts\\report.md",
+  "decision_ids": [],
+  "evidence_ids": [
+    "ev-1b487094cfeda610",
+    "ev-b680fc14fad3954a"
+  ],
+  "open_questions": [],
+  "pending_interaction": null,
+  "limitations": [],
+  "gaps": [
+    {
+      "schema_version": "1.0",
+      "id": "gap-06a4b5dd51c2efea",
+      "created_at": "2026-10-09T16:03:57.409463Z",
+      "updated_at": "2026-10-09T16:03:57.409463Z",
+      "created_seq": 0,
+      "gap_key": "9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855",
+      "gap_type": "host_only",
+      "goal": "For KM-500c-2, what must tests demonstrate?",
+      "normalized_need": "2 500c demonstrate km must tests what",
+      "request_kind": "capability",
+      "input_schema": "leafcutter.retrieval_needs_request.v1",
+      "output_schema": "leafcutter.retrieval_needs_output.v1",
+      "scope_component_ids": [],
+      "registry_snapshot_hash": "1206ce45d1899afd758ec9438db1e4251394333e031b80b683fa4662e08918ea",
+      "candidates_considered": [
+        "host.retrieval_needs",
+        "decision",
+        "host.formulate_question",
+        "host.generate_options",
+        "host.query_build"
+      ],
+      "candidate_exclusions": {
+        "decision": "kind_mismatch",
+        "host.formulate_question": "kind_mismatch",
+        "host.generate_options": "kind_mismatch",
+        "host.query_build": "kind_mismatch"
+      },
+      "need_title": "For KM-500c-2, what must tests demonstrate?",
+      "why_insufficient": "host-backed only; no native implementation exists",
+      "occurrence_count": 1,
+      "example_run_ids": [
+        "run-f53b769b410b47af"
+      ],
+      "example_trace_urls": [],
+      "fallback_outcome": "host_completed",
+      "missing_native_capability": "native implementation of host.retrieval_needs",
+      "proposal": {
+        "schema_version": "1.0",
+        "author": "template",
+        "title": "Capability for: For KM-500c-2, what must tests demonstrate?",
+        "purpose": "host_only need",
+        "draft_ref": "drafts/9f613547d053800070adff8c7551cf24300dccb85e76746c33d8871f5b9b2855.md"
+      },
+      "first_seen": "2026-10-09T16:03:57.409463Z",
+      "last_seen": "2026-10-09T16:03:57.409463Z"
+    }
+  ],
+  "usage_summary": {
+    "schema_version": "1.0",
+    "jev_calls": 2,
+    "host_operations": 1,
+    "input_tokens": 3062,
+    "output_tokens": 119,
+    "cost_usd_known": 0.000128604,
+    "cost_unknown_calls": 1,
+    "usage": [
+      {
+        "schema_version": "1.0",
+        "provider": "host",
+        "model_id": null,
+        "input_tokens": null,
+        "output_tokens": null,
+        "duration_ms": 248,
+        "cost_usd": null,
+        "cost_provenance": "unavailable",
+        "calls": 1
+      },
+      {
+        "schema_version": "1.0",
+        "provider": "jev",
+        "model_id": "jev-1.13.0",
+        "input_tokens": 3062,
+        "output_tokens": 119,
+        "duration_ms": 478,
+        "cost_usd": 0.000128604,
+        "cost_provenance": "estimated",
+        "calls": 2
+      }
+    ]
+  },
+  "trace_refs": {
+    "schema_version": "1.0",
+    "trace_id": "9eb1b0f9d04ddd424af9a03e95f329b6",
+    "trace_url": null,
+    "observability": "ok"
+  },
+  "errors": []
+}

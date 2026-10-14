@@ -116,6 +116,25 @@ def _composite_child_ids(covered_by: object) -> list[str]:
     return [e for e in map(str, covered_by if isinstance(covered_by, list) else []) if not re.search(r"[/\\]|\.(py|ts|tsx)$", e)]
 
 
+def is_superseded_ac(ac_info: dict | None) -> bool:
+    """Return whether an AC record has been withdrawn in favour of another (KI-ACS-016).
+
+    The ONE shared predicate for both composite paths -- the pre-commit
+    :func:`_unproven_composite_children` and the CI ``_resolve_all_child_ids`` --
+    so they cannot disagree about a withdrawn child. A record is superseded
+    when ``superseded_by`` is non-empty or ``req_status`` is ``"superseded"``.
+
+    Args:
+        ac_info: A parsed AC record or an ``_build_ac_status_map`` entry.
+
+    Returns:
+        ``True`` for a superseded record; ``False`` for ``None`` or any other.
+    """
+    if not isinstance(ac_info, dict):
+        return False
+    return bool(ac_info.get("superseded_by")) or ac_info.get("req_status") == "superseded"
+
+
 def _find_ac_root(yaml_path: Path) -> Path | None:
     """Return the ancestor ``acceptance-criteria`` directory of *yaml_path*.
 
@@ -209,7 +228,9 @@ def _unproven_composite_children(
     entry (:func:`_composite_child_ids`, shared with
     :func:`check_staged_done_proofs` so both agree). A child proves
     itself when ``work_status: done`` AND either (a) it is a leaf (no AC-id
-    children) carrying its own ``# covers: <child-id>`` tag, or (b) it is a
+    children) carrying its own ``# covers: <child-id>`` tag or waiving it via
+    :func:`done_proof.is_covers_tag_waived` (BO-2500a-1-ii: test_required false
+    plus a non-empty test_rationale), or (b) it is a
     composite whose own children all recursively prove it.
 
     A composite is NEVER treated as proven unconditionally: a ``covered_by``
@@ -234,12 +255,15 @@ def _unproven_composite_children(
         and covered; otherwise a list of the unproven child (or composite)
         ids. Test-path entries never appear in the result.
     """
+    from done_proof import is_covers_tag_waived  # local: avoids module-load cycle
+
     seen = _seen if _seen is not None else set()
     child_ids = _composite_child_ids(data.get("covered_by"))
     if not child_ids:
         return [str(data.get("id", "?"))]
 
     unproven: list[str] = []
+    live_children = 0
     for child_id_str in child_ids:
         if child_id_str in seen:
             continue
@@ -253,6 +277,9 @@ def _unproven_composite_children(
         if child_data is None:
             unproven.append(child_id_str)
             continue
+        if is_superseded_ac(child_data):
+            continue  # KI-ACS-016: withdrawn child stays in covered_by, owes no proof
+        live_children += 1
         if child_data.get("work_status") != "done":
             unproven.append(child_id_str)
             continue
@@ -262,9 +289,11 @@ def _unproven_composite_children(
             unproven.extend(
                 _unproven_composite_children(child_data, ac_root, all_covered_ids, _seen=seen)
             )
-        elif child_id_str not in all_covered_ids:
+        elif child_id_str not in all_covered_ids and not is_covers_tag_waived(child_data):
             unproven.append(child_id_str)
 
+    if live_children == 0 and not unproven:
+        return [str(data.get("id", "?"))]  # all superseded: nothing to derive from
     return unproven
 
 
@@ -297,6 +326,7 @@ def _verify_composite_eligible(
         _run_python_test_phase,
         _run_ts_test_phase,
         _split_linked_tests_by_language,
+        is_covers_tag_waived,
     )
 
     leaf_child_ids = _resolve_all_child_ids(covered_by, ac_status_map)
@@ -313,7 +343,9 @@ def _verify_composite_eligible(
         child_id: _collect_linked_tests(child_id, all_tags) for child_id in leaf_child_ids
     }
     uncovered_children = sorted(
-        child_id for child_id, tests in per_child_tests.items() if not tests
+        child_id
+        for child_id, tests in per_child_tests.items()
+        if not tests and not is_covers_tag_waived(ac_status_map.get(child_id))
     )
     if uncovered_children:
         return {

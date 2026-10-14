@@ -1,7 +1,7 @@
 """Helpers for unit_tests/ac_store/test_tq_600a_11.py (TQ-600a-11).
 
-Holds the mechanical C-parser call-site deriver, the counting walk-arm runner
-and the tmp-root builder so the test file keeps only its tests, tags and
+Holds the mechanical C-parser call-site deriver and the real-store path
+lister so the test file keeps only its tests, tags and
 docstrings. No test lives here; nothing here reads the declared set while
 deriving (the derivation must stay independent of it).
 """
@@ -9,12 +9,7 @@ deriving (the derivation must stay independent of it).
 from __future__ import annotations
 
 import ast
-import json
-import os
-import shutil
-import time
 from pathlib import Path
-from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 SCRIPTS_DIR = REPO_ROOT / "scripts"
@@ -28,8 +23,6 @@ STORE_ROOT = REPO_ROOT / "docs" / "acceptance-criteria"
 # or asserted on anywhere.
 DECLARED_C_PARSER_SITES = frozenset(
     {
-        ("scripts/generate_agent_cards.py", "_scan_ac_assignments"),
-        ("scripts/generate_agent_cards.py", "_scan_all_ac_assignments"),
         ("scripts/render_effective_prompt.py", "<module>"),
     }
 )
@@ -156,16 +149,6 @@ def derive_c_parser_resolutions() -> set[tuple[str, str]]:
     return found
 
 
-def yaml_files_on_disk() -> int:
-    """Files the card generator's walk would parse: every .yaml/.yml, index.yaml included."""
-    return sum(
-        1
-        for _dp, _dirs, names in os.walk(STORE_ROOT)
-        for name in names
-        if name.endswith((".yaml", ".yml"))
-    )
-
-
 def real_store_paths() -> list[Path]:
     return sorted(
         p
@@ -174,37 +157,10 @@ def real_store_paths() -> list[Path]:
     )
 
 
-def run_walk_arm(gac, resolver):
-    """Time one ``_scan_all_ac_assignments`` walk with *resolver* as its loader.
-
-    Returns (output, parsed_file_count, seconds). The resolver is wrapped so
-    each call -- one per parse inside the walk -- is counted.
-    """
-    parsed = []
-
-    def counting_resolver():
-        parsed.append(1)
-        return resolver()
-
-    with mock.patch.object(gac, "get_safe_yaml_loader", counting_resolver):
-        start = time.perf_counter()
-        output = gac._scan_all_ac_assignments(REPO_ROOT)
-        elapsed = time.perf_counter() - start
-    return output, len(parsed), elapsed
-
-
-def build_card_phase_root(root: Path, agent: str, record: Path) -> None:
-    """Lay out a minimal tmp target root: one agent template, a registry made
-    by json.dumps, and the REAL AC record *record* copied verbatim."""
-    (root / "templates" / "agents").mkdir(parents=True)
-    (root / "templates" / "agents" / f"{agent}.md").write_text(
-        f"---\nname: {agent}\ndescription: reachability stub\n---\nbody\n",
-        encoding="utf-8",
-    )
-    (root / "config").mkdir()
-    (root / "config" / "agent_registry.json").write_text(
-        json.dumps([{"id": agent}]), encoding="utf-8"
-    )
-    store_dir = root / "docs" / "acceptance-criteria" / "testing-quality"
-    store_dir.mkdir(parents=True)
-    shutil.copyfile(record, store_dir / record.name)
+# DECISION HISTORY
+# - 2026-10-09 [python-coder/agent-cards-static]: removed the two
+#   generate_agent_cards.py DECLARED_C_PARSER_SITES entries and the
+#   run_walk_arm / build_card_phase_root / yaml_files_on_disk helpers. The
+#   AC-store walk they exercised was deleted because the AC store is the
+#   source of truth and caching it in generated card markdown produced an
+#   uncommittable, permanently dirty tree. render_effective_prompt.py stays.

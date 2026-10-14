@@ -1,5 +1,5 @@
 """MODULE: product_truth_contracts.py
-Check authored JSON handoffs and their generated presentation.
+Check authored JSON handoffs and their generated compatibility labels.
 
 GOAL: Fail the existing truth gate on stale fields, types, defaults or examples.
 BUSINESS CONTEXT: Reviewers need concrete, source-checked inputs and outputs in Atlas.
@@ -12,7 +12,7 @@ from pathlib import Path
 import jsonschema
 from referencing.exceptions import Unresolvable
 from product_truth_contract_policy import PINNED_FLOW, CAPABILITY_MARKER, PINNED_MODELS
-from product_truth_contract_render import MARKER, render_contract_io
+from product_truth_contract_render import render_contract_labels
 from product_truth_contract_sources import (EXAMPLE_ROOTS, bounded_path, pointer, load_contract,
                                            field_facts, json_types, validate_value, is_projection)
 
@@ -107,12 +107,9 @@ def _check_node(flow, node, contracts, root, report, presentation):
                 _check_applied(actual, name, io, contracts, False)
             report["examples"] += 1
     if presentation:
-        consumes, produces, detail = render_contract_io(flow, node)
+        consumes, produces = render_contract_labels(flow, node)
         if node.get("consumes", []) != consumes or node.get("produces", []) != produces:
             raise ValueError("generated consumes/produces are stale; run generate_product_truth.py")
-        human = node.get("human", "")
-        if MARKER not in human or human.split(MARKER, 1)[1] != detail:
-            raise ValueError("generated field/example presentation is stale; run generate_product_truth.py")
     return used
 
 
@@ -217,3 +214,5 @@ if __name__ == "__main__":
 # DECISION HISTORY
 # ================================================================================
 # - 2026-10-05 06:37 [python-coder]: Permit explicit eval targets without suppressing their errors as baseline noise. (#TICKETLESS reason=user-authorized-evaluation-repair)
+# - 2026-10-09 [python-coder]: The presentation check compares only the generated consumes/produces labels; no
+#   contract text is generated into a step description any more. (TICKET-20261009-ProductTruthDescriptionActorKind)

@@ -15,7 +15,11 @@ description: 'Picks the right test suite based on what has changed, runs it, and
   '
 model: sonnet
 name: test-runner
-tools: Bash, Read, Edit
+tools: Bash, Read, Edit, Skill
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 portable: true
 signoff: true
 domain: null
@@ -26,7 +30,7 @@ config_keys:
     description: "Command to run the fast unit test suite"
   test_output_dir:
     required: false
-    description: "Temp directory for test output files"
+    description: "Folder for test output; empty means the scratch home (scratch.py test-output-dir)"
 adopter_notes: |
   Phase agent. Invoked by ticket-supervisor.
   `Edit` is granted for one purpose only: the atomic sign-off write into the

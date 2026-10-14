@@ -4,7 +4,7 @@ description: "The checked input/output documentation standard, worked authoring 
 type: reference
 status: active
 created: 2026-10-05
-last_updated: 2026-10-05
+last_updated: 2026-10-09
 components:
   - ux_prototyping
 related_docs:
@@ -48,11 +48,14 @@ For each boundary, identify its authority: an actual runtime contract, a
 require a nonblank `note` naming the source and limitation; they do not claim
 automatic source-code parity or runtime validation. Use the [worked example and checklist](#checked-json-handoffs) below.
 
-Write explanatory prose in `human` before the generated contract marker. Run the
-canonical generator, then `python docs/product-truth/scripts/validate_product_truth.py --quiet`.
+Keep the step's `description` to one plain sentence of what happens: the
+handoff detail lives here in `io_contracts`, never in the description (see
+[What goes where](../how-to/product-truth-schema-reference.md#what-goes-where-in-a-step)).
+Run the canonical generator, then `python docs/product-truth/scripts/validate_product_truth.py --quiet`.
 That same validator is used by the existing pre-commit gate and focused CI job;
 it rejects missing documentation, stale fields/types/defaults, invalid examples,
-unsafe references and drift between metadata and the visible contract section.
+unsafe references, stale compatibility labels and descriptions that break the
+description gates.
 Inspect the reported checked-field/example counts, explicit binding gaps and
 legacy count (zero after the complete migration). Every existing/new step and
 branch needs metadata; no legacy opt-out remains. Passing schema/model checks does not prove semantic correctness or request-bound
@@ -83,7 +86,8 @@ empty. Defaults may be omitted from a full input but must be documented in field
   },
   "steps": [{
     "id": "prepare-request", "order": 1, "label": "Prepare the question",
-    "human": "The caller supplies a question and its finite catalog; these values do not grant permission or discover sources.",
+    "description": "The caller supplies a question and the catalog of meanings it may be read against.",
+    "actor_kind": "human",
     "io_contracts": {
       "consumes": [{"contract": "request", "fields": [
         {"path": "/original_question", "types": ["string"], "required": true},
@@ -157,14 +161,15 @@ alone do not establish those runtime invariants. Request-bound comparisons
 between separate objects and semantic answer quality are not established by
 this documentation gate; the runtime submission validator remains authoritative.
 
-The generator maintains compatibility `consumes`/`produces` labels and the
-`human` suffix starting with `Contract fields and examples (generated)`. Keep
-authored narrative before that marker; do not edit those generated copies. The
-validator compares that text with the canonical renderer and rejects drift.
+The generator maintains the compatibility `consumes`/`produces` labels; do not
+edit those generated copies. It writes no contract text into any `description`
+(it did until 2026-10-09, behind a `Contract fields and examples (generated)`
+marker). The validator compares the labels with the canonical renderer and
+rejects drift.
 
 Atlas uses the same authored metadata for contract headings, field tables and
 separate JSON examples. For valid structured metadata, the drawer shows the
-narrative before the marker once and omits the compatibility text/badges. Legacy
+step's description once and omits the compatibility badges. Legacy
 or metadata unusable by the display guard keeps the readable fallback; that fallback does not
 waive repository validation. This display choice adds no new authored fields or
 runtime contract.
@@ -189,7 +194,7 @@ Before requesting review:
    observed versus reconstructed/illustrative; link observed JSON receipts.
 5. Check all branches too. Distinguish rejected input, pending work, failed work
    and successful results with unresolved needs. Mark real design gaps explicitly.
-6. Generate the visible contract section and indexes, then run the existing
+6. Regenerate the compatibility labels and indexes, then run the existing
    validator. Review both the reported limits and the Atlas presentation. A pass
    is neither proof of semantic correctness nor AC approval.
 

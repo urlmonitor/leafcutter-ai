@@ -24,6 +24,7 @@ from kernel.contracts import (
     evidence,
     interaction,
     payloads,
+    payloads_human,
     query,
     retrieval_needs,
     run,
@@ -128,7 +129,7 @@ from kernel.contracts.entity_context import (  # noqa: F401
 )
 
 _MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, entity_context, enums, evidence, interaction,
-                                    payloads, query, retrieval_needs, run, split, task, work)
+                                    payloads, payloads_human, query, retrieval_needs, run, split, task, work)
 
 
 def _collect_types() -> tuple[type, ...]:

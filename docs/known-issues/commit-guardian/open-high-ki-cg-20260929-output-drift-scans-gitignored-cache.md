@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-09-29'
-last_updated: '2026-09-29'
+last_updated: '2026-10-12'
 components:
   - commit_guardian
 related_docs:
@@ -22,7 +22,7 @@ related_docs:
 
 - **Severity:** high — it blocks a commit outright, and the printed remedy does not resolve it.
 - **Status:** open — no AC yet.
-- **Occurrences:** observed twice in one session, `9104af22` → `0374b637`. · **First seen:** 2026-09-29 · **Last seen:** 2026-09-29
+- **Occurrences:** observed twice in one session, `9104af22` → `0374b637`; again on 2026-10-12, twice (see below). · **First seen:** 2026-09-29 · **Last seen:** 2026-10-12
 - **Where:** `templates/scripts/commit_guardian/check_output_drift.py` (the deployed-file census); the offending path is `.claude/.cache/readme_markers/fallback-<n>.json`; the ignore rule is `.gitignore:15` (`.claude/.cache/`).
 
 **What happens.** Commit, and the gate exits 2 with:
@@ -60,6 +60,12 @@ a commit touches `templates/scripts/commit_guardian/README.md`. That makes the f
 land on the commit *after* a README edit — which is why it presented as "the second
 commit fails" rather than as a property of any one change. Deleting the file lets the
 commit through; the next README edit recreates it.
+
+**A second trigger (2026-10-12).** During the INF-800f-1 and GE-132a-1 builds, every
+worktree `python scripts/build.py --target-dir <worktree>` run left one such file
+(observed: `fallback-3701034.json` and `fallback-3880578.json`). `check-output-drift`
+then refused the next commit with a GAP on it and the "delete it or add an exemption"
+remedy. Deleting the file cleared it.
 
 **Two candidate fixes, both small.** Either exclude gitignored paths from the census
 (the general fix — ask git, rather than walking the tree), or exclude `.claude/.cache/`

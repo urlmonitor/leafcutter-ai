@@ -1,0 +1,100 @@
+id: AR-400a-2
+title: "A shared guide that tells its reader to use an ability that does not exist stops the build too"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package tree holding two shared guides that no single specialist
+    owns -- the ability catalogue's own introductory guide, and the body of an
+    ability named "probe-skill" -- each containing on its line 12 the sentence
+    "Load `.claude/skills/ghost-ability/SKILL.md` and apply the decision tree",
+    And no ability named "ghost-ability" exists,
+  When the build runs over that tree,
+  Then the build stops with a failing result naming each of the two guides, the
+    ability "ghost-ability" and line 12 of each, as two separate findings,
+    And the examined count reported by the check includes shared guides as a
+      separate figure from specialist definitions,
+    And removing the sentence from both guides makes the same build pass with no
+      finding about "ghost-ability".
+depends_on:
+  - AR-400a
+  - AR-400a-1
+doc_links:
+  - path: templates/skills/README.md
+    relationship: describes
+    status: exists
+    relevance: "The real shared-guide instance: an example instruction to load a retired ability (route-learning) at line 36. Shared guides are in scope, not only specialist instructions."
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "Ability bodies (signoff, building-epics) were the widest-blast-radius call sites of the original defect."
+  - path: docs/architecture/components/skill-registry.md
+    relationship: describes
+    status: exists
+    relevance: "Where ability bodies (templates/skills/<id>/SKILL.md) and the catalogue's own README live -- the shared-guide population."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The shared-guide population is DERIVED from the tree at run time: every .md under templates/skills/ (each ability body and templates/skills/README.md) plus templates/agents/_*.md shared blocks. No guide is listed by name. If the implementer widens it (for example to templates/workflows/ or templates/commands/, which check_skill_refs.py already scans), the widening is stated in the run's counts and in AR-400a-4."
+  - "Shared guides get the EXISTENCE check only (orchestrator default Q6): no grant comparison is made for a guide, and a guide is never attributed to a specialist that loads it."
+  - "Each (guide, line) is a separate finding; identical text in two guides yields two findings, never one de-duplicated finding."
+  - "The guides-examined figure is reported separately from definitions-examined, and both are on the same verdict object AR-400a-1 returns."
+test_spec:
+  - name: test_nonexistent_ability_in_two_shared_guides_yields_two_findings
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "In a copied package slice, put the ghost-ability Load sentence on line 12 of templates/skills/README.md and of a new templates/skills/probe-skill/SKILL.md; the validator CLI fails with exactly two findings, one per guide, each naming line 12 and kind 'ability does not exist'."
+    must_catch:
+      - "findings are de-duplicated by ability id"
+      - "shared guides are not scanned at all"
+  - name: test_guides_examined_is_reported_separately_from_definitions
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The run reports a guides-examined figure distinct from definitions-examined; removing every templates/skills/**/*.md from the copy drives guides-examined to zero and fails (AR-400a-1-i)."
+  - name: test_removing_sentence_from_both_guides_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: with the sentence removed from both guides the same run exits 0 with no ghost-ability finding."
+test_rationale: >-
+  The real defects of KI-BP-007 sat in ability bodies, not specialist
+  definitions, so the population descriptor matters as much as the criterion
+  one: a run that never reached the guides would pass every specialist-only
+  fixture.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The reference check and its fault kinds, extended to shared guides (existence kind only)."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ONLY EXISTENCE APPLIES TO A SHARED GUIDE. A guide has no grant of its own, so
+  the "not granted" comparison (AR-400b-1) has no left side for it; only the
+  existence half applies. Whether a guide's instruction should also be checked
+  against the grant of every specialist that loads the guide is NOT decided here
+  -- raised as an open question in the BA report.
+
+  SEPARATE COUNTS. One examined count that mixes specialist definitions and
+  guides hides a run that reached the definitions and skipped every guide.

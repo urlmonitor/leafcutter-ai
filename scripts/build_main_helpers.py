@@ -44,6 +44,7 @@ import json
 import sys
 from pathlib import Path
 
+from agent_ability_gate import refuse_on_ability_findings
 from build_colors import (
     RESET,
     GREEN,
@@ -63,6 +64,7 @@ from build_helpers import (
     shim_map,
     file_shims,
 )
+from build_log_root import add_log_root_arguments, apply_log_root_input
 from build_ownership import assemble_claim_set
 from seed_example_product import run_as_build_step as _seed_example_product
 from build_halt_guard import (
@@ -146,6 +148,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
             "config key (default: 'warning' when the key is absent)."
         ),
     )
+    add_log_root_arguments(parser)
     return parser
 
 
@@ -174,6 +177,14 @@ def _run_validation_guards(
             same reasoning as ``validate_all`` above.
     """
     if validate_all(config, package_root, args.validate_only, args.dry_run):
+        return 1
+
+    if apply_log_root_input(args, config) is not None:
+        return 1  # relative --log-root (INF-500d-4-iii): refused before any write
+
+    # AR-300c-3: report a registry copy that disagrees with the declarations
+    # (continues); refuse when a declared ability resolves to no installed skill.
+    if refuse_on_ability_findings(package_root, config, args.dry_run):
         return 1
 
     # Script reference guard: exit non-zero and halt before writing any output

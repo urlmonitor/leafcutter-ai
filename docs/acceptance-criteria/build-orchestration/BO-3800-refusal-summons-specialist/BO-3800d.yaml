@@ -7,7 +7,7 @@ components:
 level: L1
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: draft
 priority: medium
 roadmap_phase: phase_1
@@ -62,6 +62,7 @@ superseded_by: null
 covered_by:
   - BO-3800d-1
   - BO-3800d-2
+  - BO-3800d-3
 implemented_by: []
 change_target: pipeline
 risk_surface: internal

@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: medium
-work_status: done
+work_status: in_progress
 parent: KM-400e
 criteria: |
   Given a configured canonical branch and a successful merge producing commit B
@@ -16,7 +16,10 @@ criteria: |
   And graph and semantic readiness are reported separately with published SHA and lag
   And repeated, missed or out-of-order merge events follow the same publication guarantees
   And retrieval observations retain request, decision, repository, generation and evidence correlation through the existing telemetry owner
-  And operational instructions demonstrate setup, backend-off startup, rebuild, rollback and failure recovery without logging credentials
+  And operational instructions demonstrate setup, backend-off startup, rebuild, rollback, reclamation of generations outside the declared retention bound, and failure recovery without logging credentials
+  And every generation outside the declared retention bound is reclaimed as part of the same successful publication, subject to unexpired pinned continuations
+  And the job's result reports how many generations it reclaimed and how many it retained
+  And every required backend setting is declared rather than substituted, so an unset one ends the job with a failure naming it
 depends_on: [KM-400e]
 doc_links:
   - path: docs/reference/ac-schema.md
@@ -42,7 +45,23 @@ expects_from:
     preserve canonical identities and declared ownership.
 origin_agent: business-analyst
 created: '2026-10-01'
-amended_by: []
+amended_by:
+  - "2026-10-09: business-analyst amendment, not a rewrite. This AC enumerates the
+    synchronization job's obligations and omitted reclamation entirely, and its
+    documentation clause named rollback but not cleanup. Once KM-400f-2 requires
+    publication to reclaim superseded generations, an unamended KM-400e-5 would make
+    the store self-contradictory — the job AC would specify a publication that keeps
+    everything while the publication AC requires it to reclaim. Three clauses were
+    appended and nothing existing was altered: reclamation within the same successful
+    publication (subject to KM-400b-3 pinning), reporting of the reclaimed and
+    retained counts, and no substitution for an unset required backend setting. The
+    documentation clause gained reclamation alongside rollback. work_status moved from
+    done to in_progress: the appended obligations are not implemented, and the
+    existing coverage does not reach them. Note for whoever implements this: the
+    existing workflow coverage string-parses the job definition rather than executing
+    it, which is the shape this repository's conventions forbid for a workflow AC and
+    is why a wrong configuration default survived 60 consecutive failures; the
+    appended clauses must be covered by tests that run the job."
 superseded_by: null
 covered_by:
 - tests/knowledge/test_environment.py

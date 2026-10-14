@@ -66,6 +66,7 @@ amended_by:
   by: it-po
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/16_TICKET-20261012-ACD-2500a-3-i.md
 change_target: code
 risk_surface: contract_boundary

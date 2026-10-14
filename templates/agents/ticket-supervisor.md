@@ -13,7 +13,17 @@ description: 'Depth-0 ticket orchestrator — dispatched directly by `/build-fea
   '
 model: sonnet
 name: ticket-supervisor
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- __ticket_phase_agents__
+- brainstorm-lead
+- llm-expert
+- test-breaker
+skills:
+- skill_id: building-epics
+  mode: always
+- skill_id: signoff
+  mode: always
 portable: true
 signoff: true
 domain: null
@@ -368,7 +378,10 @@ ticket 04) is the **blocking layer**. This warn is non-destructive and never hal
    worktree-root lock per `building-epics` §5.2 BEFORE spawning. Hold the
    lock for the agent's lifetime; release it per §5.3 on success AND on
    every failure path. Wrap the spawn in a `trap`-style `finally` so a
-   crash still releases.
+   crash still releases. For `commit`, run the knowledge-routing stage and
+   observe inside that lock exactly as `building-epics` §5.9 orders them.
+   Stage the stage reply's `manifest` paths by name, and return the observe
+   reply as `knowledge_routing`.
 4. Spawn the chosen agent via the `Agent` tool with input
    `{ticket_path: <absolute path>}`. The agent invokes `signoff` as its
    final action.
@@ -518,7 +531,9 @@ With the effective status determined (either the original parsed tag, or
 ## Failure adjudication
 
 When the latest comment status is `blocker`, walk the four-case ladder
-in `building-epics` §3 in order; pick the FIRST matching case:
+in `building-epics` §3 in order; pick the FIRST matching case. Exception: a
+blocker (or PR check list) naming `Post-merge suite status` is an external
+hold, not a ladder case — follow `building-epics` §3.6; do not respawn.
 
 1. **Trivial mechanical** (§3.1) — single file/line/concrete fix. Respawn
    the same agent with the blocker comment as input. Cap: 1 respawn per
@@ -526,7 +541,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.1 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_mechanical-retry.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,mechanical-retry" --note "Mechanical retry: <failing_agent> failed with a single-file concrete fix on <ticket_basename>." 2>/tmp/feedback_err_mechanical-retry.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If stdout is empty,
    use `(submit-failed)` as the fallback. Include `feedback_id:` in the structured
@@ -538,7 +553,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.2 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_cross-agent-rework.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,retry-<count>,cross-agent-rework" --note "Cross-agent rework: <reviewer_agent> sent <failing_agent> back on <ticket_basename>." 2>/tmp/feedback_err_cross-agent-rework.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -550,7 +565,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.3 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_brainstorm-escalation.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,brainstorm-escalation" --note "Brainstorm escalation: <failing_agent> triggered open-ended design question on <ticket_basename>." 2>/tmp/feedback_err_brainstorm-escalation.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
 
@@ -560,7 +575,7 @@ in `building-epics` §3 in order; pick the FIRST matching case:
 
    After determining this is a §3.4 case, emit CFCS feedback (non-blocking, single command):
    ```bash
-   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." --jsonl debugging/logs/feedback.jsonl 2>/tmp/feedback_err_halt.txt
+   python3 scripts/feedback/submit_feedback.py --ticket "<ticket_path>" --phase ticket-supervisor --category subagent-quality --tags "agent-<failing_agent>,halt,<cap_kind>" --note "Halt: <failing_agent> exhausted adjudication ladder (<cap_kind>) on <ticket_basename>." 2>/tmp/feedback_err_halt.txt
    ```
    Read the feedback ID from the Bash tool result (stdout). If empty, use `(submit-failed)`.
    Include `feedback_id:` in the blocked payload returned to the caller.
@@ -593,6 +608,8 @@ The explicit paths to stage are:
    reformats SQL). These are discovered by re-running `git status --short`
    after the first hook pass — any newly-modified file that matches a known
    hook-artefact pattern is staged explicitly.
+4. `commit` only: every path in the `building-epics` §5.9 stage reply's `manifest`
+   (the knowledge-routing writes this commit must carry).
 
 **Do NOT use `git add .` or `git add -A`** — these commands stage every
 modified file in the worktree, including in-flight files from parallel agents
@@ -620,8 +637,10 @@ wait, fall through to §3.4 with `blocker_summary: commit-lock-stuck`.
 When the ticket finishes cleanly:
 
 ```
-{ "ticket_path": "<absolute path>", "status": "done" }
+{ "ticket_path": "<absolute path>", "status": "done", "knowledge_routing": { ...§5.9 observe reply... } }
 ```
+
+`knowledge_routing` is present whenever a `commit` phase ran, on a blocked payload too.
 
 When escalating to the caller (case §3.4 fall-through, or
 `question`-class comment from §2.2):
@@ -668,37 +687,16 @@ When parity is violated or the ticket file cannot be parsed:
 - Do NOT escalate to a user directly. All escalation flows via the §6 payload
   returned to the caller (`/build-feature` or the user's session).
 
-### Spawn Allowlist (is_ticket_phase agents)
+### Which agents you may spawn
 
-The following agents may be spawned via the Agent tool. Every agent name that
-appears in a ticket's `agents:` map must be in this list (validated against
-`leafcutter/config/agent_registry.json` when present):
+The agents you may spawn via the Agent tool are the ones named in the generated
+**Your Available Sub-Agents** section at the end of this prompt: your
+`spawn_allowlist` declaration, with the ticket-phase entry resolved to every
+agent whose `is_ticket_phase` is true in `leafcutter/config/agent_registry.json`
+on each build. Every agent name that appears in a ticket's `agents:` map must be
+among them.
 
-```
-adr-author
-architect-review
-architecture-diagram-author
-brainstorm-lead
-change-scope-reviewer
-commit
-documentation-expert
-explanation-author
-frontend-coder
-how-to-author
-pr-reviewer
-pull-request
-python-coder
-reference-author
-sql-coder
-sql-query
-status-checker
-test-runner
-test-writer
-user-surface-smoker
-```
-
-Source of truth: `leafcutter/config/agent_registry.json` (`is_ticket_phase: true` entries).
-Validation: if an agent name in the ticket's `agents:` map is NOT in this list and the
+Validation: if an agent name in the ticket's `agents:` map is NOT among them and the
 registry file does not exist, log a warning and attempt to spawn (backward-compatible
 fallback). If the registry IS present and the name is absent, block with a structured
 payload (see Agent Name Validation above).

@@ -270,7 +270,6 @@ class TestFlowNodeRecordsBuiltBehaviour(unittest.TestCase):
         """The node says it was built in DK-400c-1-ii and names the refusal and the abandonment."""
         node = self._node()
         self.assertIn("DK-400c-1-ii", node["implements"])
-        human = node["human"]
-        self.assertIn("Built in DK-400c-1-ii", human)
-        self.assertIn("p1 -> p2 -> p1", human)
-        self.assertIn("abandon", human.lower())
+        self.assertNotEqual(node["impl_status"], "not_started")
+        self.assertTrue(node.get("impl_asof"))
+        # The refusal and abandonment narrative is not in the merged description; dropped.

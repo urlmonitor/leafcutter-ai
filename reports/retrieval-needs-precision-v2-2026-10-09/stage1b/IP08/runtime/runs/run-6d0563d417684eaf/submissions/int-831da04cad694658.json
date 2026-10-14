@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-6d0563d417684eaf",
+  "interaction_id": "int-831da04cad694658",
+  "sha256": "51086c56fdd3cefb42f6a5a6f199eec9a34cc5d92eee94125670dd038330e3a9",
+  "submission": {
+    "schema_version": "1.0",
+    "run_id": "run-6d0563d417684eaf",
+    "interaction_id": "int-831da04cad694658",
+    "expected_state_revision": 1,
+    "actor": {
+      "schema_version": "1.0",
+      "id": "host:blind-precision",
+      "kind": "host"
+    },
+    "relayed_by": null,
+    "response_schema_id": "leafcutter.retrieval_needs_output.v1",
+    "response": {
+      "schema_version": "1.0",
+      "original_question": "Show the source of one test declared to cover KM-500c-2.",
+      "source_scope": {
+        "read_roots": [
+          "docs"
+        ],
+        "repository_id": "leafcutter",
+        "revision": "2a8ebc87ce937a0a2fec65ab26220f79a72e4859",
+        "source_ids": [
+          "knowledge.graph"
+        ]
+      },
+      "selections": {
+        "entity_types": [
+          "test"
+        ],
+        "target_ids": [
+          "KM-500c-2"
+        ],
+        "required_fields": [
+          "content"
+        ],
+        "document_types": [
+          "code"
+        ],
+        "relationships": [
+          "covered_by"
+        ]
+      },
+      "uncertain": {
+        "entity_types": [],
+        "target_ids": [],
+        "required_fields": [],
+        "document_types": [],
+        "relationships": []
+      },
+      "detail_mode": "fields",
+      "completeness": "examples",
+      "hierarchy_scope": "not_applicable",
+      "hierarchy_levels": [],
+      "scope_resolution": "sufficient",
+      "unresolved": [],
+      "rationale": "The answer needs source content from one covering test record, using the named criterion as the coverage anchor. One qualifying example suffices; declared reference values alone do not supply test source.",
+      "engine": "host_llm",
+      "status": "decided",
+      "model_id": null
+    },
+    "new_evidence": [],
+    "usage": []
+  },
+  "accepted_at": "2026-10-09T21:45:39.520314Z"
+}

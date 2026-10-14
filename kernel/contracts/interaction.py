@@ -28,8 +28,11 @@ class Choice(KernelModel):
     """One offered answer to a human question, with its consequences."""
 
     id: StableId
+    """Id the human's answer cites to pick this choice."""
     label: str = Field(min_length=1)
+    """The wording shown to the human."""
     consequences: str = ""
+    """What happens if this choice is picked, so the human can weigh it."""
 
 
 class ContextLimits(KernelModel):

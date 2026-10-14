@@ -211,7 +211,7 @@ DOC_LENGTH_MAX_LINES: int = _get("doc_length", "max_lines", 300)
 DOC_LENGTH_MAX_LINES_ADR: int = _get("doc_length", "max_lines_adr", 400)
 DOC_LENGTH_MAX_SECTIONS: int = _get("doc_length", "max_sections", 25)
 DOC_LENGTH_SEVERITY: str = _get("doc_length", "severity", "warn")
-DOC_LENGTH_EXCLUDED_FILES: list[str] = _get("doc_length", "excluded_files", ["README.md", "CHANGELOG.md"])
+DOC_LENGTH_SET_ASIDE_LOCATIONS: list[dict[str, str]] = _get("doc_length", "set_aside_locations", [])
 
 # ---------------------------------------------------------------------------
 # check_doc_links
@@ -317,6 +317,22 @@ TICKET_AC_PARITY_AC_STORE_ROOT: str = _get(
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-12 [GE-127g-1]: Replaced DOC_LENGTH_EXCLUDED_FILES with
+  DOC_LENGTH_SET_ASIDE_LOCATIONS, read from doc_length.set_aside_locations:
+  a list of {path, ground} objects rather than a list of basenames. The old
+  key matched on basename ALONE, so its two entries exempted every README.md
+  and CHANGELOG.md anywhere under docs/ -- simultaneously too broad (files
+  nobody meant to exempt) and too narrow (no way to exempt a whole generated
+  directory). Membership is now by declared location: a path ending "/"
+  matches everything beneath it, anything else matches one document.
+  TWO CONSEQUENCES WORTH KNOWING. (1) The default changed from
+  ["README.md", "CHANGELOG.md"] to [] -- nothing is set aside unless declared,
+  so a config that is missing or unreadable now exempts NOTHING where it
+  previously exempted those two basenames. (2) Nothing reads excluded_files
+  any more and nothing warns about it, so a consumer config still carrying
+  that key has a dead setting: its documents silently come back into scope
+  with no message naming the cause. A warning for that case is deliberately
+  NOT added here -- it is new behaviour and belongs to its own criterion.
 - 2026-09-15 [python-coder/GE-127d-1]: Added PUBLISHED_RULE_SURFACES, read
   from the new nested file_size.published_rule_surfaces config key (default
   ["README.md", "commit_guardian.json"]), for the new

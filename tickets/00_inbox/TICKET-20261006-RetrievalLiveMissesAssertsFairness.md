@@ -90,4 +90,7 @@ by its best section's score. As a result, the parent design document
 `docs/analysis/2026-09-30-decision-kernel-design.md` is now cut entirely for "What fields must a
 decision record hold?", while its parts 2 to 6 are offered.
 
+2026-10-08: filed as its own ticket,
+`tickets/00_inbox/TICKET-20261008-AnalysisRetrievalKeepsParentDesignDoc.md` (needs an ADR).
+
 ## Comments

@@ -145,14 +145,27 @@ def test_agent_real_registry_preserves_all_entries_and_registered_templates():
         "agents"
     ]
     records = _extract(root)
-    assert len(records) == len(entries) == 61
+    # The expected population is the registry's own count: the point is that the native
+    # projection loses no entry, not that the registry has a particular size.
+    count = len(entries)
+    assert count > 0
+    assert len(records) == count
     assert [record.metadata for record in records] == entries
-    assert [record.locator for record in records] == [f"/agents/{i}" for i in range(61)]
-    assert len({record.native_id for record in records}) == 61
-    assert sum("template_frontmatter" in record.derived for record in records) == 59
+    assert [record.locator for record in records] == [f"/agents/{i}" for i in range(count)]
+    assert len({record.native_id for record in records}) == count
+    templated = [entry for entry in entries if entry.get("template_path")]
+    untemplated = [entry for entry in entries if not entry.get("template_path")]
+    assert (
+        sum("template_frontmatter" in record.derived for record in records) == len(templated)
+    )
     by_id = {record.native_id: record for record in records}
-    for name in ("architect-review-deep", "conflict-resolver-deep"):
-        assert by_id[name].derived == {}
+    # Every registry entry WITHOUT a template must still project, with derived == {}.
+    # This used to be checked via the two never-built *-deep agents (template_path null);
+    # they were removed from the registry (2026-10-09), so no untemplated entry remains
+    # and the set is asserted empty explicitly rather than the check being dropped.
+    assert untemplated == []
+    for entry in untemplated:
+        assert by_id[entry["id"]].derived == {}
     for record in records:
         if record.metadata.get("template_path"):
             text = (root / record.metadata["template_path"]).read_text(encoding="utf-8-sig")

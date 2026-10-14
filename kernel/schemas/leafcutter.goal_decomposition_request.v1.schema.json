@@ -17,6 +17,7 @@
   "description": "leafcutter.goal_decomposition_request.v1: what the host is asked to split (ADR-067 4.1).",
   "properties": {
     "allowed_capabilities": {
+      "description": "The capabilities a part may use; the host picks one for each part.",
       "items": {
         "enum": [
           "decision",
@@ -29,6 +30,7 @@
       "type": "array"
     },
     "max_parts": {
+      "description": "Most parts the host should offer; the kernel cuts anything above split.max_parts.",
       "maximum": 5,
       "minimum": 2,
       "title": "Max Parts",
@@ -36,6 +38,7 @@
     },
     "min_parts": {
       "default": 2,
+      "description": "Fewest parts a split may offer; fewer than two is no split.",
       "maximum": 2,
       "minimum": 2,
       "title": "Min Parts",
@@ -44,18 +47,22 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "split_id": {
+      "description": "The split this request belongs to, so the host's reply can be matched to it.",
       "pattern": "^dcp-[0-9a-f]{16}$",
       "title": "Split Id",
       "type": "string"
     },
     "subject_kind": {
-      "$ref": "#/$defs/SubjectKind"
+      "$ref": "#/$defs/SubjectKind",
+      "description": "What kind of request is to be split, so the host phrases the parts to fit."
     },
     "subject_text": {
+      "description": "The exact text the host must split into separate questions.",
       "minLength": 1,
       "title": "Subject Text",
       "type": "string"

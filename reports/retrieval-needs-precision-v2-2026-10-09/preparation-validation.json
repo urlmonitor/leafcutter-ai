@@ -1,0 +1,69 @@
+{
+  "validated_at": "2026-10-09T21:39:22.097636+00:00",
+  "checks": [
+    {
+      "file": "reports\\retrieval-needs-precision-v2-2026-10-09\\controller.py",
+      "docstrings_pass": true,
+      "size": [
+        true,
+        141,
+        400
+      ],
+      "max_complexity": 6
+    },
+    {
+      "file": "reports\\retrieval-needs-precision-v2-2026-10-09\\eval_support.py",
+      "docstrings_pass": true,
+      "size": [
+        true,
+        97,
+        400
+      ],
+      "max_complexity": 2
+    },
+    {
+      "file": "reports\\retrieval-needs-precision-v2-2026-10-09\\score.py",
+      "docstrings_pass": true,
+      "size": [
+        true,
+        115,
+        400
+      ],
+      "max_complexity": 12
+    },
+    {
+      "command": [
+        "-m",
+        "ruff",
+        "check",
+        "reports\\retrieval-needs-precision-v2-2026-10-09"
+      ],
+      "exit_code": 0,
+      "output": "All checks passed!"
+    },
+    {
+      "command": [
+        "-m",
+        "mypy",
+        "--follow-imports=skip",
+        "--ignore-missing-imports",
+        "reports\\retrieval-needs-precision-v2-2026-10-09\\controller.py",
+        "reports\\retrieval-needs-precision-v2-2026-10-09\\eval_support.py",
+        "reports\\retrieval-needs-precision-v2-2026-10-09\\score.py"
+      ],
+      "exit_code": 0,
+      "output": "Success: no issues found in 3 source files"
+    },
+    {
+      "command": [
+        "reports\\retrieval-needs-precision-v2-2026-10-09\\controller.py",
+        "validate"
+      ],
+      "exit_code": 0,
+      "output": "{\"validated_cases\": 16, \"jev_calls\": 0, \"graph_calls\": 0, \"host_generations\": 0}"
+    }
+  ],
+  "model_calls": 0,
+  "graph_calls": 0,
+  "host_waits_created": 0
+}

@@ -1,0 +1,530 @@
+[
+  {
+    "index": 0,
+    "kind": "segment",
+    "name": "leafcutter.run.start",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "pending",
+      "task_id": null,
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {},
+    "closed": false
+  },
+  {
+    "index": 1,
+    "kind": "span",
+    "name": "kernel.intake",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": null,
+      "task_id": null,
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 2,
+    "kind": "span",
+    "name": "kernel.enrich_context",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 3,
+    "kind": "span",
+    "name": "entity.recognition",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 2,
+    "data": {
+      "span_kind": "context",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 4,
+    "kind": "event",
+    "name": "entity.resolution",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 2,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "coverage": {
+          "schema_version": "1.0",
+          "scan_complete": false,
+          "index_status": "disabled",
+          "index_fingerprint": null,
+          "families": {},
+          "counts": {
+            "schema_version": "1.0",
+            "detected": 0,
+            "resolved": 0,
+            "returned": 0,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          },
+          "by_family": {}
+        }
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 5,
+    "kind": "event",
+    "name": "entity.projection",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 2,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "budgets": {
+          "schema_version": "1.0",
+          "lookups": 0,
+          "serialized_chars": 671,
+          "elapsed_ms": 0.099,
+          "jev_calls": 0
+        }
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 6,
+    "kind": "event",
+    "name": "context.recognized",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 2,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "status": "disabled",
+        "coverage": {
+          "schema_version": "1.0",
+          "scan_complete": false,
+          "index_status": "disabled",
+          "index_fingerprint": null,
+          "families": {},
+          "counts": {
+            "schema_version": "1.0",
+            "detected": 0,
+            "resolved": 0,
+            "returned": 0,
+            "omitted": 0,
+            "unknown": 0,
+            "ambiguous": 0
+          },
+          "by_family": {}
+        },
+        "budgets": {
+          "schema_version": "1.0",
+          "lookups": 0,
+          "serialized_chars": 671,
+          "elapsed_ms": 0.099,
+          "jev_calls": 0
+        },
+        "limitations": [
+          "entity recognition disabled"
+        ]
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 7,
+    "kind": "span",
+    "name": "kernel.schedule",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 8,
+    "kind": "span",
+    "name": "kernel.route",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 9,
+    "kind": "event",
+    "name": "routing.assessed",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 8,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "outcome": "selected",
+        "selected": "research",
+        "reason_codes": [
+          "intent_bound"
+        ]
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 10,
+    "kind": "span",
+    "name": "capability.research",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-c34567aed2d34667",
+      "request_id": "req-6a012e90c77a40db",
+      "invocation_id": "inv-2102f227e0d0412f",
+      "decision_id": null,
+      "capability_id": "research",
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "capability",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 11,
+    "kind": "span",
+    "name": "kernel.integrate",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 12,
+    "kind": "span",
+    "name": "kernel.schedule",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 13,
+    "kind": "span",
+    "name": "kernel.route",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 14,
+    "kind": "event",
+    "name": "routing.assessed",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-7fd0cc07cd90480f",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": 13,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "outcome": "selected",
+        "selected": "host.retrieval_needs",
+        "reason_codes": [
+          "deterministic"
+        ]
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 15,
+    "kind": "event",
+    "name": "interaction.opened",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": "work-7fd0cc07cd90480f",
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": "int-3d99ae181d174a36",
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "level": "DEFAULT",
+      "payload": {
+        "kind": "host",
+        "state_revision": 1
+      }
+    },
+    "closed": false
+  },
+  {
+    "index": 16,
+    "kind": "span",
+    "name": "kernel.integrate",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  },
+  {
+    "index": 17,
+    "kind": "span",
+    "name": "kernel.schedule",
+    "corr": {
+      "schema_version": "1.0",
+      "run_id": "run-89feafb061a94fc2",
+      "root_task_id": "task-25b07a66e2bb4b03",
+      "task_id": "task-25b07a66e2bb4b03",
+      "work_item_id": null,
+      "request_id": null,
+      "invocation_id": null,
+      "decision_id": null,
+      "capability_id": null,
+      "interaction_id": null,
+      "parent_work_item_id": null,
+      "causation_seq": null
+    },
+    "parent": null,
+    "data": {
+      "span_kind": "node",
+      "input": null,
+      "metadata": {}
+    },
+    "closed": true
+  }
+]

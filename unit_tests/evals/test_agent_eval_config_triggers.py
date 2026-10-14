@@ -27,7 +27,7 @@ sys.path.insert(0, str(_EVALS_DIR))
 import eval_selector  # noqa: E402
 
 _TRIGGERS = eval_selector.agent_triggers(eval_selector.load_config(_EVALS_DIR / "agent_eval_config.json"))
-_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier"]
+_ALL_AGENTS = ["flow-author", "mock-data-author", "pt-classifier", "restructuring-specialist"]
 
 # One representative path per root that 974fa757f added and the owner decision removed.
 _OUTSIDE_OWN_FILES = [
@@ -49,6 +49,8 @@ _OWN_FILES = {
     "templates/agents/mock-data-author.md": ["mock-data-author"],
     "docs/product-truth/evals/mock-data-author/eval.jsonl": ["mock-data-author"],
     "templates/agents/pt-classifier.md": ["pt-classifier"],
+    "templates/agents/restructuring-specialist.md": ["restructuring-specialist"],
+    "scripts/evals/sets/restructuring-specialist.jsonl": ["restructuring-specialist"],
     "scripts/evals/artifact_dependencies.py": ["flow-author", "mock-data-author"],
     "scripts/evals/cli_envelope.py": _ALL_AGENTS,
     "scripts/evals/run_agent_eval.py": _ALL_AGENTS,
@@ -56,7 +58,11 @@ _OWN_FILES = {
 
 
 def test_the_config_still_declares_the_three_agents() -> None:
-    """Guard: the assertions below are about these agents, so they must all be configured."""
+    """Guard: the assertions below are about these agents, so they must all be configured.
+
+    The name predates the fourth agent (restructuring-specialist, INF-800f-1). It is kept so
+    the contract-shrinking guard and the test's history stay continuous; it checks every agent.
+    """
     assert sorted(_TRIGGERS) == _ALL_AGENTS
 
 

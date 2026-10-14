@@ -14,7 +14,9 @@
     "embedding_token_env": "LEAFCUTTER_EMBEDDING_TOKEN",
     "embedding_model": null,
     "embedding_dimensions": null,
-    "query_timeout": 3.0
+    "query_timeout": 3.0,
+    "retention_max_generations": null,
+    "retention_min_age_seconds": null
   },
   "paths": {
     "run_root": ".leafcutter/kernel",

@@ -1,0 +1,182 @@
+id: AR-300a-5-i
+title: "No compiled prompt carries a hand-written sub-agent account -- table or list -- beside the delivered one"
+component: agent-registry
+components:
+  - agent_registry
+  - template_compiler
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+criteria: |
+  Given the six agent definitions whose bodies carry a hand-written account of
+    the sub-agents they may dispatch -- five as a table (three that agree with
+    the central record and two that disagree with it) and one, ticket-supervisor,
+    as a fenced list under "### Spawn Allowlist (is_ticket_phase agents)",
+  When their compiled prompts are read after delivery is in place,
+  Then each contains exactly one account of the agent's permitted sub-agents,
+    and it is the delivered one,
+    And the sub-agents named in it are exactly those its declaration permits --
+      none named that it was not permitted, none permitted that go unnamed,
+    And the same single-account property holds for every agent the build
+      compiled, counted and reported, so a hand-written sub-agent account --
+      a table OR a list -- added to any other definition later is caught
+      rather than accumulated,
+    And a definition that merely mentions sub-agent tables or lists in prose,
+      without stating its own permitted sub-agents, is not counted as a second
+      account,
+  So an agent reading its own instructions is never choosing between two lists
+    of who it may call on.
+depends_on:
+  - AR-300a-5
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a hand-written sub-agent table that adds test-runner, which the registry does not list."
+  - path: templates/agents/architect-review.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a hand-written sub-agent table that omits architect-review-deep, which the registry lists."
+  - path: templates/agents/test-writer.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a hand-written sub-agent table that matches the registry."
+  - path: templates/agents/frontend-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a hand-written sub-agent table that matches the registry, and a frontmatter spawn_allowlist key."
+  - path: templates/agents/ticket-supervisor.md
+    relationship: modifies
+    status: exists
+    relevance: "Carries a hand-written fenced LIST of the agents it may spawn under '### Spawn Allowlist (is_ticket_phase agents)' -- the sixth hand-written sub-agent account, removed like the five tables (BrainCandy decision, 2026-10-09)."
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+    relevance: "Mentions the '## Your Available Sub-Agents' heading in its review-checklist prose without stating its own permission -- the control case."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "The abilities precedent for the one-account rule (the duplicate-account rule named in the user decision)."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "The consolidation that must run before the tables are deleted, or python-coder's table-only test-runner permission is lost."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - prompt
+risk_surface: internal
+it_requirements:
+  - "Resolving this AC means DELETING the hand-written sub-agent account from the BODY of the six templates in templates/agents/ -- the table section of the five (business-analyst, frontend-coder, test-writer, python-coder, architect-review) and ticket-supervisor's fenced list under '### Spawn Allowlist (is_ticket_phase agents)' (BrainCandy decision, 2026-10-09) -- the contiguous account section only (heading, lead-in sentence and table or fenced list); no other body prose changes and no compiled prompt is edited. Suppressing delivery is not an acceptable route to one account."
+  - "ORDER: the deletion runs only AFTER the AR-300c-5-i consolidation has written the union into each template's `spawn_allowlist` declaration (and, for architect-review, after AR-300c-5-iii's decision-10 remediation). Deleting first loses python-coder's table-only test-runner permission, which BrainCandy decided (decision 11) it keeps. For ticket-supervisor, its permission must already be carried by its declaration (the `__ticket_phase_agents__` shorthand, AR-300c-5) before the fenced list goes, so no agent it may spawn today is lost."
+  - "ONE DETECTOR: detecting a hand-written sub-agent account must generalise the existing in-place-account detector (scripts/agent_inplace_abilities.py, which detects a hand-written abilities account) over the kind of account, not add a parallel spawn detector. It anchors on the generated section's emitted structure (AR-300a-5 defines it once) and on a table OR a list (bulleted, numbered or fenced) that states the agent's OWN permitted sub-agents -- never on counting a heading string, which llm-expert's checklist prose contains (the control case; AR-200b-1 records what a heading-string detector costs this component). A detector that recognises only tables misses ticket-supervisor's shape and fails this AC."
+  - "Equality is a two-way set comparison between the sub-agents named in the surviving (delivered) account and the declaration after macro resolution."
+  - "The single-account property is asserted over EVERY compiled prompt in every platform root under the declared output root, with the count reported and failure on zero -- not just the six known instances (the five tables plus ticket-supervisor's fenced list)."
+  - "File-size ratchet: generalising the detector must not push its module over the 400-content-line limit (count_content_lines); split into a new module if needed. scripts/template_compiler.py and scripts/injection_builders.py may not grow."
+test_spec:
+  - name: test_six_formerly_hand_written_agents_carry_exactly_one_sub_agent_account
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "The compiled prompts of business-analyst, frontend-coder, test-writer, python-coder, architect-review and ticket-supervisor (both roots) each contain exactly one sub-agent account, and it is the delivered section; ticket-supervisor no longer carries the '### Spawn Allowlist (is_ticket_phase agents)' fenced list."
+  - name: test_single_account_names_exactly_the_declared_sub_agents
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "The surviving account equals the declaration in both directions; python-coder's names test-runner."
+  - name: test_a_hand_written_table_planted_in_another_template_is_caught
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Planting a hand-written sub-agent table in a different template makes the whole-population assertion fail, naming that agent."
+    must_catch:
+      - "the assertion iterates only the six known templates (the five with tables plus ticket-supervisor)"
+  - name: test_a_hand_written_sub_agent_list_planted_in_another_template_is_caught
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Planting a hand-written LIST (ticket-supervisor's former fenced-list shape) of the agent's own permitted sub-agents in a different template makes the whole-population assertion fail, naming that agent."
+    must_catch:
+      - "the detector recognises only tables, not lists"
+      - "the assertion iterates only the six known templates"
+  - name: test_single_account_property_counts_every_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "The assertion reports how many compiled prompts it examined across both roots and fails on an empty population."
+  - name: test_prose_mention_of_sub_agent_tables_is_not_a_second_account
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "A body that mentions the '## Your Available Sub-Agents' heading in checklist prose without stating its own sub-agents (llm-expert's shape) is not counted as a second account."
+test_rationale: >-
+  Two of the five tables already disagree with the registry, so the planted-table
+  descriptor is load-bearing: without it the assertion only ever runs on a repaired
+  tree and proves a loop runs. The prose descriptor guards the opposite failure, a
+  detector that fires on ordinary prose and gets switched off.
+delivers_to: null
+expects_from:
+  ac_id: AR-300a-5
+  contract: "The single generated sub-agent section, with its structure defined once, which this criterion requires to be the only account."
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-09'
+- reason: apply-user-decision
+  agent: it-po
+  date: '2026-10-09'
+  changed: "title and criteria: the single-account rule now names SIX formerly hand-written sub-agent accounts -- the five tables plus ticket-supervisor's fenced list under '### Spawn Allowlist (is_ticket_phase agents)' -- and covers any hand-written sub-agent account, table OR list, both for the whole-population clause and the prose-mention control clause (was: tables only, five agents). doc_links: templates/agents/ticket-supervisor.md added (modifies). it_requirements: the deletion line names the six accounts, the ORDER line requires ticket-supervisor's permission to be carried by its declaration before its list goes, and the ONE DETECTOR line requires the detector to recognise lists as well as tables. test_spec: the deployed descriptor is renamed test_six_formerly_hand_written_agents_carry_exactly_one_sub_agent_account and includes ticket-supervisor; a planted-LIST discrimination descriptor is added. WHY: decided by BrainCandy on 2026-10-09 -- ticket-supervisor's fenced list is a second hand-written account of who it may call on, exactly the drift this rule exists to stop, and a table-only rule would leave it and any future list in place. req_status, depends_on, delivers_to, expects_from unchanged. readiness stays approved: the widening is the approving user's own decision, recorded here so the approval provably covers the amended wording (AR-200b's re-approval convention)."
+- reason: apply-user-decision
+  agent: it-po
+  date: '2026-10-09'
+  changed: "it_requirements and test_spec: two places still read 'five' as the governing count after the six-account widening above. The whole-population it_requirement now says 'not just the six known instances (the five tables plus ticket-supervisor's fenced list)' (was 'the five known instances'), and the planted-table descriptor's must_catch now reads 'the assertion iterates only the six known templates (the five with tables plus ticket-supervisor)' (was 'the five known templates'). WHY: BrainCandy's 2026-10-09 decision made the governing count six; these two sentences were missed by the earlier amendment. Explicitly historical 'five' wording (the notes, which already say to read 'five' as the measured table population, and test_rationale's 'two of the five tables') is left as-is. criteria, title, req_status, depends_on, delivers_to, expects_from unchanged; readiness stays approved because this only aligns two sentences with a decision the approving user already made."
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_300a_5_i_single_account.py
+implemented_by:
+  - scripts/agent_ability_accounts.py
+  - scripts/agent_spawn_declaration.py
+notes: |
+  SIX, NOT FIVE (BrainCandy decision, 2026-10-09). ticket-supervisor's
+  hand-written fenced list under "### Spawn Allowlist (is_ticket_phase agents)"
+  is a second hand-written sub-agent account and is removed, same as the five
+  tables. The rule covers any hand-written sub-agent account, table OR list.
+  Where the paragraphs below say "five" or "tables", read them as the measured
+  table population of 2026-10-09; the governing count is six accounts.
+
+  THE FIVE, MEASURED 2026-10-09: business-analyst, frontend-coder, test-writer
+  (MATCH the registry); python-coder (table adds test-runner); architect-review
+  (table omits architect-review-deep). llm-expert has no table -- it only names
+  the heading inside its review-checklist prose -- and is the control case for
+  the prose clause. The user decision text says "six" tables; five is what the
+  measurement found.
+
+  RESOLVING THIS MEANS DELETING THE FIVE BODY TABLES, not suppressing delivery.
+  The surviving account must be the delivered one, because only it is held equal
+  to the declaration. And the deletion must come AFTER the union consolidation in
+  AR-300c-5-i, or python-coder's test-runner permission (table-only today) is lost
+  rather than carried across.
+
+  WHY THE EQUALITY CLAUSE IS LOAD-BEARING. Two of the five tables already
+  disagree with the registry today. That is the drift a hand-written list
+  produces with nothing comparing it -- the defect this rule exists to stop, not a
+  hypothetical.
+
+  THE PROSE CONTROL CLAUSE IS NOT PADDING. AR-200b-1 records in this component
+  what happens to a detector that matches a heading string ordinary prose also
+  produces: it fires across the tree and gets switched off. llm-expert's checklist
+  is exactly such prose (and AR-300c-5-iv rewrites it so it stops requiring the
+  table).

@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -191,8 +191,11 @@ amended_by:
   agent: approve_acs
   date: '2026-10-08'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_iv.py
+implemented_by:
+- scripts/ci/post_merge_notice.py
+- scripts/ci/post_merge_hold.py
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -200,3 +203,11 @@ notes: |
   takes the verdict from the run history, so a close of the notice changes nothing a
   pull request sees. The previous note, which warned that the escape hatch caused this
   window on every successful fix, is superseded; see the amendment.
+
+  BUILT 2026-10-09 AS A PIN, NOT TDD. As it_requirements predicted, no new code path was
+  needed: the four tests were green on arrival against -iii's lifecycle and -vi's hold.
+  Each must_catch was instead shown red against a temporary broken copy (hold releases on
+  a closed notice; hold requests an issue timeline; anchor accepts a failed run; closed
+  notice read as already raised; reopen keeps the original red_since). "The close is
+  recorded as the last green point" has no direct mutation, because nothing reads a close
+  time; the wrong-anchor mutation stands in for it.

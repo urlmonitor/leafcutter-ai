@@ -6,6 +6,7 @@ ARCHITECTURE: Adapter delegates projection and vector lifecycle to small helpers
 DECISION HISTORY
 ========================================
 - 2026-10-01 12:00 [python-coder]: Use metadata-only manifests and explicit database selection. (#TICKET-KM-400b-1)
+- 2026-10-09 12:00 [python-coder]: Surface driver error class, code and bounded message in BackendUnavailable. (#KM-400e)
 """
 
 from __future__ import annotations
@@ -32,6 +33,25 @@ def scope_key(repository_id: str, generation_id: str) -> str:
     return hashlib.sha256(json.dumps([repository_id, generation_id]).encode()).hexdigest()
 
 
+_MAX_CAUSE_CHARS = 300
+
+
+def describe_failure(error: BaseException) -> str:
+    """Summarize a driver fault as class, optional Neo4j code and bounded server text.
+
+    Args:
+        error: Infrastructure exception raised by the driver or transport.
+
+    Returns:
+        A secret-free single-line diagnostic; never includes the URI or credentials.
+    """
+    code = getattr(error, "code", None)
+    detail = getattr(error, "message", None) or str(error)
+    label = f"{type(error).__name__} [{code}]" if code else type(error).__name__
+    text = " ".join(str(detail).split())[:_MAX_CAUSE_CHARS]
+    return f"backend unavailable: {label}: {text}"
+
+
 def entity_from_row(row: dict) -> Entity:
     """Deserialize plain entity data; never leak driver records."""
     return Entity.model_validate_json(row["payload"])
@@ -39,6 +59,11 @@ def entity_from_row(row: dict) -> Entity:
 
 class Neo4jBackend:
     """Optional Neo4j read/write adapter with one explicitly closed connection pool."""
+
+    # Expected and kept counts of the last publication's build, set by neo4j_projection.publish.
+    publication_counts: dict | None = None
+    # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
+    publication_removal: dict | None = None
 
     def __init__(
         self,
@@ -93,9 +118,7 @@ class Neo4jBackend:
         Returns:
             Transaction result records materialized as plain dictionaries.
         """
-        from knowledge.adapters.domain_schema import storage_statement
-
-        return [record.data() for record in tx.run(storage_statement(statement), parameters)]
+        return [record.data() for record in tx.run(statement, parameters)]
 
     async def _transaction(
         self, callback: Callable[[ManagedTransaction], TransactionResult], write: bool = False
@@ -124,7 +147,7 @@ class Neo4jBackend:
         try:
             return await asyncio.to_thread(execute)
         except (OSError, TimeoutError, DriverError, Neo4jError) as error:
-            raise BackendUnavailable() from error
+            raise BackendUnavailable(describe_failure(error)) from error
 
     async def setup(self) -> None:
         """Apply idempotent, versioned Community-compatible projection constraints."""
@@ -165,7 +188,7 @@ class Neo4jBackend:
             Metadata for the active published generation, or None when none exists.
         """
         rows = await self._run(
-            'MATCH (r:KRRepository {repository_id:$repo}) MATCH (g:KRGeneration {key:r.active}) WHERE g.status="ready" RETURN g',
+            'MATCH (r:Repository {repository_id:$repo}) MATCH (g:Snapshot {key:r.active}) WHERE g.status="ready" RETURN g',
             {"repo": repository_id},
         )
         return self._manifest(rows[0]["g"]) if rows else None
@@ -183,7 +206,7 @@ class Neo4jBackend:
             Published generation metadata in the requested scope, or None if unavailable.
         """
         rows = await self._run(
-            'MATCH (g:KRGeneration {key:$key, status:"ready"}) RETURN g',
+            'MATCH (g:Snapshot {key:$key, status:"ready"}) RETURN g',
             {"key": scope_key(repository_id, generation_id)},
         )
         return self._manifest(rows[0]["g"]) if rows else None
@@ -199,7 +222,7 @@ class Neo4jBackend:
             Published generation metadata for that exact SHA, or None if unavailable.
         """
         rows = await self._run(
-            'MATCH (g:KRGeneration {repository_id:$repo,source_sha:$sha,status:"ready"}) RETURN g ORDER BY g.ready_at DESC LIMIT 1',
+            'MATCH (g:Snapshot {repository_id:$repo,source_sha:$sha,status:"ready"}) RETURN g ORDER BY g.ready_at DESC LIMIT 1',
             {"repo": repository_id, "sha": source_sha},
         )
         return self._manifest(rows[0]["g"]) if rows else None
@@ -363,7 +386,7 @@ class Neo4jBackend:
         self,
         repository_id: str,
         generation_id: str,
-        retention_seconds: int = 3600,
+        retention_seconds: int | None = None,
         now: float | None = None,
     ) -> bool:
         """Remove only an inactive owned generation after its retention deadline.
@@ -371,7 +394,8 @@ class Neo4jBackend:
         Args:
             repository_id: Trusted repository namespace that isolates all reads and writes.
             generation_id: Immutable generation identifier within the repository.
-            retention_seconds: Minimum elapsed retirement time before removal is permitted.
+            retention_seconds: Declared minimum retirement time; there is no built-in
+                value, so omitting it is refused with ValueError.
             now: Optional clock value for deterministic retention checks.
 
         Returns:
@@ -380,6 +404,19 @@ class Neo4jBackend:
         from knowledge.adapters.neo4j_projection import cleanup
 
         return await cleanup(self, repository_id, generation_id, retention_seconds, now)
+
+    async def retention_facts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, the per-generation facts a retention policy decides on.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per retained ready generation.
+        """
+        from knowledge.adapters.neo4j_projection import retention_facts
+
+        return await retention_facts(self, repository_id)
 
     async def close(self) -> None:
         """Close the configured driver's pool."""

@@ -1,0 +1,303 @@
+id: INF-600b-3
+title: "A card is a picture of its agent and of nothing else, so adding an acceptance criterion moves no card"
+component: infrastructure
+components:
+  - infrastructure
+  - build_pipeline
+  - agent_registry
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the build produces one card document per agent, assembled from that
+    agent's own declared facts — the description it carries, the facts table
+    naming its model and tier and whether it is portable and sign-off capable,
+    the agents it is dispatched by, its knowledge channels, its input and
+    output contract, the tools it may use, the skills it uses and its spawn
+    diagram,
+  And the acceptance-criteria store holds records that name an agent in their
+    assigned_agent field,
+  When a build regenerates every card and each resulting document is read,
+  Then no card names an acceptance criterion anywhere in it, and no card
+    carries a section listing the criteria assigned to its agent.
+
+  And given that same regeneration held as the comparison point,
+  When one acceptance criterion naming an existing agent in its assigned_agent
+    field is added to the store, nothing else in the project changes, and the
+    build runs again,
+  Then every card document is byte-for-byte identical to the one the preceding
+    build produced, and the number of cards the build reports as changed is
+    zero — so a change confined to the acceptance-criteria store moves no card.
+
+  And given instead that one acceptance criterion already naming that agent is
+    retitled, a second is removed from the store, and a third has its
+    assigned_agent changed from one existing agent to another, with nothing
+    else in the project changing,
+  When the build runs again,
+  Then every card document is again byte-for-byte identical to the preceding
+    build's — so what is established is the card's independence from the store
+    in all three directions, and not merely that one added record happened not
+    to reach it.
+
+  And given the same regeneration as the first scenario,
+  When each card is read in full,
+  Then every card still states its agent's description, still carries the
+    facts table naming its model and tier, still lists the tools it may use
+    and the skills it uses, and still carries its spawn diagram,
+  And the longest card stands below the length the size standard applies to a
+    document a person writes, where three cards stood above that length before
+    — so a card is shorter because one derived section is gone, and not
+    because the agent's own facts went with it.
+
+  And given an agent whose template description is amended, with nothing in
+    the acceptance-criteria store changing,
+  When the build runs again,
+  Then that agent's card differs from the preceding build's and every other
+    card is byte-for-byte identical — so the card still follows its agent, and
+    none of the scenarios above is satisfied by a build that stopped producing
+    cards at all.
+depends_on:
+  - INF-600b
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600b.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600b-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD THIS ONE REPLACES THE CARRIER OF, AND THE ONE A READER MUST SEE
+      ALONGSIDE IT — THE TWO ARE THE BEFORE AND AFTER OF ONE DECISION, NOT A
+      CONTRADICTION. INF-600b-2 required a per-agent grouping of criteria keyed on
+      assigned_agent "in the ticket body OR agent card". It is RETIRED as of
+      2026-10-09: status deprecated, req_status superseded. UPDATED FROM THIS RECORD'S
+      FIRST DRAFT, WHICH SAID THE OPPOSITE. That draft recorded that this record took
+      no position on the ticket body, "the disjunct that keeps INF-600b-2
+      satisfiable", and flagged the ticket-body carrier as unverified. The check was
+      then made against scripts/ac_store/_gtfa_body.py: the ticket generator builds
+      from ONE criterion and renders a single line, `Assigned agent:
+      {assigned_agent}`, with no grouped section and no per-agent headings — a
+      single-criterion ticket has nothing to group. THE CARD WAS THE ONLY CARRIER, so
+      the disjunction has no true disjunct left and INF-600b-2 could not be narrowed,
+      only retired. Two consequences for a reader of THIS record: first, its own
+      penultimate clause — an agent seeing which criteria it owns — is not abandoned,
+      it is met by querying the store at read time rather than by a copy cached in
+      markdown, which is why INF-600b-2 is `deprecated` with `superseded_by: null`
+      and not pointed at this record as a successor; second, INF-600b-2 claimed
+      work_status done for four months while only ever half-satisfied, which is a
+      phantom-done instance named on that record and worth reading there.
+  - path: docs/acceptance-criteria/build_pipeline/BP-018.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE NEIGHBOUR THIS RECORD MAKES ACHIEVABLE, AND NOT A DUPLICATE OF IT. BP-018
+      requires a no-op rebuild to leave a card byte-for-byte untouched, and names three
+      inputs that must not have changed. It owns the compare-before-write guard and the
+      carrying-through of provenance dates; this record owns which inputs a card has at
+      all. The relationship is one-directional: BP-018's guard was defeated by a
+      generated `created` date, which BP-018 fixes, while the AC-assignment section is
+      the only input that moved between regenerations in practice — so this record
+      removes the cause of the drift BP-018 was written to survive. Neither discharges
+      the other: a generator that carries provenance correctly and still reads the store
+      fails this record, and a static card rewritten with today's date fails BP-018.
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500a.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE SYMPTOM THIS RECORD REMOVES THE LARGEST INSTANCE OF, WITHOUT DISCHARGING IT.
+      BP-1500a's KI-BP-002 is "one run rewrote six cards, 99 insertions and 36
+      deletions", and every added line in those six cards is an AC-assignment entry.
+      This record removes that cause. BP-1500a is NOT satisfied by it and must not be
+      closed against it: BP-1500a's promise is a drift CHECK over every tracked
+      generated artifact, and its population also holds docs/roadmap.md and
+      docs/INDEX.md, neither of which this record touches. A card can still drift after
+      this record lands — when an agent template's description changes and the card is
+      not regenerated — which is the fifth scenario above.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127g-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE RECORD WHOSE MEASURED POPULATION THIS ONE CHANGES. GE-127g-1's criteria state
+      that the cards directory holds documents of which three stand above the 300-line
+      limit, the longest at 2,809. After this record lands the longest card is 162 and
+      none stands above the limit. GE-127g-1's own notes label those figures
+      ILLUSTRATIVE OF A SHAPE rather than fixed facts, and its test_spec builds the
+      over-limit document in a throwaway fixture rather than taking one from the real
+      directory, so GE-127g-1 stays buildable — but a reader who takes its figures as a
+      description of the tree will be wrong. The cards directory STAYS a declared
+      set-aside location; the reasoning is recorded on GE-127g.
+  - path: docs/reference/ac-schema.md
+    relationship: modifies
+    status: exists
+    relevance: >-
+      THE PUBLISHED DESCRIPTION OF THE BEHAVIOUR BEING REMOVED, AND THE ONE SURFACE THAT
+      NAMES THE SECTION BY ITS HEADING. Its section "python-coder — AC Assignments
+      section in generated card (INF-600b-2)" documents the whole-store scan, the
+      rendered `## AC Assignments` heading, the four-step data flow through
+      `_scan_ac_assignments` and `generate_card(..., ac_assignments=...)`, and the
+      error-handling contract. All of it describes behaviour this record removes. The
+      reference doc is the schema SSOT, so leaving it is how the removed behaviour gets
+      reconstructed by the next reader. Updating it is part of this change.
+  - path: docs/agents/cards/
+    relationship: related
+    status: exists
+    relevance: >-
+      The population every scenario above quantifies over. Cited so "every card
+      document" has a concrete referent; this record changes no card by hand — a hand
+      edit to any document here is reverted by the next build.
+  - path: CLAUDE.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      "Gate / Workflow ACs — Verify Behaviorally, Not by Grep" binds every scenario
+      here. A test that greps the generator's source for the absence of a scan function
+      name, or greps one card for the absence of the heading, satisfies nothing: it
+      passes on a generator that still reads the store and renders the grouping under a
+      different heading, and it passes on a build that produces no cards. Every scenario
+      above is a real build whose output is compared against the preceding build's.
+assigned_agent: python-coder
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: internal
+notes: |
+  WHY THIS PARENT. Four candidates were checked against the tree before INF-600b was
+  chosen, and the reasoning is recorded so it is not re-opened.
+
+    - INF-600b IS the L1 that owns what a card contains. Its own criteria enumerate the
+      card's inputs — "each agent's template frontmatter, registry entry, knowledge
+      plane mapping, and spawn graph" — and that list does NOT include the
+      acceptance-criteria store. So this record does not add a constraint to INF-600b;
+      it restores INF-600b's own stated input list, which INF-600b-2 widened. Filing the
+      narrowing as a sibling of the record that widened it puts both in front of the
+      same reader, which filing it elsewhere would not.
+    - BP-018 was the suggested home and cannot host a child: it is itself an L2, sitting
+      loose directly under build_pipeline/ with depends_on []. Its subject is also
+      different — the compare-before-write guard and provenance carry-through, not what
+      a card is made of.
+    - BP-1500a is an L1 and names docs/agents/cards/ as a population member, which makes
+      it the strongest rival. Rejected because its subject is a DRIFT CHECK over every
+      tracked generated artifact, and its own notes forbid the reading that would make
+      this record discharge it ("an implementation that gitignores or stops generating
+      them does not satisfy this L1"). This record reduces BP-1500a's largest symptom
+      and satisfies none of its clauses; that relationship is a doc_link, not a parent
+      edge.
+    - GE-127g is at 5 of 5 L2 children and GE-127 at 7 of 7 L1s, so that subtree has no
+      room at any level even if the subject fitted, which it does not — GE-127g is about
+      which documents a size standard judges, not about what a document contains.
+
+  CHILD CAP CHECKED, NOT ASSUMED. INF-600b held two L2 children (INF-600b-1,
+  INF-600b-2) against the cap of five; with this record it holds three. INF-600b-1-i is
+  an L3 under INF-600b-1 and does not count against the L1's cap. No
+  child_limit_override is needed or added.
+
+  WHAT THE SECOND SCENARIO IS FOR, AND WHY IT IS THE RECORD. "Adding an acceptance
+  criterion changes no card" is the precise statement of the property, and it is the
+  one that would have caught this whole class: the symptom was never that the section
+  was wrong, it was that unrelated work elsewhere in the store rewrote a build artifact
+  nobody had touched, leaving a permanently dirty tree. A build that merely stops
+  rendering the heading while still scanning the store passes a reading of the first
+  scenario and fails this one, because any field the scan reads can still reach the
+  output. The third scenario exists because an added record is the cheapest of the three
+  store mutations to be insensitive to by accident; a retitle and a reassignment are
+  what actually moved cards in the measured drift (three of the deleted lines in the six
+  dirty cards were retitled entries, not removals).
+
+  THE FOURTH SCENARIO IS THE NEGATIVE CONTROL AND IS NOT OPTIONAL. Removing too much is
+  the likelier failure here than removing too little: the section being deleted is 33%
+  of all card lines and sits at the END of every card, so an over-wide deletion that
+  truncates from the last static section onward produces a shorter card that satisfies
+  the first three scenarios completely. The control names the static content by its
+  parts rather than by a line count, because a line count goes stale the next time an
+  agent is added.
+
+  THE FIFTH SCENARIO IS THE SECOND NEGATIVE CONTROL, against a different failure. The
+  first four are all satisfied exactly by a build that produces no cards at all, or by
+  one that produces a fixed stub per agent. Requiring one card to move when its own
+  agent's description moves — and the rest to stay still — is the only clause here that
+  a dead generator fails.
+
+  MEASURED FIGURES ARE CARRIED HERE AND DELIBERATELY NOT PINNED IN criteria. Supplied
+  with the change and recorded for the enrichment pass, not as expected values: the
+  section is 3,787 of 11,526 total card lines (33%) and is present in 17 of 64 cards;
+  python-coder.card.md goes from 2,809 lines to 162; the count of cards above the
+  300-line document limit goes from 3 to 0. Any test that pins 64, 2,809, 162 or 33%
+  goes red the next time an agent is added, which is the opposite of what this record
+  says. The fourth scenario states its length clause as a RELATIONSHIP to the standard's
+  limit rather than as a number, for exactly that reason.
+
+  A DOCUMENTATION OBLIGATION THIS RECORD CREATES AND DOES NOT DISCHARGE. INF-600b
+  carries no documentation_triggers, so no documentation AC is required of this
+  decomposition. But docs/reference/ac-schema.md — the canonical AC schema reference —
+  documents the removed behaviour in full under "python-coder — AC Assignments section
+  in generated card (INF-600b-2)", including the rendered heading and the data flow.
+  That is the ONLY surface in the project that names the section by its heading, and it
+  is cited in doc_links as a modify target rather than left to be found. If the user
+  wants that update tracked as its own criterion, INF-600b has two free L2 slots after
+  this record.
+
+  PRIORITY IS INHERITED, NOT JUDGED. medium, taken from INF-600b. The live symptom — a
+  permanently dirty working tree after every build and three present-tense doc-length
+  ratchet refusals — argues for high; that is the user's call at approval, not this
+  record's.
+
+  NAMED MUTATIONS — EXECUTE THEM, DO NOT MERELY DESCRIBE THEM.
+
+  (1) THE RENDERER ONLY. MUTATION: stop rendering the section but keep the whole-store
+      scan, passing its result to the card builder where it is discarded.
+      MUST GO RED: nothing, on a correct renderer removal — which is the point. This
+      mutation is the one the first scenario alone cannot catch, and it is caught only
+      because the second and third scenarios compare whole documents across two builds
+      rather than searching one document for a heading.
+      MUST STAY GREEN: all five scenarios, IF the discarded result genuinely reaches
+      nothing. Recorded as the mutation to reason about rather than the one to assert:
+      its real cost is the whole-store walk, which belongs to TQ-600a-11's retirement
+      and not here.
+
+  (2) THE HEADING RENAME. MUTATION: keep the scan and the grouping, and render it under
+      a different heading.
+      MUST GO RED: the first scenario, whose clause is "no card NAMES an acceptance
+      criterion anywhere in it" rather than "no card carries a section with this
+      heading", and the second and third scenarios, which compare whole documents.
+      MUST STAY GREEN: the fourth and fifth. Recorded because the only surface in the
+      project that names the heading is a reference doc, so a heading-shaped assertion
+      is the natural thing to write and it is exactly the wrong test.
+
+  (3) THE OVER-WIDE DELETION. MUTATION: delete from the last static section to the end
+      of the card, taking the contributor notes, the skills list or the spawn diagram
+      with the assignments.
+      MUST GO RED: the fourth scenario only.
+      MUST STAY GREEN: the first, second, third and fifth. That asymmetry is the measure
+      of how easily this change ships having removed too much, and it is why the fourth
+      scenario enumerates the static parts individually instead of asserting a length.
+
+  (4) THE DEAD GENERATOR. MUTATION: produce no cards at all, or produce an identical
+      stub for every agent.
+      MUST GO RED: the fifth scenario, and the fourth.
+      MUST STAY GREEN: the first, second and third, each of which a build that writes
+      nothing satisfies exactly. This is the shape GE-127g-1's third arm guards against
+      one subtree over, reused here for the same reason: a fix must be distinguishable
+      from switching the thing off.
+
+  (5) THE CACHED COMPARISON. MUTATION: satisfy the byte-identity clauses by comparing
+      each card against a cached copy of itself rather than against the preceding
+      build's output.
+      MUST GO RED: the fifth scenario, which requires one card to DIFFER.
+      MUST STAY GREEN: the first four. Recorded because "nothing changed" is trivially
+      true of a comparison that re-reads its own cache, and the fifth scenario is the
+      only clause that forces the comparison to be able to report a difference at all.
+
+  NOT AUTHORED HERE, BY DESIGN: estimated_complexity, it_requirements, test_spec,
+  test_rationale and declares_side_effect. Those are the IT PO's.

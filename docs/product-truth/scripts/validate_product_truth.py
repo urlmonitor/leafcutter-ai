@@ -59,10 +59,16 @@ Checks performed:
      compared against their CURRENT content; a moved thing reports the journey
      behind (never an error). A BEHIND verdict is made durable on the journey
      as a `behind` mark, written/removed by `_sync_behind_marks` (ADR-043).
+ 13. DESCRIPTIONS (ERROR): every step and branch `description` is one plain
+     sentence of what happens -- within DESCRIPTION_MAX_CHARS and free of code
+     tokens, ids, build status and generated contract text
+     (product_truth_descriptions.check_descriptions, dec-7b1dcfd47f85cf0a).
 
-SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it is not
-importable the validator exits non-zero (2) up front rather than warn-and-skip —
-a missing package must never silently disable every schema check.
+SCHEMA VALIDATION IS MANDATORY: jsonschema is a hard dependency. When it, or a
+module the validator needs alongside it (e.g. `referencing`), is not importable the
+validator exits non-zero (2) up front rather than warn-and-skip — a missing package
+must never silently disable every schema check. The refusal names the module that
+actually failed to import, not always jsonschema.
 
 REALIZATION AXIS: flows/mockups/mock-data may carry an optional top-level
 `realization` in {built, spec, mock} (absent → built). It is orthogonal to
@@ -98,6 +104,14 @@ DECISION HISTORY
 - 2026-07-14 00:00: Added derived-vs-source checks (D1-D4), mockup schema validation, and
   the screen->mockup resolution gate. Derivation logic is now shared with
   generate_product_truth (the single writer). (product-truth linking infrastructure)
+- 2026-10-08 00:00 [python-coder]: UXP-300-4 — the guarded import no longer wraps
+  `import jsonschema` and `from product_truth_contracts import ...` in one
+  try/except. The ImportError is kept and main() names the module that actually
+  failed; a missing `referencing` reports the installed jsonschema version and that
+  it is too old (< 4.18) instead of falsely claiming jsonschema is not installed.
+  Still a hard refusal (exit 2) in every case. The guarded imports and the refusal
+  logic now live in the sibling product_truth_dependencies.py (this file was over
+  its 400-line ratchet); main() calls its dependency_refusal(). (UXP-300-4)
 - 2026-07-14 00:00: Trustworthy-status hardening. jsonschema made a HARD dependency
   (exit 2 when absent, no more warn-and-skip). Added the anti-phantom-done
   truth-evidence gate (check 10) keyed on the new `realization` axis. Declared
@@ -291,15 +305,14 @@ from generate_product_truth import (
 from product_truth_checks import (
     _check_artifact_paths,
     _check_canonical_datasets,
-    _check_derived_indexes,
+    _check_derived_indexes,  # noqa: F401  # re-exported for callers
     _check_expands,
     _check_flow,
-    _check_impl_status,
+    _check_impl_status,  # noqa: F401  # re-exported for callers
     _check_index,
     _check_mock_invariants,
     _check_pointers,
-    _check_product_truth,
-    _check_screens,
+    _check_screens,  # noqa: F401  # re-exported for callers
     _check_shape_version_bounds,  # noqa: F401  # re-exported for callers
     _check_truth_evidence,
     _validate_schema,  # noqa: F401  # re-exported for callers
@@ -314,6 +327,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _OUTCOME_ERRORS,
     _OUTCOME_SOUND,
     build_examined_total,
+    ensure_utf8_streams,
     examined_by_check,
     record_check_executed,
     record_check_not_executed,
@@ -330,6 +344,8 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     compute_type_population,
 )
 from product_truth_bounds import check_bounds, tighten_refusal
+from product_truth_drift_checks import run_drift_checks, unexercised_drift_checks
+from product_truth_descriptions import check_descriptions
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
 from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
     _check_labels,
@@ -337,16 +353,9 @@ from product_truth_label_checks import (  # noqa: F401  # re-exported for caller
     load_component_registry,
 )
 
-# jsonschema is a HARD dependency. A missing import used to warn-and-skip, which
-# silently no-oped every schema check on hosts without the package — the exact
-# "green sign-off on a broken feature" failure this store exists to prevent. We
-# import it at module load and surface the absence as a hard, non-zero exit in
-# main() (see JSONSCHEMA_MISSING) instead of degrading to no validation.
-try:
-    import jsonschema
-    from product_truth_contracts import check_contracts, contract_summary
-except ImportError:
-    jsonschema = None  # type: ignore[assignment]
+# jsonschema is a HARD dependency: its guarded import, and the refusal main() returns
+# (exit 2) when it or `referencing` cannot load, live in product_truth_dependencies.
+from product_truth_dependencies import check_contracts, contract_summary, dependency_refusal
 
 logger = logging.getLogger("validate_product_truth")
 
@@ -590,6 +599,7 @@ def run_checks() -> dict:
     for flow in flows.values():
         _validate_schema(flow, flow_schema, f"flow {flow['id']}", errors)
         _check_flow(flow, ac_ids, errors, warnings)
+    record_check_executed(checks, "descriptions", check_descriptions(flows, errors))
 
     mocks = load_mocks()
     for mock in mocks.values():
@@ -610,10 +620,7 @@ def run_checks() -> dict:
     _check_eval(errors, checks)
 
     # Derived-vs-source checks (the generator is the single writer).
-    _check_impl_status(flows, ac_records, errors)
-    _check_product_truth(ac_records, by_ac, errors)
-    _check_derived_indexes(index, flows, flow_paths, mocks, ac_records, errors)
-    _check_screens(flows, mockups, errors, warnings)
+    run_drift_checks(flows, flow_paths, mocks, mockups, ac_records, index, by_ac, errors, warnings, checks)
     _check_expands(flows, index, errors)
 
     # Pointer-resolution check (UXP-700c-1): every AC `implements` pointer must
@@ -675,14 +682,12 @@ def main() -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--tighten", metavar="BOUND", help="hold BOUND as blocking; refused while any artifact is on an older shape version")
     args = parser.parse_args()
+    ensure_utf8_streams()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
-    if jsonschema is None:
-        logger.error(
-            "FAIL: jsonschema is required for product-truth validation but is not installed. "
-            "Install it (pip install 'jsonschema>=4.0', or pip install -r requirements-dev.txt). "
-            "Refusing to run — schema validation must not silently no-op."
-        )
+    refusal_text = dependency_refusal()
+    if refusal_text is not None:
+        logger.error("%s", refusal_text)
         return 2
 
     report = run_checks()
@@ -697,7 +702,8 @@ def main() -> int:
     unresolvable, compared_freshness = report["unresolvable_pointers"], report["compared_freshness"]
     type_population = report["type_population"]
     example_only_types = compute_example_only_types(type_population)
-    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
+    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable),
+                                     len(unexercised_drift_checks(checks)))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
                 examined_by_check(checks), report["resolved_labels"], report["bounds"], type_population, example_only_types)
 

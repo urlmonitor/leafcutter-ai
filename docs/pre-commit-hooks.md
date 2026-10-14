@@ -4,7 +4,7 @@ description: "Reference for all pre-commit hooks enforced by the leafcutter comm
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-08-26
+last_updated: 2026-10-14
 components:
   - commit_guardian
 ---
@@ -56,6 +56,7 @@ flowchart TD
     H12 -->|fail| FIX
     FIX --> GC
 ```
+Limits, set-aside locations and run output for `check-doc-length`: [Document Length Standard](reference/document-length-standard.md).
 
 ## Build-Drift Check
 
@@ -290,3 +291,9 @@ coverage (BP-1100b-5, EPIC-BuildPipelinePhantomRemediation).
 | `enabled` | `true` | Set to `false` to disable the hook entirely. |
 | `scanned_source_globs` | `["templates/workflows-js/*.js", "templates/scripts/commit_guardian/*.py"]` | Glob patterns (matched via `fnmatch`) for source files whose presence-only coverage is rejected. DATA read from this key — never hardcoded in the hook. |
 | `waiver_marker` | `"presence-only"` | The comment marker recognised as `# <marker>: <reason>`. |
+
+## Folder Density Check (check-folder-density)
+
+Refuses a commit that takes a folder past 15 non-markdown files; a folder already over may not grow. Folders at or below a `folder_density.set_aside_locations` entry (`path` plus non-blank `ground`, matched by whole path components, never by name) are set aside, listed with their ground and counted apart from judged ones; 0 judged is reported, not passed. Shipped: `docs/acceptance-criteria/` (the AC store): records tools read and write and nobody navigates by hand; flat by design, one folder per feature family, bounded by the store's tree limits, not a file count.
+`docs/decisions/` (the decision kernel's record store): one file per decision, written and read by the kernel's publish, index and precedent tools; people review records in PRs, not by browsing.
+An absent or malformed declaration judges everything and says so; an empty one sets nothing aside (GE-133a).

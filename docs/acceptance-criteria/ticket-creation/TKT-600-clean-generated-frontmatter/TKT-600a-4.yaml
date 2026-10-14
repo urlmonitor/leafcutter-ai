@@ -104,7 +104,8 @@ amended_by:
     directed_by: user
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/48_TICKET-20261012-TKT-600a-4.md
 change_target: docs
 risk_surface: internal
 # test_required false: change_target docs -- the deliverable is ADR prose with no executable

@@ -6,7 +6,7 @@ component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -79,7 +79,12 @@ it_requirements:
     (it reads the new history itself); if none exists, name it. About 45 requests for 22
     open PRs; the limit is 1,000 per hour per repository (VERIFIED doc). The job's
     `if:` selects the branch by `github.event.workflow_run.name`; that is fine here
-    because this job is not a required check.
+    because this job is not a required check. AMENDED 2026-10-12 (owner decision "take
+    both", BrainCandy): `reevaluate` is no longer a job holding `actions: write`; its
+    GITHUB_TOKEN holds `actions: read`, `pull-requests: read` and `contents: read`. The
+    re-run capability is the App installation token's `{actions: write}`, minted in this
+    job, which runs in the `post-merge-hold` environment. SUPERSEDED: "the ONLY job in the
+    family holding `actions: write`".
   - >-
     PERMISSIONS: `actions: write` (re-run) and `pull-requests: read` on this job only;
     `permissions: {}` at workflow level. `actions: write` is broad on the platform (also
@@ -89,7 +94,16 @@ it_requirements:
     `head_sha`, `reason`}), and the notice job (which holds `issues: write` and `needs:`
     this job with `if: always()`) carries it onto the canonical notice, so the
     issue-writing token and the re-run token never coexist in one job. The output is
-    also printed to the job log so it is visible when no notice is open.
+    also printed to the job log so it is visible when no notice is open. AMENDED
+    2026-10-12 (owner decision "take both", BrainCandy): this job's GITHUB_TOKEN holds
+    `actions: read`, `pull-requests: read` and `contents: read`, and no `actions: write`.
+    The re-run capability is the App installation token's `{actions: write}`, minted in
+    this job, which runs in the `post-merge-hold` environment (holds the App secrets,
+    admits only `main`); TQ-600a-13-xi's client narrows that token to re-runs of
+    `pull_request_target` runs of `post-merge-hold.yml` in this repository, and refuses
+    every re-run requested with the GITHUB_TOKEN. SUPERSEDED: "`actions: write` (re-run)
+    and `pull-requests: read` on this job only" and "TQ-600a-13-xi's client narrows it
+    to re-runs of `post-merge-hold.yml`" (where "it" was the GITHUB_TOKEN's scope).
   - >-
     RE-RUN SEMANTICS — VERIFIED (doc): a re-run uses the original event's `GITHUB_SHA`
     and `GITHUB_REF` and is allowed for 30 days after the initial run. Under
@@ -107,6 +121,20 @@ it_requirements:
     secrets ARE given to same-repository `pull_request` runs — GitHub expert, Q7), used
     by this one job. Until one route is observed working, held PRs are re-run by hand
     from the UI, the documentation says so, and TQ-600a-13-x keeps the hold advisory.
+    OBSERVED 2026-10-12: REFUSED in effect — the GITHUB_TOKEN rerun POST was accepted
+    but run 38243814005 ended in `startup_failure`. FALLBACK ADOPTED (owner decision
+    2026-10-12, BrainCandy): re-runs are requested with the dedicated hold App's
+    installation token (App ID 5249547, granted "Actions: Read and write"), minted
+    scoped to `{actions: write}` on this repository only, used only by the `reevaluate`
+    job in post-merge-followup.yml, which runs in the `post-merge-hold` environment
+    (holds the App secrets; deployment-branch policy admits only `main`). Only
+    `POST /actions/runs/{id}/rerun` for a `post-merge-hold.yml` run with event
+    `pull_request_target` in this repository is allowed for that token (TQ-600a-13-xi).
+    Re-runs remain gated by the repository variable `POST_MERGE_REEVAL_RERUN` (only the
+    exact value `true` enables); until it is set and the App route is observed working
+    live, held PRs are re-run by hand and TQ-600a-13-x keeps the hold advisory.
+    SUPERSEDED: "FALLBACK if refused: a dedicated credential — a GitHub App installation
+    token or a fine-grained token limited to `actions: write` ..." as an open choice.
   - >-
     "VERDICT CHANGED" uses the settled-run rule of TQ-600a-13-v on both sides. did-not-
     complete to red is not a change (both held). Runs whose verdict is unchanged
@@ -186,9 +214,47 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: 'OWNER DECISION 2026-10-12 (BrainCandy): the anticipated fallback is
+    adopted. The GITHUB_TOKEN re-run route was observed live to fail (rerun POST
+    accepted, run 38243814005 ended in startup_failure; see notes), so re-runs are
+    requested with the dedicated hold App''s installation token (App ID 5249547,
+    granted "Actions: Read and write"), minted scoped to {actions: write} on this
+    repository only, used only by the `reevaluate` job in post-merge-followup.yml,
+    which runs in the `post-merge-hold` environment (holds the App secrets, admits only
+    main), and gated by the repository variable POST_MERGE_REEVAL_RERUN. SUPERSEDED
+    it_requirement text: "FALLBACK if refused: a dedicated credential — a GitHub App
+    installation token or a fine-grained token limited to `actions: write` on this
+    repository — stored as an ENVIRONMENT secret ..." (an open choice) -> the App
+    installation token under the conditions above. Notes updated. criteria unchanged;
+    readiness unchanged. The matching App-token allowlist exception is TQ-600a-13-xi.
+    EXTENDED same day (owner decision "take both", BrainCandy): the GITHUB_TOKEN may
+    request no re-run, and `reevaluate`''s GITHUB_TOKEN drops `actions: write` and holds
+    `actions: read`, `pull-requests: read` and `contents: read`; the re-run capability
+    is the App installation token''s {actions: write}, minted in that job in the
+    `post-merge-hold` environment. MECHANISM entry SUPERSEDED "the ONLY job in the
+    family holding `actions: write`"; PERMISSIONS entry SUPERSEDED "`actions: write`
+    (re-run) and `pull-requests: read` on this job only" and "TQ-600a-13-xi''s client
+    narrows it to re-runs of `post-merge-hold.yml`". it_requirements only; criteria and
+    readiness unchanged.'
+  by: business-analyst
+  at: 2026-10-12
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/suite_performance/test_tq_600a_13_xv.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_history.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_notice.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_workflow.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_proof.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_gate.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_app.py
+- unit_tests/suite_performance/test_tq_600a_13_xv_grant.py
+implemented_by:
+- scripts/ci/post_merge_reeval.py
+- scripts/ci/_app_token.py
+- scripts/ci/_run_history.py
+- scripts/ci/_notice_unrerunnable.py
+- scripts/ci/post_merge_notice.py
+- .github/workflows/post-merge-followup.yml
 change_target: pipeline
 risk_surface: internal
 notes: |
@@ -198,5 +264,54 @@ notes: |
   OBSERVATION TO RECORD HERE: date, run id and outcome of the first live re-run requested
   by GITHUB_TOKEN; if refused, which fallback was adopted.
 
+  PENDING (implementation landed, live observation not yet made): the live GITHUB_TOKEN
+  re-run observation is pending. Until it is recorded here, held pull requests are re-run
+  by hand from the UI if the token is refused, and TQ-600a-13-x keeps the hold advisory.
+
+  OBSERVED LIVE (2026-10-12): on this repository the `head_sha` of a `pull_request_target` run equals
+  the pull request's head commit, not the base. Example: hold run 38224595671 has head_sha dbbb8591e,
+  which is the head of PR #1147. So re-running "the latest hold run for a head_sha" re-evaluates that
+  pull request's own hold.
+
+  FIX-PROOF TRIGGER IS GUARDED: the proof branch acts only when `workflow_run.event` is
+  `pull_request_target` AND `workflow_run.head_repository.full_name` equals the repository; a same-named
+  `pull_request` workflow from a PR branch, or a fork's run, causes no re-run. The check is in
+  post_merge_reeval.py (the job's `if:` only selects on the workflow name).
+
+  RE-RUN SEMANTICS CAVEAT: a re-run executes the hold workflow and script as of the ORIGINAL run's
+  commit, so a change to the hold script takes effect on a re-run only for runs created after that
+  change lands; older runs re-run the older script.
+
   RESIDUAL: pull requests idle for more than 30 days (several exist, for example #375
   since 2026-07-21) cannot be re-run; they are named, and must be pushed or closed.
+
+  OBSERVED LIVE (2026-10-12), the credential question above is answered NEGATIVE: GITHUB_TOKEN's
+  `POST /actions/runs/{id}/rerun` was ACCEPTED, but the re-run it started failed with `startup_failure`
+  ("workflow file issue"). That overwrote the hold run's visible conclusion: the job `Post-merge hold
+  evaluation` had succeeded (attempt 1 of run 38243814005, job 114792645592); the App check
+  `Post-merge suite status` from attempt 1 survived. From about 09:49 UTC every pull request's hold run
+  showed startup_failure this way, because every pull request opens a `Post-merge fix proof` run whose
+  `prove` job is skipped when no fix is declared, and that completion re-ran the hold.
+
+  HOTFIX (2026-10-12): (1) re-runs are gated OFF by the repository variable `POST_MERGE_REEVAL_RERUN`
+  (the workflow passes it to the script as `REEVAL_RERUN_ENABLED`; only the exact value `true` enables).
+  Unset, the script makes no POST at all, still does every read, and names each pull request it would have
+  re-run with reason `rerun_disabled` (a fifth `unrerunnable` reason), so the notice lists them for a
+  manual re-run. The variable stays unset until a credential is observed working. AC fallback: a GitHub
+  App installation token or a fine-grained token with `actions: write`, as an environment secret limited
+  to `main` (see UNVERIFIED above). Until then TQ-600a-13-x keeps the hold advisory. (2) A fix-proof
+  completion re-runs a hold only when the proof run's job `Post-merge fix proof` actually ran (concluded
+  success or failure; read from `GET /actions/runs/{id}/jobs`); skipped or absent: no re-run, output `[]`.
+  Tests: test_tq_600a_13_xv_gate.py. work_status stays done: the code is built; the live credential is
+  the open item.
+
+  FALLBACK ADOPTED (owner decision 2026-10-12, BrainCandy): because of the startup_failure above, re-runs
+  are requested with the dedicated hold App's installation token (App ID 5249547), not GITHUB_TOKEN. The
+  App is granted "Actions: Read and write"; the token is minted scoped to `{actions: write}` on this
+  repository only and is used only by the `reevaluate` job in post-merge-followup.yml, which runs in the
+  `post-merge-hold` environment (holds the App secrets; admits only `main`). TQ-600a-13-xi allows that
+  token exactly one write: `POST /actions/runs/{id}/rerun` for a `post-merge-hold.yml` run with event
+  `pull_request_target` in this repository. Re-runs stay gated by `POST_MERGE_REEVAL_RERUN`; set it to
+  `true` only after the environment and App permission are in place. STILL TO RECORD HERE: date, run id
+  and outcome of the first live re-run requested with the App token. Until then TQ-600a-13-x keeps the
+  hold advisory.

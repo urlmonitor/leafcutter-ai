@@ -5,6 +5,7 @@ ARCHITECTURE: Preflight around the existing Leafcutter source loader.
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 14:00 [python-coder]: Collapse fully identical relationships before any write and report each group, with an explicit zero. (#KM-400b-2-i/01)
 - 2026-10-01 12:00 [python-coder]: Check raw AC records before loader deduplication. (#TICKET-KM-400a-1)
 """
 
@@ -171,6 +172,66 @@ def validate_snapshot(snapshot: ProjectionSnapshot) -> None:
         if edge.source_id not in identifiers or edge.target_id not in identifiers:
             raise ValueError(f"missing required endpoint {edge.source_id} -> {edge.target_id}")
         _validate_edge(edge, kinds)
+
+
+COLLAPSE_SUMMARY = "identical_relationships_collapsed:"
+COLLAPSE_GROUP = "identical_relationship_collapsed:"
+
+
+def collapse_identical_edges(snapshot: ProjectionSnapshot) -> list[str]:
+    """Collapse relationships identical in every recorded property to a single one.
+
+    Identity is the full serialised relationship, the same value the store keys its
+    MERGE on, so relationships differing in source record or locator stay distinct.
+    The snapshot is updated in place: its edges become the de-duplicated set and its
+    diagnostics carry one line per collapsed group plus an explicit total (0 included).
+    Diagnostics from an earlier call are replaced, so the call is idempotent.
+
+    Args:
+        snapshot: Generation whose relationships are de-duplicated before any write.
+
+    Returns:
+        The collapse diagnostics appended to the snapshot, group lines then the total.
+    """
+    copies: dict[str, int] = {}
+    kept = []
+    firsts = {}
+    for edge in snapshot.edges:
+        identity = edge.model_dump_json()
+        copies[identity] = copies.get(identity, 0) + 1
+        if copies[identity] == 1:
+            kept.append(edge)
+            firsts[identity] = edge
+    groups = [
+        _collapse_line(firsts[identity], count) for identity, count in copies.items() if count > 1
+    ]
+    collapsed = sum(count - 1 for count in copies.values())
+    found = [*groups, f"{COLLAPSE_SUMMARY}{collapsed}"]
+    prior = (COLLAPSE_SUMMARY, COLLAPSE_GROUP)
+    snapshot.edges = kept
+    snapshot.diagnostics = [
+        d for d in snapshot.diagnostics if not (isinstance(d, str) and d.startswith(prior))
+    ] + found
+    return found
+
+
+def _collapse_line(edge: Relation, count: int) -> str:
+    """Name a collapsed relationship by type, source record, locator, target and copies.
+
+    Args:
+        edge: The surviving relationship of the collapsed group.
+        count: Number of identical copies found, the survivor included.
+
+    Returns:
+        A one-line diagnostic naming the group and its source.
+    """
+    source = edge.source
+    path = source.path if source else ""
+    locator = source.locator if source else edge.locator
+    return (
+        f"{COLLAPSE_GROUP} type={edge.edge_type} source={path} locator={locator} "
+        f"target={edge.target_id} copies={count}"
+    )
 
 
 def _validate_edge(edge: Relation, kinds: dict) -> None:

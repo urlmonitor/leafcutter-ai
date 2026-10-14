@@ -4,10 +4,11 @@
 # configured in the main-branch ruleset. The full pytest job is disabled by
 # owner request because of its runtime; other jobs retain their existing policy.
 #
-#   lint       — ruff check over scripts/, tests/, unit_tests/, kernel/ (config:
-#                ruff.toml), plus kernel/ under E722,BLE001,TRY (the Error Handling
-#                Policy; the repo-wide cleanup of the other trees is deferred).
-#                BLOCKING. The templates/ source tree is excluded (see ruff.toml).
+#   lint       — ruff, over the trees and by the rule sets declared in
+#                leafcutter-lint.json (rules configured in ruff.toml), run through
+#                check_lint_gate.py --mode full: the same runner the commit-time
+#                check-lint-gate hook uses. BLOCKING. The templates/ source tree is
+#                excluded (see ruff.toml).
 #
 #   component-vocab — every `components` value is a canonical id in
 #                docs/components.json. BLOCKING. Diff-scoped on PRs, full tree
@@ -179,13 +180,20 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Ruff check
-        run: ruff check scripts tests unit_tests kernel
+      - name: Ruff check (declared scope and rule sets)
+        # ONE runner for the commit-time check-lint-gate hook, this job, scripts/run_ci_local.py
+        # and the sign-off gate. What is linted and by which rules is declared once, in
+        # leafcutter-lint.json (BP-1300e-1-i). Run from the template source, not a build, so this
+        # job stays fast and independent of build health.
+        run: python templates/scripts/commit_guardian/check_lint_gate.py --mode full
 
-      - name: Ruff check kernel error-handling rules
-        # The Decision Kernel is written to the Error Handling Policy (CLAUDE.md), so it is held
-        # to the full E722/BLE001/TRY set; the other trees are not (see ruff.toml).
-        run: ruff check kernel --select E722,BLE001,TRY
+      - name: Refuse a deselection with no invoked opt-in (TQ-600a-13-i)
+        # pytest.ini deselects the `manual` and `timing_ratio` tests from this
+        # run. That is only safe while an INVOKED opt-in (a workflow triggered by
+        # push to main or a schedule, whose pytest -m step fails its job) collects
+        # them. The gate refuses otherwise, so the one-line deselection cannot
+        # merge ahead of the cadence that compensates for it. Runs on every PR.
+        run: python scripts/suite_performance/check_exclusion_compensation.py
 
   product-truth-valid:
     name: Product truth valid (offline)

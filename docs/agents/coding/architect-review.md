@@ -13,13 +13,12 @@ related_docs:
 - tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md
 related_code:
 - .claude/agents/architect-review.md
-- .claude/agents/architect-review-deep.md
 description: 'Overview of Agent Reference: architect-review.'
 ---
 # Agent Reference: `architect-review`
 
-Pattern: Gatekeeper Escalation (see [conventions.md §5.3](../conventions.md#53-gatekeeper-escalation)).
-Implementing agents: `architect-review` (Sonnet gatekeeper) + `architect-review-deep` (Opus sub-agent).
+Pattern: Gatekeeper (see [conventions.md §5.3](../conventions.md#53-gatekeeper-escalation)); it has no Opus escalation tier today (follow-up: KI-AR-004).
+Implementing agent: `architect-review` (Sonnet gatekeeper), which handles small and large changes itself.
 Family: `coding/`.
 Visibility: internal — invoked by `create-ticket` only.
 
@@ -44,9 +43,9 @@ create-ticket
   └─ (parallel) architect-review   ← you are here
        ├─ 1. spawn research-agent  → blast-radius findings
        ├─ 2. classify: small | large  (rubric below)
-       ├─ small → write inline note (Sonnet only)
-       └─ large → spawn architect-review-deep (Opus)
-                   └─ returns full plan + suggested ADR
+       ├─ small → write inline note
+       └─ large → write the fuller structural analysis itself
+                   └─ full plan + suggested ADR in the same payload
 ```
 
 ---
@@ -104,8 +103,7 @@ criterion.
 
 When the change introduces a new cross-cutting policy decision not already
 covered by an existing ADR (new abstraction, new constraint, new cross-component
-contract), `architect-review` (or `architect-review-deep` for large cases)
-recommends a new ADR file path:
+contract), `architect-review` recommends a new ADR file path:
 
 ```
 docs/architecture/adrs/ADR-{NNN}-{kebab-topic}.md
@@ -122,20 +120,21 @@ that own no file but are still cited somewhere. See
 ## 4. Output Contract
 
 `architect-review` always returns a structured JSON payload plus a mandatory
-`## Escalation` section.
+`## Escalation` section. (`escalation` is always `none`: the field is kept so the
+payload shape is unchanged.)
 
 ```json
 {
-  "architectural_note": "<one-paragraph note (small) or Opus plan summary (large)>",
+  "architectural_note": "<one-paragraph note (small) or fuller structural analysis (large)>",
   "acceptance_adjustments": ["<AC bullet>", "..."],
-  "escalation": "none" | "opus",
-  "escalation_reason": "<empty string when none; rubric trigger when opus>",
+  "escalation": "none",
+  "escalation_reason": "<empty string when small; rubric trigger when large>",
   "suggested_adr": "<docs/architecture/adrs/ADR-NNN-topic.md or null>"
 }
 ```
 
-The `## Escalation` section is **mandatory on every run** — even when no
-escalation occurred. Callers (e.g. `create-ticket`) parse this section to log
+The `## Escalation` section is **mandatory on every run** and names the branch
+(`small` or `large`). Callers (e.g. `create-ticket`) parse this section to log
 the routing decision without re-reading the payload.
 
 ---
@@ -163,7 +162,7 @@ prints open positions as JSON and exits.
 
 **Classification:** Small. 2 files ≤ 5; 1 component; no always-large trigger.
 
-**architect-review output (Sonnet only):**
+**architect-review output:**
 
 ```json
 {
@@ -180,7 +179,7 @@ prints open positions as JSON and exits.
 ```
 ## Escalation
 
-Branch: none
+Branch: small
 Reason: 2 files in one component (live_trader/); no always-large trigger fired.
 ```
 
@@ -218,56 +217,25 @@ endpoint, and a Dash panel.
 **Classification:** Large. Three always-large triggers fire simultaneously
 (`has_alembic_migration`, `has_hypertable_change`, `has_public_api_change`).
 
-**architect-review spawns `architect-review-deep` with the following prompt:**
-
----
-
-#### Escalation Prompt Template (used for Opus sub-agent)
-
-```
-You are architect-review-deep, the deep architectural reviewer.
-
-## Ticket
-
-<full ticket text verbatim>
-
-## Research-Agent Findings
-
-<research-agent JSON findings block verbatim>
-
-## Why This Exceeds the Small-Case Bar
-
-<one-paragraph framing from architect-review>
-
-Example: "Three always-large triggers fire: Alembic migration required
+**architect-review writes the fuller structural analysis itself.** Framing the
+large case: "Three always-large triggers fire: Alembic migration required
 (has_alembic_migration=true), new TimescaleDB hypertable
 (has_hypertable_change=true), and a new public FastAPI endpoint
 (has_public_api_change=true). Six components are touched: alembic, models,
 live_trader, sql_functions, api, dashboards. This is a cross-cutting pipeline
-change that requires sequenced rollout and explicit API versioning."
-
-## Your Task
-
-Produce a full architectural plan per your instructions:
-1. Impact summary
-2. Risks (per-file/per-contract specifics)
-3. Design decisions (preferred + one rejected alternative per risk)
-4. Revised acceptance criteria ([added] bullets for new items)
-5. ADR recommendation (or "No new ADR required.")
-6. Implementation sequence (ordered for minimum blast radius)
-
-Return the plan under those headings, followed by the structured JSON summary.
-```
+change that requires sequenced rollout and explicit API versioning." The
+analysis walks each component boundary crossed, states the structural risk at
+each, and says what must hold for the change to land safely.
 
 ---
 
-**architect-review output after receiving Opus plan:**
+**architect-review output:**
 
 ```json
 {
-  "architectural_note": "<Opus plan summary paragraph>",
-  "acceptance_adjustments": ["<revised AC from Opus>", "..."],
-  "escalation": "opus",
+  "architectural_note": "<fuller structural analysis summary paragraph>",
+  "acceptance_adjustments": ["<revised AC>", "..."],
+  "escalation": "none",
   "escalation_reason": "has_alembic_migration=true, has_hypertable_change=true, has_public_api_change=true — three always-large triggers; 6 components touched: alembic, models, live_trader, sql_functions, api, dashboards",
   "suggested_adr": "docs/architecture/adrs/ADR-NNN-some-decision-slug.md"
 }
@@ -276,10 +244,10 @@ Return the plan under those headings, followed by the structured JSON summary.
 ```
 ## Escalation
 
-Branch: opus
+Branch: large
 Reason: has_alembic_migration=true, has_hypertable_change=true,
 has_public_api_change=true — three always-large triggers fired simultaneously;
-escalated to architect-review-deep.
+analysed in place.
 ```
 
 ---
@@ -287,8 +255,7 @@ escalated to architect-review-deep.
 ## 6. Cross-Links
 
 - [`docs/agents/conventions.md §5.3`](../conventions.md#53-gatekeeper-escalation) —
-  Gatekeeper Escalation pattern rules (model pin, Opus sub-agent file naming,
-  mandatory `## Escalation` section).
+  Gatekeeper pattern rules (model pin, mandatory `## Escalation` section).
 - [`docs/architecture/adrs/ADR-033-agent-model-tiers.md §2.3`](../../architecture/adrs/ADR-033-agent-model-tiers.md) —
   upstream ADR worked example for `architect-review`.
 - [`tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md`](../../../tickets/09_done/EPIC-CodingAgents/03_architect_review_agent.md) —
@@ -296,8 +263,5 @@ escalated to architect-review-deep.
 - [`.claude/agents/architect-review.md`](../../../.claude/agents/architect-review.md) —
   agent file (Sonnet gatekeeper). **Fallback path during EPIC-CodingAgents
   worktree: `docs/agents/coding/architect-review.AGENT_FILE.md`.**
-- [`.claude/agents/architect-review-deep.md`](../../../.claude/agents/architect-review-deep.md) —
-  agent file (Opus sub-agent). **Fallback path during EPIC-CodingAgents
-  worktree: `docs/agents/coding/architect-review-deep.AGENT_FILE.md`.**
 
 [EPIC-CodingAgents]: ../../../tickets/09_done/EPIC-CodingAgents/Master_Plan.md

@@ -275,9 +275,10 @@ class TestFlowNodeRecordsBuiltBehaviour(unittest.TestCase):
         """The node is no longer not_started and says it was built in DK-400c-1-i."""
         node = self._node()
         self.assertIn(node["impl_status"], ("in_progress", "done"))
-        self.assertIn("Built in DK-400c-1-i", node["human"])
-        self.assertNotIn("Design only", node["human"])
-        self.assertNotIn("specified, not built", node["human"])
+        self.assertNotEqual(node["impl_status"], "not_started")
+        self.assertTrue(node.get("impl_asof"))
+        self.assertIn("DK-400c-1-i", node["implements"])
+        self.assertIn("not covered", node["description"])
 
     def test_flow_node_keeps_links_intact(self) -> None:
         # covers: DK-400c-1-i

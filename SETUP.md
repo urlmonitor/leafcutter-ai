@@ -63,7 +63,7 @@ auto-detection recipe if available; otherwise ask the user.
 | `default_branch` | string | Main branch name | See recipe below |
 | `worktree_base_path` | string | Where epic worktrees are created | Default `../`; ask if non-standard |
 | `top_level_packages` | array | Top-level Python packages | See recipe below |
-| `test_output_dir` | string | Temp dir for test file output | Use `%TEMP%/<project-name>-tests/` on Windows, `/tmp/<project-name>-tests/` on Unix |
+| `test_output_dir` | string | Folder for longer-lived test output | Leave empty: the scratch home (`scratch.py test-output-dir`) is used. System-temp values (`%TEMP%/...`, `/tmp/...`) are treated as empty |
 | `settings_module` | string | Python settings module name | Check for `settings.py` at repo root; ask if absent |
 
 ---
@@ -292,7 +292,7 @@ Setup complete. Here is what I configured:
 | default_branch             | main (detected from git)                       |
 | top_level_packages         | [api, collector, live_trader, models] (detected)|
 | test_command_live_trader   | poetry run python -m unittest discover ...     |
-| test_output_dir            | %TEMP%/myproject-tests/                        |
+| test_output_dir            | "" (scratch home)                              |
 
 Manual review recommended for:
 - test_command_sql: I could not detect a SQL test suite. Set this if you add one.

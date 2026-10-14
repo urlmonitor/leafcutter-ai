@@ -9,7 +9,21 @@ description: |
   Use when: user types /sql-coder; asks to write a SQL procedure/function/view/
   index/table; asks to refactor SQL or apply a SQL change to the local DB.
 model: sonnet
-tools: Bash, Read, Edit, Write, Agent
+tools: Bash, Read, Edit, Write, Agent, Skill
+spawn_allowlist:
+- sql-table-creator
+- sql-procedure-creator
+- sql-function-creator
+- sql-index-creator
+- sql-view-creator
+- sql-query
+- sql-test-writer
+- research-agent
+- python-coder
+skills:
+- skill_id: signoff
+  mode: conditional
+  condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
 requires_verification: true
 default_artifact_checklist:
   - sql_file_written

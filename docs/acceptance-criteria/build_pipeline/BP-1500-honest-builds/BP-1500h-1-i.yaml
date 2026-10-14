@@ -1,0 +1,104 @@
+id: BP-1500h-1-i
+title: "A file-location setting that names a missing file is still reported as broken, not as 'not configured'"
+component: build-pipeline
+components:
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the scratch project of BP-1500h-1, except that the setting is
+    `changelog_categories_path: "docs/missing-categories.md"` and that file does
+    not exist,
+  When the build installs the package into that project,
+  Then the build's output warns that the setting is broken, naming the setting
+    and the path it could not find, and does not describe the setting as "not
+    configured",
+    And when the setting names an existing folder instead of a file, the output
+      warns that the setting is broken, naming the setting and saying the path
+      is a folder, not a file, and does not try to read it,
+    And in both cases the work that reads that setting is skipped, the rest of
+      the build continues, and the build passes,
+    And in neither case does the build behave as if the setting were absent.
+depends_on:
+  - BP-1500h-1
+doc_links:
+  - path: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h.yaml
+    relationship: related
+    status: exists
+    relevance: "'never a broken location' -- the blank case must not swallow the genuinely broken case."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The 'broken' outcome of scripts/config_paths.py (missing file, or a directory) is reported at WARNING severity (the build's warn channel), naming the setting key, the configured value and the reason ('not found' / 'is a folder, not a file'); the word 'not configured' never appears for it."
+  - "Each reader that receives 'broken' skips its work for that setting -- no read attempt (no IsADirectoryError path), no scaffold write to that location, no fallback to the default path -- and the build continues and exits 0 (user decision 8)."
+  - "One warning per broken setting per build, not one per reader (same de-duplication point as the 'not configured' line)."
+  - "build_referential_integrity's missing-path finding for the same key must agree with this outcome (not double-report it under a different severity); its .exists() test must not accept a folder for a file-location key."
+test_spec:
+  - name: test_missing_file_setting_warns_broken_skips_and_build_passes
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Scratch consumer with changelog_categories_path: 'docs/missing-categories.md' (absent file); build.py exits 0, exactly one warning names the setting and the path as broken/not found, no line says 'not configured', and no file is written at that path."
+    must_catch:
+      - "the broken setting is reported as 'not configured'"
+      - "the build fails instead of continuing"
+      - "the reader falls back to the default path as if the setting were absent"
+  - name: test_folder_setting_warns_is_a_folder_and_is_not_read
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "Set the key to an existing folder; build.py exits 0, one warning says the path is a folder, not a file, and the output has no 'Is a directory' / read error."
+  - name: test_broken_setting_build_differs_from_absent_setting_build
+    target_dir: unit_tests/build_guards/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Compare with the key-absent build: the broken-setting build writes no scaffold at the default location and prints the broken warning, so the two builds are not equal."
+test_rationale: >-
+  Decision 8 fixes three properties at once -- severity, skip, continue -- so
+  the criterion descriptor's must_catch names the wrong version for each, and
+  the discrimination descriptor guards the over-correction of treating a typo
+  as unset.
+delivers_to: null
+expects_from:
+  ac_id: BP-1500h-1
+  contract: "The shared interpretation, extended with a third outcome: configured-but-not-a-file ('broken', reason 'missing' | 'is_directory')."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h-1.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: the first two Then clauses now say the output WARNS that the setting is broken (was: 'names the setting and the path'); a new clause added -- 'in both cases the work that reads that setting is skipped, the rest of the build continues, and the build passes'. The 'not not configured' and 'not as if absent' clauses are unchanged. WHY: user decision 8 (BrainCandy, 2026-10-12, BA-stage Q8): a configured path to a missing file or a folder is warned about clearly as a broken setting (never 'not configured') and skipped; the build continues. The BA had left fail-versus-skip open. Title and depends_on unchanged."
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria unchanged. Under user decision 11 (BrainCandy, 2026-10-12) an ABSENT key means the shipped default path, so the existing clause 'in neither case does the build behave as if the setting were absent' now concretely means: a broken setting never falls back to the shipped default location. The it_requirements already state this ('no fallback to the default path')."
+superseded_by: null
+covered_by:
+  - unit_tests/build_guards/test_bp_1500h_1_i.py
+implemented_by:
+  - scripts/config_paths.py
+  - scripts/build_config_scaffolds.py
+  - scripts/build_helpers.py
+  - scripts/build_referential_integrity.py
+notes: |
+  OVER-CORRECTION CONTROL. "Treat anything that is not a readable file as not
+  configured" passes BP-1500h-1 and hides a typo in a real setting. Whether a
+  broken setting fails the build or is reported and skipped is NOT decided here
+  (today's behaviour per reader was not measured by the BA) -- only that it is
+  never called "not configured". Flagged in the BA report.
+
+  RESOLVED 2026-10-12 (user decision 8): warn as a broken setting, skip, and
+  continue. Criteria amended accordingly (see amended_by).

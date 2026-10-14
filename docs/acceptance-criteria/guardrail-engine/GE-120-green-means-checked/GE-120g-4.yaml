@@ -108,6 +108,7 @@ created: 2026-10-07
 amended_by: []
 superseded_by: null
 covered_by:
+  - GE-120g-4-i
   - unit_tests/commit_guardian/test_ge_120g_4.py
 implemented_by:
   - templates/scripts/commit_guardian/check_negative_control_liveness.py

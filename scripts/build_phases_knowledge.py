@@ -149,6 +149,10 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
     #   documented repeat defect of a new scripts/knowledge/*.py module being
     #   silently absent from a deployed install when this list (and its
     #   _manifest_knowledge_scripts() twin below) are not updated in lockstep.
+    # - 2026-10-08 [python-coder/INF-700a-5]: Added completion_routing.py and
+    #   its three siblings (_state, _git, _cli), the durability step the wired
+    #   completion workflows now call; they were in no deploy list, so nothing
+    #   in an install could reach them. Mirrored in _manifest_knowledge_scripts().
     """
     import build_phases as _bp
 
@@ -162,6 +166,11 @@ def build_knowledge_scripts(target_root: Path, config: dict[str, Any],
         "capture_write.py",
         "harvest_cli.py",
         "harvest_status.py",
+        "record_identity.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ]
     output_dir = target_root / "scripts" / "knowledge"
     written = 0
@@ -258,6 +267,16 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     (``emit_event.py``) share one anchor instead of each computing its own
     directory and silently drifting apart.
 
+    AC INF-500d-4-iii (ADR-069): the SAME declaration also records
+    ``operational_log_root`` (the directory every log sits directly under) and
+    ``feedback_sink`` (``<root>/feedback.jsonl``). The root is an INPUT -- the
+    ``--log-root`` value the worktree bootstrap inherits from the main install's
+    recorded declaration, parked in ``config`` by ``build_log_root`` -- and
+    defaults to ``<project_root>/debugging/logs``, so an ordinary build's two
+    historical values are unchanged. ``--no-log-root`` records NO location at
+    all (an empty declaration) and prints a NOTE saying writers will refuse.
+    The values come from ``build_log_root.declaration_values``.
+
     A NOTE is always printed alongside the write: a build has no reliable way
     to tell whether the directory it was pointed at is an already-installed
     project's own root or a separate, isolated working directory of a
@@ -305,32 +324,36 @@ def build_knowledge_sink_declaration(target_root: Path, config: dict[str, Any],
     #   function here; re-applied to the post-extraction text rather than
     #   replayed as a remembered diff.
     #   (#TICKETLESS reason=ac-scoped-fastlane-build-INF-400c-4-iii)
+    # - 2026-10-09 [python-coder/INF-500d-4-iii]: Declaration values now come
+    #   from build_log_root.declaration_values, adding operational_log_root and
+    #   feedback_sink and honouring an inherited --log-root; the NOTE also
+    #   names the operational log root. (#INF-500d-4-iii, ADR-069)
+    # - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: --no-log-root now records
+    #   an empty declaration (no worktree-local stream/sink survives to be trusted)
+    #   and the build NOTE says plainly that no durable root is declared and
+    #   writers refuse, instead of the misleading "SECOND sink" text.
     """
     import build_phases as _bp
+    from build_log_root import declaration_values
 
-    project_root = target_root.parent
-    sink_path = project_root / "debugging" / "logs" / "knowledge_emissions.jsonl"
-    # AC INF-400c-4-iii: the operational/telemetry stream is declared in this
-    # SAME artefact, one absolute path fixed at build time, so emit_event.py
-    # (the operational-stream producer) and this knowledge-sink declaration
-    # share one anchor instead of drifting as two independently-computed
-    # values. Distinct filename, same directory as the historical default.
-    operational_stream_path = project_root / "debugging" / "logs" / "agent_telemetry.jsonl"
-    content = (
-        json.dumps(
-            {
-                "knowledge_emission_sink": str(sink_path),
-                "operational_telemetry_stream": str(operational_stream_path),
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+    values = declaration_values(target_root.parent, config)
+    content = json.dumps(values, indent=2) + "\n"
     output_path = target_root / "config" / "knowledge_sink.json"
 
     if _bp._write(output_path, content, dry_run, force):
-        print(f"  config/knowledge_sink.json -> {sink_path}")
-        print(f"  config/knowledge_sink.json -> {operational_stream_path} (operational stream)")
+        if not values:
+            print(
+                "  NOTE: config/knowledge_sink.json declares NO durable operational "
+                "log root (--no-log-root), so it records no sink, stream or root. "
+                "emit_event.py, harvest_learnings.py and the --print-location "
+                "queries will REFUSE to write until a rebuild passes --log-root "
+                "<abs-dir> or a plain build declares one -- see ADR-069 and "
+                "AC INF-500d-4-i."
+            )
+            return 1
+        print(f"  config/knowledge_sink.json -> {values['knowledge_emission_sink']}")
+        print(f"  config/knowledge_sink.json -> {values['operational_telemetry_stream']} (operational stream)")
+        print(f"  config/knowledge_sink.json -> operational log root: {values['operational_log_root']}")
         print(
             "  NOTE: this build declares the knowledge-emission SINK for "
             "THIS working directory. A separate, isolated working directory "
@@ -595,6 +618,11 @@ def _manifest_knowledge_scripts(package_root: Path) -> set[str]:
         "capture_write.py",
         "harvest_cli.py",
         "harvest_status.py",
+        "record_identity.py",
+        "completion_routing.py",
+        "completion_routing_state.py",
+        "completion_routing_git.py",
+        "completion_routing_cli.py",
     ):
         if (knowledge_src / fname).is_file():
             result.add(f"scripts/knowledge/{fname}")
@@ -617,6 +645,7 @@ WORKFLOW_TOOL_SCRIPTS: tuple[str, ...] = (
     "knowledge_file_nodes.py",
     "knowledge_surface_check.py",
     "knowledge_rendering.py",
+    "knowledge_edges.py",
     "set_ticket_status.py",
     "ticket_prioritizer.py",
     "port_registry.py",

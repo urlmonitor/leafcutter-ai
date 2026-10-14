@@ -112,6 +112,7 @@ from typing import Any
 # working against this module unchanged; the split is invisible to callers.
 from build_referential_integrity_closure import ClosureAnalysisError  # noqa: F401  # re-exported for callers
 from build_referential_integrity_closure import _closure_walk
+import config_paths
 
 _log = logging.getLogger(__name__)
 
@@ -402,30 +403,17 @@ def check_referential_integrity(
         Empty list means all referenced paths exist.
     """
     missing: list[dict[str, str]] = []
-
-    for key in _PATH_KEYS:
-        value = config.get(key)
+    nested = [f"{parent}.{child}" for parent, kids in _NESTED_PATH_KEYS.items() for child in kids]
+    for key in [*_PATH_KEYS, *nested]:
+        value = config_paths.setting_value(config, key)
         if not value or not isinstance(value, str):
-            continue
-        path = target_root / value
-        if not path.exists():
+            continue  # empty = feature off (announced by the build steps that read it)
+        if config_paths.is_file_key(key):  # BP-1500h-1-i: a folder is not a file
+            ok = config_paths.resolve_and_report(config, key, target_root)["state"] != "broken"
+        else:
+            ok = (target_root / value).exists()
+        if not ok:
             missing.append({"config_key": key, "expected_path": value})
-
-    for parent_key, child_keys in _NESTED_PATH_KEYS.items():
-        parent = config.get(parent_key)
-        if not isinstance(parent, dict):
-            continue
-        for child_key in child_keys:
-            value = parent.get(child_key)
-            if not value or not isinstance(value, str):
-                continue
-            path = target_root / value
-            if not path.exists():
-                missing.append({
-                    "config_key": f"{parent_key}.{child_key}",
-                    "expected_path": value,
-                })
-
     return missing
 
 
@@ -438,6 +426,7 @@ def format_integrity_report(missing: list[dict[str, str]]) -> str:
     Returns:
         Markdown-formatted report string, or empty string if no issues.
     """
+    missing = [m for m in missing if not config_paths.was_reported(m["config_key"])]  # already warned
     if not missing:
         return ""
     lines = [
@@ -731,4 +720,7 @@ def find_uncovered_closure_dependencies(
 #   sibling build_*.py helper module (build_helpers.py, build_phases_
 #   knowledge.py, build_phases_self_description.py, build_precommit.py) has a
 #   deploy_map or shim_map entry either. (#BP-100n-4)
+# - 2026-10-14 12:00 [python-coder]: File-location keys are judged through
+#   config_paths (a folder is not a file; findings already warned about are not
+#   re-reported by format_integrity_report). (#BP-1500h/1)
 # ====================================================================

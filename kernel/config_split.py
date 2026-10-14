@@ -23,16 +23,16 @@ Probability = Annotated[float, Field(ge=0.0, le=1.0)]
 class SplitConfig(BaseModel):
     """Settings of the split of a bundled request."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, use_attribute_docstrings=True)
 
-    #: The off switch: false restores today's behaviour exactly (no bundle question, no split).
     enabled: bool
-    #: A subject counts as bundled only at or above this Jev probability.
+    """The off switch: false restores today's behaviour exactly (no bundle question, no split)."""
     bundle_threshold: Probability
-    #: Most parts one split may hold.
+    """A subject counts as bundled only at or above this Jev probability; set high to avoid false splits."""
     max_parts: int = Field(ge=2)
-    #: Most parts one run may hold across all its splits (a split needs at least 2 left).
+    """Most parts one split may offer to the person."""
     max_parts_per_run: int = Field(ge=2)
+    """Most parts one run may hold across all its splits (a split needs at least 2 left)."""
 
 
 # ====================================================================

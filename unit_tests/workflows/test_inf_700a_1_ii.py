@@ -133,6 +133,9 @@ class _BaseCase(unittest.TestCase):
         label_responses = _full_success_responses(self.worktree_root, self.ac_ids)
         if routing_response is not None:
             label_responses["knowledge-routing-step"] = routing_response
+            # Since INF-700a-5 the terminal figures come from the post-commit
+            # observation of what the commit carried; it reports the same run.
+            label_responses["knowledge-routing-observe"] = routing_response
         return run_workflow_under_e2(
             _WORKFLOW_PATH,
             timeout=_TIMEOUT,

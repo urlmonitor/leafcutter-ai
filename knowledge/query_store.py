@@ -1,6 +1,8 @@
 """Atomic local catalog persistence with retained immutable versions.
 
 DECISION HISTORY
+- 2026-10-09 09:46 [python-coder]: Remove obsolete compiler compatibility after explicit native saved-catalog re-admission. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
+- 2026-10-09 09:11 [python-coder]: Emit native queries while preserving versioned catalog admission identities. (#KM-400a-3-i/TICKET-20261009-KM-400a-3-i-native-query-maintenance)
 - 2026-10-01 15:46 [python-coder]: A configured catalog root owns writes; serving only reads. (#KM-500/TICKET-20261001-KM-500b-3)
 
 MODULE: knowledge.query_store
@@ -16,7 +18,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 from .errors import invalid, CatalogIOError
-from .query_compile import compile_query, digest_data
+from .query_compile import COMPILER_VERSION, compile_query, digest_data
 from .query_models import QueryDescriptor
 from .contracts import Model
 
@@ -75,6 +77,11 @@ def validate_entry(key: str, entry: dict) -> None:
     if not isinstance(entry["verification"], dict):
         invalid("catalog verification integrity failed")
     descriptor = QueryDescriptor.model_validate(entry["descriptor"])
+    recorded = entry["compiled"]
+    if not isinstance(recorded, dict):
+        invalid("catalog compiler integrity failed")
+    if recorded.get("compiler_version") != COMPILER_VERSION:
+        invalid("catalog compiler requires re-admission with the current native compiler")
     compiled = compile_query(descriptor)
     if key != compiled["digest"] or entry["compiled"] != compiled:
         invalid("catalog descriptor/query integrity failed")
@@ -83,6 +90,9 @@ def validate_entry(key: str, entry: dict) -> None:
     proof = entry["verification"]
     if proof.get("digest") != key or proof.get("status") != "verified":
         invalid("catalog admission integrity failed")
+    checks = proof.get("checks")
+    if not isinstance(checks, dict) or checks.get("compiler_version") != COMPILER_VERSION:
+        invalid("catalog verification requires fresh current-compiler admission")
 
 
 def activate(root: Path, entry: dict, expected_active_digest: str | None) -> dict:

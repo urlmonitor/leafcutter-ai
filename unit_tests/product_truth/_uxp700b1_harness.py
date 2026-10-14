@@ -100,7 +100,7 @@ def _make_sound_store(store_root: Path, ac_root: Path) -> None:
             {
                 "id": "step-a",
                 "label": "Step A",
-                "human": "The user sees the widget screen.",
+                "description": "The user sees the widget screen.", "actor_kind": "human",
                 "order": 1,
                 "screen": "test-screen",
                 "reads": [],

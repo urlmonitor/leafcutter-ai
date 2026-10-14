@@ -1,0 +1,74 @@
+id: AR-400e-2-i
+title: "A registry entry that still carries the retired list is refused by the registry validator"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fixture registry in which the entry for "probe-agent" carries
+    `skills_used: ["signoff"]` alongside a correct `skills_invoked`,
+  When the registry validator runs, and separately when the build runs,
+  Then both fail with a finding naming "probe-agent" and the field
+    `skills_used` as retired,
+    And the finding states that the field is regenerated from the specialist's
+      own declaration and must not be authored,
+    And removing the field makes both runs pass.
+depends_on:
+  - AR-400e-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: describes
+    status: exists
+    relevance: "The registry whose schema retires the field."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "LOAD-BEARING GATE: the refusal is an error RETURNED by registry_validator.validate_agent_registry (reached by build.py:373, check_agent_registry.py and the CLI). Replace the body of _check_skills_used (~244-270, today validating skills_used ids exist) with the retired-field refusal so the file does not grow. The JSON schema change (AR-400e-2) is documentation, not this gate."
+  - "The finding names the agent and the field, states it is retired, and that skills_invoked is regenerated from the specialist's own declaration by the commit-time hook and must not be authored."
+  - "Consumer installs: the validator runs over the PACKAGE root's config/agent_registry.json (the package's own registry, shipped with the clone). Confirm no consumer-authored registry is read by validate_agent_registry; if one is, the refusal must name the file so an adopter knows what to delete."
+test_spec:
+  - name: test_registry_entry_with_skills_used_is_refused_by_validator_and_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copy the package; add skills_used ['signoff'] to probe-agent's registry entry beside a correct skills_invoked; the validator CLI and build.py both fail naming probe-agent and skills_used as retired, with the 'regenerated, must not be authored' text."
+    must_catch:
+      - "the field is silently dropped instead of refused"
+      - "only the JSON schema is changed and nothing enforces it"
+  - name: test_removing_the_field_makes_both_pass
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: remove skills_used from the copy; both runs pass."
+test_rationale: >-
+  The schema is not the gate here, so the test plants the field in a real
+  registry and runs the real doors.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "A registry in which skills_invoked is the only derived abilities field."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The schema half of the design's reader list. A refusal rather than a silent
+  drop, because a hand-authored older-field entry is exactly the second source
+  this L1 exists to end. Consumer installs with a stale registry: the build
+  regenerates its own copy, so the refusal applies to the package registry; the
+  IT PO should confirm consumers never carry an authored registry.

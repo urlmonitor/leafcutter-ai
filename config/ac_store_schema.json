@@ -452,6 +452,16 @@
                             "requires_db": {
                                 "type": "boolean",
                                 "description": "Whether the test needs a live database (drives slow-test marking)."
+                            },
+                            "in_scope_files": {
+                                "type": "array",
+                                "minItems": 1,
+                                "uniqueItems": true,
+                                "items": {
+                                    "type": "string",
+                                    "pattern": "\\S"
+                                },
+                                "description": "TQ-500g-1-ix: the repo-relative POSIX paths of the files a wrong version named in this entry's must_catch may alter. Optional; when present it must be a non-empty list and every item must contain at least one non-whitespace character. The wrong-version writer (scripts/build_orchestration/wrong_version_writer.py) reads it through the runner's declared-scope reader: a name's in-scope files are the union over every entry carrying that exact name, minus any test file. A name with no in_scope_files has no in-scope file, so every replacement for it is refused. Not copied onto the generated ticket."
                             }
                         }
                     }
@@ -580,15 +590,18 @@
                     "ac_store",
                     "agent_registry",
                     "agent_telemetry",
+                    "atlas_frontend",
                     "bootstrap_installer",
                     "build_orchestration",
                     "build_pipeline",
                     "changelog",
+                    "colony_memory",
                     "commit_guardian",
                     "config_loader",
                     "decision_kernel",
                     "doc_compliance",
                     "documentation_system",
+                    "epic_retrospective",
                     "feedback_collector",
                     "finalize",
                     "frontend_coding",

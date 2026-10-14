@@ -54,7 +54,8 @@ describe("real contract flow selection", () => {
     for (const label of [...original.consumes, ...original.produces]) {
       expect(container.textContent).not.toContain(label);
     }
-    expect(screen.getByText(original.human.split("\n\nContract fields and examples (generated)\n")[0], { normalizer: (text) => text })).toBeInTheDocument();
+    expect(screen.getAllByText(original.description)).toHaveLength(1);
+    expect(container.querySelector(`[data-actor-kind="${original.actor_kind}"]`)).not.toBeNull();
     const bindings = [...original.io_contracts.consumes, ...original.io_contracts.produces];
     expect(screen.getAllByRole("table")).toHaveLength(bindings.length);
     for (const table of screen.getAllByRole("table")) {

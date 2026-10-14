@@ -202,6 +202,7 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     #   accidentally substituted. (#BP-900g-6)
     """
     import os
+    import re
     import subprocess
 
     import build_phases as _bp
@@ -216,16 +217,13 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
     enabled = workflows_config.get("enabled", False) if isinstance(workflows_config, dict) else False
     _raw_engine = workflows_config.get("engine", "auto") if isinstance(workflows_config, dict) else "auto"
     # Resolve "auto" → "e2" (the deterministic E2 top-level-body engine).
-    # Engine selection is purely config-driven; the version check below is a
-    # floor gate only and must NOT influence which engine is selected (ADR-030).
+    # Engine selection is config-driven; the version floor gate below must NOT influence it (ADR-030).
     engine = "e2" if _raw_engine == "auto" else _raw_engine
     if not enabled:
         print("Workflow scripts: skipped (not enabled in skills_config.json)")
         return 0
 
-    # ------------------------------------------------------------------
-    # Gate 2 — version detection
-    # ------------------------------------------------------------------
+    # --- Gate 2 — version detection ---
     version_str: str | None = os.environ.get("CLAUDE_CODE_VERSION")
     if not version_str:
         try:
@@ -235,9 +233,9 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
                 text=True,
                 timeout=2,
             )
-            # `claude --version` typically outputs e.g. "2.1.154" or "2.1.154\n"
-            if result.returncode == 0:
-                version_str = result.stdout.strip().split()[-1]
+            # `claude --version` prints e.g. "2.1.294 (Claude Code)"; take the first x.y.z.
+            m = re.search(r"\d+\.\d+\.\d+", result.stdout) if result.returncode == 0 else None
+            version_str = m.group(0) if m else None
         except Exception as exc:  # noqa: BLE001
             _bp._log.warning("claude --version probe failed: %s", exc)
             version_str = None
@@ -441,6 +439,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
     - ``scripts/knowledge_rendering.py`` — knowledge_query.py's fourth
       sibling module, the text/JSON renderers; loaded at import time, so
       knowledge_query.py fails to import in consumers without it.
+    - ``scripts/knowledge_edges.py`` — knowledge_query.py's fifth sibling
+      module, edge extraction and routing (GE-127 size-ratchet extraction);
+      loaded at import time, so knowledge_query.py fails to import in
+      consumers without it.
     - ``scripts/set_ticket_status.py`` — used by ticket-lifecycle agents and skills.
     - ``scripts/ticket_prioritizer.py`` — used by the ticket-prioritizer skill.
     - ``scripts/port_registry.py`` — used by the live-surface-tester agent.
@@ -613,4 +615,6 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   build_workflow_tools() reads build_phases_knowledge.WORKFLOW_TOOL_SCRIPTS
 #   instead of its own copy of the list, and that list now ships
 #   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
+# - 2026-10-12 [python-coder/BP-300d-3-ii]: version probe takes the first x.y.z
+#   in `claude --version` ("2.1.294 (Claude Code)"), not the last token.
 # ===========================================================================

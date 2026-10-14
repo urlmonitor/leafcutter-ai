@@ -9,7 +9,7 @@ req_status: draft
 readiness: draft
 priority: high
 roadmap_phase: phase_1
-work_status: todo
+work_status: done
 criteria: |
   Given a file that sits inside a directory a drift gate inspects but that no run of
     the build can ever produce -- a file the tooling itself writes while running, a
@@ -91,8 +91,11 @@ created: 2026-09-07
 created_by_ticket: null
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- unit_tests/commit_guardian/test_bp_100k_3_ii.py
+implemented_by:
+- templates/scripts/commit_guardian/_drift_exemptions.py
+- templates/scripts/commit_guardian/check_output_drift.py
 change_target: pipeline
 risk_surface: contract_boundary
 notes: |

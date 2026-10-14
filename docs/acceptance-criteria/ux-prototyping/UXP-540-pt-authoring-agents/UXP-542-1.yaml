@@ -24,7 +24,10 @@ criteria: 'Given an agent or person follows the Product Truth authoring prompt, 
 
   And they require existing source evidence for observed examples and review of real boundary mappings,
 
-  And they instruct the author to regenerate derived compatibility text and indexes and run validation
+  And they define each step''s description as one plain sentence of what happens, list what must never
+  appear in it and say where each kind of detail belongs instead, including the step''s actor kind,
+
+  And they instruct the author to regenerate derived compatibility labels and indexes and run validation
   instead of editing derived copies,
 
   And they state that a schema-valid record neither approves ACs nor proves runtime integration or semantic
@@ -44,6 +47,7 @@ created: '2026-10-05'
 amended_by:
 - reason: '2026-10-05 business-analyst: recorded source/test traceability and locally verified completion
     after IT PO review; retained reviewed readiness and existing parent statuses. Hosted CI and merge had not yet run at that local verification.'
+- reason: '2026-10-09 business-analyst: kernel decision dec-7b1dcfd47f85cf0a (chosen by the user) renamed the flow step field human to description, holding one plain sentence of what happens, and added actor_kind (deterministic | jev | llm | human); contract detail is no longer generated into the step text. The authoring standard now defines the one-sentence description, its never-list and the what-goes-where field guide in the prompt, guide and schema reference. work_status unchanged: the amended behaviour is implemented and its tests pass locally (TICKET-20261009-ProductTruthDescriptionActorKind).'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -51,6 +55,7 @@ implemented_by:
 - docs/how-to/authoring-product-truth-artifacts.md
 - docs/how-to/product-truth-schema-reference.md
 - docs/architecture/components/ux-prototyping.md
+- docs/reference/product-truth-size-bounds.md
 notes: 'BA and IT PO manually reviewed the authoring prompt, how-to, schema reference and architecture
   description on 2026-10-05. They consistently explain exact fields/examples, authority and gaps, generated
   ownership and validation limits; the alias-versus-JSON-wrapper explanation is explicit. This documentation-only
@@ -70,6 +75,8 @@ risk_surface: contract_boundary
 it_requirements:
 - Keep the author prompt, guide, schema reference and architecture description consistent about source
   authority, generated ownership and read-only Atlas presentation.
+- Keep the description never-list and the what-goes-where guide identical in meaning across the prompt,
+  guide and schema reference, and name the validator gates that enforce part of it.
 - The standards must distinguish reference aliases from JSON wrappers, immediate-container requiredness
   from existence of a wildcard item, and full runtime validation from projected documentation.
 - Do not imply that reviewing this authoring standard implements the broader authoring workflow or integrates

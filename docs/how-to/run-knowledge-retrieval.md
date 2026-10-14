@@ -6,9 +6,10 @@ created: '2026-10-01'
 components:
 - knowledge_management
 - decision_kernel
-last_updated: '2026-10-02'
+last_updated: '2026-10-14'
 description: Run scoped repository queries and inspect answer completeness, evidence and observation delivery.
 related_docs:
+- docs/reference/neo4j-native-queries.md
 - docs/reference/knowledge-retrieval-answers.md
 - docs/architecture/adrs/ADR-062-standalone-knowledge-retrieval.md
 - docs/architecture/components/knowledge-retrieval.md
@@ -29,113 +30,15 @@ Run commands from the trusted Leafcutter checkout. Indexed Git objects are data,
 
 ### Explore the graph in Aura
 
-The domain graph exposes native labels including `AC`, `ADR`, `Component`,
-`Agent`, `Skill`, `Ticket`, `Document`, `RoadmapPhase`, `GlossaryTerm`, `Flow`,
-`Mockup`, `MockData`, `ChangelogEntry`, `Capability`, `Decision`, `SourceFile`,
-and `Test`. A label has nodes only when the pinned source contains that type.
-Use `name` for captions (canonical identifiers), and inspect `title`, `source_path`
-and `source_revision` for context. Relationships use their actual types, such as
-`COMPONENT_MEMBERSHIP`, `DEPENDS_ON`, `COVERED_BY`, and `IMPLEMENTED_BY`.
-These remain source declarations, not proof that implementation or testing passed.
-
-In Aura **Bloom**, use the saved search phrase **Component finalize**, select the
-matching suggestion, then run it. Replace `finalize` with another component name
-to view its direct assignments. The saved phrase selects only current nodes and
-relationships. Results depend on the active mapper and source revision; the native
-field expansion also admits direct component assignments from newly supported types.
-Choose **In Scene** in the legend to show the categories present in this view.
-Aura resets this choice to **All** after a reload, so select **In Scene** again.
-The free instance uses its Default Perspective; an additional perspective requires
-an Aura upgrade. The saved captions use `name` for AC, ADR, Component, SourceFile
-and Test, and `title` for Ticket, Document and ChangelogEntry; titles appear on hover.
-The verified mapper-7 scene at source `59269e02` contains 74 nodes and 74
-relationships: 63 ACs, one ADR, one Component, three Tickets, two Documents and
-four ChangelogEntries. See `reports/native-fields/aura-ui.json` for visual evidence.
-
-Show items explicitly assigned to a component in the active snapshot:
-
-```cypher
-MATCH (n)
-WHERE n.current = true AND 'finalize' IN n.components
-RETURN n;
-```
-
-Show those items connected to the component:
-
-```cypher
-MATCH p = (n)-[:COMPONENT_MEMBERSHIP]->(c:Component {name: 'finalize'})
-WHERE n.current = true AND c.current = true
-RETURN p;
-```
-
-`components` is a list because an item may declare more than one membership.
-It includes direct assignments only; a test referenced by an AC does not acquire
-the AC's component automatically. Keep `current = true` in ordinary exploration
-to exclude retained historical copies. The component search omits `Repository`
-and `Snapshot`; they remain available for diagnostics. Ordinary label searches
-can still include historical copies unless a current filter is applied.
-
-Existing generic graphs can be inspected without writes:
-
-```sh
-python -m knowledge.domain_migrate --root REPOSITORY --repository-id leafcutter --expected-host AURA_HOST
-```
-
-After updating readers, add `--apply --backup ABSOLUTE_BACKUP_PATH` with explicitly
-configured writer credentials to perform the migration. Backups contain source
-evidence and should remain private and outside Git. Migration validates every
-retained snapshot, preserves entity keys, payloads, source revisions and counts,
-and replaces each legacy relationship atomically with its native typed equivalent.
-Interrupted runs can be inspected and resumed with a new backup path. Publication
-changes, corrupt records and cross-generation edges are rejected. Old writer
-versions must not be used after migration.
+See the [native graph reference](../reference/neo4j-native-queries.md#explore-the-graph-in-aura)
+for domain labels, saved Bloom views, current component filters and verified
+native-query catalog replacement.
 
 ### Inspect complete native fields
 
-Simple authored fields appear directly, for example `criteria`, `priority`,
-`test_required` and `depends_on`. Nested leaves use JSON Pointer names, retaining
-list positions and parent objects. For example, the first test specification's
-name is `/test_spec/0/name`. Quote these names with backticks in Cypher:
-
-```cypher
-MATCH (n:AC {current: true})
-WHERE 'finalize' IN n.components
-RETURN n.id, n.criteria, n.test_required, n.`/test_spec/0/name`;
-```
-
-Authored names that collide with graph bookkeeping use pointers too: `/id`,
-`/title`, `/components`, `/current`, and `/payload` preserve exact source values.
-The ordinary `components` property deduplicates explicit source declarations and
-direct membership edges. Unresolved declarations remain filterable and are reported
-in snapshot diagnostics; indirect connections do not imply membership.
-Registry data stays separate from template frontmatter, bodies and context, which
-appear under `_native_derived/derived/...`. Those fields are inspection aids,
-not additional authored attributes of the registry entry.
-
-Neo4j cannot store maps, nested lists or null as ordinary property values. The
-mapping exposes their non-null leaves and records null paths in
-`_native_null_paths`, empty containers in `_native_empty_paths`, and exact structure
-and types in `_native_shape`. A missing field is different from any of these.
-The lossless canonical payload remains available; low-disclosure retrieval retains
-its existing field allowlist and does not reveal the full source automatically.
-
-The maintained type registry is `knowledge/native_types/registry.py`; the reviewed
-inventory and individual field contracts are in `reports/native-fields/`. Each
-reader preserves extension fields as well as the currently declared schema fields.
-To inspect a native-field refresh at the existing active source commit:
-
-```sh
-python -m knowledge.native_refresh --root ENVIRONMENT_ROOT --source-root TRUSTED_CHECKOUT --repository-id leafcutter --expected-host AURA_HOST
-```
-
-Add `--apply --backup ABSOLUTE_PRIVATE_BACKUP_PATH` only for an authorized refresh
-with writer credentials. It builds a new mapper generation, verifies written fields
-before activation, and preserves the previous generations and their canonical data.
-It does not publish uncommitted files or claim missing source records exist.
-The 2026-10-02 publication contains 9,047 current nodes and 23,612 relationships,
-with all four earlier generations preserved. The current source contains no
-Decision records. Counts and field readback are recorded separately in
-`reports/native-fields/aura-publication.json` and `aura-readback.json`.
+See [native fields and refresh](../reference/neo4j-native-queries.md#inspect-complete-native-fields)
+for authored properties, nested leaves, null/empty distinctions, publication
+receipts and the explicit native-metadata refresh procedure.
 
 ### Step 1 - Check optional service availability
 
@@ -159,6 +62,16 @@ python -m knowledge status --root REPOSITORY --repository-id leafcutter --revisi
 ```
 
 REPOSITORY is an absolute trusted checkout; REVISION is an exact commit SHA. Validation and plan do not connect or publish. Sync reads immutable Git objects, builds a full generation and atomically publishes after validation. Repeating the same revision/mapping reuses its generation. Failed builds leave the previous generation active; stale or non-descendant publications cannot silently replace it.
+
+#### Read the collapse and count-check results from sync
+
+Before anything is written, sync collapses relationships that are identical in every recorded property (type, endpoints, source record and locator) to one. Relationships that differ in provenance are kept. The diagnostics name each collapsed group as `identical_relationship_collapsed: type=... source=... locator=... target=... copies=N` and always end with a total line `identical_relationships_collapsed:N`, including `identical_relationships_collapsed:0`.
+
+The count check then compares what the store kept for the new generation with the expected figures. Expected relationships is the number of distinct relationships after that collapse. On success the sync result carries `counts: {nodes: {expected, kept}, relationships: {expected, kept}}`. `counts` is null when the generation was already ready and nothing was built.
+
+On a shortfall publication fails with `generation count validation failed: relationships expected N kept M`, naming each mismatched kind. The new generation is marked failed and the previously active generation stays active. Criteria: [KM-400b-2-i](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-i.yaml) (collapse), [KM-400b-2-ii](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-ii.yaml) (count check).
+
+Standalone writer commands use a bounded **30-second transaction timeout** for staging and atomic publication; serving retains its independent **3-second default**. Node and relationship batches remain capped at 250, and count validation and publication guards still apply. A transaction-timeout error alone does not identify the slow statement. After an authorized retry, confirm the published SHA and lag before calling recovery successful; a local configuration test does not establish live publication.
 
 Default imports include all reviewed native record types. Existing AC, ADR and
 Component identities remain stable; additional kinds use kind-qualified native
@@ -202,7 +115,7 @@ Resume a continuation with exactly the same repository, operation, arguments, re
 
 Set knowledge.backend=neo4j, trusted knowledge.repository_id and absolute knowledge.repository_root in kernel configuration. Add a source kind graph_query with its evidence categories; overrides replace source lists, so preserve other desired sources. A leafcutter.retrieval_request.v1 payload can include the optional knowledge operation/mode/arguments/disclosure object. Invocation and repository identity are bound by the composition root; backend sessions, queries and writer credentials do not enter kernel state.
 
-The existing retrieve.repository binding consumes canonical Evidence/SourceVersion. Obvious exact and relationship choices avoid Jev; ambiguous supported semantic choices use the existing reserve-before-use Jev framework. Compact discovery precedes selected-ID source disclosure. The existing research sufficiency judgment decides whether evidence answers the question. Similarity scores are ranking signals, never correctness probabilities.
+The retrieve.repository binding consumes canonical Evidence/SourceVersion. Explicit low-level operation requests retain deterministic execution. Natural research carrying interpreted needs uses the shared finite Jev operation selector, with or without a query catalog; the earlier low-level compatibility helper does not bypass that selector. Compact discovery precedes selected-ID source disclosure. The existing research sufficiency judgment decides whether evidence answers the question. Similarity scores are ranking signals, never correctness probabilities.
 
 Evidence IDs are stable for locator/content; retrieval IDs identify separate runs. Capability diagnostics and existing tracer record modes, SHA, generation and retrieval references. Graph provenance is explicitly derived context, source excerpts stay unchanged. Telemetry outages preserve retrieval with a warning. Async hosts await environment.aclose() before closing their loop; synchronous hosts call environment.shutdown() afterward. A synchronous shutdown inside a running loop is explicitly rejected.
 
@@ -224,10 +137,10 @@ Reviewed case fields are id, reviewed_by, synthetic, request, relevant_ids and c
 
 ```sh
 python -m knowledge rollback --root REPOSITORY --repository-id leafcutter --generation-id RETAINED_GENERATION
-python -m knowledge cleanup --root REPOSITORY --repository-id leafcutter --generation-id EXPIRED_GENERATION
+python -m knowledge cleanup --root REPOSITORY --repository-id leafcutter --generation-id EXPIRED_GENERATION --retention-seconds SECONDS
 ```
 
-Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters.
+Rollback selects a retained generation. Cleanup affects only the selected expired, non-active, projector-owned generation; foreign data is protected. `--retention-seconds` is required and has no built-in value: omitting it is refused rather than defaulted, so the minimum retirement age a deletion is judged against is always one you stated. Rebuild an empty authorized database from the same immutable revision/mapping and compare identities, edges/provenance; repeat sync for idempotence. Rebuild vectors with the same model and retained outputs where exact reproducibility matters.
 
 Restore connectivity then replay a failed revision. Repair canonical reference errors in source before replay. Continue explicit graph requests during vector outage; never interpret unavailable semantic retrieval as no match. Inspect published SHA/status for lag and telemetry-loss diagnostics when trace export fails. Actual external merge execution, production memory mapping and real-model usefulness remain separately identified verification limits.
 
@@ -237,11 +150,19 @@ Serving accepts `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` as aliases f
 
 Enabled serving and writer composition resolve each setting from the process environment, then the file named by `LEAFCUTTER_ENV_FILE`, then the nearest `.env` walking upward from the configured repository root (or current directory). Within a source, the legacy `LEAFCUTTER_*` name wins over its alias. Empty values count as absent, matching kernel credential loading. Custom configured variable names are exact: they do not fall back to conventional aliases. Named unreadable files fail; unreadable discovered files emit a generic warning. Loading never mutates the process environment and disabled serving never reads credential files.
 
+An Aura instance ID and a Neo4j database name are different settings. For example,
+`NEO4J_URI=neo4j+s://2fb38dda.databases.neo4j.io` selects the instance;
+`NEO4J_DATABASE=neo4j` selects a database inside it. Use the actual database name
+shown by your deployment. `NEO4J_INSTANCE=2fb38dda` does not select a database.
+Setting the database to an instance ID fails unless a database with that exact
+name exists. The local `.env` is not copied into GitHub Actions: the publication
+workflow uses its configured database variable and writer secrets separately.
+
 Keep the actual `.env` outside Git and set `LEAFCUTTER_ENV_FILE` to its existing path when a worktree cannot discover it. Do not copy credentials into the worktree. Writer operations accept the shared URI but still require `LEAFCUTTER_NEO4J_WRITER_USERNAME` and `LEAFCUTTER_NEO4J_WRITER_PASSWORD`; serving credentials do not silently authorize writes. Merely configuring Aura does not run migrations or index a corpus.
 
 ### Step 7 - Use the governed reusable query catalog
 
-Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Existing operations keep their original contracts. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
+Set `knowledge.query_catalog_root` to an application-controlled directory outside prompt text. The catalog retains immutable descriptor and generated-Cypher versions plus their verification provenance. Only current native compiler entries are accepted; see the [saved-query replacement contract](../reference/neo4j-native-queries.md#saved-native-queries) when replacing an obsolete catalog. New operations require a trusted catalog context and a pinned digest; an unknown ordinary retrieval operation is still rejected.
 
 ```text
 python -m knowledge catalog-list --catalog-root <directory>
@@ -256,7 +177,7 @@ The coding agent authors typed parameters, purpose, supported questions and a re
 
 The candidate includes positive and empty expected-result cases. The verifier executes those judgments against the exact pinned source and independently tests invalid input, bound injection and foreign scope. Passing these checks establishes declared-case conformance, not general semantic usefulness. The example [component test query](../../knowledge/examples/component_tests_candidate.json) joins component membership to acceptance-criterion test references in one new two-hop operation. Its expected IDs were independently reviewed against the commit named in [source judgments](../../reports/knowledge-query-growth-source-judgments.json).
 
-The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; already pinned requests retain their selected descriptor. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
+The kernel's separate activation capability requires explicit `write_query_catalog` permission and the catalog-write effect. Read-only retrieval cannot acquire this permission through fallback. New research can discover admitted entries after restart; pinned requests select retained native entries; an explicit format replacement requires the new recorded digest and rejects the old pin. The original research still evaluates whether returned evidence answers its question. A successful build or admission is not an answer, and outage, denied access, unapproved source mapping and empty results remain distinct.
 
 For a catalog intended to survive replacing or later merging an implementation worktree, configure a durable user/application data directory outside that worktree. The catalog contains query metadata and measured provenance rather than Neo4j credentials. Keep write access restricted to the activation owner; copying an untrusted catalog is not an authorization mechanism.
 
@@ -322,6 +243,47 @@ Omit `--observability-config` to remain disabled. Configuration does not grant p
 
 Inspect `observation.state`: `disabled` means no attempt; `unavailable` means initialization or delivery failed; `unverified` means local emission did not establish matching remote ingestion. Follow `trace_url` only when the state is `verified` for the same request/retrieval IDs. The default application composition does not install a remote-read verifier, so local success alone cannot produce that claim. A trace ID or plausible URL is not evidence of remote visibility. Sanitized final shutdown warnings preserve the result and do not rerun retrieval or query construction.
 
+### Step 12 - Declare and evaluate the generation retention bound
+
+Every sync publishes a generation. Before this bound existed, nothing reclaimed them. Generations accumulated until the backing store latched read-only, and because reclaiming needs writes, the instance could not be recovered: it was destroyed and recreated. This happened to two instances in four days. Both latches occurred while the store was **under** its documented node and relationship caps, so those published limits do not tell you the real ceiling. Previously the only retention window was a hidden `retention_seconds = 3600` default in the adapter, visible and settable nowhere. That default is removed.
+
+A retention bound has two parts, and you must declare both:
+
+| Setting | Meaning |
+|---|---|
+| `retention_max_generations` | Count of generations to keep, newest first. The active generation occupies one slot. Must be at least 1. |
+| `retention_min_age_seconds` | Seconds a generation must have been retired before it may be reclaimed. `0` is a declared value. Must be nonnegative. |
+
+Both settings default to `null` (undeclared) in the `knowledge` section of `config/kernel_config.default.json`, and are described in `config/kernel_config.schema.json`. Neither setting has a built-in fallback value.
+
+Run the evaluation, supplying the bound on the command line:
+
+```sh
+python -m knowledge retention --backend neo4j --repository-id leafcutter --retention-max-generations 5 --retention-min-age-seconds 86400
+```
+
+The values `5` and `86400` are placeholders; choose your own. The command reads Neo4j with serving credentials and requires `--backend neo4j`.
+
+**The evaluation reports and changes nothing.** It does not reclaim, retire or re-point any generation. The `reclaimable` list it returns is a verdict, not an action taken. A generation is only deleted by a separate `cleanup` command (Step 6).
+
+The response carries the `bound` with its configuration source, a `generations` list, and a `reclaimable` list of generation IDs. Each generation has a `reason`, decided in this order:
+
+- `active_generation`: the published generation is never reclaimable.
+- `inside_count_bound`: it ranks within the newest `retention_max_generations`.
+- `younger_than_minimum_age`: it was retired (or, if never retired, created) less than `retention_min_age_seconds` ago.
+- `pinned_continuation_unexpired`: a continuation pinned to it has not yet expired. **This reason does not currently fire against a real store.** It reads `pinned_until` on the `Snapshot` node, and nothing writes that property yet — continuation pinning lives in the retrieval path instead. So a generation holding a live continuation is reported reclaimable today. That is safe while this command only reports; it would not be safe for anything that deletes what it names. See [the retention bound reference](../reference/knowledge-retention-bound.md) for the full caveat.
+- `reclaimable`: none of the above applies.
+
+The command refuses an incomplete bound before connecting to Neo4j, with a nonzero exit and a JSON error on stderr:
+
+- Neither flag given: the error names `retention_max_generations` as unset.
+- Count given without an age: the error names `retention_min_age_seconds` as unset.
+- A count below 1 or a negative age is refused naming the setting.
+
+Neither case falls back to a built-in value. `cleanup` follows the same rule: it now requires `--retention-seconds` and raises a refusal naming the unset value rather than assuming 3600.
+
+What this does not establish: the `retention` command takes its bound from its two flags only. In the code reviewed, it does not read the `knowledge` section of kernel configuration, and nothing in that code path schedules or performs reclamation. Declaring the values in kernel configuration records them but does not make this command use them. The safe count and age for a given Neo4j instance are not established here.
+
 ## Verification
 
 Run the count command after substituting your authorized repository and published revision:
@@ -340,10 +302,12 @@ Verification labels: public kernel/observer acceptance tests exercise the real k
 2. **A count is partial or has no exact total.** Inspect truncation, continuation and budget limitations. Refine the population or use an authorized sufficient budget; do not equate the first or final continued page with all requirements. The absence of another cursor is not proof of a complete aggregate.
 3. **A query build is unavailable.** Check the pinned mapping and required fields before the query catalog. Missing source data needs an approved mapping/source change, not a new query; backend outages need recovery.
 4. **A declared test has no run proof.** Keep the declaration and the missing execution receipt distinct. Do not use a historical result at another SHA as current proof.
-5. **There is no accessible trace.** Preserve the answer and explicit observation state. Check the configured owner/permissions and matching diagnostics; do not repeat the query merely to obtain a trace.
+5. **`retention` is refused as unset.** A retention setting was not supplied. Pass both `--retention-max-generations` and `--retention-min-age-seconds` (see Step 12); the error names the missing one. No default is applied.
+6. **There is no accessible trace.** Preserve the answer and explicit observation state. Check the configured owner/permissions and matching diagnostics; do not repeat the query merely to obtain a trace.
 
 ## See Also
 
+- [Native graph and saved queries](../reference/neo4j-native-queries.md)
 - [Repository answer contracts and proof meanings](../reference/knowledge-retrieval-answers.md)
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md)
 - [Kernel research and reusable queries](kernel-query-growth.md)

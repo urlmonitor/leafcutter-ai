@@ -19,8 +19,8 @@ criteria: |
   And a committed card carries provenance the generator does not itself emit —
     a `created` date recording when the card first appeared, and a
     `last_updated` date maintained by the transform-doc-frontmatter commit hook,
-  When a build regenerates a card whose agent template, registry entry and AC
-    assignments have not changed since the last build,
+  When a build regenerates a card whose agent template and registry entry have
+    not changed since the last build,
   Then the card file on disk is left byte-for-byte untouched and is not counted
     as written,
   And this holds on a later calendar day than the one the card was last built
@@ -43,6 +43,54 @@ doc_links:
   - path: templates/scripts/commit_guardian/transform_doc_frontmatter.py
     relationship: describes
     status: exists
+amended_by:
+  - reason: stale-input-removed-from-given-ac-assignments-no-longer-reach-a-card
+    by: business-analyst
+    at: '2026-10-09'
+    note: >-
+      VERIFIED FIRST: THIS RECORD DOES NOT SPECIFY CARD CONTENTS. It was surveyed as a
+      possible blocker on making agent cards static. It is not one. Its subject is the
+      compare-before-write guard and the carrying-through of provenance dates — what
+      happens when a card is regenerated, not what a card is made of. Every Then clause
+      is about the file being left untouched, about `created` surviving, about
+      `last_updated` surviving, and about a first-time card getting today's date. None
+      names a section, a heading or a field of the card body. The ONLY contact with the
+      change was in the Given.
+
+
+      THE ONE CHANGE, AND IT IS A DELETION OF A TERM THAT CAN NO LONGER VARY. The When
+      clause read "a card whose agent template, registry entry and AC assignments have
+      not changed since the last build" and now reads "a card whose agent template and
+      registry entry have not changed". Once agent cards are static, a card has no
+      AC-assignment input, so the third conjunct quantifies over nothing — it is
+      vacuously true forever, which is the shape a later reader mistakes for a
+      satisfied requirement. Removing it narrows no obligation and widens none: the
+      precondition is strictly a conjunction, and dropping a conjunct that is always
+      true leaves the same set of cases in scope. Every Then clause is byte-identical.
+
+
+      WHY readiness STAYS reviewed AND work_status STAYS done. The precedent in this
+      store (ACS-1300a-1-i) is to demote readiness when criteria change, because a
+      changed criterion is an unreviewed one. That precedent is about a change to what
+      must be TRUE. Nothing here changes what must be true, there are no new clauses,
+      and the covering test
+      (unit_tests/test_generate_agent_cards_bp018.py) exercises the no-op rebuild and
+      the provenance carry-through — neither of which reads the deleted term. If the
+      user disagrees, the demotion is one field and this note is the record of the
+      judgement being made rather than slipped past.
+
+
+      WORTH KNOWING, BECAUSE IT INVERTS THIS RECORD'S PREMISE. This record's notes
+      describe the guard as "correct and already present", defeated by a generated
+      `created` date so that "the guard therefore never fires, every card is rewritten".
+      The AC-assignment section was, separately, the ONLY part of a card that actually
+      changed between regenerations — every added line in the six cards found dirty on
+      2026-10-09 was an assignment entry, and even the three deleted lines were retitled
+      assignment entries. So after the static-cards change a no-op rebuild has nothing
+      substantive to differ on at all, and this record's guard becomes the only thing
+      standing between a clean tree and a date-driven rewrite. Its value goes UP, not
+      down. INF-600b-3 carries the reciprocal doc_link stating that neither record
+      discharges the other.
 covered_by:
   - "unit_tests/test_generate_agent_cards_bp018.py"
 implemented_by:

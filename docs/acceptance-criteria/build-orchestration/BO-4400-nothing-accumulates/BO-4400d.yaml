@@ -1,0 +1,46 @@
+id: BO-4400d
+title: "Whatever slips through is swept up routinely, with a tally of space freed"
+component: build-orchestration
+components:
+  - build_orchestration
+  - worktree_manager
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+criteria: |
+  A routine sweep reclaims finished leftovers and tells you what it freed.
+
+  On a regular rhythm, finished workspaces and expired temporary files that piled up
+  are reclaimed automatically; you can preview what would go first, and every sweep
+  reports how many items it cleared and how much space it gave back.
+depends_on: [BO-4400]
+doc_links: []
+assigned_agent: null
+estimated_complexity: null
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-09
+amended_by: []
+superseded_by: null
+covered_by: [BO-4400d-1, BO-4400d-2, BO-4400d-3, BO-4400d-4, BO-4400d-5]
+implemented_by: []
+documentation_triggers:
+  - how-to
+  - component-diagram
+notes: |
+  Gap G4. Backstop for anything BO-4400a misses (crashed sessions, pre-existing pile-up).
+  Trigger: session start or a schedule (BA/IT PO choose; both acceptable to the user).
+  Must offer a dry run and report count and bytes freed. Clears only holds-nothing
+  workspaces (BO-4100c) and expired scratch (BO-4400f's expiry rule); never touches work
+  in flight (BO-1800d). Prerequisite: BO-4300c-1-iii (a build restores tracked files it
+  changes) -- without it, finished workspaces falsely read as holding work and the sweep
+  reclaims nothing. Prior art to reconcile, not duplicate: ~/bin/wsl-reclaim hourly timer
+  (user memory) is a machine-local tool outside the package.
+  component-diagram: a new sweep script.

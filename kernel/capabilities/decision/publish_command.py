@@ -30,15 +30,18 @@ def _quote(arg: str) -> str:
     return f'"{arg}"' if any(ch.isspace() for ch in arg) else arg
 
 
-def publish_command(run_id: str) -> str:
+def publish_command(run_id: str, corrects: tuple[str, ...] = ()) -> str:
     """Return the publish command as a plain argv that runs verbatim from any shell and directory.
 
     It names the interpreter the kernel runs under and scripts/run_kernel.py, which puts the
     `kernel` package on the import path itself (no venv activation, cwd or PYTHONPATH needed).
+    Each id in `corrects` appends `--correct <id>` (a staged record that supersedes it).
     """
     launcher = repo_root() / "scripts" / "run_kernel.py"
     parts = [_quote(a) for a in (sys.executable, str(launcher))]
     command = " ".join([*parts, "decisions", "publish", "--run-id", run_id])
+    for old_id in corrects:
+        command += f" --correct {old_id}"
     if os.name == "nt" and any(p.startswith('"') for p in parts):
         return f"& {command}"  # PowerShell needs `&` to run a quoted executable
     return command

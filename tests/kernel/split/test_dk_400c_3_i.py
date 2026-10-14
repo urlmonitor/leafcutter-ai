@@ -159,7 +159,9 @@ def test_flow_node_states_two_of_three_built() -> None:
     """The node text names DK-400c-3-i and the count-after-quote-check outcome."""
     node = _node()
     assert "DK-400c-3-i" in node["implements"]
-    assert "Built in DK-400c-3-i" in node["human"]
+    assert node["impl_status"] != "not_started"
+    assert node.get("impl_asof")
+    assert "one question" in node["description"]
 
 
 def test_flow_keeps_io_contracts_intact() -> None:

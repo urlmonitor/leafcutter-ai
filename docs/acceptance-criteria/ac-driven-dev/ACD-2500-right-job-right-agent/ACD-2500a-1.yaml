@@ -131,7 +131,8 @@ superseded_by: null
 covered_by:
   - ACD-2500a-1-i
   - ACD-2500a-1-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-RightJobRightAgent/06_TICKET-20261012-ACD-2500a-1.md
 change_target: code
 risk_surface: contract_boundary
 notes: |

@@ -168,6 +168,17 @@ notes: |
       it derives from is now correct. Note that this file also carried unrelated
       uncommitted regeneration output at the time of the move, so it was left
       entirely alone rather than partially hand-patched.
+      UPDATE 2026-10-09 — THIS EXCLUSION IS NOW MOOT AND THE COUNT OF SURVIVORS IS 5,
+      NOT 8. Those 3 occurrences were entries in the card's trailing per-agent
+      AC-assignment section, which is removed when agent cards become static
+      (INF-600b-3): after that change no card names any AC id at all, so the three
+      stale BP-100n-4 pointers disappear with the section rather than being corrected
+      by a later regeneration as this paragraph predicted. The REASONING above was
+      right and is kept — a build output is corrected at its source, never by hand —
+      it simply resolved by deletion instead of by regeneration. The changelogs/
+      exclusion (5 occurrences in 4 dated entries) is unaffected and is now the whole
+      of the surviving set; its ground, that a changelog's subject IS the historical
+      event, is the only one of the two that was ever permanent.
 
   Anyone grepping BP-100n-4 in future will therefore find it only in dated release
-  notes and a regenerable index, never in a live pointer.
+  notes, and after the static-cards change not even in a regenerable index.

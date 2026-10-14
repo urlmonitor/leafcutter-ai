@@ -5,10 +5,9 @@ import { FlowDrawer, type StepView } from "../flow-drawer";
 
 afterEach(cleanup);
 
-const marker = "\n\nContract fields and examples (generated)\n";
 const definition = { model: "retrieval_needs_output" };
 const base: StepView = {
-  id: "interpret", label: "Interpret the question", human: "Keep the original question.",
+  id: "interpret", label: "Interpret the question", description: "Keep the original question.",
   screen: null, variant: "step", status: "not_started", reads: [], writes: [],
   acs: [], scenarios: [],
 };
@@ -31,7 +30,6 @@ describe("structured flow contracts", () => {
     // angle: criterion
     const value = { original_question: "Which tests cover this AC?" };
     const { container } = show({
-      human: base.human + marker + "DUPLICATE GENERATED EXAMPLE",
       consumes: ["retrieval_needs_output/original_question: string (required)"],
       contractDefinitions: { retrieval_needs_output: definition },
       ioContracts: { consumes: [{ contract: "retrieval_needs_output", fields }], produces: [], examples: [
@@ -51,9 +49,9 @@ describe("structured flow contracts", () => {
     expect(screen.getByText("Illustrative")).toBeInTheDocument();
     expect(container.querySelectorAll("pre")).toHaveLength(1);
     expect(container.querySelector("pre")?.textContent).toBe(JSON.stringify(value, null, 2));
-    expect(screen.queryByText(/DUPLICATE GENERATED/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Contract fields and examples/)).not.toBeInTheDocument();
     expect(screen.queryByText(/retrieval_needs_output\/original_question/)).not.toBeInTheDocument();
-    expect(screen.getByText(base.human)).toBeInTheDocument();
+    expect(screen.getAllByText(base.description)).toHaveLength(1);
   });
 
   it("preserves root arrays, escaped field keys, authority and observed provenance", () => {
@@ -83,16 +81,16 @@ describe("structured flow contracts", () => {
     // covers: UXP-523-2
     // covers: UXP-523-3
     // angle: criterion
-    const { unmount } = show({ human: "Plan the route." + marker + "OLD GAP", ioContracts: { missing_bindings: [
+    const { unmount } = show({ description: "Plan the route.", ioContracts: { missing_bindings: [
       { name: "Method plan", direction: "produces", reason: "No scoped multi-method record exists.", source: "docs/product-truth/flows/leafcutter/retrieve-project-knowledge.flow.json" },
     ] } });
     expect(screen.getByText("Method plan")).toBeInTheDocument();
     expect(screen.getByText(/Proposed.*missing JSON binding/i)).toBeInTheDocument();
-    expect(screen.queryByText("OLD GAP")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Plan the route.")).toHaveLength(1);
     unmount();
-    show({ human: "A person approves." + marker + "OLD REASON", ioContracts: { not_applicable: "This step records a conversation, not a JSON payload." } });
+    show({ description: "A person approves.", ioContracts: { not_applicable: "This step records a conversation, not a JSON payload." } });
     expect(screen.getByText("This step records a conversation, not a JSON payload.")).toBeInTheDocument();
-    expect(screen.queryByText("OLD REASON")).not.toBeInTheDocument();
+    expect(screen.getAllByText("A person approves.")).toHaveLength(1);
   });
 
   it("labels reconstructed projections with the remaining contract obligations", () => {
@@ -122,9 +120,9 @@ describe("structured flow contracts", () => {
   ])("rejects incomplete contract shapes without hiding legacy details", (ioContracts) => {
     // covers: UXP-523-4
     // angle: boundary
-    show({ human: "Narrative" + marker + "Legacy example still needed", consumes: ["Legacy input"], produces: ["Legacy output"],
+    show({ description: "Narrative of what happens.", consumes: ["Legacy input"], produces: ["Legacy output"],
       contractDefinitions: { output: definition }, ioContracts });
-    expect(screen.getByText(/Legacy example still needed/)).toBeInTheDocument();
+    expect(screen.getByText("Narrative of what happens.")).toBeInTheDocument();
     expect(screen.getByText("Legacy input")).toBeInTheDocument();
     expect(screen.getByText("Legacy output")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -135,8 +133,8 @@ describe("structured flow contracts", () => {
     "keeps the legacy readable fallback when structured metadata is absent or unusable", (ioContracts) => {
       // covers: UXP-523-4
       // angle: failure
-      show({ human: "Narrative" + marker + "Legacy example still needed", consumes: ["Legacy input"], ioContracts, contractDefinitions: {} });
-      expect(screen.getByText(/Legacy example still needed/)).toBeInTheDocument();
+      show({ description: "Narrative of what happens.", consumes: ["Legacy input"], ioContracts, contractDefinitions: {} });
+      expect(screen.getByText("Narrative of what happens.")).toBeInTheDocument();
       expect(screen.getByText("Legacy input")).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
     },
@@ -151,12 +149,41 @@ describe("structured flow contracts", () => {
     if (key === "authority") Object.assign(contract, { authority: ["source_reviewed"] });
     else if (key === "direction") Object.assign(gap, { direction: ["produces"] });
     else Object.assign(example, { [key]: [example[key as "mode" | "origin"]] });
-    show({ human: "Narrative" + marker + "Legacy example still needed", consumes: ["Legacy input"],
+    show({ description: "Narrative of what happens.", consumes: ["Legacy input"],
       contractDefinitions: { output: contract }, ioContracts: {
         consumes: [{ contract: "output", fields }], produces: [], examples: [example], missing_bindings: [gap],
       } });
-    expect(screen.getByText(/Legacy example still needed/)).toBeInTheDocument();
+    expect(screen.getByText("Narrative of what happens.")).toBeInTheDocument();
     expect(screen.getByText("Legacy input")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+});
+
+describe("who runs the step", () => {
+  it("shows the actor kind as a plain badge beside the named agent", () => {
+    // covers: UXP-523-3
+    // angle: criterion
+    const { container } = show({ agent: "pr-reviewer", actorKind: "llm" });
+    expect(screen.getByText("Runs")).toBeInTheDocument();
+    expect(screen.getByText("pr-reviewer")).toBeInTheDocument();
+    const badge = container.querySelector('[data-actor-kind="llm"]');
+    expect(badge?.textContent).toBe("AI agent");
+  });
+
+  it.each([
+    ["deterministic", "Code"], ["jev", "Jev"], ["human", "Person"],
+  ])("labels %s in plain words even without an agent", (kind, label) => {
+    // covers: UXP-523-3
+    // angle: boundary
+    const { container } = show({ agent: null, actorKind: kind });
+    expect(container.querySelector(`[data-actor-kind="${kind}"]`)?.textContent).toBe(label);
+  });
+
+  it("shows no runner section when neither the agent nor the kind is known", () => {
+    // covers: UXP-523-3
+    // angle: failure
+    const { container } = show({ agent: null, actorKind: null });
+    expect(screen.queryByText("Runs")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-actor-kind]")).toBeNull();
   });
 });

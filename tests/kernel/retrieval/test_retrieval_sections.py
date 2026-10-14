@@ -174,6 +174,7 @@ class TestSectionsOfAnAdr(SearchCase):
                    "Neo4j was considered as an alternative too.\n")
 
     def test_the_alternatives_section_is_a_candidate_with_its_heading_in_the_locator(self) -> None:
+        # covers: DK-600a-2
         report = _search(self.root, ["docs/adrs"],
                          "What alternatives were considered for the storage backend?")
         locators = [c.locator for c in report.candidates]
@@ -194,6 +195,7 @@ class TestSectionsOfAnAdr(SearchCase):
         self.assertEqual(len(report.candidates), 1)
 
     def test_section_locators_and_hashes_match_the_text(self) -> None:
+        # covers: DK-600a-2
         report = _search(self.root, ["docs/adrs"], "alternatives considered")
         text = (self.root / "docs/adrs/ADR-057-store.md").read_text(encoding="utf-8")
         lines = text.splitlines()

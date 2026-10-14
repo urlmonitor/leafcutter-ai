@@ -1,0 +1,183 @@
+id: KM-400f-1-v
+title: "Nodes no generation record accounts for are counted and reported, not assumed absent"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: todo
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the repository holds 12 generation records
+  And 123,810 entity nodes each name a generation, and every generation so named has a record
+  When the retention policy is evaluated
+  Then the evaluation reports that 0 entity nodes name a generation with no record
+  And it reports that figure explicitly rather than leaving it out
+  And it reports the entity-node count attributed to each of the 12 generation records, summing to 123,810
+
+  Given 400 entity nodes name a generation for which no generation record exists
+  When the retention policy is evaluated
+  Then the evaluation reports that 400 entity nodes name a generation with no record, and names the generations they refer to
+  And those 400 nodes are reported as unaccounted for, and are reported neither as reclaimable nor as belonging to any generation that received a verdict
+  And every generation that does have a record still receives its own reclaimability verdict
+
+  Given 400 entity nodes name a generation with no record, and a further 200 such nodes are added
+  When the retention policy is evaluated again
+  Then the reported unaccounted figure is 600
+
+  Given the repository holds 12 generation records and no entity node names any generation
+  When the retention policy is evaluated
+  Then the evaluation reports an entity-node count of 0 for each of the 12 generation records
+  And it reports 0 unaccounted nodes
+  And a generation record with 0 attributed nodes is not reported as unaccounted for
+depends_on: [KM-400f-1, KM-400f-1-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Evaluates generation records; this record requires the entity nodes
+      attributed to them to be reconciled against those records in the same evaluation.
+  - path: docs/reference/artifact-knowledge-graph-data-map.md
+    relationship: context
+    status: exists
+    relevance: Supplies the canonical node identities and the generation tagging this
+      reconciliation counts against; no competing model is introduced.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that a reported figure states its scope; an
+      unaccounted count of zero is stated, never omitted.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The unaccounted-node figure is operator-visible, because it is the only
+      signal that reclaiming every reclaimable generation would still leave nodes behind.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: The per-generation entity-node counts and the unaccounted-node figure, which
+    KM-400f-3's headroom measurement and KM-400f-4's operator surface report.
+expects_from:
+  ac_id: KM-400f-1-i
+  contract: The full set of generation records, against which the entity nodes are
+    reconciled; a reconciliation against a filtered record set manufactures false orphans.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12. This record is deliberately about MEASUREMENT, not about reclaiming
+  orphaned nodes, and the reason is a measurement rather than a judgement.
+
+  Measured on the live hosted store, 2026-10-12: all 123,810 generation-tagged entity nodes
+  DID have a corresponding generation record. The entity-nodes-without-a-record case is
+  therefore currently HYPOTHETICAL — it has never been observed on either destroyed
+  instance. Saying so is the point. Writing criteria that specify how to reclaim an orphan
+  set nobody has seen would be inventing coverage; writing criteria that make the orphan
+  count an explicitly reported figure makes the hypothetical detectable the first time it
+  happens, at the cost of one number.
+
+  The second scenario's input is consequently a constructed case, not an observed one, and
+  the record states that rather than implying a measurement behind it. If the figure is ever
+  reported non-zero on a real store, the reclamation behaviour for those nodes becomes a new
+  record with real measurement behind it — it is not specified here.
+
+  The first scenario carries the real measurement and is the one that binds today: an
+  evaluation that reports per-generation node counts summing to the store's own total is the
+  evidence that the reconciliation actually looked at every node, which is what makes the
+  zero trustworthy. The fourth scenario separates two states that an implementation is prone
+  to conflate: a generation record with no nodes attributed to it is accounted for and
+  empty, which is not the same as a node with no record.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_fully_accounted_population_reports_an_explicit_zero_and_per_generation_counts
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With 12 generation records that record failed publications and every
+      generation-tagged node naming one of them, assert the evaluation reports 0 unaccounted
+      nodes explicitly and reports a per-generation node count whose sum equals the store's
+      own total node count.
+    covers: [KM-400f-1-v]
+    must_catch:
+      - "count nodes only within generations whose publication completed, so the per-generation counts sum to zero while the store holds 123,810"
+      - "omit the unaccounted figure when it is zero"
+      - "report a per-generation node count that does not sum to the store's own total"
+    requires_db: false
+  - name: test_unaccounted_nodes_are_counted_named_and_never_reported_reclaimable
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: Construct 400 generation-tagged nodes naming a generation for which no
+      record exists, then assert the evaluation reports the figure 400, names the generations
+      referred to, reports those nodes as unaccounted rather than reclaimable, and still
+      issues a verdict for every generation that does have a record.
+    covers: [KM-400f-1-v]
+    must_catch:
+      - "report unaccounted nodes as reclaimable, so a sweep would reclaim nodes no policy evaluated"
+      - "stop issuing verdicts for the recorded generations once an unaccounted node is found"
+      - "report that unaccounted nodes exist without stating how many or which generations they name"
+    requires_db: false
+  - name: test_unaccounted_figure_moves_with_the_unaccounted_population
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: Evaluate with 400 unaccounted nodes, add 200 more, evaluate again and assert
+      the reported figure rises from 400 to 600.
+    covers: [KM-400f-1-v]
+    must_catch:
+      - "return a literal figure that does not move with the population"
+      - "report a boolean indication that unaccounted nodes exist instead of a count"
+    requires_db: false
+  - name: test_an_empty_generation_is_accounted_for_not_unaccounted
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With 12 generation records and no node naming any generation, assert each
+      record reports a node count of 0, the unaccounted figure is 0, and no empty generation
+      record is misreported as unaccounted for.
+    covers: [KM-400f-1-v]
+    must_catch:
+      - "report a generation record with zero attributed nodes as an unaccounted-for case"
+    requires_db: false
+  - name: test_live_reconciliation_matches_a_real_backends_own_node_total
+    target_dir: tests/knowledge_live/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: Against a real database holding generations that record failed publications,
+      assert the sum of the reported per-generation node counts plus the reported unaccounted
+      figure equals the backend's own count of generation-tagged nodes.
+    covers: [KM-400f-1-v]
+    requires_db: true
+test_rationale: >-
+  The figure this record exists to produce is a zero today, and a zero is the easiest value
+  in the store to report by accident. Under KM-400f-1's existing fixture of completed and
+  retired generations, a reconciliation that counts nodes only inside completed publications
+  reports zero unaccounted and per-generation totals that look right — the same fixture bias
+  that let the whole evaluator aim at an empty population. Every fixture here reproduces the
+  REAL observed shape instead: generations whose publication FAILED, carrying no retirement
+  time, holding every node in the store, because that is the only shape under which a
+  completed-publication-only reconciliation reports a sum of zero against a store of 123,810
+  nodes and is thereby caught. The sum-equals-the-store's-own-total assertion is what
+  distinguishes a reconciliation that examined every node from one that examined none and
+  found nothing wrong. The moving-population test is required because the asserted value is
+  otherwise a literal zero, which any implementation satisfies. The unaccounted scenarios are
+  CONSTRUCTED, not observed — no real store has shown a non-zero figure — and they are
+  written to make the hypothetical detectable rather than to claim it has occurred.

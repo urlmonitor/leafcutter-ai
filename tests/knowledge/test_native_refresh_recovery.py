@@ -72,9 +72,9 @@ class _DB:
 
     async def _run(self, statement, parameters=None, write=False):
         assert not write
-        if "MATCH (r:KRRepository" in statement:
+        if "MATCH (r:Repository" in statement:
             return [{"props": {"repository_id": "repo", "active": self.active}}]
-        if "MATCH (g:KRGeneration" in statement:
+        if "MATCH (g:Snapshot" in statement:
             return [{"props": group["metadata"]} for group in self.groups]
         group = next(g for g in self.groups if g["metadata"]["key"] == parameters["key"])
         return group["edges"] if "MATCH (a)-[r]->(b)" in statement else group["nodes"]

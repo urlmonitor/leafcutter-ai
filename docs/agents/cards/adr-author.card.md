@@ -100,13 +100,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | always | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 | `doc-enforcer` | always | — |
 ---
 
@@ -123,12 +124,3 @@ flowchart TD
 |---------|---------|----------|---------------|
 | Conditional Behavior | choosing `components:` values for the ADR frontmatter | **only pick IDs | `None` |
 | Conditional Behavior | uncertain which component applies | pick the closest | `None` |
----
-
-## AC Assignments
-
-### adr-author
-
-- BO-3100d-2: A decision replaced on a false premise stays readable, marked superseded, and linked both ways
-- INF-400c-1: An ADR documents the decision on whether learning emissions reuse the existing telemetry sink
-- TKT-600a-4: ADR-010 says a generated ticket's files come from the requirement's declared-files list, and names the documentation-link derivation as the labelled legacy path

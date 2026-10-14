@@ -290,6 +290,7 @@ covered_by:
   - TQ-600a-13-xvii
   - TQ-600a-13-xviii
   - TQ-600a-13-xix
+  - TQ-600a-13-xx
 implemented_by: []
 change_target:
   - pipeline

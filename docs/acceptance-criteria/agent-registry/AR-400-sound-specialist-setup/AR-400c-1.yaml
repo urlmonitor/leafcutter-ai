@@ -1,0 +1,99 @@
+id: AR-400c-1
+title: "A grant the instructions never mention produces no message at all"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package tree in which the definition of find-structural-smells grants
+    "review-for-structural-code-smells" and its instructions never name that
+    ability,
+  When the build runs over that tree, and separately when the registry
+    validator runs over it,
+  Then neither run prints any line about find-structural-smells and
+    "review-for-structural-code-smells" -- at any severity, warning or
+    informational,
+    And the compiled prompt of find-structural-smells still lists
+      "review-for-structural-code-smells" in its abilities section,
+    And on the package's real tree, neither run prints any line of the form
+      "<specialist>: skills_invoked declares '<ability>' but no reference found
+      in template body" or "<specialist>: template references skill
+      '<ability>' but skills_invoked does not declare it".
+depends_on:
+  - AR-400c
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3.yaml
+    relationship: related
+    status: exists
+    relevance: "SUPERSEDED by this record (its registry->template direction) and AR-400b-1 (its template->registry direction)."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "Granted abilities arrive as one delivered section without prose; this is why 'granted but not mentioned' is normal."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "REMOVED, NOT QUIETED: delete check_skills_invoked_xref() (registry_validator.py ~662-759), _extract_skill_refs_from_template() (~624-659), the four regex/stop-word constants (~60-79) and the [WARNING] print loop (~133-138). No replacement message at any severity (warning, info, debug-to-stdout) for 'granted but not mentioned'."
+  - "Update the references that describe the deleted check in the same change: config/agent_registry.schema.json skills_invoked.description (~line 151, 'Cross-referenced against each agent's template body ... (check_skills_invoked_xref)'), the registry_validator.py module docstring (~lines 14-15) and unit_tests/build_guards/test_self_description_descriptive_only.py (references the function)."
+  - "The deletion must not touch delivery: agent_skills_declaration.append_declared_skills still appends the declared table for every granted ability (assert on the compiled prompt)."
+  - "Net effect on registry_validator.py is a reduction in content lines (634 measured 2026-10-12); this is the room AR-400a-1's wiring uses."
+test_spec:
+  - name: test_granted_but_unmentioned_ability_prints_nothing_in_validator_or_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Copied package slice where find-structural-smells grants review-for-structural-code-smells and its body never names it; neither the validator CLI nor build.py prints any line containing both names, at any severity."
+    must_catch:
+      - "the message is downgraded to [INFO] instead of removed"
+  - name: test_unmentioned_grant_still_reaches_the_compiled_prompt
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "The compiled find-structural-smells prompt from that build lists review-for-structural-code-smells in its delivered abilities section."
+    must_catch:
+      - "the noise is removed by removing the grant"
+  - name: test_real_tree_prints_neither_old_xref_message_form
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Validator output over the checked-out package contains no line matching \"skills_invoked declares '...' but no reference found in template body\" or \"template references skill '...' but skills_invoked does not declare it\"."
+test_rationale: >-
+  The three descriptors cover removal (no line), non-regression of delivery
+  (grant still arrives), and the real-tree proof that the old check is gone.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400c-1-i
+implemented_by: []
+notes: |
+  REMOVED, NOT QUIETED (AR-400c: "A message nobody acts on is the defect, however
+  quietly it is printed"). The second clause guards against the over-correction:
+  removing the message must not be implemented by removing the grant.
+
+  THE ELEVEN LINES THIS REMOVES (rebuild log 2026-10-12, lines 306-307, 313-317,
+  321-324): find-structural-smells, find-design-smells, workflow-architect x4,
+  adr-author/doc-enforcer, llm-expert x2, product-owner x2. Two of them --
+  adr-author/doc-enforcer and product-owner/signoff -- happen to be real dead
+  grants; that fault is AR-400c-2's, found by the user, not by this message.
+
+  The old two-direction warning check is deleted in the same change (design
+  PR-2); the third clause is the observable proof.

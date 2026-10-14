@@ -1,0 +1,77 @@
+id: AR-400d-5
+title: "The specialist-definition reference documents the project-supplied grant marking"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author reading the reference documentation for a specialist's
+    `skills:` declaration,
+  When they look up the fields a grant may carry,
+  Then the reference lists `provided_by` with its single accepted value
+    `project`, states that an absent marking means the package supplies the
+    ability,
+    And it states the lookup location, the report-not-refuse behaviour when the
+      project lacks the ability, the refusal of an unmarked grant to an
+      unshipped ability, and the deliberate override (a marked grant to a
+      shipped ability delivers the project's copy, stated at informational
+      severity),
+    And it states that a marked ability's project copy is used by every
+      specialist granting that ability, that the build never deploys over or
+      removes it, and that a marked shipped ability the project does not
+      supply falls back to the packaged copy with an informational line,
+    And its example declaration, copied into a fixture specialist, passes the
+      declaration-shape check.
+depends_on:
+  - AR-400d-3
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The `skills` row of the field table and the example block at lines 128-141 (dated snapshot)."
+assigned_agent: reference-author
+estimated_complexity: S
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "Update the `skills` row of the field table and the example block (~lines 128-141, dated snapshot) of docs/reference/agent-template-frontmatter.md; no second page."
+  - "The example declaration is copied into a fixture by the test below and must pass the build's shape check unmodified."
+  - "State the KI-BP-009 placement hazard by cross-reference while it is open, scoped to UNMARKED project abilities (marked ids are protected per user decision 10)."
+test_spec:
+  - name: test_reference_example_declaration_passes_shape_check
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "Extract the example `skills:` block from docs/reference/agent-template-frontmatter.md, place it in a fixture specialist's frontmatter, and run the build's declaration-shape check: no finding; changing its provided_by value to 'vendor' produces one."
+test_rationale: >-
+  The only falsifiable clause is the example's validity; running the real
+  shape check over the extracted block, with a mutated control, tests it.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-3
+  contract: "The accepted provided_by value set (exactly 'project') and the shape-check refusal wording."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria, second clause only: 'the two refusals (unmarked grant to an unshipped ability; marked grant to a shipped ability)' REPLACED by 'the refusal of an unmarked grant to an unshipped ability, and the deliberate override (a marked grant to a shipped ability delivers the project's copy, stated at informational severity)'. WHY: user decision 5 (BrainCandy, 2026-10-12, BA-stage Q3) turned the second refusal into a permitted, announced override (AR-400d-2-ii amended the same day); a reference documenting the old refusal would contradict the behaviour. Title, other clauses, depends_on unchanged. (Accepted by the orchestrator, 2026-10-12.)"
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: one clause ADDED -- the reference states that a marked ability's project copy is used by every specialist granting it, that the build never deploys over or removes it, and that a marked shipped ability the project does not supply falls back to the packaged copy with an informational line. WHY: user decision 10 (BrainCandy, 2026-10-12)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies AR-400d's documentation_triggers [reference-doc].

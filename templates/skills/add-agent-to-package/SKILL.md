@@ -95,8 +95,13 @@ Append an entry to `leafcutter/config/agent_registry.json` inside the `agents` a
 }
 ```
 
-Adjust `spawn_allowlist`, `spawned_by`, `is_ticket_phase`, and `selection_criteria` to match
+Adjust `spawned_by`, `is_ticket_phase`, and `selection_criteria` to match
 the agent's actual behaviour. The template above is the minimal starting point.
+
+Do NOT grant abilities here. `spawn_allowlist` and `skills_used` / `skills_invoked` are
+derived copies: leave them empty and declare the agent's sub-agents and skills in the
+template frontmatter (`spawn_allowlist:` / `skills:`, beside `tools:`). The "Transform
+agent registry" pre-commit hook regenerates the registry fields from those declarations.
 
 ## Step 5 — Update docs/agents/README.md
 

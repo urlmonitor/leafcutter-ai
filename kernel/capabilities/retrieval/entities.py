@@ -36,8 +36,8 @@ class QueryEntities:
     ids: tuple[str, ...] = ()
     paths: tuple[str, ...] = ()
     names: tuple[str, ...] = ()
-    #: Question words to look for in paths (includes generic words like "decision").
     words: tuple[str, ...] = ()
+    """Question words to look for in paths (includes generic words like "decision")."""
 
     def __bool__(self) -> bool:
         """True if the question named at least one identifier (path words do not count)."""

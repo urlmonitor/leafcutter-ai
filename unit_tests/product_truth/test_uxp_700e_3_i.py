@@ -53,7 +53,7 @@ def _journey(flow_id: str, steps: list[dict], branches: list[dict] | None = None
 
 
 def _step(step_id: str, order: int, **extra) -> dict:
-    return {"id": step_id, "label": step_id, "human": f"the actor does {step_id}", "order": order,
+    return {"id": step_id, "label": step_id, "description": f"the actor does {step_id}", "actor_kind": "human", "order": order,
             "io_contracts": {"not_applicable": "This actor action tests expansion-reference shapes and exchanges no JSON."}, **extra}
 
 

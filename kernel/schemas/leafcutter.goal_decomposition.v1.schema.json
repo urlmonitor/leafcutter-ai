@@ -5,6 +5,7 @@
       "description": "One proposed part: its id, text, the verbatim span it quotes, dependencies and capability.",
       "properties": {
         "child_capability": {
+          "description": "Whether the part is run as a decision or as research.",
           "enum": [
             "decision",
             "research"
@@ -13,11 +14,13 @@
           "type": "string"
         },
         "covers": {
+          "description": "The words of the request this part quotes verbatim; a part whose quote is not found is dropped.",
           "minLength": 1,
           "title": "Covers",
           "type": "string"
         },
         "depends_on": {
+          "description": "Ids of parts that must be settled before this one runs.",
           "items": {
             "type": "string"
           },
@@ -25,6 +28,7 @@
           "type": "array"
         },
         "id": {
+          "description": "Short id other parts cite in depends_on.",
           "minLength": 1,
           "title": "Id",
           "type": "string"
@@ -32,10 +36,12 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "text": {
+          "description": "The part written as one question that stands alone.",
           "minLength": 1,
           "title": "Text",
           "type": "string"
@@ -66,9 +72,11 @@
         }
       ],
       "default": null,
+      "description": "The host's suggestion for asking the request as one bounded question; shown as a hint after a jev_none rejection, never run.",
       "title": "One Question Rewording"
     },
     "parts": {
+      "description": "The parts the host proposes; a proposal the kernel checks, never a fact.",
       "items": {
         "$ref": "#/$defs/PartProposal"
       },
@@ -79,6 +87,7 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     }

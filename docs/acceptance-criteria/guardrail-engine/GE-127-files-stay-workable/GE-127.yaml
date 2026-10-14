@@ -79,7 +79,27 @@ delivers_to: null
 expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-01
-amended_by: []
+amended_by:
+  - reason: adopt-seventh-l1
+    date: '2026-10-09'
+    by: business-analyst
+    entry: >-
+      covered_by gained GE-127g ("A document nobody writes by hand is not judged by a
+      limit written for one, and you can see that it was set aside"), taking this L0 from
+      6 of 7 L1 children to 7 of 7. NO L1 HEADROOM REMAINS UNDER THIS GOAL and there is no
+      child_limit_override; the next scope-shaped record in this family needs a new L0 or a
+      split. GE-127g is the OUTWARD half of GE-127c's reach decision — which kinds of
+      document are NOT judged, and on what stated ground — and it is a sibling L1 rather
+      than a GE-127c child for a mechanical reason, not a semantic one: GE-127c is the
+      right parent on the merits but is work_status done, and check_done_proof proves a
+      done composite by its children being done-and-covered, so adding a todo child would
+      stage the ACD-400a falsely-done-composite defect alongside it. The same objection
+      rules out GE-127a, GE-127b, GE-127d and GE-127e, all done; GE-127f is todo with one
+      free slot but owns the two-for-one removal obligation rather than scope. The L1 CUT
+      note below is unchanged and is not repealed: GE-127g is a GUARANTEE (where there is
+      no author, the standard does not apply, and that is said out loud), not a point patch
+      against an observed shortcoming. Full reasoning, including the two settled design
+      questions, is in GE-127g's own notes.
 superseded_by: null
 covered_by:
   - GE-127a
@@ -88,6 +108,7 @@ covered_by:
   - GE-127d
   - GE-127e
   - GE-127f
+  - GE-127g
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

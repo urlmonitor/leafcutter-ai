@@ -90,6 +90,16 @@ it_requirements:
     `@pytest.mark.timing_ratio` on the method (or on their two single-test classes), plus
     any other default-run ratio assertion the implementer finds by review, each named in
     the PR description;
+    *** CORRECTION 2026-10-12: THIS STEP IS HISTORICAL AND ITS SECOND TEST NO LONGER
+    EXISTS. This record is work_status done — the marking below was performed on
+    2026-10-08 — so nothing here is an outstanding instruction. But read it with the
+    deletion in mind rather than as a list to re-apply:
+    `test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline`
+    was DELETED on 2026-10-12 by the agent-cards-static change, because it was written
+    against `_scan_all_ac_assignments` — the whole-AC-store walk that change removes.
+    `TestTq600a11ParserSpeed::test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser`
+    survives and remains marked. Anyone re-applying this step would be re-creating a
+    test for deleted code. ***
     (3) `.github/workflows/post-merge-timing.yml`, name `Post-merge timing suite`:
     triggers `push` to main, `schedule` at least every 12 hours off the hour (for example
     `41 2,14 * * *`, deliberately not the correctness suite's minute), and
@@ -144,6 +154,15 @@ it_requirements:
     recorded descriptions because the second one is on main and not in this record's
     branch. The implementer lists every default-run wall-clock ratio assertion found by
     review in the change. Mechanical detection of "asserts a ratio" is not required.
+    *** UPDATE 2026-10-12: THE INVENTORY IS NOW ONE, AND "THE MINIMUM" IS THE CLAUSE
+    THAT MADE THAT SURVIVABLE. The agent-card store-walk test was deleted on 2026-10-12
+    with the code it measured; the parser-speed test remains and is still marked. This
+    item said from the outset that two was a floor rather than a closed set, so neither
+    the criteria nor this requirement is falsified by the count changing — which is
+    precisely why it was worth writing that way. The one thing it did NOT anticipate is
+    that the guard implementing this record hardcodes the inventory rather than deriving
+    it from the marker, so the count moving broke the guard rather than being absorbed
+    by it. See the notes for that finding. ***
   - >-
     DURATIONS. Removing tests from the default collection changes pytest-split's id set;
     regenerate .github/test_durations.json through test-durations.yml once, after the
@@ -189,9 +208,18 @@ test_spec:
       - "the marker is registered inside addopts, or misspelled, so `-m timing_ratio` selects nothing"
       - "the marker is applied but pytest ignores it on the unittest.TestCase method"
     description: >-
-      Each of the two named tests appears in the timing-lane collection and not in the
-      default collection; the other TQ-600a-11 tests stay in the default collection (so
-      the move did not take the whole file).
+      Each marked ratio test appears in the timing-lane collection and not in the
+      default collection; the other tests in the same file stay in the default
+      collection (so the move did not take the whole file). AMENDED 2026-10-12: this
+      read "each of the two named tests" and named a count that is now one. The
+      agent-card store-walk test was deleted on 2026-10-12 with the code it measured;
+      the surviving marked test is
+      `TestTq600a11ParserSpeed::test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser`.
+      THE ASSERTION IS UNCHANGED IN SUBSTANCE — it was always "each ratio test is in
+      exactly one of the two collections", and the count was incidental to it. Stated
+      without a count here deliberately: the implementing guard should derive its
+      inventory from the marker rather than carry a literal, and a descriptor that
+      names a number invites the literal it is trying to prevent.
   - name: test_tq600a_13_xix_the_timing_workflow_goes_red_on_a_failing_ratio_test
     target_dir: unit_tests/suite_performance/
     framework: unittest
@@ -236,6 +264,74 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-08'
+- reason: one-of-the-two-named-ratio-tests-deleted-inventory-reduced-to-one
+  by: business-analyst
+  at: '2026-10-12'
+  note: >-
+    criteria UNTOUCHED. status (active), req_status, work_status (done), readiness
+    (approved), priority, depends_on, declared_files, covered_by and implemented_by
+    are all UNTOUCHED — this record's behaviour still exists and still works, and
+    nothing here is a retirement. Three stale references are corrected in place
+    (one it_requirements step, the INVENTORY item, one test_spec description) and the
+    notes gain the finding.
+
+
+    WHAT HAPPENED. The agent-cards-static change (2026-10-12) makes agent cards static
+    by removing the trailing per-agent AC-assignment section, which deletes
+    `_scan_all_ac_assignments` — the whole-AC-store walk the card generator performed
+    once per build. One of the two timing-ratio tests this record moved into the timing
+    lane,
+    `TestTq600a11AgentCardWalk::test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline`,
+    was written against that walk and was DELETED with it. THE REMAINING MARKED RATIO
+    TEST IS
+    `TestTq600a11ParserSpeed::test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser`,
+    which measures the PARSER rather than any entry point and is unaffected. The guard
+    implementing this record carries a hardcoded inventory of the tests it expects in
+    the timing lane; that tuple was reduced from two to one in the same change.
+
+
+    WHY THE CRITERIA ARE NOT AMENDED, HAVING BEEN READ RATHER THAN ASSUMED. The Then
+    clause is general — "each default-run test that asserts a wall-clock ratio carries
+    the timing marker, is absent from the default collection, and is collected by the
+    timing lane" — and is satisfied by one test exactly as by two. The two tests appear
+    only in the GIVEN, as a description of what the default run collected on 2026-10-08
+    ("at least TQ-600a-11's store-sweep test ... and its agent-card store-walk test"),
+    and that Given is introduced by "at least". The INVENTORY it_requirement says the
+    same thing in as many words: "the two named tests are the MINIMUM". So the record
+    was written to survive the count changing and it has. What is stale is the worked
+    EXAMPLE, not the requirement — a reader would otherwise look for a test that cannot
+    be found, which is the only harm and is what this entry fixes.
+
+
+    THE SOURCE RECORD OF THE DELETED TEST IS ALSO GONE, WHICH MATTERS FOR ANYONE
+    FOLLOWING THE TRAIL. TQ-600a-11 was retired on 2026-10-09 (status deprecated,
+    req_status superseded, readiness reviewed, test_spec cleared) because its subject —
+    the one whole-store walk whose volume admitted the C-backed YAML parser — is the
+    walk this change deletes. Its doc_link from this record still resolves; a
+    deprecated record is retained for audit. The descriptor for the deleted test is
+    preserved in that record's notes under "THE RETIRED TEST CONTRACT", so the full
+    text of what it asserted is recoverable even though the test is not.
+
+
+    NOTHING IS DEMOTED AND NOTHING SHOULD BE. Unlike the five records retired on
+    2026-10-09, this one's behaviour is intact: the timing lane exists, the marker is
+    registered, the partitioning addopts are in place, the post-merge workflow runs, and
+    a ratio test still leaves the default run into that lane. A guard that needed a
+    one-line inventory correction is a working guard, not a false one.
+
+
+    THE GENERALISED FINDING MOVED TO ITS CANONICAL HOME (same day, second pass). This
+    record's notes first carried the full write-up of the defect class this incident
+    belongs to. It is now assembled with its two siblings on INF-600b-2 under "THREE
+    WAYS A RECORD OR A GUARD CAN BE TRUE-LOOKING AND WRONG", because the three only
+    work as a set and a reader meeting the other two there would never find a third
+    shape filed under timing lanes. WHAT STAYS HERE IS THE INCIDENT AND WHAT IS
+    ACTIONABLE AT THIS GUARD: the defect named, the by-inspection tell, why it took
+    three days and a CI run, the fact that this record's own INVENTORY requirement
+    anticipated the population moving and still did not prevent it, the BP-1600a
+    address for the cure, and the warning that a marker-derived inventory can make the
+    lane vacuously passable. Someone arriving here has the whole story; someone wanting
+    the family goes to INF-600b-2.
 superseded_by: null
 covered_by:
 - unit_tests/suite_performance/test_tq_600a_13_xix.py
@@ -256,3 +352,88 @@ notes: |
 
   LIVE OBSERVATION TO RECORD HERE: the first `Post-merge timing suite` run on main, its
   conclusion, and the two tests' measured ratios on the hosted runner.
+
+  FIRST LIVE RUNS (2026-10-08, runs 37831700317 and 37831863518 on main): conclusion
+  FAILURE, but not from the lane's own tests — both timing_ratio tests PASSED ("2 passed,
+  9769 deselected"). The run went red on 4 collection errors (ModuleNotFoundError in
+  tests/test_check_feedback_id.py, tests/test_check_mermaid_complexity.py,
+  tests/test_transform_decision_history.py, unit_tests/test_link_feedback_resolve.py):
+  pytest imports every test module to evaluate `-m`, and those modules import build outputs.
+  The "no build step is needed" claim in it_requirements was therefore wrong for a
+  whole-suite selection; the workflow now runs `python scripts/build.py --target-dir .`
+  before the lane, as ci.yml's shards do. The ratios themselves are not printed by the
+  tests on success; the next green run is the first clean observation.
+
+  SECOND LIVE EVENT (2026-10-12): ONE OF THE TWO MOVED TESTS WAS DELETED, AND THIS
+  RECORD'S GUARD WENT RED THREE DAYS LATER IN CI. The agent-cards-static change removed
+  `_scan_all_ac_assignments`, and with it
+  `TestTq600a11AgentCardWalk::test_tq600a_11_the_agent_card_store_walk_beats_a_fifth_of_its_same_sitting_pure_python_baseline`.
+  The failure surfaced not at the deletion but in
+  unit_tests/suite_performance/test_tq_600a_13_xix.py:
+  `AssertionError: TestTq600a11AgentCardWalk::...baseline is not collected by the timing
+  lane`. The surviving marked ratio test is
+  `TestTq600a11ParserSpeed::test_tq600a_11_store_sweep_is_at_least_five_times_faster_than_the_pure_python_parser`.
+  The guard's hardcoded inventory was reduced from two to one in the same change.
+
+  ==========================================================================
+  WHAT THIS INCIDENT IS AN INSTANCE OF — CANONICAL WRITE-UP ON INF-600b-2.
+  ==========================================================================
+  THE DEFECT, NAMED: a guard whose subject is a POPULATION, implemented against a
+  LITERAL LIST of that population's current members. This record's criteria quantify
+  — "each default-run test that asserts a wall-clock ratio" — and its guard carried a
+  tuple of the two tests that satisfied that description on 2026-10-08. When one was
+  legitimately deleted on 2026-10-12 the tuple was wrong, and the guard reported the
+  absence as its own failure.
+
+  THE TELL, KEPT HERE BECAUSE IT IS CHECKABLE BY INSPECTION AND THIS IS WHERE THE
+  GUARD LIVES: a criterion that quantifies over a population while the implementation
+  holds a literal list of that population's current members. The criterion is general;
+  the implementation is an inventory; the gap is filled silently by whoever next
+  changes the population.
+
+  WHY IT TOOK THREE DAYS AND A CI RUN RATHER THAN BEING CAUGHT AT THE DELETION: the
+  failure is remote in TIME (deleted one day, red on a later run, never in the editor),
+  in SPACE (deleted code in scripts/, deleted test in unit_tests/ac_store/, breakage in
+  unit_tests/suite_performance/ — three directories, no import edge, invisible to a
+  grep for the deleted symbol), and in OWNERSHIP (whoever deletes a card-generation
+  function has no reason to think about a timing lane's inventory). Nothing at deletion
+  time connected the two.
+
+  WORTH RECORDING AGAINST THIS RECORD SPECIFICALLY: its own INVENTORY it_requirement
+  DID anticipate the population moving — "the two named tests are the minimum" — and
+  that did not prevent this, because it governed the record's wording rather than the
+  guard's construction. Writing "this list is a floor" into a requirement does not stop
+  an implementer hardcoding the floor.
+
+  THE CURE, AND ITS ADDRESS: BP-1600a already owns this rule — "the population a check
+  walks is taken from reality, never from a list that can omit things" — and
+  BP-1600a-2 carries the anti-literal control that defeats it (add one member, require
+  the check's own stated count to rise by one, both numbers read from its output). This
+  defect is BP-1600a's in the OPPOSITE DIRECTION: a list that retains a deleted member
+  rather than omitting an added one. For this guard the cure means deriving the
+  expected inventory from the `timing_ratio` MARKER rather than from a tuple, since the
+  marker is already the mechanism these criteria name. GO TO BP-1600a BEFORE
+  RE-DERIVING ANY OF THIS.
+
+  BUT DO NOT APPLY THAT CURE CARELESSLY HERE, because it can make this guard weaker
+  while looking more principled: a marker-derived inventory makes "zero marked tests"
+  trivially self-consistent — zero found, zero expected, green. This record's criteria
+  already require that "a lane that collects no test at all also concludes red", and
+  that clause must be asserted INDEPENDENTLY of the derivation or the lane becomes
+  vacuously passable.
+
+  THE FAMILY, AND WHERE TO READ IT. This is the third of three distinct shapes of one
+  failure — something that LOOKS verified and is not — all found in four days in this
+  subtree. The other two are a disjunctive `When` marked done (which tells you one
+  carrier works, never which) and a present-tense field used to store history (three
+  fields, three gates, one error). THE CANONICAL WRITE-UP OF ALL THREE, WITH THE
+  BP-1600a CONNECTION IN FULL, IS ON INF-600b-2's NOTES under "THREE WAYS A RECORD OR
+  A GUARD CAN BE TRUE-LOOKING AND WRONG". They are assembled there rather than here
+  because they only work as a set, and a reader meeting the other two would never find
+  a third shape filed under timing lanes.
+
+  NOT DONE HERE, AND DELIBERATELY NOT FOLDED IN. Redesigning the guard to derive its
+  inventory from the marker is a change to a built record's implementation, which is
+  out of scope for an amendment pass. It is filed as its own record, carrying the
+  vacuous-pass warning above. The immediate CI red is fixed by correcting the tuple,
+  which is the right minimal action and is being done separately.

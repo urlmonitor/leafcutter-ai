@@ -17,7 +17,8 @@
       "properties": {
         "approval_status": {
           "$ref": "#/$defs/ApprovalStatus",
-          "default": "not_required"
+          "default": "not_required",
+          "description": "Where the criterion stands in the human approval track; a generated criterion must enter it."
         },
         "approved_by": {
           "anyOf": [
@@ -29,6 +30,7 @@
             }
           ],
           "default": null,
+          "description": "Human who approved the criterion; required once it is approved.",
           "title": "Approved By"
         },
         "decision_basis": {
@@ -41,16 +43,19 @@
             }
           ],
           "default": null,
+          "description": "Optional note on the principle or source behind the criterion; carried for readers, not interpreted by the kernel.",
           "title": "Decision Basis"
         },
         "id": {
+          "description": "Stable id that assessments and rankings use to refer to this criterion.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "kind": {
           "$ref": "#/$defs/CriterionKind",
-          "default": "evidence_answerable"
+          "default": "evidence_answerable",
+          "description": "Whether evidence can settle this criterion; Jev classifies it once (kind_source \"jev\")."
         },
         "kind_source": {
           "anyOf": [
@@ -62,15 +67,18 @@
             }
           ],
           "default": null,
+          "description": "Who set `kind`: None means not classified yet (the decision asks Jev once).",
           "title": "Kind Source"
         },
         "priority": {
           "$ref": "#/$defs/Priority",
-          "default": "required"
+          "default": "required",
+          "description": "Whether the criterion blocks resolution (required) or only adds weight to the ranking (supporting)."
         },
         "proposal_status": {
           "$ref": "#/$defs/ProposalStatus",
-          "default": "supplied"
+          "default": "supplied",
+          "description": "Whether the caller supplied the criterion or a generator proposed it, which decides if approval is needed."
         },
         "proposed_by": {
           "anyOf": [
@@ -82,9 +90,11 @@
             }
           ],
           "default": null,
+          "description": "Actor that proposed the criterion, for accountability.",
           "title": "Proposed By"
         },
         "question": {
+          "description": "The question an option must satisfy, answered from evidence or by judgement.",
           "minLength": 1,
           "title": "Question",
           "type": "string"
@@ -92,6 +102,7 @@
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
@@ -105,6 +116,7 @@
             }
           ],
           "default": null,
+          "description": "Optional note on what the criterion applies to when narrower than the decision; carried for readers, not interpreted by the kernel.",
           "title": "Scope"
         },
         "weight_rule": {
@@ -117,6 +129,7 @@
             }
           ],
           "default": null,
+          "description": "Optional note on how the criterion is weighed against others; carried for readers, not interpreted by the kernel.",
           "title": "Weight Rule"
         }
       },
@@ -142,7 +155,8 @@
       "properties": {
         "approval_status": {
           "$ref": "#/$defs/ApprovalStatus",
-          "default": "not_required"
+          "default": "not_required",
+          "description": "Where the option stands in the human approval track; a generated option must enter it."
         },
         "approved_by": {
           "anyOf": [
@@ -154,9 +168,11 @@
             }
           ],
           "default": null,
+          "description": "Human who approved the option; required once it is approved.",
           "title": "Approved By"
         },
         "assumptions": {
+          "description": "Premises that must hold for this option to be right, kept verbatim so a reader can challenge them.",
           "items": {
             "type": "string"
           },
@@ -165,22 +181,26 @@
         },
         "description": {
           "default": "",
+          "description": "What choosing this option means in practice, so it can be judged against the criteria.",
           "title": "Description",
           "type": "string"
         },
         "id": {
+          "description": "Stable id that criterion assessments and the final selection use to refer to this option.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
           "title": "Id",
           "type": "string"
         },
         "named_in_goal": {
           "default": false,
+          "description": "A host's claim that the caller's goal names this option; the kernel verifies the wording.",
           "title": "Named In Goal",
           "type": "boolean"
         },
         "proposal_status": {
           "$ref": "#/$defs/ProposalStatus",
-          "default": "supplied"
+          "default": "supplied",
+          "description": "Whether the caller supplied the option or a generator proposed it, which decides if approval is needed."
         },
         "proposed_by": {
           "anyOf": [
@@ -192,15 +212,18 @@
             }
           ],
           "default": null,
+          "description": "Actor that proposed the option, for accountability.",
           "title": "Proposed By"
         },
         "schema_version": {
           "const": "1.0",
           "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
           "title": "Schema Version",
           "type": "string"
         },
         "source_refs": {
+          "description": "Evidence ids or references this option rests on; grounding checks that generated options cite real evidence.",
           "items": {
             "type": "string"
           },
@@ -208,6 +231,7 @@
           "type": "array"
         },
         "title": {
+          "description": "Short name shown to people choosing between options.",
           "minLength": 1,
           "title": "Title",
           "type": "string"
@@ -246,6 +270,7 @@
   "description": "leafcutter.options.v1: every option is a proposal, never pre-approved.",
   "properties": {
     "named_options": {
+      "description": "Options the goal names, verified by the kernel (supplied, never proposals). Kernel-set only.",
       "items": {
         "$ref": "#/$defs/Option"
       },
@@ -253,6 +278,7 @@
       "type": "array"
     },
     "options": {
+      "description": "Candidate options the host generated; every one is a proposal awaiting approval.",
       "items": {
         "$ref": "#/$defs/Option"
       },
@@ -260,6 +286,7 @@
       "type": "array"
     },
     "proposed_criteria": {
+      "description": "Criteria the host suggests; every one is a proposal awaiting approval.",
       "items": {
         "$ref": "#/$defs/Criterion"
       },
@@ -269,10 +296,12 @@
     "schema_version": {
       "const": "1.0",
       "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
       "title": "Schema Version",
       "type": "string"
     },
     "unresolved_feasibility": {
+      "description": "Feasibility facts the host could not settle; they become targeted research.",
       "items": {
         "type": "string"
       },

@@ -403,10 +403,8 @@ graph TD
     strategy_builder --> research_agent
     workflow_architect["workflow-architect"]
     adr_author["adr-author"]
-    architect_review_deep["architect-review-deep"]
     architecture_author["architecture-author"]
     architecture_diagram_author["architecture-diagram-author"]
-    conflict_resolver_deep["conflict-resolver-deep"]
     explanation_author["explanation-author"]
     how_to_author["how-to-author"]
     onboarding_agent["onboarding-agent"]
@@ -490,8 +488,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | Name | Tier | Visibility | Slash command(s) | Notes |
 |---|---|---|---|---|
 | [adr-author](coding/adr-author.md) | Sonnet | Internal | — | Dispatched by `documentation-expert`; produces correctly-numbered ADRs in `docs/architecture/`. [EPIC-CodingAgents ticket 22] |
-| [architect-review](coding/architect-review.md) | Sonnet | Internal | — | Sonnet → Opus gatekeeper; escalates structural-impact reviews to `architect-review-deep` (Opus). [EPIC-CodingAgents ticket 03] |
-| `architect-review-deep` | Opus | Internal | — | Spawned by `architect-review` for structural-impact reviews. [EPIC-CodingAgents ticket 03] |
+| [architect-review](coding/architect-review.md) | Sonnet | Internal | — | Sonnet gatekeeper; classifies impact as small or large and handles both itself (no Opus escalation tier exists; see KI-AR-004). [EPIC-CodingAgents ticket 03] |
 | [architecture-author](coding/architecture-author.md) | Sonnet | Internal | — | Dispatched by `documentation-expert`; non-ADR architecture docs (system designs, data flow, diagrams). [EPIC-CodingAgents ticket 23] |
 | [architecture-diagram-author](coding/architecture-diagram-author.md) | Sonnet | Internal | — | C4 mermaid diagram specialist; always loads `write-c4-diagram` skill; validates tier and produces frontmatter + skeleton + legend in one pass. [EPIC-ArchitectureDocs ticket 26] |
 | [business-analyst](coding/business-analyst.md) | Sonnet | Internal | — | Clarifies business intent / value / success criteria; first stage in ticket-creation pipeline. [EPIC-CodingAgents ticket 01] |
@@ -499,8 +496,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [brainstorm-worker](coding/brainstorm-lead.md#5-brainstorm-worker-constraints-single-perspective-analyst) | Sonnet | Internal | — | Single-perspective analyst spawned only by `brainstorm-lead`. Receives a question + perspective lens; returns a strict `{perspective, recommendation, rationale, risks}` block. Does NOT spawn sub-agents. [EPIC-AgentSupervisor ticket 09] |
 | [command-step-runner](coding/command-step-runner.md) | Haiku | Internal | — | Runs exactly one given command, once, in the named workspace, and hands back its exit status, stdout and stderr untouched; holds no allow-list of commands and no judgement. Dispatched by the fast lane for command steps. [BO-2400a-1-i] |
 | [commit](coding/commit.md) | Sonnet | Confirmation-gated | `/commit` | Confirmation-gated commit; auto-fixes pre-commit hook failures via `precommit-autofix` (Haiku/Sonnet routing); single retry. [EPIC-CodingAgents ticket 09] |
-| [conflict-resolver](coding/conflict-resolver.md) | Sonnet | Internal | — | Sonnet → Opus gatekeeper; spawned by `pull-request` on merge conflicts. Escalates structural conflicts to `conflict-resolver-deep` (Opus). [EPIC-CodingAgents ticket 11] |
-| `conflict-resolver-deep` | Opus | Internal | — | Spawned by `conflict-resolver` for structural merge conflicts. [EPIC-CodingAgents ticket 11] |
+| [conflict-resolver](coding/conflict-resolver.md) | Sonnet | Internal | — | Sonnet; spawned by `pull-request` on merge conflicts. Resolves line-by-line and structural conflicts itself (no Opus escalation tier exists; see KI-AR-004). [EPIC-CodingAgents ticket 11] |
 | [create-epic](coding/create-epic.md) | Haiku | Internal | — | Scaffolds folder + Master_Plan + N stub tickets; fans out N parallel `create-ticket` calls. Invoked by `create-ticket` when deliverables_count > 3. [EPIC-CodingAgents ticket 04] |
 | [create-ticket](coding/create-ticket.md) | Sonnet | User-facing | `/create-ticket` | Single user entry for ticket creation — orchestrates BA → refinement + architect-review or create-epic. [EPIC-CodingAgents ticket 05] |
 | [database-agent](coding/database-agent.md) | Sonnet | Confirmation-gated | `/database` | Apply migrations, reload SQL, schema-check, worker ops, prod-sql-deploy. [EPIC-CodingAgents ticket 13] |
@@ -518,6 +514,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [reference-author](coding/reference-author.md) | Sonnet | Internal | — | Dispatched by `documentation-expert`; lookup-oriented reference docs (API, schema, glossary). [EPIC-CodingAgents ticket 24] |
 | [refinement](coding/refinement.md) | Sonnet | Internal | — | Five-lens technical clarifying-question pass; delegates codebase questions to `research-agent`. [EPIC-CodingAgents ticket 02] |
 | [research-agent](coding/research-agent.md) | Sonnet | Internal | — | Central context-gathering hub; owns all cross-cutting search (Grep/Glob + jcodemunch/serena/context7); exempt from strict-research-delegation rule. [EPIC-CodingAgents ticket 00] |
+| restructuring-specialist (reference doc pending) | Sonnet | Internal | — | Brought in by a run after a refusal, as a party separate from every coder; restructures named code to meet a complexity or file-size demand without changing behaviour. Applies `complexity-reduction` only when the demand is about complexity and reports it in a machine-readable `skills_applied` field. [INF-800f-1] |
 | [sql-coder](coding/sql-coder.md) | Sonnet | User-facing | `/sql-coder` | Orchestrator; dispatches SQL specialist sub-agents (table/index/procedure/function/view/query/test-writer) by artifact; owns local-deploy + `sql-test` gate. Portable — reads `.agents/agents/sql-coder/PROJECT_CONTEXT.md` at startup. [EPIC-PortableSQLAgents ticket 03] |
 | [sql-function-creator](coding/sql-function-creator.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; SQL functions (volatility-aware, language-aware). [EPIC-CodingAgents ticket 18] |
 | [sql-index-creator](coding/sql-index-creator.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; file-based indexes under `sql_functions/schema/indexes/` (NOT Alembic). [EPIC-CodingAgents ticket 16] |
@@ -527,6 +524,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [sql-query](coding/sql-query.md) | Sonnet | User-facing | `/sql-query` | Ad-hoc SELECT query authoring; invokes `sql-query-past-queries` skill to surface reusable prior queries; never executes autonomously. Portable. [EPIC-PortableSQLAgents ticket 05] |
 | [sql-test-writer](coding/sql-test-writer.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; authors SQL test files using transaction-rollback isolation (`unittest.TestCase`); reads PROJECT_CONTEXT for test_folder, framework, slow_test_marker. Portable. [EPIC-PortableSQLAgents ticket 06] |
 | [status-checker](coding/status-checker.md) | Sonnet | User-facing | `/status` | Investigates ticket state via git + prod-puller; closes confirmed-done tickets on explicit user request. [EPIC-CodingAgents ticket 08] |
+| [test-breaker](coding/test-breaker.md) | Sonnet | Internal | — | Read-only wrong-version preparer; for each named wrong version a guarding test must catch, replies with the minimal exact-match replacement or `could_not_prepare`. Dispatched by build routes ahead of the shared runner; the writer step makes the copies and manifest. [TQ-500g-1-iv] |
 | [test-runner](coding/test-runner.md) | Sonnet | User-facing | `/test` | Picks right suite from diff; structured failure report; auto-trigger for `python-coder`/`sql-coder` inner loops. Now runs after `test-writer` in the phase sequence. [EPIC-CodingAgents ticket 26] |
 | [test-writer](coding/test-writer.md) | Sonnet | Internal | — | Phase agent dispatched by `ticket-supervisor` when a ticket has a non-empty `test_requirements.tests` array; writes test files using the correct framework and setUp/tearDown pattern; runs after `python-coder`, before `test-runner`. [EPIC-PortableDevWorkflow ticket 36] |
 | [ticket-supervisor](coding/ticket-supervisor.md) | Sonnet | Internal | — | Drives a single ticket through its phase agents (read `agents:` map → spawn next `needed` → parse comment → route ok/handoff/blocker/question); runs failure-adjudication ladder; holds the commit-phase lock. Invoked only by `epic-supervisor`. [EPIC-AgentSupervisor ticket 08] |

@@ -408,7 +408,15 @@ class TestTQ600a1SharedReferenceLayout(unittest.TestCase):
                 call_count["n"] += 1
             return real_run(cmd, *args, **kwargs)
 
-        with mock.patch("subprocess.run", side_effect=_counting_run):
+        # Start from a cold producer: an earlier test in this same worker may already
+        # have produced the run's shared layout (in-process cache AND the on-disk
+        # published copy), which would make this count 0 depending on test order.
+        producer = importlib.import_module("scripts.suite_performance._shared_layout_producer")
+        cold_base = Path(self._tmp.name) / "cold-run-base"
+        with mock.patch.object(producer, "_cached_root", None), \
+                mock.patch.object(producer, "_cached_error_message", None), \
+                mock.patch.object(producer, "run_base_dir", return_value=cold_base), \
+                mock.patch("subprocess.run", side_effect=_counting_run):
             roots = [plugin.get_or_produce_shared_layout() for _ in range(50)]
 
         self.assertEqual(

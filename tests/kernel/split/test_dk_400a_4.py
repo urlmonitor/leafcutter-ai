@@ -196,12 +196,11 @@ class TestFlowNodeRecordsBuiltBehaviour(unittest.TestCase):
         """The node is no longer not_started and says the built behaviour (DK-400a-4)."""
         node = self._node()
         self.assertIn(node["impl_status"], ("in_progress", "done"))
-        text = node["human"]
-        self.assertIn("Built in DK-400a-4", text)
-        self.assertIn("never checked for bundling", text)
-        self.assertIn("split.enabled", text)
-        self.assertNotIn("Only the bundle judgement that finds the subject single is not built",
-                         text)
+        self.assertTrue(node.get("impl_asof"))
+        self.assertIn("DK-400a-4", node["implements"])
+        # The "never checked for bundling" narrative is no longer in the description (code-free
+        # rule); the stated behaviour that remains is the blocked ending.
+        self.assertIn("blocked", node["description"])
 
     def test_flow_node_keeps_io_contracts_intact(self) -> None:
         # covers: DK-400a-4

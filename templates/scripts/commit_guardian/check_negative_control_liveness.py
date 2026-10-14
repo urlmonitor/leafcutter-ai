@@ -212,6 +212,25 @@ DECISION HISTORY
   line`'s lines, `_exit_code_for`'s exit code) is untouched; the existing
   OSError log-and-raise on the write path is untouched.
   (#GE-120g-4)
+- 2026-10-12 [python-coder, GE-120g-4-i]: `_build_records`' examined branch
+  built a fresh `currently` stamped with today's date and evidence every run
+  and assigned it unconditionally, so on any day after the manifest was
+  built a re-observed identical verdict still differed from the stored one
+  and the file was rewritten (measured 2026-10-12: a record backdated one
+  day was rewritten by a single run), failing the next commit's
+  check-output-drift. The assignment is now conditional on
+  `ncp.same_verdict()` returning False (equal state, evidence length, and
+  per-position command + exit_code; output text and date ignored; a blocked
+  record's absent exit_code on both sides is equal). When the verdict is the
+  same the stored dict is left untouched, so main()'s deepcopy comparison
+  (unchanged) sees no change and skips the write. `observed` therefore now
+  means the date the current verdict was FIRST observed. `_examine` still
+  runs both subprocesses every run; printed lines and exit code unchanged.
+  KNOWN CONSEQUENCE: changing only the declared acceptable command of a
+  still-non-discriminating pair is not a change (the command lives only in
+  `output` there); accepted. The helper lives in
+  `_negative_control_pairing.py` (no headroom here).
+  (#GE-120g-4-i)
 ====================================================================
 """
 
@@ -681,7 +700,8 @@ def _build_records(hooks: list[dict], check_ids: list[str] | None) -> list[dict]
             currently, demonstration, stated_entry_point, discrimination = _examine(
                 negative_control, entry, accept_command,
             )
-            negative_control["currently"] = currently
+            if not ncp.same_verdict(negative_control.get("currently"), currently):
+                negative_control["currently"] = currently
         elif "currently" not in negative_control:
             currently, demonstration, stated_entry_point = _unverified(negative_control.get("command", ""))
             negative_control["currently"] = currently

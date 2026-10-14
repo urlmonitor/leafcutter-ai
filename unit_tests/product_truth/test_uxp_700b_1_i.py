@@ -110,7 +110,7 @@ def _write_valid_flow(flows_dir: Path, flow_id: str, component: str) -> None:
         "version": 1,
         "entities": [],
         "steps": [
-            {"id": "step-a", "label": "Step A", "human": "User does something.", "io_contracts": {"not_applicable": "User-action fixture for unreadable-record outcomes; no JSON handoff is modeled."}, "order": 1},
+            {"id": "step-a", "label": "Step A", "description": "User does something.", "actor_kind": "human", "io_contracts": {"not_applicable": "User-action fixture for unreadable-record outcomes; no JSON handoff is modeled."}, "order": 1},
         ],
     }
     name = flow_id.split("/")[-1]
