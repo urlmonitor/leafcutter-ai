@@ -183,7 +183,10 @@ readiness gate is not extended.
   to exactly that value, and the hold is never inferred from a missing key.
   `config/ac_store_schema.json` MUST declare `hold_reason` with `enum` equal to
   `HOLD_REASONS`. The designer clears the marker when it fills
-  `it_requirements.reference_file_path`.
+  `it_requirements.reference_file_path`. The technical planner sets it (ACD-2500d-2-i,
+  ACD-2500e-2) when a package-surface record cannot name its reference file. This narrows
+  ADR-071 §2: the IT PO may set `hold_reason` to exactly `reference file pending` and to
+  no other value.
 - **`file finding undecided` is computed.** It MUST be derived from `file_findings` on disk
   (a non-`consistent` finding whose `decision` is null) and MUST NOT be stored as a marker.
   A stored marker would be a second source of truth that drifts from the findings. An

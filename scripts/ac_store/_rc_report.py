@@ -37,6 +37,7 @@ FAMILY_SURFACE = "specialist versus surface"
 FAMILY_MODIFIES = "declared files versus modifies links"
 FAMILY_TEST_INTENT = "test intent coverage"
 FAMILY_TEST_DESIGN_GROUNDING = "test design grounding"
+FAMILY_FILE_FINDINGS = "file findings consistency"
 FAMILY_RECORD_SCHEMA = "record schema"
 FAMILY_RECORD_READABLE = "record readable"
 

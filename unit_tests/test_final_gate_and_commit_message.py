@@ -137,7 +137,6 @@ def _final_gate_resume_answer(action: str) -> dict:
     }
 
 
-# `_make_strategic_mock_with_final_action` REMOVED (dead live-gate dispatch, ACD-2100c-1).
 class TestFinalGateEditFallthrough(unittest.TestCase):
     """
     Behavioral tests for Defect 1: a user who requests "edit" at the final gate
@@ -281,15 +280,15 @@ class TestFinalGateEditFallthrough(unittest.TestCase):
         """
         commit_calls = self.side.get("commitCalls", [])
         self.assertEqual(
-            len(commit_calls),
-            0,
+            [", final" in c.get("instructions", "") for c in commit_calls],
+            [False],  # only the auto-approved itpo commit (ACD-2500c-2)
             msg=(
                 "DEFECT: commitStageOutput() was called despite edit retries being "
                 "exhausted at the final gate. The `|| finalAction === 'edit'` "
                 "fallthrough on ~line 645 is committing unreviewed ACs.\n"
                 "Fix: remove `|| finalAction === 'edit'` from the approve condition "
                 "and add an explicit abort branch.\n"
-                f"Captured commit calls: {len(commit_calls)} (expected 0)"
+                f"Captured commit calls: {len(commit_calls)} (expected only itpo's)"
             ),
         )
 
@@ -493,7 +492,6 @@ class TestCommitMessageShape(unittest.TestCase):
             self.fail(f"Node.js failed unexpectedly: {exc}")
 
         commit_calls = side.get("commitCalls", [])
-        # Strategic pipeline: po → ba → itpo (final). Expect at least 3 commits.
         self.assertGreaterEqual(
             len(commit_calls),
             1,
@@ -505,7 +503,7 @@ class TestCommitMessageShape(unittest.TestCase):
         final_commit_msg = self._extract_commit_message(final_instructions)
 
         self.assertIn(
-            "IT-PO",
+            "plan-feature(TEST-DESIGN, final)",
             final_commit_msg,
             msg=(
                 "DEFECT: The final (IT-PO) commit message does not contain 'IT-PO'.\n"
@@ -881,12 +879,12 @@ class TestFinalGateTerminalElse(unittest.TestCase):
 
         commit_calls = side.get("commitCalls", [])
         self.assertEqual(
-            len(commit_calls),
-            0,
+            [", final" in c.get("instructions", "") for c in commit_calls],
+            [False],  # only the auto-approved itpo commit (ACD-2500c-2)
             msg=(
                 "The commit agent was dispatched despite the final-gate action "
                 "being out-of-enum and therefore never applied.\n"
-                f"Captured commit calls: {len(commit_calls)} (expected 0)"
+                f"Captured commit calls: {len(commit_calls)} (expected only itpo's)"
             ),
         )
 
@@ -927,7 +925,7 @@ class TestFinalGateTerminalElse(unittest.TestCase):
         commit_calls = side.get("commitCalls", [])
         final_stage_commits = [
             c for c in commit_calls
-            if "ACD-UNRECOG" in c.get("instructions", "")
+            if ", final" in c.get("instructions", "")
             or "final commit" in c.get("instructions", "").lower()
         ]
         self.assertEqual(
@@ -996,11 +994,6 @@ class TestFinalGateTerminalElse(unittest.TestCase):
             ),
         )
 
-
-# Template parity test — REMOVED (TestRunFunctionParityWithTemplate): it
-# byte-diffed run() against the legacy scripts/workflows/plan-feature.js,
-# which foundation cleanup deleted, leaving one canonical E2 file and
-# nothing to compare.
 
 
 if __name__ == "__main__":

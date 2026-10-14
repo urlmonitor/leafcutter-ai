@@ -133,7 +133,7 @@ Findings are sorted by file, rule family, subject, record id, message. There is 
 
 ## Rule families
 
-Nine rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
+Ten rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
 
 | # | Family name (exact string) | Dispositions it produces | Repairable field |
 |---|---|---|---|
@@ -146,6 +146,7 @@ Nine rule families, evaluated in the order listed after `record schema`. Only fa
 | 7 | `declared files versus modifies links` | `needs a decision`, `not evaluated` | none |
 | 8 | `test intent coverage` | `needs a decision` | none |
 | 9 | `test design grounding` | `needs a decision`, `not evaluated` | none |
+| 10 | `file findings consistency` | `needs a decision` | none |
 | - | `record schema` (pass-through) | `needs a decision`, `failed` | none |
 | - | `record readable` (pass-through) | `failed` | none |
 
@@ -215,7 +216,11 @@ Each finding is `needs a decision`, one per clause, with `detail {kind, clause}`
 
 ### 9. test design grounding
 
-Judges a code-aware design: only a record with a non-empty `test_spec` and the authorship mark (legacy designs are exempt). Each finding is `needs a decision` with `detail {kind, entry, path}`, `entry` being the `test_spec` entry `name`: `absent` (the `code_file` is neither in the tree nor declared `to_be_created`; the flag alone never grounds it), `not-grounded` (`test_design_opened_files` empty or missing; no `entry`/`path`), `no-clause`, `dangling-clause`, `missing-dir`, `missing-convention`. A `to_be_created` entry on a record with no declared files is `not evaluated: no declared files`.
+Judges a code-aware design: a record with a non-empty `test_spec` and the authorship mark. Each finding is `needs a decision` with `detail {kind, entry, path}`, `entry` being the `test_spec` entry `name`: `absent` (the `code_file` is neither in the tree nor declared `to_be_created`; the flag alone never grounds it), `not-grounded` (`test_design_opened_files` empty or missing; no `entry`/`path`), `no-clause`, `dangling-clause`, `missing-dir`, `missing-convention`, `no-reachability` (no entry with `angle` reachability; judged unless `test_required` is false or a present `change_target` omits `code`), and `unmarked-design` (a markless `test_spec` on a record with `test_intent`; one without `test_intent` is legacy and exempt). A `to_be_created` entry on a record with no declared files is `not evaluated: no declared files`.
+
+### 10. file findings consistency
+
+Judges a record whose `file_findings` is a list (an absent field means the file-aware step has not run). Each finding is `needs a decision` with `detail {kind, path}`: `missing` (a declared file has no finding; a declared `to_be_created` file not yet in the tree is exempt), `undeclared` (a finding for a file that is neither declared nor the record's `it_requirements.reference_file_path`), `tree-absent` / `tree-present` (the verdict contradicts the tree for a declared file), `line_range` / `found_in` / `found_in_null` (a verdict missing its companion field, or `found_in` set on another verdict) and `unopened` (a verdict on an existing file not in `file_findings_opened_files`). An undecided finding is NOT reported: it is the approval hold `file finding undecided` (`_file_findings.undecided_findings`).
 
 ### Pass-through families
 

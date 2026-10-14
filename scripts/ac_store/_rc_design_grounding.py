@@ -8,8 +8,8 @@ GOAL: Rule family "test design grounding": a code-aware test design (a test_spec
     repaired.
 BUSINESS CONTEXT: ACD-2500c-1-i (ADR-071, ADR-072; G4 architect note section 4, conflict 15). A
     design that names a file nobody opened is how a test-writer ends up asserting against code
-    that does not exist. Legacy designs (a test_spec with no authorship mark) are not judged, via
-    the negation of `is_legacy_design`; a record with no test_spec has nothing to ground.
+    that does not exist. A markless test_spec with no test_intent (a true legacy design) is not judged;
+    one WITH test_intent is `unmarked-design` (invalid, ADR-071); a record with no test_spec has nothing to ground.
 ARCHITECTURE: One family object (NAME, pure `evaluate_record`), registered in
     requirement_rule_check.FAMILIES after _rc_test_intent and deployed flat
     (scripts/build_phases_ac_store_rc.py). Paths are judged against `ctx.repo_root`; a path with
@@ -36,6 +36,7 @@ from typing import Any
 
 from _rc_report import DISPOSITION_DECISION, DISPOSITION_NOT_EVALUATED, FAMILY_TEST_DESIGN_GROUNDING, Finding
 from _test_intent import (
+    AUTHORSHIP_KEY,
     ENTRY_CLAUSE_KEY,
     ENTRY_CODE_FILE_KEY,
     ENTRY_CONVENTION_KEY,
@@ -49,8 +50,12 @@ from declared_files import NOT_EVALUATED_LABEL, NoDeclaredFiles, get_declared_fi
 
 NAME = FAMILY_TEST_DESIGN_GROUNDING
 
+_RECORD_KINDS = ("not-grounded", "unmarked-design", "no-reachability")
+
 _MESSAGES = {
     "absent": "{record}: test_spec entry {entry} names {path}, which is neither in the tree nor declared to be created",
+    "unmarked-design": "{record}: has test_intent and a test_spec with no {mark_key} mark; a legacy design never carries test_intent",
+    "no-reachability": "{record}: the test design has no entry with angle reachability",
     "not-grounded": "{record}: the test design is not grounded: {opened_key} is empty or missing",
     "no-clause": "{record}: test_spec entry {entry} has no {clause_key}",
     "dangling-clause": "{record}: test_spec entry {entry} proves a clause that matches no test_intent clause: {path}",
@@ -70,9 +75,10 @@ def _in_tree(ctx: Any, path: str) -> bool:
 def _finding(record: Any, kind: str, entry: str = "", path: str = "") -> Finding:
     """One `needs a decision` finding of *kind*; the subject keeps each entry and path apart."""
     message = _MESSAGES[kind].format(
-        record=record["id"], entry=entry, path=path, clause_key=ENTRY_CLAUSE_KEY, opened_key=OPENED_FILES_KEY
+        record=record["id"], entry=entry, path=path, clause_key=ENTRY_CLAUSE_KEY, opened_key=OPENED_FILES_KEY,
+        mark_key=AUTHORSHIP_KEY,
     )
-    detail = {"kind": kind} if kind == "not-grounded" else {"kind": kind, "entry": entry, "path": path}
+    detail = {"kind": kind} if kind in _RECORD_KINDS else {"kind": kind, "entry": entry, "path": path}
     return Finding.for_record(
         record, NAME, DISPOSITION_DECISION, message, subject=f"{kind}:{entry}:{path}", detail=detail
     )
@@ -118,13 +124,34 @@ def _location_findings(ctx: Any, record: Any, entry: dict, name: str) -> list[Fi
     return found
 
 
+def _needs_reachability(record: Any) -> bool:
+    """True unless test_required is false or a change_target is present and names no `code`."""
+    if record.get("test_required") is False:
+        return False
+    target = record.get("change_target")
+    if target is None:
+        return True
+    return "code" in ([target] if isinstance(target, str) else target)
+
+
+def _record_findings(record: Any, spec: list) -> list[Finding]:
+    """Record-level findings: not-grounded, and no-reachability for a judged code record."""
+    opened = record.get(OPENED_FILES_KEY)
+    found = [] if isinstance(opened, list) and opened else [_finding(record, "not-grounded")]
+    angles = {item.get("angle") for item in spec if isinstance(item, dict)}
+    if "reachability" not in angles and _needs_reachability(record):
+        found.append(_finding(record, "no-reachability"))
+    return found
+
+
 def evaluate_record(ctx: Any, record: Any) -> list[Finding]:
     """Judge a code-aware design against the tree; empty for a legacy design or a record with no test_spec."""
     spec = record.get("test_spec")
-    if not isinstance(spec, list) or not spec or is_legacy_design(record):
+    if not isinstance(spec, list) or not spec:
         return []
-    opened = record.get(OPENED_FILES_KEY)
-    found = [] if isinstance(opened, list) and opened else [_finding(record, "not-grounded")]
+    if is_legacy_design(record):
+        return [_finding(record, "unmarked-design")] if intent_entries(record) is not None else []
+    found = _record_findings(record, spec)
     declared = get_declared_files(record)
     intent = intent_entries(record)
     clauses = None if intent is None else {normalise_clause(str(item.get("clause", ""))) for item in intent}

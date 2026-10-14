@@ -52,10 +52,11 @@ NOT_EVALUATED = "not evaluated: no declared files"
 
 
 def entry(name, clause, code_file=EXISTING, to_be_created=False, **extra):
-    """One code-aware test_spec entry (the ACD-2500c-3 shape)."""
+    """One code-aware test_spec entry (the ACD-2500c-3 shape); angle defaults to reachability so every
+    design carries the mandatory reachability entry (L-6) unless a test removes it."""
     item = {
         "name": name, "target_dir": "unit_tests/ac_store/", "framework": "pytest", "type": "unit",
-        "angle": "criterion", "description": f"Asserts: {clause}.", "proves_clause": clause,
+        "angle": "reachability", "description": f"Asserts: {clause}.", "proves_clause": clause,
         "code_file": code_file, "to_be_created": to_be_created, "convention_test_file": CONVENTION,
     }
     item.update(extra)
@@ -181,6 +182,7 @@ def test_legacy_design_not_evaluated_for_grounding(tmp_path):
     evaluated by this family at all: no finding of any kind. A marked design with no test_spec is skipped too.
     The marked, ungrounded control in the same store yields exactly one finding."""
     legacy = design("ZZG-101", [entry("test_old", CLAUSES[0], ABSENT)], clauses=CLAUSES[:1], marked=False)
+    del legacy["test_intent"]  # a true legacy record never carries test_intent (ADR-071)
     no_spec = design("ZZG-102", opened=[])
     del no_spec["test_spec"]
     store = build(tmp_path, legacy, no_spec, design("ZZG-103", opened=[]))

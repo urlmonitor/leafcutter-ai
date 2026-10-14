@@ -313,6 +313,17 @@
                 }
             ]
         },
+        "hold_reason": {
+            "type": "string",
+            "enum": [
+                "missing file targets",
+                "missing test contract",
+                "test design pending",
+                "reference file pending",
+                "file finding undecided"
+            ],
+            "description": "Why a gate holds this record back, carried on the record by the gate that set it. Its enum equals HOLD_REASONS in scripts/ac_store/_impl_readiness_gate.py. The value \"reference file pending\" is the explicit marker (ACD-2500d-2-i) that lets an object-form it_requirements omit reference_file_path until the file-aware step names it; the absence of the key is never read as pending."
+        },
         "package_surface": {
             "description": "Explicit declaration that this AC registers a PACKAGE SURFACE — an entry in a registry the build reads to decide what a consumer project receives (config/agent_registry.json, config/skill_registry.json, config/paths.json, templates/scripts/commit_guardian/commit_guardian.json). Set it to true, deliberately, when the AC's work brings such a surface into existence. This declaration is the SOLE trigger for the structured it_requirements obligation below (ACS-100i-6): the obligation is no longer inferred from assigned_agent or from how the AC spells its component, because that proxy both over-matched (243 of the store's 280 refusals were records registering no config key at all) and under-matched (440 records spelling the namespace 'build-pipeline' were invisible to it). Absent or false means no structured implementation spec is demanded, whatever the AC's agent, component or components values. Registering a surface without declaring it here is caught at landing time by the check-package-surface-declaration commit hook (ACS-100i-8), which reconciles the registry entries a change actually adds against the declarations of the ACs it cites.",
             "oneOf": [
@@ -339,10 +350,9 @@
                 },
                 {
                     "type": "object",
-                    "description": "Structured implementation spec required for ACs declaring `package_surface: true`. Must include all five required implementation fields. This branch's `required` list is enforced for EVERY record that uses the object form, declared or not — see ACS-100i-6-i.",
+                    "description": "Structured implementation spec required for ACs declaring `package_surface: true`. Must include the four always-required implementation fields; reference_file_path is required too unless the record carries hold_reason \"reference file pending\" (ACD-2500d-2-i, rule at the root). This branch's `required` list is enforced for EVERY record that uses the object form, declared or not — see ACS-100i-6-i.",
                     "required": [
                         "config_schema_fragment",
-                        "reference_file_path",
                         "n_location_rule",
                         "required_skills",
                         "post_write_commands"
@@ -550,6 +560,42 @@
             "type": "array",
             "items": {"type": "string", "minLength": 1},
             "description": "ACD-2500c-3: the repo-root-relative POSIX paths of the files the code-aware step opened. An empty list is schema-valid on purpose: the test-design rule check reports it as not grounded."
+        },
+        "file_findings": {
+            "type": "array",
+            "description": "ACD-2500d-1 / ACD-2500d-3-i: what the code-aware step found about each file the record names. Absent means the step has not run; an empty list is valid. A finding whose verdict is not consistent waits for the planner's decision (scripts/ac_store/_file_findings.py undecided_findings); the keys are closed, an unknown key is refused by name.",
+            "items": {
+                "type": "object",
+                "required": ["file", "verdict", "reason"],
+                "additionalProperties": false,
+                "properties": {
+                    "file": {"type": "string", "minLength": 1, "description": "The repo-root-relative POSIX path the finding is about."},
+                    "verdict": {
+                        "type": "string",
+                        "enum": ["consistent", "describes, does not implement", "absent, not to-be-created", "behaviour found elsewhere"],
+                        "description": "Its enum equals VERDICTS in scripts/ac_store/_file_findings.py."
+                    },
+                    "line_range": {"type": ["string", "null"], "description": "Required by the rule check for the verdict 'describes, does not implement'."},
+                    "found_in": {"type": ["string", "null"], "description": "Required by the rule check for the verdict 'behaviour found elsewhere'; null for every other verdict."},
+                    "reason": {"type": "string", "minLength": 1, "description": "One sentence on why the verdict was reached."},
+                    "decision": {
+                        "type": ["object", "null"],
+                        "required": ["choice", "reason", "by"],
+                        "additionalProperties": false,
+                        "description": "The technical planner's recorded decision, or null while the finding is undecided.",
+                        "properties": {
+                            "choice": {"type": "string", "enum": ["reassign", "split", "assignment stands"], "description": "Its enum equals CHOICES in scripts/ac_store/_file_findings.py."},
+                            "reason": {"type": "string", "minLength": 1, "description": "One sentence on why."},
+                            "by": {"const": "it-po", "description": "Only the technical planner records a decision."}
+                        }
+                    }
+                }
+            }
+        },
+        "file_findings_opened_files": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "description": "ACD-2500d-1: the repo-root-relative POSIX paths of the files the file-aware step opened. An empty list is schema-valid on purpose: the rule check reports a verdict on an unopened file."
         },
         "doc_links": {
             "type": "array",
@@ -846,6 +892,44 @@
             "package_surface"
         ]
     },
+    "allOf": [
+        {
+            "description": "ACD-2500d-2-i: an object-form it_requirements names reference_file_path OR the record carries hold_reason 'reference file pending'. The marker is explicit; the absence of the key alone never relaxes the rule.",
+            "if": {
+                "properties": {
+                    "it_requirements": {
+                        "type": "object"
+                    }
+                },
+                "required": [
+                    "it_requirements"
+                ]
+            },
+            "then": {
+                "anyOf": [
+                    {
+                        "properties": {
+                            "it_requirements": {
+                                "required": [
+                                    "reference_file_path"
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "properties": {
+                            "hold_reason": {
+                                "const": "reference file pending"
+                            }
+                        },
+                        "required": [
+                            "hold_reason"
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
     "then": {
         "description": "For records declaring a package surface, it_requirements MUST be a structured object (not a plain string, an array or null) with the five required implementation fields. This prevents fictional or thin specs from reaching the coder.",
         "required": [
@@ -856,7 +940,6 @@
                 "type": "object",
                 "required": [
                     "config_schema_fragment",
-                    "reference_file_path",
                     "n_location_rule",
                     "required_skills",
                     "post_write_commands"

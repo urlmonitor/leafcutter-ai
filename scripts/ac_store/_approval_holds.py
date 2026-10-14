@@ -9,8 +9,11 @@ ARCHITECTURE: Pure functions, no I/O. ``APPROVAL_HOLD_CHECKS`` is the tuple of c
     ``record -> reason | None``) that later gates append to; ``approval_hold_reason`` returns the
     first reason found. Every reason must be a member of ``HOLD_REASONS`` (the store's one closed
     vocabulary, _impl_readiness_gate.py), so a check that invents a reason is a defect and raises.
-    The test-design check is "design pending, or a needs_test clause no test_spec entry links to
-    through the per-entry clause key" (_test_intent). Not deployed: approve_acs.py is not either.
+    The reference-file check reads the explicit ``hold_reason`` marker (ACD-2500d-2-i), never the
+    absence of a key; the file-finding check is computed from ``file_findings`` (_file_findings),
+    never carried (ACD-2500d-3-i). The test-design check is "design pending, or a needs_test clause no test_spec entry links to
+    through the per-entry clause key" (_test_intent). Deployed flat beside approval_hold_report.py (scripts/build_phases_ac_store_rc.py);
+    approve_acs.py is not.
 """
 
 from __future__ import annotations
@@ -18,8 +21,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from _file_findings import undecided_findings
 from _impl_readiness_gate import HOLD_REASON_TEST_DESIGN_PENDING, HOLD_REASONS
 from _test_intent import design_pending, uncovered_needs_test_clauses
+
+
+_REFERENCE_FILE_PENDING = "reference file pending"
+_FILE_FINDING_UNDECIDED = "file finding undecided"
 
 
 def _test_design_hold(record: dict[str, Any]) -> str | None:
@@ -29,7 +37,27 @@ def _test_design_hold(record: dict[str, Any]) -> str | None:
     return None
 
 
-APPROVAL_HOLD_CHECKS: tuple[Callable[[dict[str, Any]], str | None], ...] = (_test_design_hold,)
+def _reference_file_hold(record: dict[str, Any]) -> str | None:
+    """Return ``reference file pending`` when the record carries that marker in ``hold_reason``."""
+    if record.get("hold_reason") == _REFERENCE_FILE_PENDING:
+        return _REFERENCE_FILE_PENDING
+    return None
+
+
+def _file_finding_hold(record: dict[str, Any]) -> str | None:
+    """Return ``file finding undecided`` when a finding has no recorded planner decision.
+
+    Computed from the findings on the record, never from a carried ``hold_reason``.
+    """
+    return _FILE_FINDING_UNDECIDED if undecided_findings(record) else None
+
+
+# Vocabulary order: test design pending, reference file pending, file finding undecided.
+APPROVAL_HOLD_CHECKS: tuple[Callable[[dict[str, Any]], str | None], ...] = (
+    _test_design_hold,
+    _reference_file_hold,
+    _file_finding_hold,
+)
 
 
 def approval_hold_reason(record: dict[str, Any]) -> str | None:
@@ -43,7 +71,8 @@ def approval_hold_reason(record: dict[str, Any]) -> str | None:
         if reason is None:
             continue
         if reason not in HOLD_REASONS:
-            raise ValueError(f"approval hold reason {reason!r} is not in HOLD_REASONS")
+            message = f"approval hold reason {reason!r} is not in HOLD_REASONS"
+            raise ValueError(message)
         return reason
     return None
 

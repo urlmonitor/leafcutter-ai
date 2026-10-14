@@ -129,6 +129,7 @@ def worktree_setup_default_responses() -> dict[str, Any]:
     """
     return {
         **rule_check_default_responses(),
+        **design_stage_default_responses(),
         _WORKTREE_SETUP_SCRIPT_LABEL: {
             "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
             "exit_code": 0,
@@ -160,7 +161,25 @@ def rule_check_default_responses() -> dict[str, Any]:
         {"verdict": "passed", "location": "docs/acceptance-criteria", "records_checked": 1, "findings": [], "records_to_commit": []}
     )
     reply = {"output": report, "exit_code": 0, "stderr": ""}
-    return {f"rule-check-{stage}": dict(reply) for stage in ("po", "ba", "itpo")}
+    return {f"rule-check-{stage}": dict(reply) for stage in ("po", "ba", "itpo", "test-design")}
+
+
+def design_stage_default_responses() -> dict[str, Any]:
+    """Return the default replies of the test-design stage's two scripts (ACD-2500c-2).
+
+    `design-prepass` reports an empty batch so no existing test dispatches the designer; `approval-holds`
+    reports nothing held. Shaped like design_prepass.py / approval_hold_report.py stdout.
+    """
+    prepass = {"output": json.dumps({"batch": [], "records": []}), "exit_code": 0, "stderr": ""}
+    holds = {"output": json.dumps({"approved": [], "held": []}), "exit_code": 0, "stderr": ""}
+    designer = {"status": "ok", "records": [], "anomalies": []}
+    # itpo is now an auto-approved, committed stage, so every run that reaches the final gate commits once first.
+    commit = {"status": "ok", "message": "committed successfully"}
+    branch = {"output": _WORKTREE_SETUP_DEFAULT_BRANCH, "exit_code": 0}
+    return {
+        "design-prepass": prepass, "approval-holds": holds, "stage-test-design-author": designer,
+        "commit-stage-output": commit, "branch-check": branch,
+    }
 
 
 def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:

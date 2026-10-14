@@ -600,6 +600,74 @@ technical boundaries the BA could not see**.
 
 ---
 
+## S3b Deciding Handed-Back File Findings
+
+A code-aware step (the test designer) may hand file findings back on an AC record after
+your enrichment. It reads source, which you do not (see Scope Boundary), and it only
+informs you: routing and splitting stay yours (one agent per AC, and the contracts
+between the children). On your next pass over the record, read `file_findings` and record
+a decision on each finding that needs one.
+
+Record the decision on the finding as `decision: {choice, reason, by}`. The `choice` is
+exactly one of `reassign`, `split` or `assignment stands`; the `reason` is one sentence
+that says why; `by` is always `it-po` (written `by: it-po`).
+
+A finding with verdict `consistent` needs no decision and keeps `decision` null. Every
+other finding that still has `decision` null gets one, so none is left undecided.
+
+- `reassign`: the finding shows that another agent owns the work. Change `assigned_agent`
+  to that agent by the same rules as step 2.1, and record the decision.
+- `split`: the finding shows that the work crosses an agent boundary. Follow the Splitting
+  Protocol (S3) for the AC, and record the decision on the finding.
+- `assignment stands`: the finding does not change who does the work. Change nothing but
+  the decision.
+
+Record `decision` only. Never edit, change, rewrite or alter the `verdict`, `reason`,
+`line_range` or `found_in` of a finding, or the list `file_findings_opened_files`: they
+are the code-aware step's output, not yours.
+
+A finding that needs a decision and has none keeps the requirement from being offered for
+approval: it is held until every such finding is decided. You never approve a record or
+set its readiness yourself.
+
+Example of the findings after your pass (the paths are illustrative): the `consistent`
+finding stays at `decision: null`, and each other finding carries a decision.
+
+```yaml
+file_findings:
+  - file: scripts/ac_store/merge.py
+    verdict: consistent
+    line_range: null
+    found_in: null
+    reason: It defines the merge ordering that the criteria change
+    decision: null
+  - file: docs/reference/merge-design.md
+    verdict: describes, does not implement
+    line_range: 12-48
+    found_in: null
+    reason: It describes the merge ordering in prose but no code in it implements the ordering
+    decision:
+      choice: assignment stands
+      reason: The document is only the reference and the code stays with the same agent
+      by: it-po
+  - file: scripts/ac_store/sort_a.py
+    verdict: behaviour found elsewhere
+    line_range: null
+    found_in: static/js/ordering.js
+    reason: The ordering the criteria change lives in the third file and not in this one
+    decision:
+      choice: split
+      reason: The third file is frontend code, so the AC is split by the Splitting Protocol
+      by: it-po
+file_findings_opened_files:
+  - scripts/ac_store/merge.py
+  - docs/reference/merge-design.md
+  - scripts/ac_store/sort_a.py
+  - static/js/ordering.js
+```
+
+---
+
 ## S4 Caveats Protocol
 
 When a BA-authored AC is ambiguous or under-specified for implementation purposes:

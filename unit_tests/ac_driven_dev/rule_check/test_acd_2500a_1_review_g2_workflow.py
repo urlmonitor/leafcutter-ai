@@ -24,7 +24,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "unit_tests"))
@@ -131,6 +130,11 @@ def _calls(result, label: str):
     return [c for c in result.agent_calls if c.label == label]
 
 
+def _ba_commits(result):
+    """The BA stage's own commit (itpo is auto-approved and committed as well: ACD-2500c-2)."""
+    return [c for c in _calls(result, "commit-stage-output") if "plan-feature(BA)" in c.prompt]
+
+
 # ---------------------------------------------------------------------------
 # H-1: the stage commit stages records_to_commit
 # ---------------------------------------------------------------------------
@@ -142,7 +146,7 @@ def test_h1_resumed_stage_commit_stages_the_repaired_parent(monkeypatch):
     commit-stage-output command must stage that parent file, not only RC-1."""
     result = _run(_labels_for(_passed_reply()), _resume_args())
 
-    commits = _calls(result, "commit-stage-output")
+    commits = _ba_commits(result)
     assert len(commits) == 1, [c.label for c in result.agent_calls]
     prompt = commits[0].prompt
     assert _PARENT_FILE in prompt, (
@@ -263,7 +267,7 @@ def test_n1_control_approve_with_first_check_passing_commits_without_pause():
     result = _run(_labels_for(_passed_reply()), _resume_args())
 
     names = [c.label for c in result.agent_calls]
-    assert len(_calls(result, "commit-stage-output")) == 1, names
+    assert len(_ba_commits(result)) == 1, names
     # (the NEXT stage's own final-gate pause is legitimate; only gate-ba must not re-pause)
     assert [c for c in _calls(result, "pause-persist") if "gate-ba" in c.prompt] == [], names
 
@@ -283,7 +287,7 @@ def test_ln1_commit_prompt_drops_paths_outside_the_store_or_not_yaml():
 
     result = _run(_labels_for(reply), _resume_args())
 
-    commits = _calls(result, "commit-stage-output")
+    commits = _ba_commits(result)
     assert len(commits) == 1, [c.label for c in result.agent_calls]
     prompt = commits[0].prompt
     assert _PARENT_FILE in prompt, "a valid store .yaml path was dropped"

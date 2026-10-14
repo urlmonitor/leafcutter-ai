@@ -16,6 +16,8 @@ related_docs:
   - docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
   - scripts/ac_store/design_prepass.py
   - scripts/ac_store/_rc_design_grounding.py
+  - scripts/ac_store/_file_findings.py
+  - scripts/ac_store/_rc_file_findings.py
 ---
 
 # Code-Aware Test Design Step
@@ -67,6 +69,14 @@ stdout is exactly one JSON document; every path is repo-root-relative POSIX with
 ### Determinism and failure
 
 Two runs on the same batch and tree give byte-identical stdout: LF only, sorted keys, records sorted by id, lists sorted by path, no timestamps. Any error (an unknown id, an unreadable record, a bad flag) prints nothing on stdout, a message on stderr, and exits non-zero (`1` failure, `2` usage). The workflow treats "no report" as batch failure and does not dispatch the agent.
+
+---
+
+## Hand-back of undecided file findings
+
+A file finding whose verdict is not `consistent` waits for a recorded planner decision (`reassign`, `split` or `assignment stands`, a one-sentence reason, `by: it-po`). Whether one is undecided is read from the record on disk (`_file_findings.undecided_findings`), never from an agent's reply; the approval step holds such a record at `reviewed` with the reason `file finding undecided`.
+
+Before the final gate is shown, and only after a passing `rule-check-test-design` on the live path, `plan-feature.js` (`handBackFindings`) reads the hold report. For each requirement held as `file finding undecided` it dispatches `it-po` (label `it-po-findings-round-N`) with the undecided ids and the instruction to record a decision per finding, to make the reassign or split, to touch nothing else and to return `acs_written`. The returned ids join the run, the stage rule check is run again and the hold report is re-read. There are at most 2 rounds. Whatever is still undecided after round 2 is shown at the gate as held, never approved. A `split` creates records with intent and no design; they read `test design pending` (held), and the user's `edit` re-dispatches the designer, whose pre-pass now includes them. A failed dispatch or a failing re-check ends the hand-back and leaves the records held.
 
 ---
 

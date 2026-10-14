@@ -11,6 +11,8 @@ components:
 related_docs:
   - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
   - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+  - docs/architecture/diagrams/c3-032-code-aware-test-design-sequence.md
+  - docs/architecture/diagrams/c3-033-requirement-part-owners-components.md
   - docs/architecture/adrs/ADR-071-test-intent-is-not-a-test-contract.md
   - docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
 ---
@@ -102,3 +104,13 @@ closes: a gate reporting a pass it never earned.
   — L3 component diagram of the check `/plan-feature` runs at the end of each authoring stage:
   its rule families (which repair, which only report), the rule source, the surface-to-specialist
   map and the store record check it calls. A failed check keeps the stage from being reported complete.
+- [Code-Aware Test Design — Sequence Diagram](../diagrams/c3-032-code-aware-test-design-sequence.md)
+  — L3 sequence diagram from the technical planner's test intent, through the rule check, the
+  pre-pass, test-designer (test design and file findings in one step), the hold report, the
+  hand-back of undecided findings (at most 2 rounds) and the approval gate, to the test writer.
+  It shows the `test design pending` branch at the gate and at the test writer.
+- [Requirement Part Owners — Component Diagram](../diagrams/c3-033-requirement-part-owners-components.md)
+  — L3 component diagram of the one writer of each part of a requirement record (criteria,
+  routing and contracts, technical requirements, test intent, test design, reference file,
+  rule-checked fields), and which owners may read source: only test-designer and test-writer.
+  The rule check and the pre-pass test only that paths exist, never file contents.

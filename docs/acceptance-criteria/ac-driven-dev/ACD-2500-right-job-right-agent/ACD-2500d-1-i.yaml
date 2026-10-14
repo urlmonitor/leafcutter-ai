@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a requirement declares 2 existing files, neither of which contains the behaviour its
     criteria change, and the behaviour is found in a third file,
@@ -38,6 +38,7 @@ expects_from:
     stands'', reason: str, by: ''it-po''}} plus the list of files opened. Written by the code-aware agent
     (decision null); decision filled only by the technical planner''s next pass.'
 test_required: false
+test_rationale: "Prompt-only deliverable (the behaviour-found-elsewhere rule in templates/agents/test-designer.md) whose behaviour is an LLM following instructions; the structural tests under unit_tests/ (paragraph-scoped rules, the prompt's examples validated against the real schema, the real render CLI) pin the instructions, and the requirement rule check enforces what the agent writes."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:

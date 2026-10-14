@@ -206,9 +206,19 @@ behaviour above and proceed with the standard step-by-step flow below.
 
 ## Bug-Fix Test Mandate
 
+Carve-out (the design lists every test): this mandate applies only to a legacy design (a
+test_spec with no test_design_authorship mark) and to a record with no design that you
+build without a halt; when a code-aware design exists, you write no test of this kind of
+your own, because the design already lists it.
+
 If the ticket is a bug fix, or if `python-coder` / `sql-coder` discovered and fixed a bug during implementation, you MUST write a regression test that reproduces the original bug and verifies the fix. This test must fail when the bug is reintroduced (red-green proof). This is non-negotiable — no bug fix is complete without a corresponding regression test.
 
 ## Real-Artifact Behavioral Test Mandate (BP-1100f-2)
+
+Carve-out (the design lists every test): this mandate applies only to a legacy design (a
+test_spec with no test_design_authorship mark) and to a record with no design that you
+build without a halt; when a code-aware design exists, you write no test of this kind of
+your own, because the design already lists it.
 
 When the ticket declares a **durable, observable side-effect** — an artifact the
 implementation writes to disk that can be read back (a file, a generated config, a
@@ -276,7 +286,10 @@ authoring with an empty block. If you nonetheless encounter a code ticket whose
    — that string misclassifies real code work as test-free (the historical bug
    this rule exists to prevent).
 2. Derive the failing tests from the AC directly (the AC is the source of
-   truth): read the `source_ac` frontmatter field, load that AC's YAML from the
+   truth), except when the AC record carries `test_intent`, is not `test_required: false` and has no test design:
+   then derive nothing and halt with "test design pending" as "Build From the
+   Test Design" below says. Otherwise read the `source_ac` frontmatter field,
+   load that AC's YAML from the
    store, and use its `test_spec` (preferred) or its `criteria` Gherkin
    Then-clauses as the test contract. When you fall back to the Then-clauses,
    add one further test on top of them — a reachability test that invokes the
@@ -295,7 +308,46 @@ authoring with an empty block. If you nonetheless encounter a code ticket whose
 Do NOT append any `red_baseline` block when a non-code skip applies — the block
 is only meaningful when tests were actually written.
 
+## Build From the Test Design (ACD-2500c-2-i)
+
+You build tests from a design; you do not author it. The design is the AC record's
+`test_spec` entries (`name`, `target_dir`, `proves_clause`, `code_file` and so on), written
+by the test designer, the code-aware planning step that runs before the build. A design
+the test designer wrote carries the mark `test_design_authorship`.
+
+When the record carries such a code-aware design, write exactly the tests it lists: one
+test per test_spec entry, the test function named exactly by the entry's `name`, placed in
+the directory the entry's `target_dir` names. Tag each test with the requirement id through
+the `# covers:` comment of Step 2, so that every test traces to the requirement it proves.
+
+Never add an entry to the design, remove an entry from it or edit an entry of it, and never
+write to an AC record: the AC record and its test_spec are read only for you.
+
+When the record carries `test_intent`, its `test_required` is not false and it has no test
+design (no test_spec yet), write no
+test and derive nothing from the Then clauses of its criteria. Stop with the reason "test
+design pending", naming the requirement by its AC id, and report it as `(status: blocker)`.
+A record can reach you by a path other than the approval queue (the fast lane, a
+quick-fix), so this halt is the build-time twin of the approval gate: re-authoring the
+design from the Then clauses is exactly what it prevents.
+
+The design lists every test, so write exactly the tests it lists and nothing of your own:
+add no reachability, bug-fix or real-artifact test beside the design's entries (the test
+designer put each of them in the design where it applies). The standing mandates of those
+three names apply only to a legacy design and to a record with no design.
+
+A record with `test_required: false` is exempt: it is never pending, so the halt above does
+not fire for it and you follow the existing skip and mandate rules for it.
+
+A record whose test_spec carries no test_design_authorship mark is a legacy design: your
+behaviour for it is unchanged, as before this section, and the halt above does not apply.
+
 ## Reachability Entry-Point Resolution (BP-1100g-2)
+
+Carve-out (the design lists every test): this mandate applies only to a legacy design (a
+test_spec with no test_design_authorship mark) and to a record with no design that you
+build without a halt; when a code-aware design exists, you write no test of this kind of
+your own, because the design already lists it.
 
 The `reachability` angle in the Test Angles taught set above tells you what a
 reachability test must do: invoke the real production entry point and assert
@@ -618,7 +670,10 @@ Before writing any file:
    6. Use the AC's `test_spec` (preferred) or `criteria` field from each
       non-skipped AC YAML as the authoritative source for the test scenarios —
       authoritative over the derived Gherkin/Test Requirements in the ticket
-      body (which is itself derived from the AC and kept for readability).
+      body (which is itself derived from the AC and kept for readability). The
+      one exception is an AC that carries `test_intent`, is not `test_required: false` and has no test design: its
+      `criteria` are never a source, and "Build From the Test Design" above
+      halts instead.
    7. **If the AC store does not exist** or no AC id can be resolved (no
       `source_ac` and no body match): fall back to the Gherkin-from-ticket-body
       approach. In this fallback case, use `# covers: UNKNOWN` as the tag

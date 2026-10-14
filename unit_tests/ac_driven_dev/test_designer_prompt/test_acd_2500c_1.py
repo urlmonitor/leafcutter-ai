@@ -399,3 +399,59 @@ def test_acd_2500c_1_reachable_from_entry_point(tmp_path):
     rendered_section = _design_section(rendered)
     assert rendered_section == _design_section()
     assert "proves_clause" in rendered_section
+
+
+# --------------------------------------------------------------------------
+# user decision 2026-10-14 "Design lists them all": the standing test mandates live in the design
+# --------------------------------------------------------------------------
+def test_every_code_record_design_carries_a_reachability_entry_through_the_real_entry_point():
+    # covers: ACD-2500c-1
+    # angle: criterion
+    """The design is the whole list: for every code record test_spec carries a test with angle
+    `reachability` that invokes the real production entry point (CLI, hook runner, slash command,
+    workflow dispatch or main() with real argv). The rule is mandatory, not optional."""
+    paragraph = _paragraph_with(_design_section(), "reachability", "entry point")
+
+    assert re.search(r"(every|each|all)[^.]{0,40}(code )?record", paragraph, re.I), paragraph
+    assert re.search(r"(must|always|at least one|requires?|carry|carries)", paragraph, re.I), paragraph
+    assert not re.search(r"\bmay\b[^.]{0,40}reachability", paragraph, re.I), paragraph
+
+
+def test_reachability_is_not_left_optional_or_to_the_test_writer():
+    # covers: ACD-2500c-1
+    # angle: discrimination
+    """WRONG VERSION THIS CATCHES: the designer writes only criterion entries and leaves the
+    reachability test to the test writer's old standing mandate (so the design no longer 'lists them
+    all'). The section states that the design lists it, so the test writer adds nothing of its own."""
+    section = _flat(_design_section())
+
+    assert re.search(r"(test writer|test-writer)[^.]{0,80}(adds? no|nothing|does not add|never add)", section, re.I), section
+
+
+def test_bug_fix_and_real_artifact_entries_are_designed_where_they_apply():
+    # covers: ACD-2500c-1
+    # angle: criterion
+    """Where they apply the design also carries a bug-fix discrimination entry (must_catch with angle
+    discrimination, the rule already stated) and a real-artifact entry (angle real_artifact: the code
+    runs, writes to a real location and the artifact is read back) for a record with a durable side
+    effect."""
+    section = _design_section()
+    real = _paragraph_with(section, "real_artifact")
+
+    assert re.search(r"(durable|side[- ]effect|writes? (a|an|to)|artifact)", real, re.I), real
+    assert re.search(r"(where|when|only)[^.]{0,80}(appl|side[- ]effect|durable)", real, re.I), real
+    assert "discrimination" in _flat(section) and "must_catch" in _flat(section)
+
+
+def test_example_shows_a_reachability_entry_valid_under_the_real_schema():
+    # covers: ACD-2500c-1
+    # angle: real_artifact
+    """The fenced example shows a `reachability` entry (angle reachability) next to the others; its
+    test_spec still validates against the REAL config/ac_store_schema.json, and the reachability entry
+    names a code_file that is in test_design_opened_files (grounded like every other entry)."""
+    example = _example(_design_section())
+    entries = [e for e in example["test_spec"] if e.get("angle") == "reachability"]
+
+    assert entries, "the example needs an entry with angle: reachability"
+    jsonschema.validate(example["test_spec"], _schema()["properties"]["test_spec"])
+    assert all(e["code_file"] in example["test_design_opened_files"] for e in entries), entries

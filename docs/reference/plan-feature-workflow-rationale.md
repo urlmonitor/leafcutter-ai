@@ -153,3 +153,133 @@ DECISION HISTORY
   unit_tests/_plan_feature_harness_defaults.py's DECISION HISTORY for the
   companion harness-side default this required. (quick-fix; no ticket)
 ```
+
+## Flow-ref recovery: parsing git log by commit header
+
+Explains: `recoverFlowRefFromCommit()`.
+
+```text
+Parse per-commit by scanning lines. Real `git log --name-only
+--format=%H%x00%s` output is: a header line `<hash>\x00<subject>`, a BLANK
+line, then the commit's file list — with NO blank line between one commit's
+last file and the next commit's header. A blank-line split therefore
+misaligns headers and files. Instead, treat any line containing \x00 as a
+new commit header (recording its subject) and collect the subsequent
+non-empty lines as that commit's files until the next header. Return the
+first *.flow.json belonging to a commit whose subject matches the FLOW stage.
+```
+
+## Shape-valid is not person-authored
+
+Explains: The `channel` provenance check in `resolveGate()`.
+
+```text
+ACD-2100c-4: shape-valid is not the same as person-authored. A
+well-formed, enum-valid answer can be constructed by anything with
+write access to args.resume_answer (an automated agent, a stale
+replay, a test) -- validateAnswerShape() cannot and must not be asked
+to tell the difference, because that would put content back in charge
+of the decision this AC exists to gate. Provenance is checked as a
+property of the answer itself (`channel`), never inferred from its
+content: only `channel === "person"` is treated as the person's own
+decision. Anything else -- a different value, or the field's absence
+-- is refused exactly like an unanswered gate (same
+"paused_awaiting_input" status, same gate_id, record left untouched
+below), except the terminal payload also names WHY: provenance, never
+a shape/parse complaint, so the journal cannot read this refusal as
+"could not understand the answer" (KI-ACD-005).
+```
+
+## Carrying the pause record context back to the caller
+
+Explains: The `_resumedContext` hand-back in `resolveGate()`.
+
+```text
+ACD-2100c-3 AC-1/AC-2: carry the pause record's own context snapshot
+back to the caller so the step(s) BEFORE this decision point are not
+re-dispatched on resume -- the caller recovers the AC ids already
+drafted (and left on disk, untouched) by the paused run from the
+persisted record instead of re-running the authoring agent.
+```
+
+## Clearing the pause record once the run moves past the gate
+
+Explains: The pause-record clear in `resolveGate()`.
+
+```text
+ACD-2100c-3 AC-4: once the resumed run has moved PAST this decision
+point, no record of it waiting must remain on disk. "edit" does NOT
+move past the gate -- it re-dispatches the step with feedback and
+re-presents essentially the same decision -- so the record is
+deliberately left in place for that one answer type; every other
+answer clears it here, before the caller performs the work (commit /
+PR / terminal return) that actually commits the run past the gate.
+Ordering matters (see this ticket's Implementation Notes): if the
+process dies between this clear and that later work, the run is left
+uncommitted-but-not-listed-as-waiting rather than the worse state of
+committed-yet-still-listed-as-waiting.
+```
+
+## A failed pause-record clear must be observable
+
+Explains: The clear-failure branch in `resolveGate()`.
+
+```text
+Fail loudly, not silently: a stale record left behind makes this
+run look permanently paused to any later reader (AC-4). This does
+NOT block the caller from proceeding past the gate — the answer
+has already been validated and applied above, and the ordering
+comment before this block explains why the clear happens before
+the caller's own commit/PR/terminal-return work — but the failure
+must be observable, not discarded.
+```
+
+## No matching resume answer: the run pauses
+
+Explains: The pause-and-persist tail of `resolveGate()`.
+
+```text
+No matching resume_answer: the ONLY remaining channel that reaches the
+person running the route is a pause-and-persist record surfaced through
+this run's own terminal payload (ACD-2100c-1 / KI-ACD-005). `liveGateFn`
+is still accepted as a parameter — every one of the five existing call
+sites, plus any future one, still builds and passes it — but it is
+deliberately NEVER invoked. Its whole purpose was to dispatch an agent()
+call to obtain a human answer by proxy, which is exactly the dispatch
+this AC forbids ("no dispatch whose purpose was to obtain an answer to
+any of the five"). Leaving the closure unread rather than deleting the
+parameter (which would force a signature change at every call site) is
+what makes the guard live on THIS function — the class every decision
+point routes through — instead of on a per-site opt-out that a sixth,
+newly added gate would have to remember to apply.
+```
+
+## The pause payload carries the question
+
+Explains: The terminal payload of `pauseAtGate()`.
+
+```text
+Carry the actual question content in the terminal payload (ACD-2100c-1):
+in this sandboxed E2 body the run's own top-level return value is the
+ONLY channel back to the caller (the /plan-feature skill, running in the
+human's own session). A bare `gate_id`/`status` pair forces that caller
+to separately look up what is being asked; `question` is the exact
+object already built above for the persisted record, just never
+returned until now.
+```
+
+## No pre-flight verdict at all fails closed
+
+Explains: The Pre-Stage-0 workspace-setup permission check.
+
+```text
+Fail closed when NO pre-flight verdict reaches this workflow at all. A
+caller that invokes this workflow directly — e.g. Workflow({ scriptPath:
+'.leafcutter/workflows/plan-feature.js' }), a real, currently-used
+invocation path that bypasses the skill's own pre-flight step entirely —
+supplies no such verdict. This is a DISTINCT fact from "the pre-flight ran
+and denied permission" (handled below): the report here must name the
+MISSING pre-flight itself, never assert a permission cause this run never
+established (ACD-2100b-5 it_requirements; this is a new outcome of the
+startup path and must not be worded as any of ACD-2100b-1/-2/-3's outcomes).
+```

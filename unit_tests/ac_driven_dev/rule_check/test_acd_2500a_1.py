@@ -144,7 +144,9 @@ def test_passed_check_lets_the_stage_complete():
 
     labels = _labels(result)
     assert _CHECK_LABEL in labels, labels
-    assert labels.count("commit-stage-output") == 1, labels
+    # the BA stage is committed once (itpo is auto-approved and committed too: ACD-2500c-2)
+    ba_commits = [c for c in result.agent_calls if c.label == "commit-stage-output" and "plan-feature(BA)" in c.prompt]
+    assert len(ba_commits) == 1, labels
     assert labels.count("stage-itpo-author") == 1, labels
 
 

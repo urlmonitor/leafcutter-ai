@@ -161,4 +161,4 @@ retries are used up, the workflow returns `status: "error"` with the report as `
 Only a passed check reaches step 11. That commit includes `records_to_commit`, so a parent
 repaired by the back-link family is committed too.
 
-The CLI also accepts `--stage test-design`, but the workflow has no test-design stage yet.
+The workflow also runs the check with `--stage test-design` after the code-aware test-design step (see [c3-032](c3-032-code-aware-test-design-sequence.md)).

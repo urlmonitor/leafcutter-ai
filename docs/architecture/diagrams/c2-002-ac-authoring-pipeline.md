@@ -9,6 +9,8 @@ flight_level: L2-Container
 parent: agent_delivery_workflows.md
 children:
   - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+  - docs/architecture/diagrams/c3-032-code-aware-test-design-sequence.md
+  - docs/architecture/diagrams/c3-033-requirement-part-owners-components.md
 components:
   - ac_store
   - ticket_creation_pipeline
