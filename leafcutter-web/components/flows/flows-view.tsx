@@ -34,6 +34,7 @@ import {
 } from "./parts/flows-view-banners";
 import { StepAddressContext } from "./flow-step-view";
 import { stepNotFoundDetail } from "@/lib/flow-url";
+import { productLabel } from "@/lib/flow-finder/facets";
 import { useFlowsViewState } from "./use-flows-view-state";
 import type { FlowsViewFilters } from "./flow-view-model";
 import { RealizationBadge } from "./realization-badge";
@@ -100,7 +101,7 @@ export function FlowsView({
           flow?.kind === "architecture"
             ? "Architecture · type-level schema"
             : flow?.product
-              ? `Product truth · ${flow.product}`
+              ? `Product truth · ${productLabel(flow.product)}`
               : "Product truth"
         }
         title={flow?.name ?? "Flows"}

@@ -24,9 +24,9 @@ import type {
 } from "./types";
 
 const PT_DIR = "docs/product-truth";
-const FLOWS_DIR = "docs/product-truth/flows";
-const MOCK_DIR = "docs/product-truth/mock-data";
-const MOCKUP_DIR = "docs/product-truth/mockups";
+const FLOWS_DIR = `${PT_DIR}/flows`;
+const MOCK_DIR = `${PT_DIR}/mock-data`;
+const MOCKUP_DIR = `${PT_DIR}/mockups`;
 const ARTIFACT_GRAPH_FILE = "docs/reference/artifact-knowledge-graph.graph.json";
 
 function asArray(v: unknown): string[] {
@@ -193,7 +193,7 @@ function parseFlow(raw: Record<string, unknown>, file: string): Flow | null {
   return {
     id: String(raw.id),
     component: String(raw.component ?? ""),
-    product: raw.product ? String(raw.product) : null,
+    product: raw.product ? String(raw.id).split("/")[0] : null, // the slug; names: lib/flow-finder/facets
     name: String(raw.name ?? raw.id),
     summary: String(raw.summary ?? ""),
     kind: normKind(raw.kind),
@@ -239,6 +239,17 @@ function parseMock(raw: Record<string, unknown>, file: string): MockData | null 
   };
 }
 
+/** Parse a JSON file into an object; null when it is unreadable or malformed. */
+function readJson(file: string): Record<string, unknown> | null {
+  const raw = readFileSafe(file);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 // All three caches keyed by repoRoot() so mock and real roots cache independently.
 // A single-value cache serves stale data after a mock-mode toggle in the same process.
 const _flowCache = new Map<string, Flow[]>();
@@ -251,14 +262,8 @@ export function getFlows(): Flow[] {
   if (hit) return hit;
   const flows: Flow[] = [];
   for (const file of walk(repoPath(FLOWS_DIR), ".flow.json")) {
-    const rawStr = readFileSafe(file);
-    if (!rawStr) continue;
-    let doc: Record<string, unknown> | null = null;
-    try {
-      doc = JSON.parse(rawStr) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
+    const doc = readJson(file);
+    if (!doc) continue;
     const flow = parseFlow(doc, file);
     if (flow) flows.push(flow);
   }
@@ -281,9 +286,7 @@ export function getFlows(): Flow[] {
           kind: "architecture" as FlowKind,
           source: "real" as FlowSource,
           level: "journey" as FlowLevel,
-          // "built": this map describes the LIVE repo's artifact schema. It was
-          // previously "spec", which triggered a "the system it maps does not
-          // exist yet" banner — false for every clause.
+          // "built": this maps the LIVE repo's artifact schema ("spec" claimed it did not exist).
           realization: "built" as FlowRealization,
           status: "active",
           readiness: "approved",
@@ -319,14 +322,8 @@ export function getMockData(): MockData[] {
   if (hit) return hit;
   const mocks: MockData[] = [];
   for (const file of walk(repoPath(MOCK_DIR), ".mock.json")) {
-    const rawStr = readFileSafe(file);
-    if (!rawStr) continue;
-    let doc: Record<string, unknown> | null = null;
-    try {
-      doc = JSON.parse(rawStr) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
+    const doc = readJson(file);
+    if (!doc) continue;
     const mock = parseMock(doc, file);
     if (mock) mocks.push(mock);
   }
@@ -390,14 +387,8 @@ export function getScreenTitles(): Record<string, string> {
   if (hit) return hit;
   const map: Record<string, string> = {};
   for (const file of walk(repoPath(MOCKUP_DIR), ".mockup.json")) {
-    const rawStr = readFileSafe(file);
-    if (!rawStr) continue;
-    let doc: Record<string, unknown> | null = null;
-    try {
-      doc = JSON.parse(rawStr) as Record<string, unknown>;
-    } catch {
-      continue;
-    }
+    const doc = readJson(file);
+    if (!doc) continue;
     const screen = doc.screen ? String(doc.screen) : "";
     const title = doc.title ? String(doc.title) : "";
     if (screen && title) map[screen] = title;
@@ -405,6 +396,3 @@ export function getScreenTitles(): Record<string, string> {
   _screenTitleCache.set(root, map);
   return map;
 }
-
-// Referenced to keep the product-truth root path documented alongside the loader.
-export const PRODUCT_TRUTH_DIR = PT_DIR;

@@ -164,7 +164,8 @@ describe("row cap and ordering rules", () => {
     // independent expectation from the index's own nodes: matching = io-gap nodes
     const nodesOf = (flowId: string) =>
       index.nodes.filter((n: any) => n.flowId === flowId && n.ioGap === true);
-    let mixedShown = 0;
+    let bothKinds = 0; // flows whose full matching list holds steps AND branches
+    let branchOnlyShown = 0; // flows with no matching step: a branch row still shows
     let cappedFlows = 0;
     for (const r of out.results) {
       const matching = nodesOf(r.flow_id);
@@ -183,13 +184,15 @@ describe("row cap and ordering rules", () => {
       const kinds = r.step_rows.map((s) => s.node_kind);
       expect(kinds, r.flow_id).toEqual([...kinds].sort((a, b) => (a === b ? 0 : a === "step" ? -1 : 1)));
 
-      if (kinds.includes("step") && kinds.includes("branch")) mixedShown++;
+      if (steps.length > 0 && branches.length > 0) bothKinds++;
+      if (steps.length === 0 && branches.length > 0 && kinds.join() === "branch") branchOnlyShown++;
       if (matching.length > 3) cappedFlows++;
     }
-    // non-vacuity: the data must contain a capped flow and a card that shows both steps and
-    // branches, or this test cannot tell wrong from right
+    // non-vacuity: the data must contain a capped flow, flows that match both steps and
+    // branches (ordering is then checked on the full matching list above), and a branch-only flow
     expect(cappedFlows).toBeGreaterThan(0);
-    expect(mixedShown).toBeGreaterThan(0);
+    expect(bothKinds).toBeGreaterThan(0);
+    expect(branchOnlyShown).toBeGreaterThan(0);
   });
 
   it("AC-6: with a search, a flow whose own name matches is listed before flows with more matching steps, then by steps, then by name", async () => {

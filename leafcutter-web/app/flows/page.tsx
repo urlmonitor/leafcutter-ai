@@ -1,19 +1,22 @@
 import { PageHeader, EmptyState } from "@/components/ui/kit";
-import { FlowsView } from "@/components/flows/flows-view";
-import { DEFAULT_ENTRY_FLOW_ID } from "@/lib/flow-url";
+import { FinderScreen } from "@/components/flows/finder/finder-screen";
+import { buildFinderHref, parseFinderQuery } from "@/lib/flow-finder/address";
+import { buildFinderIndex } from "@/lib/flow-finder/build-index";
 import { Workflow } from "lucide-react";
-import { loadFlowsViewData } from "./flows-data";
+import { getFlows, getScreenTitles } from "@/lib/data/flows";
 
-// The Flows view — living maps of the product-truth flows, each step coloured by
-// the LIVE work_status of the acceptance criteria it implements. Server
-// component: reads the repo via getFlows(), resolves every flow's mock data, and
-// hands a serializable slice to the client <FlowsView> (which owns the flow
-// selector + graph). buildFlowGraph runs client-side (pure) from these flows.
-//
-// The bare /flows address keeps its address and opens the default entry flow
-// (UXP-591-1-i), with the same flat initial props as a canonical address.
-export default function FlowsPage() {
-  const { flows, mocks, screenTitles } = loadFlowsViewData();
+// The Flows view opens on the FINDER (UXP-617-1): one search box and counted
+// filters over every flow, results grouped by flow. Bare /flows draws no flow;
+// a flow opens at /flows/<product>/<flow>[?step=<id>]. Server component: it reads
+// the finder state from the address, builds the index from the same flows the
+// Flows view loads, and renders the first paint (summary and results included).
+// The client <FinderScreen> recomputes from that index on every edit.
+export default async function FlowsPage({
+  searchParams = {},
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
+  const flows = getFlows();
 
   if (flows.length === 0) {
     return (
@@ -32,17 +35,18 @@ export default function FlowsPage() {
     );
   }
 
-  const entry = flows.find((f) => f.id === DEFAULT_ENTRY_FLOW_ID) ?? flows[0];
+  const initial = parseFinderQuery(searchParams);
+  const index = buildFinderIndex(flows, getScreenTitles());
 
   return (
-    <FlowsView
-      flows={flows}
-      mocks={mocks}
-      screenTitles={screenTitles}
-      flowId={entry.id}
-      crumbs={[entry.id]}
-      filters={{ source: entry.source, kind: entry.kind, realization: "all" }}
-      step={null}
-    />
+    <div className="flex flex-col">
+      <PageHeader
+        eyebrow="Atlas · Flows"
+        title="Flows"
+        description="Search and filter every flow by name, step, field, AC, entity or screen."
+      />
+      {/* keyed by the address, so following a link to another finder address starts from it */}
+      <FinderScreen key={buildFinderHref(initial)} index={index} initial={initial} />
+    </div>
   );
 }
