@@ -614,7 +614,7 @@ check `docs/INDEX.md` before staging. KI-BP-016, now resolved, used to overwrite
 The old symlink caveat no longer applies. It said that through a symlinked `.leafcutter`,
 feedback landed in the install tree's own sink. `submit_feedback.py` no longer walks up for
 `.claude/`. Through the symlink it reads the main install's declaration, which names the
-same durable root. INF-500d-4 removed the cause, and KI-FC-001 closes once that work lands.
+same durable root. INF-500d-4 removed the cause, and KI-FC-001 was resolved by PR #1169.
 
 **The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
 (Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
