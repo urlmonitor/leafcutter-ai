@@ -253,10 +253,6 @@ def build_by_ac(flows: dict, run_date: str | None = None) -> dict:
     return dict(sorted(by_ac.items()))
 
 
-
-
-
-
 def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | None = None) -> dict:
     """Rebuild the by_flow lookup: derived impl_status/impl_summary + hierarchy view.
 
@@ -382,6 +378,13 @@ def load_mocks() -> dict:
     return mocks
 
 
+def _sync_text(path: Path, text: str, check: bool) -> bool:  # flag stale; rewrite unless check
+    logger.warning("stale derived file: %s", path)
+    if not check:
+        _write_text(path, text)
+    return True
+
+
 # --------------------------------------------------------------------------- #
 # Write steps
 # --------------------------------------------------------------------------- #
@@ -400,12 +403,8 @@ def write_flows(flows: dict, flow_paths: dict, ac_map: dict, check: bool, run_da
         path = STORE / flow_paths[flow_id]
         new_text = json.dumps(flow, indent=2, ensure_ascii=False) + "\n"
         if new_text != _read_text(path):
-            changed = True
-            if not check:
-                _write_text(path, new_text)
+            changed = _sync_text(path, new_text, check)
     return changed
-
-
 
 
 def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str) -> bool:
@@ -432,15 +431,8 @@ def write_ac_product_truth(ac_map: dict, by_ac: dict, check: bool, run_date: str
 
         new_text = apply_product_truth_text(text, new_entries)
         if new_text != text:
-            changed = True
-            if not check:
-                _write_text(path, new_text)
+            changed = _sync_text(path, new_text, check)
     return changed
-
-
-
-
-
 
 
 def write_index(
@@ -517,9 +509,7 @@ def write_index(
 
     new_text = json.dumps(index, indent=2, ensure_ascii=False) + "\n"
     if not index_path.exists() or new_text != _read_text(index_path):
-        if not check:
-            _write_text(index_path, new_text)
-        return True
+        return _sync_text(index_path, new_text, check)
     return False
 
 
