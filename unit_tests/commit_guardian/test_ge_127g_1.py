@@ -72,6 +72,7 @@ def _cards_repo(root: Path, extra_after: dict[str, int] | None = None) -> Path:
 
 def test_regenerated_cards_directory_commits_cleanly(tmp_path: Path) -> None:
     # covers: GE-127g-1
+    # covers: GE-127g
     # angle: criterion
     """Arm 1. The whole cards directory, restaged as a regeneration leaves it
     (documents already over the limit grew, one document crossed it), passes
