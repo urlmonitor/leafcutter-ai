@@ -6,7 +6,7 @@ created: '2026-10-01'
 components:
 - knowledge_management
 - decision_kernel
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 description: Run scoped repository queries and inspect answer completeness, evidence and observation delivery.
 related_docs:
 - docs/reference/neo4j-native-queries.md
@@ -62,6 +62,14 @@ python -m knowledge status --root REPOSITORY --repository-id leafcutter --revisi
 ```
 
 REPOSITORY is an absolute trusted checkout; REVISION is an exact commit SHA. Validation and plan do not connect or publish. Sync reads immutable Git objects, builds a full generation and atomically publishes after validation. Repeating the same revision/mapping reuses its generation. Failed builds leave the previous generation active; stale or non-descendant publications cannot silently replace it.
+
+#### Read the collapse and count-check results from sync
+
+Before anything is written, sync collapses relationships that are identical in every recorded property (type, endpoints, source record and locator) to one. Relationships that differ in provenance are kept. The diagnostics name each collapsed group as `identical_relationship_collapsed: type=... source=... locator=... target=... copies=N` and always end with a total line `identical_relationships_collapsed:N`, including `identical_relationships_collapsed:0`.
+
+The count check then compares what the store kept for the new generation with the expected figures. Expected relationships is the number of distinct relationships after that collapse. On success the sync result carries `counts: {nodes: {expected, kept}, relationships: {expected, kept}}`. `counts` is null when the generation was already ready and nothing was built.
+
+On a shortfall publication fails with `generation count validation failed: relationships expected N kept M`, naming each mismatched kind. The new generation is marked failed and the previously active generation stays active. Criteria: [KM-400b-2-i](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-i.yaml) (collapse), [KM-400b-2-ii](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-2-ii.yaml) (count check).
 
 Standalone writer commands use a bounded **30-second transaction timeout** for staging and atomic publication; serving retains its independent **3-second default**. Node and relationship batches remain capped at 250, and count validation and publication guards still apply. A transaction-timeout error alone does not identify the slow statement. After an authorized retry, confirm the published SHA and lag before calling recovery successful; a local configuration test does not establish live publication.
 
