@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -56,10 +56,96 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    THE STEP. The shared commit step is ONE stdlib-only Python command-line script,
+    templates/scripts/commit_changes.py (the C6 name; provisional until built, after which that
+    path is the contract every route names), deployed by the build to scripts/. It is the only
+    place in the package that stages files and records a commit on a route's behalf. Its
+    dependencies (BO-4500a-3's use of the remedy-declaration loader and remedy_handoff.py, the
+    canonical structural-parent derivation of BO-4500a-1-ii) must be in the build deploy-manifest
+    and must be verified by running the DEPLOYED script, per the repo CLAUDE.md rule on hook and
+    gate dependencies.
+  - >-
+    The path set is an explicit list supplied by the caller. The step has no flag, environment
+    variable or default that expands to every changed or every tracked file, and an entry that is
+    a directory, a glob or a pathspec expression is refused rather than expanded (reason_code
+    policy_path_not_a_file; an empty list or an "all" request is policy_no_explicit_paths -- see
+    BO-4500a-4 for the enum).
+  - >-
+    The committed tree must equal HEAD plus exactly the named paths' working-tree state (plus the
+    BO-4500a-1-ii parents). Index entries of every other path must be identical before and after
+    the call, on every outcome. The coder picks the mechanism; the property is tested by comparing
+    the commit's file list and the post-call index against the pre-call index.
+  - >-
+    HARDENED SOURCE (BO-4500 standing rule): the staging rule is taken from commit.md's
+    stage-by-name rule. The fast lane's add -A and precommit-autofix's add -u are the weaker
+    siblings and are not carried. The change that builds the step must name this provenance
+    (BO-4500a-5, second scenario).
+  - >-
+    A repeated call with the same paths after a successful commit must answer nothing_to_commit
+    and record nothing (idempotent on re-run).
+  - >-
+    The step's own overhead, excluding the checks' runtime, must stay under 2 seconds for a call
+    naming 200 paths in a local repository.
+  - Errors are handled per the project error handling policy; every failure ends in one answer (BO-4500a-4), never a traceback on stdout.
 delivers_to:
-  agent: python-coder
-  contract: "The shared commit step's staging rule: the committed set equals the caller's named path set (plus BO-4500a-1-ii's structural parents). Consumed by every route migrated under BO-4500a-5."
+  - agent: python-coder
+    contract: >-
+      Staging rule of the shared step (templates/scripts/commit_changes.py): the commit contains
+      exactly the caller's named path set plus BO-4500a-1-ii's structural parents, reported in the
+      answer's paths and added_parents keys (BO-4500a-4 contract). Consumed by every route migrated
+      under BO-4500a-5.
 expects_from: null
+test_required: true
+test_spec:
+  - name: test_commit_contains_exactly_the_named_files
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run the real step against a scratch repo with five unstaged changes naming a.py and docs/c.md; the new commit's file list is exactly those two."
+  - name: test_unnamed_changes_stay_modified_unstaged_and_byte_identical
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the call b.py, docs/INDEX.md and tickets/t.md are still modified, not staged, and byte-identical to their pre-call content."
+  - name: test_committed_answer_lists_exactly_the_named_paths_and_the_new_sha
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The answer has status committed, sha equal to the new HEAD and paths equal to [a.py, docs/c.md]."
+  - name: test_no_paths_or_all_request_is_refused_and_stages_nothing
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Calls with no path, with an all-changed request and with an all-tracked request each answer refused with reason_code policy_no_explicit_paths, record no commit and leave the index unchanged."
+  - name: test_step_offers_no_mode_that_stages_every_changed_or_tracked_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Every option the step's own usage text lists is exercised once against a dirty scratch repo; none commits a file that was not named, and a directory or glob entry is refused with policy_path_not_a_file."
+    must_catch:
+      - "a default that falls back to git add -A when no path is given"
+      - "an --all flag"
+      - "a directory entry expanded to every file under it"
+  - name: test_second_identical_call_answers_nothing_to_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Repeating the same call after a commit answers nothing_to_commit and records no second commit."
+test_rationale: >-
+  The property is about what lands in a real commit and what the real index holds afterwards, so
+  every test runs the real script as a subprocess against a scratch git repository and reads the
+  result back from git. A direct-import test of a path-filter helper would pass while the script
+  still swept the index; a source grep for "add -A" would pass on a recipe that stages by
+  directory. The must_catch entries name the three sweep shapes C6 found in the package today.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

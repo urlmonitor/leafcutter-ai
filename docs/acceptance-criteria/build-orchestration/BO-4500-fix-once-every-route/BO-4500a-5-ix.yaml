@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -35,6 +35,16 @@ doc_links:
     relevance: "Link the diagram from the component page."
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - >-
+    Show three layers: the shared step (staging, checks with one mechanical retry, branch refusal,
+    the answer with remedy / handoff); the commit agent (message authoring, own-context mechanical
+    fix, relaying the answer and the handoff); and the depth-0 callers that engage a specialist on a
+    handoff and re-offer -- each route workflow, the drive's phase loop, and, once BO-3800a lands,
+    the /commit route (commit.js). The criteria list five routes; include commit.js as a sixth
+    route when it is on main at publishing time.
+  - Show remedy_handoff.py / the remedy-declaration loader as a component the step uses, and the shared COMMIT-ANSWER caller block as a component the depth-0 routes share.
+  - Run the next-free diagram id allocator immediately before publishing; link the diagram from docs/architecture/components/build-orchestration.md.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-5

@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -34,6 +34,17 @@ doc_links:
     relevance: "Link the diagram from here."
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+  - >-
+    The hook_failed path is drawn per disposition: mechanical-autofix returns to the commit agent
+    for an own-context fix and a fresh call (repeatable up to max_automated_fix_retries, default
+    3); engage-specialist continues past the commit agent
+    (which cannot spawn at depth 1) to the depth-0 caller, which engages the specialist at most once
+    and re-offers the identical commit through a fresh step call; author-clears is reported. The
+    criteria's "returning to the commit agent for autofix judgement" is the first branch; the
+    second is BO-3800a's and must also be shown.
+  - Each non-committed answer is labelled with its reason_code family (policy_ stop, step_ may retry, check_ by disposition, nothing_changed) so the route's action is visible.
+  - Allocate the diagram id immediately before publishing; link it from docs/architecture/agent_delivery_workflows.md.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-5

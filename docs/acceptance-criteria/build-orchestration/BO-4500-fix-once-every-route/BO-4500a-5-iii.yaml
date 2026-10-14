@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -42,11 +42,59 @@ doc_links:
     status: exists
     relevance: "BP-600c-3-ii forbids a bare stash; the hardened copy of BO-4500a-4-iii's rule."
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The two sites, verified 2026-10-14 in quick-fix.js, are the Commit phase dispatch (label commit:
+    target file, test file and the AC record) and the Changelog phase dispatch (label
+    commit/changelog: the changelog entry). Each calls the shared step in supervised mode naming
+    BP-601 (the run's AC id) and exactly that commit's files.
+  - >-
+    Each result is read through the shared COMMIT-ANSWER block: continue only on committed; stop
+    without retry on a policy_ code (policy_protected_branch is the main-branch case of the second
+    scenario); up to max_transient_retries fresh calls on a step_ code (config, default 3); engage-once-and-re-offer on a handoff; stop on
+    any other answer. Every stop reports status, reason_code and reason and records nothing further.
+  - >-
+    HARDENED COPY: BP-600c-3-ii (no bare stash) and BP-600f (protected-branch refusal) are present in
+    the step before quick-fix moves (BO-4500a-4-iii, BO-4500a-4-i). Their existing regression tests
+    are re-pointed at the step, not duplicated. quick-fix's own workflow-side main-branch guard stays
+    as an earlier stop; it does not replace the step's refusal.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-4
-  contract: "One-answer contract."
+  contract: "One-answer contract (status, reason_code family, handoff) read through the commit agent's commit_answer."
+test_required: true
+test_spec:
+  - name: test_both_quick_fix_commits_call_the_step_supervised_with_the_ac
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run quick-fix.js under the workflow-engine harness; the commit and commit/changelog dispatches each instruct the shared step in supervised mode naming BP-601 and exactly that commit's files."
+  - name: test_quick_fix_stops_on_any_non_committed_answer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Scripting each non-committed answer at the first commit records no changelog or close dispatch and reports status and reason_code."
+  - name: test_main_branch_run_is_refused_by_the_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The quick-fix commit set committed through the real step on a scratch repo on main is refused with policy_protected_branch and records nothing."
+    must_catch:
+      - "rely on the workflow-side guard alone"
+  - name: test_bp600_regression_tests_target_the_shared_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "The BP-600c-3-ii and BP-600f regression tests drive the real step and pass."
+test_rationale: >-
+  quick-fix has a workflow-side guard already, so the discrimination test runs the real step on
+  main to prove the refusal does not depend on that guard.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

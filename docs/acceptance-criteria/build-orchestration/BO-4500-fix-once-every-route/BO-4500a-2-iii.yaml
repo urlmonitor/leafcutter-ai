@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -34,10 +34,50 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: XS
+package_surface: false
+it_requirements:
+  - >-
+    The message must be recorded with message cleanup disabled (the version-control system's
+    verbatim mode or equivalent), so "#" lines, indentation and blank lines survive. The
+    "whitespace" mode is not acceptable: it collapses consecutive blank lines. The default "strip"
+    mode is forbidden: it deletes "#" lines.
+  - >-
+    CARVE-OUT CONFIRMED NARROWER THAN WRITTEN: with verbatim cleanup the version-control system
+    removes nothing, so trailing whitespace and trailing blank lines are also kept. The criterion's
+    carve-out ("the only differences are ...") is still satisfied (an empty difference is within
+    it); the tests assert the stronger fact -- the recorded message equals the file byte for byte.
+  - The behaviour must not depend on the user's or repository's commit.cleanup or core.commentChar configuration; the step sets what it needs for its own call only.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-2
   contract: "Message-from-file rule."
+test_required: true
+test_spec:
+  - name: test_hash_lines_survive_in_place
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A body holding '# covers: BO-4500a-2' and '#1043 is the fix this follows' is recorded with both lines unchanged and in place."
+    must_catch:
+      - "use the default strip cleanup"
+  - name: test_indentation_and_whitespace_survive
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A four-space-indented line keeps its indentation and the recorded message equals the file byte for byte, including trailing spaces."
+    must_catch:
+      - "use the whitespace cleanup mode, which collapses blank lines"
+  - name: test_repo_cleanup_config_does_not_change_the_result
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With commit.cleanup=strip and core.commentChar set in the scratch repo config, the recorded message still equals the file."
+test_rationale: >-
+  The default cleanup is invisible until a message carries a "#" line, so each case is a real
+  commit read back from git with a hostile repository configuration in place.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

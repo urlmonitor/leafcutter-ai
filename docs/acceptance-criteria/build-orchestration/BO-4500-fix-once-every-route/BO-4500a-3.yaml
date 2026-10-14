@@ -1,5 +1,5 @@
 id: BO-4500a-3
-title: "The project's checks always run first, and a failure gets exactly one fix-and-retry before it is reported"
+title: "The project's checks always run first, and an automatically fixable failure gets a bounded number of fix-and-retries before it is reported"
 component: build-orchestration
 components:
   - build_orchestration
@@ -9,8 +9,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -25,9 +25,16 @@ criteria: |
   Given the same call,
   And on that first run a fixing check (a formatter) rewrites a.py and every other check passes,
   When the step continues,
-  Then it takes the rewritten a.py into the named set and runs the checks exactly once more,
+  Then it takes the rewritten a.py into the named set and runs the checks again,
   And when that second run passes, the commit is recorded with the rewritten a.py,
   And the answer is committed and names the fixing check and a.py as the file it changed.
+
+  Given the project's configuration sets no retry ceiling,
+  When a fixing check keeps rewriting files,
+  Then the step re-runs the checks at most 3 times after the first run, because 3 is the
+    default ceiling,
+  And given the configuration sets a different ceiling, that ceiling is used instead, without
+    any change to the step's code.
 
   Given the same call,
   And on the first run a judging check that fixes nothing fails on notes.md,
@@ -43,7 +50,7 @@ doc_links:
   - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
     relationship: describes
     status: exists
-    relevance: "Cluster C6: three retry policies across the recipes; spec is 'hook probe, then autofix, then exactly one retry; never skips hooks'."
+    relevance: "Cluster C6: three retry policies across the recipes; spec is 'hook probe, then autofix, then exactly one retry; never skips hooks'. The 'exactly one' part was superseded on 2026-10-14 by a configured ceiling, default 3 (see amended_by)."
   - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c-2.yaml
     relationship: related
     status: exists
@@ -58,13 +65,97 @@ doc_links:
     relevance: "Current single-retry autofix recipe -- one of the copies the step replaces."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The checks the step runs are the project's own pre-commit checks, run the same way a commit in
+    that workspace runs them; the step adds no check of its own and skips none (BO-4500a-3-i).
+    Workspaces where checks cannot run at all are BO-1700's and are not re-specified.
+  - >-
+    THE IN-CALL FIX-AND-RETRY IS FOR THE MECHANICAL CLASS ONLY. It is triggered solely when a
+    fixing (transform-tier) check rewrote a NAMED file -- the mechanical-autofix class. The rewrite
+    is taken in, recorded in the answer's autofixed key ({hook_name, files}), and the checks run
+    again, up to max_automated_fix_retries re-runs (config/commit_step.json, default 3; see
+    BO-4500a-4). A judging check's failure gets NO in-call retry, whatever its declared
+    disposition (engage-specialist, mechanical-autofix or author-clears): the step answers
+    hook_failed and the disposition decides what the caller does next.
+  - >-
+    A JUDGEMENT FAILURE IS THE BO-3800a HANDOFF, NOT A SECOND MECHANISM. The hook_failed answer
+    carries hook_name, failing_files, hook_output (verbatim) and remedy / handoff exactly as
+    BO-4500a-4's contract defines them, built by reusing remedy_handoff.py and the shared
+    remedy-declaration loader. What each disposition means for the caller: mechanical-autofix ->
+    the commit agent applies the precommit-autofix fix in its own context, then makes a fresh
+    call, up to max_automated_fix_retries in total; engage-specialist -> the commit agent relays the handoff and its
+    depth-0 caller engages the specialist at most once, then re-offers (BO-3800a); author-clears
+    or no declaration -> reported to the caller, never retried automatically.
+  - >-
+    RETRY BUDGET: configured, default 3 (BrainCandy, final gate 2026-10-14), which agrees with
+    BO-200b-3's "at most 3". The hardened source for HOW a retry is bounded is still
+    precommit-autofix as BO-210c-2 fixed it: a fixed ceiling read before the loop starts, never
+    a loop whose bound depends on check output (KI-BO-20260914-autofix-depth). BO-210c-2's
+    regression tests run against the shared step with the ceiling set to 1, then to the default.
+  - >-
+    On every non-committed outcome the working tree keeps the content it had when the step stopped
+    (fixing checks' edits kept) and none of the caller's named files is left staged by the call;
+    other callers' staging is untouched (BO-4500a-1-i). BO-200b-2 owns rollback semantics.
+  - Errors are handled per the project error handling policy; a check that cannot be launched is hook_failed naming it, never a pass.
 delivers_to:
-  agent: llm-expert
-  contract: "hook_failed answer carrying hook_name, failing_files and the check's own message, which the commit agent reads to apply autofix judgement (BO-4500a-3-iii, BO-4500a-5-v)."
-expects_from: null
+  - agent: llm-expert
+    contract: >-
+      hook_failed answer per BO-4500a-4 (hook_name, failing_files, hook_output verbatim, remedy
+      {hook_id, disposition, skills, demand}, handoff when engage-specialist) read by the commit
+      agent (BO-4500a-5-v) to choose: own-context mechanical fix then one fresh call, relay the
+      handoff, or report.
+expects_from:
+  ac_id: BO-4500a-1
+  contract: "The named path set the checks run over and that a fixing check's rewrite may re-enter."
+test_required: true
+test_spec:
+  - name: test_checks_run_once_over_named_files_before_any_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With passing fixture checks, the check runner is invoked exactly once over a.py and notes.md before the commit object exists, and the answer is committed."
+  - name: test_fixing_check_rewrite_is_taken_in_and_checks_run_exactly_once_more
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fixture formatter rewrites a.py on the first run; the checks run exactly twice, the commit holds the rewritten a.py and autofixed names the formatter and a.py."
+  - name: test_judging_failure_gets_no_second_run_and_answers_hook_failed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A judging check failing on notes.md yields hook_failed naming it with failing_files [notes.md]; the check runner ran once, no commit exists, and neither file is staged."
+    must_catch:
+      - "retry the checks after a judging failure"
+      - "an autofix attempted by the step itself for a judging check"
+  - name: test_working_tree_keeps_fixer_edits_after_hook_failed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "When a fixer rewrote a.py and a judging check then failed, a.py holds the fixer's content and notes.md its pre-call content after the answer."
+test_rationale: >-
+  Retry counts and staging state are only observable by running the real step over a scratch
+  repository whose fixture checks count their own invocations; the assertions read the invocation
+  log and git, never the step's source.
 origin_agent: business-analyst
 created: 2026-10-12
-amended_by: []
+amended_by:
+  - reason: retry-ceiling-configured-default-3
+    by: BrainCandy
+    at: 2026-10-14
+    note: >-
+      Final-gate decision resolving the conflict with BO-200b-3 ("retries at most 3 times") in
+      favour of three: "3 retries is fine, as there can always be server or whatever issues. if
+      they are automated, its fine." Title changed from "exactly one fix-and-retry" to "a bounded
+      number of fix-and-retries"; the second scenario's "exactly once more" became "again"; a
+      third scenario adds the configured ceiling (config/commit_step.json
+      max_automated_fix_retries, default 3). The judging-check scenario is unchanged: a judging
+      failure is still never retried inside the step.
 superseded_by: null
 covered_by: [BO-4500a-3-i, BO-4500a-3-ii, BO-4500a-3-iii]
 implemented_by: []
@@ -79,3 +170,13 @@ notes: |
   "Fixing" vs "judging" is the check tier the hooks manifest already declares (transform vs
   judgment, GE-102c / GE-120g). Workspaces where the checks cannot run at all are BO-1700's
   (fail closed; graceful no-op where a project has none) and are not re-specified here.
+
+  IT PO 2026-10-14 -- RECONCILED WITH BO-3800a (BrainCandy instruction 2). The single
+  fix-and-retry inside one call is the mechanical-autofix class only (a fixing check rewrote a
+  named file). A judgement failure handed back whole (BO-4500a-3-iii) IS the BO-3800a handoff:
+  the answer carries remedy_handoff.py's remedy sub-object and, for engage-specialist, its full
+  payload, so there is one answer shape and one payload builder. LAYERING: shared step =
+  deterministic staging, checks and answer; commit agent = runs the step and relays the answer,
+  applying an own-context mechanical fix or relaying the handoff (BO-4500a-5-v); depth-0 caller
+  (commit.js for /commit, each workflow for its own commits) = engages the specialist on a
+  handoff, at most once, then re-offers the same commit (BO-3800a).

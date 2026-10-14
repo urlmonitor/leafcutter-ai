@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -49,10 +49,70 @@ doc_links:
     relevance: "Routes the lane's command steps to the command-step-runner. The commit step is one of those steps; this record decides what it commits, BO-2400f-5-i decides which agent is asked."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The lane's commit dispatch (fast-lane-ship.js, the single commit-agent dispatch) passes an
+    explicit COMPUTED path list: the coder's reported files_modified, the changelog entry path the
+    changelog phase reported, and the claimed AC record paths. add -A and every other sweep are
+    deleted, not narrowed. Structural parents come from the step (BO-4500a-1-ii), not from the lane.
+  - >-
+    The lane reads the commit agent's reply through the shared COMMIT-ANSWER block (BO-4500a-5):
+    continue to the pull-request phase only when commit_answer.status is committed; on a policy_
+    reason_code halt without retry; on a step_ code up to max_transient_retries fresh calls (config, default 3), then halt; on a
+    hook_failed answer carrying handoff, engage the named specialist at most once and re-offer the
+    identical path list and message file; on any other hook_failed halt. Every halt reports
+    status, reason_code, reason, hook_name and failing_files. The lane never classifies by reason
+    text.
+  - >-
+    HARDENED COPY KEPT: the lane's halt-on-non-ok reply reading (C2) is the hardened reply handling
+    and is preserved; any behaviour the lane's commit copy had been fixed for and the step lacked is
+    carried into the step before the lane moves (BO-4500 standing rule).
+  - >-
+    The commit dispatch stays routed as BO-2400f-5-i decides (which agent is asked); this record
+    decides only what is committed and how the answer is read. BO-3200f must not re-decompose this
+    site.
+  - KI-BO-029's regression test runs against the shared step and the migrated lane, not the retired add -A recipe.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-4
-  contract: "One-answer contract the lane reads."
+  contract: "One-answer contract (status, reason_code family, handoff) read through the commit agent's commit_answer."
+test_required: true
+test_spec:
+  - name: test_lane_commit_names_exactly_the_computed_set
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run fast-lane-ship.js under the workflow-engine harness; the recorded commit dispatch names exactly scripts/x.py, unit_tests/test_x.py, the changelog entry and the two claimed records."
+  - name: test_kibo029_bootstrap_churn_is_not_committed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "A scratch workspace dirtied with four agent cards and docs/INDEX.md, committed through the real step with the lane's computed set, yields a commit with the five files (plus any edited parent) and none of the churn."
+    must_catch:
+      - "keep git add -A"
+      - "narrow add -A to a directory"
+  - name: test_lane_continues_only_on_committed_and_halts_on_every_other_answer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "With the commit reply scripted to each non-committed answer (policy_ refusal, step_ refusal, hook_failed, nothing_to_commit), no pull-request dispatch is recorded and the halt reports status and reason_code."
+  - name: test_lane_engages_specialist_once_and_reoffers_identical_commit
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A scripted hook_failed reply with handoff makes the lane dispatch the named specialist once, then re-dispatch the commit with the identical path list and message file; a second handoff halts."
+    must_catch:
+      - "re-derive the file list on the re-offer"
+      - "loop on repeated handoffs"
+test_rationale: >-
+  The lane is a workflow the unit layer can run through the engine harness, so control flow is
+  asserted on the recorded dispatch list; the KI-BO-029 case runs the real step on a real dirty
+  workspace because the defect is what lands in git.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

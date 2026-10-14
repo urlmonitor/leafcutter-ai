@@ -8,8 +8,8 @@ level: L1
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: [code, prompt]
 risk_surface: safety
@@ -54,6 +54,22 @@ doc_links:
     relevance: >-
       The chartered executor (BO-2400a-1-i) a workflow uses to run the shared step. Its
       contract requires target.ac_id, which plan-feature and finalize-feature do not have.
+  - path: docs/architecture/adrs/ADR-019-build-feature-inline-phase-dispatch.md
+    relationship: describes
+    status: exists
+    relevance: "Depth-1 agents cannot spawn; why the commit agent returns a handoff and a depth-0 caller engages the specialist."
+  - path: docs/architecture/adrs/ADR-030-dual-engine-workflow-support.md
+    relationship: describes
+    status: exists
+    relevance: "E2 workflow bodies have no require/import and no process access; the step is a command, shared JS is build-inlined."
+  - path: docs/reference/remedy-declarations.md
+    relationship: describes
+    status: exists
+    relevance: "The three disposition values and the shared declaration loader the hook_failed answer reuses."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800a-2.yaml
+    relationship: related
+    status: exists
+    relevance: "In flight (branch fast-lane/bo-3800a): commit.js and remedy_handoff.py. Same answer shape; commit.js is the ninth route."
 assigned_agent: null
 estimated_complexity: null
 delivers_to: null
@@ -69,6 +85,23 @@ documentation_triggers:
   - sequence-diagram
   - reference-doc
 notes: |
+  BUILD ORDER -- NEW PATH FIRST, REWIRE ONLY WHEN IT WORKS (BrainCandy, final gate 2026-10-14:
+  "We need a new path first AND only when that works rewire existing solutions to it"). The
+  shared step (BO-4500a-1..-4) is built and proved on its own before any route moves onto it.
+  No route migration (BO-4500a-5 and its L3s, including the /commit route once BO-3800a lands)
+  starts until those four are done with green tests, and each route keeps its old recipe until
+  its own migration passes. This is enforced structurally by BO-4500a-5's depends_on
+  [BO-4500a-1, -2, -3, -4]; this note records why, so the order is not "optimised" away.
+
+  FINAL-GATE DECISIONS (2026-10-14), recorded here so they are found from the L1:
+    - Census wording made count-independent (BO-4500a-5 amended_by).
+    - Retry ceilings configured, default 3, automated retries only; a specialist is still
+      engaged at most once (BO-4500a-3, -3-ii amended_by; BO-4500a-4 it_requirements).
+    - The answer's vocabulary (reason codes and families, answer keys, answer_version, retry
+      ceilings) lives in config/commit_step.json, not in code, so it can be extended later by
+      a data edit (BO-4500a-4 amended_by).
+    - BO-2400a-1-i carries an amended_by entry for the run-id widening (BO-4500a-5-viii).
+
   WHAT THE USER ASKED FOR (2026-10-12, BrainCandy, via /plan-feature). Committing becomes one
   deterministic step that every workflow calls the same way, replacing the 8+ hand-written
   commit recipes in templates/workflows-js/ (plan-feature x3, quick-fix x2, fast-lane-ship,
@@ -138,3 +171,28 @@ notes: |
   DOCUMENTATION TRIGGERS. component-diagram: a new shared script plus a changed commit-agent
   role. sequence-diagram: workflow -> executor -> commit agent -> script -> hooks -> autofix
   -> retry is a multi-actor flow. reference-doc: the one-answer contract every caller reads.
+
+  IT PO ENRICHMENT, 2026-10-14 (technical fields on the 31 leaves; this composite stays without an
+  assigned_agent). Decisions taken:
+    - WHO RUNS THE STEP (constraint 2): the commit agent, its brief shrunk to "author a message if
+      none, run the step, relay the answer" (BO-4500a-5-v). The command-step-runner widening
+      (BO-4500a-5-viii) is kept for BO-3200f but is not on the commit path.
+    - REFUSED vs STEP FAILURE (BrainCandy instruction 1): four statuses kept; a required,
+      enumerated reason_code on every non-committed answer, with disjoint policy_* (stop, do not
+      retry) and step_* (the step could not finish, may retry) families under refused
+      (BO-4500a-4, -4-v). No fifth status.
+    - ONE ANSWER WITH BO-3800a (BrainCandy instruction 2): the hook_failed answer embeds
+      remedy_handoff.py's remedy sub-object and handoff payload; dispositions engage-specialist /
+      author-clears / mechanical-autofix are the incumbent vocabulary. The step's single
+      fix-and-retry is the mechanical class only.
+    - LAYERING: shared step = deterministic staging, checks and answer; commit agent = runs the
+      step and relays; depth-0 caller (commit.js for /commit, each workflow for its own commits,
+      the drive's phase loop for builds) = engages a specialist on a handoff at most once and
+      re-offers. E2 workflows cannot call another workflow (Edge 5), so commit.js is a ROUTE, the
+      ninth consumer, not the centre.
+    - DEPENDENCY: the depth-0 engage-then-re-offer loop must be shared through the reserved
+      shared-code-inliner L1 (BO-4500 notes; generalising BO-4300c-3's build-inlined block), not
+      typed into each workflow. That L1 is not authored here.
+  Further dependencies: BO-1600a-1 (serialisation guard, approved/todo) blocks BO-4500a-4-ii;
+  BO-210c-2's regression tests do not exist yet and must be written against the step; BO-3800a
+  (branch fast-lane/bo-3800a) owns remedy_handoff.py, which must remain the only payload builder.

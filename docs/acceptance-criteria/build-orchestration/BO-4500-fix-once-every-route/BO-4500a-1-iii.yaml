@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -40,10 +40,57 @@ doc_links:
     relevance: "Owns whether a fixing (transform-tier) check may change files at all. This record does not restrict the checks; it decides only what the commit contains when they do."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The answer field for files a check changed outside the named set is unlisted_changes (list of
+    repo-relative POSIX paths), always present, [] when none (BO-4500a-4 contract). It is distinct
+    from paths and from autofixed.
+  - >-
+    A path a check stages that is outside the named set (plus BO-4500a-1-ii parents) is removed
+    from the commit and left in the working tree with the check's content, unstaged. The check
+    itself is not suppressed or reconfigured (GE-120g owns whether a transform check may change
+    files at all).
+  - >-
+    The decision taken is the BA's Q3 default -- leave out and report -- because including the file
+    is KI-BO-029 mechanism 2 and breaks "commit messages must match the diff". If the user
+    reverses it, only the commit-membership clause flips; unlisted_changes still reports.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-1
   contract: "Explicit-path staging rule."
+test_required: true
+test_spec:
+  - name: test_check_regenerated_index_is_left_out_of_the_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fixture transform check regenerates and stages docs/INDEX.md; the commit holds the three named known-issues files and not docs/INDEX.md."
+  - name: test_left_out_file_keeps_the_checks_content_unstaged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the call docs/INDEX.md holds the regenerated content in the working tree and is not staged."
+  - name: test_answer_reports_left_out_file_in_unlisted_changes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The committed answer lists docs/INDEX.md in unlisted_changes and not in paths."
+    must_catch:
+      - "include the check-staged file silently"
+      - "drop the file without reporting it"
+  - name: test_check_rewrite_of_a_named_file_is_committed_and_reported_in_paths
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "When a fixing check rewrites docs/known-issues/a.md, the commit holds the fixed content and a.md is in paths, not unlisted_changes."
+test_rationale: >-
+  KI-BO-029's mechanism is a hook staging a file mid-commit; only a real fixture transform hook
+  inside a real commit run reproduces it. The tests read the commit and the index from git.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

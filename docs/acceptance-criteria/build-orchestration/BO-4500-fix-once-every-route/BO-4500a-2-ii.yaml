@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -37,10 +37,43 @@ doc_links:
     relevance: "BO-200c-4 lets the BODY be amended after an autofix to reflect extra staged files. Under the shared step the staged set cannot grow (BO-4500a-1-iii), so no amendment is needed and the message stays whole. Flagged as a narrowing of BO-200c-4 for the IT PO."
 assigned_agent: python-coder
 estimated_complexity: XS
+package_surface: false
+it_requirements:
+  - The step adds no trailer of any kind (no Co-Authored-By, no sign-off line, no change-id) and reorders none.
+  - >-
+    The in-call retry after a fixing check (BO-4500a-3) re-uses the caller's file as is; the
+    message is never amended to describe a rewrite. This narrows BO-200c-4 (which lets the body be
+    amended after autofix): under the step the staged set cannot grow (BO-4500a-1-iii), so no
+    amendment is needed. Flagged for BO-200c-4's owner.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-2
   contract: "Message-from-file rule."
+test_required: true
+test_spec:
+  - name: test_message_without_trailer_gains_none
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A message with subject and body and no Co-Authored-By line is recorded with no Co-Authored-By line."
+  - name: test_two_trailers_are_kept_in_order
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The recorded message ends with the Claude Opus 5.5 trailer then the BrainCandy trailer, in that order."
+  - name: test_message_after_fixer_retry_equals_the_file
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "When a fixture formatter rewrites a named file on the first run, the message recorded after the second run is identical to the file."
+    must_catch:
+      - "amend the body to mention the autofix"
+test_rationale: >-
+  Each test reads the real recorded commit message back from git; the retry case uses a real
+  fixture formatter so the message path through the retry is exercised, not assumed.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

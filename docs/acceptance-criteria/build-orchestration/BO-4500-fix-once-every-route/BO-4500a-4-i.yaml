@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -44,10 +44,52 @@ doc_links:
     relevance: "BO-4300 and BO-1800e guarantee a route has its own line of work to begin with. This record is the last-line refusal at the commit; it does not restate either."
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+it_requirements:
+  - The branch check runs first, before path validation side effects, staging or any check, so a refused call changes nothing in the index or working tree.
+  - >-
+    The protected set is main, master and the origin-reported default branch, matched by whole
+    name. The default branch is read from locally recorded remote state (no network access); when
+    it is not recorded locally, only main and master are protected and the answer is not delayed.
+    Additional protected names may come from project config; none is hard-coded beyond main and
+    master.
+  - Codes (BO-4500a-4 enum) are policy_protected_branch (reason naming the branch) and policy_detached_head; both are policy refusals a caller must not retry.
+  - HARDENED SOURCE is quick-fix's BP-600f protected-branch refusal; its regression test runs against this step (BO-4500a-5-iii).
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-4
-  contract: "One-answer contract."
+  contract: "One-answer contract and the policy_ reason_code family."
+test_required: true
+test_spec:
+  - name: test_main_and_master_are_refused_before_any_check_runs
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "On main and on master the answer is refused with policy_protected_branch naming the branch; no commit, a.py not staged and the fixture check log is empty."
+  - name: test_origin_default_branch_trunk_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With the scratch repo's recorded origin default branch set to trunk, a call on trunk is refused naming trunk."
+  - name: test_detached_checkout_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A detached checkout answers refused with policy_detached_head."
+  - name: test_main_followup_is_allowed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A branch named main-followup commits normally."
+    must_catch:
+      - "a prefix match that refuses every branch starting with main"
+test_rationale: >-
+  The refusal must precede any side effect, so the tests assert both the answer and the empty
+  check-invocation log from a real run on each branch shape.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: contract_boundary
@@ -43,16 +43,163 @@ doc_links:
     status: exists
     relevance: "The E2 engine gives a workflow body no subprocess or filesystem; a step reachable only as a command with a JSON answer is what lets any engine reach it."
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    FOUR STATUSES, NO FIFTH. status stays exactly committed | nothing_to_commit | refused |
+    hook_failed (approved criteria). Whether a caller may retry is carried by reason_code, not by
+    a new status value.
+  - >-
+    REASON_CODE IS REQUIRED ON EVERY NON-COMMITTED ANSWER and null only when status is committed.
+    It is drawn from ONE published enumeration, partitioned into disjoint families so a caller
+    decides what to do by membership, never by reading reason text. refused + policy_* = the
+    request is not allowed (stop; do not retry; fix the request): policy_no_explicit_paths,
+    policy_path_not_a_file, policy_path_outside_workspace, policy_path_not_found,
+    policy_message_missing, policy_message_not_found, policy_message_unreadable,
+    policy_message_empty, policy_protected_branch, policy_detached_head,
+    policy_unattributed_supervised_call, policy_unknown_option. refused + step_* = the request was allowed but the step
+    could not finish (the caller may retry; the step itself never retries): step_index_locked,
+    step_vcs_error, step_config_unreadable, step_serialisation_unavailable (only if BO-1600a's
+    guard can report that it could not be acquired). hook_failed + check_*: check_failed, check_unsettled,
+    check_awaited_input. nothing_to_commit + nothing_changed. A refused answer whose code is not
+    in the policy_ or step_ family is a contract violation.
+  - >-
+    THE CONTRACT'S VOCABULARY IS CONFIGURATION, NOT CODE (BrainCandy, final gate 2026-10-14:
+    "make sure we can extend later, and that they are not part of the code but some config
+    file"). The reason_code enumeration and its family partition, the list of answer keys with
+    their empty value, answer_version, and the two retry ceilings live in ONE package config file,
+    config/commit_step.json, validated by config/commit_step.schema.json (the repo's existing
+    name.json + name.schema.json convention), deployed by build.py beside the other package
+    config and read by the step at run time. The step's code holds no copy of any of them: it
+    loads the file, and a missing or schema-invalid file makes the step answer refused with
+    step_config_unreadable rather than fall back to a built-in list. Extending the contract (a new
+    code, a new key) is an edit to that file alone. The reference page (BO-4500a-4-vi) and every
+    caller's acceptance predicate are tested against that file, never against a hand-typed copy.
+    Adding a code or key is additive; renaming a code, removing one, or moving one between
+    families is a breaking change and needs answer_version to change in the same file.
+  - >-
+    RETRY CEILINGS ARE CONFIGURED, DEFAULT 3 (BrainCandy, final gate 2026-10-14: "3 retries is
+    fine, as there can always be server or whatever issues. if they are automated, its fine").
+    config/commit_step.json carries max_automated_fix_retries (default 3; the BO-4500a-3 re-runs
+    after a fixing check rewrites a named file) and max_transient_retries (default 3; how many
+    fresh calls a caller may make on a step_* code). Both apply ONLY to automated retries.
+    A judging check's failure is never retried inside the step, and a specialist is engaged at
+    most once (BO-3800a), whatever these values are. Every sibling record that says "one fresh
+    call" or "at most one retry" on a step_* code means "up to max_transient_retries".
+  - >-
+    ALL KEYS ALWAYS PRESENT. Beyond the five C6 keys and reason, the answer carries reason_code,
+    added_parents, unlisted_changes, autofixed, hook_output, remedy, handoff,
+    skip_request_ignored, run, ac_id and answer_version (shape in delivers_to). A key that does not
+    apply holds null or an empty list, never absent, so a caller can read every answer with one
+    fixed schema.
+  - >-
+    ONE SHAPE WITH THE BO-3800a HANDOFF. On hook_failed the remedy key carries exactly the remedy
+    sub-object that templates/scripts/commit_guardian/remedy_handoff.py builds ({hook_id,
+    disposition, skills, demand}), and the handoff key carries remedy_handoff.py's full payload
+    when the disposition is engage-specialist. The step obtains both by REUSING remedy_handoff.py's
+    builder and the shared remedy-declaration loader, never by a second parser of the hook's
+    output. remedy is null when the hook has no declaration; an unreadable declaration yields
+    remedy null and a reason naming it, never a guessed disposition. (BO-3800a is in flight on
+    branch fast-lane/bo-3800a; if this step is built first, the builder moves here unchanged and
+    remedy_handoff.py imports it, so there is still exactly one.)
+  - >-
+    FRAMEWORK NEUTRAL. Reaching the step needs only the ability to run a command in the workspace
+    and read standard output. No input may name or require a workflow engine, agent framework,
+    model or environment variable set by one. Standard output carries the answer and nothing else;
+    diagnostics go to standard error. A crash before an answer can be printed must leave standard
+    output empty, so every caller fails closed rather than reading partial JSON.
+  - Errors are handled per the project error handling policy; an exception inside the step becomes refused + step_vcs_error with the error quoted, never a traceback on stdout.
 delivers_to:
   - agent: python-coder
-    contract: "The one-answer contract every migrated route reads (BO-4500a-5): keys status, sha, paths, hook_name, failing_files, reason; status in committed | nothing_to_commit | refused | hook_failed."
+    contract: >-
+      ONE-ANSWER CONTRACT (answer_version 1), read by every migrated route (BO-4500a-5) and by the
+      commit agent (BO-4500a-5-v). Standard output is one JSON object. Keys, all always present:
+      status (string, committed | nothing_to_commit | refused | hook_failed); reason_code (string
+      from the published enum, null iff committed); reason (string in plain words, null iff
+      committed); sha (40-hex string iff committed, else null); paths (list of repo-relative POSIX
+      path strings committed, [] unless committed); added_parents (subset of paths added as
+      structural parents, BO-4500a-1-ii); unlisted_changes (list of paths a check changed outside
+      the named set and left uncommitted, BO-4500a-1-iii); autofixed (list of {hook_name: string,
+      files: list of paths} for fixing checks whose rewrite was taken in, BO-4500a-3); hook_name
+      (string iff hook_failed, else null); failing_files (list of paths iff hook_failed, else []);
+      hook_output (the failing check's output verbatim iff hook_failed, else null); remedy (null or
+      {hook_id: string, disposition: engage-specialist | mechanical-autofix | author-clears,
+      skills: list of strings, demand: list (the hook's REFUSAL_RECORD, verbatim) or null});
+      handoff (null, or remedy_handoff.py's payload {status: handoff, handoff_target,
+      record_handoff_target, flips_signed_off, message, remedy} iff remedy.disposition is
+      engage-specialist); skip_request_ignored (list of check ids, BO-4500a-3-i); run (string or
+      null) and ac_id (string or null), echoing the attribution given (BO-4500a-4-iv);
+      answer_version (integer 1).
   - agent: documentation-expert
-    contract: "The contract the reference doc (BO-4500a-4-vi) documents."
+    contract: "The contract above plus the reason_code enumeration and its family partition, documented by the reference page BO-4500a-4-vi."
 expects_from: null
+test_required: true
+test_spec:
+  - name: test_each_outcome_prints_exactly_one_json_object_on_stdout
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Four real calls ending committed, nothing_to_commit, refused and hook_failed each print a stdout that parses as exactly one JSON object with nothing before or after it."
+  - name: test_every_answer_carries_every_contract_key
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Each of the four answers carries every key of the contract, including the five C6 keys, with sha set only on committed and hook_name/failing_files set only on hook_failed."
+  - name: test_every_non_committed_answer_has_a_reason_code_from_its_family
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Every refused answer produced by the suite's fixtures has a reason_code in exactly one of the policy_ or step_ families of the published enum; hook_failed carries a check_ code; committed carries null."
+    must_catch:
+      - "a refused answer with reason text but no reason_code"
+      - "an index-lock failure coded as a policy refusal"
+      - "a protected-branch refusal coded as a step failure"
+  - name: test_hook_failed_remedy_equals_remedy_handoff_builder_output
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "For a fixture judgement hook declared engage-specialist, the answer's remedy and handoff keys are equal to what remedy_handoff.py builds from the same hook output and declaration; for an undeclared hook both are null."
+  - name: test_plain_command_harness_gets_the_same_answer_as_a_workflow_route
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The step run as a plain subprocess with arguments, and the same call reached through a workflow route under unit_tests/_workflow_engine_harness.py, yield answers equal in every key except sha."
+  - name: test_crash_before_answer_leaves_stdout_empty
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Forcing an internal failure before the answer is composed leaves stdout empty (or a refused step_ answer), never partial JSON."
+  - name: test_contract_vocabulary_is_read_from_config_not_code
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Against a disposable copy of config/commit_step.json: adding a new step_ code and a new answer key makes the real step emit that key and accept that code with no code change; lowering max_automated_fix_retries to 1 makes a never-settling fixer stop after one retry; removing the file makes the step answer refused with step_config_unreadable instead of falling back to a built-in list. A copy of the vocabulary hard-coded in the step fails the first arm."
+test_rationale: >-
+  The contract is what every caller parses, so it is proved by running the real script and
+  parsing its real stdout, never by importing a dict builder. The remedy/handoff seam test exists
+  because two specs (this one and BO-3800a-2) describe the same answer; it fails the moment the
+  two builders diverge. The reachability test is the framework-neutrality scenario: the same
+  answer whether a workflow or a bare harness runs the step.
 origin_agent: business-analyst
 created: 2026-10-12
-amended_by: []
+amended_by:
+  - reason: contract-vocabulary-moved-to-config
+    by: BrainCandy
+    at: 2026-10-14
+    note: >-
+      Final-gate decision, technical fields only (criteria unchanged). The reason_code
+      enumeration, answer keys, answer_version and the two retry ceilings move out of the
+      step's code into config/commit_step.json (+ schema), so the contract is extended by a
+      data edit. Added step_config_unreadable and the test proving the vocabulary is read from
+      config. Retry ceilings default to 3, automated retries only.
 superseded_by: null
 covered_by: [BO-4500a-4-i, BO-4500a-4-ii, BO-4500a-4-iii, BO-4500a-4-iv, BO-4500a-4-v, BO-4500a-4-vi]
 implemented_by: []
@@ -65,3 +212,18 @@ notes: |
   "reason" is added to the spec's five keys so a refusal is explainable; BO-4500a-1-iii adds one
   list for files a check changed outside the named set. Both are flagged as extensions of the C6
   spec for the user's confirmation.
+
+  IT PO 2026-10-14 -- REASON_CODE DECISION (BrainCandy instruction 1). "refused" covers both a
+  policy refusal (you asked for something not allowed: stop, do not retry) and a step failure
+  (the step could not finish: may be retried). The approved criteria fix four statuses and put
+  the runtime case under refused (BO-4500a-4-v), so a fifth status would contradict them. The
+  distinction is therefore a REQUIRED, ENUMERATED reason_code on every non-committed answer,
+  partitioned into policy_* and step_* families for refused (plus check_* for hook_failed and
+  nothing_changed for nothing_to_commit). A fifth status is NOT needed: the partition gives
+  callers the stop/retry decision mechanically. This supersedes the BA's Q4 alternative.
+
+  IT PO 2026-10-14 -- ONE ANSWER WITH BO-3800a. The in-flight BO-3800a work
+  (templates/scripts/commit_guardian/remedy_handoff.py on branch fast-lane/bo-3800a) builds the
+  handoff payload a depth-0 caller consumes. This contract embeds that payload (remedy, handoff)
+  instead of defining a second one, so BO-4500a and BO-3800a-2 describe ONE answer shape. The
+  extension keys beyond C6's five are listed in delivers_to and flagged for the user.

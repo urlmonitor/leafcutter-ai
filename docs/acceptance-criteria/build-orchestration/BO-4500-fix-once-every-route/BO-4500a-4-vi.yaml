@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: docs
 risk_surface: internal
@@ -39,10 +39,29 @@ doc_links:
     relevance: "Link the reference page from here."
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+  - >-
+    Place the page under docs/reference/ (e.g. docs/reference/shared-commit-step.md, name
+    provisional) with the repo's doc frontmatter, and link it from
+    docs/architecture/agent_delivery_workflows.md and docs/architecture/components/build-orchestration.md.
+  - >-
+    The page documents the reason_code enumeration and its family partition from the step's own
+    published source as built, and states the caller rule per family: policy_* -> stop, do not
+    retry, fix the request; step_* -> the step could not finish, the caller may retry (the step
+    never does); check_* on hook_failed -> act on remedy.disposition; nothing_changed ->
+    nothing_to_commit, never read as a success where work was expected. It must not copy an enum
+    that drifts from the step: it is written from the built step, and a reviewer checks every code
+    on the page against the step's listing.
+  - >-
+    It documents remedy and handoff as the BO-3800a payload produced by remedy_handoff.py (one
+    shape), and the layering: the step answers; the commit agent relays; the depth-0 caller engages
+    a specialist on a handoff at most once and re-offers the identical path list and message file.
+  - The four example answers are real outputs captured from the built step, not hand-typed JSON.
+  - Written after the step is built (BO-2200d timing); names no workflow engine, agent framework or model as a requirement.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-4
-  contract: "The one-answer contract and the behaviours of BO-4500a-1..-4 as built."
+  contract: "The one-answer contract (answer_version 1, reason_code families, remedy/handoff) and the behaviours of BO-4500a-1..-4 as built."
 test_required: false
 origin_agent: business-analyst
 created: 2026-10-12

@@ -338,6 +338,11 @@ amended_by:
   agent: it-po
   date: '2026-09-28'
   reason: "Declared package_surface: true and converted it_requirements to the structured ACS-100i-6 form (config_schema_fragment, reference_file_path, n_location_rule, required_skills, post_write_commands), because the commit-msg hook check-package-surface-declaration (ACS-100i-8) refused the build commit that adds the command-step-runner registry entry. The 12 earlier requirements are kept verbatim under constraints. Criteria, title, depends_on and req_status unchanged."
+- action: contract-widened-by
+  agent: BrainCandy
+  date: '2026-10-14'
+  by_record: BO-4500a-5-viii
+  reason: "BO-4500a-5-viii (approved 2026-10-14) widens the request target this record defines: a request may name a run id (target.run_id) INSTEAD of an acceptance-criterion id, so routes with no single AC (plan-feature, finalize-feature) can reach the command-step-runner. A target naming neither is declined, naming the missing run-or-criterion; a target naming an AC id behaves exactly as today, so the fast lane is unaffected. This record's criteria, title and work_status (done) are unchanged; the widening is built and proved under BO-4500a-5-viii, and this entry exists so a reader of this record learns its contract is no longer AC-only."
 superseded_by: null
 covered_by: []
 implemented_by: []

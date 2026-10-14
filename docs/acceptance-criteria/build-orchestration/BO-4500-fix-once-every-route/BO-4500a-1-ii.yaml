@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -49,10 +49,61 @@ doc_links:
     relevance: "The id-derived structural-parent algorithm; the step must use the canonical derivation, not a private copy (KI-ACS-20260925-derive-parent-id-copies-disagree)."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The structural parent is derived with the ONE canonical id-to-parent derivation the AC store
+    already ships (docs/reference/ac-id-hierarchy.md; scripts/ac_store/ac_parent_id.py), reused,
+    never a private copy (KI-ACS-20260925-derive-parent-id-copies-disagree). If that derivation
+    returns no parent for an id shape, no parent is added and nothing is guessed.
+  - >-
+    A parent is added only when (a) a named path is an AC record, (b) its derived parent record
+    lives in the same feature folder or the same component tree as the canonical derivation
+    resolves it, and (c) that parent is modified in the working tree. Exactly one hop; never a
+    grandparent, never a sibling.
+  - >-
+    The AC-store root(s) are read from the project's configured AC-store location, never
+    hard-coded to docs/acceptance-criteria/, so a consumer project with a different store root gets
+    the same behaviour.
+  - Each added parent appears in both paths and added_parents in the answer (BO-4500a-4 contract).
+  - A done parent that refuses todo children is reported as hook_failed like any other check; the step never edits a record to make a check pass.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-1
   contract: "Explicit-path staging rule this record extends by exactly one hop."
+test_required: true
+test_spec:
+  - name: test_modified_parent_is_committed_with_its_named_children
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Naming four BP-100k-4-* children with BP-100k-4 modified commits five records; added_parents is [BP-100k-4's path]."
+  - name: test_covered_by_check_sees_the_edited_parent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "With the real check-ac-parent-covered-by hook in the scratch repo's checks, the commit passes because the hook was given the edited parent."
+  - name: test_unmodified_parent_is_not_staged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "With BP-100k-4 unmodified, only the four children are committed and the parent is not staged."
+  - name: test_modified_non_parent_sibling_stays_out
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Naming BP-100k-4-iv only, a modified BP-100k-3 is not committed and stays modified and unstaged."
+    must_catch:
+      - "add every modified record in the folder"
+      - "add the grandparent too"
+test_rationale: >-
+  KI-BO-20260928 shipped because the parent check was never given the parent. The real_artifact
+  test runs the real covered_by hook over a commit the real step built, which is the only way to
+  show the check sees the edited parent rather than the committed one.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

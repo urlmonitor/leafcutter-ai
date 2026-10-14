@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: prompt
 risk_surface: safety
@@ -45,10 +45,56 @@ doc_links:
     relevance: "Section 5.6 'all in scope' staging; section 5.2 names scripts/epic_lock.py, which does not exist (KI-BO-20260901-0920)."
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - >-
+    precommit-autofix keeps its routing judgement (which fix applies to which check) but loses
+    every staging and commit instruction: after a fix it hands back to "make one fresh call of the
+    shared step" (each fix earns one call; the total is capped by max_automated_fix_retries,
+    default 3, in config/commit_step.json), and its add -u is deleted. Its Step 4a.3 depth-1 dispatch for engage-specialist
+    hooks is replaced by the BO-3800a handoff (return the step's handoff; the depth-0 caller
+    engages), consistent with BO-4500a-5-v.
+  - >-
+    building-epics section 5.6's "all in scope" staging and section 5.2's reference to the
+    never-written scripts/epic_lock.py are replaced by a pointer to the shared step and to
+    BO-4500a-4-ii's serialisation. No helper that does not exist is named.
+  - The single-retry rule (BO-210c-2) lives in the step before the skill is moved; the skill states the budget by reference, not as its own loop.
+  - Edit templates/skills/ sources; the deployed copies are build outputs (ADR-001 parity via build.py).
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-3
-  contract: "Check-run sequence the skills defer to."
+  contract: "Check-run sequence and single-retry budget the skills defer to."
+test_required: true
+test_spec:
+  - name: test_skills_direct_commits_to_the_shared_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The deployed precommit-autofix and building-epics skills direct every commit to the shared step."
+  - name: test_skills_contain_no_sweep_or_direct_commit_instruction
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "Neither deployed skill contains git add -A, git add -u, git add ., an all-in-scope staging instruction or a direct git commit."
+    must_catch:
+      - "keep precommit-autofix's add -u"
+  - name: test_building_epics_names_no_missing_helper
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "Every script path the deployed building-epics skill names in section 5 exists in the deployed layout."
+  - name: test_bo210c2_regression_tests_run_against_the_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "BO-210c-2's single-retry regression tests drive the real step and pass."
+test_rationale: >-
+  Skill bodies are LLM surfaces, so text assertions on the deployed copies are the unit-level
+  proof; the missing-helper test resolves names against the deployed layout rather than grepping
+  for one known bad name.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

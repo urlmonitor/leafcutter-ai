@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -49,11 +49,69 @@ doc_links:
     relationship: modifies
     status: exists
 assigned_agent: python-coder
-estimated_complexity: M
+estimated_complexity: L
+package_surface: false
+it_requirements:
+  - >-
+    ALL FIVE plan-feature COMMIT PATHS MOVE IN THIS CHANGE, not three. Verified 2026-10-14:
+    commitStageOutput (label commit-stage-output) serves the per-stage, final and orphan-recovery
+    commits named in the criteria, and two further dispatches exist -- the product-truth stage
+    commit (label commit-stage-output-product-truth) and the flow-reconciliation commit (label
+    commit-flow-reconciliation). Each calls the shared step in supervised mode naming the run id and
+    the exact files written; none keeps its own prompt-level staging or "do not retry" recipe.
+  - >-
+    plan-feature has no AC id for a run: every call names the run (BO-4500a-4-iv). It reaches the
+    commit agent, not the command-step-runner, so BO-4500a-5-viii is not on this path; it is needed
+    only if a later decision routes the step through the runner.
+  - >-
+    Every commit result is read through the shared COMMIT-ANSWER block: committed -> continue;
+    policy_ code -> fail the commit with no retry; step_ code -> up to max_transient_retries fresh calls (config, default 3), then fail;
+    hook_failed with handoff -> engage the specialist at most once and re-offer the identical path
+    list and message file; any other non-committed answer -> fail. A failed commit reports status,
+    reason_code, hook_name and failing_files to the user and leaves the files uncommitted on disk.
+  - >-
+    HARDENED COPY KEPT: plan-feature's exact-name rule and its NO-MAIN-COMMIT defensive guard are
+    preserved (the guard becomes the step's policy_protected_branch; the workflow-side duplicate may
+    be removed only once the step refuses on the same branches). The KI-BO-20260928 regression test
+    (a stage adding children to an existing parent, committed through the real checks) runs against
+    the step.
+  - Open PR #968 (audit/plan-feature-next) edits plan-feature.js; rebase onto it, do not re-derive its pause-gate fixes.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-1-ii
-  contract: "Structural-parent inclusion."
+  contract: "Structural-parent inclusion: the step adds a modified parent record and lists it in added_parents."
+test_required: true
+test_spec:
+  - name: test_stage_commit_calls_the_step_supervised_with_the_run_and_written_records
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run plan-feature.js under the workflow-engine harness with a BA stage writing four BP-100k-4-* records; the recorded commit dispatch instructs the shared step in supervised mode naming those four records and run plan-bo-100k-20261012."
+  - name: test_kibo20260928_parent_lands_and_covered_by_check_passes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The same four records and an edited BP-100k-4 committed through the real step with the real AC checks give a commit containing all five, with the covered_by check passing."
+    must_catch:
+      - "name the children only and let the parent stay unstaged"
+  - name: test_every_plan_feature_commit_path_reaches_the_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "The final commit, orphan recovery, product-truth stage commit and flow-reconciliation commit each record a dispatch to the shared step naming exactly that commit's records."
+  - name: test_non_committed_answer_fails_the_commit_and_reports_details
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Scripting each non-committed answer makes the workflow report a failed commit with status, reason_code, hook_name and failing_files, and dispatch no later stage."
+test_rationale: >-
+  The census failure mode is a commit path nobody migrated, so the reachability test drives all
+  five plan-feature commit paths through the harness; the KI case runs the real step and real AC
+  hooks because the defect was the hooks never seeing the parent.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
@@ -65,3 +123,8 @@ notes: |
   done-parent gap from the same KI is out of scope (BO-4500a-1-ii notes). Open PR #968
   (audit/plan-feature-next) edits plan-feature.js; the implementer must rebase onto it, not
   re-derive its pause-gate fixes.
+
+  IT PO 2026-10-14 -- SCOPE FLAG (criteria NOT edited). The criteria name three commits (after a
+  stage, final, orphan recovery). plan-feature.js also commits from the product-truth stage and the
+  flow-reconciliation step. Those two are carried as it_requirements here so the census
+  (BO-4500a-5) can pass; the BA may prefer to name them in the criteria.

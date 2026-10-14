@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -38,10 +38,46 @@ doc_links:
     relevance: "The evidence in this criterion is that KI's 'Why nothing broke' sample (d6a7fe470): the commit agent's explicit pathspec took its own file and left three siblings staged. That convention is prose today; this record makes it a property of the one step."
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Pre-existing index entries for paths the caller did not name must be byte-identical (same
+    staged blob, same mode) before and after the call, on all four outcomes. The commit is built
+    from HEAD plus the named paths only, never from the shared index as it stands.
+  - >-
+    Rollback on hook_failed or refused restores only the caller's own named paths' index entries;
+    it never resets the whole index (BO-200b-2 read as scoped to one envelope's files).
+  - This record closes the index half of KI-BO-20260901-0920 jointly with BO-4500a-4-ii; it does not claim the working-tree half (KI-BO-20261009-parallel-tickets-interfere-through-one-worktree).
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-1
-  contract: "Explicit-path staging rule."
+  contract: "Explicit-path staging rule: commit = HEAD plus the named paths' working-tree state."
+test_required: true
+test_spec:
+  - name: test_presstaged_sibling_files_stay_out_of_the_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With two sibling tickets pre-staged, a call naming tickets/10_TICKET-BP-900h-6.md commits only that file and paths lists only it."
+  - name: test_presstaged_siblings_keep_their_exact_staged_content
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "After a committed call the two sibling files are still staged with the same staged blob ids they had before."
+    must_catch:
+      - "commit the whole index"
+      - "reset the index after committing"
+  - name: test_failed_or_refused_call_leaves_siblings_staged_and_own_files_unstaged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "On hook_failed and on refused the siblings keep their staged blobs and none of the caller's named files remains staged."
+test_rationale: >-
+  The evidence is the index itself: blob ids per path read from git before and after a real call.
+  This is the KI's own 'why nothing broke' sample turned into a test, which a prose rule cannot be.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

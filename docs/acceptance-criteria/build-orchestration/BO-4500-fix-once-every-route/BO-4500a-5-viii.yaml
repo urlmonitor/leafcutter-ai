@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: prompt
 risk_surface: contract_boundary
@@ -41,10 +41,46 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: S
+it_requirements:
+  - >-
+    The command-step-runner's request contract widens by exactly one alternative key: target is
+    {workspace, branch, ac_id} OR {workspace, branch, run_id}; at least one of ac_id / run_id is
+    required. The decline for neither names the missing run-or-criterion. Nothing else in the
+    runner's contract, tools or registry entry changes.
+  - >-
+    Under the adopted Q1 decision the commit step is run by the commit agent, so this widening is
+    NOT on the commit path; it is kept because BO-3200f's plan-feature and finalize command steps
+    need it. Recorded so no one routes commits through the runner on the strength of this record
+    (the commit-delegation guard would block it; BO-4500a-5-vii).
+  - BO-2400a-1-i is done and approved; its contract record needs an amended_by entry by its owner recording the widened target. This record does not edit it.
+  - Edit templates/agents/command-step-runner.md; the deployed copy is a build output.
 delivers_to: null
 expects_from:
   ac_id: BO-2400a-1-i
-  contract: "The executor's request and decline shapes."
+  contract: "The executor's request and decline shapes ({step, command, target: {workspace, branch, ac_id}})."
+test_required: true
+test_spec:
+  - name: test_runner_template_accepts_run_id_in_place_of_ac_id
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The deployed command-step-runner template states a target with workspace, branch and run_id and no ac_id is run, not declined."
+  - name: test_runner_template_declines_neither_run_nor_ac
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: failure
+    description: "The deployed template states that a target with neither run_id nor ac_id is declined naming the missing run-or-criterion and runs nothing."
+  - name: test_fast_lane_ac_id_requests_behave_as_before
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "The existing BO-2400a-1-i runner tests still pass unchanged against the deployed template."
+test_rationale: >-
+  The runner is an LLM surface; its template text is the unit evidence, and the unchanged
+  BO-2400a-1-i suite is the regression guard for the fast lane's existing requests.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

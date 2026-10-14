@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: prompt
 risk_surface: safety
@@ -64,10 +64,85 @@ doc_links:
     status: exists
 assigned_agent: llm-expert
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+  - >-
+    WHO RUNS THE STEP: the commit agent (Q1 default, adopted). Its brief becomes: author a message
+    file only when none was given; run the shared step once with the caller's explicit path list
+    and message file, unchanged; relay the answer. Staging, recording, retry budget, branch refusal
+    and process/stash safety leave the template.
+  - >-
+    REPLY ENVELOPE (the shape every depth-0 caller reads): {status: ok | handoff | blocker,
+    commit_answer: <the step's answer object exactly as printed>, earlier_answers: [<verbatim
+    answers of earlier calls in this dispatch, in order>]}, and, only when commit_answer.handoff is
+    non-null, the handoff object's keys (handoff_target, record_handoff_target, flips_signed_off,
+    message, remedy) copied unchanged to the top level so BO-3000a routing and commit.js's existing
+    schema read them as today. status is handoff iff commit_answer.handoff is non-null; ok iff
+    commit_answer.status is committed; blocker otherwise. Callers decide on commit_answer, never on
+    the envelope's prose.
+  - >-
+    DISPOSITIONS (BO-4500a-3 / BO-3800a): engage-specialist -> dispatch nobody (depth 1, ADR-019),
+    edit nothing, return the handoff envelope; mechanical-autofix -> apply the precommit-autofix fix
+    in the agent's own context, then make a fresh call of the step, up to max_automated_fix_retries in total (config, default 3; bounded the BO-210c-2 way); author-clears or
+    remedy null -> return blocker with the answer. No other retry route exists: never edit check
+    configuration, never --no-verify or SKIP=, never reset, stash, checkout or restore.
+  - >-
+    BO-3800a's commit.md step 0 ("run remedy_handoff.py with the hook output on stdin") is
+    superseded by relaying commit_answer.handoff, which the step already built with the same
+    builder. Until BO-3800a lands, this record must not reintroduce a second payload path; if
+    BO-3800a lands first, its step 0 is rewritten here.
+  - >-
+    COMPANION SURFACE, THE /commit ROUTE: commit.js (BO-3800a-2) dispatches this agent with the hand
+    recipe "Show the planned commit message and file list, then commit", and re-offers with "Attempt
+    the SAME commit again". Both prompts must instead instruct running the shared step with the
+    explicit path list and message file, and the re-offer must pass the IDENTICAL path list and
+    message file captured from the first commit_answer, never re-derived. That .js edit is
+    python-coder work and belongs to a follow-up L3 under BO-4500a-5 (recommended to the user); it
+    is recorded here so the template and the /commit prompt change together.
+  - The person-facing confirmation gate and stage-by-name are kept (as the step's explicit path list); the template carries no literal model name, no hardcoded Co-Authored-By footer and no process-kill or stash command.
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      Commit-agent reply envelope {status: ok | handoff | blocker, commit_answer: <verbatim
+      BO-4500a-4 answer>, earlier_answers: [answers], plus handoff_target, record_handoff_target,
+      flips_signed_off, message, remedy copied from commit_answer.handoff when status is handoff},
+      read by every depth-0 route's COMMIT-ANSWER block (BO-4500a-5-i..iv, the /commit route) and by
+      the drive's BO-3000a handoff routing.
 expects_from:
   ac_id: BO-4500a-4
-  contract: "One-answer contract the agent relays verbatim."
+  contract: "One-answer contract the agent relays verbatim inside commit_answer."
+test_required: true
+test_spec:
+  - name: test_commit_agent_template_instructs_one_step_call_with_the_given_list_and_file
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "The deployed commit agent template instructs exactly one call of the shared step with the caller's path list and message file and a verbatim relay inside commit_answer."
+  - name: test_commit_agent_template_has_no_staging_commit_kill_or_stash_command
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "The deployed template contains no git add, git commit, pkill/kill, git stash or literal model name, and states that a caller-supplied message and trailer are passed as given (KI-BO-20260914, KI-BO-20260925)."
+    must_catch:
+      - "keep the hardcoded Co-Authored-By footer"
+      - "keep Step 0's test-process kill"
+  - name: test_engage_specialist_answer_becomes_a_handoff_envelope_consumed_by_depth0
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Under the workflow-engine harness a scripted commit reply built from a real hook_failed answer with handoff is consumed by a depth-0 route, which engages the named specialist and re-offers the identical commit."
+  - name: test_regression_tests_for_trailer_and_pkill_kis_pass_against_migrated_agent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: real_artifact
+    description: "The KI-BO-20260914 and KI-BO-20260925 regression tests run against the deployed template and the real step and pass."
+test_rationale: >-
+  The template is an LLM surface, so its text is the strongest unit-level evidence (BO-2400a-1-i
+  precedent); the seam test adds the behavioural half by proving a depth-0 route actually consumes
+  the envelope this template is told to return.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
@@ -84,3 +159,12 @@ notes: |
   The verbatim relay is the C2 lesson: an agent that summarises the answer re-creates the
   unreadable-reply fallback. Template-text tests are the strongest proof available for an LLM
   surface (BO-2400a-1-i's test_rationale makes the same argument).
+
+  IT PO 2026-10-14 -- LAYERING WITH BO-3800a. Shared step = deterministic staging, checks and the
+  answer (including remedy / handoff). Commit agent (this record) = runs the step and relays;
+  "applying the autofix judgement BO-210 / BO-3800 assign" means: own-context mechanical fix then
+  a fresh call, repeatable up to max_automated_fix_retries (config, default 3), or return the handoff for an engage-specialist disposition (it cannot spawn at
+  depth 1). Depth-0 caller = commit.js for /commit, each workflow for its own commits, the drive's
+  phase loop for builds: engages the specialist at most once and re-offers the identical commit.
+  The engage-then-re-offer loop must be one shared block (BO-4500a-5 it_requirements), not typed
+  into each workflow.

@@ -9,8 +9,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -40,13 +40,73 @@ doc_links:
     status: exists
     relevance: "A standard that turns work away summons a restructuring craft, bounded give-up (BO-3800d). Also plugs in here; the step neither re-specifies nor performs it."
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    THIS HAND-BACK IS THE BO-3800a HANDOFF. The hook_failed answer carries hook_output (the check's
+    output verbatim, byte for byte, no paraphrase and no truncation below a documented ceiling of
+    at least 64 KB) and the remedy / handoff keys of BO-4500a-4. They are built by reusing
+    templates/scripts/commit_guardian/remedy_handoff.py's builder and the shared remedy-declaration
+    loader (_remedy_declarations), never by a second parser, so the demand is the hook's
+    REFUSAL_RECORD carried verbatim (BO-3800c: carried, never reconstructed).
+  - >-
+    For check-complexity today (declared engage-specialist, complexity-reduction) the handoff key
+    must equal what remedy_handoff.py prints for the same output; for author-clears and
+    mechanical-autofix declarations handoff is null and remedy names the disposition; for an
+    undeclared hook both are null. A declaration that cannot be read gives remedy null and a reason
+    naming the declaration, never a guessed disposition.
+  - >-
+    The step starts no agent, edits no file to satisfy a judging check and holds no state between
+    calls: a fresh call runs the checks from the start with its own single retry. How many fresh
+    calls are allowed is BO-210 / BO-3800d's bound, enforced by the caller (the depth-0 route's
+    engage-at-most-once loop), not by the step.
+  - >-
+    DEPENDENCY: remedy_handoff.py exists only on branch fast-lane/bo-3800a today. If this record is
+    built first, the builder is placed where both can import it and remedy_handoff.py is rebased onto
+    it; under no ordering may two payload builders exist.
 delivers_to:
-  agent: llm-expert
-  contract: "hook_failed answer with the check's verbatim message, read by the commit agent (BO-4500a-5-v)."
+  - agent: llm-expert
+    contract: >-
+      hook_failed answer per BO-4500a-4 with hook_output verbatim and remedy {hook_id, disposition,
+      skills, demand}; handoff = remedy_handoff.py's payload {status: handoff, handoff_target,
+      record_handoff_target, flips_signed_off, message, remedy} when the disposition is
+      engage-specialist. Read by the commit agent (BO-4500a-5-v), which relays handoff unchanged to
+      its depth-0 caller.
 expects_from:
   ac_id: BO-4500a-3
   contract: "Check-run sequence."
+test_required: true
+test_spec:
+  - name: test_judging_failure_message_is_reproduced_verbatim
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fixture check-file-size failing scripts/big.py with the stated message yields hook_failed, hook_name check-file-size, failing_files [scripts/big.py], and hook_output containing that message byte for byte."
+  - name: test_step_starts_no_agent_changes_no_file_records_no_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "After the judging failure, scripts/big.py is byte-identical, no commit exists and no child process other than the check runner was started."
+    must_catch:
+      - "the step trims the file to satisfy the limit"
+  - name: test_engage_specialist_handoff_equals_remedy_handoff_output
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "On real check-complexity output the answer's handoff equals remedy_handoff.py's stdout for the same output and hook id."
+  - name: test_fresh_call_after_change_runs_checks_from_the_start
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "After scripts/big.py is changed, a second call with the same names and message file runs the checks from run 1 with its own single retry."
+test_rationale: >-
+  The seam test is the guard against two specs drifting into two answer shapes: it compares the
+  step's handoff against the BO-3800a builder's own output on a real hook's refusal text.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
@@ -59,3 +119,10 @@ notes: |
   and the named demand are CARRIED, never reconstructed" -- if the step paraphrased it, BO-3800c
   would be unbuildable on any route that goes through the step. How many fresh calls an agent may
   make is BO-3800d's / BO-210's bound, not this step's.
+
+  IT PO 2026-10-14 -- RECONCILED WITH BO-3800a. This "handed back whole" answer IS the BO-3800a
+  handoff. The incumbent contract is remedy_handoff.py's payload and its three dispositions
+  (engage-specialist / author-clears / mechanical-autofix); this record reuses them rather than
+  defining a second shape. The commit agent no longer pipes hook stderr into remedy_handoff.py
+  itself (BO-3800a's commit.md step 0); it relays the answer's handoff key. That is an amendment
+  BO-3800a-2 needs, flagged to the user, not made here.

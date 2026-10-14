@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: [code, prompt]
 risk_surface: safety
@@ -23,9 +23,8 @@ criteria: |
     skill text,
   Then every one of them records its commit by calling the shared commit step,
   And none of them stages files or records a commit by a recipe of its own,
-  And the enumeration finds the eight workflow sites named in BO-4500a's notes (plan-feature
-    three, quick-fix two, fast-lane-ship one, finalize-feature one, plus the build-feature
-    commit dispatch) and no site that the migration records do not account for.
+  And every site the enumeration finds is accounted for by a migration record, so a route
+    added later with a commit of its own fails the enumeration until it is migrated too.
 
   Given each piece of commit logic the shared step carries -- which files are staged, how the
     message is handled, how checks are run and retried, which branches are refused, and how
@@ -67,17 +66,143 @@ doc_links:
   - path: templates/agents/commit.md
     relationship: modifies
     status: exists
+  - path: templates/workflows-js/commit.js
+    relationship: modifies
+    status: planned
+    relevance: "The /commit route (BO-3800a-2), in flight on branch fast-lane/bo-3800a, not yet on main. The ninth route to migrate; its engage-then-re-offer loop is the block to share."
+  - path: templates/workflows-js/build-ticket.js
+    relationship: related
+    status: exists
+    relevance: "Declared twin of build-feature.js; its commit phase migrates with build-feature's through the commit agent (BO-4500a-5-v)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The build-inlined marker-block mechanism the reserved shared-code-inliner L1 generalises; the COMMIT-ANSWER block depends on it."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "Edge 5: workflow() throws in E2, so no workflow can call a central commit workflow."
 assigned_agent: python-coder
 estimated_complexity: L
+package_surface: false
+it_requirements:
+  - >-
+    THE SITE INVENTORY, VERIFIED 2026-10-14 against templates/workflows-js/ on this branch (grep of
+    commit-agent dispatches and raw commit commands; line numbers are hints, re-verify at HEAD):
+    plan-feature.js has THREE commit dispatches -- the commitStageOutput helper (label
+    commit-stage-output, which serves the per-stage, final and orphan-recovery commits),
+    commit-stage-output-product-truth and commit-flow-reconciliation; quick-fix.js has two (labels
+    commit and commit/changelog); fast-lane-ship.js one; finalize-feature.js one (a raw
+    COMMIT_AGENT_MODE=1 git commit inside a dispatched prompt); build-feature.js and its declared
+    twin build-ticket.js reach commits through the commit phase agent. The in-flight /commit route,
+    templates/workflows-js/commit.js (BO-3800a-2, branch fast-lane/bo-3800a), is a NINTH route
+    once it lands and must be migrated onto the shared step like the others. The criteria's
+    "eight sites" therefore understate the population; the census must count what exists.
+  - >-
+    The census is DERIVED, never a hard-coded list: it enumerates every dispatch in the deployed
+    workflow set whose agent type is the commit agent or whose prompt instructs staging or
+    committing, and every commit instruction in agent and skill text, then requires each to be
+    accounted for by a migration record. A new route that commits is caught without editing the
+    test.
+  - >-
+    After migration the only commit instruction any workflow prompt may carry is: run the shared
+    step with this explicit path list and this message file (or let the commit agent author one)
+    and relay its answer. commit.js's current "Show the planned commit message and file list, then
+    commit" is a hand recipe and is replaced the same way.
+  - >-
+    ONE CALLER-SIDE BLOCK, NOT HAND COPIES. Every depth-0 route reads the commit agent's reply with
+    the SAME acceptance predicate (continue only on commit_answer.status committed; stop without
+    retry on a policy_ code; up to max_transient_retries retries on a step_ code (config, default 3); on handoff engage the named
+    specialist at most once and re-offer the identical path list and message file; report
+    everything else) and the SAME engage-then-re-offer loop that commit.js introduces. Typed into
+    each workflow, that loop is exactly the duplication BO-4500 exists to stop. It must be shared
+    through the reserved shared-code-inliner L1 named in BO-4500's notes, generalising
+    BO-4300c-3's build-inlined WORKSPACE-ANSWER block to a COMMIT-ANSWER block with a
+    byte-identity parity test over every deployed consumer. DEPENDENCY: that L1 is not authored
+    yet; route migrations (BO-4500a-5-i..iv and the /commit route) must not land the loop as
+    untested hand copies. build-feature / build-ticket consume handoffs through their existing
+    BO-3000a phase-loop routing (BO-3800a-1) and do not take the block.
+  - >-
+    PROVENANCE IS PART OF THE CHANGE. The change that builds the step names, per piece (staging,
+    message, checks and retry, branch refusal, serialisation, process and stash safety, handoff
+    payload), the copy it was taken from and the KIs that copy was fixed for: commit.md
+    stage-by-name; no hardened message copy exists (defined by BO-4500a-2); precommit-autofix
+    single retry per BO-210c-2; quick-fix's BP-600f protected-branch refusal and BP-600c-3-ii
+    no-bare-stash; BO-1600a-1 serialisation; remedy_handoff.py for the handoff payload.
+  - >-
+    REGRESSION TESTS THAT MUST EXERCISE THE STEP: KI-BO-029, KI-BO-20260928 (edited parent),
+    KI-BO-20260901-0920 (index half), KI-BO-20260914 (trailer), KI-BO-20260925 (process kill and
+    stash), BP-600f, BP-600c-3-ii and BO-210c-2. BO-210c-2 is approved but todo, so its regression
+    tests do not exist yet and must be written against the step, not the retired recipe.
+  - >-
+    ORDER: the step (BO-4500a-1..-4) lands before any route moves; each route then moves in its own
+    change so a regression is attributable to one route. BO-3200f must exclude these commit sites
+    from its command-step routing (recorded on this record's notes).
+  - >-
+    Workflow .js edits are python-coder work in this repo (precedent BO-4300c-3, BO-3800a-2) because
+    they are proved by the Python workflow-engine harness; prompt text inside agent and skill
+    templates stays llm-expert (BO-4500a-5-v, -vi, -viii).
 delivers_to: null
 expects_from:
   - ac_id: BO-4500a-1
-    contract: "Staging rule."
+    contract: "Staging rule (explicit path set plus structural parents)."
+  - ac_id: BO-4500a-3
+    contract: "Check-run sequence and the hook_failed answer carrying remedy / handoff."
   - ac_id: BO-4500a-4
-    contract: "One-answer contract every migrated site reads."
+    contract: "One-answer contract (answer_version 1, reason_code families) every migrated site reads."
+test_required: true
+test_spec:
+  - name: test_every_workflow_commit_path_calls_the_shared_step
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Each deployed workflow's commit path is run under unit_tests/_workflow_engine_harness.py with scripted replies; every recorded commit dispatch instructs the shared step and no other staging or commit command."
+  - name: test_census_names_any_commit_site_no_migration_record_accounts_for
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Adding a fixture workflow with an extra commit dispatch, or an agent text with a git add instruction, makes the census fail naming that site."
+    must_catch:
+      - "a hard-coded list of eight sites"
+      - "a census that greps for the step's name instead of enumerating dispatches"
+  - name: test_no_agent_or_skill_text_carries_a_staging_or_commit_recipe
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: criterion
+    description: "Every commit instruction found in deployed agent and skill text directs the reader to the shared step; none stages all, stages by scope or records a commit directly."
+  - name: test_each_replaced_ki_regression_test_invokes_the_shared_step
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "For each listed KI and hardened-copy rule, its regression test drives the real shared step (observed by the step's own invocation record), not a retired recipe."
+  - name: test_commit_answer_block_is_byte_identical_in_every_deployed_consumer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: unit
+    angle: deployed
+    description: "Every deployed workflow that dispatches the commit agent outside the drive phase loop carries the COMMIT-ANSWER block byte-identical to its single source."
+test_rationale: >-
+  Repo CLAUDE.md "Verify behaviorally, not by grep" binds here: a census that greps for the
+  step's name passes on dead code. The census therefore runs each workflow's commit path and
+  derives the population, and the parity test exists because BO-4300c-3 found the precedent
+  marker block had already drifted between two workflows.
 origin_agent: business-analyst
 created: 2026-10-12
-amended_by: []
+amended_by:
+  - reason: census-made-count-independent
+    by: BrainCandy
+    at: 2026-10-14
+    note: >-
+      Final-gate decision. The third clause of the first scenario named "the eight
+      workflow sites" and could not pass: plan-feature alone has five commit paths, and
+      the /commit route (commit.js, BO-3800a-2) adds another once it lands. A count in
+      the criterion also breaks the moment a route is added. Replaced with "every site the
+      enumeration finds is accounted for by a migration record", which keeps the same
+      promise and makes a new, unmigrated route fail the census. No other clause changed.
 superseded_by: null
 covered_by: [BO-4500a-5-i, BO-4500a-5-ii, BO-4500a-5-iii, BO-4500a-5-iv, BO-4500a-5-v, BO-4500a-5-vi, BO-4500a-5-vii, BO-4500a-5-viii, BO-4500a-5-ix, BO-4500a-5-x]
 implemented_by: []
@@ -102,3 +227,20 @@ notes: |
   source. Each KI was read in its register entry; the IT PO must re-verify the cited line ranges
   against current code before a ticket is generated. KI-BO-20260901-0920's own 2026-10-09 update
   already records a code change (build-feature's commitLane).
+
+  IT PO 2026-10-14 -- SITE COUNT FLAG (criteria NOT edited). The first scenario names eight
+  workflow sites. Verified against templates/workflows-js/ the population is larger: plan-feature
+  has three commit dispatches (commit-stage-output, commit-stage-output-product-truth,
+  commit-flow-reconciliation) serving five commit paths, build-feature's declared twin
+  build-ticket also has a commit phase, and once BO-3800a lands commit.js (the /commit route) is a
+  ninth route. As written, "finds the eight ... and no site that the migration records do not
+  account for" cannot pass. Needs a BA amendment of the count (or a count-agnostic wording), and a
+  migration record for the /commit route (recommended follow-up L3 under this L2: "the /commit
+  route runs the shared step and re-offers through it").
+
+  IT PO 2026-10-14 -- WHY commit.js IS A ROUTE, NOT THE CENTRE. E2 workflows cannot call another
+  workflow (workflow() throws; docs/reference/workflow-authoring-contract.md Edge 5), so commit.js
+  cannot be the central commit workflow every route calls. The central unit is the shared step
+  (the script). commit.js is one more route; its engage-then-re-offer loop is the part every
+  depth-0 route needs, and it must be shared through the reserved shared-code-inliner L1
+  (generalising BO-4300c-3), not re-typed per workflow.

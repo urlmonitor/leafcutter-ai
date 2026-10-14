@@ -8,8 +8,8 @@ level: L2
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -45,10 +45,59 @@ doc_links:
     relevance: "Message KIND and authoring stay upstream of the step (BO-1100). The step carries what it is given."
 assigned_agent: python-coder
 estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    The message is read only from a caller-supplied file path. The step offers no inline-message
+    option, no template, no default trailer and no editor, so there is no input through which an
+    agent's own model name or a rewritten trailer could enter.
+  - >-
+    The message must be recorded with no message cleanup at all (the version-control system's
+    verbatim mode or an equivalent). The "whitespace" cleanup mode is NOT sufficient: it also
+    collapses consecutive blank lines, which would break the line-for-line comparison.
+  - >-
+    The commit is recorded with the hooks that run at message time active like every other check.
+    A message-stage check that would rewrite the message is incompatible with this record; if the
+    project defines one, the step must report it rather than let it edit the message silently.
+  - >-
+    The same message file is used unchanged for the retry after a fixing check (BO-4500a-2-ii) and
+    for every fresh call a caller makes; the step never writes to the caller's file.
+  - The step carries the message it is given and never composes, rewords or appends to it; message authoring stays upstream (BO-1100, BO-4500a-5-v).
 delivers_to:
-  agent: llm-expert
-  contract: "The step records the caller's message file unchanged; the commit agent's brief (BO-4500a-5-v) relies on this and stops editing trailers."
+  - agent: llm-expert
+    contract: >-
+      The step records the bytes of the caller's message file (path passed as an argument) as the
+      commit message. The commit agent's brief (BO-4500a-5-v) relies on this: it writes a message
+      file only when the caller gave none, passes a caller-supplied file unchanged, and never edits
+      trailers.
 expects_from: null
+test_required: true
+test_spec:
+  - name: test_recorded_message_is_identical_to_the_file_line_for_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Commit through the real step with the five-part message file; the message read back from the new commit equals the file's content line for line."
+  - name: test_trailer_names_the_caller_model_not_the_running_agent
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With the environment describing a Claude Sonnet 5 runner, the recorded trailer still names Claude Opus 5.5 (1M context)."
+    must_catch:
+      - "the step appends its own Co-Authored-By footer"
+      - "the step substitutes the running model's name into the trailer"
+  - name: test_step_adds_removes_or_changes_no_message_line
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Across a corpus of message files (no trailer, two trailers, # lines, indented lines), the recorded message never gains, loses or alters a line."
+test_rationale: >-
+  KI-BO-20260914 recurred after a prompt-level fix, so the proof is the recorded commit object
+  read back from git and compared byte for byte with the file -- not a template grep and not an
+  import of a message helper.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

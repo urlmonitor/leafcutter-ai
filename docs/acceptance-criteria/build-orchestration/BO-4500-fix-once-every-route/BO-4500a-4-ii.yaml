@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -40,10 +40,49 @@ doc_links:
     relevance: "Owns the serialisation primitive and its semantics (git-write portion only, cross-process, released on every exit). Not re-specified here."
 assigned_agent: python-coder
 estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The step acquires BO-1600a-1's serialisation guard around the whole staging-to-recording span
+    and releases it on every exit path, including refusals, hook failures and crashes. It does not
+    define a lock of its own; lock semantics and stale-lock recovery stay with BO-1600a / BO-1600b.
+  - >-
+    Waiting for the guard is not a failure: a call that waits answers exactly as it would have
+    without contention. Only if BO-1600a's guard can report that it could not be acquired does the
+    step answer refused with step_serialisation_unavailable (step family, retryable).
+  - >-
+    DEPENDENCY: BO-1600a-1 is approved but todo. This record cannot be built until the guard
+    exists; it must not ship a private lock as a stand-in.
 delivers_to: null
 expects_from:
   ac_id: BO-1600a-1
   contract: "The git-write serialisation guard scoped to one shared workspace; this step acquires it around staging and recording."
+test_required: true
+test_spec:
+  - name: test_two_overlapping_calls_each_record_only_their_own_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two real step processes started concurrently in one scratch workspace naming a.py and b.py produce exactly two commits, one per file, each with its caller's message, and two committed answers."
+  - name: test_second_call_waits_for_the_first_before_staging
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With a fixture check that pauses caller A between staging and recording, caller B's first staging action is observed only after A's commit exists."
+    must_catch:
+      - "no serialisation around staging"
+      - "a guard taken only around the record step"
+  - name: test_guard_is_released_after_a_refused_or_failed_call
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "After a call ends hook_failed or refused, a following call proceeds without waiting."
+test_rationale: >-
+  Concurrency is only observable with two real processes and a fixture check that holds one of
+  them at a known point; a single-process test cannot show B waited.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []

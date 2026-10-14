@@ -8,8 +8,8 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -116,3 +116,10 @@ notes: |
   PR #971, readiness draft: routine command steps go to the chartered executor
   command-step-runner instead of an agent that may decline -- the MEANS by which a workflow
   reaches this goal's shared step, not this goal), BO-2400a-1-i (owns command-step-runner).
+
+  IT PO 2026-10-14. The reserved "inliner" sibling is now a stated DEPENDENCY of BO-4500a, not
+  only a future slot: the depth-0 "engage the specialist on a handoff, then re-offer the commit"
+  loop introduced by BO-3800a's commit.js is needed by every workflow that commits, and typing it
+  into each one is the duplication this goal exists to stop. It must be shared through that L1,
+  generalising BO-4300c-3's build-inlined marker block to arbitrary shared blocks. Not authored
+  here; needs its own /plan-feature run.

@@ -8,8 +8,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 change_target: code
 risk_surface: safety
@@ -36,10 +36,45 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: XS
+package_surface: false
+it_requirements:
+  - >-
+    Codes (BO-4500a-4 enum, policy family): no message file argument is policy_message_missing; a
+    path that does not exist is policy_message_not_found; a file that exists but cannot be read or
+    decoded is policy_message_unreadable; content of only blank lines and spaces is
+    policy_message_empty. The reason names the message file path and the condition.
+  - The message is validated before anything is staged and before any check runs.
+  - The step never opens an editor, reads standard input or waits for a person on any message path; it must complete without a terminal attached.
 delivers_to: null
 expects_from:
   ac_id: BO-4500a-2
   contract: "Message-from-file rule."
+test_required: true
+test_spec:
+  - name: test_missing_message_file_argument_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "No message file answers refused with policy_message_missing, no commit, a.py not staged."
+  - name: test_nonexistent_and_blank_message_files_are_refused_with_distinct_codes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A nonexistent file gives policy_message_not_found and a whitespace-only file gives policy_message_empty, each reason naming the file."
+    must_catch:
+      - "fall back to a default message"
+      - "report both conditions with one code"
+  - name: test_refusal_never_opens_an_editor_or_waits_for_input
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Run with GIT_EDITOR set to a sentinel script and stdin closed; the sentinel never runs and the step answers within a short timeout."
+test_rationale: >-
+  The editor sentinel is the observable proof that no message is composed interactively; status
+  and code are read from the real step's stdout.
 origin_agent: business-analyst
 created: 2026-10-12
 amended_by: []
