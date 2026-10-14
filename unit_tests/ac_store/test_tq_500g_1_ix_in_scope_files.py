@@ -32,7 +32,7 @@ _BASE_AC = {
 
 def _validate(tmp_path: Path, label: str, **extra_item_keys) -> int:
     """Write the fixture AC (yaml.safe_dump) with *extra_item_keys* on its test_spec entry; return the exit code."""
-    record = copy.deepcopy(_BASE_AC)
+    record: dict = copy.deepcopy(_BASE_AC)
     record["test_spec"][0].update(extra_item_keys)
     path = tmp_path / f"{label}.yaml"
     path.write_text(yaml.safe_dump(record, sort_keys=False), encoding="utf-8")

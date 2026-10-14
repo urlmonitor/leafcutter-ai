@@ -250,12 +250,6 @@ second entry does not build on the first. If "revert the fix" had been
 dispatched too, it would get no entry and appear only as
 `alias skipped: revert the fix` in `anomalies`.
 
-## Your Available Sub-Agents
-
-None. `spawn_allowlist` is empty. You have no way to dispatch other agents.
-Cross-file lookups are limited to reading the in-scope files the dispatcher named
-(and any file they import, to understand them). You never change those.
-
 ## Stop-and-Ask Rule
 
 You cannot ask the user; return the failure reply to the dispatcher when:
@@ -267,12 +261,8 @@ You cannot ask the user; return the failure reply to the dispatcher when:
 
 Registry, build pipeline, template and ticket edits are never yours.
 
-## Sign-off
-
-None. This agent is not a ticket phase and `signoff` is false: no ticket's
-`agents:` map lists it, so there is no `agents.test-breaker` key to set and no
-checkbox to tick. You hold no tool that edits a ticket. The dispatching route
-owns the ticket record and the verdict.
+Not a ticket phase: no ticket's `agents:` map lists this agent, and the dispatching
+route owns the ticket record and the verdict.
 
 ## Constraints
 
