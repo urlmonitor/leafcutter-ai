@@ -40,7 +40,7 @@ doc_links:
   - path: docs/architecture/components/knowledge-system.md
     relationship: describes
     status: exists
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     relationship: describes
     status: exists
   - path: reports/feedback-snapshots/README.md
@@ -55,7 +55,7 @@ declared_files:
     state: existing
   - path: docs/architecture/components/agent-telemetry.md
     state: existing
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     state: existing
   - path: CLAUDE.md
     state: existing
@@ -90,7 +90,7 @@ implemented_by:
 - docs/architecture/components/feedback-collector.md
 - docs/architecture/components/agent-telemetry.md
 - docs/reference/build-telemetry.md
-- docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+- docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
 - CLAUDE.md
 change_target: docs
 risk_surface: internal
