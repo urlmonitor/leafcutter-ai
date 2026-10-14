@@ -49,8 +49,15 @@ def _fact(name, status, created_hours, retired_hours=None):
 
 
 def _fresh_newer():
-    """Four young generations so the generations under test sit outside the count bound of 3."""
-    return [_fact(f"N{i}", "ready", 0.1 * i) for i in range(1, 5)]
+    """Four young generations so the generations under test sit outside the count bound of 3.
+
+    N1 is the newest and is the generation the active pointer references (KM-400f-1-iii: with
+    no active generation nothing is reclaimable). It holds rank 0 either way, so the ranks of
+    the generations under test are unchanged.
+    """
+    rows = [_fact(f"N{i}", "ready", 0.1 * i) for i in range(1, 5)]
+    rows[0]["active"] = True
+    return rows
 
 
 class FactsDb:
@@ -143,7 +150,8 @@ _DRIVER = textwrap.dedent(
     H = 3600.0
 
     def fact(name, created_h, retired_h=None):
-        return {"generation_id": name, "publication_status": "failed", "active": False,
+        # N1 is the newest generation and the one the active pointer references (KM-400f-1-iii)
+        return {"generation_id": name, "publication_status": "failed", "active": name == "N1",
                 "created_at": None if created_h is None else NOW - created_h * H,
                 "retired_at": None if retired_h is None else NOW - retired_h * H,
                 "pinned_until": None}

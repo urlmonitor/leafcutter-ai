@@ -47,7 +47,7 @@ async def run(args: argparse.Namespace) -> dict:
     if config.backend != "neo4j":
         invalid("retention evaluation requires the neo4j backend")
     from .adapters.neo4j_backend import Neo4jBackend
-    from .adapters.neo4j_projection import evaluate_retention
+    from .adapters.neo4j_retention import evaluate_retention
     from .environment import resolve_database, resolve_neo4j
 
     backend = Neo4jBackend(
