@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -183,9 +183,12 @@ amended_by:
     "PROPOSED" marker is removed), carrying ticket_path and reason 'absent'|'differs'. readiness
     stays reviewed.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300c_2.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260927-BO-4300c-2.md
+- templates/scripts/worktree.py
+- templates/scripts/workspace/workspace_core.py
 notes: |
   F4: a sandbox run of create-ac-worktree printed git's own tracking and HEAD messages before
   the JSON, and set-up let package installers and the build write to the same channel. Whether

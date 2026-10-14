@@ -24,6 +24,9 @@ ARCHITECTURE: Stdlib-only helper of worktree.py, deployed beside it by its own
 #   base with the main copy's bytes, else TICKET_NOT_ON_BASE (absent | differs),
 #   checked before the build; the half-made workspace is removed.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
+# - 2026-10-14 22:00 [python-coder]: A failed install build answers
+#   BOOTSTRAP_FAILED (was BUILD_FAILED) and the build's output is forwarded to
+#   stderr and kept out of the answer's message. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/22) (BO-4300c-2)
 """
 from __future__ import annotations
 
@@ -99,7 +102,8 @@ def _clone(plan: dict, created_at: str) -> None:
     try:
         ws.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        raise MakerError("CLONE_FAILED", f"cannot create {ws.parent}: {exc}") from exc
+        raise MakerError("GIT_FAILED", f"cannot create {ws.parent}: {exc}",
+                         step="CLONE_FAILED") from exc
     must(ws.parent, "CLONE_FAILED", "clone", "--local", "--no-checkout",
          str(plan["project"]), str(ws))
     must(ws, "CLONE_FAILED", "remote", "set-url", "origin", plan["hub"])
@@ -174,10 +178,10 @@ def _build(plan: dict, build: tuple) -> None:
         except OSError as exc:
             raise MakerError("NO_CONFIG", f"cannot write the build config: {exc}") from exc
     done = run([sys.executable, str(ws / entry), "--target-dir", str(ws),
-                "--config-path", str(config)], ws, timeout=1800)
+                "--config-path", str(config)], ws, timeout=1800, echo_stdout=True)
     if done.returncode != 0:
-        raise MakerError("BUILD_FAILED", f"the install build exited {done.returncode}: "
-                         f"{(done.stderr or done.stdout).strip()[-800:]}")
+        raise MakerError("BOOTSTRAP_FAILED", f"the install build exited {done.returncode}; "
+                         "its own output is on the maker's stderr")
 
 
 def create_workspace(plan: dict, allow_stale: bool, build: tuple,

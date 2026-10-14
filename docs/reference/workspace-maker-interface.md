@@ -39,7 +39,7 @@ Invocation: `python <absolute path to worktree.py> <verb> [flags]`, from any wor
 
 ## Verbs
 
-Source: `worktree.py` `_build_parser`, `verb_*` functions. Every verb except `where` accepts `--repo-root`; a flag marked "required" makes the parser answer `BAD_ARGUMENT` when absent.
+Source: `worktree.py` `_build_parser`, `verb_*` functions. Every verb except `where` accepts `--repo-root`; a flag marked "required" makes the parser answer `USAGE` (exit 64) when absent.
 
 | Verb | Creates or changes state | Purpose |
 |---|---|---|
@@ -123,7 +123,7 @@ No flags. Answers with `maker_path`, the real path of `worktree.py`.
 
 ## Work Identity and Naming
 
-Source: `workspace_core.py` (`_PREFIX`, `_ALIASES`, `normalize_slug`, `branch_for`, `dirname_for`, `make_plan`).
+Source: `workspace_core.py` (`_PREFIX`, `_ALIASES`, `_WORD_FOLDED`, `_CAMEL_BOUNDARY`, `normalize_slug`, `branch_for`, `dirname_for`, `make_plan`).
 
 | Kind | Branch | Landing folder name for slug `S` |
 |---|---|---|
@@ -136,13 +136,39 @@ Source: `workspace_core.py` (`_PREFIX`, `_ALIASES`, `normalize_slug`, `branch_fo
 
 | Normalisation rule | Behaviour |
 |---|---|
-| Alias strip | For kind `epic`, a leading `EPIC-` (case-insensitive) is removed. |
+| Alias strip | For kind `epic`, a leading `EPIC-` or `epic/` (case-insensitive) is removed. Each alias is tried in turn. |
+| Word folding | For kind `epic` only, a hyphen is inserted at each lower-case-or-digit to upper-case boundary, then the whole slug is lower-cased. Other kinds keep their case. |
 | Character class | Runs of characters outside `A-Za-z0-9._-` become `-`. |
 | Dots | Runs of two or more `.` collapse to one; leading and trailing `-` and `.` are trimmed. |
 | `.lock` suffix | A trailing `.lock` is removed. |
-| Empty result | `BAD_ARGUMENT`. |
+| Empty result | `USAGE`. |
 
 The workspace path is `<project parent>/worktrees/<folder name>`.
+
+### Epic spellings that name one workspace (BO-4300a-2)
+
+Every spelling in the first column normalises to the slug in the second, so `ensure`, `locate` and `list` resolve all of them to one workspace (`EPIC-files-stay-workable`) and one branch of the same name.
+
+| Spelling a route uses | Used by | Normalised slug |
+|---|---|---|
+| `EPIC-FilesStayWorkable` | feature skill epic route | `files-stay-workable` |
+| `epic/files-stay-workable` | build-feature route | `files-stay-workable` |
+| `Files Stay Workable` | the epic's display title | `files-stay-workable` |
+| `FilesStayPortable` | a different epic | `files-stay-portable` |
+
+Matching is on the whole normalised slug. It is never a prefix or substring match, so `Files Stay` does not select `Files Stay Workable`. A repeat request for an existing identity answers ok with the existing `workspace_path`. It creates no second workspace or branch and moves no commit on the existing branch.
+
+```mermaid
+flowchart LR
+    A["EPIC-FilesStayWorkable"] --> N["normalize_slug(epic)"]
+    B["epic/files-stay-workable"] --> N
+    C["Files Stay Workable"] --> N
+    N --> S["files-stay-workable"]
+    S --> W["worktrees/EPIC-files-stay-workable"]
+    S --> BR["branch EPIC-files-stay-workable"]
+```
+
+Limit: a title whose words are already lower-case with no separators (for example `filesstayworkable`) cannot be split and names a different identity.
 
 ---
 

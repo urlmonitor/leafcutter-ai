@@ -23,15 +23,22 @@ Lookup tables for what `worktree.py` prints and returns: the JSON answer fields,
 
 ## JSON Answer Shape
 
-Source: `worktree.py` (`main`, `_ok`, `_entry`, `_ready_answer`, `verb_*`) and `workspace_core.MakerError.payload`. Every invocation prints exactly one JSON object followed by a newline on stdout.
+Source: `worktree.py` (`main`, `_ok`, `_entry`, `_ready_answer`, `verb_*`) and `workspace_core.MakerError.payload`. Every invocation prints exactly one JSON object followed by a newline on stdout, and nothing else; see [One Answer, Separate Channels](#one-answer-separate-channels).
 
-### Fields on every ok answer
+### Fields on every answer
 
 | Field | Type | Meaning |
 |---|---|---|
-| `status` | string | `"ok"`. |
-| `code` | string | `"OK"`. |
-| `verb` | string | Verb that answered. |
+| `schema_version` | integer | `SCHEMA_VERSION` (currently `1`). Adding a field is compatible; renaming or removing one bumps it. |
+| `status` | string | `"ok"`, `"refused"` or `"error"`: every answer states which. |
+| `code` | string | `"OK"` or a code from Status and Refusal Codes. |
+| `verb` | string | Verb that answered; `"unknown"` when the first word is not a verb. |
+| `message` | string | One sentence naming the cause (`"<verb> succeeded"` on ok). |
+
+### Additional fields on every ok answer
+
+| Field | Type | Meaning |
+|---|---|---|
 | `mechanism` | string | `"clone"`. |
 | `maker_version` | string | `MAKER_VERSION`. |
 
@@ -95,8 +102,9 @@ Returned for `TICKET_NOT_ON_BASE`, `OCCUPIED` and `UNSENT_WORK` (`workspace_core
 
 | Field | Type | Meaning |
 |---|---|---|
+| `schema_version` | integer | Contract version. |
 | `status` | string | `"refused"`. |
-| `code` | string | `TICKET_NOT_ON_BASE` or `OCCUPIED`. |
+| `code` | string | `TICKET_NOT_ON_BASE`, `OCCUPIED` or `UNSENT_WORK`. |
 | `verb` | string | Verb requested. |
 | `message` | string | Human-readable cause. |
 | `ticket_path` | string | `TICKET_NOT_ON_BASE` only: the `--ticket` value exactly as requested. |
@@ -114,8 +122,9 @@ Like an error answer, a refused answer carries no `mechanism` or `maker_version`
 
 | Field | Type | Meaning |
 |---|---|---|
+| `schema_version` | integer | Contract version. |
 | `status` | string | `"error"`. |
-| `code` | string | Refusal code (see Status and Refusal Codes). |
+| `code` | string | Error code (see Status and Refusal Codes). |
 | `verb` | string | Verb requested; `"unknown"` when the first word is not a verb. |
 | `message` | string | Human-readable cause. |
 | `workspace_path` | string | Optional. Present on `WORKSPACE_INCOMPLETE`, `NOT_READY` (verify), and `TICKET_NOT_FOUND` after creation. |
@@ -144,8 +153,7 @@ Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspa
 | Code | Returned when | Raised in |
 |---|---|---|
 | `OK` | A verb succeeded. | `worktree._ok` |
-| `BAD_ARGUMENT` | Unparseable command line (including unknown verb or missing required flag); `locate` with no selector; slug that normalises to empty. | `_Parser.error`, `verb_ensure`, `verb_locate`, `normalize_slug` |
-| `USAGE` | `--ticket` with `--kind scratch`; or `--ticket` names a path outside the project (absolute and not under the project root, relative with `..`, or the project root itself). | `verb_ensure`, `ticket_rel` |
+| `USAGE` | Answer status `error`, exit 64. Unparseable command line (including unknown verb, missing required flag, or `-h`, which is not accepted); `locate` with no selector; slug that normalises to empty; `--ticket` with `--kind scratch`; or `--ticket` names a path outside the project (absolute and not under the project root, relative with `..`, or the project root itself). Replaces the former `BAD_ARGUMENT` (exit 1), which no longer exists. | `_Parser.error`, `verb_ensure`, `verb_locate`, `normalize_slug`, `ticket_rel` |
 | `TICKET_NOT_ON_BASE` | Answer status `refused`, exit 2; carries `ticket_path` and `reason`, no `workspace_path`, no ticket fields. New workspace: the base lacks the ticket (`absent`) or holds other bytes than the main copy (`differs`); checked after the fetch and checkout, before the install build; the half-made workspace is cleared. Resumed workspace: the ticket is absent at the line's `HEAD` (`absent`; no byte comparison); the workspace is kept. Caller action: push the ticket, then ask again. | `check_ticket_on_base`, `ticket_fields` |
 | `OCCUPIED` | Answer status `refused`, exit 2. `ensure` found a folder at the workspace location with no workspace marker. Nothing is changed. | `verb_ensure` |
 | `NO_REPO` | No project could be resolved, or `--repo-root` is not a repo. | `resolve_project` |
@@ -156,15 +164,15 @@ Source: `MakerError` raise sites in `worktree.py`, `workspace_core.py`, `workspa
 | `IDENTITY_MISMATCH` | `verify` was given a `--kind` or `--slug` that differs from the marker. | `verb_verify` |
 | `NOT_READY` | A readiness check failed (`ensure`, `verify`), or `verify` found marker state other than `ready`. | `require_ready`, `verb_verify` |
 | `UNSENT_WORK` | Answer status `refused`, exit 2. `remove` without `--discard` found unsent work: commits on the workspace's branch reachable from neither `origin/<branch>` nor `origin/main` after a fetch, or uncommitted or untracked changes. The answer carries `unsent.commits` (identifiers) and `unsent.files` (paths); nothing is deleted and the workspace is unchanged. `remove` never reads stdin or prompts, so an unattended caller always gets this answer rather than a stall. | `verb_remove`, `_unsent_work` |
-| `REMOTE_DELETE_FAILED` | `git push origin --delete <branch>` failed. | `verb_remove` |
+| `GIT_FAILED` | A required git step failed (clone, origin re-point, checkout, config, remote branch delete). The answer adds `step` (`CLONE_FAILED`, `CHECKOUT_FAILED` or `REMOTE_DELETE_FAILED`) naming the stage; `message` is one sentence with no git output, which is on the maker's stderr. | `must` |
 | `REMOVE_FAILED` | The workspace folder could not be deleted. | `verb_remove` |
 | `NO_CONFIG` | `--config-path` is not a file; the main checkout has no install config or it is unreadable; the derived build config cannot be written. | `derive_build`, `_main_config`, `_build` |
 | `NO_BUILD_ENTRY` | No `scripts/build.py` in the project or its top-level packages. | `derive_build` |
-| `CLONE_FAILED` | The landing folder cannot be created, `git clone` failed, or origin could not be re-pointed. | `_clone` |
+| `CLONE_FAILED` | Not a code; the `step` value of a `GIT_FAILED` answer when the landing folder cannot be created, `git clone` failed, or origin could not be re-pointed. | `_clone` |
 | `FETCH_FAILED` | `git fetch origin main` failed, or the hub could not be asked about the branch, without `--allow-stale-base`; or the workspace has no `origin/main`. | `_checkout`, `_branch_on_hub` |
-| `CHECKOUT_FAILED` | Checkout of the branch or detached base, or setting `gc.auto` / `maintenance.auto`, failed. | `_checkout` |
+| `CHECKOUT_FAILED` | Not a code; the `step` value of a `GIT_FAILED` answer when checkout of the branch or detached base, or setting `gc.auto` / `maintenance.auto`, failed. | `_checkout` |
 | `COPY_FAILED` | `.env` or `.mcp.json` could not be copied. | `_copy_env_files` |
-| `BUILD_FAILED` | The workspace's install build exited non-zero; `message` ends with the last 800 characters of its output. | `_build` |
+| `BOOTSTRAP_FAILED` | The workspace's install build exited non-zero. `message` states the exit status only; the build's own output is on the maker's stderr, never in the answer. Renamed from `BUILD_FAILED`. | `_build` |
 | `TICKET_NOT_FOUND` | The main copy of the ticket cannot be read (new workspace; the half-made workspace is cleared), or the stated location in the workspace is not a regular file (missing, or a symlink; `workspace_path` carried; the workspace is left in place). | `check_ticket_on_base`, `ticket_fields` |
 | `INTERNAL_ERROR` | The marker cannot be written, the exclude file cannot be updated, or any unclassified exception; `message` is `<ExceptionType>: <text>`. No traceback is printed on stdout. | `write_marker`, `_clone`, `main` |
 
@@ -177,10 +185,52 @@ Source: `worktree.main`.
 | Exit code | Meaning |
 |---|---|
 | `0` | The verb answered `status: ok`. |
-| `1` | The verb answered `status: error` (any code above except the three refusals), including argument errors. |
+| `1` | The verb answered `status: error` (any code above except the three refusals and `USAGE`), including `INTERNAL_ERROR` from an unclassified exception. |
 | `2` | The verb answered `status: refused` (`TICKET_NOT_ON_BASE`, `OCCUPIED`, `UNSENT_WORK`). |
+| `64` | The verb answered `status: error`, `code: USAGE` (a usage error). Still one JSON object on stdout. |
 
-The parser never exits with argparse's own status `2`; usage errors become a `BAD_ARGUMENT` answer with exit `1`, so exit `2` always means a refusal. Logger warnings go to stderr.
+The exit code always matches the stated `status`: 0 ok, 2 refused, 1 error, 64 usage. The parser never exits with argparse's own status `2`; usage errors become a `USAGE` answer with exit `64`, so exit `2` always means a refusal. Logger warnings go to stderr.
+
+---
+
+## One Answer, Separate Channels
+
+Source: `worktree.main`, `workspace_core.run` and `_forward`, `workspace_create._build`. Covers the four outcomes of a workspace request: ready (`ok`), `OCCUPIED` (refused), `FETCH_FAILED` (the shared project cannot be reached), and `BOOTSTRAP_FAILED` (the install failed).
+
+| Channel | Carries | Never carries |
+|---|---|---|
+| stdout | Exactly one JSON object (UTF-8, no BOM) and one trailing newline. | Any child-process message, progress text, help text or traceback. |
+| stderr | Logger warnings and everything the underlying tools print: git's own lines (for example `HEAD is now at ...`), package installers, the install build. | The answer. |
+| exit code | The same outcome as the answer's `status` (see Exit Codes). | A signal different from the answer. |
+
+Every child process (git, the install build) runs with stdout and stderr captured. `run` forwards the child's stderr to the maker's stderr; a child's stdout is forwarded only when it is progress text (the install build), never when it is a value the maker reads (such as a commit id from git). The maker never reads stdin and never prompts.
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Maker as worktree.py main
+    participant Tool as git / install build
+
+    Caller->>Maker: verb + flags (stdin closed)
+    Maker->>Tool: run(cmd), output captured
+    Tool-->>Maker: stdout, stderr, return code
+    Maker-->>Caller: child messages forwarded to stderr
+    alt ready
+        Maker-->>Caller: stdout: one JSON answer, status ok, code OK
+        Maker-->>Caller: exit 0
+    else OCCUPIED, TICKET_NOT_ON_BASE, UNSENT_WORK
+        Maker-->>Caller: stdout: one JSON answer, status refused
+        Maker-->>Caller: exit 2
+    else FETCH_FAILED, BOOTSTRAP_FAILED, any other failure
+        Maker-->>Caller: stdout: one JSON answer, status error
+        Maker-->>Caller: exit 1
+    else usage error
+        Maker-->>Caller: stdout: one JSON answer, status error, code USAGE
+        Maker-->>Caller: exit 64
+    end
+```
+
+A caller that needs the tools' own messages reads stderr; a caller that needs the result parses all of stdout as one JSON object and treats `refused` and `error` identically: halt.
 
 ---
 

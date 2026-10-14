@@ -200,7 +200,7 @@ class TestBo4300a1Regressions(unittest.TestCase):
             done, payload = self._ensure(world, "feature", "bo4300a1-doomed")
             self.assertNotEqual(done.returncode, 0, attempt)
             self.assertEqual(payload.get("status"), "error", (attempt, payload))
-            self.assertEqual(payload.get("code"), "BUILD_FAILED", (attempt, payload))
+            self.assertEqual(payload.get("code"), "BOOTSTRAP_FAILED", (attempt, payload))
             self.assertNotEqual(payload.get("code"), "WORKSPACE_INCOMPLETE", attempt)
             self.assertEqual(_children(landing), [sibling.name],
                              f"{attempt}: a half-made workspace was left behind")
