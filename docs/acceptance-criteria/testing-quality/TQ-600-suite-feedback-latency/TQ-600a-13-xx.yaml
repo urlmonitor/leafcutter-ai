@@ -1,0 +1,341 @@
+id: TQ-600a-13-xx
+components:
+  - testing_quality
+title: "The finalize workflow reports a pull request held only by Post-merge suite status as held externally, not as merged and not as its own failure"
+component: testing-quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the finalize workflow is deterministic code, not a prompt, so the agent guidance
+    of TQ-600a-13-xviii does not govern the decisions the workflow itself makes,
+  And that today the workflow never looks at a pull request's checks before it asks to
+    merge, and records the merge step as "merged to main" and finishes the run as a success
+    whether or not the merge happened,
+  And that a failing `Post-merge suite status` means the correctness lane on main is not
+    green or has no fresh verdict, a condition the pull request did not cause unless it is
+    the fix (TQ-600a-13-vi),
+  When the finalize workflow reaches its merge step for an open pull request and reads
+    that pull request's checks,
+  Then a check recognised by its exact name `Post-merge suite status` and reported as
+    failing is reported as an external hold, quoting that check's held state word for word
+    and giving its link, so the run on main and the notice it names reach the user,
+  And the workflow does not report that hold as a regression of the branch, does not
+    re-run the check or wait on it in a loop, does not push any commit, empty or otherwise,
+    and does not add a fix declaration to the pull request's description,
+  And no step the workflow takes after reading the checks edits the post-merge workflows,
+    the scripts that run them, the family's tunables file, the repository's ruleset or the
+    notice issues, and its report says that when the hold check itself is broken only the
+    owner's break-glass procedure (TQ-600a-13-xvii) applies, which the workflow never
+    performs,
+  And when that hold is the only failing check, the merge does not proceed and the run
+    ends with an outcome of "held externally", which is distinct from every branch-failure
+    outcome, is never reported as a success, and leaves the worktree and branch in place so
+    that a later run finishes the merge once the hold lifts,
+  And when the hold fails beside any other failing check, the merge does not proceed, the
+    run ends as a failure of the branch naming each other failing check as the branch's
+    own, and the hold is listed separately as external rather than counted among them,
+  And when `Post-merge suite status` is not failing, every other check is treated exactly
+    as before, and when no check is failing the run's dispatches, step record and outcome
+    are the same as before this change apart from the one added read of the checks,
+  And a check whose name merely resembles `Post-merge suite status` is never treated as
+    the hold,
+  And this is demonstrated by executing the workflow on three recorded pull-request states
+    — A, the hold is the only failing check; B, the hold fails beside a real
+    `Test suite (pytest)` failure; C, every check passes — and observing the decision each
+    one reaches.
+depends_on:
+  - TQ-600a-13
+  - TQ-600a-13-vi
+  - TQ-600a-13-xviii
+doc_links:
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xviii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The prompt-runbook sibling. Its notes name this record as the follow-up for the
+      deterministic workflow scripts; its rule paragraph (building-epics SKILL §3.6) is
+      the behaviour this record makes the finalize workflow's own code match.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-vi.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The check's exact name, its held states and the output wording the workflow quotes.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-viii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      When a fix declaration is legitimate — authored by a person or agent who wrote the
+      fix, never by the workflow as a way to pass the check.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xvii.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      The owner-only break-glass the workflow's report points to and never performs.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xviii-scenarios/scenario-A-hold-only.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Recorded state A (`gh pr checks --json name,state,link,description` shape) that the
+      test can reuse rather than retype.
+  - path: docs/acceptance-criteria/testing-quality/TQ-600-suite-feedback-latency/TQ-600a-13-xviii-scenarios/scenario-B-hold-plus-pytest-failure.json
+    relationship: describes
+    status: exists
+    relevance: >-
+      Recorded state B, same shape.
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+    relevance: >-
+      Step 4 (merge) gains the checks read and the held-externally outcome. Edit the
+      template only; .claude/workflows/ is a build output.
+  - path: unit_tests/_workflow_engine_harness.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      The Node-backed E2 harness (`run_workflow_under_e2`, `label_responses`) that
+      executes finalize-feature.js with recorded agent replies — the test seam.
+  - path: unit_tests/workflows/test_inf_700a_5_i_finalize_teardown.py
+    relationship: describes
+    status: exists
+    relevance: >-
+      A working precedent: `_finalize_responses()` drives finalize-feature.js through
+      every step to Step 7 under the harness; copy its label map shape.
+declared_files:
+  - path: templates/workflows-js/finalize-feature.js
+    state: existing
+  - path: unit_tests/workflows/test_tq_600a_13_xx_finalize_hold.py
+    state: to_be_created
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - >-
+    AGENT CONFIRMED BY FILE TYPE: python-coder. The surface is a workflow script under
+    templates/workflows-js/; every other record that modifies finalize-feature.js
+    (FIN-100g-3, FIN-100g-4-i, FIN-100f-2, BO-1000b-1-i and others) assigns python-coder,
+    and the test is a Python unittest driving the script through the Node harness.
+    frontend-coder is for web UI, llm-expert for prompts (that half is TQ-600a-13-xviii).
+  - >-
+    SCOPE — ONE SCRIPT, BY EVIDENCE. Both scripts named in -xviii's follow-up were read on
+    this branch (fresh off origin/main, 2026-10-14). Only finalize-feature.js needs a
+    change.
+    (a) templates/workflows-js/finalize-feature.js DOES NOT READ PR CHECKS ANYWHERE. Its
+    only `gh pr` reads are `gh pr list` (Step 1, ~line 921), and `gh pr view --json state`
+    (Step 3.5 at ~line 1422 label `step-3.5-pr-state`; Step 4 at ~line 1852-1858 label
+    `step-4-pr-state`; Step 7's `announceUnpublishedLearnings()` at ~line 203-229 label
+    `step-7-pr-merged-probe`). Its regression halt (`reason: "test_regression"`, Step 3,
+    ~lines 1085-1382, and the Step 4 defensive guard at ~lines 1836-1849) is driven by
+    LOCAL post-merge test runs and test-failure-triage, never by PR checks, so the hold
+    cannot be misread as a regression there. THE REAL MISCLASSIFICATION IS IN STEP 4:
+    after the confirmation gate (`resolveGate("step-4-merge-gate", ...)`, ~lines
+    1874-1912) it dispatches `pull-request` (label `step-4-merge-pr`, ~lines 1921-1927)
+    with `gh pr merge <N> --merge --auto`, then UNCONDITIONALLY does
+    `completedSteps.push(4); outcome('Step 4 of 9', 'PR #N merged to main')` (~lines
+    1929-1930) without reading `mergeResult`. With `--auto` and a failing required check,
+    GitHub queues auto-merge and the PR stays open — so a held PR is recorded as merged,
+    Step 5 syncs an unchanged main, Step 7 removes the worktree, and the run returns
+    `status: "ok"` "finalized" (~lines 2088-2141). That is the false-success direction:
+    the hold is reported as neither external nor a failure, but as done.
+    (b) templates/workflows-js/fast-lane-ship.js NEEDS NOTHING. It ends at "Phase 6 — Pull
+    Request" (~lines 2033-2153): it dispatches `pull-request` (label `fastlane-pr`) with
+    an explicit push / create / return script and returns; it never merges, never reads
+    PR checks, never polls. Its terminal payload is built by
+    `buildFastLaneDeliveryOutcome(prUrl, unsatisfiedRequiredChecks)` (~lines 421-458),
+    called once at ~line 2130 with a LITERAL `[]` — that list carries only checks the run
+    itself evaluated before commit (the changelog-presence gate), not GitHub check
+    results. No path in the script can classify `Post-merge suite status` at all. Should
+    a future change feed real PR check results into that list, this record's rule must be
+    applied there too (the hold would otherwise land in `status: "blocked"` as an
+    unsatisfied required check, i.e. as the branch's own).
+  - >-
+    WHERE THE READ GOES. In Step 4, after `step-4-pr-state` reports OPEN and BEFORE the
+    merge confirmation gate, so the user is never asked to merge a held PR: one dispatch
+    (status-checker, a new label — indicative `step-4-pr-checks`) running `gh pr checks
+    <N> --required --json name,state,bucket,link,description` and returning the JSON
+    array verbatim. Note `gh pr checks` exits 1 when any check fails and 8 when any is
+    pending — the reply must still carry the array; the prompt says so. The E2 engine has
+    no process or filesystem access (ADR-024), so the read is necessarily a dispatch and
+    the classification is a PURE function over its reply (indicative
+    `classifyPrChecks(checks)` -> `{ hold: <entry|null>, ownFailures: [<entry>...] }`),
+    defined in the script and safe to execute directly. Recognition is by EXACT name
+    `Post-merge suite status` (TQ-600a-13-vi's settled ruleset string) and a failing
+    state (`bucket: "fail"`, or `state` FAILURE / ERROR / CANCELLED / TIMED_OUT /
+    ACTION_REQUIRED when `bucket` is absent). No case-folding, trimming or prefix match.
+    A same-named check from another source can only make the workflow stop — the
+    conservative direction — so source pinning is not needed here (-x owns that).
+  - >-
+    THE THREE OUTCOMES (names indicative; the distinctness is the requirement).
+    Hold failing, no other failing check: no merge gate, no merge dispatch; return
+    `{ status: "halted", halted_at_step: 4, reason: "held_externally", external_hold:
+    { name, state, link, description }, ... }` with a message quoting `description`
+    verbatim and the link, saying the cause is the correctness lane on main and not this
+    branch, that a later /finalize-feature run completes the merge once the hold lifts
+    (Step 4's existing `step-4-pr-state` MERGED probe already makes that resumable), and
+    that a broken hold check is the owner's break-glass (TQ-600a-13-xvii) which agents and
+    workflows never perform. `reason` must never be `test_regression` or the branch-failure
+    reason, and `status` never "ok". Step 4 records an outcome line (one per path, per the
+    repo CLAUDE.md skip-branch rule).
+    Hold failing beside others: no merge; return a branch-failure halt (indicative
+    `reason: "required_checks_failing"`) listing the OTHER failing checks as
+    `own_failures` and the hold separately as `external_hold`, never inside
+    `own_failures`.
+    Hold not failing: Step 4 continues exactly as today (gate, merge dispatch, existing
+    outcome recording), whatever the other checks say — this record does not change how
+    non-hold failures are handled when the hold is absent.
+    Unreadable or malformed checks reply: log it and continue exactly as today; never
+    classify an unreadable reply as a hold (GitHub still enforces the required check).
+  - >-
+    FORBIDDEN ACTIONS ARE OBSERVABLE AS DISPATCHES. After the checks read on the held
+    paths the only dispatch permitted is the baseline cleanup already used by every halt
+    (`cleanupBaselineWorktree()`). No `step-4-merge-gate`, `step-4-merge-pr`, Step 5 sync,
+    Step 6, or Step 7 removal dispatch; no prompt that runs `git push`, `git commit`,
+    `gh run rerun`, `gh pr checks --watch`, `gh pr edit`, or names .github/workflows/
+    post-merge-*.yml, scripts/ci/, scripts/ci/post_merge_tunables.json, the ruleset or a
+    `post-merge-red` issue. The checks read itself happens exactly once per run.
+  - >-
+    OUT OF SCOPE, FILED AS A FINDING, NOT FIXED HERE: Step 4 also records "merged" without
+    reading `mergeResult` when the hold is NOT the cause (any other blocked merge, a
+    queued auto-merge, an agent refusal). That is a separate false-success defect in the
+    FIN-100 family and changes the hold-absent path this record promises to leave alone;
+    it needs its own record. Likewise whether `--auto` should stay on the merge command.
+  - >-
+    TEST COST: about 0.2-0.7 s per harness run of finalize-feature.js (measured
+    2026-10-14 on this host: the five INF-700a-5-i finalize harness tests took 2.81 s in
+    total including collection). Four runs (A, B, C, plus the near-miss name) plus the
+    pure classifier cases stay under about 4 s, inside the family's 15 s default-run
+    budget, and the test stays in the default run. No build.py, no network, no `gh`.
+delivers_to: null
+expects_from:
+  - ac_id: TQ-600a-13-vi
+    contract: >-
+      The exact check name `Post-merge suite status` and its output wording (the held state
+      naming the run by link and conclusion, and the notice when one describes it), which
+      this workflow recognises by name and quotes verbatim.
+  - ac_id: TQ-600a-13-xviii
+    contract: >-
+      The canonical rule paragraph in templates/skills/building-epics/SKILL.md §3.6, which
+      the `pull-request` agent this workflow dispatches already follows; this record makes
+      the workflow's own deterministic decision agree with it.
+test_required: true
+test_spec:
+  - name: test_tq600a_13_xx_hold_only_ends_held_externally_without_merging
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    surface_invoked: "templates/workflows-js/finalize-feature.js executed end to end by run_workflow_under_e2() with label_responses driving it to Step 4 (step-4-pr-state OPEN) and the checks-read label answered with recorded state A (TQ-600a-13-xviii-scenarios/scenario-A-hold-only.json, with a notice reference such as #9001 added to the hold's description)"
+    must_catch:
+      - "Step 4 dispatches the merge (step-4-merge-pr) or the merge gate while the hold is failing"
+      - "the run returns status ok, or records 'merged to main', for a held pull request"
+      - "the run halts with reason test_regression or the branch-failure reason"
+      - "the report paraphrases or drops the hold's description, link or notice reference"
+      - "Step 5, Step 6 or the Step 7 worktree removal is dispatched after the hold is seen"
+    description: >-
+      The run halts at Step 4 with the held-externally reason, its message contains the
+      hold's description verbatim and its link, and no merge, sync or removal dispatch
+      appears in the recorded agent calls.
+  - name: test_tq600a_13_xx_hold_beside_a_real_failure_blames_only_the_real_failure
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the same harness run with the checks-read label answered with recorded state B (scenario-B-hold-plus-pytest-failure.json)"
+    must_catch:
+      - "the hold is counted among the branch's own failing checks"
+      - "the pytest failure is reported as external because a hold is also present"
+      - "state B ends with the held-externally reason, hiding the branch's own failure"
+      - "the merge proceeds"
+    description: >-
+      The run ends as a branch failure whose own-failure list is exactly
+      [`Test suite (pytest)`], the hold appears only in the separate external-hold field,
+      and no merge dispatch is recorded.
+  - name: test_tq600a_13_xx_all_green_is_unchanged_apart_from_the_one_read
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: "the same harness run with every check SUCCESS (state C) and the merge gate and merge dispatch answered as the existing finalize harness tests answer them"
+    must_catch:
+      - "the checks read blocks or alters the all-green path"
+      - "the checks read is dispatched more than once"
+    description: >-
+      The ordered list of dispatched labels equals the pre-change list with the single
+      checks-read label inserted before the merge gate, and the run's status, step_summary
+      and Step 4 outcome text are identical to a run without that read.
+  - name: test_tq600a_13_xx_held_paths_take_no_forbidden_action
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    surface_invoked: "the recorded agent calls (labels and prompt text) of the state A and state B harness runs, as actually dispatched by the executed script"
+    must_catch:
+      - "a dispatch re-runs the check (gh run rerun) or waits on it (gh pr checks --watch, a polling loop)"
+      - "a dispatch pushes or commits, including an empty commit"
+      - "a dispatch edits the pull request description to add a fix declaration"
+      - "a dispatch names a post-merge workflow, scripts/ci/, the tunables file, the ruleset or a post-merge-red issue"
+    description: >-
+      After the checks read, no recorded dispatch other than the baseline cleanup exists,
+      and the checks-read label occurs exactly once per run.
+  - name: test_tq600a_13_xx_only_the_exact_check_name_is_the_hold
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    surface_invoked: "the same harness run with state A's hold entry renamed to `post-merge suite status`, `Post-merge suite status (copy)` and `Post-merge suite` in turn, plus a run whose checks-read reply is malformed"
+    must_catch:
+      - "the name match is case-insensitive, trimmed or a prefix/substring match"
+      - "an unreadable checks reply is classified as a hold"
+    description: >-
+      Each look-alike is treated as an ordinary failing check, never reported as an
+      external hold; a malformed reply leaves Step 4 on its pre-change path.
+test_rationale: |
+  Behavioural by construction: every descriptor executes finalize-feature.js through the
+  Node-backed E2 harness and asserts on what the script actually did — the return payload
+  and the ordered agent dispatches it issued — given a recorded `gh pr checks` reply. None
+  reads the script's source. A grep for the string `Post-merge suite status` in the
+  script would pass on a constant that is defined and never consulted, which is the
+  fast-lane phantom-done this repository's CLAUDE.md names; the all-green descriptor
+  exists because the cheapest wrong version is a read that silently changes the path that
+  works today. The forbidden-action descriptor inspects the prompts of dispatches the
+  executed run produced, not the file's text. The look-alike descriptor guards the exact
+  name, which is a ruleset string settled in TQ-600a-13-vi. About 4 s in the default run,
+  inside the family's 15 s budget.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+notes: |
+  ADDED 2026-10-14 as the code-surface sibling named in TQ-600a-13-xviii's FOLLOW-UP
+  ("workflows-js/finalize-feature.js and fast-lane-ship.js are deterministic code that
+  classifies check failures; they need a sibling code record, agent chosen by file type").
+
+  WHAT THE EVIDENCE CHANGED. The follow-up assumed both scripts classify check failures.
+  Read on this branch, neither reads PR checks at all. fast-lane-ship.js stops at opening
+  the PR and is therefore out of scope (it_requirements, SCOPE (b)). finalize-feature.js
+  does not misread the hold as a regression — its regression halt comes from local test
+  runs — but it misreads it the other way: Step 4 records "merged to main" and returns ok
+  for a PR the hold kept open. The criteria are written for that real defect, so the
+  hold is reported as external instead of as done.
+
+  "TREATS EVERY OTHER FAILING CHECK EXACTLY AS BEFORE" — HOW IT WAS HONOURED. The script
+  has no prior handling of PR checks, so "as before" is kept literally for every state in
+  which the hold is not failing (Step 4 unchanged). Only in state B, where the hold also
+  fails, does a non-hold check get a new treatment (named as the branch's own failure),
+  because the merge cannot proceed there and the outcome must distinguish the two. The
+  separate false-"merged" defect on the hold-absent path is recorded in it_requirements
+  as a finding for its own FIN-family record, not fixed here.
+
+  readiness is draft: the owner approves. Line numbers in it_requirements are from
+  origin/main as of 2026-10-14 and are approximate; re-confirm before editing.
