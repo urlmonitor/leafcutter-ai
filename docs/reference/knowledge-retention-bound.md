@@ -185,17 +185,23 @@ The failure keeps its original cause. The message appends one of:
 | Removal result | Appended message |
 |---|---|
 | Removed | `failed generation removed: N entity records, M relationships` |
-| Removal itself failed | `failed generation not removed: <reason>` |
+| Both deletes refused | `failed generation not removed: repository <repo> generation <gen>; refused: <refusal>; <remaining>` |
+| One delete refused | `failed generation partially removed (<kinds> remain): repository <repo> generation <gen>; refused: <refusal>; <remaining>` |
+
+Both deletes (relationships, then nodes) are attempted whatever happens to the first. `<remaining>` is recounted after the refusal: `N entity records, M relationships remain`, or `remaining amount undetermined` when the store also refuses the count. It is never stated as 0 for lack of a count (AC `KM-400b-5-ii`).
 
 The outcome is recorded on the backend as `publication_removal`:
 
 | `outcome` | Shape | Meaning |
 |---|---|---|
-| `removed` | `{"outcome": "removed", "nodes": N, "relationships": M}` | Figures are counted before deleting. |
-| `not_removed` | `{"outcome": "not_removed", "reason": "<reason>"}` | The removal failed; the publication failure is still the one raised. |
+| `removed` | `{"outcome": "removed", "nodes": N, "relationships": M}` | Figures are counted before deleting (`"undetermined"` if that count was refused). |
+| `partially_removed` | `{"outcome", "repository_id", "generation_id", "refusal", "remaining", "remaining_kinds"}` | One delete was refused; `remaining_kinds` names it. |
+| `not_removed` | `{"outcome", "repository_id", "generation_id", "refusal", "remaining"}` | Both deletes were refused; the publication failure is still the one raised. |
 | `nothing_stored` | `{"outcome": "nothing_stored"}` | The publication failed before anything was written; no removal was attempted. |
 
-This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. The retention evaluation's reporting of failed generations as reclaimable remains the backstop for any generation that could not be removed.
+`remaining` is `{"nodes": N, "relationships": M}` or `"undetermined"`.
+
+This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. Reporting it as reclaimable on a failed-publication basis is specified by KM-400f-1-iv and not yet built, so nothing removes a left-behind generation automatically yet. A read-only refusal has to be resolved first, because removal needs writes.
 
 ---
 
