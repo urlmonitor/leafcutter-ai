@@ -5,8 +5,8 @@ components: [knowledge_management]
 level: L3
 status: active
 req_status: active
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 work_status: todo
 parent: KM-400b-5
 criteria: |
