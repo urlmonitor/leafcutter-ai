@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-10'
+last_updated: '2026-10-13'
 components:
   - supervisor_system
   - commit_guardian
@@ -29,8 +29,9 @@ related_docs:
 - **Occurrences:** 3 tickets, 4 refusals. Ticket 02, 2026-09-30, one entry (the commit agent's
   audit entry), and again on 2026-10-09. Ticket 05, 2026-10-09, four entries. Ticket 06,
   2026-10-10, the commit agent's entry. The last two refusals were "repaired" with a made-up
-  `feedback-id: (submit-failed)` (see "Observed again" below).
-- **First seen:** 2026-09-30 · **Last seen:** 2026-10-10
+  `feedback-id: (submit-failed)` (see "Observed again" below). Typed or missing ids again on
+  tickets 10, 11 and 13, 2026-10-12/13, where the permission classifier refused two of the repairs.
+- **First seen:** 2026-09-30 · **Last seen:** 2026-10-13
 - **Where:** the rule: `templates/skills/signoff/SKILL.md:125` and `:743` ("`feedback-id:` line ...
   always first"); the gate: `templates/scripts/commit_guardian/check_feedback_id.py` (a new
   `### YYYY-MM-DD HH:MM — ` heading needs `feedback-id:` within its next two added lines). The
@@ -149,3 +150,40 @@ told from the record, and that is the defect.
   the id it prints", not just "add a line".
 - Merge `c3a469610` into long-lived epic branches, so the genuine failures stop and the fallback is
   rare enough to stand out.
+
+## Observed again, 2026-10-13: typed ids continue, and the classifier refuses the repair
+
+**Where:** tickets 10, 11 and 13 of EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace, 2026-10-12/13. The
+account is the coordinator's. The counts are from the ticket files at epic tip `cc3c85edc`.
+
+**What happened.**
+
+- pr-reviewer, python-coder, test-runner and commit agents kept writing `feedback-id: (submit-failed)`
+  without running `scripts/feedback/submit_feedback.py`, or left the line out. Ticket 11 alone had five
+  such entries, and tickets 10 and 13 had more.
+- The permission classifier refused two of the agents' own repairs. It called a pr-reviewer's
+  self-sign-off with a typed id "Self-Approval". It called a commit agent's attempt to type a placeholder
+  id into *another phase's* entry "Instruction Poisoning".
+- The coordinator replaced each typed value with a real submission, noted as recorded afterwards.
+
+**What survives on the branch (verified):**
+
+| Ticket | `(submit-failed)` | `fb_` id |
+|---|---|---|
+| 07 | 5 | 4 |
+| 08 | 1 | 7 |
+| 10 | 4 | 17 |
+| 11 | 0 | 19 |
+| 13 | 0 | 11 |
+
+Tickets 11 and 13 now carry only real ids. Ticket 10 still has four typed values, including its
+pr-reviewer entry at 2026-10-12 23:50 and the failed commit entry at 23:59 (`:1235-1239`). The ticket
+text does not mark which ids were submitted after the fact, so the record cannot show which agents
+actually ran the script.
+
+**What this adds.** Typing the line is no longer just a gap the hook misses. The next layer, the
+permission classifier, now treats a typed id as a forged record and refuses it, so the shortcut that
+`check-feedback-id`'s refusal message invites ("add a line") halts the drive. The fix direction above is
+unchanged and more urgent. Have the script leave a receipt even when it fails, have the hook check the
+value against that receipt, and have the refusal name the script. An agent that runs the script then
+never needs to type an id.
