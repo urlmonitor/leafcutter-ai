@@ -39,7 +39,7 @@ doc_links:
   - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
     relationship: describes
     status: exists
-  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
     relationship: describes
     status: exists
   - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json

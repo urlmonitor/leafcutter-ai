@@ -36,10 +36,10 @@ doc_links:
     relationship: implemented-by-step
     status: exists
     relevance: "v6 steps finderOverview, finderSearch, finderFacets, finderUrl, finderResults, openResult, actorBadge, pageTitle and branches finderNoMatch, finderIoGap, acChipLink, drawerByKey, drawerCloseByKey, each with an acceptance_scenario."
-  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.mockup.json
     relationship: specified-by
     status: exists
-  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
     relationship: specified-by
     status: exists
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json

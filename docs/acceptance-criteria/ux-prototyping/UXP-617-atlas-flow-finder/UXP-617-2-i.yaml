@@ -38,7 +38,7 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "FlowNavigation pop invariant: a finder entry comes back with the search and facets last replaced into it."
-  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
     relationship: describes
     status: exists
   - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html

@@ -1356,7 +1356,7 @@
       "screen": "atlas-flows-finder",
       "source": "mock",
       "component": "ux-prototyping",
-      "path": "mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json",
+      "path": "mockups/leafcutter/atlas-flows-finder.mockup.json",
       "status": "active",
       "readiness": "draft",
       "version": 1,

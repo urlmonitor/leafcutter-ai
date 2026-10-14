@@ -36,7 +36,7 @@ doc_links:
     relationship: specifies
     status: exists
     relevance: "FlowFinderQuery finder-no-match: empty_state title, detail and suggestions."
-  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-finder.html
     relationship: describes
     status: exists
 assigned_agent: frontend-coder
