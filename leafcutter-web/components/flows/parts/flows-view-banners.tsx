@@ -2,7 +2,7 @@
 
 /**
  * Presentational pieces of the Flows view: level chip, step rollup, realization
- * banner and the 'not found' notice.
+ * banner and the notices.
  */
 import * as React from "react";
 import Link from "next/link";
@@ -126,6 +126,16 @@ export function StepNotice({ detail }: { detail: string }) {
   return (
     <div role="status" className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
       <h2 className="text-sm font-semibold text-foreground">Step not found</h2>
+      <p className="mt-1 break-words text-sm text-muted-foreground">{detail}</p>
+    </div>
+  );
+}
+
+/** The drawn entry flow no longer fits the Source / Kind / Realization filters; it stays until another flow is picked. */
+export function ScopeNotice({ detail }: { detail: string }) {
+  return (
+    <div className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3">
+      <h2 className="text-sm font-semibold text-foreground">Outside the current filters</h2>
       <p className="mt-1 break-words text-sm text-muted-foreground">{detail}</p>
     </div>
   );

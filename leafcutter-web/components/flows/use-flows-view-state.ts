@@ -5,13 +5,18 @@
  * (flowId, crumbs, filters, step); after that:
  *   - selecting a flow, drilling and clicking a breadcrumb PUSH one entry,
  *   - a drawer change, or a filter change that keeps the entry flow, REPLACES,
- *   - a filter change that drops the entry flow re-picks one and REPLACES,
- *   - Back / Forward (popstate) restore the entry as it was left, with no writes.
+ *   - a filter change never picks or swaps the drawn flow: it rewrites the entry's
+ *     stored filters in place (same URL, ?step= kept); the 'Outside the current
+ *     filters' notice is derived from the entry flow and the filters, never stored,
+ *   - Back / Forward (popstate) restore the entry as it was left, with no writes;
+ *     an entry at exactly /flows is the finder.
  * Native history only: a router move would remount the keyed page.
  */
 import * as React from "react";
 import type { Flow } from "@/lib/data/types";
 import { flowNotFoundNotice } from "@/lib/flow-url";
+import { parseFinderQuery } from "@/lib/flow-finder/address";
+import type { FinderState } from "@/lib/flow-finder/types";
 import { pushFlowAddress, replaceFlowAddress, storeViewState } from "./flow-history";
 import { resolveFilters, viewForEntry, type FlowsViewFilters } from "./flow-view-model";
 import type { FlowsViewNotice } from "./parts/flows-view-banners";
@@ -42,7 +47,8 @@ export function useFlowsViewState(p: {
   const flowById = React.useMemo(() => new Map(flows.map((f) => [f.id, f])), [flows]);
 
   const [f, setF] = React.useState<FlowsViewFilters>(p.filters);
-  const [selectedId, setSelectedId] = React.useState<string>(p.flowId ?? "");
+  // Set when Back / Forward lands on exactly /flows: the finder, no flow drawn.
+  const [finder, setFinder] = React.useState<FinderState | null>(null);
   const [path, setPath] = React.useState<string[]>(p.crumbs);
   const [notice, setNotice] = React.useState<FlowsViewNotice | null>(p.notice ?? null);
   const [seed, setSeed] = React.useState<Seed>(() =>
@@ -52,14 +58,18 @@ export function useFlowsViewState(p: {
   const [epoch, setEpoch] = React.useState(0);
 
   const r = React.useMemo(() => resolveFilters(flows, f), [flows, f]);
-  // With nothing selected (not-found address) no flow is drawn — never a fallback.
-  const entryFlow = selectedId
-    ? r.filtered.find((x) => x.id === selectedId) ?? r.filtered[0] ?? null
-    : null;
+  // The drawn flow is the last crumb; with none (not-found address) nothing is drawn.
   const renderedId = path[path.length - 1];
-  const flow = (renderedId && flowById.get(renderedId)) || entryFlow;
+  const flow = (renderedId && flowById.get(renderedId)) || null;
+  const entryFlow = (path[0] && flowById.get(path[0])) || null;
 
   const live = { source: f.source, kind: r.kind, realization: r.realization };
+  // Derived, never stored: the entry flow no longer fits the filters (UXP-591-5-iii).
+  const outsideFilters =
+    entryFlow !== null &&
+    (entryFlow.source !== live.source ||
+      entryFlow.kind !== live.kind ||
+      (live.realization !== "all" && entryFlow.realization !== live.realization));
 
   const leaveEntry = (nextPath: string[]) => {
     setPath(nextPath);
@@ -67,21 +77,12 @@ export function useFlowsViewState(p: {
     setSeed(NO_SEED);
   };
 
+  // A filter change keeps the drawn flow and its notice: only the entry's stored filters change.
   const applyFilters = (nf: FlowsViewFilters) => {
     if (nf.source === f.source && nf.kind === f.kind && nf.realization === f.realization) return;
     const nr = resolveFilters(flows, nf);
-    const next = { source: nf.source, kind: nr.kind, realization: nr.realization };
-    const keep = selectedId !== "" && nr.filtered.some((x) => x.id === selectedId);
-    const entry = keep ? selectedId : nr.filtered[0]?.id ?? "";
     setF(nf);
-    if (entry === selectedId) {
-      if (entry) storeViewState({ crumbs: path, filters: next });
-      return;
-    }
-    // The entry flow dropped out of the filter (or the notice shows): re-pick, replace in place.
-    setSelectedId(entry);
-    leaveEntry(entry ? [entry] : []);
-    if (entry) replaceFlowAddress(entry, null, { crumbs: [entry], filters: next });
+    storeViewState({ crumbs: path, filters: { source: nf.source, kind: nr.kind, realization: nr.realization } });
   };
 
   const onSource = (source: FlowsViewFilters["source"]) => {
@@ -95,7 +96,6 @@ export function useFlowsViewState(p: {
   };
   const onSelectFlow = (id: string) => {
     if (id === entryFlow?.id && path.length === 1) return;
-    setSelectedId(id);
     push([id]);
   };
   const onCrumb = (i: number) => push(path.slice(0, i + 1));
@@ -120,8 +120,12 @@ export function useFlowsViewState(p: {
   React.useEffect(() => {
     const onPop = () => {
       const v = viewForEntry(flows);
+      if (v.finder) {
+        setFinder(parseFinderQuery(new URLSearchParams(window.location.search)));
+        return;
+      }
+      setFinder(null);
       setF(v.filters);
-      setSelectedId(v.crumbs[0] ?? "");
       setPath(v.crumbs);
       setNotice(v.flowId ? null : flowNotFoundNotice(v.rawId));
       setSeed(seedFor(v.flowId ? flowById.get(v.flowId) : undefined, v.step, false));
@@ -136,6 +140,8 @@ export function useFlowsViewState(p: {
     f,
     r,
     entryFlow,
+    outsideFilters,
+    finder,
     flow,
     crumbs: path.map((id) => flowById.get(id)).filter((x): x is Flow => Boolean(x)),
     notice,

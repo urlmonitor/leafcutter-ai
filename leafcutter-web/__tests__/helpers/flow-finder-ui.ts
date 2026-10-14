@@ -25,9 +25,10 @@ export const squash = (s: string | null | undefined) => (s ?? "").replace(/\s+/g
 export const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** Point jsdom's address at the finder URL before the page mounts (no spy involved). */
-export function setAddress(searchParams: Record<string, string | string[]>) {
+export function setAddress(searchParams: Record<string, string | string[] | undefined>) {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(searchParams)) {
+    if (v === undefined) continue;
     for (const one of Array.isArray(v) ? v : [v]) qs.append(k, one);
   }
   const s = qs.toString();
@@ -47,7 +48,7 @@ export function stubBrowserGlobals() {
 
 /** The page's React element for these searchParams, exactly as Next awaits it. */
 export async function pageElement(
-  searchParams: Record<string, string | string[]> = {},
+  searchParams: Record<string, string | string[] | undefined> = {},
 ): Promise<React.ReactElement> {
   setAddress(searchParams);
   const mod = await import("@/app/flows/page");
@@ -56,7 +57,7 @@ export async function pageElement(
   })) as React.ReactElement;
 }
 
-export async function renderFinderPage(searchParams: Record<string, string | string[]> = {}) {
+export async function renderFinderPage(searchParams: Record<string, string | string[] | undefined> = {}) {
   stubBrowserGlobals();
   const el = await pageElement(searchParams);
   return render(el);

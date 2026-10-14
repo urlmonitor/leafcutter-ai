@@ -75,6 +75,20 @@ const UNKNOWN = "/flows/leafcutter/flow-render-pipline?step=resolve";
 const ARCH = "leafcutter/product-truth-architecture";
 const CHECKOUT = "fern-and-fig/checkout-and-pay";
 
+/**
+ * The selector under Real · Architecture lists the architecture flow and nothing outside that scope.
+ * Button names carry a progress badge ('N/M done'), which is stripped before comparing; the
+ * selector may list more than one Real · Architecture flow, so the list is not required to be exactly one.
+ */
+const listedFlows = () => groupButtonsText("Flow").map((t) => t.replace(/\d+\/\d+ done$/, "").trim());
+function expectArchSelector() {
+  const listed = listedFlows();
+  expect(listed).toContain(nameOf(ARCH));
+  for (const outside of ["leafcutter/deliver-a-feature", CHECKOUT, "leafcutter/define-a-feature"]) {
+    expect(listed, `${outside} is not a Real · Architecture flow`).not.toContain(nameOf(outside));
+  }
+}
+
 /** Nothing is drawn: no graph, no heading naming a flow, no breadcrumb, no drawer. */
 function expectNothingDrawn() {
   expect(document.querySelector(".react-flow__node")).toBeNull();
@@ -95,7 +109,7 @@ describe("a filter change from the 'Flow not found' state", () => {
     setFilter("Kind", "Architecture");
 
     await waitFor(() => expect(activeOf("Kind")).toBe("Architecture"));
-    await waitFor(() => expect(groupButtonsText("Flow")).toEqual([nameOf(ARCH)]));
+    await waitFor(() => expectArchSelector());
     // a filter change never picks or swaps a flow
     expect(flowNotFoundNoticeShown()).toBe(true);
     expect(document.body.textContent).toContain("No flow has the id 'leafcutter/flow-render-pipline'");
@@ -131,7 +145,7 @@ describe("a filter change from the 'Flow not found' state", () => {
     // angle: criterion
     await openNotFoundTab(nav, UNKNOWN);
     setFilter("Kind", "Architecture");
-    await waitFor(() => expect(groupButtonsText("Flow")).toEqual([nameOf(ARCH)]));
+    await waitFor(() => expectArchSelector());
     const start = window.history.length;
 
     selectFlow(nameOf(ARCH));
@@ -146,7 +160,7 @@ describe("a filter change from the 'Flow not found' state", () => {
     // angle: seam
     await openNotFoundTab(nav, UNKNOWN);
     setFilter("Kind", "Architecture");
-    await waitFor(() => expect(groupButtonsText("Flow")).toEqual([nameOf(ARCH)]));
+    await waitFor(() => expectArchSelector());
     selectFlow(nameOf(ARCH));
     await expectOnScreen({ flow: ARCH, address: `/flows/${ARCH}` });
 
@@ -156,7 +170,7 @@ describe("a filter change from the 'Flow not found' state", () => {
     await waitFor(() => expect(flowNotFoundNoticeShown()).toBe(true));
     // the stored filters win over the boundary's server-rendered Real, User, All
     await waitFor(() => expect(activeOf("Kind")).toBe("Architecture"));
-    expect(groupButtonsText("Flow")).toEqual([nameOf(ARCH)]);
+    expectArchSelector();
     expectNothingDrawn();
   });
 

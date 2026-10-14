@@ -17,6 +17,7 @@ import { PageHeader, EmptyState } from "@/components/ui/kit";
 import { humanize } from "@/lib/utils";
 import type { Flow, MockData } from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
+import { FinderPane } from "./finder/finder-pane";
 import {
   FlowCrumbs,
   FlowSelector,
@@ -28,6 +29,7 @@ import {
   FlowNotice,
   LevelChip,
   RealizationBanner,
+  ScopeNotice,
   StepNotice,
   StepRollup,
   type FlowsViewNotice,
@@ -70,6 +72,8 @@ export function FlowsView({
     f,
     r,
     entryFlow,
+    outsideFilters,
+    finder,
     flow,
     crumbs,
     notice: shownNotice,
@@ -91,6 +95,9 @@ export function FlowsView({
     for (const x of flows) names[x.id] = x.name;
     return names;
   }, [flows]);
+
+  // Back / Forward onto exactly /flows: the finder, no flow drawn (UXP-617-2-i).
+  if (finder) return <FinderPane flows={flows} screenTitles={screenTitles} initial={finder} />;
 
   return (
     <div className="flex flex-col">
@@ -114,6 +121,11 @@ export function FlowsView({
       </PageHeader>
 
       {flow && <RealizationBanner flow={flow} />}
+      {flow && outsideFilters && entryFlow && (
+        <ScopeNotice
+          detail={`'${entryFlow.name}' is not a ${f.source === "mock" ? "Mock" : "Real"} · ${humanize(effectiveKind)} · ${REALIZATION_LABEL[effectiveRealization]} flow, so the flow list no longer shows it. It stays on screen until you pick another flow.`}
+        />
+      )}
       {flow && unknownStep !== null && <StepNotice detail={stepNotFoundDetail(unknownStep)} />}
 
       {/* source + kind controls */}
