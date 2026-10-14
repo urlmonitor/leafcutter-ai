@@ -30,83 +30,71 @@ If `$ARGUMENTS` is empty, print usage and exit non-zero. Do not spawn
 
 ## Step 1 — Validate the ticket file
 
-1. Resolve `$ARGUMENTS` to an absolute path. Call it `TICKET_PATH`.
-2. Confirm the file exists and ends in `.md`.
+1. Resolve `$ARGUMENTS` to an absolute path. Call it `MAIN_TICKET_PATH` (the
+   ticket's main-copy path). Nothing in this skill reads, edits or moves the
+   ticket at this path.
+2. Confirm the path ends in `.md`.
 3. Confirm its parent directory is exactly `tickets/00_inbox` or
    `tickets/01_todo` (no `EPIC-*` segment between).
 4. If under `tickets/99_done/`, refuse with:
    `"Ticket is already in 99_done/. Move it back to 01_todo/ manually
    to re-drive."` and exit non-zero.
-5. Read the frontmatter. Confirm it has an `agents:` map with at least
-   one entry. If empty, refuse with:
-   `"Ticket has no `agents:` map — re-create it via /create-ticket so
-   business-analyst + refinement populate the map before driving."`
-   Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
-   trap codified in user-memory.)
-6. **Delete `.build-feature.lock` (inline-work-guard handoff).** Before
+5. **Delete `.build-feature.lock` (inline-work-guard handoff).** Before
    dispatching `ticket-supervisor`, remove the sentinel lock written by
-   `/build-feature` so phase agents are not blocked by `inline_work_guard.py`:
+   `/build-feature` so phase agents are not blocked by `inline_work_guard.py`.
+   `<project-root>` is the absolute path of the project's main checkout:
 
    ```bash
-   REPO_ROOT="$PWD"
-   while [ ! -d "$REPO_ROOT/.git" ] && [ "$REPO_ROOT" != "/" ]; do
-     REPO_ROOT="$(dirname "$REPO_ROOT")"
-   done
-   rm -f "$REPO_ROOT/.build-feature.lock"
+   rm -f <project-root>/.build-feature.lock
    ```
 
    This deletion signals that a supervisor has taken ownership of the drive.
    Phase agents that subsequently call Edit/Write will find no lock and be
    allowed through. If the lock file does not exist, the `rm -f` is a no-op.
 
-## Step 2 — Set up the worktree (mandatory, blocking)
+## Step 2 — Get the workspace (mandatory, blocking)
 
 Per the project convention (`feedback_epic_worktree.md`): standalone tickets
-large enough to invoke `/build-feature` should run in their own worktree,
-NEVER on `main`. The bootstrap recipe is implemented in
-`scripts/setup_ticket_worktree.py` — do not re-implement inline steps here.
+large enough to invoke `/build-feature` should run in their own workspace,
+NEVER on `main`. The one workspace maker, `worktree.py`, makes it. This skill
+asks no agent to create, copy, set up, link or repair a workspace by steps of
+its own.
 
-Call the script via a Bash tool call:
+Run the maker as one Bash command. `<slug>` is the ticket's file name without
+`.md`, lowercased:
 
 ```bash
-python scripts/setup_ticket_worktree.py setup-ticket "$TICKET_PATH"
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind ticket --slug <slug> --ticket <MAIN_TICKET_PATH> --repo-root <project-root>
 ```
 
-Parse the JSON output (single line on stdout):
+The maker is idempotent: a second run for the same ticket returns the same
+workspace. Parse the answer, one JSON object on stdout:
 
-- `worktree_path` → `WORKTREE_PATH`
+- `workspace_path` → `WORKTREE_PATH`
 - `branch` → `BRANCH`
-- `ticket_path_final` → `TICKET_PATH` (the ticket's path inside the worktree)
+- `ticket_path_in_worktree` → `TICKET_PATH` (the ticket's path inside the workspace, and the only source of `TICKET_PATH`)
 
-On non-zero exit, surface stderr verbatim and stop — do NOT fall through to
-running on `main`. Silent-main-branch execution is the exact bug the worktree
-convention exists to prevent.
+On a non-zero exit, or stdout that is not one JSON object, surface stdout and
+stderr word for word and stop — do NOT fall through to running on `main`.
+Silent-main-branch execution is the exact bug the workspace convention exists
+to prevent.
 
-The script creates and bootstraps the worktree. It does NOT move the ticket
-file — folder position is reconciled on main by `finalize-feature.js` after
-merge.
+The maker puts the ticket into the workspace and leaves the main copy alone.
+Folder position is reconciled on main by `finalize-feature.js` after merge.
 
-**Pre-commit hook bootstrap (AC BO-1500b-1-i):** `setup_ticket_worktree.py`
-guarantees that the fresh worktree has a working pre-commit configuration
-before the first commit.  At the end of `_bootstrap()`, it calls
-`_establish_pre_commit_config(main_repo, worktree_path)` which:
+Every later step reads and edits the ticket at `TICKET_PATH` only.
 
-1. Is a no-op if `.leafcutter` or `.pre-commit-config.yaml` already exists
-   (e.g. was materialised by `build.py`).
-2. Creates a symlink `.leafcutter -> <main_repo>/.leafcutter` (preferred on
-   Linux native FS).
-3. Falls back to copying `.pre-commit-config.yaml` from the main repo when
-   the symlink fails (Windows / NTFS `OSError` / `EPERM`).
-4. Warns and continues if neither source exists (project not yet bootstrapped
-   — operator must run `build.py` manually before committing).
+**Frontmatter check.** Read the frontmatter of the ticket at `TICKET_PATH`.
+Confirm it has an `agents:` map with at least one entry. If empty, refuse with:
+`"Ticket has no `agents:` map — re-create it via /create-ticket so
+business-analyst + refinement populate the map before driving."`
+Exit non-zero. (This guards against the `feedback_use_create_ticket_agent.md`
+trap codified in user-memory.)
 
-This means **all package hooks are active** in the new worktree from the
-moment `setup_ticket_worktree.py` returns.  A stage commit that would
-violate an AC hook (e.g. `check-ac-schema`, `check-parent-link`) is blocked
-rather than landing unchecked.  If you observe hooks being silently skipped,
-confirm that `_establish_pre_commit_config` ran (check stderr output from
-`setup_ticket_worktree.py`) and that `<worktree>/.leafcutter` resolves to a
-non-empty directory.
+The maker's readiness checks include the pre-commit configuration, so all
+package hooks are active in the new workspace from the moment it answers. A
+stage commit that would violate an AC hook (e.g. `check-ac-schema`,
+`check-parent-link`) is blocked rather than landing unchecked.
 
 Do NOT dispatch `worktree-agent` as a separate Agent tool call.
 
@@ -365,8 +353,8 @@ post-completion — share one write path.
 6. Print the path of the written changelog file to the user.
 7. Commit and push the new entry so it lands on the PR branch the
    `pull-request` phase already opened. The commit goes through the `commit`
-   agent: a raw commit is blocked by the `enforce_commit_delegation` hook,
-   including the `git -C <path> commit` spelling. Dispatch it with the worktree
+   agent: a raw commit is blocked by the `enforce_commit_delegation` hook
+   under any spelling. Dispatch it with the worktree
    path, the single changelog file path to stage, and the message
    `chore(changelog): add ticket-completion entry for <ticket basename>`, then
    push:
@@ -470,23 +458,20 @@ Do not add any other preamble or summary text.
   a `(status: question)` or a `failed` payload, this skill is a
   passthrough — it does not try to answer on the user's behalf.
 - **Does not create AC-authoring worktrees.** The dedicated AC-authoring
-  worktree (branched from `origin/main`) is created by `/plan-feature`
-  via `scripts/setup_ticket_worktree.py create-ac-worktree`
-  (AC BO-1500a-1). This skill creates implementation worktrees (branched
-  from local `main`) for ticket execution — a separate concern from AC
-  authoring.
-  The `create-ac-worktree` subcommand is **idempotent and reuse-safe** (AC
-  BO-1500a-1-i): if a prior authoring run crashed and left behind a worktree
-  or branch, the next invocation detects the pre-existing state and reuses it
-  rather than failing with "worktree already exists" or "branch already exists".
+  workspace (branched from `origin/main`) is made by `/plan-feature` through
+  the same one workspace maker, with `--kind ac` (AC BO-1500a-1). This skill
+  asks the maker for a ticket workspace for ticket execution — a separate
+  concern from AC authoring.
+  The maker is **idempotent and reuse-safe** (AC BO-1500a-1-i): if a prior
+  authoring run left behind a workspace, the next request for the same work
+  returns it rather than failing with "worktree already exists".
   Existing AC YAML files committed on the branch are never deleted or overwritten.
   **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
   the protected `main` branch when they run `/plan-feature`,
-  the AC-authoring workflow still proceeds normally — it creates the authoring
-  worktree from `origin/main` regardless of the user's current checkout.  No
-  branch switch is required.  This skill's implementation worktrees use the same
-  structural isolation principle but branch from local `main` rather than
-  `origin/main` (see `scripts/setup_ticket_worktree.py` for the distinction).
+  the AC-authoring workflow still proceeds normally — the workspace is based on
+  `origin/main` regardless of the user's current checkout.  No
+  branch switch is required.  This skill's ticket workspaces are made by the
+  same maker and are also based on `origin/main`.
   See `templates/skills/plan-feature/SKILL.md §MP` for the full specification of
   main-branch invocation behaviour for the AC-authoring workflows.
 - **Does not push the AC-authoring branch or open the AC-authoring PR.** After
@@ -524,8 +509,8 @@ Do not add any other preamble or summary text.
 
 ## Contrast: this skill vs. `/quick-fix`
 
-This skill (`build-single-ticket`) always creates a **new isolated worktree** (Step 2 via
-`setup_ticket_worktree.py`) and drives the ticket on a **new branch**. The ticket persists
+This skill (`build-single-ticket`) always gets a **new isolated workspace** (Step 2 via
+the one workspace maker) and drives the ticket on a **new branch**. The ticket persists
 in the inbox until `finalize-feature.js` reconciles it on `main` after the PR is merged.
 
 The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) is the
@@ -637,8 +622,9 @@ escalation summary output format and artefact preservation rules.
   dispatches this skill for single-ticket arguments.
 - `.claude/agents/ticket-supervisor.md` — the inner driver this
   skill spawns.
-- `scripts/setup_ticket_worktree.py` — canonical worktree + ticket-move
-  script called in Step 2. Edit this script to change the bootstrap steps.
+- `.leafcutter/scripts/worktree.py` — the one workspace maker run in Step 2.
+  Edit the maker (source `templates/scripts/worktree.py`) to change how a
+  workspace is made.
 - `.claude/skills/building-epics/SKILL.md` — operational runbook
   the supervisor follows.
 - `.claude/skills/signoff/SKILL.md` — ticket-state schema the

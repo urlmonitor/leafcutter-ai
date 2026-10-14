@@ -1,5 +1,5 @@
 ---
-description: "Fast bug-fix pipeline. Accepts a structured diagnosis (target_file, location_hint, symptom, root_cause) and drives: worktree self-isolation (when needed) → AC creation → test-first (red) → fix (python-coder) → green phase + mutation proof → commit → changelog entry → close (push + confirmed PR). Operates in place when the cwd is already an isolated, non-default-branch worktree; otherwise creates one automatically via setup_ticket_worktree.py before doing any work. Escalates to /build-feature when scope expands beyond the target file."
+description: "Fast bug-fix pipeline. Accepts a structured diagnosis (target_file, location_hint, symptom, root_cause) and drives: worktree self-isolation (when needed) → AC creation → test-first (red) → fix (python-coder) → green phase + mutation proof → commit → changelog entry → close (push + confirmed PR). Operates in place when the cwd is already an isolated, non-default-branch worktree; otherwise gets one by running the one workspace maker (worktree.py ensure) before doing any work. Escalates to /build-feature when scope expands beyond the target file."
 ---
 
 # /quick-fix — Fast Bug Fix, Isolated When It Needs To Be
@@ -14,9 +14,10 @@ git worktree on a branch other than `main`/`master`, quick-fix operates in
 place, exactly as it always has. If the session is not inside a git repo at
 all (common when the cwd is an untracked workspace parent), or is on
 `main`/`master` (which is PR-only in this repo — a direct commit cannot be
-pushed), quick-fix creates an isolated worktree for you via the repository's
-canonical `setup_ticket_worktree.py create-only` script before doing anything
-else, then proceeds exactly as it would have in place.
+pushed), quick-fix gets an isolated workspace by running the one workspace maker
+before doing anything else, then proceeds exactly as it would have in place. No
+step asks an agent to create, copy, set up, link or repair a workspace by its own
+choice of steps.
 
 ## When to use /quick-fix vs. /build-feature
 
@@ -57,9 +58,8 @@ Invokes the `quick-fix.js` workflow script (deterministic JS control flow) which
 enforces the exact phase sequence:
 
 1. **Guards and self-isolation**: determines whether the cwd is already a
-   usable, non-default-branch worktree; if not, creates one via
-   `setup_ticket_worktree.py create-only` (after a stale-local-`main`
-   pre-check), then checks the target file for uncommitted changes.
+   usable, non-default-branch worktree; if not, takes the workspace the one
+   maker returns, then checks the target file for uncommitted changes.
 2. **AC Creation**: writes a permanent AC YAML entry into the hierarchical
    `docs/acceptance-criteria/` store, at the correct level (L2, or an L3
    technical-constraint child when the parent's L2 slot cap is already
@@ -103,10 +103,23 @@ beyond the target file.
 
 Parse `$ARGUMENTS` into a diagnosis object. If the input is natural language, extract the four fields (target_file, location_hint, symptom, root_cause) from the sentence. If structured JSON, use directly.
 
-Then invoke the workflow:
+**Get the workspace.** If the session is not already inside a git worktree on a
+branch other than `main`/`master`, run the one workspace maker. `<slug>` is a short
+kebab-case name for the bug, and `<project-root>` is the absolute path of the
+main checkout:
+
+```bash
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind feature --slug <slug> --repo-root <project-root>
+```
+
+On a non-zero exit, stop and report stdout and stderr word for word. Do not call
+the workflow. On exit 0, keep the parsed answer unchanged.
+
+Then invoke the workflow, passing the maker's answer on word for word as
+`workspace` (omit `workspace` when the session was already in a usable worktree):
 
 ```
-Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause })
+Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause, workspace: <maker answer> })
 ```
 
 If `quick-fix.js` is not available (pre-v2.1.154 install), fall back to loading

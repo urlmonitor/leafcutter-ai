@@ -261,6 +261,23 @@ file, not `git worktree list`. There is no symlink step. And its JSON gains `mec
 Section 6's migration order is unchanged. It gains a cut-over chore: prune and retire the 19
 registered worktrees, and set `gc.auto=0` on the main checkout in the meantime.
 
+### Status of decision 7 on the entry surfaces (BO-4300a-1-ib)
+
+The entry commands and skills now follow decision 7. The `feature` skill is the one workspace
+skill: it runs the maker as a single absolute-path command, stops on a non-zero exit, and
+relays the JSON answer unchanged. The `plan-feature`, `fast-lane-build` and `quick-fix`
+commands and the `plan-feature`, `quick-fix` and `build-single-ticket` skills each run the
+same single command and pass its answer on as `args.workspace`. `build-feature` and
+`finalize-feature` leave the workspace to the workflow, because the work identity is only
+known once the workflow resolves it. No surface keeps its own clone, symlink or copy recipe
+any more. The `build-single-ticket` skill takes `TICKET_PATH` only from
+`ticket_path_in_worktree`. The `/plan-feature` command now runs the permission pre-flight, so
+the "MISSING pre-flight" stop described in section 2.3 no longer applies to it.
+
+How to use it: [get a workspace](../how-to/get-a-workspace.md). How a workflow receives the
+answer: [ADR-030](../architecture/adrs/ADR-030-dual-engine-workflow-support.md). The maker
+itself: [worktree-manager](../architecture/components/worktree-manager.md).
+
 ## Method
 
 - **Incident:** read the full workflow journal and each agent's transcript (prompt, tool calls,

@@ -4,7 +4,7 @@ description: "Records the decision to author all new workflow scripts exclusivel
 type: "adr"
 status: "active"
 created: "2026-07-01"
-last_updated: "2026-07-01"
+last_updated: "2026-10-14"
 deciders:
   - supervisor_system
 components:
@@ -199,6 +199,7 @@ execution path is taken. Each edge has a mandated handling convention:
 | **`parallel()` cap: 4096 items / ~16 concurrent** | E2 only | Keep parallel fan-out below 16 branches. E1 has no such cap. Document the cap in any script that fans out more than 4 branches. |
 | **Schema-enforcement asymmetry** | E2 enforces; E1 ignores | E2: `agent()` returns an already-parsed object when `schema` is provided. E1: `agent()` returns raw text; the callAgent adapter calls `JSON.parse`. Do not call `JSON.parse` on E2 results; the callAgent adapter handles this transparently on E1. |
 | **User gate asymmetry** | E1 had `userInput` param; E2 has none | E1 supported an interactive `prompt(userInput, ...)` gate. E2 has no `userInput` global — user gates must be implemented as an agent turn. Design gates as `agent()` calls that ask the user a yes/no question and return `status: ok` or `status: blocked`. |
+| **No filesystem or process access in a workflow body** | E2 only | A workflow body cannot run the workspace maker or read a file. An entry skill or command that knows the work identity up front runs the one workspace maker (`worktree.py ensure`) itself and passes its JSON answer into the workflow word for word as `args.workspace`. An entry that cannot know the identity until the workflow resolves it leaves the workspace to the workflow's one dispatch to the maker. Neither route asks an agent to build a workspace by its own steps (BO-4300a-1-ib). |
 | **`workflow()` leaf-invariant** | E2 only | In E2, calling `workflow()` throws because the script IS the workflow (leaf-level guard). In E1, `workflow` was a passed function. Use `typeof workflow !== 'function'` to detect E2 (or the IIFE-with-try pattern above) — never call `workflow()` for detection, only to probe its type. |
 
 ## Alternatives Considered
