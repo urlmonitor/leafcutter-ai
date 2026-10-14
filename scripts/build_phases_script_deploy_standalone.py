@@ -76,8 +76,8 @@ def build_template_standalone_scripts(target_root: Path, config: dict[str, Any],
 
     Currently deploys:
 
-    - ``templates/scripts/setup_ticket_worktree.py`` → ``scripts/setup_ticket_worktree.py``
-      Referenced by worktree-agent.md and build-single-ticket/SKILL.md.
+    - (``setup_ticket_worktree.py`` was retired by BO-4300f-2: the maker below
+      is the only workspace script an install delivers.)
     - ``templates/scripts/worktree.py`` → ``scripts/worktree.py`` (NAMED entry,
       see ``NAMED_STANDALONE_SCRIPTS``): the one maker BO-4300a-1 requires
       every workspace-creation route to go through.

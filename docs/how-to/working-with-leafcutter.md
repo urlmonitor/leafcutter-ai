@@ -1,19 +1,19 @@
 ---
-title: "How to work with leafcutter end-to-end"
+title: How to work with leafcutter end-to-end
 type: how-to
 status: active
 created: 2026-06-03
 last_updated: 2026-06-03
 components:
-  - build_pipeline
+- build_pipeline
 related_docs:
-  - docs/ticket-lifecycle.md
-  - docs/architecture/agent_delivery_workflows.md
-  - docs/agents/README.md
-  - docs/how-to/drain-backlog-with-build-backlog.md
-  - docs/how-to/drive-epic-manually.md
+- docs/ticket-lifecycle.md
+- docs/architecture/agent_delivery_workflows.md
+- docs/agents/README.md
+- docs/how-to/drain-backlog-with-build-backlog.md
+- docs/how-to/drive-epic-manually.md
+description: Overview of How to work with leafcutter end-to-end.
 ---
-
 # How to work with leafcutter end-to-end
 
 This guide walks you through the full daily workflow lifecycle — from capturing
@@ -125,7 +125,7 @@ action:
 3. Sync local main with origin
 4. Run the test suite
 5. Close tickets (move to `99_done/`)
-6. Remove the worktree
+6. Remove the worktree (via the workspace maker (see [get-a-workspace](get-a-workspace.md)))
 7. Generate a changelog entry (dispatches `changelog-agent`)
 
 You will be prompted before each merge or deletion — `/finalize-feature` never

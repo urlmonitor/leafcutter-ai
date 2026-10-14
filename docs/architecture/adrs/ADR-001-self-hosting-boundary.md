@@ -2,9 +2,11 @@
 title: 'ADR-001: Self-Hosting Boundary — Config-Driven Path Resolution'
 description: Documents the self-hosting boundary for leafcutter-ai — config-driven
   path resolution, build output separation, and user-curated PROJECT_CONTEXT.md preservation
-  across upgrades.
+  across upgrades. Amendment 1 (2026-10-13) keeps install copies out of the package
+  repository, with build.py refusing an implicit build into it, and retires the
+  installed-layout resolver of setup_ticket_worktree.py.
 created: '2026-08-13'
-last_updated: '2026-09-27'
+last_updated: '2026-10-13'
 type: adr
 status: active
 components:
@@ -14,15 +16,24 @@ related_docs:
 - docs/architecture/adrs/ADR-004-consolidated-output-root.md
 - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
 - docs/architecture/adrs/ADR-031-worktree-quality-gate-guard.md
+- docs/architecture/adrs/worktree-maker-amendment-1-2026-09-27.md
 related_code:
 - scripts/build.py
-- templates/scripts/setup_ticket_worktree.py
+- build-self.sh
+- .gitignore
+- templates/scripts/workspace_root.py
+- templates/scripts/worktree_layout.py
 ---
 # ADR-001: Self-Hosting Boundary — Config-Driven Path Resolution
 
 ## Status
 
-Accepted (2026-05-19)
+| Field | Value |
+|---|---|
+| Status | Accepted (2026-05-19). [Amendment 1](#amendment-1--2026-10-13--no-install-inside-the-package-repository-resolver-retired) is Proposed. |
+| Date | 2026-05-19 (amended 2026-10-13) |
+| Author | leafcutter engineering team; Amendment 1 by adr-author (ticket 14, BO-4300f-2) |
+| Supersedes | Nothing. The decision replaced the undocumented status quo (Option A below). |
 
 ## Context
 
@@ -70,6 +81,14 @@ We did NOT implement a `--self` flag (as originally proposed). Instead, the conf
 
 ## Installed-Layout Path Resolution (AC BO-1500e-2)
 
+> **Replaced on 2026-10-13 by [Amendment 1](#amendment-1--2026-10-13--no-install-inside-the-package-repository-resolver-retired)
+> (AM1.1). No longer binding.** The text below records how `setup_ticket_worktree.py`
+> resolved the layout until BO-4300f-2 retired that script. Project resolution now follows
+> [ADR-018 Amendment 1, A1.8](worktree-maker-amendment-1-2026-09-27.md#revision-1--2026-09-30--resolution-order-landing-root-and-config-derivation)
+> in `templates/scripts/workspace_root.py`. The landing place follows A1.9–A1.10 in
+> `templates/scripts/worktree_layout.py`, which replaced the `<consumer_root>/worktrees/<slug>`
+> location below on 2026-09-30.
+
 When leafcutter-ai is cloned into a consumer project as a subdirectory
 (`my-project/leafcutter-ai/`), `setup_ticket_worktree.py` must resolve the
 repository root and the AC store location from the actual installed layout rather
@@ -91,26 +110,143 @@ without any user configuration. See
 [Agent Delivery Workflows §9](../agent_delivery_workflows.md#9-installed-copy-path-resolution-bo-1500e-2)
 for the full detection flowchart and directory tree examples.
 
-> **Scheduled to be replaced (2026-09-27, ADR-018 Amendment 1).** This section describes
-> how `setup_ticket_worktree.py` behaves until BO-4300f-2 retires it. From then on, per
-> [ADR-018 Amendment 1](ADR-018-agent-isolation-topology.md#amendment-1--2026-09-27--one-workspace-maker-hardlinked-clones-real-install-files):
->
-> - Project-root resolution MUST come from the separate stdlib-only resolver module deployed
->   in `<install-root>/scripts/` (§A1.5). `_resolve_installed_layout()` MUST NOT be carried
->   into the new maker, and `commit_guardian/_resolve_root.py` MUST NOT be reused. BO-4300b-1
->   owns the resolution order, including how the dev layout (package repo as a child of a
->   non-repo workspace parent) and the consumer layout are told apart.
-> - Workspaces MUST be created, located and removed only by the maker
->   (`templates/scripts/worktree.py` → `<install-root>/scripts/worktree.py`, §A1.2). Each is
->   an independent clone that identifies its project only through the `project_root` field of
->   its marker record (§A1.4).
-> - The ADR-001 boundary applies unchanged. The maker and the resolver are tracked only under
->   `templates/scripts/`, and the build deploys them outside the source tree (§A1.6).
-> - Where adopter workspaces land (open question 5) is not decided here.
-
 ## Alternatives
 
 The `--self` flag approach was rejected because it adds a special code path that only leafcutter uses. Config-driven paths are more general and testable.
+
+## Amendment 1 — 2026-10-13 — No install inside the package repository, resolver retired
+
+| Field | Value |
+|---|---|
+| Amends | The Decision's build-output rule (adds AM1.2 and AM1.3). Replaces the "Installed-Layout Path Resolution (AC BO-1500e-2)" section (AM1.1). |
+| Status | Proposed |
+| Date | 2026-10-13 |
+| Author | adr-author (ticket 14, BO-4300f-2) |
+| Driven by | [Ticket 14](../../../tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md) ([BO-4300f-2](../../acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300f-2.yaml)) in epic `EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace`; user decision Q6 of 2026-09-28 |
+| Supersedes this ADR? | No. Config-driven paths, the source/output boundary and user-owned `PROJECT_CONTEXT.md` files are unchanged. |
+
+### Why this had to change
+
+- **An install copy sat inside the package repository.** On the reference host,
+  `leafcutter-ai/.leafcutter/` held a stale install, including a deployed
+  `setup_ticket_worktree.py` with `_resolve_installed_layout()`. It got there because
+  `scripts/build.py` installs into the current folder when no `--target-dir` is given
+  (`main()`: `target_root = ... else Path.cwd()`). A build started at the package root
+  therefore installs into the package. The `.leafcutter/` entry in `.gitignore` hides the
+  copy at any depth, so nothing reported it. The copy breaks this ADR's boundary
+  (everything in `leafcutter-ai/` is source). It is also a place where a former way of
+  making a workspace could survive after BO-4300f-2 removes it from the tracked tree.
+  [ADR-018 Amendment 1](worktree-maker-amendment-1-2026-09-27.md) A1.8 already stops project
+  resolution from reading such a copy (BO-4300b-2-ii), but nothing stopped a build from
+  making one.
+- **The resolver this ADR named is retired.** The "Installed-Layout Path Resolution"
+  section named `_resolve_installed_layout()` in `scripts/setup_ticket_worktree.py` as the
+  authority. [ADR-018](ADR-018-agent-isolation-topology.md) Amendment 1 (A1.2) retires that
+  script at BO-4300f-2. A1.8 now fixes project resolution, and A1.9 replaced the
+  `<consumer_root>/worktrees/<slug>` location on 2026-09-30.
+- **A ban on every install in a package checkout would break real callers.** CI runs
+  `python scripts/build.py --target-dir .` at the package root. `build-self.sh` passes
+  `--target-dir <workspace>`. The maker builds each workspace of the package with an
+  explicit `--target-dir` inside the clone (A1.3), because workspaces carry their own
+  install (user decision 2 of 2026-09-25). The rule therefore targets the implicit build.
+
+### Decision
+
+**AM1.1 — The installed-layout resolver is retired.** The "Installed-Layout Path
+Resolution (AC BO-1500e-2)" section MUST be read as a record only. Project-root resolution
+MUST follow ADR-018 Amendment 1 A1.8 in `templates/scripts/workspace_root.py`. The landing
+place MUST follow A1.9–A1.10 in `templates/scripts/worktree_layout.py`. After BO-4300f-2,
+tracked code in the package MUST NOT define or call `_resolve_installed_layout()`, and
+`scripts/setup_ticket_worktree.py` MUST NOT exist. `templates/scripts/setup_ticket_worktree.py`
+MUST be deleted or, for at most one release, be a shim that passes every request to the
+maker and returns the maker's answer unchanged. The maker and its resolver modules MUST stay
+tracked only under `templates/scripts/` (A1.6). This ADR's boundary applies to them
+unchanged.
+
+**AM1.2 — A developer's checkout of the package holds no install.** The package repository
+a developer works in (`leafcutter-ai/` in the dev layout) MUST NOT hold an install output
+root (`<package-root>/.leafcutter/`). A developer's install MUST go to the enclosing
+workspace folder (`build-self.sh` passes `--target-dir <workspace>`). A package workspace's
+install MUST go inside that workspace, built by the maker with an explicit `--target-dir`
+(A1.3). Ticket 14 MUST delete the stale `leafcutter-ai/.leafcutter/` from the developer's
+main checkout once, and record before and after listings in its Comments. The folder is
+untracked and ignored, so no commit can delete it. That step MUST NOT touch the enclosing
+workspace's install (`<workspace>/.leafcutter/`). The `.leafcutter/` entry in `.gitignore`
+MUST stay, because package workspaces and CI checkouts hold installs on purpose.
+
+**AM1.3 — `build.py` refuses an implicit build into the package repository.**
+`scripts/build.py` MUST exit non-zero when `--target-dir` is absent and the current folder
+is the build's own package root or lies inside it. The check MUST run straight after
+argument parsing, before config is loaded and before any guard or phase runs, so a refused
+run writes nothing. The package root MUST be the folder `main()` already derives from the
+build's own location (`Path(__file__).resolve().parent.parent`), and both paths MUST be
+resolved before they are compared. The package MUST NOT be recognised by its folder name
+(`leafcutter-ai`). The refusal MUST apply in every mode, including `--dry-run` and
+`--validate-only`. Its message MUST name this rule (ADR-001 AM1.3) and the `--target-dir`
+remedy, and MUST say that a developer's install belongs in the enclosing workspace folder.
+An explicit `--target-dir` MUST NOT be refused, whatever folder it names, including
+`--target-dir .` at the package root. The check MUST be a small guard helper beside the
+existing validation guards in `scripts/build.py`, so the file stays within its file-size
+ratchet.
+
+### Consequences
+
+**Positive:**
+
+- The route that made the stale copy is closed. A build started inside the package
+  without a target stops before it writes anything, and says how to build correctly.
+- After ticket 14, no former workspace script can survive inside the developer's package
+  checkout, tracked or untracked.
+- CI, `build-self.sh` and the maker keep working unchanged, because each already passes
+  `--target-dir`.
+- ADR-001 no longer names a retired function as the authority for resolving the project.
+
+**Negative:**
+
+- An explicit `--target-dir .` at the package root is still accepted, because CI needs it.
+  A developer who answers the refusal that way recreates the copy. The refusal message is
+  the only guard against this, since the user ruled out a check that fails whenever a
+  package checkout holds an install.
+- Instructions that run `python scripts/build.py` from the package root without a target
+  now lead into the refusal. Examples are the how-to guides for hooks, skills, agent
+  templates and removing artifacts, and the remedy line printed by
+  `templates/scripts/commit_guardian/check_build_drift.py`. Each must name a target.
+- The refusal also covers `--dry-run` and `--validate-only`, so a quick validation from the
+  package root needs an explicit target. An in-process test that calls `build.main()`
+  without `--target-dir` from the package root gets the refusal. Such a test passes without
+  exercising the code it names unless it supplies a target.
+
+**Operational:**
+
+- Ticket 14 deletes the stale copy on the reference host only. Another developer host
+  holding `<package-root>/.leafcutter/` must delete it by hand, because the refusal only
+  prevents a new copy.
+- An install inside a package workspace or a CI checkout is expected and does not break
+  AM1.2.
+
+### Alternatives
+
+- **Recognise the package by its folder name (`leafcutter-ai`).** Rejected. A clone or a
+  renamed checkout of the package has another name, so the guard would miss it. Any
+  unrelated folder with that name would be refused. The root derived from `build.py`'s own
+  location is right in every layout.
+- **Refuse every build into a package checkout, explicit targets included.** Rejected. CI
+  builds with `--target-dir .` at the package root, and the maker builds each package
+  workspace with an explicit target inside the clone. Both would break.
+- **A test or hook that fails whenever a package checkout holds `.leafcutter/`.** Rejected.
+  Package workspaces and CI checkouts hold installs on purpose, so the check would fail on
+  every legitimate one. The user decided that enforcement is the refusal plus the one-time
+  deletion.
+- **Drop `.leafcutter/` from `.gitignore` so a stray copy shows in `git status`.**
+  Rejected. Every package workspace and CI checkout would then show its whole install as
+  untracked, and one `git add -A` would commit an install into the package.
+- **Exempt `--dry-run` and `--validate-only` from the refusal.** Rejected. The user's
+  decision has no mode exception. An exemption would also rest on each mode's write
+  behaviour staying correct, so a regression in one of them would reopen the route that
+  made the stale copy. Naming a target costs one flag.
+- **Keep `_resolve_installed_layout()` as a second resolver beside the maker.** Rejected.
+  The older resolvers already disagreed on which project a folder belongs to (F3, F11).
+  ADR-018 Amendment 1 A1.5 and A1.8 allow exactly one.
 
 ## See Also
 

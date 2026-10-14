@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -75,9 +75,20 @@ origin_agent: it-po
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300f_2_ib.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md
+- README.md
+- scripts/worktree/README.md
+- docs/how-to/drive-epic-manually.md
+- docs/how-to/verify-precommit-active.md
+- docs/reference/plan-feature-layout-and-startup-checks.md
+- docs/reference/skills-config-fields.md
+- docs/agents/utility/worktree-agent.md
+- docs/architecture/agent_delivery_workflows.md
+- docs/architecture/components/worktree-manager.md
+- docs/INDEX.md
 notes: 'IT PO split of BO-4300f-2-i (2026-09-25): the how-to guides (documentation-expert). With BO-4300f-2-ia
   the union of the two Givens is the parent''s.'
 target_epic: EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace

@@ -33,7 +33,7 @@ Each agent entry requires these fields:
 | `template_path` | string | Path to template file (relative to package root) |
 | `model` | string | Preferred model tier (`"sonnet"` or `"opus"`) |
 | `skills_used` | array | Skills this agent loads at runtime (may be `[]`) |
-| `permits_shell` | boolean (optional) | `true` if the agent's registered charter permits running repository-mutating shell commands (`git fetch`/`branch`/`worktree add`, file writes outside its own scratch area, etc.). `false` or absent means the agent must be treated as read-only for dispatch-permission gates such as the isolated-workspace setup step in `plan-feature.js` (see [Agent Code Delivery Workflows §6](architecture/agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)). Distinct from tool possession — an agent can carry `Bash` in its tools purely for read-only diagnostics (e.g. `status-checker`) without `permits_shell` being `true`. |
+| `permits_shell` | boolean (optional) | `true` if the agent's registered charter permits running repository-mutating shell commands (`git fetch`/`branch`, asking the workspace maker for a workspace, file writes outside its own scratch area, etc.). `false` or absent means the agent must be treated as read-only for dispatch-permission gates such as the isolated-workspace setup step in `plan-feature.js` (see [Agent Code Delivery Workflows §6](architecture/agent_delivery_workflows.md#6-detail-view-isolated-authoring-worktree-lifecycle-bo-1500a-3)). Distinct from tool possession — an agent can carry `Bash` in its tools purely for read-only diagnostics (e.g. `status-checker`) without `permits_shell` being `true`. |
 
 ## Portable vs. Domain Agents
 

@@ -1,7 +1,7 @@
 """
 MODULE: sweep_processes
 GOAL: Terminate residual background worker processes and remove log files
-    before calling ``git worktree remove``, so no orphaned PIDs or
+    before the workspace maker removes a workspace, so no orphaned PIDs or
     partially-deleted worktree directories survive an epic's close flow.
 BUSINESS CONTEXT: After a ``/build-feature`` epic completes, the worktree
     directory must be fully removable.  Long-running host processes (live
@@ -70,7 +70,7 @@ class SweepResult:
         error: Non-None when a fatal condition prevented the sweep from running
             (e.g. invalid worktree path, all processes conflicted).  When set,
             ``killed_pids`` will be empty and callers should NOT proceed to
-            ``git worktree remove``.
+            the workspace maker's remove step.
     """
 
     killed_pids: list[int] = field(default_factory=list)
@@ -346,7 +346,7 @@ def sweep(
         result.error = (
             f"Sweep aborted: {len(protected_conflicts)} process(es) matched "
             "protected_paths. No processes were killed. Resolve the conflicts "
-            "manually before retrying git worktree remove."
+            "manually before retrying the workspace removal."
         )
         return result
 
@@ -413,7 +413,7 @@ def main() -> None:
     Exits 0 on clean sweep; exits 1 on any conflict or error.
     """
     parser = argparse.ArgumentParser(
-        description="Sweep residual processes and log files from a worktree before git worktree remove."
+        description="Sweep residual processes and log files from a workspace before it is removed."
     )
     parser.add_argument("worktree_path", help="Absolute path to the worktree directory.")
     parser.add_argument(

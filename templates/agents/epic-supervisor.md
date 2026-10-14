@@ -591,11 +591,15 @@ see `docs/how-to/epic-supervisor-recovery.md` for the manual repair procedure.
 
 #### Step 5 — Worktree Cleanup (user approval required)
 
-Spawn `worktree-agent` with `remove <epic-worktree-path>`.
+Spawn `worktree-agent` with `remove <epic-workspace-path>`.
 The worktree-agent has its own confirmation gate before any destructive action.
+Clearing the workspace is only ever the workspace maker's `remove` verb
+(`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`); the supervisor never
+deletes a workspace by hand.
 
-The worktree-cleanup step now includes **process sweep and log cleanup** (Phase 3.5
-of the close-worktree workflow) before `git worktree remove`. The contract is:
+The workspace-cleanup step includes **process sweep and log cleanup** (Phase 3.5
+of the close-worktree workflow) before the maker's `remove` verb
+(`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`). The contract is:
 
 - `epic-supervisor` calls `worktree-agent` (which invokes close-worktree).
 - `close-worktree` owns the sweep — `epic-supervisor` does NOT call

@@ -274,7 +274,7 @@ Exit 0 if no failures; exit 1 if any items failed.
   Type:     epic
 ---
 
-(the workspace maker makes or resumes the epic workspace; ticket-supervisor(s) dispatched directly)
+(the workspace maker, `scripts/worktree.py`, makes or resumes the epic workspace; see `docs/how-to/get-a-workspace.md`; ticket-supervisor(s) dispatched directly)
 
 ...
 

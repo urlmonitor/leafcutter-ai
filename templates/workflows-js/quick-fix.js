@@ -14,7 +14,7 @@
  * Otherwise — cwd is not a repo at all (common when it is an untracked workspace
  * parent), HEAD is detached, or the branch is main/master (PR-only under the
  * require-ci-lint ruleset, so a direct commit cannot be pushed) — the workflow
- * self-isolates via scripts/setup_ticket_worktree.py create-only before doing any
+ * self-isolates via the workspace maker (scripts/worktree.py ensure --kind feature) before doing any
  * work. Every phase after Guards is anchored to the resulting worktree root.
  *
  * Implements BP-600a through BP-600e. NOTE: BP-600a-1, BP-600a-2, BP-600b-1 and

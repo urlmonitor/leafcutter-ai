@@ -222,13 +222,13 @@ BEHIND=$(git rev-list --count HEAD..main 2>/dev/null || echo 0)
 if [ "$BEHIND" -gt 0 ]; then
   TICKET_CREATION_SHA=$(git log --diff-filter=A --format=%H -- "<ticket_path>" | tail -1)
   if [ -n "$TICKET_CREATION_SHA" ] && git merge-base --is-ancestor "$TICKET_CREATION_SHA" HEAD 2>/dev/null; then
-    echo "INFO: worktree contains ticket-creation commit ($TICKET_CREATION_SHA); the $BEHIND commit(s) on main are unrelated activity (likely concurrent merges during the drive)."
+    echo "INFO: checkout contains ticket-creation commit ($TICKET_CREATION_SHA); the $BEHIND commit(s) on main are unrelated activity (likely concurrent merges during the drive)."
   elif [ -n "$TICKET_CREATION_SHA" ]; then
-    echo "WARNING: worktree HEAD does NOT contain the ticket-creation commit at $TICKET_CREATION_SHA. The worktree may have been bootstrapped from a stale base ref. Verify ticket content is current and consider rebasing."
+    echo "WARNING: checkout HEAD does NOT contain the ticket-creation commit at $TICKET_CREATION_SHA. The checkout may have been prepared from a stale base ref. Verify ticket content is current and consider rebasing."
   else
-    echo "WARNING: worktree branch is $BEHIND commit(s) behind local main."
+    echo "WARNING: checkout branch is $BEHIND commit(s) behind local main."
     echo "Could not locate ticket-creation commit in git history — unable to determine reachability."
-    echo "The worktree may have been bootstrapped from origin/main before a local create-ticket commit was made. Verify ticket content is current."
+    echo "The checkout may have been prepared from origin/main before a local create-ticket commit was made. Verify ticket content is current."
   fi
 fi
 ```
@@ -246,7 +246,7 @@ This check distinguishes two cases when `BEHIND > 0`:
   without alarm.
 
 If the ticket-creation commit cannot be located in git history (edge case — e.g.
-the ticket was not committed before the worktree was created), the check degrades
+the ticket was not committed before the checkout was prepared), the check degrades
 to the original generic `WARNING` text.
 
 The check is advisory only and exits 0 in all branches — it never blocks the
@@ -425,9 +425,9 @@ command above — it will:
 1. Gate on your confirmation before merging.
 2. Run `gh pr merge` (Step 2).
 3. Sync `main` and run tests (Steps 3–4).
-4. Close the ticket and remove the worktree (Steps 5–6).
+4. Close the ticket and clear the workspace through the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) (Steps 5–6).
 
-Per `feedback_merge_before_worktree_remove.md`: the worktree will not be removed
+Per `feedback_merge_before_worktree_remove.md`: the workspace will not be cleared (by the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`))
 until the merge succeeds — `/finalize-feature` enforces this ordering internally;
 you do not need to merge manually first.
 
@@ -452,7 +452,7 @@ Do not add any other preamble or summary text.
   passthrough — it does not try to answer on the user's behalf.
 - **Does not create AC-authoring workspaces.** The dedicated AC-authoring
   workspace is made by `/plan-feature` through the same one workspace maker
-  (kind `ac`); this skill makes the ticket workspace (kind `ticket`) for ticket
+  (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`; kind `ac`); this skill makes the ticket workspace (kind `ticket`) for ticket
   execution — a separate concern from AC authoring.
   **Main-branch invocation is supported (AC BO-1500e-1):** if the user is on
   the protected `main` branch when they run `/plan-feature`, the AC-authoring
@@ -503,15 +503,15 @@ The `/quick-fix` workflow (AC BP-600a-1; `templates/workflows-js/quick-fix.js`) 
 
 | Aspect | `build-single-ticket` (this skill) | `/quick-fix` |
 |--------|-----------------------------------|----|
-| Worktree | New isolated worktree created | **Current worktree — no new directory** |
+| Workspace | New isolated workspace from the workspace maker (`scripts/worktree.py`, `docs/how-to/get-a-workspace.md`) | **Current workspace — no new directory** |
 | Branch | New branch per ticket | **Current branch — no switch** |
 | Entry | Invoked by `/build-feature` for single-ticket paths | Invoked directly by `/quick-fix` |
 | Ticket lifecycle | Full inbox → PR → finalize | Single-shot — ticket created and driven to commit inline |
 
 **When to use this skill vs. `/quick-fix`:** use this skill when the fix requires a clean
 branch and a full PR lifecycle. Use `/quick-fix` when you have already diagnosed a bug,
-want the fix committed on your current branch immediately, and do not want a new worktree
-directory created (AC BP-600a-1).
+want the fix committed on your current branch immediately, and do not want a new workspace
+from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) (AC BP-600a-1).
 
 See `docs/architecture/agent_delivery_workflows.md` §5 for the full quick-fix workflow diagram.
 
@@ -585,8 +585,8 @@ escalation:
    >   Root cause: <root_cause>
    ```
 
-3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill creates
-   a new isolated worktree, bootstraps the branch, and drives the full phase-agent pipeline
+3. **Invoke this skill** (via `/build-feature`) on the resulting ticket. This skill gets
+   a new isolated workspace from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), and drives the full phase-agent pipeline
    (including `python-coder` for the fix and `pr-reviewer` for review).
 
 **AC ID continuity contract (BP-600e-3):**

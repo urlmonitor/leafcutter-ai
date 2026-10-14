@@ -3,8 +3,9 @@ name: quick-fix
 description: |
   Fast bug-fix pipeline for a single, already-diagnosed bug in one file.
   Operates in place when the current working directory is already an isolated,
-  non-default-branch worktree; otherwise gets an isolated workspace from
-  the one workspace maker before doing any work. Accepts a structured bug diagnosis (target file,
+  non-default-branch workspace; otherwise gets an isolated workspace from
+  the one workspace maker (scripts/worktree.py, docs/how-to/get-a-workspace.md)
+  before doing any work. Accepts a structured bug diagnosis (target file,
   location hint, symptom, root cause) and drives: worktree self-isolation →
   AC creation (hierarchical store) → test-first (red, AC_ENFORCE_STRICT) →
   warning checks → fix (python-coder) → green phase + mutation proof → commit
@@ -47,8 +48,8 @@ gets an isolated workspace from the one workspace maker (Phase 0) before
 doing anything else, then operates inside that worktree exactly as it would have operated
 in place.
 
-Contrast with `build-single-ticket`: that skill always creates a new isolated
-worktree from a ticket and drives a full phase-agent lifecycle. This skill
+Contrast with `build-single-ticket`: that skill always gets a new isolated
+workspace for a ticket from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) and drives a full phase-agent lifecycle. This skill
 never scaffolds a ticket or epic — it isolates only when the current location
 requires it, and its unit of work is a single AC, not a ticket.
 
@@ -56,7 +57,7 @@ requires it, and its unit of work is a single AC, not a ticket.
 > `BP-600a-1`, `BP-600a-2`, `BP-600b-1`, and `BP-600d-3` under
 > `docs/acceptance-criteria/build_pipeline/BP-600-quick-fix-workflow/` are
 > `work_status: done` and their `criteria` fields still assert the *old*
-> behaviour this rewrite replaces (no worktree ever created; three-file
+> behaviour this rewrite replaces (no workspace ever made; three-file
 > commit only). `BP-600f`'s own YAML is itself a live artifact of the old
 > six-field flat AC template this rewrite retires (it is missing `level`,
 > `work_status`, `depends_on`, `covered_by`, and other now-required fields).
@@ -1122,7 +1123,7 @@ the user with the available options and wait for explicit direction.
 - **AC file is permanent** — do NOT delete or move any AC YAML written by
   this workflow after creation, even if the workflow aborts mid-run.
 - **Isolation is conditional, not absolute** — quick-fix operates in place
-  whenever the cwd is already a usable, non-default-branch worktree. It
+  whenever the cwd is already a usable, non-default-branch workspace (from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)). It
   self-isolates via the one workspace maker only when the cwd is not a git
   repo, or is on `main`/`master`, or is in detached HEAD. It never uses
   `worktree-agent` and never makes a workspace by steps of its own — always

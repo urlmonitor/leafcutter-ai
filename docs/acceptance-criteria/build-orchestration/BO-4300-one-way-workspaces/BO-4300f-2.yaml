@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -265,6 +265,17 @@ superseded_by: null
 covered_by: [BO-4300f-2-ia, BO-4300f-2-ib]
 implemented_by:
 - tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/14_TICKET-20260928-BO-4300-retire-former-ways.md
+- scripts/setup_ticket_worktree.py
+- templates/scripts/setup_ticket_worktree.py
+- templates/scripts/worktree_repo_facts.py
+- templates/scripts/git_recovery.py
+- scripts/build.py
+- scripts/build_phases.py
+- scripts/build_phases_script_deploy.py
+- scripts/build_phases_workflows.py
+- scripts/build_helpers.py
+- scripts/worktree/check_workspace_setup_permission.py
+- templates/scripts/commit_guardian/commit_guardian.json
 notes: |
   Migration plan step 9. "Removed rather than left alongside" is the point: the tracked and
   deployed copies of today's script already differ on purpose and a test enforces the drift

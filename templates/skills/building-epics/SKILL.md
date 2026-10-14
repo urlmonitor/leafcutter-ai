@@ -79,9 +79,9 @@ retrospective. This pre-flight step closes that gap.
 ### §1.0.1 Pre-Commit Hook Probe Pre-flight (runs after §1.0)
 
 Before entering the main epic loop (§1.1), verify that the pre-commit hooks
-are active and wired up in the epic worktree. This prevents the scenario where
-a hook silently skips for the entire drive because the config was lost between
-the worktree bootstrap and the drive start.
+are active and wired up in the epic workspace. This prevents the scenario where
+a hook silently skips for the entire drive. The epic workspace comes only from the
+workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`; the maker builds its install and hook config itself.
 
 **Check (POSIX):**
 
@@ -99,18 +99,16 @@ If `failing_checks` is non-empty OR the script exits non-zero:
 1. Emit the structured warning block to the user, listing each failing check:
    ```
    ## Warning: Pre-commit hook probe failed
-   Worktree: <worktree_root>
+   Workspace: <worktree_root>
    Failing checks: <list>
    Pre-commit hooks may silently skip during this drive.
    ```
 2. Offer the user **three options**:
-   a. **Fix and retry** — resolve the config/hooks issue (the probe describes what to fix), then re-invoke `/build-feature`. Typical fix: `build.py` wasn't run, or `.pre-commit-config.yaml` is absent.
-   b. **Investigate** — inspect `probe_pre_drive.txt` and the worktree hook installation manually before deciding.
-   c. **Override** — proceed despite the failing probe, accepting the risk that hooks may silently skip. This requires an explicit confirmation: "I understand hooks may skip — proceed".
-3. On option (a) or (b): halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — user must fix or override"}`.
-4. On option (c) only: log `[probe-override] User accepted hook-skip risk for this drive` and continue to §1.1.
+   a. **Fix and retry** — ask the workspace maker for the workspace again (`scripts/worktree.py ensure`, see `docs/how-to/get-a-workspace.md`); it finishes a half-made workspace in place. Never repair the config or hooks by hand. Then re-invoke `/build-feature`.
+   b. **Investigate** — inspect `probe_pre_drive.txt` before deciding.
+3. On either option: halt with `{status: "blocked", blocker_summary: "pre-commit hook probe failed — ask the workspace maker again"}`. There is no override: a failing probe always halts the drive.
 
-Do NOT silently continue when `failing_checks` is non-empty — the warning must be surfaced.
+Do NOT continue when `failing_checks` is non-empty — the failure must be surfaced and the drive halted.
 
 If `verify_precommit_active.py` is absent (graceful_skip_if_incomplete pattern), emit:
 ```
@@ -118,9 +116,8 @@ INFO: verify_precommit_active.py not found — probe skipped (incomplete guardia
 ```
 and continue to §1.1 without blocking.
 
-**Why this gate exists:** A worktree bootstrap can succeed (config file copied/symlinked)
-but the hooks can still fail to fire if the binary is missing, the hook is not installed,
-or the config is malformed. This probe checks all four conditions simultaneously.
+**Why this gate exists:** A workspace can be made yet the hooks can still fail to fire if
+the binary is missing, the hook is not installed, or the config is malformed. This probe checks all four conditions simultaneously.
 (Source: EPIC-WorktreeQualityGateGuard, BO-1700d-2)
 
 ---
@@ -244,8 +241,8 @@ In all other blocker scenarios, the epic continues with the remaining independen
 **Workflow driver (`build-feature.js`, BO-100e-4).** A halted ticket no longer ends the run. Later batches and looks still build every ticket that does not depend on it (transitively) and does not list a file it left modified in `files_touched`. Dependants are withheld (`withheld_by`) and tickets sharing a leftover file are withheld (`withheld_by_shared_files`); both appear in `unbuilt`. Only two further conditions stop the run early, because the commit agent commits whatever is staged: the halted ticket left **staged** changes (the stop names the paths), or the worktree's dirty state **could not be read** (fail closed). The run then ends with `status: "blocked"`, `epic_complete: false`, `ended_because: "halted"` and `halted_at_batch` set to the first halt. The legacy `build-epic.js` still halts the whole run at the first halt.
 ### §1.4 Worktree lifecycle — close-worktree prohibition
 
-`/build-feature` **MUST NOT** invoke `close-worktree`, `git worktree remove`, or
-`git branch -D` until **every sub-ticket in the epic is in `done/` status**.
+`/build-feature` **MUST NOT** invoke `close-worktree`, ask the maker to clear the epic workspace (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`), or
+run `git branch -D` until **every sub-ticket in the epic is in `done/` status**.
 
 Premature invocation of `close-worktree` destroys the branch ref while in-progress commits
 survive as unreachable orphan objects in the object database. This failure mode was observed
@@ -794,7 +791,7 @@ EPIC-AcPipelineDeployGaps). Re-sending "yes" via SendMessage will not resolve it
    `AskUserQuestion` answer or a direct message).
 2. The parent then performs the gated action **directly** from the main loop — e.g. the
    `commit` agent's job is done by a direct (delegated) commit; the merge gate by
-   `gh pr merge`; worktree removal by `git worktree remove`. (Note: a direct `git commit`
+   `gh pr merge`; workspace clearing by the maker's `remove` verb (workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`). (Note: a direct `git commit`
    is blocked by `enforce_commit_delegation`; satisfy it by dispatching a FRESH `commit`
    agent with the user's approval stated as a pre-authorization in the initial dispatch
    prompt — gated agents accept their *initial* task, only relayed *follow-ups* deadlock.)
@@ -1011,7 +1008,7 @@ the original stash-conflict incident.
 ### §5.7 Interim Protocol: Gated-Agent Confirmation-Gate Deadlock
 
 **Problem.** Gated agents — `commit`, `worktree-agent`, and `finalize-feature` — require direct
-user authority to proceed past their confirmation gates (git commit, PR merge, worktree removal).
+user authority to proceed past their confirmation gates (git commit, PR merge, workspace clearing through the workspace maker `scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`).
 When any of these agents is dispatched as a subagent by a coordinator or supervisor, no direct
 user-turn channel exists. A coordinator relaying "yes" via `SendMessage` is rejected ("coordinator
 message carries no user authority"), and the agent dead-ends at its gate permanently. The ticket

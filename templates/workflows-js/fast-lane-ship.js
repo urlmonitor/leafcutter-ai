@@ -4,8 +4,8 @@
  * One command, one AC id, a PR back. Point the fast lane at ANY acceptance
  * criterion and it does the whole arc with no other input (BO-2400f):
  *
- *   1. Worktree      — setup_ticket_worktree.py create-fastlane-worktree <slug>
- *                      opens a fresh isolated worktree off the latest origin/main
+ *   1. Worktree      — the workspace maker (worktree.py ensure --kind fastlane
+ *                      --slug <slug>) opens a fresh isolated workspace off the latest origin/main
  *                      (fast-lane/<slug> branch), bootstrapped (BO-2400f-3).
  *   2. Resolve       — fast_lane.py select_connected --ac <id> resolves the
  *                      connected build set (subtree ∪ unmet-deps closure, in
@@ -28,7 +28,7 @@
  *
  * Gate script:   {{config.output_root}}/scripts/build_orchestration/fast_lane.py
  *                (resolved inside the freshly-created worktree, once bootstrapped)
- * Worktree tool: {{config.output_root}}/scripts/setup_ticket_worktree.py
+ * Worktree tool: {{config.output_root}}/scripts/worktree.py (the workspace maker)
  *                (run from the consumer repo root, BEFORE any worktree exists)
  * Done marker:   fast_lane.py's own `mark_done` subcommand (coverage-gated) —
  *                not a direct call to scripts/ac_store/mark_ac_done.py

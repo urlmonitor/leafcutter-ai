@@ -1,9 +1,9 @@
 ---
 description: |
   Post-merge feature finalization: capture pre-merge test baseline on main,
-  open PR if missing, merge origin/main into worktree, run post-merge tests
+  open PR if missing, merge origin/main into the workspace, run post-merge tests
   (with triage baseline), merge PR to main only when tests pass, sync local
-  main, close tickets/archive epic, remove worktree. Prompt gates on all
+  main, close tickets/archive epic, clear the workspace through the workspace maker (scripts/worktree.py, docs/how-to/get-a-workspace.md). Prompt gates on all
   destructive steps. HALT on test regression before PR merge.
 ---
 
@@ -25,7 +25,7 @@ working directory.
 
 This entry makes no workspace and passes no `workspace` argument: the workflow
 resolves the work from the name and, where it needs a workspace, runs the one
-workspace maker itself and consumes the answer unchanged. Do not create, copy,
+workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) itself and consumes the answer unchanged. Do not create, copy,
 set up or repair a workspace here by hand.
 
 ## Progress Relay Protocol (launcher responsibility)

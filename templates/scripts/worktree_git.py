@@ -48,7 +48,8 @@ _CANARY_FILE_NAME = ".leafcutter_workspace_canary_probe.txt"
 _CANARY_CONTENT = "LEAFCUTTER_WORKSPACE_CANARY_PROBE\n"
 _GIT_TIMEOUT_SECONDS = 60
 
-def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> subprocess.CompletedProcess:
+def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS,
+            encoding: str | None = None) -> subprocess.CompletedProcess:
     """Run ``git <args>`` with the working directory set to *cwd*.
 
     The single subprocess boundary for this module. Never uses ``git -C`` --
@@ -63,6 +64,8 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> 
         args: The git subcommand and its arguments, without the leading "git".
         cwd: Absolute path to run git in.
         timeout: Seconds to wait before giving up.
+        encoding: Decode output with this codec (errors replaced) instead of the
+            locale default -- for callers reading unquoted non-ASCII paths.
 
     Returns:
         The completed process (real or synthesized on launch failure).
@@ -73,6 +76,8 @@ def run_git(args: list[str], cwd: Path, timeout: int = _GIT_TIMEOUT_SECONDS) -> 
             cwd=str(cwd),
             capture_output=True,
             text=True,
+            encoding=encoding,
+            errors="replace" if encoding else None,
             timeout=timeout,
             check=False,
         )

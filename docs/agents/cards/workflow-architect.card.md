@@ -139,7 +139,7 @@ flowchart TD
 - BP-1100c-2: Spot-check findings are recorded in the retrospective and defects open remediation tickets before close
 - BP-1100d-2: pr-reviewer checks the agentType at every commit step in workflow JavaScript
 - BP-600a-1: Quick-fix operates in the current worktree when it can, and self-isolates when it cannot
-- BP-600a-2: Quick-fix never uses worktree-agent, the feature skill, or a hand-rolled git worktree add
+- BP-600a-2: Quick-fix never uses worktree-agent, the feature skill, or a hand-rolled workspace of its own
 - BP-600a-3: Quick-fix workflow rejects invocation when target file has uncommitted changes
 - BP-600a-3-i: Quick-fix workflow permits uncommitted changes in unrelated files
 - BP-600b-1: Quick-fix writes a schema-complete AC into the hierarchical AC store and back-links its parent

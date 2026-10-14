@@ -134,8 +134,8 @@ via the `emit_event.py` script (non-blocking; failures are ignored).
 
 **This section runs BEFORE the workflow is invoked, and before §PRR below.**
 The workflow never makes its own workspace when this entry already knows the
-work: it consumes the answer of the one workspace maker, passed in as
-`args.workspace`.
+work: it consumes the answer of the one workspace maker (`scripts/worktree.py`,
+see `docs/how-to/get-a-workspace.md`), passed in as `args.workspace`.
 
 ### §WS.1 — Run the maker once
 
@@ -149,7 +149,8 @@ python <absolute-install-root>/scripts/worktree.py ensure --kind ac --slug <slug
 ```
 
 - **Non-zero exit:** stop. Report the maker's answer verbatim and do NOT invoke
-  the workflow. Do not make a workspace by any other means.
+  the workflow. Do not make a workspace by any other means; only the one
+  workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) does.
 - **Exit 0:** the one JSON object on stdout is the answer.
 
 ### §WS.2 — Pass the answer into the workflow
@@ -373,8 +374,8 @@ the user's responsibility and are not touched by this pre-flight.
 
 ## §0 — Stage 0: Triage
 
-After the authoring worktree has been set up and the Partial-Run Recovery
-pre-flight passes (or passes with no orphans) in the authoring worktree,
+After the authoring workspace has been set up by the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) and the Partial-Run Recovery
+pre-flight passes (or passes with no orphans) in the authoring workspace,
 dispatch `ac-triage` to classify the user's request:
 
 ```
@@ -535,19 +536,20 @@ The workflow proceeds identically whether the user is on `main` or any other
 branch.  No manual branch switch is required before running `/plan-feature`.
 
 `plan-feature.js` detects the user's current branch at the start of the `run()`
-function (before the worktree is created) and emits a brief informational log
+function (before the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)
+is asked for the workspace) and emits a brief informational log
 when the user is on `main`:
 
 ```
 [plan-feature] Detected: current checkout is on protected main branch.
-[plan-feature] The AC-authoring worktree will be created from origin/main
-on a dedicated ac-authoring/ branch — your main branch will not be modified.
-[plan-feature] No branch switch is required. Proceeding with worktree setup.
+[plan-feature] The AC-authoring workspace comes from the workspace maker (scripts/worktree.py)
+based on origin/main — your main branch will not be modified.
+[plan-feature] No branch switch is required. See docs/how-to/get-a-workspace.md.
 ```
 
 This message appears in the workflow output before any authoring agent is
 dispatched.  After this point the workflow continues normally: the authoring
-worktree is created, partial-run recovery runs (§PRR), committed stages
+workspace is ready (from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)), partial-run recovery runs (§PRR), committed stages
 are detected, and the pipeline proceeds through triage and the stage
 agents.
 
@@ -570,7 +572,7 @@ The current-branch detection in `plan-feature.js` (used only for the
 informational log) is best-effort.  If `git branch --show-current` fails (e.g.
 the tool is unavailable, or the git environment is unusual), the detection is
 skipped silently and the workflow continues without the diagnostic log.  The
-authoring worktree is created regardless — the safety properties described in
+authoring workspace (from the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)) is made regardless — the safety properties described in
 §MP.1 are structural (enforced by the worktree isolation) and do not depend on
 the branch detection succeeding.
 

@@ -586,59 +586,29 @@ scans `<target_root>/docs`, finds nothing, and overwrites the tracked `docs/INDE
 nine-section `No docs found.` stub. It also deploys a worktree's unmerged templates over the
 shared `.leafcutter` install tree, which is a second and quieter way to lose work.
 
-Prefer the symlink instead — point the worktree's `.leafcutter` at the main tree's, alongside
-the `.pre-commit-config.yaml` fix in the section below. If you do run the build, run
+Instead, ask the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the workspace again; it rebuilds the workspace's own install
+with an explicit `--target-dir`. If you do run the build, run
 `git status` immediately afterwards and look at `docs/INDEX.md` before staging anything: a
 `git add -A` after an affected build silently commits a ~175-line deletion of the very index
 this file points agents at for doc discovery.
 
-Caveat on the symlink, so it is chosen with eyes open: a symlinked `scripts/feedback` makes
-`submit_feedback.py` resolve `__file__` through the link, so its walk-up for `.claude/` lands
-in the **install tree** and feedback is written to the install tree's
-`debugging/logs/feedback.jsonl` rather than the worktree's. See KI-BP-017 and KI-FC-001 — the
-sink still works, it is just not where you will look for it.
-
 **The path above was wrong in this file until 2026-08-25** — it read `.leafcutter/feedback_categories.yaml`, one directory too high. That path has never existed, so the documented check reported a missing file on every worktree including correctly-provisioned ones, and a real absence was indistinguishable from the check's own error. Confirmed during the GE-120 epic drive: the deployed copy was present at `.leafcutter/config/feedback_categories.yaml` and feedback entries were landing in `debugging/logs/feedback.jsonl` while the documented check said the file was absent. A `(submit-failed)` seen in that drive had a different cause and is tracked separately in the known-issues registers.
 (Source: EPIC-ComputedQualityGates FP-5, 2026-07-07; path corrected 2026-08-25.)
 
-### Worktree pre-commit config (MANDATORY for worktree-based drives)
+### Workspace pre-commit config (run the maker)
 
-Worktrees do not inherit `.pre-commit-config.yaml` from the main working tree.
-It is a `.leafcutter` symlink created by `install_shims` in the project root only —
-a fresh worktree created from `origin/main` has neither the symlink nor a populated
-`.leafcutter/`. If the worktree root lacks it, ALL package hooks are silently skipped
-for the entire drive (`git commit` runs with `PRE_COMMIT_ALLOW_NO_CONFIG=1`).
-
-**Check:**
-```bash
-ls <worktree-root>/.pre-commit-config.yaml 2>/dev/null || ls <worktree-root>/.leafcutter 2>/dev/null
-```
-
-**Fix (if absent):**
-```bash
-# Option A — symlink (preferred, requires native Linux FS):
-ln -s <main-tree-root>/.leafcutter <worktree-root>/.leafcutter
-
-# Option B — copy (for NTFS/WSL2 where symlinks are restricted):
-cp <main-tree-root>/.pre-commit-config.yaml <worktree-root>/.pre-commit-config.yaml
-```
+A workspace has its own install and its own `.pre-commit-config.yaml`. The workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`)
+makes the workspace and builds both. If hooks look inactive in a workspace
+(all package hooks silently skipped, commits running with `PRE_COMMIT_ALLOW_NO_CONFIG=1`),
+run the maker again for the same work and read its answer; asking again is always safe and
+finishes a half-made workspace in place. Never link, copy or install config into a workspace
+by hand.
 
 **Why this matters:** During EPIC-AcPipelineDeployGaps (2026-06-17), all nine package
 hooks were silently skipped for the entire drive. A post-drive diagnostic found 14
 would-have-blocked findings (7 `check-feedback-id` + 7 `check-description-field`) that
 required a dedicated fix commit after merge. If you cannot establish the config, run the
 package hooks manually against the branch diff before merge.
-(Permanent fix tracked in TICKET-20260617-Worktree_Precommit_Bootstrap.md)
-
-**Latent hazard — `.security-allowlist` resolves via the symlink target, not the worktree
-root.** The `check-secrets` hook computes its project root from `__file__` of the *resolved*
-`.leafcutter` symlink target (under the workspace parent, e.g.
-`/home/henzeh/projects/leafcutter/.leafcutter/`), so it reads the allowlist from the
-**workspace-root** `.security-allowlist`, not the worktree's own copy. When you add a
-suppression for a worktree-local false positive, add it to the workspace-root
-`.security-allowlist` (or duplicate it to both) — a suppression placed only in the
-worktree's `.security-allowlist` is silently ignored when the hook runs via the symlink path.
-(Observed in EPIC-AcPatternEnforcementIsMechanically, 2026-06-18.)
 
 ### Security Allowlist — Use Glob Patterns for Test Files
 
@@ -650,15 +620,15 @@ Instead, use a single glob entry:
 ENTROPY_HIGH:<path>:*
 ```
 
-This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to **BOTH** the worktree-root and workspace-root `.security-allowlist` per the dual-update rule (the `check-secrets` hook resolves the allowlist from the workspace-root symlink target, not the worktree's own copy — a suppression placed only in the worktree's `.security-allowlist` is silently ignored).
+This is supported by `scan_secrets.py _is_suppressed` (checks `lineno == "*"`). Add the glob to the `.security-allowlist` of the workspace you are working in; the `check-secrets` hook reads that workspace's own copy.
 
 (Source: EPIC-ComputedQualityGates ticket 10 AC-5, 2026-07-07.)
 
-### Land the scaffold commit on origin/main before creating the epic worktree
+### Land the scaffold commit on origin/main before asking for the epic workspace
 
 After running `/create-epic`, confirm the scaffold commit (Master_Plan.md + sub-ticket
-stubs) is reachable from `origin/main` before calling `worktree-agent` to create the epic
-worktree.
+stubs) is reachable from `origin/main` before asking the workspace maker (`scripts/worktree.py`, see `docs/how-to/get-a-workspace.md`) for the epic
+workspace.
 
 ```bash
 # The scaffold files must be reachable from origin/main (empty output = nothing missing):
@@ -679,12 +649,13 @@ gh pr create --repo <org>/<repo> --base main --head scaffold/EPIC-<name> \
   --title "chore: scaffold EPIC-<name>" --body "..."
 gh pr merge <N> --squash --delete-branch
 
-# 3. Verify the scaffold is on origin/main before creating the epic worktree:
+# 3. Verify the scaffold is on origin/main before asking the workspace maker
+#    (scripts/worktree.py, see docs/how-to/get-a-workspace.md) for the epic workspace:
 git -C <repo> fetch origin
 git -C <repo> ls-tree -r origin/main --name-only tickets/00_inbox/epics/EPIC-<name>/
 ```
 
-**If you skip this:** the epic worktree (created from `origin/main`) diverges at a stale
+**If you skip this:** the epic workspace (based on `origin/main`) diverges at a stale
 point — the scaffold files are unreachable inside it and ticket agents cannot read them
 until the scaffold commit is cherry-picked onto the epic branch. Worse, when the scaffold
 later reaches `origin/main` independently, the epic PR hits an add/add merge conflict on

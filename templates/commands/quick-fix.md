@@ -123,6 +123,7 @@ Then invoke the workflow:
 
 ```
 Workflow(name: "quick-fix", args: { target_file, location_hint, symptom, root_cause, workspace: <maker-answer> })
+// <maker-answer>: the answer of the workspace maker (scripts/worktree.py); see docs/how-to/get-a-workspace.md
 ```
 
 If `quick-fix.js` is not available (pre-v2.1.154 install), fall back to loading

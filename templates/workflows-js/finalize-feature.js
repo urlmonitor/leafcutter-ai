@@ -72,7 +72,6 @@ export const meta = {
 // N MUST equal STEP_COUNT. Use double-quoted strings so N appears as a
 // detectable integer literal (required by BO-1000a-1 static text tests) while
 // avoiding the single-quoted bare-literal form that BO-1000a-2 prohibits.
-// When STEP_COUNT changes, update every narrate() call alongside it.
 // ---------------------------------------------------------------------------
 
 /**
@@ -109,9 +108,6 @@ function narrate(progressText, description) {
 // AFTER the step's agent() dispatches (distinct from narrate() which fires
 // BEFORE the first dispatch). Also records the outcome to stepOutcomes[] in
 // insertion order so BO-1000b-2 can compose an end-of-run summary.
-//
-// The 'progressText' argument carries the literal 'Step X of N' label so the
-// text is statically visible to tooling and tests that parse the source file.
 //
 // BO-1000c-1a / BP-1100b-45 NOTE: in-flight visibility of a running finalize workflow is
 // provided by the E2 engine's own per-agent run journal
@@ -705,7 +701,7 @@ phase('Step 0')
 
 narrate("Step 0 of 9", 'Capturing pre-merge test baseline on current main HEAD...')
 
-// BO-4300a-1-ia: a scratch workspace from the maker (no hand-written worktree add/remove or rm) and one pytest run in it
+// BO-4300a-1-ia: a scratch workspace from the maker (no hand-written workspace steps or rm) and one pytest run in it
 // (after the build.py deploy, so deploy-dependent tests are not RED in the baseline), each a shell-runner dispatch.
 const baselineRun = await mainTestRun(baselineSlug, null, "Step 0", "step-0-baseline");
 const baselineInfo = {
@@ -1362,7 +1358,7 @@ if (closureAlreadyCommitted) {
       "\n" +
       "  If all staged paths pass the scope guard:\n" +
       "    If staged files exist:\n" +
-      `      Run: COMMIT_AGENT_MODE=1 git -C ${WORKTREE_ROOT} commit -m 'chore(tickets): close tickets and source ACs'\n` +
+      `      From ${WORKTREE_ROOT} run: COMMIT_AGENT_MODE=1 git commit -m 'chore(tickets): close tickets and source ACs'\n` +
       "      Log: 'Closure commit created on feature branch.'\n" +
       "    Else:\n" +
       "      Log: 'Nothing staged after edits — all tickets were already done.'\n" +

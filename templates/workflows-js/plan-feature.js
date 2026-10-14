@@ -41,10 +41,6 @@ export const meta = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// JSON Schemas for structured agent() responses
-// ---------------------------------------------------------------------------
-
 /** Maximum retry count for a single authoring agent on edit-path. */
 const MAX_EDIT_RETRIES = 1;
 
@@ -1955,7 +1951,6 @@ function isAgentRefusal(answer) {
 // Repository-anchored support-script resolution
 // (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
 // ---------------------------------------------------------------------------
-//
 // `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
 // relative name (".leafcutter") baked into the compiled template. A shell
 // command built with that placeholder is resolved by the DISPATCHING AGENT'S
@@ -1977,8 +1972,8 @@ function isAgentRefusal(answer) {
 // repository" by `git rev-parse --show-toplevel`'s definition — but that
 // command reports the WORKTREE'S OWN directory, which holds no installed
 // `.leafcutter/` of its own (ADR-001: it is untracked build output that only
-// `install_shims` populates on the project's own checkout; `git worktree add`
-// only ever checks out TRACKED content). `git rev-parse --git-common-dir`
+// `install_shims` populates on the project's own checkout; a workspace's
+// checkout only ever holds TRACKED content). `git rev-parse --git-common-dir`
 // does not have that problem: it always resolves to the ONE `.git` directory
 // shared by the main checkout and every one of its linked worktrees,
 // regardless of which of them the command runs from — so its parent
@@ -2088,7 +2083,7 @@ function _buildRepoRootResolutionSnippet(targetDescription) {
  * combined shell invocation.
  *
  * @param {string} relPath - Path under the repo's `.leafcutter/` support
- *                            directory, e.g. "scripts/setup_ticket_worktree.py".
+ *                            directory, e.g. "scripts/worktree.py".
  * @returns {string} A single-line POSIX shell command.
  */
 function buildRepoAnchoredResolutionCommand(relPath) {
