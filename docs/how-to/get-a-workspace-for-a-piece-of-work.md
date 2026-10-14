@@ -126,13 +126,13 @@ The answer holds `"workspaces": [ ... ]`, one identity entry per workspace.
 python <maker_path> remove --path <workspace_path>
 ```
 
-`remove` refuses with `UNSAVED_WORK` when the workspace has uncommitted changes or commits not on the pushed branch (or on `origin/main` when the branch was never pushed). Commit and push the work, or give up-front authorisation to throw it away:
+`remove` answers at once and never waits for input: it does not read stdin or ask a question, so an unattended run cannot stall on it. It refuses with `UNSENT_WORK` (status `refused`, exit 2) when the workspace holds work that has not reached the shared project: uncommitted or untracked changes, or commits reachable from neither the pushed branch nor `origin/main`. The refusal names each unpushed commit by identifier (`unsent.commits`) and each uncommitted file by path (`unsent.files`), and leaves the workspace's files and commits unchanged. Commit and push the work, or give up-front authorisation to throw it away:
 
 ```bash
 python <maker_path> remove --path <workspace_path> --discard
 ```
 
-Add `--delete-remote-branch` to also delete the workspace's branch on the hub before the folder is deleted. A successful remove answers with `"removed": true`.
+Add `--delete-remote-branch` to also delete the workspace's branch on the hub before the folder is deleted. A successful remove deletes the whole folder and answers with `"removed": true` and `removed_path`; it answers `ok` only after checking that nothing is left at that location.
 
 ## Verification
 
@@ -154,7 +154,7 @@ An error answer has `"status": "error"`, a `"code"`, a `"verb"` and a `"message"
 6. **`NO_CONFIG` or `NO_BUILD_ENTRY`.** The maker found no install config in the main checkout (`.claude/skills_config.json` or `.leafcutter/config/skills_config.json`), `--config-path` is not a file, or no `scripts/build.py` exists. Run the install build in the main checkout, or pass `--config-path <file>`.
 7. **`NO_REPO` or `AMBIGUOUS_REPO`.** The maker could not pick one project from your current directory. `NO_REPO` carries `searched_from`. `AMBIGUOUS_REPO` carries `candidates`. Rerun with `--repo-root <absolute path of the main checkout>`.
 8. **`NOT_FOUND`, `IDENTITY_MISMATCH`.** `locate`, `verify` or `remove` found no workspace with that identity or path for this project, or `verify` was given a `--kind` or `--slug` that differs from the workspace's marker. Run `list` to see the real entries.
-9. **`UNSAVED_WORK`.** See Step 6. Push the work, or rerun `remove` with `--discard`.
+9. **`UNSENT_WORK`.** A refusal, not an error: status `refused`, exit 2. `unsent.commits` lists the unpushed commit identifiers and `unsent.files` the uncommitted paths. See Step 6. Push the work, or rerun `remove` with `--discard`.
 10. **`TICKET_NOT_FOUND`.** The `--ticket` path is outside the project, or the ticket file does not exist in the workspace (it is not on `origin/main`). Land the ticket on the hub's `main`, then run `ensure` again. A workspace made for the failed request stays in place.
 11. **`BAD_ARGUMENT`.** A missing or invalid flag, a slug that names no work identity, `--ticket` with `--kind scratch`, or `locate` given none of `--path`, `--branch`, or `--kind` with `--slug`. The message names it.
 12. **`CLONE_FAILED`, `CHECKOUT_FAILED`, `COPY_FAILED`, `REMOTE_DELETE_FAILED`, `REMOVE_FAILED`.** A git or file operation failed. The message carries the tail of git's error. Fix the named cause (disk space, permissions, hub access), then retry the same command.

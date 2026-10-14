@@ -36,6 +36,11 @@ ARCHITECTURE: Stdlib-only CLI, run as ``python <install>/scripts/worktree.py
 # - 2026-10-14 18:00 [python-coder]: A declined request (TICKET_NOT_ON_BASE,
 #   OCCUPIED) answers status "refused" and exits 2; a folder with no marker is
 #   OCCUPIED. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
+# - 2026-10-14 20:00 [python-coder]: remove classifies unsent work (commits
+#   reachable from neither origin/<branch> nor origin/main after a fetch, plus
+#   uncommitted and untracked paths), refuses UNSENT_WORK (status refused, exit
+#   2) naming both, and answers ok only after a post-check finds nothing left.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/44) (BO-4300e-2)
 """
 from __future__ import annotations
 
@@ -48,12 +53,14 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from workspace.workspace_checks import require_ready  # noqa: E402
 from workspace.workspace_core import (  # noqa: E402
-    KINDS, MAKER_VERSION, MakerError, dirname_for, discard_tree, log, make_plan,
-    must, normalize_slug, out, plan_from_marker, read_marker, resolve_project, scan,
+    KINDS, MAKER_VERSION, MakerError, dirname_for, discard_tree, git, log, make_plan,
+    must, normalize_slug, out, plan_from_marker, read_marker, resolve_project, run, scan,
 )
 from workspace.workspace_create import (  # noqa: E402
     create_workspace, derive_build, ticket_fields, ticket_rel,
 )
+
+_FETCH_TIMEOUT = 60  # seconds; bounds remove when the hub is unreachable
 
 
 def _entry(ws: Path, marker: dict) -> dict:
@@ -154,30 +161,65 @@ def verb_verify(args: argparse.Namespace) -> dict:
     return _ready_answer("verify", plan, base, require_ready(plan, base, True))
 
 
-def _refuse_unsaved(ws: Path, branch: str | None) -> None:
-    """Raise when the workspace holds uncommitted or unpushed work."""
-    if out(ws, "status", "--porcelain"):
-        raise MakerError("UNSAVED_WORK", "the workspace has uncommitted changes",
-                         workspace_path=str(ws))
-    pushed = branch and out(ws, "rev-parse", "--verify", "-q", f"refs/remotes/origin/{branch}")
-    upstream = f"origin/{branch}" if pushed else "origin/main"
-    if out(ws, "rev-list", "--count", f"{upstream}..HEAD") not in (None, "0"):
-        raise MakerError("UNSAVED_WORK", f"the workspace has commits not on {upstream}",
-                         workspace_path=str(ws))
+def _changed_files(ws: Path) -> list[str]:
+    """Return every uncommitted or untracked path in the workspace (read-only)."""
+    done = git(ws, "status", "--porcelain", "-uall", "-z")
+    if done.returncode != 0:
+        raise MakerError("STATE_UNREADABLE", "cannot read the workspace's changes: "
+                         f"{done.stderr.strip()[-300:]}")
+    entries, files, index = done.stdout.split("\x00"), [], 0
+    while index < len(entries):
+        entry = entries[index]
+        index += 1
+        if len(entry) < 4:
+            continue
+        if entry[0] in "RC" or entry[1] in "RC":
+            index += 1  # the old name follows as its own field
+        files.append(entry[3:])
+    return files
+
+
+def _unsent_work(ws: Path, branch: str | None) -> dict:
+    """Classify what the workspace holds that has not reached the shared project.
+
+    Commits reachable from neither origin/<branch> nor origin/main (after a
+    fetch bounded to _FETCH_TIMEOUT seconds), plus uncommitted and untracked
+    paths. A failed fetch leaves the local view, which over-reports only while
+    origin/main resolves; when the commit listing itself fails (origin or
+    origin/main missing) the state is unreadable and this raises, so remove
+    never deletes on a guess. Reads stdin never; changes nothing but
+    remote-tracking refs.
+    """
+    fetched = run(["git", "fetch", "--quiet", "origin"], ws, timeout=_FETCH_TIMEOUT)
+    if fetched.returncode != 0:
+        log.warning("fetch failed in %s: %s", ws, fetched.stderr.strip()[-300:])
+    sent = ["refs/remotes/origin/main"]
+    if branch and out(ws, "rev-parse", "--verify", "-q", f"refs/remotes/origin/{branch}"):
+        sent.append(f"refs/remotes/origin/{branch}")
+    listed = out(ws, "rev-list", "HEAD", "--not", *sent)
+    if listed is None:
+        raise MakerError("STATE_UNREADABLE", "cannot tell which commits reached the shared "
+                         "project (origin/main is missing or unreachable); nothing was removed")
+    return {"commits": listed.split() if listed else [], "files": _changed_files(ws)}
 
 
 def verb_remove(args: argparse.Namespace) -> dict:
-    """Delete one workspace; refuses unsaved work unless --discard was given."""
+    """Delete one workspace; refuses unsent work unless --discard was given."""
     ws, marker = _find(resolve_project(args.repo_root), args.path)
-    if not args.discard:
-        _refuse_unsaved(ws, marker.get("branch"))
+    unsent = _unsent_work(ws, marker.get("branch"))
+    if not args.discard and (unsent["commits"] or unsent["files"]):
+        raise MakerError("UNSENT_WORK", "the workspace holds work that has not reached "
+                         "the shared project; nothing was removed", unsent=unsent)
     if args.delete_remote_branch and marker.get("branch"):
         must(ws, "REMOTE_DELETE_FAILED", "push", "origin", "--delete", marker["branch"])
     try:
         discard_tree(ws)
     except OSError as exc:
         raise MakerError("REMOVE_FAILED", f"cannot delete {ws}: {exc}") from exc
-    return _ok("remove", **_entry(ws, marker), removed=True)
+    if os.path.lexists(ws):
+        raise MakerError("REMOVE_FAILED", f"{ws} is still there after deletion")
+    return _ok("remove", **_entry(ws, marker), removed=True, removed_path=str(ws),
+               discarded=unsent)
 
 
 def verb_where(_args: argparse.Namespace) -> dict:
