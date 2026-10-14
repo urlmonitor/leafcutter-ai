@@ -3,7 +3,8 @@
  * `actor_kind` (docs/product-truth/schemas/flow.schema.json). The free-text
  * `agent` names the actor; this says what kind of actor it is.
  */
-export const ACTOR_KINDS = ["deterministic", "jev", "llm", "human"] as const;
+/** In the order the badges and the finder's Actor facet list them: Code, AI agent, Person, Jev. */
+export const ACTOR_KINDS = ["deterministic", "llm", "human", "jev"] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
 
 /** Plain-language badge text, so a reader need not know the enum values. */

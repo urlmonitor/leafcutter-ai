@@ -224,7 +224,6 @@ export function FlowDrawer({
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 320 }}
           >
-            {/* header */}
             <div className="flex items-start justify-between gap-3 border-b border-border/70 p-5">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -245,6 +244,7 @@ export function FlowDrawer({
               </div>
               <button
                 type="button"
+                aria-label="Close step details"
                 onClick={onClose}
                 className="shrink-0 rounded-md border border-border/70 p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
@@ -252,7 +252,6 @@ export function FlowDrawer({
               </button>
             </div>
 
-            {/* body */}
             <div className="flex-1 space-y-5 overflow-y-auto p-5">
               {step.expandsTo && step.expandsToName && onDrill && (
                 <button

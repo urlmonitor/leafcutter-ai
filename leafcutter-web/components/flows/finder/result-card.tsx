@@ -1,4 +1,4 @@
-import Link from "next/link";
+import type { MouseEvent } from "react";
 import type { FinderResult } from "@/lib/flow-finder/types";
 import { ActorBadge } from "./actor-badge";
 
@@ -8,15 +8,21 @@ const LINK =
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** One flow: its facts, then up to three matching step rows and "N more steps". */
-export function ResultCard({ result }: { result: FinderResult }) {
+export function ResultCard({
+  result,
+  open,
+}: {
+  result: FinderResult;
+  open?: (flowId: string, stepId: string | null) => (e: MouseEvent<HTMLAnchorElement>) => void;
+}) {
   const { meta } = result;
   const noNodes = meta.stepCount + meta.branchCount === 0;
   return (
     <article className="rounded-xl border border-border bg-card p-4 transition-colors focus-within:border-primary/50 hover:border-primary/50">
       <h3 className="text-[15px] font-semibold leading-snug">
-        <Link href={result.href} className={LINK}>
+        <a href={result.href} onClick={open?.(result.flowId, null)} className={LINK}>
           {result.flowName}
-        </Link>
+        </a>
       </h3>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         <span className={PILL}>{meta.productLabel}</span>
@@ -48,9 +54,9 @@ export function ResultCard({ result }: { result: FinderResult }) {
                 {row.nodeKind === "branch" && (
                   <span className="mr-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">Branch</span>
                 )}
-                <Link href={row.href} className={LINK}>
+        <a href={row.href} onClick={open?.(result.flowId, row.nodeId)} className={LINK}>
                   {row.label}
-                </Link>
+                </a>
               </span>
               {row.actorKind && row.actorLabel && <ActorBadge actorKind={row.actorKind} label={row.actorLabel} />}
               <span className="col-span-2 text-xs text-muted-foreground">{row.reason}</span>
@@ -59,12 +65,13 @@ export function ResultCard({ result }: { result: FinderResult }) {
         </ul>
       )}
       {result.moreSteps > 0 && (
-        <Link
+        <a
           href={result.href}
+          onClick={open?.(result.flowId, null)}
           className="mt-2 inline-block rounded text-xs text-accent underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {plural(result.moreSteps, "more step", "more steps")}
-        </Link>
+        </a>
       )}
     </article>
   );

@@ -13,10 +13,12 @@ export function FinderPane({
   flows,
   screenTitles,
   initial,
+  onOpen,
 }: {
   flows: Flow[];
   screenTitles: Record<string, string>;
   initial: FinderState;
+  onOpen?: (flowId: string, stepId: string | null) => void;
 }) {
   const index = React.useMemo(() => buildFinderIndex(flows, screenTitles), [flows, screenTitles]);
   return (
@@ -26,7 +28,7 @@ export function FinderPane({
         title="Flows"
         description="Search and filter every flow by name, step, field, AC, entity or screen."
       />
-      <FinderScreen key={buildFinderHref(initial)} index={index} initial={initial} />
+      <FinderScreen key={buildFinderHref(initial)} index={index} initial={initial} onOpen={onOpen} />
     </div>
   );
 }

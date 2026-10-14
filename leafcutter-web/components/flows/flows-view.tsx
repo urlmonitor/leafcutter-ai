@@ -18,6 +18,8 @@ import { humanize } from "@/lib/utils";
 import type { Flow, MockData } from "@/lib/data/types";
 import { FlowExplorer } from "./flow-explorer";
 import { FinderPane } from "./finder/finder-pane";
+import { useDocumentTitle } from "./finder/use-document-title";
+import { FLOWS_TITLE, NOT_FOUND_TITLE, flowTitle } from "@/lib/flow-finder/titles";
 import {
   FlowCrumbs,
   FlowSelector,
@@ -84,6 +86,7 @@ export function FlowsView({
     onKind,
     onRealization,
     onSelectFlow,
+    openResult,
     onCrumb,
     onDrill,
   } = useFlowsViewState({ flows, flowId, crumbs: initialCrumbs, filters, step, notice });
@@ -96,8 +99,10 @@ export function FlowsView({
     return names;
   }, [flows]);
 
+  // The tab title follows what is shown: the finder, the drawn flow, or the not-found notice.
+  useDocumentTitle(finder ? FLOWS_TITLE : flow ? flowTitle(flow.name) : shownNotice ? NOT_FOUND_TITLE : null);
   // Back / Forward onto exactly /flows: the finder, no flow drawn (UXP-617-2-i).
-  if (finder) return <FinderPane flows={flows} screenTitles={screenTitles} initial={finder} />;
+  if (finder) return <FinderPane flows={flows} screenTitles={screenTitles} initial={finder} onOpen={openResult} />;
 
   return (
     <div className="flex flex-col">

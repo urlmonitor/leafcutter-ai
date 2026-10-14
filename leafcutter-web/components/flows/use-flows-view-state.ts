@@ -103,6 +103,20 @@ export function useFlowsViewState(p: {
     if (flowById.has(childId)) push([...path, childId]);
   };
 
+  // A result opened from the finder (UXP-617-2-i): one pushed entry, the flow drawn in place.
+  const openResult = (id: string, stepId: string | null) => {
+    const target = flowById.get(id);
+    if (!target) return;
+    const view = { source: target.source, kind: target.kind, realization: "all" as const };
+    pushFlowAddress(id, { crumbs: [id], filters: view }, stepId);
+    setFinder(null);
+    setF(view);
+    setPath([id]);
+    setNotice(null);
+    setSeed(seedFor(target, stepId, true));
+    setEpoch((e) => e + 1);
+  };
+
   // A drawer opened, switched or closed: replace the address in place (no Back entry).
   const flowIdNow = flow?.id;
   const onStepChange = (nodeId: string | null) => {
@@ -153,6 +167,7 @@ export function useFlowsViewState(p: {
     onRealization: (realization: FlowsViewFilters["realization"]) =>
       applyFilters({ ...f, realization }),
     onSelectFlow,
+    openResult,
     onCrumb,
     onDrill,
   };
