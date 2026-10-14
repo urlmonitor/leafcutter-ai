@@ -63,9 +63,12 @@ origin_agent: business-analyst
 created: '2026-10-12'
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- tests/knowledge/test_km_400f_1_i.py
+- tests/knowledge_live/test_km_400f_1_i.py
 implemented_by:
 - tickets/00_inbox/TICKET-20261014-KM-400f-1-i.md
+- knowledge/adapters/neo4j_projection.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

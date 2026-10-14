@@ -123,6 +123,16 @@ amended_by:
     publications, an active pointer to an incompletely published generation, and no
     retirement time — because this AC's existing 27-generation fixture of completed and
     retired generations is the same fixture bias that hid the defect in KM-400f-1."
+  - "2026-10-14: THIRD PRECONDITION, found by pr-reviewer on the KM-400f-1-i drive (finding
+    M-1). KM-400f-1-i widened the retention evaluation to every generation record whatever its
+    publication outcome, which is correct for reporting. It also means a generation whose
+    publication is STILL IN PROGRESS (status building or validated) is now in view, and the
+    verdict treats it like any other: one older than the count bound and minimum age is
+    reported reclaimable. This AC deletes what the evaluation calls reclaimable, so built
+    naively it would delete a generation a running publication is still writing. Before
+    building this AC, reclamation must refuse any generation whose publication has not
+    reached a terminal outcome (completed or failed), and its fixtures must include an
+    in-progress generation that is outside both bounds and must survive."
 superseded_by: null
 covered_by: []
 implemented_by: []
