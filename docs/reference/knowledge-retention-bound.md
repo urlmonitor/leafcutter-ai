@@ -80,7 +80,7 @@ The resolved bound uses different field names from the configuration settings.
 async evaluate_retention(db: Neo4jBackend, repository_id: str, bound: object, now: float | None = None) -> dict
 ```
 
-Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an optional clock value (seconds); the current time is used when omitted.
+Defined in `knowledge/adapters/neo4j_retention.py`. Read-only. `now` is an optional clock value (seconds); the current time is used when omitted.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -97,6 +97,8 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | `assessed` | integer | Count of generation records evaluated. Equals the length of `generations`. |
 | `generations` | list of verdicts | One entry per generation record, whatever its publication outcome, newest first by `created_at`, ties by `generation_id` ascending. |
 | `reclaimable` | list of strings | `generation_id` of each verdict whose `reclaimable` is `true`. |
+| `active_generation` | string or null | `generation_id` of the generation the active pointer references; `null` when no generation is flagged active. |
+| `findings` | list of strings | Statements about the active pointer; empty when the active generation's publication completed. See [Active generation](#active-generation). |
 
 ### Per-generation verdict
 
@@ -105,13 +107,14 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | `generation_id` | string | Generation identifier. |
 | `reclaimable` | boolean | Whether the bound permits reclaiming the generation. |
 | `reason` | string | One value from the reason vocabulary. |
+| `reason_detail` | string | Present on `active_generation` and `active_generation_unidentified` verdicts only. Prose naming the active pointer; it never states the generation's publication outcome or age. |
 | `age_basis` | string | The recorded time the age was measured from: `retired_at` when the generation carries a retirement time, else `created_at`, else `undetermined`. Every generation never retired is aged from `created_at`, the same basis for all of them. |
 | `age_seconds` | number or null | Age in seconds measured from `age_basis`; `null` when `age_basis` is `undetermined`. |
 | `absent_times` | list of strings | Empty when the age is determined. `["retired_at", "created_at"]` when the generation carries neither time. |
 
 ### Generation facts read
 
-`retention_facts` (`knowledge/adapters/neo4j_projection.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per `Snapshot` record for the repository. It applies no status filter: every generation is assessed, whatever its publication outcome.
+`retention_facts` (`knowledge/adapters/neo4j_retention.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per `Snapshot` record for the repository. It applies no status filter: every generation is assessed, whatever its publication outcome.
 
 | Column | Meaning |
 |---|---|
@@ -124,6 +127,28 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 
 The active-generation verdict keeps precedence (reason order 1), so an active generation whose publication never completed is still reported not reclaimable.
 
+### Active generation
+
+AC `KM-400f-1-iii`. The generation the active pointer references is never reclaimable, whatever its publication outcome. It is identified from the pointer alone: the `active` column of `retention_facts`, true when the repository's `active` pointer equals the generation's key. Neither `publication_status` nor creation order is used to find or protect it.
+
+`active_generation_verdict(facts)` in `knowledge/adapters/neo4j_retention.py` computes this from the `retention_facts` rows and is the function `evaluate_retention` calls. It returns:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `identified` | boolean | `true` when a row is flagged active. |
+| `generation_id` | string or null | The active generation; `null` when unidentified. |
+| `publication_completed` | boolean or null | `true` when the active generation's `publication_status` is `ready`; `false` for any other value; `null` when unidentified. |
+| `finding` | string or null | The statement reported in `findings`, or `null` when the active generation's publication completed. |
+
+The two findings:
+
+| Finding | When |
+|---|---|
+| `the active pointer references a generation whose publication did not complete` | The active generation's status is not `ready`. The verdict is unchanged: it stays `reclaimable: false`, `reason: active_generation`. |
+| `no active generation could be identified` | No row is flagged active. |
+
+When no active generation is identified, every generation is reported `reclaimable: false` with reason `active_generation_unidentified`, `reclaimable` is empty, and `active_generation` is `null`. The most recently created generation is not treated as active in place of the absent pointer, and the count, age and pin checks are not applied. This holds for a repository with no `Repository` node as well as one whose pointer is unset. If more than one row is flagged active, the first row returned is reported as the active generation.
+
 The age basis is stated on every verdict (`age_basis`, `age_seconds`, `absent_times`; AC `KM-400f-1-ii`). A generation that was never retired is aged from `created_at`; one carrying `retired_at` is aged from it, never from its creation time. A generation carrying neither time is still reported, with `age_basis` `undetermined`, a `null` age and reason `age_undetermined`; an undetermined age never satisfies the minimum, so it is not reclaimable. It sorts after all dated generations in the count rank.
 
 The age basis is operator-visible: an operator reading a `reclaimable` verdict can see which clock produced it. The 24-hour minimum and the count bound declared by the parent (`KM-400f-1`) are unchanged; only the measuring basis is fixed here. Pinning stays the superior constraint (`KM-400b-3`): a stated age basis never makes a generation with an unexpired continuation reclaimable. KM-400f-4's operator listing is a consumer of `age_basis`, `age_seconds` and `absent_times` and reports them rather than recomputing them.
@@ -134,11 +159,12 @@ Grounding: on the live store on 2026-10-12 every generation record was a failed 
 
 ## Reason vocabulary
 
-`_verdict` in `knowledge/adapters/neo4j_projection.py` applies the checks in the order below and returns the first that matches.
+`_verdict` in `knowledge/adapters/neo4j_retention.py` applies the checks in the order below and returns the first that matches.
 
 | Order | `reason` | `reclaimable` | Condition |
 |---|---|---|---|
-| 1 | `active_generation` | `false` | The generation is active. |
+| 0 | `active_generation_unidentified` | `false` | No generation is flagged active; replaces the verdict of every generation, so checks 1 to 6 do not apply. |
+| 1 | `active_generation` | `false` | The generation is the one the active pointer references, whatever its publication outcome. |
 | 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. |
 | 3 | `age_undetermined` | `false` | Neither `retired_at` nor `created_at` is recorded. |
 | 4 | `younger_than_minimum_age` | `false` | `age_seconds` (from `age_basis`) is less than `minimum_age_seconds`. |
@@ -176,7 +202,7 @@ Defined in `knowledge/cli_retention.py`, registered in `knowledge/__main__.py`. 
 
 The `source` reported by this command is the constant `BOUND_SOURCE`: `command line (--retention-max-generations, --retention-min-age-seconds)`.
 
-Output: `{"status": "ok", "bound": {...}, "assessed": N, "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added.
+Output: `{"status": "ok", "bound": {...}, "assessed": N, "active_generation": ..., "findings": [...], "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added.
 
 ---
 
@@ -221,5 +247,5 @@ This removal is separate from retention reclaiming. A failed publication reclaim
 - [KM-400f-1](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml) - Parent AC declaring the retention bound.
 - [KM-400b-3](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml) - Pinning constraint that outranks the age basis.
 - `knowledge/config.py` - Settings, `RetentionBound`, `resolve_retention_bound`.
-- `knowledge/adapters/neo4j_projection.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
+- `knowledge/adapters/neo4j_retention.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
 - `knowledge/cli_retention.py` - The `retention` command.

@@ -414,7 +414,7 @@ class Neo4jBackend:
         Returns:
             One row per retained ready generation.
         """
-        from knowledge.adapters.neo4j_projection import retention_facts
+        from knowledge.adapters.neo4j_retention import retention_facts
 
         return await retention_facts(self, repository_id)
 
