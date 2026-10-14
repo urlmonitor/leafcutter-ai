@@ -13,16 +13,28 @@ description: |
 in your environment, this command will not work — do not attempt to run it
 manually as an LLM conversation.**
 
-Invoke the `fast-lane-ship` workflow script via the Workflow tool, passing the
-single AC-id argument:
-
-```
-Workflow("fast-lane-ship", { ac: $ARGUMENTS })
-```
-
 `$ARGUMENTS` is one acceptance-criterion id (e.g. `BO-2400f`). That one argument
 is the only required input: pointing at the AC is the go-ahead, so a not-yet-approved
-AC is still built. The workflow is auto-discovered by `build.py` (it globs
+AC is still built.
+
+**Step 1 — Get the workspace.** Run the one workspace maker, with the AC id as the
+slug and the absolute path of the main checkout as `<project-root>`:
+
+```bash
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind fastlane --slug $ARGUMENTS --repo-root <project-root>
+```
+
+On a non-zero exit, stop and report stdout and stderr word for word. Do not call
+the workflow.
+
+**Step 2 — Invoke the `fast-lane-ship` workflow** via the Workflow tool, passing the
+AC id and the maker's answer on word for word:
+
+```
+Workflow("fast-lane-ship", { ac: $ARGUMENTS, workspace: <step 1 answer> })
+```
+
+The workflow is auto-discovered by `build.py` (it globs
 `templates/workflows-js/*.js`), so no manual registry entry is required.
 
 If the Workflow tool is unavailable or the script returns an error, stop

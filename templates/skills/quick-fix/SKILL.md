@@ -3,9 +3,8 @@ name: quick-fix
 description: |
   Fast bug-fix pipeline for a single, already-diagnosed bug in one file.
   Operates in place when the current working directory is already an isolated,
-  non-default-branch worktree; otherwise self-isolates into a new worktree via
-  the repository's canonical `setup_ticket_worktree.py create-only` script
-  before doing any work. Accepts a structured bug diagnosis (target file,
+  non-default-branch worktree; otherwise self-isolates by running the one
+  workspace maker (`worktree.py ensure`) before doing any work. Accepts a structured bug diagnosis (target file,
   location hint, symptom, root cause) and drives: worktree self-isolation →
   AC creation (hierarchical store) → test-first (red, AC_ENFORCE_STRICT) →
   warning checks → fix (python-coder) → green phase + mutation proof → commit
@@ -44,9 +43,8 @@ sessions frequently start in an untracked workspace parent (not a git repo at
 all), and this repository's `main` is PR-only (branch-protection ruleset
 `require-ci-lint`) — a direct commit to `main` cannot be pushed. So when the
 cwd is not a suitable target (not a repo, or on `main`/`master`), quick-fix
-self-isolates into a new worktree using the repo's canonical
-`setup_ticket_worktree.py create-only` script (Phase 0) before doing anything
-else, then operates inside that worktree exactly as it would have operated
+self-isolates by running the one workspace maker (Phase 0) before doing anything
+else, then operates inside that workspace exactly as it would have operated
 in place.
 
 Contrast with `build-single-ticket`: that skill always creates a new isolated
@@ -199,104 +197,37 @@ untracked workspace parent has no git branch to report at all, and `main` is
 PR-only (`require-ci-lint` ruleset, 6 required checks) — a direct commit to
 `main` cannot be pushed, so offering "commit straight to main" is a dead end.
 
-**Step 0.4.1 — Locate the canonical worktree-setup script.**
-
-```bash
-pwd
-```
-
-Record the output as `SESSION_CWD` (this is well-defined even when
-`NOT_A_REPO` is true).
-
-Check the two supported layouts, in order:
-
-```bash
-ls "<SESSION_CWD>/scripts/setup_ticket_worktree.py"
-```
-
-```bash
-ls "<SESSION_CWD>/leafcutter-ai/scripts/setup_ticket_worktree.py"
-```
-
-The first candidate that exists is `SCRIPT_PATH` — the first is the deployed
-consumer/dev-root layout, the second is the dev workspace-parent layout where
-`leafcutter-ai/` is a subdirectory (see this repo's own `CLAUDE.md`
-"Repository Structure" section). If **neither** exists, halt:
-
-```
-Halt: cannot locate setup_ticket_worktree.py under <SESSION_CWD>/scripts/
-or <SESSION_CWD>/leafcutter-ai/scripts/. quick-fix cannot self-isolate.
-Provide the correct project directory and re-run /quick-fix.
-```
-
-Derive `SCRIPT_REPO_ROOT` by stripping the trailing
-`/scripts/setup_ticket_worktree.py` from `SCRIPT_PATH` — this is the
-leafcutter-ai git repository root, used as the `-C` anchor below.
-
-**Step 0.4.2 — Guard against a stale local `main` (mandatory, before creating anything).**
-
-`create-only` roots the new branch at the **local** `main` HEAD, not
-`origin/main` — this is the one subcommand in `setup_ticket_worktree.py` that
-does this (`create-ac-worktree` and `create-fastlane-worktree` both root at
-`origin/main`; see the module's `_create_worktree()` docstring). A stale local
-`main` would silently produce a stale branch, so check first:
-
-```bash
-git -C "<SCRIPT_REPO_ROOT>" fetch origin
-```
-
-```bash
-git -C "<SCRIPT_REPO_ROOT>" rev-list --left-right --count main...origin/main
-```
-
-The output is `<L>\t<R>` — commits only on local `main` (L) and commits only
-on `origin/main` (R). **If R is non-zero, halt:**
-
-```
-Halt: local main is <R> commit(s) behind origin/main.
-setup_ticket_worktree.py create-only roots the new branch at LOCAL main,
-so proceeding now would silently create a stale branch.
-
-Fast-forward local main first:
-  git -C "<SCRIPT_REPO_ROOT>" checkout main
-  git -C "<SCRIPT_REPO_ROOT>" merge --ff-only origin/main
-
-Then re-run /quick-fix with the same diagnosis.
-```
-
-Only proceed to Step 0.4.3 when R is 0.
-
-**Step 0.4.3 — Derive a slug and create (or reuse) the worktree.**
+**Step 0.4.1 — Derive a slug.**
 
 Derive a kebab-case slug from the diagnosed bug (e.g. a bug in
 `fast_lane.py`'s structural-parent resolution becomes
 `fast-lane-structural-parent`).
 
+**Step 0.4.2 — Run the one workspace maker.**
+
+The maker is the only way this skill gets a workspace. It fetches `origin/main`,
+bases the workspace on it, builds the workspace's own install and checks it is
+ready, so no stale-`main` guard, bootstrap or repair step belongs here.
+`<project-root>` is the absolute path of the project's main checkout.
+
 ```bash
-python "<SCRIPT_PATH>" create-only "<slug>"
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind feature --slug <slug> --repo-root <project-root>
 ```
 
-This is idempotent: a second run with the same slug reuses the existing
-worktree and reports `created: false` rather than failing. It also runs the
-full bootstrap (build.py, pre-commit shim install, `.pre-commit-config.yaml`
-symlink) — this is *why* the script is used instead of a hand-rolled `git
-worktree add`: a hand-made worktree gets none of that bootstrap and silently
-skips all package pre-commit hooks for the entire session.
+The maker is idempotent: a second run with the same slug returns the same
+workspace.
 
-Parse the single-line JSON payload from stdout:
+On a non-zero exit, or stdout that is not one JSON object, halt. Report stdout and
+stderr word for word. The answer's `code` names the reason.
 
-```json
-{"worktree_path": "...", "branch": "feature/<slug>", "created": true}
-```
-
-Set:
-- `WORKTREE_ROOT = <worktree_path from the payload>` — do not guess this path
+Parse the single JSON object from stdout (its `status` is `ok`) and set:
+- `WORKTREE_ROOT = <workspace_path from the answer>` — do not guess this path
   any other way.
-- `ACTIVE_BRANCH = <branch from the payload>` — always `feature/<slug>`. The
-  script always prefixes with `feature/`; it does **not** honour `fix/`,
-  `bugfix/`, `hotfix/`, or `chore/` prefixes on creation. This is a current
-  limitation of the script, not a choice made by this skill — do not tell the
-  user their branch will be named anything other than `feature/<slug>`.
+- `ACTIVE_BRANCH = <branch from the answer>` — use the branch exactly as the
+  maker reports it.
+
+When the workflow is invoked, the answer is handed to it unchanged as
+`args.workspace`.
 
 ### Step 0.5 — Branch invariant (re-anchored)
 
@@ -1153,10 +1084,9 @@ Next steps:
 The `/quick-fix` skill MUST stop and ask the user (do not proceed
 automatically) when:
 
-- Phase 0.4.2 finds local `main` behind `origin/main` (non-zero right-hand
-  count) — do not create a worktree from a stale base.
-- Neither candidate location for `setup_ticket_worktree.py` exists
-  (Phase 0.4.1) — quick-fix cannot self-isolate without it.
+- The workspace maker (Phase 0.4.2) exits non-zero or answers with anything but
+  one JSON object — quick-fix cannot self-isolate without a workspace, and it
+  does not make one by other steps.
 - Guard BP-600a-3 fires (uncommitted changes in the target file).
 - Phase 1 Step 1.2 finds no clearly matching L1 parent for the diagnosed
   behaviour — authoring new L0/L1 nodes is PO/BA scope, not a bug-fix
@@ -1200,10 +1130,11 @@ the user with the available options and wait for explicit direction.
   this workflow after creation, even if the workflow aborts mid-run.
 - **Isolation is conditional, not absolute** — quick-fix operates in place
   whenever the cwd is already a usable, non-default-branch worktree. It
-  self-isolates via `setup_ticket_worktree.py create-only` only when the cwd
+  self-isolates by running the one workspace maker only when the cwd
   is not a git repo, or is on `main`/`master`, or is in detached HEAD. It
   never uses `worktree-agent`, the `feature` skill, or a raw `git worktree
-  add` — always the canonical script, for its bootstrap side-effects.
+  add` — always the one maker, which gives every workspace the same readiness
+  checks.
 - **Branch invariant, re-anchored** — the branch established at the end of
   Phase 0 is the branch at Phase 7. Verify with
   `git -C "<WORKTREE_ROOT>" branch --show-current` after every git-touching

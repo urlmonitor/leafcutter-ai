@@ -23,6 +23,10 @@ Pass the epic or ticket name as a plain string (e.g. `"EPIC-FooBar"` or
 CWD-based detection, which is usually wrong when invoked from a different
 working directory.
 
+**Workspace.** The workspace being finalized already exists, and this command makes
+none. No step here asks an agent to create, copy, set up, link or repair a
+workspace; removing the finished workspace is the workflow's own step.
+
 ## Progress Relay Protocol (launcher responsibility)
 
 After the `finalize-feature` background run is started, the launcher (the main

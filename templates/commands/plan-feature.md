@@ -13,10 +13,31 @@ description: |
 in your environment, this command will not work — do not attempt to run it
 manually as an LLM conversation.**
 
-Invoke the `plan-feature` workflow script via the Workflow tool:
+Run these steps in order. Each Bash call is one simple command.
+
+**Step 1 — Permission pre-flight.** Run the pre-flight and keep its stdout JSON
+object (see `.claude/skills/plan-feature/SKILL.md` §WSP):
+
+```bash
+python3 <project-root>/scripts/worktree/check_workspace_setup_permission.py --agent-id worktree-agent
+```
+
+**Step 2 — Get the workspace.** Run the one workspace maker. `<slug>` is a short
+kebab-case name for the request, and `<project-root>` is the absolute path of the
+main checkout:
+
+```bash
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind ac --slug <slug> --repo-root <project-root>
+```
+
+On a non-zero exit, stop and report stdout and stderr word for word. Do not call
+the workflow.
+
+**Step 3 — Invoke the workflow** via the Workflow tool, passing the pre-flight's
+answer and the maker's answer on word for word:
 
 ```
-Workflow("plan-feature", { userInput: $ARGUMENTS })
+Workflow("plan-feature", { userInput: $ARGUMENTS, workspace_setup_permission: <step 1 answer>, workspace: <step 2 answer> })
 ```
 
 If the Workflow tool is unavailable or the script returns an error, stop

@@ -130,6 +130,26 @@ via the `emit_event.py` script (non-blocking; failures are ignored).
 
 ---
 
+## §WS — Get the Workspace (the one maker)
+
+**This section runs BEFORE the workflow is invoked.** The skill asks no agent to
+create, copy, set up, link or repair a workspace. It runs the one workspace maker
+and hands the maker's answer to the workflow unchanged.
+
+`<project-root>` is the absolute path of the main checkout. `<slug>` is a short
+kebab-case name for the request.
+
+```bash
+python3 <project-root>/.leafcutter/scripts/worktree.py ensure --kind ac --slug <slug> --repo-root <project-root>
+```
+
+- **Non-zero exit, or stdout that is not one JSON object:** stop. Report stdout and
+  stderr word for word. The workflow is not invoked.
+- **Exit 0:** pass the parsed answer on word for word as `args.workspace` when the
+  workflow is invoked. The skill never reshapes or edits it.
+
+---
+
 ## §WSP — Workspace-Setup Permission Pre-flight
 
 **This section runs BEFORE the workflow is invoked, and before §PRR below.**
@@ -349,8 +369,8 @@ accept `y`, `n`, `d` as shorthand).
    ```
 
 2. Commit them with a fixed message by dispatching the `commit` agent, not a
-   raw commit (the `enforce_commit_delegation` hook blocks a raw commit,
-   including the `git -C <path> commit` spelling). Pass it
+   raw commit (the `enforce_commit_delegation` hook blocks a raw commit under
+   any spelling). Pass it
    `AUTHORING_WORKTREE_PATH`, the same file list, and the message
    `chore: commit orphaned AC files from prior session`.
 
