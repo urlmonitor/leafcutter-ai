@@ -56,6 +56,7 @@ below by hand.
 |---|---|
 | [architecture-docs-layout.md](architecture-docs-layout.md) | What belongs in each `docs/architecture/` subdirectory, which files are currently misplaced, and what a fresh install must scaffold so the identifier-uniqueness gate's namespace roots resolve. |
 | [artifact-numbering.md](artifact-numbering.md) | The one-number-one-artifact rule, the per-namespace numbering shape and free-number lookup, and the current (partial) state of whole-collection uniqueness enforcement. |
+| [document-length-standard.md](document-length-standard.md) | Length limits check-doc-length applies to docs/**/*.md, the set-aside locations with their grounds and per-location report sizes, and what each kind of run prints. |
 
 ## Build Pipeline & Runtime Configuration
 

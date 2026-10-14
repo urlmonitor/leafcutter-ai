@@ -4,7 +4,7 @@ description: "Reference for all pre-commit hooks enforced by the leafcutter comm
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-08-26
+last_updated: 2026-10-14
 components:
   - commit_guardian
 ---
@@ -56,6 +56,7 @@ flowchart TD
     H12 -->|fail| FIX
     FIX --> GC
 ```
+Limits, set-aside locations and run output for `check-doc-length`: [Document Length Standard](reference/document-length-standard.md).
 
 ## Build-Drift Check
 
