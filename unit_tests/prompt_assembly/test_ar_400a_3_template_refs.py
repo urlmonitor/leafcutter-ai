@@ -7,11 +7,10 @@ AR-400a-3-{i,ii,iii}.yaml.
 Every test reads the COMPILED prompt (real ``build_agents`` over a copy of the real
 tree, both platform roots) or the real shipped file -- never a typed literal.
 
-DEFERRED (need the not-yet-built reference gate of AR-400a-1 / AR-400b-1):
-  * test_validator_reports_no_nonexistent_finding_for_research_agent   (AR-400a-3-i)
-  * test_validator_reports_no_ability_finding_for_retrospective_agent  (AR-400a-3-ii)
-  * the "existence check reports zero findings" half of
-    test_skills_readme_has_zero_findings_and_no_retired_examples        (AR-400a-3-iii)
+The existence-check halves (AR-400a-3-i and AR-400a-3-iii) are written against the reference
+gate of AR-400a-1 (slice 2b-i). STILL DEFERRED (need the grant comparison of AR-400b-1, a later
+slice): test_validator_reports_no_ability_finding_for_retrospective_agent (AR-400a-3-ii, whose
+second clause asserts a 'not granted' finding when the grant is removed).
 """
 
 from __future__ import annotations
@@ -19,8 +18,11 @@ from __future__ import annotations
 import os
 import re
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import _ar_400a_1_support as H  # noqa: E402
 
 from _ar_400_support import (  # noqa: E402
     REPO_ROOT,
@@ -68,6 +70,20 @@ def test_import_question_is_routed_to_a_granted_tool():
         assert "import-scanner" not in target
 
 
+def test_validator_reports_no_nonexistent_finding_for_research_agent():
+    # covers: AR-400a-3-i
+    # angle: real_artifact
+    # must_catch: a gate that never reaches research-agent (so 'no finding' is vacuous)
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = H.make_slice(tmp)
+        path = probe / "templates" / "agents" / "research-agent.md"
+        path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n" + H.GHOST_SENTENCE + "\n", encoding="utf-8")
+        planted = H.findings(H.validate(probe)[0], H.GHOST, "research-agent")
+        assert len(planted) == 1, f"the existence check never reaches research-agent: {planted}"
+    real = [e for e in H.validate(REPO_ROOT)[0] if "research-agent" in e and H.KIND in e.lower()]
+    assert real == [], f"real tree: 'ability does not exist' finding for research-agent: {real}"
+
+
 def test_compiled_retrospective_agent_names_route_knowledge_not_route_learning():
     # covers: AR-400a-3-ii
     # angle: deployed
@@ -92,7 +108,17 @@ def test_retrospective_agent_permits_the_skill_tool():
 def test_skills_readme_has_zero_findings_and_no_retired_examples():
     # covers: AR-400a-3-iii
     # angle: real_artifact
-    # (existence-check half deferred: the gate of AR-400a-1 is not built; the retired-name half is asserted.)
+    # Two halves: (1) the existence check over the real tree reports zero findings for the README,
+    # proven REACHABLE by planting a ghost Load on its line 12 in a copy (the gate then names the
+    # README); (2) no line names a retired ability.
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = H.make_slice(tmp)
+        H.put_line(probe / "templates" / "skills" / "README.md", 12, H.GHOST_SENTENCE)
+        planted = H.findings(H.validate(probe)[0], H.GHOST)
+        assert len([e for e in planted if H.names_line(e, "templates/skills/README.md", 12)]) == 1, (
+            f"the existence check never reaches templates/skills/README.md: {planted}")
+    real = [e for e in H.validate(REPO_ROOT)[0] if "templates/skills/README.md" in e and H.KIND in e.lower()]
+    assert real == [], f"existence check reports findings for the real README: {real}"
     lines = README.read_text(encoding="utf-8").splitlines()
     offenders = [(n, ln.strip()) for n, ln in enumerate(lines, 1) if re.search(r"route-learning|capture-learning", ln)]
     assert not offenders, f"templates/skills/README.md still names retired abilities: {offenders}"

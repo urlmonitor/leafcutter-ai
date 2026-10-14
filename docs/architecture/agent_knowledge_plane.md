@@ -1,10 +1,10 @@
 ---
 title: "Agent Knowledge Plane"
-description: "Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including skills_invoked cross-reference validation."
+description: "Canonical reference for knowledge injection — all channels through which agents receive context at invocation time, including the build-time check that every ability an agent is told to load exists."
 type: "reference"
 status: "active"
 created: "2026-05-30"
-last_updated: "2026-05-30"
+last_updated: "2026-10-15"
 flight_level: "L2-Container"
 diagram_type: data_flow
 components:
@@ -12,7 +12,7 @@ components:
   - knowledge_system
 related_code:
   - "config/skills_config.default.json"
-  - "config/settings.json"
+  - "templates/settings.json"
   - "config/paths.json"
   - "CLAUDE.md"
 related_docs:
@@ -468,40 +468,20 @@ channel wins** at the point of decision:
 
 ---
 
-## Build-Time Validation: `skills_invoked` Cross-Reference
+## Build-Time Validation: Ability References
 
-`config/agent_registry.json` carries a `skills_invoked` array on each agent
-entry.  This array declares which skills the agent is expected to load at
-runtime (typically via the Skill tool or by an explicit `.claude/skills/<id>/SKILL.md`
-load directive in the template body).
+`check_skill_refs.ability_reference_verdict()` runs inside
+`registry_validator.validate_agent_registry`, so its findings stop `build.py`
+and the validator CLI (AR-400a-1). It reads every agent definition and every
+other Markdown file under `templates/` (shared guides) and fails on an
+instruction-form path reference (`Load .claude/skills/<id>/SKILL.md`,
+`python .claude/skills/<id>/scripts/...`) to an ability the package does not
+ship, naming the agent or guide, the ability and `file:line`. HTML comments,
+such as DECISION HISTORY blocks, are not instructions. It reports how many
+definitions and guides it examined; zero of either is a failure.
 
-At build time, `scripts/registry_validator.py` cross-references each agent's
-`skills_invoked` array against skill references extracted from its compiled
-template body.  Two classes of mismatch are detected and emitted as advisory
-`[WARNING]` messages:
-
-| Mismatch direction | Warning format |
-|---|---|
-| Template references a skill **absent** from `skills_invoked` | `<agent-id>: template references skill '<skill-id>' but skills_invoked does not declare it` |
-| `skills_invoked` declares a skill with **no** template reference | `<agent-id>: skills_invoked declares '<skill-id>' but no reference found in template body` |
-
-These warnings are advisory — they do not block the build — because skill
-references may appear in prose that does not match the extraction patterns, or
-a skill may be loaded implicitly through a parent template rather than an
-inline directive.  Nevertheless, consistent `skills_invoked` declarations help
-downstream tooling (agent cards, documentation generation) produce accurate
-capability descriptions.
-
-The detection heuristic recognises three reference patterns:
-
-1. **Path-based**: ``.claude/skills/<skill-id>/SKILL.md`` — the canonical
-   runtime load path used by the Sign-off section and supervisor boot sequences.
-2. **Natural-language directives**: ``load the <skill-id> skill``,
-   ``invoke the <skill-id> skill``, etc. — the imperative form used in
-   instruction-heavy sections.
-3. **Skill tool patterns**: ``Skill tool invocation pattern referencing
-   "<skill-id>"`` — the structured form used in AC acceptance criteria and
-   onboarding prose.
+The earlier advisory `skills_invoked` cross-reference (INF-600g-3), which
+printed `[WARNING]` lines nobody acted on, was removed by AR-400c-1.
 
 ---
 
@@ -522,8 +502,11 @@ The detection heuristic recognises three reference patterns:
   routed learnings.
 - `.claude/skills/signoff/SKILL.md` §7 — mandatory knowledge-capture trigger
   after every phase agent sign-off.
-- `scripts/registry_validator.py` — `check_skills_invoked_xref()` — build-time
-  cross-reference checker for `skills_invoked` vs. template body (AC INF-600g-3).
+- `scripts/check_skill_refs.py` — `ability_reference_verdict()` — build-time
+  check (returned as a registry-validator error) that every ability an agent
+  definition or shared guide tells its reader to load exists (AC AR-400a-1). It
+  replaced the advisory `check_skills_invoked_xref()` (AC INF-600g-3, retired by
+  AR-400c-1).
 
 <!-- related-code-hash:3a2a4fc1 -->
 

@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-15'
 components:
   - build_pipeline
 related_docs:
@@ -16,12 +16,21 @@ related_docs:
 # KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist
 
 > One known issue, split out of `docs/known-issues/build-pipeline.md` on
-> 2026-09-14. Index: [build-pipeline.md](../build-pipeline.md).
+> 2026-09-14. Index: [build-pipeline.md](../../build-pipeline.md).
 > Filename severity is the three-level index bucket (`high`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** high
-- **Status:** open — PARTIALLY FIXED (re-verified 2026-09-23). Closed: `route-learning`
+- **Status:** RESOLVED 2026-10-15 (AR-400 slice 2b-i). The closure condition below is met:
+  `scripts/check_skill_refs.py` reports no finding on the real tree, and its new
+  `ability_reference_verdict()` is wired into `registry_validator.validate_agent_registry`
+  as returned errors, so a definition or shared guide that tells its reader to load an
+  ability that does not exist stops `build.py` and the validator CLI (AR-400a-1, AR-400a-2;
+  a check that examined zero definitions or zero guides fails too, AR-400a-1-i). The
+  remaining instances were fixed by AR-400 slice 2a (PR #1235): `retrospective-agent` and
+  `templates/skills/README.md` now use `route-knowledge`, and the three trading-domain rows
+  are gone from `research-agent`. The history below is kept as written.
+- **Previous status:** open — PARTIALLY FIXED (re-verified 2026-09-23). Closed: `route-learning`
   and `capture-learning` are retired per ADR-034 and removed from the fail-open path in
   `signoff/SKILL.md` §7 and from PO v3 / BA v3 / IT PO v3
   (`templates/agents/{product-owner,business-analyst,it-po}.md`), which now read "Do NOT

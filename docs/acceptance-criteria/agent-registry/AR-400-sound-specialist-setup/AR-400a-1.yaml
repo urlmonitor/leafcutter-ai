@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -32,7 +32,7 @@ criteria: |
 depends_on:
   - AR-400a
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "The defect this closes. Its closure condition: the existing reference checker exits clean on the real tree AND is wired in as a required build/CI check. A check that runs only by hand is the status quo."
@@ -112,7 +112,9 @@ superseded_by: null
 covered_by:
   - AR-400a-1-i
   - AR-400a-1-ii
-implemented_by: []
+implemented_by:
+  - scripts/check_skill_refs.py
+  - scripts/registry_validator.py
 notes: |
   A REFUSAL, NOT A WARNING (AR-400a; user wording "failing the build instead of
   printing noise"). The build's current skill-reference lines are all

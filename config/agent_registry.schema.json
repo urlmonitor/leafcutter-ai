@@ -148,7 +148,7 @@
               }
             ]
           },
-          "description": "Structured record of skills this agent invokes, superseding the flat skills_used list with per-skill mode/descriptive_only detail. Cross-referenced against each agent's template body by scripts/build_phases.py (check_skills_invoked_xref) — a mismatch is currently a [WARNING], not a build failure (see KI-AR-003). Optional — absent on a template-less registry entry."
+          "description": "Structured record of skills this agent invokes, superseding the flat skills_used list with per-skill mode/descriptive_only detail. No longer cross-referenced against the template body: the advisory check (check_skills_invoked_xref) was retired (AR-400c-1), so a grant the instructions never mention prints nothing. Path-form references to abilities the package does not ship are caught separately by check_skill_refs.ability_reference_verdict (AR-400a-1). Optional — absent on a template-less registry entry."
         },
         "knowledge_channels": {
           "type": "array",
