@@ -310,6 +310,7 @@ def run_parity(layout_dir: Path, rows: list[Row], canonical: Callable[..., Verdi
                     if error not in report.errors:
                         report.errors.append(error)
                     continue
+                assert verdict is not None and answer is not None, "a pair with no error has both verdicts"
                 report.verdicts[(name, row_name)] = verdict
                 report.canonical_verdicts[(name, row_name)] = answer
     finally:
