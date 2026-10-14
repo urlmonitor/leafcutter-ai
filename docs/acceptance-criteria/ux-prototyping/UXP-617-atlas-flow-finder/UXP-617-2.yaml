@@ -157,7 +157,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - UXP-617-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-UXP-617-2.md
 change_target:
   - code
   - ui

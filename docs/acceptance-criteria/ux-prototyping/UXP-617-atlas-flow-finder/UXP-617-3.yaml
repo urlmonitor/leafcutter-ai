@@ -113,7 +113,8 @@ covered_by:
   - UXP-617-3-i
   - UXP-617-3-ii
   - UXP-617-3-iii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-UXP-617-3.md
 change_target:
   - code
   - ui
