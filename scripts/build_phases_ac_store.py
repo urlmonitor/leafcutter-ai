@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any
 
 from build_phases_ac_store_docs import build_ac_store_docs  # noqa: F401  # re-exported for callers
+from build_phases_ac_store_rc import RULE_CHECK_DEPLOY_MAP
 
 
 # ---------------------------------------------------------------------------
@@ -171,11 +172,6 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # deployed layout even though unit tests -- which import from source --
     # stay green.
     ("scripts/ac_store/ac_coverage_resolver.py",      "ac_coverage_resolver.py"),
-    # The following seven were added per BP-900a-1: all seven source files
-    # already existed in scripts/ac_store/ but were never wired into this
-    # deploy_map, so consumer installs were missing 7 of the 13 AC-store
-    # scripts the AC requires (deploy_map completeness gap, not a
-    # missing-source gap).
     ("scripts/ac_store/validate_ac_schema.py",        "validate_ac_schema.py"),
     # declared_files.py (ACD-1600c-4): the single declared_files read seam.
     # Imported by validate_ac_schema.py (`from declared_files import
@@ -245,6 +241,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # ModuleNotFoundError in the deployed layout -- the exact done_proof.py
     # deploy-manifest incident CLAUDE.md documents, one level up.
     ("scripts/ac_store/yaml_safe_loader.py",          "yaml_safe_loader.py"),
+    *RULE_CHECK_DEPLOY_MAP,  # ACD-2500a-1: the eleven requirement-rule-check modules
 )
 
 

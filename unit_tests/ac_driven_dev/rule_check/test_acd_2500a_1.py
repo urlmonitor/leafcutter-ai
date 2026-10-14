@@ -128,7 +128,7 @@ def test_stage_not_reported_complete_while_check_failed():
     check = next(call for call in result.agent_calls if call.label == _CHECK_LABEL)
     assert check.agent_type == "worktree-agent"  # a shell-permitted agent runs the script
     assert "requirement_rule_check.py" in check.prompt
-    assert "--stage ba" in check.prompt and _STAGE_AC in check.prompt
+    assert "--stage ba" in check.prompt and "--changed-since HEAD" in check.prompt
     assert _FAILING_FILE in json.dumps(result.result), (
         "the failing report must be shown at the gate/result, not swallowed"
     )

@@ -4,16 +4,18 @@ description: "C4 L2 sequence diagram showing the /create-ac pipeline: partial-ru
 type: architecture
 status: active
 created: 2026-06-05
-last_updated: 2026-06-22
-flight_level: L2
+last_updated: 2026-10-14
+flight_level: L2-Container
 parent: agent_delivery_workflows.md
+children:
+  - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
 components:
   - ac_store
   - ticket_creation_pipeline
 related_docs:
-  - docs/architecture/diagrams/ac-readiness-states.md
-  - docs/architecture/diagrams/build-ac-flow.md
-  - docs/architecture/diagrams/ac-driven-pipeline.md
+  - docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  - docs/architecture/diagrams/c2-004-build-ac-flow.md
+  - docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
   - docs/how-to/ac-driven-development.md
 ---
 

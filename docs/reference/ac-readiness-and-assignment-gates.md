@@ -4,7 +4,7 @@ description: "Lookup reference for the single hold-reason list, the hold_reason 
 type: reference
 status: active
 created: 2026-10-12
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 components:
   - ac_store
   - ac_driven_dev
@@ -149,3 +149,4 @@ logged to stderr and raises. The script deploys to `<root>/scripts/ac_store/` an
 - [ac-schema.md](ac-schema.md) - parent AC schema reference.
 - [ac-schema.md](ac-schema.md#the-declared_files-field) - the `declared_files` field behind `missing file targets`; [ac-declared-files.md](ac-declared-files.md) - how the generator uses it.
 - [ADR-026](../architecture/adrs/ADR-026-ac-driven-build-v2-phased-migration.md) - warn-before-required rollout.
+- [requirement-rule-check.md](requirement-rule-check.md) - the `specialist versus surface` family of the requirement rule check applies this surface map.

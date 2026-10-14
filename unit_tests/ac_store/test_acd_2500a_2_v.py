@@ -78,6 +78,15 @@ def _doc_findings(report: dict) -> list[dict]:
     return findings_for(report, rule_family=FAMILY_DOC_TRIGGERS)
 
 
+def _only_advisory_besides_doc(report: dict) -> bool:
+    """Every finding outside the documentation family is an advisory 'not evaluated'
+    entry (the unmapped .md surface), which never fails a verdict."""
+    return all(
+        f["disposition"] == "not evaluated"
+        for f in report["findings"] if f["rule_family"] != FAMILY_DOC_TRIGGERS
+    )
+
+
 def _mixed_store(tmp_path):
     """The AC's scenario: triggers [sequence-diagram, reference-doc]; one diagram
     requirement, no documentation-expert requirement."""
@@ -95,8 +104,11 @@ def test_missing_reference_doc_reported_by_trigger_and_specialist(tmp_path):
 
     exit_code, report = check_store(store)
 
-    assert len(report["findings"]) == 1, report["findings"]
-    finding = report["findings"][0]
+    # The doc records' .md surface is unmapped, so the surface family adds advisory
+    # 'not evaluated' entries (note D2); nothing else may appear besides the one finding.
+    assert len(_doc_findings(report)) == 1, report["findings"]
+    assert _only_advisory_besides_doc(report), report["findings"]
+    finding = _doc_findings(report)[0]
     assert finding["rule_family"] == FAMILY_DOC_TRIGGERS
     assert finding["rule_family"] == "documentation trigger to documentation requirement mapping"
     assert finding["disposition"] == "needs a decision"
@@ -242,6 +254,6 @@ def test_acd_2500a_2_v_reachable_from_entry_point(tmp_path):
     assert run.exit_code == 1, run.stderr
     assert run.report["verdict"] == "failed"
     findings = _doc_findings(run.report)
-    assert len(findings) == 1 and len(run.report["findings"]) == 1
+    assert len(findings) == 1 and _only_advisory_besides_doc(run.report), run.report["findings"]
     assert "reference-doc" in finding_text(findings[0]) and _DOC_AGENT in finding_text(findings[0])
     assert snapshot_tree(store.folder) == before

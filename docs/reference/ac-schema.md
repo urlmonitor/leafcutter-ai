@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 components:
   - build_pipeline
 related_docs:
@@ -225,8 +225,8 @@ declared_files:
 If `unit_tests/ac_store/test_scan_extra.py` already existed on unfinished work, the
 second entry is the one reported (`declared path '...' is marked to be created but
 already exists`) and the commit proceeds; if `scripts/ac_store/scan_ac_store.py` were
-absent, the first entry would refuse the commit. No requirement rule check reads the
-field in this repository yet, so the seam alone reports this case.
+absent, the first entry would refuse the commit. The requirement rule check
+([requirement-rule-check.md](requirement-rule-check.md)) reads the field for two families.
 
 ## ID Format, Hierarchy, and `covered_by` Scope
 

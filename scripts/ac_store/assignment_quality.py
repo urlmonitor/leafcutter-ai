@@ -110,6 +110,15 @@ def _resolve(surface: str, rules: Rules) -> str | None:
     return next((craft for rx, craft in rules if rx.match(norm)), None)
 
 
+def resolve_craft_in(surface: str, rules: Rules) -> str | None:
+    """Return the craft of the FIRST rule in an ALREADY-LOADED map matching *surface*, else None.
+
+    The public resolver over a ``load_map`` result's rules: a caller resolving many
+    surfaces (the requirement rule check) parses the map once and calls this per surface.
+    """
+    return _resolve(surface, rules)
+
+
 def resolve_craft(surface: str, map_path: Path | str | None = None) -> str | None:
     """Return the craft of the FIRST map entry matching *surface*, else None.
 

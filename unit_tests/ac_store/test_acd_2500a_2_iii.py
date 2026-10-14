@@ -45,6 +45,17 @@ _EXPECTS_UNKNOWN = "ACD-9990a-5"
 _UNKNOWN_ID = "ACD-9990a-7"
 
 
+def _llm_surface(name: str) -> dict:
+    """Override: a declared file whose surface (templates/agents/*.md) maps to llm-expert,
+    so the specialist-versus-surface family has nothing to say about an llm-expert record."""
+    return {
+        "assigned_agent": "llm-expert",
+        "declared_files": [
+            {"path": f"templates/agents/_fixture_{name}.md", "state": "to_be_created"}
+        ],
+    }
+
+
 def _three_defect_records() -> list[dict]:
     return hierarchy(
         "ACD-9990", 5,
@@ -141,7 +152,7 @@ def test_mutual_pair_with_different_wording_passes(tmp_path):
         child={
             1: {"delivers_to": {"agent": "llm-expert", "contract": "A rendered prompt template."}},
             2: {
-                "assigned_agent": "llm-expert",
+                **_llm_surface("mutual_consumer"),
                 "expects_from": {"ac_id": _PRODUCER, "contract": "Words with nothing in common."},
             },
             3: {"expects_from": {"ac_id": _UNKNOWN_ID, "contract": "A result."}},  # control
@@ -168,7 +179,7 @@ def test_all_four_shapes_of_contract_fields_are_handled(tmp_path):
         child={
             # list delivery to llm-expert, consumed through a STRING expects_from
             1: {"delivers_to": [{"agent": "llm-expert", "contract": "x"}]},
-            2: {"assigned_agent": "llm-expert", "expects_from": _PRODUCER},
+            2: {**_llm_surface("shape_consumer"), "expects_from": _PRODUCER},
             # STRING delivery (agent name), consumed through a LIST expects_from
             3: {"delivers_to": "python-coder"},
             4: {"expects_from": [{"ac_id": "ACD-9990a-3", "contract": "y"}]},

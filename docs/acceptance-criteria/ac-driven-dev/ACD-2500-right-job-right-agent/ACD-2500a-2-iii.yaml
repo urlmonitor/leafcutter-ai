@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given ACD-9990a-1 (assigned to python-coder) declares a delivery to llm-expert, and no
     record assigned to llm-expert declares it expects anything from ACD-9990a-1,

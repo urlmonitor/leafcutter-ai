@@ -273,9 +273,10 @@ function stageDisplayName(stageKey) {
  * @param {string}   runId        - Short run identifier.
  * @param {string}        acStorePath           - Absolute path to the AC store directory.
  * @param {string|null}   authoringWorktreePath  - Absolute path to the dedicated authoring worktree.
+ * @param {string[]}      [extraPaths]           - Repo-relative record paths to stage too (the rule check's records_to_commit: repaired parents).
  * @returns {Promise<{ status: "ok"|"error", message: string, hook_name?: string|null, failing_files?: string[], is_conflict?: boolean }>}
  */
-async function commitStageOutput(written, stageName, component, isFinal, runId, acStorePath, authoringWorktreePath) {
+async function commitStageOutput(written, stageName, component, isFinal, runId, acStorePath, authoringWorktreePath, extraPaths) {
   acStorePath = acStorePath || "docs/acceptance-criteria";
   // Build the git -C anchor for all git operations in this function. (AC BO-1500a-2)
   const gitC = authoringWorktreePath ? `-C "${authoringWorktreePath}"` : "";
@@ -366,6 +367,11 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
 
   // Build a JSON-safe representation of the AC IDs so the agent can filter on them.
   const writtenJson = JSON.stringify(written);
+  // records_to_commit is untrusted: keep only .yaml paths under the store (relative to the worktree), never `..`.
+  const _wt = (authoringWorktreePath || "").split("\\").join("/"), _st = acStorePath.split("\\").join("/");
+  const _storeRel = (_wt && _st.startsWith(_wt + "/")) ? _st.slice(_wt.length + 1) : _st;
+  const keepPaths = (extraPaths || []).filter((p) => typeof p === "string" && p.endsWith(".yaml") && p.startsWith(_storeRel + "/") && !p.split("/").includes(".."));
+  const extra = keepPaths.length ? `EXTRA PATHS: also stage these exact repo-relative paths in Step 3 (they count as stage-specific files even though their stem is not an AC ID above): ${JSON.stringify(keepPaths)}\n` : "";
 
   let commitResult;
   try {
@@ -374,7 +380,7 @@ async function commitStageOutput(written, stageName, component, isFinal, runId, 
       "\n" +
       `The AC IDs written by this stage are: ${writtenJson}\n` +
       `The commit message to use is: ${commitMessage}\n` +
-      "\n" +
+      extra + "\n" +
       (authoringWorktreePath
         ? `ISOLATION RULE (AC BO-1500a-2): ALL git commands in this task MUST use the\n` +
           `'-C "${authoringWorktreePath}"' flag so they operate inside the dedicated authoring\n` +
@@ -1970,36 +1976,7 @@ function buildSetupFailureResult(kind, reason, rawReply) {
   };
 }
 
-// Repository-anchored support-script resolution
-// (ACD-2100a-1 / KI-ACD-004, extended by ACD-2100a-3 / KI-ACD-009 cause 1).
-// `{{config.output_root}}` is a BUILD-TIME placeholder that resolves to a bare
-// relative name (".leafcutter") baked into the compiled template. A shell
-// command built with that placeholder is resolved by the DISPATCHING AGENT'S
-// OWN working directory, not by anything this workflow controls — in the
-// ADR-001 self-hosting dev layout that selects the deployed build-output copy
-// sitting in the untracked workspace parent, not the copy that belongs to the
-// repository this run is actually operating on (KI-ACD-004).
-//
-// The E2 workflow body has no filesystem access of its own (ADR-030: no `fs`,
-// `process`, `__dirname` reachable from the sandboxed script body), so the
-// fix cannot be "read the path here" — it must happen INSIDE a dispatched
-// shell command, at the moment that command actually runs, and the resolved
-// ABSOLUTE path must then be embedded literally into any later command that
-// needs it, so the run's own record of what it issued names a real,
-// repository-anchored location rather than a cwd-relative placeholder.
-//
-// A run started with cwd set to a LINKED `git worktree` (e.g. the very
-// AC-authoring worktree this route creates) is itself "inside a git
-// repository" by `git rev-parse --show-toplevel`'s definition — but that
-// command reports the WORKTREE'S OWN directory, which holds no installed
-// `.leafcutter/` of its own (ADR-001: it is untracked build output that only
-// `install_shims` populates on the project's own checkout; `git worktree add`
-// only ever checks out TRACKED content). `git rev-parse --git-common-dir`
-// does not have that problem: it always resolves to the ONE `.git` directory
-// shared by the main checkout and every one of its linked worktrees,
-// regardless of which of them the command runs from — so its parent
-// directory is "the repository being operated on" even from inside a
-// worktree (KI-ACD-009 cause 1).
+// Rationale (why `--git-common-dir`, why resolve inside a dispatched command): docs/reference/plan-feature-workflow-rationale.md
 
 /**
  * Build the POSIX-sh fragment that resolves `$REPO_ROOT` to the repository
@@ -2120,15 +2097,7 @@ function buildRepoAnchoredResolutionCommand(relPath) {
   );
 }
 
-// buildRepoAnchoredReadCommand(), _parseRegistryUnreadableDiagnostic(),
-// _describeRegistryInterpretationFailure(), and
-// _resolveWorkspaceSetupAgentEntryState() used to live here, supporting the
-// Pre-Stage-0 workspace-setup permission dispatch above. ACD-2100b-5 removed
-// that dispatch (the registry read now happens locally, in
-// scripts/worktree/check_workspace_setup_permission.py, invoked by the
-// plan-feature skill before this workflow runs — see that section's own
-// comment) and these four helpers had no other caller, so they were removed
-// with it rather than left as dead code.
+// Removed registry-read helpers (ACD-2100b-5): see docs/reference/plan-feature-workflow-rationale.md
 
 /**
  * Build the single-line POSIX-sh command that resolves BOTH the
@@ -2174,6 +2143,40 @@ function buildPauseStoreCommand(subcommandArgs) {
     // is rejected as an unrecognized argument.
     "python \"$SCRIPT\" --store-dir \"$STORE_DIR\" " + subcommandArgs
   );
+}
+
+/**
+ * ACD-2500a-1: run requirement_rule_check.py for one authoring stage. Dispatches
+ * label `rule-check-<stage>` to `agentType` (a shell-permitted agent). The agent
+ * relay carries stdout and exit code only; the verdict is read fail-closed from
+ * those, never from prose: passed iff exit_code === 0, report.verdict === "passed"
+ * and report.records_checked > 0. Every other outcome (dispatch error, unreadable
+ * reply, exit/verdict disagreement) is `passed: false`.
+ * @returns {Promise<{passed: boolean, toCommit: string[], report: object, summary: string}>} toCommit = report.records_to_commit (every record file changed against HEAD, repaired parents included)
+ */
+async function runRuleCheck(stage, acStoreDir, worktreePath, agentType) {
+  const target = ".leafcutter/scripts/ac_store/requirement_rule_check.py";
+  const label = "rule-check-" + stage;
+  const failed = (why, report) => ({ passed: false, toCommit: [], report: report || { verdict: "failed", reason: why }, summary: "Rule check failed: " + why });
+  const cmd = _buildRepoRootResolutionSnippet(target) +
+    "python \"$REPO_ROOT/" + target + "\" --stage " + stage + " --changed-since HEAD" +
+    " --store-root \"" + acStoreDir + "\" --repo-root \"" + worktreePath + "\" --before-ref HEAD";
+  try {
+    const raw = await agent(
+      "Run the following command and return ONLY the raw stdout output:\n" + cmd + "\n" +
+      "Return JSON: { \"output\": \"<raw stdout>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
+      { agentType: agentType, label: label }
+    );
+    const reply = parseAgentJson(raw, { stage: label, agent: agentType });
+    const report = JSON.parse(reply.output);
+    const findings = Array.isArray(report.findings) ? report.findings : [];
+    if (reply.exit_code === 0 && report.verdict === "passed" && report.records_checked > 0) {
+      return { passed: true, toCommit: Array.isArray(report.records_to_commit) ? report.records_to_commit : [], report: report, summary: "Rule check passed." + findings.filter((f) => f.disposition === "fixed").map((f) => "\nFixed by the check: " + f.message).join("") };
+    }
+    return failed("verdict " + report.verdict + ", exit " + reply.exit_code + "\n" + findings.map((f) => f.file + ": [" + f.rule_family + "] " + f.message).join("\n"), report);
+  } catch (err) {
+    return failed("the check produced no readable report (" + (err && err.message ? err.message : String(err)) + ")");
+  }
 }
 
 /**
@@ -2298,26 +2301,7 @@ const sessionSlug = component
 // -------------------------------------------------------------------------
 // Pre-Stage-0 — Workspace-Setup Permission Gate (ACD-2100b-5).
 // -------------------------------------------------------------------------
-// The isolated-workspace setup step below runs repository-mutating commands
-// (fetch, branch-create, worktree-add via setup_ticket_worktree.py). It must
-// be dispatched only to an agent whose registered charter (config/agent_registry.json)
-// permits running repository/shell commands.
-//
-// ACD-2100b-5 moved the registry read OUT of this workflow body. The E2
-// engine (ADR-030) contextifies this body with EXACTLY agent, parallel,
-// pipeline, phase, log, args, workflow, budget — no module loader and no
-// filesystem primitive of any kind (canonical statement: unit_tests/
-// _workflow_engine_harness.py docstring, "ENGINE FIDELITY" section) — so
-// this workflow physically cannot read config/agent_registry.json itself.
-// The agent()-dispatch round-trip this section used to make existed only to
-// work around that sandbox; it is gone. The plan-feature SKILL now runs a
-// LOCAL pre-flight script (scripts/worktree/check_workspace_setup_permission.py)
-// BEFORE invoking this workflow — the skill runs in the main agent loop,
-// which has real Bash/Read access — and passes that script's verdict through
-// `args.workspace_setup_permission`, the only injected global that carries
-// caller-supplied data. This workflow makes NO agent() dispatch and touches
-// no filesystem for this check at all; it only consumes the pre-computed
-// verdict, and fails closed whenever one does not reach it.
+// Why the registry read is out of this body (ACD-2100b-5): docs/reference/plan-feature-workflow-rationale.md
 const workspaceSetupAgentId = (args && args.workspace_setup_agent) || "worktree-agent";
 const workspaceSetupPermission = args && args.workspace_setup_permission;
 
@@ -3076,7 +3060,8 @@ for (const step of pipeline) {
     if (_actualPausedGateId && typeof _actualPausedGateId === "object") { return _actualPausedGateId; }
     isPausedAtThisStep = _actualPausedGateId === stepGateId;
   }
-  const skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
+  let skipAuthorOnResume = isPausedAtThisStep && _resumeAction !== "edit";
+  let reapprove = false; // approval was consumed, then the check forced a re-author: a rewrite that passes needs a NEW pause (never the old answer); one that still fails skips the gate and retries
 
   while (!approved) {
     // ACD-2100c-3 AC-1/AC-2: on a resume whose answer moves past this step's
@@ -3152,13 +3137,15 @@ for (const step of pipeline) {
       }
     }
 
+    // ACD-2500a-1: rule check at stage end (resume path: run after the gate).
+    let ruleCheck = skipAuthorOnResume ? null : await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
     // Present gate to the user. ADR-024: resolveGate checks args.resume_answer first.
     if (step.gate !== "final") {
-      const _midGateResult = await resolveGate(
+      const _midGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         `gate-${step.stage}`,
         async () => {
           const raw = await agent(
-            `${step.agent} has written the following ACs: ${written.join(", ") || "(none)"}.\n` +
+            `${step.agent} has written the following ACs: ${written.join(", ") || "(none)"}.\n` + (ruleCheck ? ruleCheck.summary + "\n" : "") +
             "Present these to the user and ask them to choose:\n" +
             "  1. approve — proceed to the next stage.\n" +
             "  2. edit    — re-invoke this agent with feedback.\n" +
@@ -3174,8 +3161,8 @@ for (const step of pipeline) {
           }
           return (parsed && typeof parsed.action === "string") ? parsed : null;
         },
-        args,
-        { stage: step.stage, acs: written },
+        reapprove ? { ...args, resume_answer: null } : args,
+        { stage: step.stage, acs: written, rule_check: ruleCheck && ruleCheck.summary },
         { type: "single_choice", options: ["approve", "edit", "cancel"] },
         args.run_id || "default-run"
       );
@@ -3207,7 +3194,9 @@ for (const step of pipeline) {
         allAcsWritten.push(...written);
       }
 
-      const action = gateDecision.action.toLowerCase();
+      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+      let action = gateDecision.action.toLowerCase();
+      if (!ruleCheck.passed && action !== "cancel") { gateDecision.feedback = (action === "edit" && gateDecision.feedback ? gateDecision.feedback + "\n" : "") + ruleCheck.summary; if (action !== "edit") reapprove = true; action = "edit"; skipAuthorOnResume = false; }
 
       if (action === "cancel") {
         // AC BO-1500c-1-i — NO-PR GUARANTEE (mid-pipeline cancel).
@@ -3245,6 +3234,7 @@ for (const step of pipeline) {
           message:
             `${step.agent} failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
             buildCancelMessage(committedAcs, written, `max-retries abort for ${step.agent}`, acStoreDir, authoringWorktreePath),
+          failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -3254,7 +3244,7 @@ for (const step of pipeline) {
         // COMMIT-BEFORE-NEXT-STAGE INVARIANT (AC BO-1500b-1):
         // The commit MUST succeed before the while-loop exits and the outer
         // for-loop advances to the next pipeline step.
-        const commitOutcome = await commitStageOutput(written, step.stage, component, false, runId, acStoreDir, authoringWorktreePath);
+        const commitOutcome = await commitStageOutput(written, step.stage, component, false, runId, acStoreDir, authoringWorktreePath, ruleCheck.toCommit);
         if (commitOutcome.status === "error") {
           return {
             status: "error",
@@ -3288,11 +3278,11 @@ for (const step of pipeline) {
     } else {
       // Final gate: IT PO v3 has enriched ACs and set readiness: reviewed.
       // ADR-024: resolveGate checks args.resume_answer before the live agent call.
-      const _finalGateResult = await resolveGate(
+      const _finalGateResult = (reapprove && !ruleCheck.passed) ? { action: "approve" } : await resolveGate(
         "final-gate",
         async () => {
           const raw = await agent(
-            `IT PO v3 has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` +
+            `IT PO v3 has enriched the following ACs: ${written.join(", ") || allAcsWritten.join(", ")}.\n` + (ruleCheck ? ruleCheck.summary + "\n" : "") +
             "Present these to the user with their enriched fields (assigned_agent, complexity, contracts).\n" +
             "Ask the user to:\n" +
             "  1. Set a priority: critical / high / medium / low\n" +
@@ -3308,8 +3298,8 @@ for (const step of pipeline) {
           }
           return (parsed && typeof parsed.action === "string") ? parsed : null;
         },
-        args,
-        { stage: "final", acs: written, all_acs: allAcsWritten },
+        reapprove ? { ...args, resume_answer: null } : args,
+        { stage: "final", acs: written, all_acs: allAcsWritten, rule_check: ruleCheck && ruleCheck.summary },
         { type: "priority_choice", options: ["approve", "edit", "defer", "cancel"] },
         args.run_id || "default-run"
       );
@@ -3317,26 +3307,7 @@ for (const step of pipeline) {
       if (_finalGateResult && TERMINAL_GATE_STATUSES.includes(_finalGateResult.status)) {
         return _finalGateResult;
       }
-      // ACD-2100c-2: resolveGate() never returns a falsy value TODAY -- every
-      // path out of it is either one of the four pause-related statuses
-      // handled above (which return before this line), or a decision object
-      // from applyAnswerByType(). The `|| { action: "defer" }` fallback that
-      // used to sit here was unreachable dead code and was removed for
-      // clarity with no behaviour change at the time.
-      //
-      // ACD-2100c-5: that "never returns falsy" property is a fact about
-      // resolveGate()'s CURRENT body, not a contract enforced at this call
-      // site -- the next refactor of resolveGate() (or a future sixth gate)
-      // can silently reintroduce a falsy return, and a test written only
-      // against the destructive-fallback LINE would have been deleted along
-      // with it, letting the invariant lapse unnoticed (this AC's own
-      // test_rationale). So this guard is restated here as a standing
-      // invariant over the exit path, not a repair to one known line: a
-      // missing/falsy gate result is a gate FAILURE (KI-ACD-005), never a
-      // user cancellation and never a silent "defer" -- it must fail CLOSED
-      // with the same "undetermined" vocabulary the other four call sites
-      // already use, so the drafted work is never discarded and no stop is
-      // ever attributed to the person on this path.
+      // Why a falsy gate result fails CLOSED (ACD-2100c-2/-5): docs/reference/plan-feature-workflow-rationale.md
       if (!_finalGateResult) {
         return {
           status: "undetermined",
@@ -3383,7 +3354,9 @@ for (const step of pipeline) {
         }
       }
 
-      const finalAction = finalDecision.action.toLowerCase();
+      ruleCheck = ruleCheck || await runRuleCheck(step.stage, acStoreDir, authoringWorktreePath, workspaceSetupAgentId);
+      let finalAction = finalDecision.action.toLowerCase();
+      if (!ruleCheck.passed && finalAction !== "cancel") { acFeedback = ruleCheck.summary; if (finalAction !== "edit") reapprove = true; finalAction = "edit"; skipAuthorOnResume = false; }
       const priority = VALID_PRIORITIES.includes(finalDecision.priority)
         ? finalDecision.priority
         : "medium";
@@ -3410,6 +3383,7 @@ for (const step of pipeline) {
           message:
             `it-po failed to produce satisfactory ACs after ${MAX_EDIT_RETRIES + 1} attempts. Pipeline aborted.\n` +
             buildCancelMessage(committedAcs, written, "max-retries abort for it-po (final gate)", acStoreDir, authoringWorktreePath),
+          failed_check: ruleCheck.passed ? null : ruleCheck.report,
           committed_acs: committedAcs,
           acs_as_drafts: written,
         };
@@ -3429,7 +3403,7 @@ for (const step of pipeline) {
         );
 
         // Commit the final IT PO enriched AC output before reporting success.
-        const finalCommitOutcome = await commitStageOutput(written, step.stage, component, true, runId, acStoreDir, authoringWorktreePath);
+        const finalCommitOutcome = await commitStageOutput(written, step.stage, component, true, runId, acStoreDir, authoringWorktreePath, ruleCheck.toCommit);
         if (finalCommitOutcome.status === "error") {
           return {
             status: "error",
@@ -3509,28 +3483,4 @@ return {
   route: effectiveRoute,
 };
 
-// DECISION HISTORY
-// ================================================================================
-// - 2026-09-25 [python-coder]: /quick-fix, live incident wf_734389cf-248 (run
-//   itpo-split-20260925 ended pause_persist_failed because status-checker
-//   refused pause_store.py write as outside its scope; see docs/known-issues/
-//   build-orchestration/open-high-ki-bo-20260901-1620.md). (1) BO-2300a-1-ii:
-//   repointed the pause-store round trip and resolve-worktree-setup-script-
-//   path from "status-checker" to "worktree-agent" (permits_shell: true).
-//   Main-body dispatches use the module-level `workspaceSetupAgentId`
-//   (~l.2342); peekPausedGateId()/resolveGate()/pauseAtGate() each use their
-//   OWN local `_shellPermittedAgentId` instead, because those three are
-//   extracted VERBATIM into a standalone Node driver (no top-level body) by
-//   test_acd_2100c_1.py's TestSixthDecisionPointInheritsTheRule -- confirmed
-//   by direct execution to ReferenceError otherwise. Does not narrow
-//   args.workspace_setup_agent's override contract (that only ever covered
-//   the worktree-BOOTSTRAP dispatch, ACD-2100b/BO-1500f-1; confirmed by grep
-//   no test asserts these six honor it). (2) BO-1500a-5-i: the Pre-Stage-0
-//   bootstrap previously fail-hard ONLY on an explicit non-zero exit_code; a
-//   refusal, an uninterpretable reply, a success-shaped reply naming no
-//   worktree_path, or a no-failure reply naming neither a directory nor a
-//   branch all fell through silently. All four now halt via the shared
-//   buildSetupFailureResult() helper with a distinguishing
-//   setup_failure_kind before any authoring agent is dispatched. See
-//   unit_tests/_plan_feature_harness_defaults.py's DECISION HISTORY for the
-//   companion harness-side default this required. (quick-fix; no ticket)
+// DECISION HISTORY: moved to docs/reference/plan-feature-workflow-rationale.md

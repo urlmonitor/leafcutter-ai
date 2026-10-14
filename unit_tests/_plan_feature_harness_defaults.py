@@ -123,9 +123,12 @@ def worktree_setup_default_responses() -> dict[str, Any]:
     shim) and only needs the payload shapes, not the `_is_plan_feature_script()`
     gate `plan_feature_default_label_responses()` applies below for
     run_workflow_under_e2()'s generic multi-script dispatch. The single
-    source of these two shapes -- never pasted per caller.
+    source of these two shapes -- never pasted per caller. Also carries the
+    passed `rule-check-<stage>` replies (ACD-2500a-1) so every shim caller
+    meets a well-formed check reply at stage end.
     """
     return {
+        **rule_check_default_responses(),
         _WORKTREE_SETUP_SCRIPT_LABEL: {
             "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
             "exit_code": 0,
@@ -144,6 +147,20 @@ def worktree_setup_default_responses() -> dict[str, Any]:
             "stderr": "",
         },
     }
+
+
+def rule_check_default_responses() -> dict[str, Any]:
+    """Return a well-formed PASSED rule-check reply for each authoring stage label.
+
+    ACD-2500a-1: plan-feature.js dispatches `rule-check-<stage>` at the end of every
+    authoring stage and reads the verdict fail-closed (exit 0, verdict "passed",
+    records_checked > 0). Shaped like requirement_rule_check.py's real stdout.
+    """
+    report = json.dumps(
+        {"verdict": "passed", "location": "docs/acceptance-criteria", "records_checked": 1, "findings": [], "records_to_commit": []}
+    )
+    reply = {"output": report, "exit_code": 0, "stderr": ""}
+    return {f"rule-check-{stage}": dict(reply) for stage in ("po", "ba", "itpo")}
 
 
 def plan_feature_default_label_responses(script_path: Path) -> dict[str, Any]:

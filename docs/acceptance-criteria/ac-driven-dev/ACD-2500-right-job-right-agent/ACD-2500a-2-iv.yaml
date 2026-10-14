@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given record R had readiness "draft" when the technical planner's stage began,
     and at the end of that stage R carries readiness "approved",

@@ -5,11 +5,12 @@ flight_level: L3-Component
 status: active
 type: reference
 created: 2026-07-10
-last_updated: 2026-09-14
+last_updated: 2026-10-14
 components:
   - ac_driven_dev
 related_docs:
   - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
+  - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
 ---
 
 # AC-Driven Development
@@ -95,3 +96,7 @@ closes: a gate reporting a pass it never earned.
   — L3 sequence diagram of the five points at which `/plan-feature` stops and asks the
   person running it for a decision, and the three exits every one of those points has
   (person answers, no person reachable, answer not attributable to the person).
+- [Requirement Rule Check — Component Diagram](../diagrams/c3-030-requirement-rule-check-components.md)
+  — L3 component diagram of the check `/plan-feature` runs at the end of each authoring stage:
+  its rule families (which repair, which only report), the rule source, the surface-to-specialist
+  map and the store record check it calls. A failed check keeps the stage from being reported complete.

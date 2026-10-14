@@ -421,3 +421,37 @@ def snapshot_tree(folder: Path) -> dict[str, bytes]:
         for path in sorted(Path(folder).rglob("*"))
         if path.is_file()
     }
+
+
+# --------------------------------------------------------------------------
+# real git repo helpers (additive; used by the --changed-since review tests)
+# --------------------------------------------------------------------------
+def git(repo_root: Path, *argv: str) -> str:
+    """Run `git <argv>` in `repo_root` (identity and autocrlf pinned); return stdout."""
+    proc = subprocess.run(
+        ["git", "-c", "user.name=rc-test", "-c", "user.email=rc-test@example.invalid",
+         "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false", *argv],
+        cwd=str(repo_root), capture_output=True, text=True, encoding="utf-8", timeout=60,
+    )
+    assert proc.returncode == 0, f"git {argv} failed: {proc.stderr}"
+    return proc.stdout
+
+
+def init_git_repo(repo_root: Path) -> None:
+    """`git init` a tmp repo root (a real repository, never a mock)."""
+    git(repo_root, "init", "-q")
+
+
+def commit_all(repo_root: Path, message: str = "commit") -> None:
+    """Stage everything under `repo_root` and commit it."""
+    git(repo_root, "add", "-A")
+    git(repo_root, "commit", "-q", "-m", message)
+
+
+def changed_since_argv(store: Store, rev: str = "HEAD", *extra: str, stage: str = "ba") -> list[str]:
+    """argv for `--changed-since REV` mode, shaped like the plan-feature.js dispatch."""
+    return [
+        "--changed-since", rev, "--stage", stage,
+        "--store-root", str(store.repo_root / "docs" / "acceptance-criteria"),
+        "--repo-root", str(store.repo_root), "--before-ref", rev, *extra,
+    ]

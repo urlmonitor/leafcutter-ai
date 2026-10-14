@@ -575,6 +575,8 @@ def test_dispatch_order_plan_feature() -> None:
 
       Authoring (it-po, technical route — ac-triage stub returns no 'route'):
         8. it-po           label='stage-itpo-author'
+           then worktree-agent label='rule-check-itpo' (ACD-2500a-1: the
+           requirement rule check runs at the end of the authoring stage).
 
       Final gate (ACD-2100c-1: resolveGate() no longer dispatches a live
       "final-gate" agent() call to obtain an answer at all -- with no
@@ -628,12 +630,6 @@ def test_dispatch_order_plan_feature() -> None:
     )
 
     expected_sequence = [
-        # See this test's docstring above for the rationale behind each step
-        # (ACD-2100a-1 script-path resolution, ACD-2100b-5's no-dispatch
-        # permission gate, BO-1500f-1's resolved worktree-setup target,
-        # BO-2300a-1-ii's worktree-agent dispatch target, the always-on
-        # self-skipping PT phase, and ACD-2100c-1's pauseAtGate()/
-        # "pause-persist" in place of a live final-gate answer).
         ("status-checker", "detect-current-branch"),
         ("worktree-agent", "resolve-worktree-setup-script-path"),
         ("worktree-agent", "worktree-setup"),
@@ -642,6 +638,7 @@ def test_dispatch_order_plan_feature() -> None:
         ("ac-triage", "stage-0-triage"),
         ("pt-classifier", "pt-classify"),
         ("it-po", "stage-itpo-author"),
+        ("worktree-agent", "rule-check-itpo"),  # ACD-2500a-1: stage-end rule check
         ("worktree-agent", "pause-persist"),
     ]
 
