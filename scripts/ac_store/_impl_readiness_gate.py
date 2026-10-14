@@ -26,21 +26,26 @@ DECISION HISTORY:
     another gate's reason is named ``hold_reason`` (ACD-2500b-2 defines only
     the approval-report key ``reason``, no record field). ACD-2500b-2's
     ``held`` approval report is a separate shape and is not produced here.
+  - 2026-10-14 [python-coder/ACD-2500b-2, -2-i]: HOLD_REASON_TEST_DESIGN_PENDING
+    named in place; an unknown ``hold_reason`` raises ValueError (G1 review F2);
+    intent without a design reads ``test design pending`` and is always held.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from _test_intent import design_pending
 from declared_files import NoDeclaredFiles, get_declared_files
 
 HOLD_REASON_MISSING_FILE_TARGETS = "missing file targets"
 HOLD_REASON_MISSING_TEST_CONTRACT = "missing test contract"
+HOLD_REASON_TEST_DESIGN_PENDING = "test design pending"
 
 HOLD_REASONS: tuple[str, ...] = (
     HOLD_REASON_MISSING_FILE_TARGETS,
     HOLD_REASON_MISSING_TEST_CONTRACT,
-    "test design pending",
+    HOLD_REASON_TEST_DESIGN_PENDING,
     "reference file pending",
     "file finding undecided",
 )
@@ -49,6 +54,7 @@ _HELD_SCHEMA_VERSION = 2
 
 __all__ = [
     "HOLD_REASONS", "HOLD_REASON_MISSING_FILE_TARGETS", "HOLD_REASON_MISSING_TEST_CONTRACT",
+    "HOLD_REASON_TEST_DESIGN_PENDING",
     "implementation_readiness_reasons", "is_held_back", "partition_by_readiness",
 ]
 
@@ -64,22 +70,29 @@ def _has_test_contract(ac: dict[str, Any]) -> bool:
 def implementation_readiness_reasons(ac: dict[str, Any]) -> list[str]:
     """List why *ac* is NOT implementation-ready (empty when it is ready).
 
-    Order: ``missing file targets``, ``missing test contract``, then the
-    record's own ``hold_reason`` value (when set), reported unchanged and
-    never folded into one of the two owned reasons.
+    Order: ``missing file targets``, ``missing test contract`` (reported as
+    ``test design pending`` instead when the record carries test intent and no
+    design, ADR-071), then the record's own ``hold_reason`` value (when set),
+    reported unchanged and never folded into one of the owned reasons.
 
     Args:
         ac: Parsed AC record.
 
     Returns:
-        Reasons, each a value of ``HOLD_REASONS`` (or the record's own value).
+        Reasons, each a value of ``HOLD_REASONS``.
+
+    Raises:
+        ValueError: The record's own ``hold_reason`` is not in ``HOLD_REASONS``.
     """
     reasons: list[str] = []
     if isinstance(get_declared_files(ac), NoDeclaredFiles):
         reasons.append(HOLD_REASON_MISSING_FILE_TARGETS)
     if not _has_test_contract(ac):
-        reasons.append(HOLD_REASON_MISSING_TEST_CONTRACT)
+        pending = design_pending(ac)
+        reasons.append(HOLD_REASON_TEST_DESIGN_PENDING if pending else HOLD_REASON_MISSING_TEST_CONTRACT)
     other = ac.get("hold_reason")
+    if isinstance(other, str) and other and other not in HOLD_REASONS:
+        raise ValueError(f"hold_reason {other!r} is not one of HOLD_REASONS {HOLD_REASONS}")
     if isinstance(other, str) and other and other not in reasons:
         reasons.append(other)
     return reasons
@@ -96,12 +109,14 @@ def _schema_version(ac: dict[str, Any]) -> int:
 def is_held_back(ac: dict[str, Any], *, enforce: bool = False) -> bool:
     """Return True when *ac* is flagged AND the flag holds it back from dispatch.
 
-    Held iff reasons are non-empty and (enforce is on OR schema_version >= 2).
-    A schema_version < 2 record is reported but dispatchable in advisory mode.
+    Held iff reasons are non-empty and (enforce is on OR schema_version >= 2 OR the reasons
+    include ``test design pending``, which is always held). A schema_version < 2 record is
+    reported but dispatchable in advisory mode for every other reason.
     """
-    if not implementation_readiness_reasons(ac):
+    reasons = implementation_readiness_reasons(ac)
+    if not reasons:
         return False
-    return enforce or _schema_version(ac) >= _HELD_SCHEMA_VERSION
+    return enforce or _schema_version(ac) >= _HELD_SCHEMA_VERSION or HOLD_REASON_TEST_DESIGN_PENDING in reasons
 
 
 def partition_by_readiness(

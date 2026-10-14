@@ -33,7 +33,7 @@ The check reads a set of requirement records, repairs three one-right-answer vio
 | Script | `scripts/ac_store/requirement_rule_check.py` (deployed to `<root>/scripts/ac_store/`, with the `_rc_*.py` modules, flat) |
 | Output | One JSON document on stdout; logging goes to stderr |
 | Exit codes | `0` passed, `1` failed, `2` usage error |
-| Rule families | 7 rule families plus the pass-through `record schema` and `record readable` |
+| Rule families | 8 rule families plus the pass-through `record schema` and `record readable` |
 | Writer | `_rc_edit.py` only; it may write `covered_by`, `components` and `readiness` |
 
 ---
@@ -132,7 +132,7 @@ Findings are sorted by file, rule family, subject, record id, message. There is 
 
 ## Rule families
 
-Seven rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
+Eight rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
 
 | # | Family name (exact string) | Dispositions it produces | Repairable field |
 |---|---|---|---|
@@ -143,6 +143,7 @@ Seven rule families, evaluated in the order listed after `record schema`. Only f
 | 5 | `documentation trigger to documentation requirement mapping` | `needs a decision`, `failed` | none |
 | 6 | `specialist versus surface` | `needs a decision`, `not evaluated`, `failed` | none |
 | 7 | `declared files versus modifies links` | `needs a decision`, `not evaluated` | none |
+| 8 | `test intent coverage` | `needs a decision` | none |
 | - | `record schema` (pass-through) | `needs a decision`, `failed` | none |
 | - | `record readable` (pass-through) | `failed` | none |
 
@@ -197,6 +198,18 @@ Each declared file path ([ac-declared-files.md](ac-declared-files.md)) is resolv
 ### 7. declared files versus modifies links
 
 Every `doc_links` entry whose relationship is `modifies` must also be a declared file. Each one that is not: `needs a decision`, one per path. No declared files: `not evaluated`.
+
+### 8. test intent coverage
+
+Judges coverage of `test_intent` ([test-intent.md](test-intent.md)) against the outcome clauses of `criteria`; the entry shape is the `record schema` family's job. Only a record whose `test_intent` is a non-empty list is evaluated; a record with only a `test_spec`, or with neither, is never judged. Nothing is repaired.
+
+| `detail.kind` | Reported when |
+|---|---|
+| `missing` | An outcome clause has no entry. |
+| `stale` | An entry names a clause that is no longer in `criteria`. |
+| `duplicate` | A clause has more than one entry. |
+
+Each finding is `needs a decision`, one per clause, with `detail {kind, clause}` and no line. Clauses and entry texts are compared under `normalise_clause`. A failing `itpo` stage goes back to the IT PO.
 
 ### Pass-through families
 

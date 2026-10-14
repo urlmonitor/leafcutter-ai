@@ -470,7 +470,8 @@ Rules:
 - A leaf code AC carries at least one clause with `needs_test: true`.
 - Describe only the need, never the design: leave out test names, target
   directories, frameworks, test types, angles, strategy, isolation level and
-  `must_catch`. `test_constraints` stays your only channel for strategy.
+  `must_catch`. You express no test strategy at all: test design belongs to the
+  code-aware step (ADR-071).
 - Never write `test_spec`, never set `hold_reason`, and never raise `readiness`.
   The test design and the approval hold belong to later steps.
 - The criteria stay byte-identical. If a clause reads badly, log a caveat; do
@@ -484,8 +485,10 @@ genuinely produces no executable behaviour (for example `change_target: prompt`
 or `docs`, a prompt- or docs-only change). It records the decision explicitly so
 test-writer skips with an accurate reason.
 
-An approved leaf code AC with neither `test_intent` nor `test_required: false` is
-rejected by the `check-ac-schema` guard.
+The `check-ac-schema` commit check rejects an approved leaf code AC that has no
+`test_spec` and no `test_required: false`. It also rejects `test_intent` alone,
+with no `test_spec`, as "test design pending". It accepts a legacy `test_spec`
+that has no intent.
 
 ---
 

@@ -30,34 +30,49 @@ ENTRY_CONVENTION_KEY = "convention_test_file"
 AUTHORSHIP_KEY = "test_design_authorship"
 OPENED_FILES_KEY = "test_design_opened_files"
 
-_OUTCOME_LINE = re.compile(r"(Then|And)\b\s*(.*)")
+_STEP_LINE = re.compile(r"(Given|When|Then|And|But)\b[,:]?\s*(.*)")
+_BULLET_LINE = re.compile(r"[-*]\s+(.*)")
 _TRAILING_MARKS = ",;."
 
 
 def outcome_clauses(criteria: Any) -> list[str]:
-    """Return the outcome clauses of *criteria*: the text after each ``Then`` and each ``And``
-    that follows the first ``Then``, continuation lines joined with single spaces.
+    """Return the outcome clauses of *criteria*, continuation lines joined with single spaces.
 
-    An ``And`` before the first ``Then`` continues the Given or When and is not an outcome.
-    A blank line ends the clause being collected. A non-string *criteria* has no clauses.
+    Each scenario is read in phases: ``Given`` and ``When`` open (or reopen) the precondition
+    phase, ``Then`` opens the outcome phase, and ``And`` / ``But`` are outcomes only inside the
+    outcome phase of their own scenario (before it they continue the Given or When). A
+    ``Given`` or ``When`` after a ``Then`` ends the clause being collected and starts a new
+    scenario, blank line or not. A comma or colon right after the keyword is dropped. A ``Then``
+    header ending in ``:`` followed by ``-`` / ``*`` bullet lines yields one clause per bullet
+    (the header is dropped); a wrapped bullet is joined. A blank line ends the clause being
+    collected. A non-string *criteria* has no clauses.
     """
     if not isinstance(criteria, str):
         return []
     clauses: list[list[str]] = []
-    seen_then = False
-    collecting = False
+    in_then = collecting = header = False
     for line in criteria.splitlines():
         text = line.strip()
-        match = _OUTCOME_LINE.match(text)
-        if match and (seen_then or match.group(1) == "Then"):
-            seen_then = True
-            collecting = True
+        match = _STEP_LINE.match(text)
+        bullet = _BULLET_LINE.match(text) if in_then else None
+        word = match.group(1) if match else ""
+        collecting = bool(text) and collecting
+        if word in ("Given", "When"):
+            in_then = collecting = header = False
+        elif word == "Then" or (word in ("And", "But") and in_then):
+            in_then = collecting = True
             clauses.append([match.group(2)])
-        elif collecting and text:
+            header = match.group(2).endswith(":")
+        elif bullet:
+            if header:
+                clauses.pop()
+            header = False
+            collecting = True
+            clauses.append([bullet.group(1)])
+        elif collecting:
             clauses[-1].append(text)
-        else:
-            collecting = False
-    return [" ".join(" ".join(parts).split()) for parts in clauses]
+            header = False
+    return [" ".join(" ".join(parts).split()) for parts in clauses if " ".join(parts).strip()]
 
 
 def normalise_clause(text: str) -> str:
@@ -84,8 +99,13 @@ def intent_entries(record: Any) -> list[dict] | None:
 
 def design_pending(record: Any) -> bool:
     """True when the record has a non-empty ``test_intent`` and no ``test_spec`` (absent, null
-    or empty): the intent is waiting for its test design (ADR-071)."""
-    return intent_entries(record) is not None and not record.get("test_spec")
+    or empty) and ``test_required`` is not ``false``: the intent is waiting for its test design
+    (ADR-071). A record that states it needs no tests is never pending."""
+    return (
+        intent_entries(record) is not None
+        and not record.get("test_spec")
+        and record.get("test_required") is not False
+    )
 
 
 def is_legacy_design(record: Any) -> bool:
@@ -96,3 +116,27 @@ def is_legacy_design(record: Any) -> bool:
     """
     test_spec = record.get("test_spec")
     return isinstance(test_spec, list) and bool(test_spec) and not record.get(AUTHORSHIP_KEY)
+
+
+def uncovered_needs_test_clauses(record: Any) -> list[str]:
+    """Return the ``needs_test`` true clauses of the record's intent that no ``test_spec`` entry
+    covers, in intent order (ADR-071).
+
+    An entry covers a clause when its ``ENTRY_CLAUSE_KEY`` value normalises to the clause. Names
+    and descriptions are never read. A record with no intent, or with ``test_required: false``,
+    has no uncovered clauses.
+    """
+    if record.get("test_required") is False:
+        return []
+    spec = record.get("test_spec")
+    spec = spec if isinstance(spec, list) else []
+    covered = {
+        normalise_clause(item[ENTRY_CLAUSE_KEY])
+        for item in spec
+        if isinstance(item, dict) and isinstance(item.get(ENTRY_CLAUSE_KEY), str)
+    }
+    return [
+        str(entry.get("clause"))
+        for entry in intent_entries(record) or []
+        if entry.get("needs_test") is True and normalise_clause(entry.get("clause", "")) not in covered
+    ]

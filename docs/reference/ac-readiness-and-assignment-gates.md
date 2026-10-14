@@ -37,7 +37,7 @@ list. This table mirrors it; there is no second list.
 |---|---|---|
 | `missing file targets` | ACD-1600c-1 | The record is in the "no declared files" state ([declared_files](ac-schema.md#the-declared_files-field)). `it_requirements`, `doc_links` and `reference_file_path` neither raise nor clear it. |
 | `missing test contract` | ACD-1600c-1 | The record has neither a non-empty `test_spec` nor `test_required: false`. |
-| `test design pending` | ACD-2500b-2 | Carried on the record's `hold_reason` field. |
+| `test design pending` | ACD-2500b-2 | Computed, always held (whatever `--enforce-impl-readiness` and `schema_version` say): the record has a non-empty `test_intent` and no `test_spec`. Reported instead of `missing test contract`. Four points hold it: approval (`approve_acs.py`), this gate, the ticket generator and the commit check; see [test-intent.md](test-intent.md#intent-with-no-design-cannot-be-approved-or-built). |
 | `reference file pending` | ACD-2500b-2 | Carried on the record's `hold_reason` field. |
 | `file finding undecided` | ACD-2500b-2 | Carried on the record's `hold_reason` field. |
 
@@ -49,7 +49,7 @@ into the first two.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `hold_reason` | string | no | One value of the list above, set by its owner. The gate appends any non-empty string value unchanged after the two reasons it computes itself; it does not check the value against the list. |
+| `hold_reason` | string | no | One value of the list above, set by its owner. The vocabulary is closed: a non-empty value outside `HOLD_REASONS` raises `ValueError`, in the gate and in `_approval_holds`. A listed value is appended unchanged after the reasons the gate computes itself. |
 
 ### Advisory versus held
 

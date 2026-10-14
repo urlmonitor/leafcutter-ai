@@ -42,6 +42,7 @@ ARCHITECTURE: Standalone CLI script. Two modes:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import date
@@ -49,6 +50,8 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+
+from _approval_holds import approval_hold_reason, build_report
 
 
 # Matches the amended_by key line itself, including any inline value such as
@@ -167,7 +170,29 @@ def _build_amended_by_block(existing: list, new_entry: dict) -> str:
     )
 
 
-def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
+def _repo_relative(ac_file: Path) -> str:
+    """Return *ac_file* as a POSIX path relative to the working directory (the repo root)."""
+    try:
+        return ac_file.resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except ValueError:
+        return ac_file.as_posix()
+
+
+def _say(report: Optional[dict], line: str) -> None:
+    """Print a text-mode stdout line; ``--json`` mode (a *report*) keeps stdout to the JSON."""
+    if report is None:
+        print(line)
+
+
+def _hold_leaf(ac_file: Path, ac_id: str, hold: str, report: Optional[dict]) -> None:
+    """Report a held leaf: a ``held <id>: <reason>`` line, or an entry of ``report["held"]``."""
+    if report is None:
+        print(f"held {ac_id}: {hold}")
+    else:
+        report["held"].append({"id": ac_id, "file": _repo_relative(ac_file), "reason": hold})
+
+
+def _promote_leaf(ac_file: Path, dry_run: bool = False, report: Optional[dict] = None) -> int:
     """Promote a single leaf AC from readiness: reviewed to readiness: approved.
 
     Performs two targeted in-place mutations: replaces the ``readiness`` field
@@ -182,9 +207,14 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
     Args:
         ac_file: Path to the leaf AC YAML file.
         dry_run: When True, log what would happen but do not write files.
+        report: The ``--json`` report to fill instead of printing text lines to
+            stdout, or None for text mode.
+
+    A record held by ``approval_hold_reason`` is never written: it is reported
+    (``held <id>: <reason>``, or an entry of ``report["held"]``) and counts as 0.
 
     Returns:
-        0 on success or no-op, 1 on read/write error or on a write that
+        0 on success, no-op or hold, 1 on read/write error or on a write that
         fails self-validation (post-write re-parse), 2 on unexpected
         readiness.
     """
@@ -206,7 +236,7 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
 
     # Already approved — skip without touching the file (byte-stable idempotency)
     if readiness == "approved":
-        print(f"no-op {ac_id}: readiness already approved")
+        _say(report, f"no-op {ac_id}: readiness already approved")
         return 0
 
     if readiness != "reviewed":
@@ -216,8 +246,13 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
         )
         return 2
 
+    hold = approval_hold_reason(data)
+    if hold is not None:
+        _hold_leaf(ac_file, ac_id, hold, report)
+        return 0
+
     if dry_run:
-        print(f"[dry-run] would promote {ac_id} readiness reviewed -> approved")
+        _say(report, f"[dry-run] would promote {ac_id} readiness reviewed -> approved")
         return 0
 
     # --- Targeted replacement 1: readiness field ---
@@ -291,7 +326,9 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
         )
         return 1
 
-    print(f"promoted {ac_id} readiness reviewed -> approved")
+    _say(report, f"promoted {ac_id} readiness reviewed -> approved")
+    if report is not None:
+        report["approved"].append(ac_id)
     return 0
 
 
@@ -300,13 +337,16 @@ def _promote_leaf(ac_file: Path, dry_run: bool = False) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _do_approve_goal(goal_ac_id: str, ac_root: Path, dry_run: bool = False) -> int:
+def _do_approve_goal(
+    goal_ac_id: str, ac_root: Path, dry_run: bool = False, report: Optional[dict] = None
+) -> int:
     """Find goal AC, enumerate covered_by leaves, promote each from reviewed to approved.
 
     Args:
         goal_ac_id: The AC identifier of the goal to process.
         ac_root: Root directory to search recursively for AC YAML files.
         dry_run: When True, log what would happen but do not write files.
+        report: The ``--json`` report to fill, or None for text mode.
 
     Returns:
         0 on success or complete no-op, 1 on goal-AC-not-found or read error,
@@ -355,7 +395,7 @@ def _do_approve_goal(goal_ac_id: str, ac_root: Path, dry_run: bool = False) -> i
                 file=sys.stderr,
             )
             continue
-        result = _promote_leaf(leaf_file, dry_run=dry_run)
+        result = _promote_leaf(leaf_file, dry_run=dry_run, report=report)
         if result != 0 and exit_code == 0:
             exit_code = result
     return exit_code
@@ -423,6 +463,11 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--json",
+        action="store_true",
+        help='Print exactly {"approved": [id], "held": [{id, file, reason}]} to stdout.',
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Log what would happen but do not write any files.",
@@ -444,15 +489,24 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     ac_root = Path(args.ac_root)
 
+    report = build_report([], []) if args.json else None
+    code = _run_mode(args, ac_root, report)
+    if report is not None and code in (0, 2):
+        print(json.dumps(report))
+    return code
+
+
+def _run_mode(args: argparse.Namespace, ac_root: Path, report: Optional[dict]) -> int:
+    """Run the ``--goal`` or ``--ac`` mode, filling *report* in ``--json`` mode."""
     if args.goal:
-        return _do_approve_goal(args.goal, ac_root, dry_run=args.dry_run)
+        return _do_approve_goal(args.goal, ac_root, dry_run=args.dry_run, report=report)
 
     # --ac mode: directly promote a single AC
     ac_file = _find_ac_file(ac_root, args.ac)
     if ac_file is None:
         print(f"ERROR: AC {args.ac} not found in {ac_root}", file=sys.stderr)
         return 1
-    return _promote_leaf(ac_file, dry_run=args.dry_run)
+    return _promote_leaf(ac_file, dry_run=args.dry_run, report=report)
 
 
 if __name__ == "__main__":

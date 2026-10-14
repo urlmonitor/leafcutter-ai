@@ -372,6 +372,7 @@ def _build_ticket_body(
     if surface:
         lines.append(surface)
 
+    _gtfa_tests_section.require_design(ac)
     if implementation_in_scope or authored_spec:
         # Derive the Test Requirements from the AC (test_spec first, else the
         # Gherkin criteria) — never a hardcoded empty stub. The AC is the source
