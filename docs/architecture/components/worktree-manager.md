@@ -1,6 +1,6 @@
 ---
-title: "Worktree Manager — Git Worktree Lifecycle"
-description: "Git worktree lifecycle management component that creates, tracks, and tears down isolated branch environments for parallel epic and ticket development."
+title: "Worktree Manager — The One Workspace Maker"
+description: "Per-feature clone workspaces made, found, listed and cleared through one maker (worktree.py), with one project-root resolver."
 flight_level: L3-Component
 diagram_type: component
 status: active
@@ -8,7 +8,7 @@ type: reference
 created: 2026-06-08
 last_updated: 2026-10-14
 root: true
-source_ticket: "tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01_TICKET-20260927-BO-4300a-1.md"
+source_ticket: "tickets/00_inbox/epics/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/07_TICKET-20260927-BO-4300a-4.md"
 components:
   - worktree_manager
 related_adrs:
@@ -21,6 +21,7 @@ related_code:
   - templates/scripts/workspace/workspace_create.py
 related_docs:
   - docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md
+  - docs/architecture/adrs/ADR-071-workflow-shell-steps-reach-only-shell-permitted-agents.md
   - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
 ---
@@ -29,18 +30,38 @@ related_docs:
 
 ## Overview
 
-The Worktree Manager provides isolated branch environments for epic and ticket development using git worktrees. Each epic gets its own worktree so parallel tickets can proceed without cross-branch contamination.
+The Worktree Manager gives every separate line of work (an epic, a ticket, an AC-authoring
+session, a fast-lane build) its own workspace. One maker makes them all: `worktree.py`. A
+workspace is a per-feature clone of the main copy, not a `git worktree`. It has its own
+`.git`, its own branch, its own installed tools and its own marker file. Because each
+workspace is an independent repository, parallel lines of work cannot touch each other's
+branch, index or object store. The decision is
+[ADR-070](../adrs/ADR-070-single-workspace-maker-and-resolver.md); the clone topology is
+decision 1 of [ADR-018](../adrs/ADR-018-agent-isolation-topology.md).
 
 ## Responsibilities
 
-- Create and register git worktrees for new epics
-- Sweep orphan processes left behind after worktree teardown
+- Make, find, list, verify and clear workspaces through one maker, `worktree.py`, which
+  prints exactly one JSON answer per call
+- Resolve the project root the same way for every caller (`workspace_root.py`)
+- Prove each workspace ready by measuring it from disk, including a hooks canary, before
+  marking it `ready`
+- Keep the registry as one marker file inside each workspace, never in a shared list
+- Sweep orphan processes left behind after a workspace is cleared
 - Provide the commit serialization lock (`epic-commit-lock`) used by ticket-supervisor
 
 ## Entry Points
 
-- `scripts/worktree/sweep_processes.py` — orphan process cleanup
-- `scripts/setup_ticket_worktree.py` — worktree provisioning script
+- `scripts/worktree.py` (source `templates/scripts/worktree.py`; deployed to
+  `<install>/.leafcutter/scripts/worktree.py`): the workspace maker. Verbs `ensure`,
+  `locate`, `list`, `verify`, `remove`, `where`. This is the primary entry point and the
+  only one the decided topology allows for making, finding or clearing a workspace.
+- `scripts/worktree/sweep_processes.py`: orphan process cleanup.
+- `scripts/setup_ticket_worktree.py`: **legacy**. The old git-worktree provisioning
+  script. `worktree-agent` and the `feature` skill still call it as of 2026-10-14. It is
+  retired under BO-4300f-2 and must not be used by new callers.
+
+The maker names where a requested ticket lives inside the workspace and refuses when the ticket is not on the workspace's base; see [Ticket Location Fields](../../reference/workspace-maker-answers-and-codes.md#ticket-location-fields) and the `TICKET_NOT_ON_BASE` / `OCCUPIED` codes in the same reference.
 
 ## Component diagram — the one workspace maker (ADR-070)
 
@@ -55,48 +76,60 @@ local clone of the main checkout. Its `origin` points at the hub, it starts from
 
 ```mermaid
 C4Component
-    title Worktree Manager — the one workspace maker (ADR-070)
+    title Worktree Manager — the one workspace maker and everyone who calls it (ADR-070)
 
-    Component_Ext(routes, "Route workflows (BO-4300f-1)", "plan-feature.js, fast-lane-ship.js, build-feature.js, build-ticket.js, build-epic.js, quick-fix.js, finalize-feature.js", "Reach the maker through args.workspace or one shell-agent dispatch of the exact command. Halt on any answer other than status ok")
-    Component_Ext(skills, "Workspace skill, entry skills, a person at a terminal", "BO-4300a-1-ib", "Run where, then ensure. Relay the answer verbatim as args.workspace")
+    Component_Ext(routes, "Route workflows", "plan-feature, fast-lane-ship, build-feature, build-ticket, build-epic, quick-fix, finalize-feature (BO-4300f-1)", "Receive the maker's answer as args.workspace, or make one verbatim shell dispatch of the exact command. Halt on any status other than ok")
+    Component_Ext(skill, "Workspace skill", "the skill agents run it from (BO-4300a-1-ib)", "Runs where, then ensure, and relays the JSON answer verbatim")
+    Component_Ext(agents, "Agents", "phase and helper agents, e.g. worktree-agent", "Take a workspace path only from a maker answer, never by guessing a folder")
+    Person(person, "Person at a terminal", "Runs the same command by hand and reads the same JSON answer")
 
-    Container_Boundary(maker, "Main install: .leafcutter/scripts/ (deployed from templates/scripts/)") {
-        Component(cli, "worktree.py", "stdlib CLI", "Verbs ensure, locate, list, verify, remove, where. Prints one JSON answer. Never reads stdin or prompts. Unclassified failure becomes INTERNAL_ERROR")
-        Component(core, "workspace/workspace_core.py", "shared primitives", "Kind and slug to branch and landing dir (one naming table), make_plan, git runner, MakerError, marker read/write, scan of the landing place, discard_tree")
-        Component(root, "workspace/workspace_root.py", "resolve_project_root(cwd, repo_root)", "Which project is this? Order: --repo-root, workspace marker, git common dir, child search, sibling search. Recomputed on every call, never cached")
-        Component(create, "workspace/workspace_create.py", "create_workspace, derive_build", "Clone, re-point origin, fetch, check out, copy .env and .mcp.json, build, prove ready, mark ready. A failed ensure deletes the half-made workspace")
-        Component(checks, "workspace/workspace_checks.py", "checks_for, require_ready, canary", "Recomputes every readiness check from disk, including the hooks canary. Raises NOT_READY")
+    Container_Boundary(install, "Main install: .leafcutter/scripts/ (deployed from templates/scripts/)") {
+        Component(maker, "Workspace maker: worktree.py", "one stdlib CLI plus its workspace/ helper package", "The only thing that makes, finds, lists, verifies or clears a workspace. Verbs ensure, locate, list, verify, remove, where. Prints exactly one JSON answer")
     }
 
-    System_Ext(main, "Main checkout", "the project's own git repository", "Clone source. Holds the install config (skills_config.json), .env and .mcp.json")
-    System_Ext(hub, "Hub (origin)", "the remote the main checkout's origin names", "Source of origin/main and existing lines of work")
+    System_Ext(main, "Main copy", "the project's own checkout", "Clone source. Holds the install config, .env and .mcp.json")
+    System_Ext(hub, "Shared project (hub)", "the remote the main copy's origin names", "Source of origin/main and of existing lines of work")
 
-    Container_Boundary(ws, "Per-feature workspace: worktrees/ beside the main checkout, one folder per line of work") {
-        ComponentDb(clone, "Workspace clone", "independent git repo, own .git, no alternates", "Branch from the naming table, e.g. ticket/SLUG or EPIC-SLUG (scratch: detached), gc.auto 0, own .leafcutter/ install, one .git/hooks shim per declared stage")
-        Component(build, "build.py (the workspace's own)", "scripts/build.py --target-dir ws --config-path .git/workspace_build_config.json", "Builds real install files. Never a symlink")
-        ComponentDb(marker, ".leafcutter-workspace.json", "marker, excluded via .git/info/exclude", "kind, slug, branch, hub, project_root, base_commit, maker_version, state creating then ready, created_at")
+    Container_Boundary(landing, "Landing place: worktrees/ beside the main copy, one folder per line of work") {
+        Container_Boundary(wsa, "Workspace (one per line of work)") {
+            ComponentDb(clone, "Workspace clone", "independent git repo, own .git, gc.auto 0", "Branch from the naming table, e.g. ticket/SLUG or EPIC-SLUG; origin re-pointed at the hub")
+            Component(tools, "Own installed tools", ".leafcutter/ built by the workspace's own build.py", "Real install files and one hook shim per declared stage. Never a symlink to the main install")
+            ComponentDb(marker, ".leafcutter-workspace.json", "marker = the registry entry", "kind, slug, branch, hub, project_root, base_commit, state creating then ready")
+        }
+        ComponentDb(wsn, "Further workspaces", "same shape", "Each with its own clone, its own installed tools and its own marker")
     }
 
-    Rel(routes, cli, "ensure --kind ac|fastlane|epic|ticket|feature|scratch --slug S [--ticket P]")
-    Rel(skills, cli, "where, then ensure (subprocess, absolute path)")
-    Rel(cli, core, "make_plan, scan, read_marker")
-    Rel(core, root, "resolve_project")
-    Rel(root, main, "resolves the project root")
-    Rel(cli, create, "ensure on a new location")
-    Rel(cli, checks, "verify, and ensure on a ready workspace")
-    Rel(create, main, "git clone --local --no-checkout; reads install config")
-    Rel(create, hub, "set-url origin; fetch origin main; ls-remote the branch")
-    Rel(create, clone, "checkout -B branch from origin/main, or resume origin/branch")
-    Rel(create, build, "runs with an explicit derived config")
-    Rel(build, clone, "writes .leafcutter/ and hook shims")
-    Rel(create, checks, "require_ready before state ready")
-    Rel(checks, clone, "canary: known-bad commit must be rejected by a hook (--no-verify control)")
-    Rel(checks, hub, "ls-remote main: base_is_fresh")
-    Rel(core, marker, "write creating, then ready (tmp + replace); scan reads")
+    Rel(routes, maker, "ensure --kind K --slug S [--ticket P]")
+    Rel(skill, maker, "where, then ensure")
+    Rel(agents, maker, "locate, verify, remove")
+    Rel(person, maker, "any verb, by hand")
+    Rel(maker, main, "resolves the project; git clone --local")
+    Rel(maker, hub, "set-url origin; fetch origin main")
+    Rel(maker, clone, "creates, checks out, verifies, clears")
+    Rel(maker, tools, "runs the workspace's own build.py; hooks canary")
+    Rel(maker, marker, "writes creating then ready; scans to locate and list")
+    Rel(maker, wsn, "same verbs, same answer")
 ```
 
-`root: true`: no L2 container doc covers the workspace lifecycle yet. Decision record:
+`root: true`: no L2 container doc covers the workspace lifecycle yet, so this diagram has no parent tier.
+
+Decision record:
 [ADR-070 — One Workspace Maker and One Project-Root Resolver](../adrs/ADR-070-single-workspace-maker-and-resolver.md).
+Isolation topology (per-feature clones, `gc.auto=0`):
+[ADR-018 — Agent Isolation Topology](../adrs/ADR-018-agent-isolation-topology.md).
+
+Every arrow into the landing place starts at the maker. No caller has an arrow of its own
+to a workspace, to the main copy or to the hub, so the diagram shows no second way to make,
+find or clear a workspace. The maker is drawn as one component; its helper modules are
+internal to it:
+
+| Module | Role inside the maker |
+|---|---|
+| `worktree.py` | CLI entry: parses the verb, prints one JSON answer, never reads stdin or prompts; an unclassified failure becomes `INTERNAL_ERROR` |
+| `workspace/workspace_core.py` | One naming table (kind and slug to branch and folder), `make_plan`, git runner, `MakerError`, marker read/write, landing-place scan, `discard_tree` |
+| `workspace/workspace_root.py` | `resolve_project_root`: `--repo-root`, workspace marker, git common dir, child search, sibling search; recomputed on every call |
+| `workspace/workspace_create.py` | Clone, re-point origin, fetch, check out, copy `.env` and `.mcp.json`, build, prove ready, mark ready; a failed `ensure` deletes the half-made workspace |
+| `workspace/workspace_checks.py` | Recomputes every readiness check from disk, including the hooks canary; raises `NOT_READY` |
 
 How to read it:
 
@@ -116,13 +149,36 @@ How to read it:
   `hooks_canary_rejected`. The canary commits a known-bad file with the working directory
   set to the workspace, never with `git -C`. A rejection counts as proof only if a control
   commit made with `--no-verify` succeeds. The check never runs on a tree that holds work.
-- **The callers are not migrated yet.** The route workflows shown on the left move to the
-  maker under BO-4300f-1. Until BO-4300f-2 retires it, `setup_ticket_worktree.py` (listed
-  under Entry Points above) is still a second way to make a workspace.
+- **The diagram is the decided topology; the callers are not all migrated yet.** The route
+  workflows move to the maker under BO-4300f-1, and the workspace skill lands under
+  BO-4300a-1-ib. As of 2026-10-14, `worktree-agent` and the `feature` skill still call
+  `setup_ticket_worktree.py`. Until BO-4300f-2 retires that script it remains a second way
+  to make a workspace in the code, even though the diagram, by decision, draws none.
 
 ## Safety Constraints
 
-Per building-epics §1.4, worktrees MUST NOT be closed until all sub-tickets are done. The All-Tickets-Done gate (§1.4.1) enforces this by counting open tickets before allowing `worktree-agent` to run.
+Per building-epics §1.4, a workspace MUST NOT be closed until all sub-tickets are done. The All-Tickets-Done gate (§1.4.1) enforces this by counting open tickets before allowing `worktree-agent` to run.
+
+What the maker itself guarantees:
+
+- **Nothing half-made survives.** A failed `ensure` deletes the workspace it was making, so a
+  retry starts clean. An `ensure` on a workspace whose marker is not `ready` fails with
+  `WORKSPACE_INCOMPLETE`.
+- **No protected branch, no stale base.** Readiness fails on a protected branch, and on a base
+  older than the hub's `origin/main` unless `--allow-stale-base` was given. An unreachable hub
+  is `FETCH_FAILED` without that flag.
+- **Unsaved work is never discarded silently.** `remove` refuses a workspace with unsaved
+  work unless `--discard` is given.
+- **No symlinks.** The workspace gets real install files from its own `build.py`. It never
+  links to the main install, so a build in one workspace cannot rewrite another's tools.
+- **No guessed paths.** Every caller takes the workspace path from the maker's JSON answer.
+  The project root is recomputed on every call by `workspace_root.py`.
+
+### Legacy: `setup_ticket_worktree.py` (until BO-4300f-2)
+
+The rest of this section and the next section describe the old git-worktree script. They
+stay accurate for its remaining callers (`worktree-agent`, the `feature` skill) and are
+removed when BO-4300f-2 retires the script. None of it applies to the maker.
 
 The caller that invokes `scripts/setup_ticket_worktree.py` (`templates/workflows-js/plan-feature.js`'s
 authoring-worktree creation step) MUST resolve it to an absolute, repository-anchored path
@@ -162,7 +218,14 @@ wrong-repository incident undiagnosable. See
 `_git_toplevel()` anchor with no fallback and are a known related gap outside this AC's
 scope.
 
-## Log root inherited from the main install (ADR-069)
+## Log root inherited from the main install (ADR-069) — legacy bootstrap
+
+**Legacy until BO-4300f-2.** This section describes how `setup_ticket_worktree.py` hands a
+worktree its log root. ADR-070 keeps the rule (a workspace inherits the main install's
+durable log root through its own build). As of 2026-10-14, though, the maker's build step
+(`_build` in `workspace/workspace_create.py`) passes only `--target-dir` and `--config-path`
+to the workspace's `build.py`, with no `--log-root`. So a maker-made workspace does not yet
+get the inherited root that the bootstrap below provides.
 
 A worktree is deleted when its drive ends, so its logs must not live in it. The bootstrap
 (`_bootstrap` step 5 in `scripts/setup_ticket_worktree.py`) runs the worktree's own
