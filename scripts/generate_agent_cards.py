@@ -254,9 +254,6 @@ def render_knowledge_flow(
     channels = registry_entry.get("knowledge_channels", [])
     if not channels:
         return "## Knowledge Flow\n\n*No knowledge channels declared.*\n\n"
-
-    hyperlinks_enabled = card_path is not None and package_root is not None
-
     lines: list[str] = [
         "## Knowledge Flow",
         "",
@@ -269,7 +266,7 @@ def render_knowledge_flow(
         mode = ch.get("injection_mode", "—")
         desc = ch.get("description", "—")
 
-        if hyperlinks_enabled and raw_source != "—":
+        if card_path is not None and package_root is not None and raw_source != "—":
             source = _linkify_source(raw_source, card_path, package_root)
         else:
             source = raw_source
@@ -582,8 +579,6 @@ def render_references(
         return ""
 
     agent_id = registry_entry.get("id", "unknown")
-    hyperlinks_enabled = card_path is not None and package_root is not None
-
     lines: list[str] = ["## References", ""]
     for entry in doc_links:
         if isinstance(entry, dict):
@@ -596,7 +591,7 @@ def render_references(
         if not path_str:
             continue
 
-        if hyperlinks_enabled:
+        if card_path is not None and package_root is not None:
             target = package_root / path_str
             if target.exists():
                 link = make_relative_link(card_path, target, label)

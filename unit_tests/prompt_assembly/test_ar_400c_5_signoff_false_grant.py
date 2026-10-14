@@ -37,6 +37,7 @@ import yaml
 _HERE = Path(__file__).resolve().parent
 _SUP = _HERE.parent / "agents" / "_ar_200b_2_support.py"
 _spec = importlib.util.spec_from_file_location("_ar_200b_2_support", _SUP)
+assert _spec is not None and _spec.loader is not None, f"cannot load {_SUP}"
 S = importlib.util.module_from_spec(_spec)
 sys.modules["_ar_200b_2_support"] = S
 _spec.loader.exec_module(S)
