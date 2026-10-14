@@ -202,8 +202,8 @@
       "version": 3,
       "entities": [],
       "impl_summary": {
-        "done": 3,
-        "in_progress": 1,
+        "done": 4,
+        "in_progress": 0,
         "not_started": 1,
         "total": 5,
         "asof": "2026-10-14"
@@ -2113,8 +2113,8 @@
       "path": "flows/leafcutter/generate-product-truth.flow.json",
       "impl_status": "in_progress",
       "impl_summary": {
-        "done": 3,
-        "in_progress": 1,
+        "done": 4,
+        "in_progress": 0,
         "not_started": 1,
         "total": 5,
         "asof": "2026-10-14"

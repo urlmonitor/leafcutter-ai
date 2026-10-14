@@ -382,7 +382,10 @@ class TestTheStorePassesItsOwnValidator(unittest.TestCase):
         self.assertEqual(result["outcome"], "checked-and-sound")
         self.assertEqual(result["examined"], expected_flows)
         self.assertEqual(result["examined_by_check"]["example-data-shape"], expected_mocks)
-        self.assertEqual(result["examined_by_check"]["product-truth-links"], expected_acs)
+        # D2 states how many criteria it inverted (UXP-514-2), i.e. the by_ac entries.
+        expected_inverted = len(json.loads((PT_SOURCE / "index.json").read_text(encoding="utf-8"))["by_ac"])
+        self.assertGreater(expected_inverted, 0)
+        self.assertEqual(result["examined_by_check"]["product-truth-links"], expected_inverted)
 
     def test_deployed_validator_degrades_informatively_on_an_empty_store(self) -> None:
         # covers: UXP-300
