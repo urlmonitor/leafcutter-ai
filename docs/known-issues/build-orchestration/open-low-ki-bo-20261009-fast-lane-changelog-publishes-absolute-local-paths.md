@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-10-09'
-last_updated: '2026-10-09'
+last_updated: '2026-10-14'
 components:
   - build_orchestration
   - changelog
@@ -25,9 +25,10 @@ related_docs:
 - **Severity:** low. No build or gate breaks. But the entries are shipped, release-note-feeding
   files, and each one publishes a local username, home-directory layout and worktree name.
 - **Status:** open, no AC.
-- **Occurrences:** 12 entries on main, from 2026-08-31 to 2026-10-08 (list below).
-- **First seen:** 2026-08-31 (oldest affected entry) · **Last seen:** 2026-10-08 (PR #1053,
-  merge `fbf0c5223`)
+- **Occurrences:** 12 entries on main, from 2026-08-31 to 2026-10-08 (list below). 15 on main
+  as of 2026-10-14, plus the GE-127g lanes caught before commit (see "Recurrence 2026-10-14").
+- **First seen:** 2026-08-31 (oldest affected entry) · **Last seen:** 2026-10-14 (GE-127g-2-i
+  lane, rewritten before commit)
 - **Where:** the description is composed at `scripts/build_orchestration/_fl_changelog.py:145-151`:
 
   ```python
@@ -107,3 +108,21 @@ a test that feeds an absolute worktree path into `build_changelog_payload()` and
 
 **Pattern:** a field filled from an agent's free-form report and written verbatim into a
 published artifact. Whatever local detail the agent included gets shipped.
+
+## Recurrence 2026-10-14
+
+Still happening, unfixed. Measured on origin/main `95961b718`.
+
+- **On main, three more since filing.** `git grep -n "Files modified: /" -- changelogs/` now lists
+  **15** entries, up from 12: the 2026-10-09-0925 entry (BP-100k-3-ii) and two 2026-10-12 entries,
+  1525 (GE-133a) and 1854 (GE-132a-4).
+- **Caught before commit, not on main.** The GE-127g-2-i lane on 2026-10-14 generated an entry whose
+  `Files modified:` named absolute local worktree paths. It was rewritten with repo-relative paths
+  before commit, so `changelogs/2026-10-14-1120-...` is clean. The GE-127g-5 lane's entry had the same
+  defect and was rewritten in `8d9aea24e` (its commit message says so). Earlier GE-127g lanes the
+  same day needed the same hand edit. The workaround works, and it is a step every lane needs.
+- **Line numbers have moved; the code has not changed.** In `templates/workflows-js/fast-lane-ship.js`
+  the coder contract is now at `:1614`, `filesModified` is read unchanged at `:1822`, the
+  exempt-prefix filter starts at `:1823`, `--files-modified` is passed at `:1833`, and
+  `CHANGELOG_EXEMPT_PREFIXES` is at `:414`. In `scripts/build_orchestration/_fl_changelog.py` the
+  join is at `:146` and the `Files modified:` text at `:150`.

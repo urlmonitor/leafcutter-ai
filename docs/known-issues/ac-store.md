@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-25'
+last_updated: '2026-10-14'
 components:
   - ac_store
 related_docs:
@@ -56,7 +56,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 24** (1 blocker, 14 high, 9 low) · **Resolved: 4**
+**Open: 25** (1 blocker, 14 high, 10 low) · **Resolved: 4**
 
 ## Open
 
@@ -86,6 +86,7 @@ Fixed issues move to [`ac-store/resolved/`](ac-store/resolved/) and are no longe
 | `low` | KI-ACS-20260909-standalone-validator-does-not-derive-declares-side-effect — `validate_ac_schema.py` passes records the commit hook then rejects, so a clean bulk run is not evidence on every field | [open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md](ac-store/open-low-ki-acs-20260909-standalone-validator-does-not-derive-declares-side-effect.md) |
 | `low` | KI-ACS-20260923-doc-links-status-not-reconciled — an AC's `doc_links[].status` field is never reconciled against whether its target document actually exists or shipped | [open-low-ki-acs-20260923-doc-links-status-not-reconciled.md](ac-store/open-low-ki-acs-20260923-doc-links-status-not-reconciled.md) |
 | `low` | KI-ACS-20260928 — the done-proof pytest rootdir walk has no upper bound, so a config file above the project can become the test run's cwd | [open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md](ac-store/open-low-ki-acs-20260928-done-proof-rootdir-walk-unbounded.md) |
+| `low` | KI-ACS-20261014-untagged-done-ratchet-counts-composites-as-untested — the KM-ADM-005 ratchet wants a `# covers:` tag on a composite AC itself, although the required done-proof gate proves a composite through its children, so marking a fully tested parent done fails the required pytest check | [open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md](ac-store/open-low-ki-acs-20261014-untagged-done-ratchet-counts-composites-as-untested.md) |
 
 ## Resolved
 

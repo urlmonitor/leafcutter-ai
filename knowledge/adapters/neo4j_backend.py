@@ -62,6 +62,8 @@ class Neo4jBackend:
 
     # Expected and kept counts of the last publication's build, set by neo4j_projection.publish.
     publication_counts: dict | None = None
+    # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
+    publication_removal: dict | None = None
 
     def __init__(
         self,

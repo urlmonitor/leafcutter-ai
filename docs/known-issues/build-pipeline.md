@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-14'
 components:
   - build_pipeline
 related_docs:
@@ -101,7 +101,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 46** (1 blocker, 22 high, 23 low) · **Resolved: 12**
+**Open: 51** (1 blocker, 22 high, 3 medium, 25 low) · **Resolved: 13** (recounted from the directory 2026-10-14; the table below still lacks rows for some entries filed since 2026-09-28)
 
 ## Open
 
@@ -160,6 +160,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
 | `low` | KI-BP-20260927 — the closure walk's second-hop symlink fix has no regression test, so a reintroduced `.resolve()` would only be caught by an unrelated CI failure | [open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md](build-pipeline/open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md) |
 | `low` | KI-BP-20260928-closure-guard-reads-comparison-literals-as-file-reads — the intra-package closure guard treats a `dir/file.ext` literal used only for path comparison as a data-file read and fails the build with a false missing-deploy-mapping | [open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md](build-pipeline/open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md) |
+| `medium` | KI-BP-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable — when `git log <pin>..HEAD` fails, `build_halt_guard` silently treats every changelog entry as new, so an already-applied breaking migration halts the build again instead of the guard saying it could not tell | [open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md](build-pipeline/open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md) |
 
 ## Resolved
 
