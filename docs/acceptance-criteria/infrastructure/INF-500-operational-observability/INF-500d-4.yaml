@@ -97,7 +97,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
     relationship: constrains
     status: exists
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     relationship: describes
     status: exists
     relevance: "The defect census (787 records across 18 sinks on 2026-09-30, 1 in the sink people check)."

@@ -36,7 +36,7 @@ doc_links:
     relationship: modifies
     status: exists
     relevance: "Canonical source. scripts/feedback/ is a git-ignored build output of this file."
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     relationship: describes
     status: exists
     relevance: "KI-FC-001. Its fix direction ends: echo the resolved sink path to stderr on every run, so a split is visible at the call site. This record is that step and only that step."

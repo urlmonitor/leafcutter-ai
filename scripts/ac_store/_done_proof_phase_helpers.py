@@ -129,6 +129,8 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
                 "covered_by": [str(child_id) for child_id in covered_by],
                 "test_required": data.get("test_required"),
                 "test_rationale": data.get("test_rationale"),
+                "req_status": data.get("req_status"),  # KI-ACS-016
+                "superseded_by": data.get("superseded_by"),  # KI-ACS-016
             }
     return status_map
 
