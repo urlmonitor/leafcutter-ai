@@ -37,7 +37,7 @@ COMPOSITE = "BO-9301"
 DONE_CHILD = "BO-9301-i"
 GONE_CHILD = "BO-9301-ii"
 TODO_CHILD = "BO-9301-iii"
-SUPERSEDED_FORMS = {
+SUPERSEDED_FORMS: dict[str, dict[str, object]] = {
     "req_status": {"req_status": "superseded"},
     "superseded_by": {"superseded_by": ["BO-9999"]},
     "both": {"req_status": "superseded", "superseded_by": ["BO-9999"]},
