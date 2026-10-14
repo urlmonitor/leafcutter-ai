@@ -29,7 +29,7 @@
       "implements": [
         "UXP-510"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
