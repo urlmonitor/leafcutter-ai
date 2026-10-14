@@ -119,7 +119,7 @@ agents:
   ac-validator: signed_off
   adr-author: signed_off
   architect-review: signed_off
-  commit: needed
+  commit: signed_off
   documentation-expert: signed_off
   documentation-verifier: signed_off
   frontend-coder: not_needed
@@ -594,7 +594,7 @@ tests:
 - [x] ac-validator — 2026-10-14 12:30
 - [x] ac-fulfillment-gate — 2026-10-14 13:00
 - [x] documentation-verifier — 2026-10-14 13:10
-- [ ] commit
+- [x] commit — 2026-10-14 14:00
 
 ## Comments
 
@@ -862,3 +862,9 @@ completion_manifest:
   no_placeholder_content_in_changed_docs: true
 Documentation coverage verified: both required docs (docs/how-to/drive-epic-manually.md, docs/how-to/verify-precommit-active.md) are present in the working-tree diff (the branch range against origin/scaffold/EPIC-BO-4300 was empty for them) with real content; helper scan, TBD, token and stub checks all clean.
 
+### 2026-10-14 14:00 — commit (status: ok)
+feedback-id: fb_2026-10-14_127981b3
+
+Committed f837478fb (part 2 of 2); part 1 = edc6d4a65. The file-size cuts on scripts/build.py, finalize-feature.js and plan-feature.js were genuine: the helper moved to scripts/build_target_guard.py and stale history and comments were removed. All pre-commit hooks passed with no bypass.
+
+Q6 operational deletion of leafcutter-ai/.leafcutter/ is DEFERRED by user-approved decision dec-02bc263515e9d362 (2026-10-14): on main the main checkout's hooks, new-worktree provisioning and the paused-run store still depend on it. After the epic merges and is built: confirm no session has work in the main checkout, back up paused_runs/ and debugging/ outside the repo, ask the user per paused run, then delete it and the root .pre-commit-config.yaml with before/after listings recorded here. Before listing 2026-10-13: .agents agents commands config debugging gemini hooks paused_runs pre-commit-config.yaml scripts settings.json skills workflows. Never touch the parent install.
