@@ -232,8 +232,9 @@ async def evaluate_retention(
         now: Optional clock value for deterministic age checks.
 
     Returns:
-        A report naming the bound, its configuration source, and a
-        reclaimability verdict with a reason for every retained generation.
+        A report naming the bound, the ``assessed`` count of generation
+        records evaluated (whatever their publication outcome), and a
+        reclaimability verdict with a reason for every one of them.
 
     Raises:
         TypeError: When no declared RetentionBound is supplied (nothing is read).
@@ -251,26 +252,31 @@ async def evaluate_retention(
     ]
     return {
         "bound": bound.model_dump(),
+        "assessed": len(verdicts),
         "generations": verdicts,
         "reclaimable": [v["generation_id"] for v in verdicts if v["reclaimable"]],
     }
 
 
 async def retention_facts(db: Neo4jBackend, repository_id: str) -> list[dict]:
-    """Read generation_id, active, created_at, retired_at and pinned_until per ready generation.
+    """Read generation_id, publication_status, active, created_at, retired_at and pinned_until.
+
+    Every generation record is returned whatever its publication outcome
+    (ready, validated, building, failed); none is filtered out.
 
     Args:
         db: Scoped Neo4j adapter owning the driver and transaction policy.
         repository_id: Trusted repository namespace isolating all reads.
 
     Returns:
-        One row per retained ready generation; pinned_until is None when no
+        One row per generation record; pinned_until is None when no
         continuation is pinned to it. Read-only.
     """
     return await db._run(
         "OPTIONAL MATCH (r:Repository {repository_id:$repo}) "
-        'MATCH (g:Snapshot {repository_id:$repo}) WHERE g.status="ready" '
-        "RETURN g.generation_id AS generation_id, coalesce(g.key = r.active, false) AS active, "
+        "MATCH (g:Snapshot {repository_id:$repo}) "
+        "RETURN g.generation_id AS generation_id, g.status AS publication_status, "
+        "coalesce(g.key = r.active, false) AS active, "
         "g.created_at AS created_at, g.retired_at AS retired_at, g.pinned_until AS pinned_until",
         {"repo": repository_id},
     )
@@ -366,4 +372,5 @@ async def cleanup(
     return True
 
 
+# - 2026-10-14 [python-coder]: Assess every generation record regardless of publication outcome and report the assessed count. (#KM-400f-1-i)
 # - 2026-10-01 [python-coder]: Preserve question evidence and explicit source support through bounded research. (#KM-500/KM-500e-2)
