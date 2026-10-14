@@ -61,7 +61,7 @@ from pathlib import Path
 
 import yaml
 from product_truth_flow_fields import refresh_flow_fields
-from product_truth_text import _scalar, apply_product_truth_text, serialize_product_truth  # noqa: F401
+from product_truth_text import _read_text, _scalar, _write_text, apply_product_truth_text, serialize_product_truth  # noqa: F401
 from product_truth_shapes import combine_statuses, expansion_targets, normalise_flow_shapes
 
 logger = logging.getLogger("generate_product_truth")
@@ -286,22 +286,6 @@ def build_by_flow(flows: dict, flow_paths: dict, ac_map: dict, run_date: str | N
 # --------------------------------------------------------------------------- #
 # I/O boundary (typed try/except, log + re-raise per repo error-handling policy)
 # --------------------------------------------------------------------------- #
-def _read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        logger.exception("cannot read %s", path)
-        raise
-
-
-def _write_text(path: Path, text: str) -> None:
-    try:
-        path.write_text(text, encoding="utf-8")
-    except OSError:
-        logger.exception("cannot write %s", path)
-        raise
-
-
 def _load_json(path: Path) -> dict:
     try:
         with path.open(encoding="utf-8") as handle:
