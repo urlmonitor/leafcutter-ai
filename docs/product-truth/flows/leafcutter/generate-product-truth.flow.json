@@ -418,7 +418,7 @@
       "implements": [
         "UXP-513"
       ],
-      "impl_status": "not_started",
+      "impl_status": "done",
       "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
@@ -864,9 +864,9 @@
   ],
   "branches": [],
   "impl_summary": {
-    "done": 0,
+    "done": 1,
     "in_progress": 2,
-    "not_started": 3,
+    "not_started": 2,
     "total": 5,
     "asof": "2026-10-14"
   },
