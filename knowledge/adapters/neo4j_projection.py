@@ -5,6 +5,7 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 15:00 [python-coder]: Count check names each mismatched kind with expected and kept figures and publishes them. (#KM-400b-2-ii)
 - 2026-10-14 14:00 [python-coder]: Collapse identical relationships in publish, before the first write. (#KM-400b-2-i/01)
 - 2026-10-01 12:00 [python-coder]: Separate build transactions from publication CAS. (#TICKET-KM-400b-3)
 """
@@ -53,6 +54,8 @@ async def publish(
     # The digest names the loaded source content, so it is taken before the collapse: a
     # generation record left by an earlier attempt on the same revision keeps its identity.
     digest = hashlib.sha256(snapshot.model_dump_json().encode()).hexdigest()
+    # Counts belong to this publication only; an already-ready generation reports none.
+    db.publication_counts = None
     collapse_identical_edges(snapshot)  # in place, before any node or relationship is written
     validate_snapshot(snapshot)
     unsupported = await db._run(_CONTROL_SCHEMA_QUERY, {"repo": snapshot.repository_id})
@@ -88,7 +91,10 @@ async def publish(
     if rows[0]["status"] != "ready":
         try:
             await _build(db, snapshot, key)
-            await _validate_counts(db, key, len(snapshot.nodes), len(snapshot.edges))
+            # edges were collapsed to distinct identities above, so len() is what the store keys on
+            db.publication_counts = await _validate_counts(
+                db, key, len(snapshot.nodes), len(snapshot.edges)
+            )
         except (ValueError, BackendUnavailable) as error:
             await db._run(
                 'MATCH (g:Snapshot {key:$key}) WHERE g.status<>"ready" SET g.status="failed",g.error_code=$code,g.failed_at=$now',
@@ -119,14 +125,20 @@ async def _build(db: Neo4jBackend, snapshot: ProjectionSnapshot, key: str) -> No
     await build(db, snapshot, key)
 
 
-async def _validate_counts(db: Neo4jBackend, key: str, nodes: int, edges: int) -> None:
+async def _validate_counts(db: Neo4jBackend, key: str, nodes: int, edges: int) -> dict:
     """Reject a staging generation whose persisted record counts differ.
 
     Args:
         db: Scoped Neo4j adapter owning the driver and transaction policy.
         key: Trusted hashed repository/generation scope key.
         nodes: Expected number of staged entity records.
-        edges: Expected number of staged relationship records.
+        edges: Expected number of distinct staged relationship identities.
+
+    Returns:
+        Expected and kept figures for nodes and for relationships.
+
+    Raises:
+        ValueError: Naming each mismatched kind with its expected and kept figure.
     """
     rows = await db._run(
         "MATCH (n:" + NODE_LABELS + " {generation_key:$key}) RETURN count(n) AS count", {"key": key}
@@ -141,8 +153,18 @@ async def _validate_counts(db: Neo4jBackend, key: str, nodes: int, edges: int) -
         + " {generation_key:$key}) RETURN count(r) AS count",
         {"key": key},
     )
-    if rows[0]["count"] != nodes or links[0]["count"] != edges:
-        raise ValueError("generation count validation failed")
+    counts = {
+        "nodes": {"expected": nodes, "kept": rows[0]["count"]},
+        "relationships": {"expected": edges, "kept": links[0]["count"]},
+    }
+    wrong = [
+        f"{kind} expected {c['expected']} kept {c['kept']}"
+        for kind, c in counts.items()
+        if c["expected"] != c["kept"]
+    ]
+    if wrong:
+        raise ValueError("generation count validation failed: " + "; ".join(wrong))
+    return counts
 
 
 async def switch_active(

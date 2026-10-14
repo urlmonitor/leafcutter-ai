@@ -137,7 +137,13 @@ async def sync(
     published = await backend.publish(
         snapshot, expected_generation=active.generation_id if active else None
     )
-    return {"status": "ok" if published else "stale", "published": published, **_plan(snapshot)}
+    counts = getattr(backend, "publication_counts", None)
+    return {
+        "status": "ok" if published else "stale",
+        "published": published,
+        "counts": counts,
+        **_plan(snapshot),
+    }
 
 
 def _plan(snapshot: ProjectionSnapshot) -> dict:
