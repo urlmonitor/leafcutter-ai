@@ -77,6 +77,7 @@ import _rc_changed
 import _rc_components
 import _rc_contracts
 import _rc_declared
+import _rc_design_grounding
 import _rc_doc_triggers
 import _rc_readiness
 import _rc_record_schema
@@ -116,6 +117,7 @@ logger = logging.getLogger("requirement_rule_check")
 FAMILIES: list[Any] = [
     _rc_record_schema, _rc_backlinks, _rc_components, _rc_readiness, _rc_contracts, _rc_doc_triggers,
     _rc_declared.FAMILY_SURFACE_RULE, _rc_declared.FAMILY_MODIFIES_RULE, _rc_test_intent,
+    _rc_design_grounding,
 ]
 
 STAGES = ("po", "ba", "itpo", "test-design", "approval")

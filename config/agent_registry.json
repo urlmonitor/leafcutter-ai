@@ -3291,6 +3291,44 @@
             ]
         },
         {
+            "id": "test-designer",
+            "name": "Test Designer",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "plan-feature.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-designer.md",
+            "model": "sonnet",
+            "skills_used": [],
+            "description": "Code-aware planning agent that reads the pre-pass report, then the real code files and existing tests, and writes the test design (ACD-2500c) and the file findings (ACD-2500d) onto the requirement record in separate fields before the build. The only planning step that may read source (ADR-072).",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (date, git)"
+                }
+            ],
+            "produces": "analysis",
+            "components": [
+                "product_ownership"
+            ]
+        },
+        {
             "id": "build-ac",
             "name": "Build AC",
             "tier": "utility",

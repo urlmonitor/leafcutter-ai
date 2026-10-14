@@ -92,3 +92,4 @@ python scripts/adr_refs.py --index --write
 | [ADR-066](ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md) | Active | The Kernel Resolves Named Terms by Research and Finds Its Own Repository Root | 2026-10-02 |
 | [ADR-067](ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | Active | The Kernel Splits a Bundled Request into Parts a Person Approves | 2026-10-05 |
 | [ADR-071](ADR-071-test-intent-is-not-a-test-contract.md) | Active | Test Intent Is Not a Test Contract | 2026-10-14 |
+| [ADR-072](ADR-072-code-aware-test-designer-may-read-source.md) | Proposed | The Code-Aware Test Designer May Read Source | 2026-10-14 |

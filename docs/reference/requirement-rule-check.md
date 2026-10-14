@@ -13,6 +13,7 @@ related_docs:
   - docs/reference/ac-readiness-and-assignment-gates.md
   - docs/reference/ac-declared-files.md
   - docs/reference/ac-id-hierarchy.md
+  - docs/reference/code-aware-step.md
   - docs/architecture/components/ac-driven-dev.md
   - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
   - scripts/ac_store/requirement_rule_check.py
@@ -33,7 +34,7 @@ The check reads a set of requirement records, repairs three one-right-answer vio
 | Script | `scripts/ac_store/requirement_rule_check.py` (deployed to `<root>/scripts/ac_store/`, with the `_rc_*.py` modules, flat) |
 | Output | One JSON document on stdout; logging goes to stderr |
 | Exit codes | `0` passed, `1` failed, `2` usage error |
-| Rule families | 8 rule families plus the pass-through `record schema` and `record readable` |
+| Rule families | 9 rule families plus the pass-through `record schema` and `record readable` |
 | Writer | `_rc_edit.py` only; it may write `covered_by`, `components` and `readiness` |
 
 ---
@@ -132,7 +133,7 @@ Findings are sorted by file, rule family, subject, record id, message. There is 
 
 ## Rule families
 
-Eight rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
+Nine rule families, evaluated in the order listed after `record schema`. Only families 1, 2 and 4 repair. Every repair goes through `_rc_edit`, which refuses any field outside `{covered_by, components, readiness}` (`ProtectedFieldError`), and writes only after proving that the old and new YAML differ in the target key alone.
 
 | # | Family name (exact string) | Dispositions it produces | Repairable field |
 |---|---|---|---|
@@ -144,6 +145,7 @@ Eight rule families, evaluated in the order listed after `record schema`. Only f
 | 6 | `specialist versus surface` | `needs a decision`, `not evaluated`, `failed` | none |
 | 7 | `declared files versus modifies links` | `needs a decision`, `not evaluated` | none |
 | 8 | `test intent coverage` | `needs a decision` | none |
+| 9 | `test design grounding` | `needs a decision`, `not evaluated` | none |
 | - | `record schema` (pass-through) | `needs a decision`, `failed` | none |
 | - | `record readable` (pass-through) | `failed` | none |
 
@@ -210,6 +212,10 @@ Judges coverage of `test_intent` ([test-intent.md](test-intent.md)) against the 
 | `duplicate` | A clause has more than one entry. |
 
 Each finding is `needs a decision`, one per clause, with `detail {kind, clause}` and no line. Clauses and entry texts are compared under `normalise_clause`. A failing `itpo` stage goes back to the IT PO.
+
+### 9. test design grounding
+
+Judges a code-aware design: only a record with a non-empty `test_spec` and the authorship mark (legacy designs are exempt). Each finding is `needs a decision` with `detail {kind, entry, path}`, `entry` being the `test_spec` entry `name`: `absent` (the `code_file` is neither in the tree nor declared `to_be_created`; the flag alone never grounds it), `not-grounded` (`test_design_opened_files` empty or missing; no `entry`/`path`), `no-clause`, `dangling-clause`, `missing-dir`, `missing-convention`. A `to_be_created` entry on a record with no declared files is `not evaluated: no declared files`.
 
 ### Pass-through families
 
