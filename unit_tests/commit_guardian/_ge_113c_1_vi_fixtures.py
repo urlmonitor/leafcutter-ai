@@ -189,6 +189,11 @@ def build_minimal_package(
     write_schema(pkg_root / "config" / "agent_registry.schema.json")
     templates_agents_dir = pkg_root / "templates" / "agents"
     templates_agents_dir.mkdir(parents=True, exist_ok=True)
+    # A real package always has templates/skills/ and at least one shared guide;
+    # the ability-reference check (AR-400a-1-i) refuses a tree with neither.
+    skills_dir = pkg_root / "templates" / "skills"
+    skills_dir.mkdir(parents=True, exist_ok=True)
+    (skills_dir / "README.md").write_text("# Skills\n\nFixture skills catalogue.\n", encoding="utf-8")
     if include_fixture_template:
         (templates_agents_dir / "fixture-agent.md").write_text(
             FIXTURE_TEMPLATE_BODY, encoding="utf-8"
