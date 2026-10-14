@@ -4,7 +4,7 @@ description: "Lookup for the declared generation retention bound of the knowledg
 type: reference
 status: active
 created: 2026-10-12
-last_updated: 2026-10-14
+last_updated: 2026-10-15
 components:
   - knowledge_management
   - decision_kernel
@@ -101,12 +101,15 @@ Defined in `knowledge/adapters/neo4j_retention.py`. Read-only. `now` is an optio
 | `reclaimable_by_basis_note` | string | States that the per-basis counts may overlap and are not a total. |
 | `active_generation` | string or null | `generation_id` of the generation the active pointer references; `null` when no generation is flagged active. |
 | `findings` | list of strings | Statements about the active pointer; empty when the active generation's publication completed. See [Active generation](#active-generation). |
+| `unaccounted_nodes` | integer or string | AC `KM-400f-1-v`. Count of entity nodes whose generation key matches no generation record. Always present; `0` is stated, never omitted. `"undetermined"` when the backend cannot count nodes. See [Entity-node reconciliation](#entity-node-reconciliation). |
+| `unaccounted_generation_keys` | list of strings or string | Sorted generation keys those nodes name; empty list when `unaccounted_nodes` is `0`. `"undetermined"` when the backend cannot count nodes. |
 
 ### Per-generation verdict
 
 | Key | Type | Description |
 |---|---|---|
 | `generation_id` | string | Generation identifier. |
+| `entity_nodes` | integer or string | AC `KM-400f-1-v`. Entity nodes attributed to this generation record. `0` is stated for a generation with no nodes. `"undetermined"` when the backend cannot count nodes. |
 | `reclaimable` | boolean | Whether the bound permits reclaiming the generation. |
 | `reason` | string | One value from the reason vocabulary. |
 | `reclaimable_bases` | list of strings | AC `KM-400f-1-iv`. The named bases on which a reclaimable generation is reclaimable: `outside_count_bound`, `publication_failed`, or both. Empty when the generation is not reclaimable. |
@@ -170,6 +173,26 @@ AC `KM-400f-1-iv`. Routine retention and accumulated failed publications call fo
 A generation holding both lists both, whatever the input order. `reclaimable_by_basis` counts a generation under each basis it holds, so the counts may overlap and must not be read as a total; the length of `reclaimable` is the total.
 
 Count rank is taken over generations whose publication did not fail. A failed generation never occupies a count slot; it is outside the bound when at least `generation_limit` non-failed generations are newer than it. A failed generation inside the bound is still reclaimable on the `publication_failed` basis once the age, pin and active checks pass. The `retention` command output carries the same fields.
+
+### Entity-node reconciliation
+
+AC `KM-400f-1-v`. Entity nodes tagged with a generation are reconciled against the generation records in the same evaluation, so nodes that no record accounts for are counted rather than assumed absent.
+
+| Item | Definition |
+|---|---|
+| Source of counts | `entity_node_counts(db, repository_id)` in `knowledge/adapters/neo4j_retention.py`, exposed as `Neo4jBackend.entity_node_counts`. Read-only. Returns one `{"generation_key", "nodes"}` row per distinct non-null `generation_key` carried by entity nodes of the repository. |
+| Reconciliation | `_reconcile_nodes` matches each row's key against `scope_key(repository_id, generation_id)` for every row of `retention_facts`, the full record set with failed publications included. |
+| Attributed | A node whose key matches a record is counted in that generation's `entity_nodes`. Per-generation counts plus `unaccounted_nodes` equal the store's count of generation-tagged entity nodes. |
+| Unaccounted | A node whose key matches no record. Counted in `unaccounted_nodes`, named in `unaccounted_generation_keys`. |
+| Empty generation | A record with no nodes reports `entity_nodes: 0`. It is not unaccounted. |
+
+Unaccounted nodes appear in no verdict, are never listed in `reclaimable` and are not counted in `reclaimable_by_basis`. Every generation that has a record still receives its own verdict. The figure rises and falls with the unaccounted population (400 nodes then 200 more reports 600).
+
+When `db` has no `entity_node_counts`, the figures are the string `"undetermined"`, never a false `0`.
+
+The figure is the only signal that reclaiming every reclaimable generation would still leave nodes behind. It is consumed by KM-400f-3 (headroom measurement) and KM-400f-4 (operator surface), which report it rather than recompute it.
+
+Not established: the live test (`tests/knowledge_live/test_km_400f_1_v.py`) skips when Neo4j is unreachable, so the count query has not been run against a real database in this change.
 
 ---
 
@@ -259,6 +282,7 @@ This removal is separate from retention reclaiming. A failed publication reclaim
 - [Knowledge Retrieval Answers](knowledge-retrieval-answers.md) - Sibling reference for the retrieval surfaces.
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md) - Ownership and integration boundaries.
 - [ADR-062](../architecture/adrs/ADR-062-standalone-knowledge-retrieval.md) - Immutable standalone projection decision.
+- [Artifact knowledge graph data map](artifact-knowledge-graph-data-map.md) - Node identities and generation tagging the reconciliation counts against.
 - [AC schema reference](ac-schema.md) - Schema of the acceptance-criteria records cited here.
 - [KM-400f-1](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml) - Parent AC declaring the retention bound.
 - [KM-400f-4](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml) - Operator listing and sweep; reports the reclaimable bases rather than recomputing them.

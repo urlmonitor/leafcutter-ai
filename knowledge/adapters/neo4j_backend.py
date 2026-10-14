@@ -418,6 +418,19 @@ class Neo4jBackend:
 
         return await retention_facts(self, repository_id)
 
+    async def entity_node_counts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, how many entity nodes name each generation key.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per distinct generation key carried by entity nodes.
+        """
+        from knowledge.adapters.neo4j_retention import entity_node_counts
+
+        return await entity_node_counts(self, repository_id)
+
     async def close(self) -> None:
         """Close the configured driver's pool."""
         await asyncio.to_thread(self.driver.close)
