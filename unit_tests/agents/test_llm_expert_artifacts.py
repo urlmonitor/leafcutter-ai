@@ -143,7 +143,6 @@ def _registry_agent(agent_id: str) -> dict:
     assert len(matches) == 1, f"expected exactly one '{agent_id}' registry entry"
     return matches[0]
 
-
 # ---------------------------------------------------------------------------
 # BP-200a — agent template (templates/agents/llm-expert.md)
 # ---------------------------------------------------------------------------
@@ -363,8 +362,8 @@ def test_bp200c_2_trigger_conditions_dsl_and_llm():
 def test_bp200c_3_spawn_wiring_and_skills_used():
     # covers: BP-200c-3
     supervisor = _registry_agent("ticket-supervisor")
-    assert "llm-expert" in supervisor["spawn_allowlist"]
     entry = _registry_agent("llm-expert")
+    assert "__ticket_phase_agents__" in supervisor["spawn_allowlist"] and entry.get("is_ticket_phase")  # AR-400f-2
     assert "ticket-supervisor" in entry["spawned_by"]
     assert "research-agent" in entry["spawn_allowlist"]
     for skill in ("add-agent-to-package", "add-skill-to-package", "signoff"):

@@ -38,6 +38,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from agent_signoff_grant_check import signoff_grant_errors
 from registry_verification_flags import validate_verification_flags
 from skill_tool_grant_validator import validate_tool_grants
 from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
@@ -106,7 +107,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
         whether to abort.
     """
     errors: list[str] = []
-
     agents, load_errors = _load_agents(package_root)
     errors.extend(load_errors)
     if load_errors:
@@ -115,19 +115,16 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     domain_agents = [a for a in agents if not a.get("portable", True)]
     registry_ids = {a["id"] for a in agents}
     template_dir = package_root / "templates" / "agents"
-
     errors.extend(_check_template_paths(portable_agents, package_root))
     errors.extend(_check_orphan_templates(registry_ids, template_dir))
-
     spawn_map = {a["id"]: a.get("spawn_allowlist", []) for a in agents}
     spawned_by_map = {a["id"]: a.get("spawned_by", []) for a in agents}
     errors.extend(check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids, package_root))
     errors.extend(_check_self_loops(spawn_map))
     errors.extend(_check_skills_used(portable_agents, package_root))
     errors.extend(check_step_kinds(agents, package_root))
-    errors.extend(validate_verification_flags(template_dir))
-    errors.extend(validate_produces_field(agents, template_dir))
-    errors.extend(validate_tool_grants(template_dir))  # Skill and Agent pairs (AR-200b-2, AR-200b-3)
+    errors.extend(validate_verification_flags(template_dir) + validate_produces_field(agents, template_dir))
+    errors.extend(validate_tool_grants(template_dir) + signoff_grant_errors(agents, package_root))  # AR-200b-2/3; AR-400c-5
     warn_redundant_phase_agents(agents)
 
     # Cross-reference skills_invoked against template body references (AC INF-600g-3).

@@ -34,7 +34,6 @@ PYTHON_CODER_TEMPLATE_FM = {
     "config_keys": {
         "test_command_live_trader": {"required": False},
         "test_output_dir": {"required": False},
-        "collector_enforcer_paths": {"required": False},
     },
     "inputs": [
         {"name": "ticket_path", "type": "path", "description": "Path to ticket .md file"},
@@ -70,7 +69,6 @@ PYTHON_CODER_TEMPLATE_FM = {
         {"skill_id": "signoff", "mode": "always"},
         {"skill_id": "doc-enforcer", "mode": "always"},
         {"skill_id": "complexity-reduction", "mode": "conditional", "condition": "when flagged"},
-        {"skill_id": "collector-enforcer", "mode": "conditional", "condition": "when paths under collector/"},
     ],
 }
 

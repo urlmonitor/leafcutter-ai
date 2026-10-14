@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -121,8 +121,11 @@ amended_by:
     date: '2026-10-12'
     changed: "criteria: new clause -- a specialist whose registry tier is 'supervisor' with `signoff: false` and a signoff grant produces no finding; the same declaration on any other tier stops the build. it_requirements: the epic-supervisor blocker replaced by the tier-based exemption and the real-tree measurement; test_spec gains the supervisor/non-supervisor negative-control pair. WHY: user decision 9 (BrainCandy, 2026-10-12): exempt agents whose registry tier is supervisor (data, not a name list) -- epic-supervisor and ticket-supervisor validate ticket state with the signoff skill; only an explicit `signoff: false` counts, an absent key is unaffected (confirms the fifth clause)."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400c_5_signoff_false_grant.py
+implemented_by:
+  - scripts/agent_signoff_grant_check.py
+  - scripts/registry_validator.py
 notes: |
   USER DECISION 6 (BrainCandy, 2026-10-12), BINDING: the mechanical case raised
   as an open question in AR-400c-2's notes is adopted as a refusing check.

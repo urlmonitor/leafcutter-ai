@@ -2,7 +2,7 @@
 
 If you were invoked with a `ticket_path` argument:
 
-1. **Resolve and load the sign-off skill.** Read it in full before editing anything.
+1. **Resolve and load the `signoff` skill.** Read it in full before editing anything.
    - Consumer project (after `build.py`): `.claude/skills/signoff/SKILL.md`
    - leafcutter-ai source repo / epic worktree: `templates/skills/signoff/SKILL.md`
 
