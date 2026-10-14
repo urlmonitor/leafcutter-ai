@@ -1,0 +1,210 @@
+id: INF-500d-4-ix
+components:
+  - infrastructure
+  - agent_telemetry
+  - knowledge_system
+title: "Every copy of the usable-stream and stale-root rule gives the canonical verdict, and a copy that drifts fails a check"
+component: infrastructure
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the rule "is this declared log stream usable, and is the enduring root that
+    holds it still live" exists once as the canonical rule and five more times as
+    copies of it:
+      - the canonical rule in the shared sink-resolution module,
+      - the inline copy carried by the agent-telemetry event writer,
+      - the inline copy carried by the inline-work guard hook,
+      - the telemetry command the plan-feature workflow dispatches for its
+        product-truth events,
+      - the pre-drive reachability probe in the epic-building runbook,
+      - the same probe in the epic supervisor's pre-flight checklist,
+  And each copy is taken from a deployed install, in the form an agent, hook or
+    workflow actually runs it,
+  And for a copy that keeps a log file of its own rather than reading a declared
+    stream, the canonical verdict it is compared against is the verdict the rule
+    gives for that file placed directly under the declared root,
+  And a table of installs with one declaration and filesystem layout per row:
+      - no declaration file,
+      - a declaration that is an empty object, which is what a build with no log
+        root records,
+      - a declaration that cannot be parsed,
+      - a declaration with no operational log root,
+      - a declaration whose operational log root is a relative path,
+      - a declaration whose stream is missing, or is a relative path,
+      - a declaration whose stream sits outside the operational log root,
+      - a declaration whose stream sits two levels under the operational log root,
+      - a valid declaration whose log directory exists,
+      - a valid declaration whose log directory is missing under a live enduring
+        root (a fresh install), once in the conventional project/debugging/logs
+        layout and once with a log root that is not under a debugging directory,
+      - a valid declaration whose enduring root has vanished, in both of those
+        layouts,
+  When the parity check feeds every row to every copy,
+  Then every copy returns the same usable-or-unusable verdict as the canonical rule
+    on every row,
+  And on every row the canonical rule finds usable, every copy that reports a
+    location reports the same absolute location the canonical rule returns,
+  And exactly the valid rows whose enduring root is live are usable, so a table on
+    which every copy agrees that everything is unusable, or that everything is
+    usable, fails the check instead of passing it,
+  And on every unusable row no copy brings the log directory or the enduring root
+    into existence, and no copy leaves any new file behind.
+
+  Given the plan-feature telemetry command and the two pre-drive probes are workflow
+    and prompt text rather than importable code,
+  When the parity check compares them,
+  Then each one is executed in a shell exactly as the deployed text states it,
+    against the same row layouts as every other copy,
+  And its verdict is read from what it observably does: the probe's
+    reachable-or-unreachable outcome, and the telemetry command's exit status
+    together with whether the declared stream gained exactly one line,
+  And a check that only searches the text for expected words or fragments does not
+    satisfy this criterion.
+
+  Given the canonical rule is changed so its verdict flips on one row, for example
+    a stream two levels under the root becomes usable, or a missing log directory
+    under a live enduring root is treated as stale,
+  And one of the five copies is left as it was,
+  When the parity check runs in the test suite that guards a merge,
+  Then the check fails,
+  And the failure names the copy that disagrees, the row it disagrees on, and the
+    two verdicts,
+  So that the drift is caught before the change merges, not discovered later when a
+    drive's logs are lost or its writers refuse.
+
+  Given one of the five copies can no longer be found in the deployed install, or
+    its command can no longer be extracted and run as written,
+  When the parity check runs,
+  Then the check fails and names the copy it could not find or run,
+  And every run reports how many copies and how many rows it compared, so a run that
+    compared nothing cannot report agreement.
+depends_on:
+  - INF-500d-4
+  - INF-500d-4-iv
+  - INF-500d-4-vi
+doc_links:
+  - path: docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+    relationship: constrains
+    status: exists
+    relevance: "Implementation record: the usable-stream rule (read_usable_stream), the stale rule (enduring_root_exists / enduring_holder), and the statement that --print-location tests shape but not staleness."
+  - path: scripts/knowledge/sink_resolution.py
+    relationship: describes
+    status: exists
+    relevance: "The canonical rule: read_usable_stream, enduring_holder, enduring_root_exists."
+  - path: templates/skills/agent-telemetry/scripts/emit_event.py
+    relationship: describes
+    status: exists
+    relevance: "Inline copy 1 (_declared_stream). Standard library only by design."
+  - path: templates/hooks/inline_work_guard.py
+    relationship: describes
+    status: exists
+    relevance: "Inline copy 2 (_resolve_audit_path). Standard library only by design. Keeps a file of its own (inline_work_guard.jsonl) rather than reading a declared stream."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 1: the command emitPtTelemetry dispatches (location query, then the holder check and mkdir -p only under a live root)."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 2: the pre-drive-reachability-check snippet in section 1.0."
+  - path: templates/agents/epic-supervisor.md
+    relationship: describes
+    status: exists
+    relevance: "Shell copy 3: the pre-drive-reachability-check snippet in pre-flight check 7."
+  - path: unit_tests/feedback/test_inf_500d_4_iv_usable_stream_parity.py
+    relationship: related
+    status: exists
+    relevance: "The existing parity test. It pins only emit_event against sink_resolution (11 declaration shapes, 5 staleness layouts). This AC extends the same comparison to the other four copies. The row table in the criteria is a superset of its rows."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-iv.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the writers and plan-feature.js whose copies this AC pins."
+  - path: docs/acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-vi.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns the prompt surfaces that carry the two probe snippets."
+assigned_agent: python-coder
+estimated_complexity: null
+delivers_to: null
+expects_from:
+  - ac_id: INF-500d-4-iv
+    contract: "emit_event.py, inline_work_guard.py and plan-feature.js each applying the usable-stream and stale-root rules, as deployed."
+  - ac_id: INF-500d-4-vi
+    contract: "The pre-drive reachability probe snippets in building-epics section 1.0 and epic-supervisor check 7, as deployed."
+origin_agent: BrainCandy
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+declares_side_effect: false
+notes: |
+  Follow-up asked for by BrainCandy on 2026-10-14, after PR #1169 (merge 818c301c0,
+  ADR-069 accepted). The architect-review on tickets 03 (INF-500d-4-iv) and 05
+  (INF-500d-4-vi) of EPIC-OneDurableLogRootForEveryWorkspace found that only
+  emit_event's inline copy is pinned against sink_resolution. The other four copies
+  can drift without any check noticing. The review recommended a follow-up AC and
+  no new ADR. ADR-069 already decides the rule, and this AC only keeps the copies
+  in step with it.
+
+  PLACEMENT. This is an L3 under INF-500d-4, the composite whose rule the copies
+  restate. It is not an L2 under INF-500d, which already has five L2s (d-1 to d-5)
+  and so is at the 5-L2-per-L1 hard cap in check_ac_limits.py. The store caps only
+  L1s per L0 and L2s per L1, so an L2 can take a ninth L3. Roman suffix -ix follows
+  -viii.
+
+  WHY THE SHELL COPIES ARE EXECUTED, NOT GREPPED. The repo rule (CLAUDE.md, "Gate /
+  Workflow ACs: Verify Behaviorally, Not by Grep") is that a test that only looks
+  for a string passes on dead code. The three shell copies are prompt and workflow
+  text. The only proof that they agree is to run each one as written against the
+  same layouts and read what it does.
+
+  WHAT THE SHELL COPIES ACTUALLY RESTATE. All three get their stream from the
+  location query, sink_resolution.py --print-location telemetry. That query runs
+  the canonical shape rule, so on the shape rows they agree with the canonical rule
+  by construction. Per ADR-069's implementation record, the query does NOT test
+  staleness. Each snippet restates the stale rule itself (HOLDER = the log root's
+  parent, or the project above it when that parent is debugging). So the
+  vanished-root rows, in both layouts, are the rows that catch a drifted shell copy.
+  The shape rows still matter: they catch a change to the query's refusal behaviour
+  that a snippet doesn't follow, such as a query that starts printing a path for an
+  unusable stream.
+
+  WHY BOTH LAYOUTS. enduring_holder has two branches: a log root under debugging/
+  (go up two levels) and one that is not (go up one). The existing parity test
+  covers both (flat_root_live, flat_root_gone). A copy that hard-codes the
+  conventional layout agrees on every conventional row and is wrong on the other
+  layout, so the table carries both.
+
+  THE INLINE-WORK GUARD IS A SPECIAL CASE. It reads only operational_log_root and
+  keeps its own file, <root>/inline_work_guard.jsonl, which sits directly under the
+  root by construction. Rows that vary only where the telemetry stream sits (outside,
+  nested, relative, missing) don't change what the guard sees. The criteria
+  therefore compare the guard against the canonical verdict for its own file under
+  the declared root. They do not compare it against the telemetry stream's verdict,
+  which would wrongly report it as drifted. BrainCandy: confirm this is the intended
+  reading, or say if the guard should refuse whenever the declared stream is
+  unusable.
+
+  WRITABILITY IS OUT OF SCOPE. The two probes also test that the nearest existing
+  directory is writable. That is not part of the usable-stream or stale-root rule.
+  Every row's layout is writable, so writability never decides a verdict here.
+
+  DEPLOYED, NOT SOURCE. The probe snippets carry a {{config.output_root}} token that
+  the build resolves, and inject_config can rewrite literals in deployed text.
+  Compare the deployed copies. The shared_reference_layout fixture (reader) is
+  enough for the copies themselves. The row installs are cheap temp declarations,
+  as in the existing parity test, and need no build of their own.
+
+  NOT IN SCOPE. Adding a sixth copy is not covered by these criteria. If one appears,
+  it should join the table under this AC rather than get a parity test of its own.
+  The fourth scenario's copy count makes a missing copy visible. It does not find
+  new ones.
