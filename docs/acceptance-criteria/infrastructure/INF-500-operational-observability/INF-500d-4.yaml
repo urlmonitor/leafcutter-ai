@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -165,7 +165,7 @@ amended_by:
   - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved on this record and on the children this change set touched or created (INF-500d-4-i, -iii, -iv, -v, -vi, -vii, -viii); INF-500d-4-ii was already approved and done and is not touched. Criteria and work_status unchanged."
     by: BrainCandy
     at: 2026-10-09
-  - reason: "The four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py (all pass against main). work_status stays todo: the done flip is blocked only by the check-done-proof composite gap, which does not accept the test_required:false documentation children INF-500d-4-vii and INF-500d-4-viii as done-and-covered. See KI-CG-20260914-done-proof-precommit-ignores-test-required. Criteria unchanged; covered_by and implemented_by link fields added."
+  - reason: "The four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py (all pass against main). work_status flipped to done. History: a local pre-commit check-done-proof from a deployed hook built 2026-10-08 refused the flip over the test_required:false documentation children INF-500d-4-vii and INF-500d-4-viii (KI-CG-20260914-done-proof-precommit-ignores-test-required); PR #1165 fixed that waiver gap in source and the source composite check reports no unproven children. Criteria unchanged; covered_by and implemented_by link fields added."
     by: test-writer
     at: 2026-10-14
 superseded_by: null
