@@ -174,6 +174,31 @@ Output: `{"status": "ok", "bound": {...}, "assessed": N, "generations": [...], "
 
 ---
 
+## Failed publication removal
+
+Defined by `publish` in `knowledge/adapters/neo4j_projection.py` (AC `KM-400b-5-i`, `docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml`).
+
+When a publication fails after its build has started (a count-check failure or an unavailable backend), the same operation removes the nodes and relationships tagged with that attempt's own generation key. Removal never matches on failed status, so other repositories and older generations are untouched. The generation record stays, with status `failed`.
+
+The failure keeps its original cause. The message appends one of:
+
+| Removal result | Appended message |
+|---|---|
+| Removed | `failed generation removed: N entity records, M relationships` |
+| Removal itself failed | `failed generation not removed: <reason>` |
+
+The outcome is recorded on the backend as `publication_removal`:
+
+| `outcome` | Shape | Meaning |
+|---|---|---|
+| `removed` | `{"outcome": "removed", "nodes": N, "relationships": M}` | Figures are counted before deleting. |
+| `not_removed` | `{"outcome": "not_removed", "reason": "<reason>"}` | The removal failed; the publication failure is still the one raised. |
+| `nothing_stored` | `{"outcome": "nothing_stored"}` | The publication failed before anything was written; no removal was attempted. |
+
+This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. The retention evaluation's reporting of failed generations as reclaimable remains the backstop for any generation that could not be removed.
+
+---
+
 ## See Also
 
 - [Knowledge retrieval how-to](../how-to/run-knowledge-retrieval.md) - Procedures for running knowledge retrieval.
