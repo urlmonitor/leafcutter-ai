@@ -1,0 +1,98 @@
+id: UXP-617
+components:
+  - ux_prototyping
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "A person can find any flow or step by what it does, who runs it, or what it uses, and share the search"
+component: ux-prototyping
+level: L1
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Find the right flow or step in seconds, then share exactly what you found.
+
+  As a person looking at the Atlas, I want the Flows page to open on a finder
+  rather than on one drawn flow, so that I can search every flow by its name,
+  its step text, the fields it uses or produces, the criteria it carries, and
+  the entities and screens it touches, then narrow the list with counted
+  filters (product; who runs it — code, an AI agent, a person, or Jev; kind;
+  real or mock; level; field used or produced; entity; screen; and steps whose
+  inputs or outputs are not defined yet). Results are grouped by flow and open
+  straight at the matching step, and the search travels in the page address,
+  so a link reproduces it for anyone I send it to.
+
+  While I work, the page stays predictable and easy to use: changing a filter
+  never swaps out the flow I am looking at, every step card shows who runs it,
+  a step opens and closes from the keyboard, the close button says what it
+  closes, every flow page has its own tab title, and a criterion chip opens
+  that criterion in the Atlas.
+depends_on:
+  - UXP-490
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 steps finderOverview, finderSearch, finderFacets, finderUrl, finderResults, openResult, actorBadge, pageTitle and branches finderNoMatch, finderIoGap, acChipLink, drawerByKey, drawerCloseByKey, each with an acceptance_scenario."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: specified-by
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specified-by
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-520-atlas-flow-explorer/UXP-591.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling L1 (explore flows visually). The finder sits beside it, not under it."
+documentation_triggers:
+  - how-to
+  - reference-doc
+delivers_to: null
+expects_from: {}
+origin_agent: product-owner
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  PRODUCT TRUTH IS ALREADY APPROVED. The owner approved this feature at all three
+  product-truth gates: mock data leafcutter/atlas-flows v4 (bb878207a), mockups
+  atlas-flows-finder (new) and atlas-flows-canonical-url v2 (cd4359cba), and flow
+  leafcutter/explore-flows-in-atlas v6 (1fabfee90). The flow's eight new steps and
+  five new branches each carry an acceptance_scenario. Those scenarios are the
+  intended source for this L1's L2 children; their implements lists are empty
+  until the L2s exist.
+
+  OWNER DECISIONS, FIXED (2026-10-12): Jev is its own actor value, never shown as
+  "AI agent". Bare /flows is the finder overview, not a drawn flow.
+
+  PARENT CHOICE. Placed directly under UXP-490 rather than under UXP-591, which
+  already has five L2s. The finder is a separate promise: finding the right flow,
+  where UXP-591 is about exploring one flow once you have it.
+
+  SUPERSESSION THE BA MUST RESOLVE. Two approved, not-yet-built L2/L3s under
+  UXP-591 contradict the owner's decisions:
+  - UXP-591-1-i says bare /flows opens the default entry flow. The finder
+    overview replaces that.
+  - UXP-591-5-iii says a filter change that excludes the drawn flow re-picks a
+    new flow. This contradicts "a filter change never swaps the drawn flow".
+  Both are readiness approved and work_status todo. They must be amended or
+  superseded before either side is built. Otherwise /fast-lane-build could ship
+  behaviour the owner has already rejected.
+
+  documentation_triggers [how-to, reference-doc]: a how-to, because a person
+  needs to learn the search, the facets and shareable links. A reference doc,
+  because the address parameters (q, actor= with stored values such as human,
+  llm and jev, io=gap and the rest) store values, not labels, and a shared link depends on them staying
+  stable.
