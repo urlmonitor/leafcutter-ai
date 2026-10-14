@@ -1,12 +1,15 @@
 /**
  * UXP-591-4-ii - closing the drawer returns the address to the flow's
  * canonical address without adding a Back entry. (Ticket names a Python test
- * file; vitest only collects *.test.{ts,tsx}. Drill-then-Back belongs to
- * UXP-591-5 and is not tested here.)
+ * file; vitest only collects *.test.{ts,tsx}.)
+ *
+ * Amended 2026-10-14 (UXP-617): the bare-/flows clause is gone; /flows is the
+ * finder and has no drawer to close.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
-import { clickNode, closeWithCanvas, closeWithX, drawers, expectDrawers } from "../helpers/flow-routes";
+import { cleanup, screen } from "@testing-library/react";
+import { closeWithCanvas, closeWithX, drawers, expectDrawers } from "../helpers/flow-routes";
+import { drillNode, expectOnScreen, labelOf, openTab, traverse } from "../helpers/flow-history-nav";
 import { expectReplaced, openAt, watchHistory, type NavState } from "../helpers/drawer-nav";
 
 const nav = vi.hoisted(() => ({
@@ -65,18 +68,33 @@ describe("closing the drawer", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("a drawer opened and closed on the bare /flows ends at the default flow's canonical address, never /flows", async () => {
+  it("after closing the drawer and drilling into Build, Back returns deliver-a-feature at its canonical address with no drawer", async () => {
     // covers: UXP-591-4-ii
-    // angle: boundary
-    await openAt(nav, "/flows");
-    const w = watchHistory(nav);
-    clickNode("Plan");
+    // angle: seam
+    await openTab(nav, `/flows/${DEFAULT}?step=build`);
+    expect(drawers().map((d) => d.id)).toEqual(["build"]);
     closeWithX();
     await expectDrawers([]);
-    expectReplaced(nav, w, `/flows/${DEFAULT}`, 2);
-    for (const call of w.replace.mock.calls) {
-      expect(String(call[2])).not.toMatch(/^\/flows\/?(\?|$)/);
-    }
+    drillNode(labelOf(DEFAULT, "build"));
+    await expectOnScreen({ flow: "leafcutter/how-acs-are-built", drawer: null });
+    await traverse("back");
+    await expectOnScreen({ flow: DEFAULT, crumbs: [DEFAULT], drawer: null, address: `/flows/${DEFAULT}` });
+  });
+
+  it("the finder at /flows has no drawer to close: no graph node, no close button, no history write", async () => {
+    // covers: UXP-591-4-ii
+    // angle: boundary
+    window.history.replaceState({}, "", "/flows");
+    const w = watchHistory(nav);
+    await openAt(nav, "/flows");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(document.querySelector(".react-flow__node")).toBeNull();
+    expect(document.querySelector(".react-flow__pane")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close step details" })).toBeNull();
+    for (const call of w.replace.mock.calls) expect(String(call[2])).not.toContain("step=");
+    expect(w.push).not.toHaveBeenCalled();
+    expect(window.location.pathname + window.location.search).toBe("/flows");
   });
 
   it("stores the entry's view state with the drawer closed, beside the App Router's keys", async () => {
