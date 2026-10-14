@@ -169,6 +169,7 @@ task, then pull only those files.
 | fast lane build | [docs/how-to/fast-lane-build.md](how-to/fast-lane-build.md) | Run the lean two-agent batch build loop that selects a cohesive AC batch, writes failing test stubs, gates on red baseline, implements the batch, and gates on green coverage before staging a commit. |
 | file and reuse decisions with the kernel | [docs/how-to/file-and-reuse-decisions-with-the-kernel.md](how-to/file-and-reuse-decisions-with-the-kernel.md) | Publish the decision record a kernel run staged into docs/decisions/, review it as a normal git change, validate the store and the generated index, and see how a later run finds the record, judges whether it applies and asks you to reuse it or decide anew. |
 | finalize feature | [docs/how-to/finalize-feature.md](how-to/finalize-feature.md) | Step-by-step guide for running /finalize-feature to merge a feature branch, |
+| find a flow in the atlas | [docs/how-to/find-a-flow-in-the-atlas.md](how-to/find-a-flow-in-the-atlas.md) | Walks a first-time reader through the Atlas Flows finder at /flows: search, filter, share the link, open a step, and recover from an empty result. |
 | goal to epic | [docs/how-to/goal-to-epic.md](how-to/goal-to-epic.md) | Task-oriented guide: invoke /build-ac with a goal-level AC ID to generate a full EPIC folder of tickets in one command. |
 | inject project knowledge into agents | [docs/how-to/inject-project-knowledge-into-agents.md](how-to/inject-project-knowledge-into-agents.md) | Overview of How to inject project knowledge into a portable agent. |
 | inspect kernel traces with langfuse mcp | [docs/how-to/inspect-kernel-traces-with-langfuse-mcp.md](how-to/inspect-kernel-traces-with-langfuse-mcp.md) | Connect your MCP client to Langfuse's authenticated data MCP server, restrict it to read-only tools and read a decision-kernel run's observations (segments, Jev generations, key events) by trace id. |
@@ -208,6 +209,7 @@ task, then pull only those files.
 | architecture docs layout | [docs/reference/architecture-docs-layout.md](reference/architecture-docs-layout.md) | What belongs in each subdirectory of docs/architecture/, which of today's files are misplaced, and what a fresh consumer install must scaffold so the uniqueness gate's four namespace roots all resolve. |
 | artifact knowledge graph data map | [docs/reference/artifact-knowledge-graph-data-map.md](reference/artifact-knowledge-graph-data-map.md) | Node table, edge table, trust ratings, gaps, and graph-build guidance for the leafcutter-ai artifact knowledge graph. Foundation for queries on AC implementation status, test coverage, and product-truth linkage. |
 | artifact numbering | [docs/reference/artifact-numbering.md](reference/artifact-numbering.md) | The one-number-one-artifact rule, the per-namespace numbering shape and free-number lookup for acceptance criteria, decisions, diagrams and work items, and the current (partial) state of whole-collection uniqueness enforcement. |
+| atlas flows finder address | [docs/reference/atlas-flows-finder-address.md](reference/atlas-flows-finder-address.md) | Every query parameter of the /flows finder address with its filter label, stored values and displayed labels; consult it before building, parsing or renaming a finder link. |
 | build telemetry | [docs/reference/build-telemetry.md](reference/build-telemetry.md) | Lookup reference for the build telemetry JSONL record schema, the lane comparison aggregate fields, the emitter API, and the fail-loud sink behavior. |
 | claude code hooks | [docs/reference/claude-code-hooks.md](reference/claude-code-hooks.md) | Reference guide for Claude Code PreToolUse and PostToolUse hooks — hook types, registration format, exit-code contract, and the fail-open convention. |
 | code smell finding anatomy | [docs/reference/code-smell-finding-anatomy.md](reference/code-smell-finding-anatomy.md) | All twelve Modern-12 Fowler code smells with their bucket grouping, primary refactorings, and the exact finding format produced by the review-for-code-smells skill family. |
@@ -254,9 +256,9 @@ task, then pull only those files.
 
 | Name | Path | Description |
 |------|------|-------------|
+| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 | POL GIT 001 git operations without asking | [docs/conventions/POL-GIT-001-git-operations-without-asking.md](conventions/POL-GIT-001-git-operations-without-asking.md) | Approved repository-scoped policy recorded from BrainCandy's decision of 2026-09-30. In leafcutter-ai, Claude and its agents commit, create branches and worktrees, push non-main branches and open pull requests without asking first; merging to main, force-pushing and pushing to main still need the human's confirmation. It is the first learned human decision for the Leafcutter kernel and the seed example for ADR-054 open item 2, not a decision about where or how policies are stored. |
 | PROJECT CONTEXT injection | [docs/conventions/PROJECT_CONTEXT-injection.md](conventions/PROJECT_CONTEXT-injection.md) | Overview of Convention: PROJECT_CONTEXT Injection for Portable Agents. |
-| adr numbering | [docs/conventions/adr-numbering.md](conventions/adr-numbering.md) | Overview of Convention: ADR Numbering and Collision Prevention. |
 
 ## Retrospectives
 
@@ -264,9 +266,9 @@ task, then pull only those files.
 |------|------|-------------|
 | 2026 05 22 epic antigravity support | [docs/retrospectives/2026-05-22-epic-antigravity-support.md](retrospectives/2026-05-22-epic-antigravity-support.md) | Retrospective: Dual Platform Antigravity Support |
 | EPIC ACDrivenDevelopment | [docs/retrospectives/EPIC-ACDrivenDevelopment.md](retrospectives/EPIC-ACDrivenDevelopment.md) | Date: 2026-06-05 |
-| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC AcPatternEnforcementIsMechanically | [docs/retrospectives/EPIC-AcPatternEnforcementIsMechanically.md](retrospectives/EPIC-AcPatternEnforcementIsMechanically.md) | Retrospective for EPIC-AcPatternEnforcementIsMechanically (ACS-500f) |
 | EPIC AcPipelineDeployGaps | [docs/retrospectives/EPIC-AcPipelineDeployGaps.md](retrospectives/EPIC-AcPipelineDeployGaps.md) | Post-merge retrospective for EPIC-AcPipelineDeployGaps (PR #88), covering |
+| EPIC ACTraceabilityStore | [docs/retrospectives/EPIC-ACTraceabilityStore.md](retrospectives/EPIC-ACTraceabilityStore.md) | Date: 2026-06-04 |
 | EPIC BOPhantomDoneRemediation | [docs/retrospectives/EPIC-BOPhantomDoneRemediation.md](retrospectives/EPIC-BOPhantomDoneRemediation.md) | Overview of Retrospective: EPIC-BOPhantomDoneRemediation. |
 | EPIC CodeQualityHooks | [docs/retrospectives/EPIC-CodeQualityHooks.md](retrospectives/EPIC-CodeQualityHooks.md) | Epic retrospective for EPIC-CodeQualityHooks — jscpd duplicate-code detection and diff-cover test-coverage enforcement hooks. |
 | EPIC CompletionManifestSignoff | [docs/retrospectives/EPIC-CompletionManifestSignoff.md](retrospectives/EPIC-CompletionManifestSignoff.md) | Date: 2026-05-30 |
