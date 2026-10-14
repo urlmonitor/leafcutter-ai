@@ -10,9 +10,11 @@ portable: true
 
 # agent-telemetry — record what a drive actually did
 
-Appends structured events to `debugging/logs/agent_telemetry.jsonl` so an epic
+Appends structured events to the install's declared telemetry stream so an epic
 drive can be reconstructed afterwards: which supervisors were dispatched, which
-tickets halted, how many retries a phase took.
+tickets halted, how many retries a phase took. The stream is chosen at build time
+and outlives the workspace; to see where it is, run
+`python3 {{config.output_root}}/scripts/knowledge/sink_resolution.py --print-location telemetry`.
 
 Invoked as a shell command, not read as instructions:
 
@@ -20,8 +22,7 @@ Invoked as a shell command, not read as instructions:
 python .claude/skills/agent-telemetry/scripts/emit_event.py \
   --agent "ticket-supervisor" --event agent_start \
   --ticket "tickets/00_inbox/epics/EPIC-Foo/01_schema.md" \
-  --phase "python-coder" \
-  --log debugging/logs/agent_telemetry.jsonl || true
+  --phase "python-coder" || true
 ```
 
 ## Arguments
@@ -34,7 +35,7 @@ python .claude/skills/agent-telemetry/scripts/emit_event.py \
 | `--phase` | no | Phase name, e.g. `python-coder` |
 | `--outcome` | no | `ok`, `blocked`, `failed`, … |
 | `--retry-count` | no | Attempt number, when the event is a retry |
-| `--log` | no | Sink path. Defaults to `debugging/logs/agent_telemetry.jsonl` |
+| `--log` | no | Sink path override. Do not pass it: the default is the install's declared telemetry stream. |
 
 ## Record shape
 

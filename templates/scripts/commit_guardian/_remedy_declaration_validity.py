@@ -196,10 +196,10 @@ def _existence_findings(
 
 
 def validate(declared: dict[str, dict], manifest: dict, manifest_path: Path, root: Path) -> list[str]:
-    """Judge every declaration in the merged view.
+    """Judge every declaration in the committed package table's view.
 
     Args:
-        declared: Loader view ``{hook_id: declaration}``.
+        declared: View ``{hook_id: declaration}`` built from the committed package table.
         manifest: Parsed canonical manifest (carries the platform agent list).
         manifest_path: Its path (for messages).
         root: Project root.

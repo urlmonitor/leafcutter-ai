@@ -11,10 +11,15 @@ BUSINESS CONTEXT: Enforcement hook for TICKET-20260527-BuildFeatureInlineWorkGua
       Any Edit/Write while the lock exists means a supervisor was not dispatched.
 ARCHITECTURE: Reads tool_input from stdin JSON, walks parent dirs to find the
       per-worktree repo root (where .git lives), checks for .build-feature.lock
-      at the repo root. On lock present: appends a JSONL audit record then exits 2
+      at the repo root. On lock present: appends a JSONL audit record to
+      <operational_log_root>/inline_work_guard.jsonl (the root recorded in this
+      workspace's build-time declaration, config/knowledge_sink.json -- never
+      beneath the repo root, which is deleted with the drive) then exits 2
       (block) or 0 (warn), depending on INLINE_WORK_GUARD_MODE env var (default:
-      block). On lock absent: exits 0 immediately (fail-open). Any exception: exits
-      0 (fail-open), matching the fail-open pattern of sibling hooks.
+      block). With no usable declaration it warns on stderr, names the
+      declaration and writes nothing; the exit code is unchanged. On lock absent:
+      exits 0 immediately (fail-open). Any exception: exits 0 (fail-open),
+      matching the fail-open pattern of sibling hooks.
 """
 
 import json
@@ -26,7 +31,7 @@ from pathlib import Path
 # -- Configuration ------------------------------------------------------------
 
 LOCK_FILENAME = ".build-feature.lock"
-AUDIT_LOG_FILENAME = "debugging/logs/inline_work_guard.jsonl"
+AUDIT_LOG_FILENAME = "inline_work_guard.jsonl"  # beneath the declared operational_log_root
 MODE_ENV_VAR = "INLINE_WORK_GUARD_MODE"
 DEFAULT_MODE = "block"
 SESSION_ENV_VAR = "CLAUDE_SESSION_ID"
@@ -65,38 +70,88 @@ def _get_session_id() -> str:
     return f"fallback-{ppid}"
 
 
+def _declaration_path() -> Path:
+    """Return the build-time declaration of THIS hook's own deployed workspace.
+
+    The hook deploys to ``<output_root>/hooks/`` and is reached through the
+    ``.claude/hooks`` symlink, so its resolved location is one directory below
+    ``<output_root>``, whose ``config/`` holds ``knowledge_sink.json``. The Gemini
+    copy (``<output_root>/gemini/hooks/``, reached through ``.gemini``) is one
+    directory deeper, so a ``gemini`` directory is stepped out of.
+    """
+    install = Path(__file__).resolve().parents[1]
+    if install.name == "gemini":
+        install = install.parent
+    return install / "config" / "knowledge_sink.json"
+
+
+def _resolve_audit_path() -> tuple[Path | None, str]:
+    """Return ``(<operational_log_root>/inline_work_guard.jsonl, "")`` or ``(None, why not)``.
+
+    Standard library only. The audit log lives in the declared operational log
+    root (AC INF-500d-4-iv), never beneath the repo root the guard is judging:
+    that is a per-drive workspace which is deleted when the drive ends. The
+    enduring root must be live (inline mirror of
+    ``sink_resolution.enduring_root_exists``): a vanished project is refused,
+    never recreated; a missing log directory under a live one is a first write.
+    """
+    try:
+        data = json.loads(_declaration_path().read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None, "absent: no such file"
+    except (OSError, ValueError) as exc:
+        return None, f"unreadable or unparseable: {exc}"
+    root = data.get("operational_log_root") if isinstance(data, dict) else None
+    if not isinstance(root, str) or not root:
+        return None, "missing: no 'operational_log_root' entry"
+    if not Path(root).is_absolute():
+        return None, f"not absolute: 'operational_log_root' is {root!r}"
+    holder = Path(root).parent
+    if holder.name == "debugging":
+        holder = holder.parent
+    if not holder.is_dir():
+        return None, f"stale: {holder} (the enduring root that should hold {root}) no longer exists"
+    return Path(root) / AUDIT_LOG_FILENAME, ""
+
+
 def _append_audit_record(
+    audit_path: Path,
     repo_root: Path,
     tool_name: str,
     file_path: str,
     session_id: str,
     mode: str,
 ) -> None:
-    """Append a JSONL audit record to the audit log file.
+    """Append a JSONL audit record to *audit_path* as one atomic append.
 
     Args:
+        audit_path: The audit file under the declared operational log root.
         repo_root: Absolute path to the git repo root.
         tool_name: Name of the tool being called (e.g. "Edit" or "Write").
         file_path: Path of the file the tool was targeting.
         session_id: Current session identifier.
         mode: Current guard mode ("block" or "warn").
     """
-    audit_path = repo_root / AUDIT_LOG_FILENAME
+    record = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "tool_name": tool_name,
+        "file_path": file_path,
+        "session_id": session_id,
+        "mode": mode,
+        "lock_file": str(repo_root / LOCK_FILENAME),
+    }
+    line = (json.dumps(record) + "\n").encode("utf-8")
     try:
+        # Safe to create parents: _resolve_audit_path proved the enduring root live.
         audit_path.parent.mkdir(parents=True, exist_ok=True)
-        record = {
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "tool_name": tool_name,
-            "file_path": file_path,
-            "session_id": session_id,
-            "mode": mode,
-            "lock_file": str(repo_root / LOCK_FILENAME),
-        }
-        with open(audit_path, "a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record) + "\n")
-    except Exception:
-        # Audit failure must not affect the guard outcome
-        pass
+        fd = os.open(audit_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+        try:
+            os.write(fd, line)
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        # Audit failure must not affect the guard outcome -- but say so.
+        print(f"inline_work_guard: WARNING: could not append audit record to {audit_path}: {exc}", file=sys.stderr)
 
 
 def main() -> None:
@@ -140,13 +195,21 @@ def main() -> None:
         mode = os.environ.get(MODE_ENV_VAR, DEFAULT_MODE).strip().lower()
         session_id = _get_session_id()
 
-        _append_audit_record(
-            repo_root=repo_root,
-            tool_name=tool_name,
-            file_path=file_path_str,
-            session_id=session_id,
-            mode=mode,
-        )
+        audit_path, problem = _resolve_audit_path()
+        if audit_path is None:
+            # No usable declaration: warn, name it, write nothing workspace-relative.
+            audit_note = f"NOT written -- no usable build-time declaration {_declaration_path()} ({problem})"
+            print(f"inline_work_guard: WARNING: {audit_note}", file=sys.stderr)
+        else:
+            audit_note = f"appended to: {audit_path}"
+            _append_audit_record(
+                audit_path=audit_path,
+                repo_root=repo_root,
+                tool_name=tool_name,
+                file_path=file_path_str,
+                session_id=session_id,
+                mode=mode,
+            )
 
         if mode == "warn":
             # Warn mode: log and allow through
@@ -159,7 +222,7 @@ def main() -> None:
                 f"  - For epics: dispatch epic-supervisor via the Agent tool.\n"
                 f"  - For standalone tickets: invoke the build-single-ticket sub-skill.\n\n"
                 f"The supervisor will delete the lock file, allowing phase agents to run.\n"
-                f"Audit record appended to: {repo_root / AUDIT_LOG_FILENAME}"
+                f"Audit record {audit_note}"
             )
             print(msg, file=sys.stderr)
             sys.exit(0)
@@ -174,13 +237,12 @@ def main() -> None:
                 f"  - For epics: dispatch epic-supervisor via the Agent tool.\n"
                 f"  - For standalone tickets: invoke the build-single-ticket sub-skill.\n\n"
                 f"The supervisor will delete the lock file, unblocking phase agents.\n"
-                f"Audit record appended to: {repo_root / AUDIT_LOG_FILENAME}"
+                f"Audit record {audit_note}"
             )
             print(msg, file=sys.stderr)
             sys.exit(2)
 
-    except Exception:
-        # Fail-open: any unexpected error must not block legitimate edits
+    except Exception:  # noqa: BLE001 -- hook fail-open: an unexpected error must never block an edit
         sys.exit(0)
 
 
@@ -192,6 +254,26 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-12 [python-coder/INF-500d-4-iv]: The audit log moved from
+  <repo_root>/debugging/logs/inline_work_guard.jsonl (inside the per-drive
+  workspace, destroyed with it) to <operational_log_root>/inline_work_guard.jsonl,
+  read from this hook's own workspace declaration (parents[1]/config/
+  knowledge_sink.json, standard library only). A missing/unusable declaration
+  warns on stderr naming it and writes nothing; the block/warn exit code is
+  untouched. The append is one os.write on an O_APPEND descriptor and creates
+  only the final log directory. The audit-failure `except Exception: pass` is
+  now a narrow OSError handler that warns.
+- 2026-10-12 [python-coder/INF-500d-4-iv fresh install]: The final-directory-only
+  mkdir lost the first audit record on a fresh install (project exists,
+  debugging/ does not). The hook now creates up to the declared log directory
+  (mkdir parents) but ONLY after proving the enduring root live: the directory
+  holding operational_log_root (its parent, or the project above `debugging`)
+  must exist. A vanished project warns naming the declaration, creates nothing
+  and keeps the exit code. This is an inline mirror of
+  sink_resolution.enduring_root_exists (same rule as feedback_sink and
+  emit_event): the hook stays standard-library only because it deploys as a
+  standalone script and must fail open without the package importable. Keep the
+  copies in step.
 - 2026-05-27 [TICKET-20260527-BuildFeatureInlineWorkGuard]: Initial implementation.
   PreToolUse hook that blocks Edit/Write tool calls while .build-feature.lock
   exists. Uses the lock file protocol: /build-feature writes the lock at start,

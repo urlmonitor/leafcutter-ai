@@ -1,26 +1,32 @@
 ---
-title: "Feedback Lifecycle — Data Flow"
+title: Feedback Lifecycle — Data Flow
 type: architecture
-flight_level: "L3-Component"
+flight_level: L3-Component
 diagram_type: dataflow
 status: active
 components:
-  - build_pipeline
+- build_pipeline
 created: 2026-06-03
-last_updated: 2026-06-08 12:30
+last_updated: 2026-10-12 12:00
 related_code:
-  - scripts/feedback/submit_feedback.py
-  - scripts/feedback/aggregate.py
-  - scripts/feedback/resolve_feedback.py
-  - scripts/feedback/emit_hook_finding.py
+- templates/scripts/feedback/submit_feedback.py
+- templates/scripts/feedback/feedback_sink.py
+- templates/scripts/feedback/feedback_reader.py
+- templates/scripts/feedback/aggregate.py
+- templates/scripts/feedback/resolve_feedback.py
+- templates/scripts/feedback/emit_hook_finding.py
+- scripts/knowledge/sink_resolution.py
 related_docs:
-  - docs/architecture/agent_delivery_workflows.md
-  - docs/architecture/agent_knowledge_system.md
+- docs/architecture/agent_delivery_workflows.md
+- docs/architecture/agent_knowledge_system.md
+- docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
+- docs/architecture/components/feedback-collector.md
+- docs/known-issues/feedback-collector/open-low-ki-fc-001.md
 related_tickets:
-  - tickets/00_inbox/TICKET-20260603-FeedbackResolutionTracking.md
-  - tickets/00_inbox/TICKET-20260603-FeedbackReviewSkill.md
+- tickets/00_inbox/TICKET-20260603-FeedbackResolutionTracking.md
+- tickets/00_inbox/TICKET-20260603-FeedbackReviewSkill.md
+description: Overview of Feedback Lifecycle — Data Flow.
 ---
-
 # Feedback Lifecycle — Data Flow
 
 ## Purpose
@@ -44,12 +50,9 @@ flowchart LR
     end
 
     %% --- Storage ---
-    subgraph Storage["Storage (per-worktree)"]
-        FBJSONL["debugging/logs/feedback.jsonl\n(append-only JSONL;\nresolved_at + resolution_note\nadded by resolve_feedback.py)"]
+    subgraph Storage["Storage (declared log root, outlives worktrees)"]
+        FBJSONL["feedback_sink =\noperational_log_root/feedback.jsonl\n(append-only JSONL;\nresolved_at + resolution_note\nadded by resolve_feedback.py)"]
     end
-
-    %% --- Merge ---
-    FF["finalize-feature\n(merge per-worktree\nfeedback.jsonl to main)"]
 
     %% --- Evaluators ---
     subgraph Evaluators["Evaluators"]
@@ -74,9 +77,6 @@ flowchart LR
     TS -->|"submit_feedback.py"| FBJSONL
     PHK -->|"emit_hook_finding.py"| FBJSONL
     SS -->|"submit_feedback.py"| FBJSONL
-
-    %% --- Edges: Storage → Merge ---
-    FBJSONL -->|"finalize-feature merges\nworktree file to main branch"| FF
 
     %% --- Edges: Storage → Evaluators ---
     FBJSONL -->|"aggregate.py\n(all entries)"| RA
@@ -115,10 +115,7 @@ Parent: [Agent Delivery Workflows](./agent_delivery_workflows.md)
 
 | Node | Description | Location |
 |------|-------------|----------|
-| `feedback.jsonl` | Append-only JSONL file; one JSON object per line; `resolved_at` and `resolution_note` fields added in place when an entry is resolved | `debugging/logs/feedback.jsonl` (per-worktree) |
-
-During `finalize-feature`, per-worktree `feedback.jsonl` files are merged into the main
-branch so the full feedback corpus is available after an epic closes.
+| `feedback.jsonl` | Append-only JSONL file; one JSON object per line; `resolved_at` and `resolution_note` fields added in place when an entry is resolved | The declared `feedback_sink`, one per install, shared by every worktree of it. See [Where every log is kept](#where-every-log-is-kept--one-declared-log-root-adr-069) |
 
 ### Evaluators
 
@@ -134,6 +131,61 @@ branch so the full feedback corpus is available after an epic closes.
 | `create-ticket integration` | Auto-resolves the originating feedback entry when a ticket is created from feedback context; sets `resolution_ticket` to the new ticket path | `resolve_feedback.py --ticket <path>` |
 | `/feedback-review manual` | Called by `/feedback-review` after the user selects Dismiss; sets `resolved_at` and `resolution_note` | `resolve_feedback.py --feedback-id <id> --note "<reason>"` |
 | `resolve_feedback.py CLI` | Direct invocation escape hatch for developers who want to resolve an entry outside the skill flow | `python scripts/feedback/resolve_feedback.py --feedback-id <id>` |
+
+---
+
+## Where every log is kept — one declared log root (ADR-069)
+
+Every log in the operational log directory (`feedback.jsonl`, `agent_telemetry.jsonl`,
+`knowledge_emissions.jsonl`, `inline_work_guard.jsonl`) sits in **one enduring directory**,
+`operational_log_root`. The per-drive worktree is deleted after the drive; this directory
+outlives it. The build records the directory in `<output_root>/config/knowledge_sink.json`,
+together with `feedback_sink`, `operational_telemetry_stream` and `knowledge_emission_sink`.
+Writers and readers read this declaration. Nothing works the location out at run time.
+Decision and alternatives: [ADR-069](./adrs/ADR-069-durable-log-root-for-workspaces.md). The
+acceptance criterion for this section is [INF-500d-4-vii](../acceptance-criteria/infrastructure/INF-500-operational-observability/INF-500d-4-vii.yaml).
+
+- **A usable stream.** A stream counts only when the declaration also records an absolute
+  `operational_log_root` and the stream is an absolute path directly under it
+  (`sink_resolution.read_usable_stream`; `emit_event.py` keeps an inline copy).
+- **How the root is chosen.** `build.py --log-root <abs-dir>` records the given directory.
+  A relative value is refused before anything is written. With no flag, an ordinary build
+  records `<project>/debugging/logs`. `--no-log-root` records an empty declaration (`{}`),
+  so every writer refuses. A worktree bootstrap (`setup_ticket_worktree.py`) passes the
+  root the main install recorded in `<main>/.leafcutter/config/knowledge_sink.json`, or
+  warns and passes `--no-log-root` when it cannot read one. If the worktree's older
+  `build.py` rejects the flag (exit 2, `unrecognized arguments`), the bootstrap retries once
+  without it and warns that the worktree has no durable log root. Git-based discovery was
+  rejected ([INF-400c-4](../acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c-4.yaml), ADR-069).
+- **Stale versus first write.** Stale means the enduring root is gone: the directory holding
+  `operational_log_root` (its parent, or the project above `debugging`;
+  `sink_resolution.enduring_root_exists`). A missing log directory under a live root is a
+  fresh install and gets its first write. `submit_feedback.py`, `emit_event.py` and
+  `inline_work_guard.py` create only up to the log directory, and only under a live root.
+- **Asking without filing.** `python3 .leafcutter/scripts/knowledge/sink_resolution.py
+  --print-location {root|feedback|telemetry|knowledge}` prints one absolute path and creates
+  nothing. A missing declaration or key, or an unusable stream: no stdout, an ERROR, exit 1.
+  Shipped prompts pass no log path of their own; they rely on the writers' declared defaults or ask this query (INF-500d-4-vi).
+- **When the location cannot be determined.** `submit_feedback.py` without `--jsonl` prints
+  one `destination could not be written` line naming the declaration and the condition
+  (absent, unreadable, unparseable, missing key, not absolute, not under the root, or stale),
+  exits 1 with no id, and never falls back to the working directory or the script's location.
+  `emit_event.py` and `inline_work_guard.py` warn and write nothing; their `.gemini` copies
+  step out of the `gemini` directory and read the same install's declaration.
+- **Readers.** The feedback readers, `generate_health_report.py`, `weekly_health.py` and
+  `extract_epic_facts.py` print `read N records from <absolute path>` on stderr, or exit 1
+  without a usable declaration. An explicit path is used as given. A feedback reader names,
+  once, a populated pre-declaration `feedback.jsonl` that differs from the sink, and leaves
+  it alone. A rewrite (`link_feedback.py`, `resolve_feedback.py`) first copies the sink to
+  `<sink>.bak-<UTC timestamp>`, removed on success and named on failure.
+- **Earlier reports are not carried over.** No sink was moved or merged. The one-off rescue
+  is [`reports/feedback-snapshots/`](../../reports/feedback-snapshots/README.md).
+- **Three rules, kept separate.** (a) Configuration resolves to the workspace's own
+  `.leafcutter/config` (INF-100c-1-i). (b) Commit guards resolve to the worktree being
+  judged (GE-113c-1-iv). (c) Logs go to the declared root. Rule (b) returns the very
+  directory that gets deleted, so the guard resolver is not reused for logs. A single
+  resolver for all three rules would bring the defect back. The declaration file is found
+  by rule (a), and only the value it holds is rule (c).
 
 ---
 
@@ -219,8 +271,9 @@ The config directory is always exactly **two parents above the script file**, re
 - The presence of `.claude/` markers in the directory tree
 - The existence of a `config/` directory in the worktree's parent
 
-This is enforced by the `_find_config_root()` function (not `_find_project_root()`,
-which searches for `.claude/` and is used only for the JSONL log path).
+This is enforced by the `_find_config_root()` function. The former `_find_project_root()`
+`.claude/` walk, which chose the JSONL log path, was removed by INF-500d-4-i. The log path
+now comes from the declaration described above.
 
 **Cross-reference:** AC INF-100c-1 (base), AC INF-100c-1-i (worktree scenario),
 `unit_tests/feedback/test_submit_feedback_worktree_resolution.py`.
@@ -270,4 +323,6 @@ from the exception detail. The new format labels the path explicitly.
 
 - Parent: [Agent Delivery Workflows](./agent_delivery_workflows.md) — supervisor dispatch topology
 - Related: [Agent Knowledge System](./agent_knowledge_system.md) — how agents classify and persist learnings
+- Decision: [ADR-069](./adrs/ADR-069-durable-log-root-for-workspaces.md) — one durable log root, declared as a build input
+- Component: [Feedback Collector](./components/feedback-collector.md) — writers and readers of the declared sink
 - Skill: `templates/skills/feedback-review/SKILL.md` — procedural definition of the `/feedback-review` triage flow

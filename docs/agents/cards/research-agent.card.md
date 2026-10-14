@@ -163,9 +163,7 @@ flowchart TD
 
 ## Skills Used
 
-| Skill | Mode | Condition |
-|-------|------|-----------|
-| `signoff` | always | — |
+*No skills declared.*
 ---
 
 ## Configuration

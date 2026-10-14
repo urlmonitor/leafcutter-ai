@@ -90,13 +90,17 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `package-audit` | conditional | — |
+| `package-audit` | conditional | When asked to audit package boundary drift, load package-audit to run package_audit.py and report gaps. |
+| `create-hook` | conditional | When asked to add a new pre-commit hook, load create-hook to scaffold, register and document it. |
+| `add-agent-to-package` | conditional | When asked to promote a project-local agent into the package, load add-agent-to-package. |
+| `add-skill-to-package` | conditional | When asked to promote a project-local skill into the package, load add-skill-to-package. |
 ---
 
 ## Configuration

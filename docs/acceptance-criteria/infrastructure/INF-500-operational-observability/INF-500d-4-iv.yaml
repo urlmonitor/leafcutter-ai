@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -136,9 +136,19 @@ amended_by:
     by: BrainCandy
     at: 2026-10-09
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/feedback/test_inf_500d_4_iv.py
+- unit_tests/feedback/test_inf_500d_4_iv_gemini_copies.py
+- unit_tests/feedback/test_inf_500d_4_iv_inline_work_guard_fresh_install.py
+- unit_tests/feedback/test_inf_500d_4_iv_usable_stream_parity.py
+- unit_tests/feedback/test_inf_500d_4_i_fresh_install.py
+- unit_tests/feedback/test_inf_500d_4_i_no_log_root_writers.py
+- unit_tests/workflows/test_inf_500d_4_iv.py
 implemented_by:
 - tickets/00_inbox/epics/EPIC-OneDurableLogRootForEveryWorkspace/03_TICKET-20261009-INF-500d-4-iv.md
+- templates/skills/agent-telemetry/scripts/emit_event.py
+- templates/hooks/inline_work_guard.py
+- templates/workflows-js/plan-feature.js
 change_target:
   - code
   - infrastructure

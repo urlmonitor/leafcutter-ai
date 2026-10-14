@@ -112,13 +112,14 @@ flowchart TD
 | `Edit` |
 | `Write` |
 | `Agent` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `signoff` | conditional | — |
+| `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 ---
 
 ## Configuration
@@ -127,7 +128,7 @@ flowchart TD
 |-----|----------|-------------|
 | `testing_context` | No | Test infrastructure context: directories, frameworks, constraints |
 | `test_command_live_trader` | No | Command to run the fast unit test suite |
-| `test_output_dir` | No | Temp directory for test output files |
+| `test_output_dir` | No | Folder for test output; empty means the scratch home (scratch.py test-output-dir) |
 ---
 
 ## Contributor Notes

@@ -40,6 +40,7 @@ from _ge_132a_1_harness import (  # noqa: E402
     _all_declared_seed,
     _clean_seed,
     _commit,
+    _declared_ids,
     _deployed_guardian,
     _dump,
     _git,
@@ -218,12 +219,15 @@ def test_ge132a1_malformed_skills_config_is_reported_not_defaulted(tmp_path: Pat
 def test_ge132a1_old_install_commit_passes_through_shared_loader(shared_reference_layout: Path, tmp_path: Path) -> None:
     # covers: GE-132a-1
     # angle: seam
-    """Seam: the deployed check consuming the loader's merged view. The scratch
-    repo's local table is the REAL pre-GE-132 one; check-complexity is declared
-    only in the seed, so the commit passes only if the check reads through the
-    loader (a local-only reader would refuse check-complexity as undeclared)."""
-    local, seed, manifest = _old_install_tables()
-    merged_undeclared = _undeclared(manifest, local, seed)
+    """Seam: the commit-time legs judge the committed table. The scratch repo's
+    local table (.claude/precommit-autofix.json) is the REAL pre-GE-132 one and the
+    committed templates/scripts/precommit-autofix.json is the current real table;
+    the commit passes with the old-shape local table present beside it, and a
+    hook declared in neither table is still refused."""
+    local, _, manifest = _old_install_tables()
+    seed = _clean_seed(manifest)
+    assert "check-complexity" not in _declared_ids(local), "local table must stay the pre-GE-132 shape"
+    merged_undeclared = _undeclared(manifest, seed)
     assert "check-complexity" not in merged_undeclared and "check-file-size" not in merged_undeclared
     base = _with_parity(manifest, merged_undeclared)
     repo, stanza = _scratch(shared_reference_layout, tmp_path / "old_install", base, seed, local=local)

@@ -20,6 +20,7 @@ ARCHITECTURE: A refusal states "<function> has complexity X, only Y allowed". Th
 """
 
 import ast
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -240,7 +241,29 @@ def report_refusal(failed_files: list, unchecked: list) -> int:
     # lookup and no fallback literal.
     if declaration and declaration.get("agent"):
         print(f"AUTOFIX_AGENT: {declaration['agent']}")
+    print(refusal_record_line(failed_files))
     return 1
+
+
+def refusal_record_line(failed_files: list) -> str:
+    """Render the machine-readable refusal record (GE-132a-3), one entry per refused function.
+
+    The specialist's demand is carried from this record verbatim and in refusal order;
+    nothing downstream parses the human sentence or re-runs the check.
+
+    Args:
+        failed_files: ``(filepath, failures)`` pairs for files over their ceiling.
+
+    Returns:
+        str: ``COMPLEXITY_REFUSAL_RECORD: <JSON list of {path, function, score, ceiling, reason}>``.
+    """
+    record = [
+        {"path": item.path, "function": item.name, "score": item.score,
+         "ceiling": item.ceiling, "reason": item.reason}
+        for _, failures in failed_files
+        for item in failures
+    ]
+    return f"COMPLEXITY_REFUSAL_RECORD: {json.dumps(record)}"
 
 
 def main() -> int:
@@ -297,6 +320,9 @@ if __name__ == "__main__":
 ====================================================================
 DECISION HISTORY
 ====================================================================
+- 2026-10-12 [python-coder/BO-3800c-2]: Refusal now also prints a
+  COMPLEXITY_REFUSAL_RECORD line (JSON list of path/function/score/ceiling/reason,
+  refusal order) so the restructuring specialist's brief is carried, not re-derived.
 - 2026-10-12 [python-coder/GE-132a-3]: Refusal now reads "<function> has
   complexity X, only Y allowed". The hard-coded tip and the
   get_agent_for_extension() lookup with its python-coder fallback are gone;

@@ -1,8 +1,8 @@
 ---
 description: |
   Runs the knowledge-emission harvester for a worktree. Reads unprocessed
-  knowledge_captured events from debugging/logs/knowledge_emissions.jsonl
-  (per ADR-011) and routes each to the correct knowledge surface via the
+  knowledge_captured events from the install's declared knowledge sink
+  (per ADR-011 and ADR-069) and routes each to the correct knowledge surface via the
   capture-learning write protocol. A routed event is marked processed so
   re-runs are idempotent; an event whose entry_kind is unrecognised is left
   UNMARKED and retained for a later run rather than dropped (INF-400c-2-ii).
@@ -46,7 +46,7 @@ mutates:
     remain retryable on a later run (INF-400c-2-ii) — this is not a
     read-only agent.'
   name: harvest_state_file
-  surface: debugging/logs/harvest_state.json
+  surface: harvest_state.json beside the declared knowledge sink
 behavioral_patterns:
 - behavior: 'Stop and ask the user when:
 
@@ -72,9 +72,12 @@ knowledge surface in the worktree.
 
 ## Context
 
-Phase agents emit `knowledge_captured` events to
-`debugging/logs/knowledge_emissions.jsonl` during their sign-off step
-(signoff §7). These events are NOT processed inline — they accumulate in
+Phase agents emit `knowledge_captured` events to the install's declared
+knowledge sink during their sign-off step (signoff §7). The sink location is
+fixed when the package is built and recorded in the install's declaration; a
+worktree inherits the enduring root, so the declared sink usually lies OUTSIDE
+the worktree. Never assume a path inside the worktree and never restate one:
+ask the scripts (see Pre-Flight Checks). These events are NOT processed inline — they accumulate in
 the sink until this agent runs. Running the harvester:
 
 1. Reads every unprocessed event from the sink.
@@ -94,14 +97,25 @@ This agent does NOT sign off on any ticket. It is a post-processing step.
 
 Before running the harvester:
 
-1. Verify the sink file is reachable:
+1. Verify the declared sink is reachable. The harvester prints the declared
+   sink path (it reads the declaration only and touches nothing), and `ls`
+   confirms the file exists:
 
 ```bash
-ls debugging/logs/knowledge_emissions.jsonl
+ls "$(python3 scripts/knowledge/harvest_learnings.py --print-sink)"
 ```
 
-If the file does not exist, exit with a message:
-`"Sink file not found: debugging/logs/knowledge_emissions.jsonl — nothing to harvest."`
+If this fails, run `python3 scripts/knowledge/harvest_learnings.py --print-sink`
+on its own and read the result:
+
+- It prints nothing and exits 1 (an ERROR on stderr names the missing
+  declaration): there is no usable sink declaration. Report a refusal quoting
+  that stderr message and stop. Do NOT fall back to a path inside the worktree;
+  the fix is to rebuild the install, which is not this agent's job.
+- It prints a path but the file does not exist: exit with a message naming the
+  printed path, `"Sink file not found: <printed path> — nothing to harvest."`
+- (`python3 scripts/knowledge/sink_resolution.py --print-location knowledge`
+  gives the same answer if `harvest_learnings.py` predates `--print-sink`.)
 
 2. Check the script is present:
 
@@ -126,11 +140,12 @@ With `--dry-run` for a preview without writing anything:
 python3 scripts/knowledge/harvest_learnings.py --dry-run --verbose
 ```
 
-With a custom sink path:
+Do NOT pass `--sink` or `--state`. Without them the harvester drains the
+declared sink and keeps its idempotency state file beside it. Only the user may
+direct a harvest at a different sink, and then with an absolute path they supply.
 
-```bash
-python3 scripts/knowledge/harvest_learnings.py --sink debugging/logs/knowledge_emissions.jsonl
-```
+To see whether and when the routing step last ran, over which sink, run the
+harvester with `--status` (it prints one JSON line and changes nothing).
 
 ## Interpreting the Output
 
@@ -220,8 +235,9 @@ After running the harvester, emit a brief report:
 
 - Summary: <one-line output from the script>
 - Exit code: <0 nothing left to route | 3 unroutable events retained | 4 write and/or state failure | 1 sink missing | 2 state corrupt>
-- Sink path: debugging/logs/knowledge_emissions.jsonl
-- State path: debugging/logs/harvest_state.json
+- Sink path: <the absolute path printed by `--print-sink`; never a path you typed>
+- State path: <the `harvest_state.json` beside that sink, as named in the run's own output; "not reported" if the output does not name it>
+- Sink declaration: <"declared" | "refused — <stderr message>">  (Sink path and State path are "none" on a refusal)
 - Warnings: <any WARNING lines from the run, or "none">
 - No learning text: <count and per-kind breakdown from the summary's `no learning text` segment, else "none">
 - Retained for a later run: <count and per-kind breakdown when exit is 3, else "none">

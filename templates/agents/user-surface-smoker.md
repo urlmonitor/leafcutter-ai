@@ -296,10 +296,9 @@ When calling `submit_feedback.py` during sign-off:
 - Use `--category blocker` when emitting a `(status: blocker)` comment.
 - Use `--category tooling-issue` if the smoke test failed due to harness infrastructure (not surface logic).
 
-**Worktree path note:** `submit_feedback.py` resolves its sink path relative to
-`__file__` (not CWD), walking up to find the `.claude/` directory. In an epic
-worktree, `.claude/` exists in the worktree root — the script will write to the
-worktree's `debugging/logs/feedback.jsonl`. No special `--jsonl` override is needed.
+**Worktree path note:** `submit_feedback.py` writes to the install's declared
+feedback sink (the install's declared log root), which outlives the worktree. Pass no
+destination override; the script prints the sink it used on stderr.
 
 Run a single command (per the shell convention — no chaining):
 

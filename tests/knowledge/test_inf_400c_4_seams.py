@@ -157,7 +157,20 @@ def test_parity_check_blocks_a_relative_declared_value_and_a_directory_dependent
 
     run_a = _run_harvester_default(harvester_path, cwd=cwd_a)
     run_b = _run_harvester_default(harvester_path, cwd=cwd_b)
-    assert run_a.returncode == 0 and run_b.returncode == 0
+    # INF-500d-4-i: this hand-written two-key declaration records no
+    # operational_log_root and a RELATIVE stream, so it is not a usable
+    # declaration. The ordinary run refuses it (exit non-zero, naming
+    # operational_log_root) from every working directory instead of reading
+    # whichever file the current directory happens to hold -- the retracted
+    # behaviour this assertion used to encode (the harvester exiting 0).
+    for run in (run_a, run_b):
+        assert run.returncode != 0, (
+            "the ordinary harvester must refuse a declaration with no "
+            f"operational_log_root; exit={run.returncode}\n{run.stdout}{run.stderr}"
+        )
+        assert "operational_log_root" in run.stdout + run.stderr, (
+            f"the refusal must name operational_log_root:\n{run.stdout}{run.stderr}"
+        )
 
     resolved_a = (cwd_a / relative_value).resolve()
     resolved_b = (cwd_b / relative_value).resolve()

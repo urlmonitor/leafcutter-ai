@@ -101,14 +101,14 @@ flowchart TD
 |------|
 | `Bash` |
 | `Read` |
+| `Skill` |
 ---
 
 ## Skills Used
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `feature` | conditional | — |
-| `signoff` | always | — |
+| `feature` | conditional | When a create request names an epic ticket path (an EPIC-*/ path segment), load feature and run its Epic Workflow with the ticket path as $ARGUMENTS. |
 ---
 
 ## Configuration

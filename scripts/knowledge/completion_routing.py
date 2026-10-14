@@ -137,7 +137,7 @@ def stage_completion(
     working_dir = Path(working_dir).resolve()
 
     records = _state.read_eligible_sink_records(sink_path)
-    confirmed = _state.load_state_set(state_path)
+    confirmed = _state.load_confirmed(sink_path, state_path)
     _git.refresh_base(working_dir, base_ref)
     has_base = _git.ref_exists(working_dir, base_ref)
     candidates = [r for r in records if r[0] not in confirmed]
@@ -423,7 +423,7 @@ def waiting_learnings(*, sink_path: Path | str, state_path: Path | str) -> dict[
         except OSError as exc:
             logger.warning("Cannot read knowledge sink %s: %s", sink_path, exc)
             return {"case": "unknown", "waiting": None, "records": [], "note": str(exc)}
-    confirmed = _state.load_state_set(Path(state_path))
+    confirmed = _state.load_confirmed(sink_path, Path(state_path))
     records = [
         {"text": text, "destination": destination}
         for record_hash, text, destination in _state.read_eligible_sink_records(sink_path)

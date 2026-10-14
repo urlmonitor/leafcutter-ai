@@ -56,6 +56,29 @@ ARCHITECTURE: Helper module for the Knowledge System component
 #   ``output_root``) and ``resolve_sink_for_status`` (the ``--status`` flag's
 #   never-refuses sink resolution, reusing ``resolve_default_sink`` rather
 #   than a second resolver).
+# - 2026-10-09 [python-coder/INF-500d-4-iii]: Added ``read_declared_value``
+#   (``read_sink_declaration`` now delegates to it), ``handle_print_location``
+#   and a ``main`` so the deployed copy answers ``--print-location
+#   {root|feedback|telemetry|knowledge}`` side-effect-free, refusing like
+#   ``--print-sink`` (ADR-069).
+# - 2026-10-12 [python-coder/INF-500d-4-i gap fix]: Added ``read_usable_stream``,
+#   the ONE usable-stream rule (absolute ``operational_log_root`` + the stream
+#   directly under it), and ``refusal_message``. ``handle_print_location``
+#   (telemetry|knowledge), ``handle_print_sink`` and ``resolve_sink_or_log_stale``
+#   now refuse on it, so a ``--no-log-root`` / legacy two-key declaration can no
+#   longer point a writer into the disposable worktree. A wholly absent
+#   declaration keeps the un-built source-tree fallback for the ordinary run.
+#   ``emit_event.py`` (standard library only) carries an inline copy.
+# - 2026-10-12 [python-coder/INF-500d-4-iii harvest]: Staleness is now "the
+#   enduring root holding the declared ``operational_log_root`` is gone"
+#   (``enduring_root_exists``), not "the declared sink differs from
+#   ``<project>/debugging/logs``", which refused every ordinary harvest in an
+#   inherited-root install. The legacy-sink NOTE needs a non-empty legacy file.
+# - 2026-10-12 [python-coder/INF-500d-4 review fix]: Added ``enduring_holder``
+#   (``enduring_root_exists`` now delegates to it) so ``feedback_sink`` -- the
+#   report writer -- asks this module's own rule instead of a stale copy, and
+#   ``--print-location feedback`` now refuses on ``read_usable_stream`` like the
+#   other streams (the one usable-stream rule covers ``feedback_sink`` too).
 """
 
 from __future__ import annotations
@@ -76,6 +99,71 @@ _LEGACY_SINK_RELATIVE_PARTS: tuple[str, ...] = (
 )
 
 
+def load_declaration(output_root: Path) -> tuple[dict | None, str | None]:
+    """Load the build-time declaration as ``(data, None)`` or ``(None, failure)``.
+
+    *failure* is a short phrase naming which condition failed -- ``absent``,
+    ``unreadable`` (a directory, or an OS error) or ``unparseable`` (not JSON,
+    or JSON that is not an object) -- so a refusing caller can say why
+    (AC INF-500d-4-i). Side-effect free; never logs (the caller reports it).
+    """
+    path = output_root / "config" / "knowledge_sink.json"
+    if not path.exists():
+        return None, "absent: no such file"
+    if not path.is_file():
+        return None, "unreadable: not a regular file"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return None, f"unreadable: {exc}"
+    except ValueError as exc:  # json.JSONDecodeError and UnicodeDecodeError
+        return None, f"unparseable: {exc}"
+    if not isinstance(data, dict):
+        return None, "unparseable: the declaration is not a JSON object"
+    return data, None
+
+
+def read_declared_value(output_root: Path, key: str) -> str | None:
+    """Read one string value from the build-time declaration, if it is there.
+
+    Returns ``None`` when no declaration file is present (e.g. an un-built
+    source-tree run), it cannot be parsed, or *key* is absent or not a
+    non-empty string. Side-effect free.
+    """
+    data, failure = load_declaration(output_root)
+    if data is None:
+        if failure is not None and not failure.startswith("absent"):
+            logger.warning(
+                "Could not read sink declaration under %s: %s", output_root, failure
+            )
+        return None
+    value = data.get(key)
+    return value if isinstance(value, str) and value else None
+
+
+def read_absolute_values(
+    output_root: Path, keys: tuple[str, ...]
+) -> tuple[dict[str, str] | None, str | None]:
+    """Return ``({key: absolute path}, None)`` or ``(None, failure)`` for *keys*.
+
+    The failure names the condition that stopped it -- the load failures of
+    ``load_declaration``, ``missing: no '<key>' entry`` or ``not absolute:
+    '<key>' is '<value>'`` -- for a caller that refuses rather than falls back.
+    """
+    data, failure = load_declaration(output_root)
+    if data is None:
+        return None, failure
+    values: dict[str, str] = {}
+    for key in keys:
+        value = data.get(key)
+        if not isinstance(value, str) or not value:
+            return None, f"missing: no '{key}' entry"
+        if not Path(value).is_absolute():
+            return None, f"not absolute: '{key}' is {value!r}"
+        values[key] = value
+    return values, None
+
+
 def read_sink_declaration(output_root: Path) -> str | None:
     """Read the build-time knowledge-sink declaration, if one exists.
 
@@ -84,18 +172,111 @@ def read_sink_declaration(output_root: Path) -> str | None:
     cannot be parsed -- callers fall back to the historical default in
     either case, per AC INF-400c-4-v ("nothing is written into nowhere").
     """
-    declaration_path = output_root / "config" / "knowledge_sink.json"
-    if not declaration_path.is_file():
-        return None
-    try:
-        data = json.loads(declaration_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning(
-            "Could not read sink declaration %s: %s", declaration_path, exc
+    return read_declared_value(output_root, "knowledge_emission_sink")
+
+
+_LOCATION_KEYS: dict[str, str] = {
+    "root": "operational_log_root",
+    "feedback": "feedback_sink",
+    "telemetry": "operational_telemetry_stream",
+    "knowledge": "knowledge_emission_sink",
+}
+_ROOT_KEY = "operational_log_root"
+_KNOWLEDGE_KEY = "knowledge_emission_sink"
+_TELEMETRY_KEY = "operational_telemetry_stream"
+_FEEDBACK_KEY = "feedback_sink"
+
+
+def read_usable_stream(output_root: Path, key: str) -> tuple[Path | None, str]:
+    """Return ``(stream, "")`` or ``(None, why)`` for the declared stream *key*.
+
+    THE one usable-stream rule (ADR-069 section 4, AC INF-500d-4-i): a declared
+    stream is usable only when the declaration ALSO records an absolute
+    ``operational_log_root`` and the stream is an absolute path sitting directly
+    under that root. A stream recorded without the root (a ``--no-log-root`` or
+    legacy two-key declaration) or outside it names a disposable location, so
+    it is not an answer. *why* names the condition and, for every root problem,
+    ``operational_log_root``. Side-effect free.
+
+    ``emit_event.py`` must stay standard-library-only and so carries an
+    equivalent of this check in ``_declared_stream``; keep the two in step.
+    """
+    data, failure = load_declaration(output_root)
+    if data is None:
+        return None, failure or "absent"
+    problem = ""
+    values: dict[str, str] = {}
+    for name in (_ROOT_KEY, key):
+        value = data.get(name)
+        if not isinstance(value, str) or not value:
+            problem = problem or f"missing: no '{name}' entry"
+        elif not Path(value).is_absolute():
+            problem = problem or f"not absolute: '{name}' is {value!r}"
+        else:
+            values[name] = value
+    if problem:
+        return None, problem
+    if Path(values[key]).parent != Path(values[_ROOT_KEY]):
+        return None, (
+            f"'{key}' is {values[key]}, which is not directly under "
+            f"{_ROOT_KEY} {values[_ROOT_KEY]}"
         )
-        return None
-    value = data.get("knowledge_emission_sink")
-    return value if isinstance(value, str) and value else None
+    return Path(values[key]), ""
+
+
+def refusal_message(output_root: Path, what: str, why: str) -> str:
+    """Return the one-line reason a writer/reader refuses to use stream *what* (no ``ERROR:`` prefix)."""
+    return (
+        f"no usable {what} in the build-time declaration "
+        f"{output_root / 'config' / 'knowledge_sink.json'}: {why}. A declared stream "
+        f"is usable only when the declaration also records an absolute '{_ROOT_KEY}' "
+        "with the stream directly under it, so nothing is written into a disposable "
+        "working directory. Rebuild (python scripts/build.py --target-dir "
+        "<project-root> [--log-root <abs-dir>]) to declare it."
+    )
+
+
+def handle_print_location(output_root: Path, name: str) -> int:
+    """Print the declared absolute location *name*, or refuse (AC INF-500d-4-iii).
+
+    *name* is ``root``, ``feedback``, ``telemetry`` or ``knowledge``. Reads the
+    declaration only -- creates no file, directory or record -- and gives the
+    same answer from every working directory. Refuses exactly as
+    ``handle_print_sink`` does: when the declaration is absent, the key is
+    missing, or the value is not absolute, nothing goes to stdout and stderr
+    names the expected declaration path. ``telemetry``, ``knowledge`` and
+    ``feedback`` are streams, so they are also refused unless
+    ``read_usable_stream`` accepts them (INF-500d-4-i).
+    """
+    key = _LOCATION_KEYS[name]
+    if key in (_TELEMETRY_KEY, _KNOWLEDGE_KEY, _FEEDBACK_KEY):
+        stream, why = read_usable_stream(output_root, key)
+        declared = str(stream) if stream is not None else None
+    else:
+        declared = read_declared_value(output_root, key)
+        why = f"missing or not absolute: '{key}'"
+        if declared is not None and not Path(declared).is_absolute():
+            declared = None
+    if declared is None:
+        print(
+            f"ERROR: {refusal_message(output_root, repr(key), why)} Refusing to answer "
+            f"--print-location {name} from the current working directory.",
+            file=sys.stderr,
+        )
+        return 1
+    print(declared)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point of the deployed copy: ``--print-location {root|feedback|telemetry|knowledge}``."""
+    parser = argparse.ArgumentParser(
+        prog="sink_resolution",
+        description="Print a declared operational log location without creating anything.",
+    )
+    parser.add_argument("--print-location", required=True, choices=sorted(_LOCATION_KEYS))
+    args = parser.parse_args(argv)
+    return handle_print_location(deployed_output_root(), args.print_location)
 
 
 def deployed_output_root() -> Path:
@@ -129,22 +310,27 @@ def resolve_default_sink(output_root: Path) -> Path:
     return Path("debugging/logs/knowledge_emissions.jsonl")
 
 
-def recomputed_sink_for_output_root(output_root: Path) -> Path:
-    """Recompute the conventional sink path from where this script currently lives.
+def enduring_holder(log_root: Path) -> Path:
+    """Return the enduring directory that holds *log_root*: its parent, or the project above ``debugging``."""
+    holder = log_root.parent
+    return holder.parent if holder.name == "debugging" else holder
 
-    Mirrors ``build_knowledge_sink_declaration``'s own derivation in
-    ``build_phases_knowledge.py`` (``<project_root>/debugging/logs/
-    knowledge_emissions.jsonl``, where ``project_root == output_root.parent``)
-    so that comparing this against a DECLARED value is what staleness
-    detection (AC INF-400c-4-v) is built on: a declaration written for an
-    install that has since been moved by hand still names its OLD absolute
-    path verbatim, and that stops matching what this exact layout would
-    produce right now -- without either path needing to exist on disk for
-    the comparison itself to hold.
 
-    Pure function: no I/O, no shared-state mutation.
+def enduring_root_exists(output_root: Path) -> bool:
+    """Return whether the enduring project root the declaration records still exists.
+
+    The enduring root is the directory holding the declared ``operational_log_root``:
+    its parent, or -- for the conventional ``<project>/debugging/logs`` layout -- the
+    project above ``debugging``. An inherited root (ADR-069 section 3) lies outside
+    this install on purpose, so it is NOT compared with this layout. A missing log
+    directory under a live root is a first write, not staleness. A declaration with
+    no usable root is reported as existing here; ``read_usable_stream`` refuses it.
+    Side-effect free.
     """
-    return output_root.parent / "debugging" / "logs" / "knowledge_emissions.jsonl"
+    root = read_declared_value(output_root, _ROOT_KEY)
+    if root is None or not Path(root).is_absolute():
+        return True
+    return enduring_holder(Path(root)).is_dir()
 
 
 def stale_declaration_message(output_root: Path) -> str | None:
@@ -159,13 +345,15 @@ def stale_declaration_message(output_root: Path) -> str | None:
     meaningful for an absolute path that used to match this layout and no
     longer does -- a relative declared value never "used to match" an
     absolute recomputation, so treating it as stale would misreport a
-    resolution-hazard case as an install-moved case), or when the declared
-    value still matches what this layout would produce right now.
+    resolution-hazard case as an install-moved case), or when the enduring
+    root the declaration records still exists (``enduring_root_exists``). A
+    declared sink that differs from this layout's own is NOT stale: an
+    inherited root differs on purpose (ADR-069 section 3).
     """
     declared = read_sink_declaration(output_root)
     if declared is None or not Path(declared).is_absolute():
         return None
-    if Path(declared) == recomputed_sink_for_output_root(output_root):
+    if enduring_root_exists(output_root):
         return None
     return (
         f"Declared knowledge-emission sink is STALE: {declared} (its "
@@ -195,17 +383,14 @@ def handle_print_sink(output_root: Path) -> int:
     a message on stderr naming the missing declaration, and the ordinary
     run's fallback for un-built source trees is left untouched.
     """
-    declared = read_sink_declaration(output_root)
+    declared, why = read_usable_stream(output_root, _KNOWLEDGE_KEY)
     if declared is None:
-        declaration_path = output_root / "config" / "knowledge_sink.json"
         print(
-            "ERROR: no build-time knowledge-emission-sink declaration found "
-            f"at {declaration_path}. Refusing to resolve --print-sink "
-            "against the current working directory -- that would hand a "
-            "different answer to every caller depending on where it is "
-            "standing, which is the corpus split this refusal exists to "
-            "prevent. Rebuild (python scripts/build.py --target-dir "
-            "<project-root>) to declare the sink for this install.",
+            f"ERROR: {refusal_message(output_root, 'knowledge-emission sink', why)} "
+            "Refusing to resolve --print-sink against the current working "
+            "directory -- that would hand a different answer to every caller "
+            "depending on where it is standing, which is the corpus split this "
+            "refusal exists to prevent.",
             file=sys.stderr,
         )
         return 1
@@ -224,9 +409,18 @@ def resolve_sink_or_log_stale(args: argparse.Namespace, output_root: Path) -> Pa
     An explicit ``--sink`` is the caller's own responsibility and is never
     checked for staleness -- only the DECLARED/default path is a build-time
     declaration that can go stale.
+
+    A declaration that exists but does not satisfy ``read_usable_stream`` (no
+    ``operational_log_root``, or the sink outside it) is refused, naming
+    ``operational_log_root`` (INF-500d-4-i). Only a wholly ABSENT declaration (an
+    un-built source tree) keeps the historical CWD-relative default.
     """
     if args.sink is not None:
         return args.sink
+    stream, why = read_usable_stream(output_root, _KNOWLEDGE_KEY)
+    if stream is None and not why.startswith("absent"):
+        logger.error(refusal_message(output_root, "knowledge-emission sink", why))
+        return None
     stale_message = stale_declaration_message(output_root)
     if stale_message is not None:
         logger.error(stale_message)
@@ -273,7 +467,7 @@ def warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> Non
     does not exist or is already the same file the declaration names.
     """
     legacy = legacy_sink_candidate(output_root)
-    if legacy == resolved_sink or not legacy.is_file():
+    if legacy == resolved_sink or not legacy.is_file() or legacy.stat().st_size == 0:
         return
     message = (
         f"NOTE: declared knowledge-emission sink is {resolved_sink}, which "
@@ -283,3 +477,7 @@ def warn_if_diverging_from_legacy(resolved_sink: Path, output_root: Path) -> Non
     )
     print(message)
     logger.warning(message)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
