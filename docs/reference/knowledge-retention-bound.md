@@ -105,6 +105,9 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | `generation_id` | string | Generation identifier. |
 | `reclaimable` | boolean | Whether the bound permits reclaiming the generation. |
 | `reason` | string | One value from the reason vocabulary. |
+| `age_basis` | string | The recorded time the age was measured from: `retired_at` when the generation carries a retirement time, else `created_at`, else `undetermined`. Every generation never retired is aged from `created_at`, the same basis for all of them. |
+| `age_seconds` | number or null | Age in seconds measured from `age_basis`; `null` when `age_basis` is `undetermined`. |
+| `absent_times` | list of strings | Empty when the age is determined. `["retired_at", "created_at"]` when the generation carries neither time. |
 
 ### Generation facts read
 
@@ -116,12 +119,14 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | `publication_status` | The Snapshot's `status`: `ready`, `validated`, `building` or `failed`. |
 | `active` | `true` when the generation is the repository's active one. |
 | `created_at` | Creation time; orders the count rank. |
-| `retired_at` | Retirement time; `created_at` is used when it is null. A failed generation has no `retired_at`, so it is currently aged from `created_at`. |
+| `retired_at` | Retirement time; `created_at` is used when it is null. A failed generation has no `retired_at`, so it is aged from `created_at`, and the verdict says so. |
 | `pinned_until` | Expiry of a pinned continuation; null when none is pinned. |
 
 The active-generation verdict keeps precedence (reason order 1), so an active generation whose publication never completed is still reported not reclaimable.
 
-Not established: the age basis is implicit. A generation that was never retired falls back from `retired_at` to `created_at` without the report saying so. Stating that basis explicitly is a separate criterion, `KM-400f-1-ii`, that is not built.
+The age basis is stated on every verdict (`age_basis`, `age_seconds`, `absent_times`; AC `KM-400f-1-ii`). A generation that was never retired is aged from `created_at`; one carrying `retired_at` is aged from it, never from its creation time. A generation carrying neither time is still reported, with `age_basis` `undetermined`, a `null` age and reason `age_undetermined`; an undetermined age never satisfies the minimum, so it is not reclaimable. It sorts after all dated generations in the count rank.
+
+The age basis is operator-visible: an operator reading a `reclaimable` verdict can see which clock produced it. The 24-hour minimum and the count bound declared by the parent (`KM-400f-1`) are unchanged; only the measuring basis is fixed here. Pinning stays the superior constraint (`KM-400b-3`): a stated age basis never makes a generation with an unexpired continuation reclaimable. KM-400f-4's operator listing is a consumer of `age_basis`, `age_seconds` and `absent_times` and reports them rather than recomputing them.
 
 Grounding: on the live store on 2026-10-12 every generation record was a failed publication and none was ready, so before this change the evaluation reported zero generations while the store was full.
 
@@ -135,9 +140,10 @@ Grounding: on the live store on 2026-10-12 every generation record was a failed 
 |---|---|---|---|
 | 1 | `active_generation` | `false` | The generation is active. |
 | 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. |
-| 3 | `younger_than_minimum_age` | `false` | `now` minus `retired_at` is less than `minimum_age_seconds`. |
-| 4 | `pinned_continuation_unexpired` | `false` | `pinned_until` is set and later than `now`. |
-| 5 | `reclaimable` | `true` | None of the above applies. |
+| 3 | `age_undetermined` | `false` | Neither `retired_at` nor `created_at` is recorded. |
+| 4 | `younger_than_minimum_age` | `false` | `age_seconds` (from `age_basis`) is less than `minimum_age_seconds`. |
+| 5 | `pinned_continuation_unexpired` | `false` | `pinned_until` is set and later than `now`. |
+| 6 | `reclaimable` | `true` | None of the above applies. |
 
 ---
 
@@ -211,6 +217,9 @@ This removal is separate from retention reclaiming. A failed publication reclaim
 - [Knowledge Retrieval Answers](knowledge-retrieval-answers.md) - Sibling reference for the retrieval surfaces.
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md) - Ownership and integration boundaries.
 - [ADR-062](../architecture/adrs/ADR-062-standalone-knowledge-retrieval.md) - Immutable standalone projection decision.
+- [AC schema reference](ac-schema.md) - Schema of the acceptance-criteria records cited here.
+- [KM-400f-1](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml) - Parent AC declaring the retention bound.
+- [KM-400b-3](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml) - Pinning constraint that outranks the age basis.
 - `knowledge/config.py` - Settings, `RetentionBound`, `resolve_retention_bound`.
 - `knowledge/adapters/neo4j_projection.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
 - `knowledge/cli_retention.py` - The `retention` command.

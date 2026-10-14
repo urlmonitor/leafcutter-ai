@@ -5,6 +5,7 @@ ARCHITECTURE: Writer-only helper; ancestry is verified by the Git sync coordinat
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 22:00 [python-coder]: State each verdict's age basis (retired_at, created_at or undetermined); an undetermined age is never reclaimable. (#KM-400f-1-ii)
 - 2026-10-14 21:00 [python-coder]: Report a refused removal as not/partially removed, naming repository and generation, the refusal and what remains. (#KM-400b-5-ii)
 - 2026-10-14 19:00 [python-coder]: Guard the failed-status write so removal always runs and the original error is re-raised with a never-empty cause. (#KM-400b-5-i/02)
 - 2026-10-14 18:00 [python-coder]: Remove a failed publication's own generation by key and report it with the original cause. (#KM-400b-5-i)
@@ -419,7 +420,15 @@ async def evaluate_retention(
         raise TypeError(_NO_BOUND)
     clock = time.time() if now is None else now
     facts = await db.retention_facts(repository_id)
-    ordered = sorted(facts, key=lambda f: (-f["created_at"], f["generation_id"]))
+    # A generation with no creation time has no place in the newest-first order; it ranks last.
+    ordered = sorted(
+        facts,
+        key=lambda f: (
+            f["created_at"] is None,
+            -(f["created_at"] or 0),
+            f["generation_id"],
+        ),
+    )
     verdicts = [
         {"generation_id": f["generation_id"], **_verdict(f, rank, bound, clock)}
         for rank, f in enumerate(ordered)
@@ -475,12 +484,49 @@ def _verdict(fact: dict, rank: int, bound: RetentionBound, now: float) -> dict:
     Returns:
         Mapping with ``reclaimable`` and ``reason``.
     """
+    age = _age_basis(fact, now)
+    return {**_decide(fact, rank, bound, now, age), **age}
+
+
+def _age_basis(fact: dict, now: float) -> dict:
+    """State which recorded time a generation's age is measured from.
+
+    Args:
+        fact: Generation row with retired_at and created_at (either may be None).
+        now: Clock value the age is measured against.
+
+    Returns:
+        Mapping with ``age_basis`` (retired_at, created_at or undetermined),
+        ``age_seconds`` (None when undetermined) and ``absent_times`` (the
+        recorded times that were absent when the age is undetermined).
+    """
+    if fact.get("retired_at") is not None:
+        return {"age_basis": "retired_at", "age_seconds": now - fact["retired_at"], "absent_times": []}
+    if fact.get("created_at") is not None:
+        return {"age_basis": "created_at", "age_seconds": now - fact["created_at"], "absent_times": []}
+    return {"age_basis": "undetermined", "age_seconds": None, "absent_times": ["retired_at", "created_at"]}
+
+
+def _decide(fact: dict, rank: int, bound: RetentionBound, now: float, age: dict) -> dict:
+    """Apply the reclaimability checks in precedence order.
+
+    Args:
+        fact: Generation row with active and pinned_until.
+        rank: Zero-based newest-first position among all retained generations.
+        bound: Declared RetentionBound.
+        now: Clock value for pin-expiry checks.
+        age: Stated age from ``_age_basis``; an undetermined age never satisfies the minimum.
+
+    Returns:
+        Mapping with ``reclaimable`` and ``reason``.
+    """
     if fact["active"]:
         return {"reclaimable": False, "reason": "active_generation"}
     if rank < bound.generation_limit:
         return {"reclaimable": False, "reason": "inside_count_bound"}
-    retired = fact["retired_at"] if fact["retired_at"] is not None else fact["created_at"]
-    if now - retired < bound.minimum_age_seconds:
+    if age["age_seconds"] is None:
+        return {"reclaimable": False, "reason": "age_undetermined"}
+    if age["age_seconds"] < bound.minimum_age_seconds:
         return {"reclaimable": False, "reason": "younger_than_minimum_age"}
     pinned = fact["pinned_until"]
     if pinned is not None and pinned > now:
