@@ -11,6 +11,7 @@ components:
 related_docs:
   - docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md
   - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+  - docs/architecture/adrs/ADR-071-test-intent-is-not-a-test-contract.md
 ---
 
 # AC-Driven Development

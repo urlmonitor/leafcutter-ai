@@ -3,7 +3,7 @@ title: "Architecture Decision Records"
 description: "Index of all Architecture Decision Records (ADRs) for the leafcutter-ai package, listing each decision's number, status, title, and date."
 type: "reference"
 created: '2026-08-13'
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 status: active
 components:
 - documentation_system
@@ -91,3 +91,4 @@ python scripts/adr_refs.py --index --write
 | [ADR-065](ADR-065-colony-learned-statistics-neo4j-aggregates.md) | Active | Colony Learned Statistics Live in Neo4j as Derived Aggregates — Supersedes ADR-057 in Part | 2026-10-02 |
 | [ADR-066](ADR-066-kernel-resolves-named-terms-and-finds-its-own-root.md) | Active | The Kernel Resolves Named Terms by Research and Finds Its Own Repository Root | 2026-10-02 |
 | [ADR-067](ADR-067-kernel-splits-bundled-requests-into-approved-parts.md) | Active | The Kernel Splits a Bundled Request into Parts a Person Approves | 2026-10-05 |
+| [ADR-071](ADR-071-test-intent-is-not-a-test-contract.md) | Active | Test Intent Is Not a Test Contract | 2026-10-14 |
