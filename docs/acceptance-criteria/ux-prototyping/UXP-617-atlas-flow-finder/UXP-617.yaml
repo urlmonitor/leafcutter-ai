@@ -61,7 +61,12 @@ origin_agent: product-owner
 created: 2026-10-14
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - UXP-617-1
+  - UXP-617-2
+  - UXP-617-3
+  - UXP-617-4
+  - UXP-617-5
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary

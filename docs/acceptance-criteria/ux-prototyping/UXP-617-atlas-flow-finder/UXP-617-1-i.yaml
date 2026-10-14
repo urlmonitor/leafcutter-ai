@@ -1,0 +1,71 @@
+id: UXP-617-1-i
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Searching 'selected option' lists the 5 flows and 27 steps whose names, text, fields, criteria, screens or entities match every word"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the store as measured on 2026-10-12, in which several decision flows have steps that
+    use or produce the field decision_record.selected_option_id,
+  When the person types 'selected option' into the search box on /flows,
+  Then the summary reads '5 flows, 27 steps match',
+  And the listed flows are, in this order, Publishing the decision record (7 matching steps),
+    Retrieving a decision as precedent (6), Forming a decision in a kernel run (5), Staging the
+    decision record (5) and How a decision is formed, saved, stored and reused (4),
+  And typing 'Selected Option' lists the same 5 flows and 27 steps, because case is ignored,
+  And a step matches only when every typed word starts a word of one single target of that
+    step: its label, its text together with its condition, one of its AC ids, one input or
+    output field name, its screen id together with its screen title, or one entity it reads or
+    writes,
+  And words are split at every character that is not a letter or a digit, so 'selected option'
+    matches the field decision_record.selected_option_id,
+  And a step whose label contains 'selected' while only its text contains 'option' does not
+    match,
+  And typing 'UXP-210d' lists 2 flows with 8 matching steps, found by their AC ids,
+  And each new summary is announced to screen readers as a polite status update.
+depends_on:
+  - UXP-617-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderSearch and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-selected-option and finder-ac-prefix; the search-matching invariant."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: UXP-617-1
+  contract: "The finder screen with its search box, result list and result summary."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderSearch'. The one-target
+  rule (every word must hit the same target), the AC-id example and the live-region
+  announcement come from the leafcutter/atlas-flows v4 dataset (search invariant,
+  FlowFinderQuery finder-ac-prefix, status_text field), not from the scenario. The one-target
+  rule is the clause most likely to be built wrong: a search that pools all of a step's text
+  matches more steps and still passes the 'selected option' example.

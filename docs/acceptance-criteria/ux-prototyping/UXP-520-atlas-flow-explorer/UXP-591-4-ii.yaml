@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 criteria: |
   Given the 'Build' drawer is open at /flows/leafcutter/deliver-a-feature?step=build,
@@ -18,9 +18,7 @@ criteria: |
   And the number of entries in the tab's history is unchanged,
   And when the person afterwards drills into the 'Build' sub-flow and presses Back,
     leafcutter/deliver-a-feature returns at /flows/leafcutter/deliver-a-feature with no drawer
-    open,
-  And a drawer opened from the bare /flows entry closes to /flows/leafcutter/deliver-a-feature,
-    never back to /flows.
+    open.
 depends_on:
   - UXP-591-4
 doc_links:
@@ -96,6 +94,9 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: "2026-10-14 business-analyst: criteria amended for UXP-617. Removed the last clause (a drawer opened from the bare /flows closes to /flows/leafcutter/deliver-a-feature, never back to /flows): the bare /flows is now the finder and no drawer opens there (owner decision 2026-10-12; flow v6 drawerUrl scenario). The rest is unchanged. Keyboard close via 'Close step details' is UXP-617-3-i. Readiness lowered approved -> draft; the second it_requirements bullet and the test_spec entry 'a drawer opened and closed on the bare /flows ...' are obsolete."
+  agent: business-analyst
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -105,6 +106,8 @@ notes: |
   nav-drawer-replace-4 to -6, nav-drawer-in-history-4, nav-drawer-on-bare-flows-3). Owner
   ruling 1 (2026-10-09) governs the bare-/flows clause. Authored as an L3 under the
   drawer-opening L2 because UXP-591 is at its five-L2 cap; it is a flow step, not a branch.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): bare-/flows clause removed; see amended_by.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: drawerClose

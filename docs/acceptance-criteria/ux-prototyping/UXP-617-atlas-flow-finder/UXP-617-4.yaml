@@ -1,0 +1,71 @@
+id: UXP-617-4
+components:
+  - ux_prototyping
+  - documentation_system
+  - atlas_frontend
+readiness: draft
+priority: medium
+title: "A how-to guide teaches a person to find a flow or step with the finder and share the search"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the finder at /flows searches, filters, shares its search by address and opens results,
+  When a person who has never used it reads the how-to guide for the Atlas Flows finder,
+  Then the guide walks through one worked example from start to finish: typing
+    'selected option' (5 flows, 27 steps match), ticking 'Person' under Actor
+    (2 flows, 5 steps match), copying /flows?q=selected+option&actor=human to share it, and
+    opening the step row 'Reuse it, or decide anew?',
+  And it states the search rule: case is ignored, and a step matches when every typed word
+    starts a word of one of its label, text, AC ids, input or output field names, screen or
+    entities,
+  And it states that values combine with OR within one filter and with AND across filters, and
+    that each count is the number of flows that value alone would list,
+  And it shows how to find steps whose inputs or outputs are not defined yet with
+    'I/O not yet defined' (/flows?io=gap),
+  And it explains the 'No flows match' state and its 'Remove <filter>' suggestions,
+  And it explains that Back from an opened result returns the finder with the same search,
+    and that a filter change on a flow page never swaps the drawn flow but shows
+    'Outside the current filters'.
+depends_on:
+  - UXP-617
+  - UXP-617-1
+  - UXP-617-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: "Atlas views table the guide links from."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: UXP-617-1
+    contract: "The finder screen, its facets and its counts as built."
+  - ac_id: UXP-617-2
+    contract: "The finder address format as built."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Documentation AC for UXP-617's 'how-to' documentation trigger. The worked example reuses the
+  dataset's FlowFinderQuery records so the guide's numbers can be checked against the approved
+  product truth.

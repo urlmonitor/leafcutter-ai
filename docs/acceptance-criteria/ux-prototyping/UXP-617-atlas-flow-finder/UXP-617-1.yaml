@@ -1,0 +1,85 @@
+id: UXP-617-1
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "The bare /flows address opens the finder overview with every flow listed and counted filters"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the store holds 28 flows the Flows view can draw, 25 under Leafcutter and 3 under
+    Fern & Fig,
+  When a person opens /flows from the sidebar 'Flows' link,
+  Then the finder shows an empty search box and the summary '28 flows',
+  And all 28 flows are listed, the Leafcutter flows first and the Fern & Fig flows after,
+    each product's flows ordered by name with case ignored,
+  And the Product filter shows Leafcutter 25 and Fern & Fig 3,
+  And the Actor filter shows Code 23, AI agent 17, Person 12 and Jev 8, Jev being its own
+    option and never counted under AI agent,
+  And the Kind filter shows User 6, Data 20 and Architecture 2, the Realization filter shows
+    Built 17, Spec 8 and Sample 3, and the Level filter shows Journey 14, Pipeline 13 and
+    Agent 1,
+  And the 'I/O not yet defined' option shows 9,
+  And every count is the number of flows that option alone would list, not a number of steps,
+  And no flow is drawn, no flow is selected, no breadcrumb shows and no drawer is open.
+depends_on:
+  - UXP-617
+  - UXP-591-1-i
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderOverview and its acceptance_scenario."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery record finder-overview (status_text, facet_counts) and the Flow records it counts."
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: L
+delivers_to:
+  agent: frontend-coder
+  contract: "The finder screen on the bare /flows: search box, result list grouped by flow, facet panel with per-option flow counts and the result summary. UXP-617-1-i to -v and UXP-617-2 build on it."
+expects_from:
+  ac_id: UXP-591-1-i
+  contract: "The bare /flows route answers 200 with no redirect, keeps its address and renders the finder instead of a flow."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-617-1-i
+  - UXP-617-1-ii
+  - UXP-617-1-iii
+  - UXP-617-1-iv
+  - UXP-617-1-v
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderOverview'
+  (FlowFinderQuery finder-overview in the leafcutter/atlas-flows v4 dataset). The Kind,
+  Realization and Level counts come from that record, not from the scenario. The tab
+  title 'Flows · Leafcutter Atlas' that the scenario also names is specified once, in
+  UXP-617-3-ii. The routing half of the bare /flows (200, no redirect, no notice) stays
+  in the amended UXP-591-1-i, which the flow's 'bareFlows' branch still implements.
+  The counts are the store as measured for the dataset; tests should replay the
+  dataset record, or derive the expected counts from the Flow records, rather than pin
+  28 against a live store that grows.

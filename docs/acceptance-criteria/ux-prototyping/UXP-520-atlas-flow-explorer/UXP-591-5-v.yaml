@@ -1,5 +1,5 @@
 id: UXP-591-5-v
-title: "A filter change while 'Flow not found' shows clears the notice, re-picks a flow and replaces the address in place"
+title: "A filter change while 'Flow not found' shows keeps the notice and the address and draws no flow"
 component: ux-prototyping
 components:
   - ux_prototyping
@@ -8,26 +8,24 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 criteria: |
   Given a new tab opened /flows/leafcutter/flow-render-pipline?step=resolve, so the tab has one
     history entry and shows the 'Flow not found' notice with no flow drawn, an empty breadcrumb
     and the filters Real, User, All,
   When the person sets the Kind filter to 'Architecture',
-  Then the 'Flow not found' notice disappears,
-  And "Product-truth in the leafcutter architecture", the only flow the selector lists under
-    Real, Architecture, All, is drawn with a breadcrumb of only that flow and no drawer,
-  And the address bar becomes /flows/leafcutter/product-truth-architecture with no ?step=: the
-    unknown flow's ?step=resolve is not carried over,
-  And the tab still has one history entry, because the current entry was replaced rather than a
-    new one added,
-  And when several flows match the new filters, the first one the selector lists is picked:
-    setting the Source filter to 'Mock' from the same 'Flow not found' state draws
-    "Checkout & pay (inside the buy-a-plant checkout step)" at /flows/fern-and-fig/checkout-and-pay,
-  And after the person then picks "Customer buys a plant" in the flow selector and presses Back,
-    the Atlas shows /flows/fern-and-fig/checkout-and-pay with that flow drawn, never
-    /flows/leafcutter/flow-render-pipline and never the 'Flow not found' notice.
+  Then the 'Flow not found' notice stays and no flow is drawn, because a filter change never
+    picks or swaps a flow,
+  And the address bar stays /flows/leafcutter/flow-render-pipline?step=resolve and the tab still
+    has one history entry,
+  And the flow selector lists only "Product-truth in the leafcutter architecture", the only flow
+    under Real, Architecture, All,
+  And when the person then picks that flow in the selector, one history entry is added at
+    /flows/leafcutter/product-truth-architecture with that flow drawn and a breadcrumb of only
+    that flow,
+  And Back from there returns /flows/leafcutter/flow-render-pipline?step=resolve with the
+    'Flow not found' notice and the Kind filter at 'Architecture'.
 depends_on:
   - UXP-591-5
   - UXP-591-5-iii
@@ -109,6 +107,9 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: "2026-10-14 business-analyst: criteria REPLACED for UXP-617. Owner decision 2026-10-12: a filter change never swaps the drawn flow. Old behaviour (owner ruling at the AC gate 2026-10-09, decision (2)(c)): a filter change on 'Flow not found' cleared the notice, drew the first flow the selector lists and replaced the address. New behaviour, inferred by the BA from the never-swap rule because neither flow v6 nor dataset v4 models a filter change on 'Flow not found' (the dataset's filter invariant requires the previous state to show a graph): the notice and the address stay, no flow is drawn, the selector re-lists under the new filters and no entry is added. NEEDS OWNER CONFIRMATION before readiness goes back up. Title changed. Readiness lowered approved -> draft; it_requirements, expects_from (the re-pick function of UXP-591-5-iii) and the test_spec describe the rejected behaviour."
+  agent: business-analyst
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -125,3 +126,6 @@ notes: |
   filter change adds no history entry. UXP-591-5-ii's Back-onto-an-unknown-id clause concerns a
   'Flow not found' entry nobody changed a filter on; once a filter change replaces that entry, it
   returns as the re-picked flow.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): the re-pick behaviour above is retired; see
+  amended_by. Still no flow node maps to this AC.

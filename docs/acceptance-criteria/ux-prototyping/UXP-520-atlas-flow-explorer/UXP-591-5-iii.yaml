@@ -1,5 +1,5 @@
 id: UXP-591-5-iii
-title: "A filter change that excludes the entry flow re-picks the flow and replaces the address in place"
+title: "A filter change that excludes the entry flow keeps the drawn flow and shows 'Outside the current filters'"
 component: ux-prototyping
 components:
   - ux_prototyping
@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 criteria: |
   Given the person drilled from /flows/leafcutter/deliver-a-feature into
@@ -16,13 +16,17 @@ criteria: |
     drawer, so the tab has two history entries, the address is
     /flows/leafcutter/how-acs-are-built?step=code and the filters are Real, User, All,
   When they set the Realization filter to 'Spec',
-  Then "Define a feature the product-truth way" is drawn with a breadcrumb of only that flow
-    and no drawer,
-  And the current entry is replaced with /flows/leafcutter/define-a-feature, with no ?step=,
-    so the tab still has two entries,
-  And Back returns to /flows/leafcutter/deliver-a-feature,
-  And Forward then returns /flows/leafcutter/define-a-feature with the Realization filter at
-    'Spec'.
+  Then "How a ticket is built (the phase chain)" stays drawn with the breadcrumb
+    "Deliver a feature end-to-end > How a ticket is built (the phase chain)" and its drawer open,
+  And the address bar stays /flows/leafcutter/how-acs-are-built?step=code and the tab still has
+    two entries,
+  And an 'Outside the current filters' notice reads "'Deliver a feature end-to-end' is not a
+    Real · User · Spec flow, so the flow list no longer shows it. It stays on screen until you
+    pick another flow.",
+  And the notice stays on screen until the person picks another flow,
+  And Back returns to /flows/leafcutter/deliver-a-feature with the filters Real, User, All and no
+    notice,
+  And Forward brings back the Realization filter at 'Spec' together with the notice.
 depends_on:
   - UXP-591-5
   - UXP-521
@@ -102,6 +106,9 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: "2026-10-14 business-analyst: criteria REPLACED for UXP-617 (flow v6 branch filterRepicksFlow, rewritten in place; the flow keeps the id for this AC link). Owner decision 2026-10-12: a filter change never swaps the drawn flow, replacing owner ruling 3 of 2026-10-09. Old behaviour: the first flow the selector lists under the new filters (leafcutter/define-a-feature) was drawn and the entry replaced with its address. New behaviour: the flow, breadcrumb, drawer and address stay; an 'Outside the current filters' notice shows; no entry is added. Title changed to match. Readiness lowered approved -> draft; it_requirements (re-pick from the selector), delivers_to (the re-pick function) and the whole test_spec describe the rejected behaviour and must be re-authored by IT-PO. The filter change is still written to the current entry in place (filters and notice must return on Back/Forward, UXP-591-5-ii)."
+  agent: business-analyst
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by:
@@ -113,6 +120,10 @@ notes: |
   history entry. The re-picked flow is the first flow the selector lists under the new
   filters, as today. Not modelled by the dataset: a filter change while the 'Flow not found'
   notice shows.
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): the re-pick rule above is retired; the notes
+  above describing it are history. The dataset leafcutter/atlas-flows v4 records nav-filter-replace-5
+  to -7 as the new sessions (scope_notice set, rendered_flow unchanged).
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: filterRepicksFlow

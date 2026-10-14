@@ -8,19 +8,20 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: approved
+readiness: draft
 priority: medium
 criteria: |
-  Given the tab has one history entry showing leafcutter/deliver-a-feature with no drawer open,
-    either at /flows/leafcutter/deliver-a-feature or at the bare /flows,
+  Given the tab has one history entry showing /flows/leafcutter/deliver-a-feature with no
+    drawer open,
   When the person clicks the 'Plan' step,
   Then the 'Plan' drawer opens,
-  And the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan in both cases, the
-    bare /flows being replaced by the default flow's canonical address,
+  And the address bar becomes /flows/leafcutter/deliver-a-feature?step=plan,
   And the tab still has one history entry, because the current entry was replaced rather than a
     new one added,
   And opening the address now in the address bar in a new tab shows the same flow with the same
-    'Plan' drawer open.
+    'Plan' drawer open,
+  And the finder at the bare /flows draws no flow, so no drawer opens there and /flows is never
+    rewritten to a step address.
 depends_on:
   - UXP-591
   - UXP-591-1
@@ -148,6 +149,9 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: "2026-10-14 business-analyst: criteria amended for UXP-617 (flow v6 drawerUrl scenario). The bare /flows is now the finder (owner decision 2026-10-12), so owner ruling 1 (a drawer opened on bare /flows replaces it with the default flow's step address) has nothing left to act on. Removed the bare-/flows starting state and its replace clause; added that no drawer opens on the finder. Readiness lowered approved -> draft; it_requirements (the bare-/flows replace via the default-entry constant) and the test_spec entries 'clicking Plan on the bare /flows ...' and the nav-drawer-on-bare-flows replay are obsolete and need IT-PO re-enrichment."
+  agent: business-analyst
+  date: '2026-10-14'
 superseded_by: null
 covered_by:
   - UXP-591-4-i
@@ -162,6 +166,8 @@ notes: |
   the current history entry; they never add a Back entry. Branch 'drawerSwitch' and the
   closing step 'drawerClose' are the L3 children (closing sits here as the inverse of opening
   because UXP-591 is at its five-L2 cap).
+
+  AMENDED 2026-10-14 (business-analyst, UXP-617): owner ruling 1 no longer applies; see amended_by.
 product_truth:
   - flow: leafcutter/explore-flows-in-atlas
     node: drawerUrl

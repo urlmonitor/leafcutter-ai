@@ -1,0 +1,66 @@
+id: UXP-617-1-ii
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Results are grouped by flow, each card showing up to three matching step rows with an actor badge and why it matched"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given /flows?q=selected+option&actor=human is open,
+  When the results show,
+  Then Publishing the decision record comes first with 4 matching steps and three step rows,
+    'Decide to publish', 'Commit and review in git' and 'Merge to main', in step order,
+  And each of those rows carries a 'Person' badge and the reason it matched, either
+    'Input · Decision record › selected_option_id' or
+    'Output · Decision record › selected_option_id',
+  And the card ends with '1 more step',
+  And Retrieving a decision as precedent follows with its one row 'Reuse it, or decide anew?',
+  And no flow card shows more than three step rows, listing steps in step order before branches,
+  And with a search, flows whose own name matches come first, then flows with more matching
+    steps, then flows by name.
+depends_on:
+  - UXP-617-1
+  - UXP-617-1-i
+  - UXP-617-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderResults and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-selected-option-person results; the result-ordering invariant."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: UXP-617-1-i
+    contract: "The matching steps per flow, with the target each matched on."
+  - ac_id: UXP-617-3
+    contract: "The shared actor-label mapping (Code, AI agent, Person, Jev)."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderResults'. The ordering
+  clause comes from the dataset's result-ordering invariant. Opening a row or a card is
+  UXP-617-2-i.

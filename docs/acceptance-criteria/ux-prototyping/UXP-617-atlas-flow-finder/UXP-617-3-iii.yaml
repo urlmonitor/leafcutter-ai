@@ -1,0 +1,63 @@
+id: UXP-617-3-iii
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "A criterion chip in a step drawer opens that criterion in the Atlas, selected with its detail open"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given the step 'resolve' of leafcutter/flow-render-pipeline implements UXP-411 and UXP-411a,
+  When the person opens /flows/leafcutter/flow-render-pipeline?step=resolve and clicks the
+    'UXP-411' chip in its drawer,
+  Then the drawer shows one chip per linked criterion, UXP-411 then UXP-411a in stored order,
+    each with that criterion's title,
+  And the 'UXP-411' chip links /atlas?ac=UXP-411,
+  And following it opens the Atlas with UXP-411 selected and its detail open, rather than the
+    component overview,
+  And opening /atlas?ac=UXP-411a directly in a new tab likewise opens UXP-411a selected with its
+    detail open.
+depends_on:
+  - UXP-617-3
+  - UXP-523
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 branch acChipLink and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowNode ac_chips invariant: href '/atlas?ac=<ac>'."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-523
+  contract: "The step drawer that lists the step's acceptance criteria."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, branch 'acChipLink'. Two sides:
+  the drawer chip's link, and the Atlas page honouring ?ac= (today it ignores it and shows the
+  component overview, per the dataset invariant). The direct-open clause is added so the fix
+  lands on the Atlas page and not as a click handler on the chip. What the Atlas shows for
+  /atlas?ac=<unknown id> is not specified.

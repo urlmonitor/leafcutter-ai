@@ -1,0 +1,83 @@
+id: UXP-617-2
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "The finder's search and filters travel in the /flows address, so a shared link reopens the same results"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given /flows is open in a tab with one history entry,
+  When the person types 'selected option' and then ticks 'Person' under Actor,
+  Then the address bar becomes /flows?q=selected+option and then
+    /flows?q=selected+option&actor=human,
+  And the tab still has one history entry, because each change rewrote the current entry
+    rather than adding one,
+  And opening /flows?q=selected+option&actor=human in a new tab answers 200 and shows the same
+    search 'selected option', the 'Actor: Person' chip and the same '2 flows, 5 steps match'
+    results,
+  And the address names each filter by its stored value, actor=human, never by its label
+    'Person',
+  And the address never carries a flow or a step parameter, so opening it never triggers the
+    legacy-link redirect and never opens a drawer,
+  And clearing the search box and unticking 'Person' returns the address to /flows.
+depends_on:
+  - UXP-617
+  - UXP-617-1
+  - UXP-617-1-iii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderUrl and its acceptance_scenario."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery url field (the query string is the finder state) and the invariant that a finder URL never carries flow or step."
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: "Atlas routes table; gains the /flows finder parameters."
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  - agent: frontend-coder
+    contract: "One finder address format: /flows plus q and the facet parameters product, actor, kind, realization, level, uses, produces, io, entity and screen, carrying stored values; written in place without adding a history entry. UXP-617-2-i and UXP-617-1-v's suggestion links use it."
+  - agent: documentation-expert
+    contract: "The stable parameter names and stored values the reference doc in UXP-617-5 lists."
+expects_from:
+  ac_id: UXP-617-1-iii
+  contract: "The chosen facet values, held as stored values (for example actor human), from which the address is built."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-617-2-i
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: contract_boundary
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderUrl' (FlowFinderQuery
+  finder-selected-option and finder-selected-option-person). risk_surface is
+  contract_boundary because a shared or bookmarked link depends on the parameter names and
+  stored values staying stable; UXP-617-5 documents them. The legacy-link redirect is the one
+  UXP-591-2-iii keys on the 'flow' parameter alone.

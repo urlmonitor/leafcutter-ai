@@ -1,0 +1,75 @@
+id: UXP-617-3
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Every step and branch card on a flow page shows who runs it: Code, AI agent, Person or Jev"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given leafcutter/decision-retrieval has steps run by code, by Jev and by a person,
+  When a person opens /flows/leafcutter/decision-retrieval,
+  Then every step card and every branch card carries an actor badge,
+  And 'Ask Jev whether each applies' shows 'Jev', 'Reuse it, or decide anew?' shows 'Person'
+    and 'Look up matching records' shows 'Code',
+  And the 'Reuse it, or decide anew?' card's accessible name is
+    'Step 4 of 5: Reuse it, or decide anew? (Person)', and a branch card's accessible name has
+    the form 'Branch: <label> (<actor>)',
+  And a step that Jev runs is never badged 'AI agent',
+  And the badge words are the same four the finder's Actor filter and step rows use: Code,
+    AI agent, Person and Jev.
+depends_on:
+  - UXP-617
+  - UXP-591-1
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step actorBadge and its acceptance_scenario."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowNode actor_kind -> actor_label mapping and the card_label invariant."
+  - path: docs/architecture/components/ux-prototyping.md
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to:
+  agent: frontend-coder
+  contract: "One actor-label mapping (deterministic -> Code, llm -> AI agent, human -> Person, jev -> Jev) shared by the step cards, the finder's step rows and its Actor filter, and each card's accessible name 'Step <order> of <step count>: <label> (<actor>)' or 'Branch: <label> (<actor>)'. UXP-617-3-i addresses cards by that name."
+expects_from: {}
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-617-3-i
+  - UXP-617-3-ii
+  - UXP-617-3-iii
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'actorBadge'. Owner decision
+  (2026-10-12): Jev is its own actor value. This L2 also hosts the other flow-page quick wins
+  of UXP-617 as L3 children (keyboard drawer access, tab titles, AC chip links). They are flow
+  steps and branches, not edge cases of the badge; they sit here because UXP-617 has five L2
+  slots, two of which its documentation triggers take, and the folder holds at most 15 files.
+  Open: the flow contract allows a step's actorKind to be null; the dataset assumes every node
+  has one. What a card with no stored actor shows is not specified.

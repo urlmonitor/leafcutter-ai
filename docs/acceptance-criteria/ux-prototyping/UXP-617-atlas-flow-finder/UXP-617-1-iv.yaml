@@ -1,0 +1,64 @@
+id: UXP-617-1-iv
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "'I/O not yet defined' lists exactly the 102 steps in 9 flows whose inputs or outputs are not defined yet"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given on the store as measured on 2026-10-13, 102 of the 306 stored steps and branches, in 9
+    flows, have an input or output that is not defined yet, and the overview's
+    'I/O not yet defined' shows 9,
+  When a person ticks 'I/O not yet defined' on /flows, or opens /flows?io=gap,
+  Then the summary reads '9 flows, 102 steps match',
+  And each listed flow's matching steps are exactly its steps and branches with an undefined
+    input or output, none more and none fewer,
+  And the chip reads 'I/O not yet defined' and never 'I/O: I/O not yet defined',
+  And adding 'AI agent' under Actor, at /flows?actor=llm&io=gap, narrows the list to
+    '6 flows, 8 steps match',
+  And among those the step 'Build a candidate query' is listed, and opening it goes to
+    /flows/leafcutter/retrieval-query-build?step=author.
+depends_on:
+  - UXP-617-1
+  - UXP-617-1-iii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 branch finderIoGap and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-io-gap and finder-io-gap-ai-agent; FlowNode io_gap and missing_io."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-617-1-iii
+  contract: "Facet selection, chips and recounting, which the io facet joins with its one value gap."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, branch 'finderIoGap'. A step counts
+  as undefined when its input/output contracts declare missing bindings. A field search can
+  miss these steps, which is why the option exists. The 'none more and none fewer' clause
+  guards against counting every step of a flow that has one gap.

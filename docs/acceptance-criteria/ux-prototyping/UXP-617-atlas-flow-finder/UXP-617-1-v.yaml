@@ -1,0 +1,64 @@
+id: UXP-617-1-v
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "When nothing matches, the finder says so and offers to remove each filter with the number of flows that would then list"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given no step that matches 'tracking' is run by Jev,
+  When a person opens /flows?q=tracking&actor=jev,
+  Then the summary reads 'No flows match' and no result is listed,
+  And the empty state is titled "No flows match 'tracking'",
+  And it offers 'Remove Actor: Jev', which links /flows?q=tracking and says it would list
+    3 flows,
+  And following 'Remove Actor: Jev' lists those 3 flows with the search 'tracking' kept,
+  And with no search, a filter combination that matches nothing shows the title
+    'No flows match these filters'.
+depends_on:
+  - UXP-617-1
+  - UXP-617-1-iii
+  - UXP-617-2
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 branch finderNoMatch and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-no-match: empty_state title, detail and suggestions."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: UXP-617-1-iii
+    contract: "Per-value flow counts with the search and other filters kept, which give each suggestion's number."
+  - ac_id: UXP-617-2
+    contract: "The finder address format each suggestion links to."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, branch 'finderNoMatch'. One
+  suggestion per chosen filter value. A search that matches nothing with no filter chosen has
+  no suggestion to offer; the dataset does not model that case, so its empty-state wording is
+  left open.

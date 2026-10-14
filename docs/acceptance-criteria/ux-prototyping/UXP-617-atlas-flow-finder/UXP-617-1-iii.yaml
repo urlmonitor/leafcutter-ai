@@ -1,0 +1,71 @@
+id: UXP-617-1-iii
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Ticking a filter value narrows the results, shows a removable chip and recounts every option, zero values staying listed"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given /flows?q=selected+option lists 5 flows and 27 steps,
+  When the person ticks 'Person' under Actor,
+  Then the summary reads '2 flows, 5 steps match' and only steps a person runs are listed,
+  And an 'Actor: Person' chip with a button named 'Remove filter Actor: Person' and a
+    'Clear all' link appear above the results,
+  And the Actor filter shows Code 5, AI agent 1, Person 2 and Jev 0, the Jev option staying
+    listed but disabled,
+  And ticking 'Code' as well lists the steps run by a person or by code, because values
+    combine with OR within one filter,
+  And a value ticked in a second filter narrows the list further, because filters combine with
+    AND,
+  And 'Clear all' removes every filter value and keeps the search 'selected option',
+  And the filter panel offers Product, Actor, Kind, Realization, Level, Uses field, Produces
+    field, I/O, Entity and Screen, the Uses field and Produces field options being picked by
+    typing a field name.
+depends_on:
+  - UXP-617-1
+  - UXP-617-1-i
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step finderFacets and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery finder-selected-option-person; the facet_counts and applied_chips invariants."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to:
+  agent: frontend-coder
+  contract: "The chosen facet values held as stored values per facet (product, actor, kind, realization, level, uses, produces, io, entity, screen), from which UXP-617-2 builds the address."
+expects_from:
+  ac_id: UXP-617-1
+  contract: "The facet panel with per-option flow counts."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'finderFacets'. The OR/AND
+  examples, the 'Clear all' clause and the facet list come from the dataset invariants
+  (facet_counts, applied_chips, clear_all_href). A zero option stays listed but disabled so
+  the panel does not jump. Not specified by the flow or dataset: a concrete count for
+  'Person' plus 'Code' together; the test should derive it from the dataset's FlowNode
+  records rather than this AC pinning a number.

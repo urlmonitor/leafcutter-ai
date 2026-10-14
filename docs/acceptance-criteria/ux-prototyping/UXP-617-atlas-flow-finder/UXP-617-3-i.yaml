@@ -1,0 +1,69 @@
+id: UXP-617-3-i
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Enter on a focused step card opens its drawer and Enter on 'Close step details' closes it, exactly as clicks do"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given /flows/leafcutter/flow-render-pipeline is open with no drawer and the tab has one
+    history entry,
+  When the person tabs to the card named
+    'Step 2 of 3: Resolve each step to its AC's live work_status (Code)' and presses Enter,
+  Then the 'resolve' drawer opens and the address bar becomes
+    /flows/leafcutter/flow-render-pipeline?step=resolve,
+  And the tab still has one history entry, exactly as a click on the card gives,
+  And when the person then tabs to the drawer's close button, which is named
+    'Close step details', and presses Enter,
+  Then the drawer closes and the address bar becomes /flows/leafcutter/flow-render-pipeline
+    with no query,
+  And the tab still has one history entry, exactly as a click on that button gives,
+  And every step and branch card can be reached with the Tab key.
+depends_on:
+  - UXP-617-3
+  - UXP-591-4
+  - UXP-591-4-ii
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 branches drawerByKey and drawerCloseByKey and their acceptance_scenarios."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowNode card_label invariant: the card is focusable and opens its drawer with Enter."
+assigned_agent: frontend-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  - ac_id: UXP-617-3
+    contract: "Each card's accessible name 'Step <order> of <step count>: <label> (<actor>)'."
+  - ac_id: UXP-591-4
+    contract: "The replace-entry path drawer open and close already use."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, branches 'drawerByKey' and
+  'drawerCloseByKey'. Merged into one AC because they are the two halves of keyboard access
+  to one drawer and share every precondition; the folder's 15-file cap left no room for two.
+  The 'exactly as a click' clauses mean the key path must reuse the click path, not a second
+  history write.

@@ -1,0 +1,69 @@
+id: UXP-617-2-i
+components:
+  - ux_prototyping
+  - atlas_frontend
+  - frontend_coding
+readiness: draft
+priority: medium
+title: "Opening a result goes to its flow or step address with one Back entry that returns the finder as it was left"
+component: ux-prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given /flows?q=selected+option&actor=human is open and the tab has one history entry,
+  When the person clicks the step row 'Reuse it, or decide anew?' under Retrieving a decision
+    as precedent,
+  Then a second history entry /flows/leafcutter/decision-retrieval?step=offer-reuse is added,
+  And Retrieving a decision as precedent is drawn with the 'Reuse it, or decide anew?' drawer
+    open, the filters Real, Data, All and a breadcrumb of only that flow,
+  And Back returns /flows?q=selected+option&actor=human with the same search, the
+    'Actor: Person' chip and the same '2 flows, 5 steps match' results,
+  And Forward returns the flow with the same drawer open,
+  And clicking the Retrieving a decision as precedent flow card instead adds an entry at
+    /flows/leafcutter/decision-retrieval with no drawer open.
+depends_on:
+  - UXP-617-2
+  - UXP-617-1-ii
+  - UXP-591-5
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/explore-flows-in-atlas.flow.json
+    relationship: implemented-by-step
+    status: exists
+    relevance: "v6 step openResult and its acceptance_scenario."
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowNavigation pop invariant: a finder entry comes back with the search and facets last replaced into it."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows/atlas-flows-finder.html
+    relationship: describes
+    status: exists
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.html
+    relationship: describes
+    status: exists
+assigned_agent: frontend-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  - ac_id: UXP-617-2
+    contract: "The finder entry's address, rewritten in place with the current search and facets."
+  - ac_id: UXP-591-5
+    contract: "Push-entry path that adds one history entry at a flow's canonical address, and the popstate restore."
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - ui
+risk_surface: internal
+notes: |
+  Derived from flow leafcutter/explore-flows-in-atlas v6, step 'openResult'. Opening a result
+  is a navigation (one entry added), unlike search and filter edits on the finder (rewritten
+  in place, UXP-617-2). The opened flow's filters are its own source and kind with Realization
+  All, as for any canonical address (UXP-591-1).
