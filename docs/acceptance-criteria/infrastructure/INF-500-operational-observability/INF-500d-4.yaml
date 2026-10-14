@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -169,6 +169,9 @@ amended_by:
     by: test-writer
     at: 2026-10-14
   - reason: "work_status done -> todo, set while merging origin/main. PR #1193 (merge 2832c5357) added the child INF-500d-4-ix (rule-copies parity, approved, work_status todo), so the composite cannot be done until -ix is built. The four end-to-end tests and the covered_by/implemented_by links stay. Criteria unchanged."
+    by: orchestrator
+    at: 2026-10-14
+  - reason: "work_status todo -> done. The last open child, INF-500d-4-ix (rule-copies parity), is done in the same commit, proven by unit_tests/feedback/test_inf_500d_4_ix.py. All nine children (-i to -ix) are done, and the four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py. Criteria unchanged."
     by: orchestrator
     at: 2026-10-14
 superseded_by: null

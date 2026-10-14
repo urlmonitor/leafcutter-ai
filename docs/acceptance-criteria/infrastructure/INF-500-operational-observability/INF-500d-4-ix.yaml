@@ -8,7 +8,7 @@ component: infrastructure
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -205,9 +205,19 @@ amended_by:
   - reason: "IT PO technical enrichment: added test_required: true, a six-entry behavioral test_spec derived from the four Gherkin scenarios (every copy executed from the deployed shared_reference_layout, never grepped), test_rationale, and estimated_complexity L. criteria, readiness and work_status unchanged."
     by: it-po
     at: 2026-10-14
+  - reason: "ac-fulfillment-gate store reconciliation: covered_by set to unit_tests/feedback/test_inf_500d_4_ix.py (tests tagged '# covers: INF-500d-4-ix'); implemented_by set to the five unit_tests/feedback/_usable_stream_parity_*.py modules and the generator's bogus ticket-file entry removed (a ticket is not an implementation); work_status todo -> done via mark_ac_done.py. criteria and readiness unchanged."
+    by: ac-fulfillment-gate
+    at: 2026-10-14
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/feedback/test_inf_500d_4_ix.py
+  - unit_tests/feedback/test_inf_500d_4_ix_drift.py
+implemented_by:
+- unit_tests/feedback/_usable_stream_parity_copies.py
+- unit_tests/feedback/_usable_stream_parity_core.py
+- unit_tests/feedback/_usable_stream_parity_rows.py
+- unit_tests/feedback/_usable_stream_parity_report.py
+- unit_tests/feedback/_usable_stream_parity_canonical.py
 change_target:
   - code
 risk_surface: contract_boundary
