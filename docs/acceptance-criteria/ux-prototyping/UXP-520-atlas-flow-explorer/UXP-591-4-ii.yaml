@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 criteria: |
   Given the 'Build' drawer is open at /flows/leafcutter/deliver-a-feature?step=build,
@@ -85,8 +85,17 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
-- reason: "2026-10-14 business-analyst: criteria amended for UXP-617. Removed the last clause (a drawer opened from the bare /flows closes to /flows/leafcutter/deliver-a-feature, never back to /flows): the bare /flows is now the finder and no drawer opens there (owner decision 2026-10-12; flow v6 drawerUrl scenario). The rest is unchanged. Keyboard close via 'Close step details' is UXP-617-3-i. Readiness lowered approved -> draft; the second it_requirements bullet and the test_spec entry 'a drawer opened and closed on the bare /flows ...' are obsolete."
+- reason: '2026-10-14 business-analyst: criteria amended for UXP-617. Removed the
+    last clause (a drawer opened from the bare /flows closes to /flows/leafcutter/deliver-a-feature,
+    never back to /flows): the bare /flows is now the finder and no drawer opens there
+    (owner decision 2026-10-12; flow v6 drawerUrl scenario). The rest is unchanged.
+    Keyboard close via ''Close step details'' is UXP-617-3-i. Readiness lowered approved
+    -> draft; the second it_requirements bullet and the test_spec entry ''a drawer
+    opened and closed on the bare /flows ...'' are obsolete.'
   agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
   date: '2026-10-14'
 superseded_by: null
 covered_by: []

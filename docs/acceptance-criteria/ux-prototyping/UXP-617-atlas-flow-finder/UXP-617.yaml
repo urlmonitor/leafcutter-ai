@@ -2,7 +2,7 @@ id: UXP-617
 components:
   - ux_prototyping
   - frontend_coding
-readiness: draft
+readiness: approved
 priority: medium
 title: "A person can find any flow or step by what it does, who runs it, or what it uses, and share the search"
 component: ux-prototyping
@@ -59,7 +59,10 @@ delivers_to: null
 expects_from: {}
 origin_agent: product-owner
 created: 2026-10-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by:
   - UXP-617-1

@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A criterion chip in a step drawer opens that criterion in the Atlas, selected with its detail open"
 component: ux-prototyping
@@ -91,7 +91,10 @@ test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

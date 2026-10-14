@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Results are grouped by flow, each card showing up to three matching step rows with an actor badge and why it matched"
 component: ux-prototyping
@@ -102,7 +102,10 @@ test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

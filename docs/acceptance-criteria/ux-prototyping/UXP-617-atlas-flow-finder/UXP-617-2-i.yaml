@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - atlas_frontend
   - frontend_coding
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "Opening a result goes to its flow or step address with one Back entry that returns the finder as it was left"
 component: ux-prototyping
@@ -120,7 +120,10 @@ test_required: true
 declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

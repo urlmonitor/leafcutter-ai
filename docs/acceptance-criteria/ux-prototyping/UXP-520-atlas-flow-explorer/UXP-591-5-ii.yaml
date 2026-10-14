@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 criteria: |
   Given the person opened a bookmarked /flows/leafcutter/deliver-a-feature, drilled into 'Build'
@@ -139,8 +139,19 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
-- reason: "2026-10-14 business-analyst: criteria amended for UXP-617 (flow v6 backForward scenario). The session now starts from a bookmarked /flows/leafcutter/deliver-a-feature instead of the bare /flows, which is the finder (owner decision 2026-10-12), so the second Back shows Deliver a feature end-to-end at its canonical address, not 'the default flow at /flows'. Added that an entry a filter change rewrote returns with its 'Outside the current filters' notice (UXP-591-5-iii as amended). Back from a flow to the finder is UXP-617-2-i; the tab title on Back is UXP-617-3-ii. Readiness lowered approved -> draft; the first test_spec entry and the e2e spec ('after two drills from /flows') need the new starting address."
+- reason: '2026-10-14 business-analyst: criteria amended for UXP-617 (flow v6 backForward
+    scenario). The session now starts from a bookmarked /flows/leafcutter/deliver-a-feature
+    instead of the bare /flows, which is the finder (owner decision 2026-10-12), so
+    the second Back shows Deliver a feature end-to-end at its canonical address, not
+    ''the default flow at /flows''. Added that an entry a filter change rewrote returns
+    with its ''Outside the current filters'' notice (UXP-591-5-iii as amended). Back
+    from a flow to the finder is UXP-617-2-i; the tab title on Back is UXP-617-3-ii.
+    Readiness lowered approved -> draft; the first test_spec entry and the e2e spec
+    (''after two drills from /flows'') need the new starting address.'
   agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
   date: '2026-10-14'
 superseded_by: null
 covered_by: []

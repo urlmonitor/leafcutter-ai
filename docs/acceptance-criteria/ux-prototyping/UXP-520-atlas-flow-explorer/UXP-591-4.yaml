@@ -8,7 +8,7 @@ level: L2
 status: active
 req_status: active
 work_status: todo
-readiness: reviewed
+readiness: approved
 priority: medium
 criteria: |
   Given the tab has one history entry showing /flows/leafcutter/deliver-a-feature with no
@@ -132,8 +132,18 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
-- reason: "2026-10-14 business-analyst: criteria amended for UXP-617 (flow v6 drawerUrl scenario). The bare /flows is now the finder (owner decision 2026-10-12), so owner ruling 1 (a drawer opened on bare /flows replaces it with the default flow's step address) has nothing left to act on. Removed the bare-/flows starting state and its replace clause; added that no drawer opens on the finder. Readiness lowered approved -> draft; it_requirements (the bare-/flows replace via the default-entry constant) and the test_spec entries 'clicking Plan on the bare /flows ...' and the nav-drawer-on-bare-flows replay are obsolete and need IT-PO re-enrichment."
+- reason: '2026-10-14 business-analyst: criteria amended for UXP-617 (flow v6 drawerUrl
+    scenario). The bare /flows is now the finder (owner decision 2026-10-12), so owner
+    ruling 1 (a drawer opened on bare /flows replaces it with the default flow''s
+    step address) has nothing left to act on. Removed the bare-/flows starting state
+    and its replace clause; added that no drawer opens on the finder. Readiness lowered
+    approved -> draft; it_requirements (the bare-/flows replace via the default-entry
+    constant) and the test_spec entries ''clicking Plan on the bare /flows ...'' and
+    the nav-drawer-on-bare-flows replay are obsolete and need IT-PO re-enrichment.'
   agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
   date: '2026-10-14'
 superseded_by: null
 covered_by:

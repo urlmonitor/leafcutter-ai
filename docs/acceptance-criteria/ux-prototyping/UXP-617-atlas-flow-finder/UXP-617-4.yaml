@@ -3,7 +3,7 @@ components:
   - ux_prototyping
   - documentation_system
   - atlas_frontend
-readiness: reviewed
+readiness: approved
 priority: medium
 title: "A how-to guide teaches a person to find a flow or step with the finder and share the search"
 component: ux-prototyping
@@ -69,7 +69,10 @@ test_rationale: Documentation only (change_target docs); no executable behaviour
 declares_side_effect: false
 origin_agent: business-analyst
 created: 2026-10-14
-amended_by: []
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -8,7 +8,7 @@ level: L3
 status: active
 req_status: active
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given a new tab opened /flows/leafcutter/flow-render-pipline?step=resolve, so the tab has one
@@ -109,8 +109,22 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
-- reason: "2026-10-14 business-analyst: criteria REPLACED for UXP-617. Owner decision 2026-10-12: a filter change never swaps the drawn flow. Old behaviour (owner ruling at the AC gate 2026-10-09, decision (2)(c)): a filter change on 'Flow not found' cleared the notice, drew the first flow the selector lists and replaced the address. New behaviour, inferred by the BA from the never-swap rule because neither flow v6 nor dataset v4 models a filter change on 'Flow not found' (the dataset's filter invariant requires the previous state to show a graph): the notice and the address stay, no flow is drawn, the selector re-lists under the new filters and no entry is added. NEEDS OWNER CONFIRMATION before readiness goes back up. Title changed. Readiness lowered approved -> draft; it_requirements, expects_from (the re-pick function of UXP-591-5-iii) and the test_spec describe the rejected behaviour."
+- reason: '2026-10-14 business-analyst: criteria REPLACED for UXP-617. Owner decision
+    2026-10-12: a filter change never swaps the drawn flow. Old behaviour (owner ruling
+    at the AC gate 2026-10-09, decision (2)(c)): a filter change on ''Flow not found''
+    cleared the notice, drew the first flow the selector lists and replaced the address.
+    New behaviour, inferred by the BA from the never-swap rule because neither flow
+    v6 nor dataset v4 models a filter change on ''Flow not found'' (the dataset''s
+    filter invariant requires the previous state to show a graph): the notice and
+    the address stay, no flow is drawn, the selector re-lists under the new filters
+    and no entry is added. NEEDS OWNER CONFIRMATION before readiness goes back up.
+    Title changed. Readiness lowered approved -> draft; it_requirements, expects_from
+    (the re-pick function of UXP-591-5-iii) and the test_spec describe the rejected
+    behaviour.'
   agent: business-analyst
+  date: '2026-10-14'
+- action: approved
+  agent: approve_acs
   date: '2026-10-14'
 superseded_by: null
 covered_by: []
