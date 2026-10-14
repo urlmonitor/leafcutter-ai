@@ -274,7 +274,7 @@ any more. The `build-single-ticket` skill takes `TICKET_PATH` only from
 `ticket_path_in_worktree`. The `/plan-feature` command now runs the permission pre-flight, so
 the "MISSING pre-flight" stop described in section 2.3 no longer applies to it.
 
-How to use it: [get a workspace](../how-to/get-a-workspace.md). How a workflow receives the
+How to use it: [get a workspace](../how-to/get-a-workspace-for-a-piece-of-work.md). How a workflow receives the
 answer: [ADR-030](../architecture/adrs/ADR-030-dual-engine-workflow-support.md). The maker
 itself: [worktree-manager](../architecture/components/worktree-manager.md).
 
