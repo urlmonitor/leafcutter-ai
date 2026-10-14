@@ -8,7 +8,7 @@ component: ux-prototyping
 level: L2
 status: active
 req_status: approved
-work_status: todo
+work_status: done
 criteria: |
   Given the authored flow->AC edges (step.implements) across every flow,
   When generate_product_truth.py runs,
