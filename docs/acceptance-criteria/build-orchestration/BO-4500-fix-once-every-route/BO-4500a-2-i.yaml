@@ -1,0 +1,51 @@
+id: BO-4500a-2-i
+title: "No message, an empty message or an unreadable message file means no commit"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-2.yaml"
+criteria: |
+  Given the caller names a.py (changed) and gives no message file,
+  When the shared commit step runs,
+  Then no commit is recorded, a.py is not left staged by the call,
+  And the answer is refused with a reason stating that a message file is required.
+
+  Given the caller names a.py and a message file that does not exist, or that contains only
+    blank lines and spaces,
+  When the step runs,
+  Then no commit is recorded and the answer is refused with a reason naming the message file
+    and stating which of the two conditions applied.
+
+  Given any of these refusals,
+  When the step answers,
+  Then it has not opened an editor, composed a message of its own, or waited for input.
+depends_on: [BO-4500a-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-2
+  contract: "Message-from-file rule."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The step never invents a message. Authoring a message when the caller has none is the commit
+  agent's job (BO-4500a-5-v), done before the step is called.

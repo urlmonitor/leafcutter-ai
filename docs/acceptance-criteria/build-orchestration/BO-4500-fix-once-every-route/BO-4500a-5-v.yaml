@@ -1,0 +1,86 @@
+id: BO-4500a-5-v
+title: "The commit agent still takes the dispatch, but runs the shared step and relays its answer instead of committing by hand"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - llm_authoring
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given the commit agent is dispatched with a list of files and a caller-written message file,
+  When it carries out the dispatch,
+  Then it calls the shared commit step once with that list and that file, unchanged,
+  And its reply contains the step's answer exactly as the step printed it, with no key added,
+    removed or reworded.
+
+  Given the commit agent is dispatched with a list of files and no message,
+  When it carries out the dispatch,
+  Then it writes a message to a file following the project's commit-message rules before
+    calling the step, and passes that file.
+
+  Given the step answers hook_failed for a judging check,
+  When the commit agent continues,
+  Then it applies the autofix judgement the precommit-autofix routing and BO-210 / BO-3800
+    assign for that check before any second call of the step,
+  And it never edits the check's configuration, and never retries by any route other than a
+    fresh call of the step.
+
+  Given the commit agent's instructions after this change,
+  When they are read,
+  Then they contain no command that stages files, records a commit, ends other processes or
+    uses the shared stash, and no literal model name,
+  And they state that a caller-supplied message, trailer included, is passed to the step as
+    given.
+
+  Given the commit agent's recipe before this change and the shared step after it,
+  When the migration is reviewed,
+  Then its stage-by-name rule and its confirmation gate for a person are kept,
+  And the regression tests for KI-BO-20260914-commit-agent-rewrites-co-author-trailer and
+    KI-BO-20260925-commit-agent-pkill-kills-parallel-test-runs run against the migrated agent and
+    the shared step and pass.
+depends_on: [BO-4500a-5, BO-4500a-2, BO-4500a-3-iii, BO-4500a-4-iii]
+doc_links:
+  - path: templates/agents/commit.md
+    relationship: modifies
+    status: exists
+    relevance: "Step 0 (process kill), the stash failure path, the hardcoded Co-Authored-By footer (~line 214) and the Step 5 re-stage loop are the parts removed or replaced."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260925-commit-agent-pkill-kills-parallel-test-runs.md
+    relationship: describes
+    status: exists
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract the agent relays verbatim."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHO RUNS THE STEP (L1 constraint 2) -- BA RECORDS THE USER'S DEFAULT, to be confirmed at the gate
+  (question Q1): the commit agent still receives every commit dispatch; its brief shrinks to "author
+  the message if none was given, run the step, relay its JSON, apply autofix judgement on
+  hook_failed". Message authoring and autofix judgement stay agent work; staging, recording,
+  retry budget and branch refusal move into the step.
+
+  The verbatim relay is the C2 lesson: an agent that summarises the answer re-creates the
+  unreadable-reply fallback. Template-text tests are the strongest proof available for an LLM
+  surface (BO-2400a-1-i's test_rationale makes the same argument).

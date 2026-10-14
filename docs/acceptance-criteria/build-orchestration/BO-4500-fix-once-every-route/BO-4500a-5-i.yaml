@@ -1,0 +1,66 @@
+id: BO-4500a-5-i
+title: "The fast lane commits the set it built -- coder's files, its changelog entry and its claimed records -- through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a fast-lane run whose workspace was dirtied at bootstrap with four regenerated agent
+    cards and docs/INDEX.md,
+  And whose coder reported changing scripts/x.py and unit_tests/test_x.py,
+  And whose changelog phase wrote changelogs/2026-10-12-1200-x.md,
+  And which claimed the acceptance-criterion records BO-9999a-1 and BO-9999a-1-i,
+  When the lane reaches its commit phase,
+  Then it calls the shared commit step naming exactly those two code files, the changelog
+    entry and the two claimed records,
+  And the resulting commit contains those five files plus any structural parent record the
+    run edited, and none of the four agent cards and not docs/INDEX.md,
+  And the lane reads the step's answer, continues to its pull-request phase only on committed,
+    and halts reporting the answer's status and reason on any other status.
+
+  Given the fast lane's commit recipe before this change and the shared step after it,
+  When the migration is reviewed,
+  Then every behaviour the fast lane's copy had been fixed for and the shared step lacked has
+    been carried into the shared step before the lane is moved,
+  And the KI-BO-029 regression test -- a bootstrap-dirtied workspace whose commit must not
+    carry the bootstrap churn -- runs against the shared step and passes.
+depends_on: [BO-4500a-5]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-029.md
+    relationship: describes
+    status: exists
+    relevance: "add -A is deliberate: it picks up the uncommitted changelog entry. The fix is a COMPUTED set -- files_modified, the changelog path and the claimed AC files -- not a narrowed add -A. The first scenario is that set."
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-2400-fast-lane-build/BO-2400f-5-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Routes the lane's command steps to the command-step-runner. The commit step is one of those steps; this record decides what it commits, BO-2400f-5-i decides which agent is asked."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract the lane reads."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The fast lane is often the HARDENED copy (BO-4500 notes: KI-BO-020; the hardened AC writer
+  _fl_lifecycle). For commits it is the WEAKEST on staging (add -A) but its halt-on-non-ok reading
+  of replies is the hardened reply handling C2 credits it with -- keep that, which is the third
+  clause of the first Then. BO-9999a-1 is a placeholder id for the test fixture.

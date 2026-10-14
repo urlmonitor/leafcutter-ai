@@ -1,0 +1,61 @@
+id: BO-4500a-5-vi
+title: "The autofix and epic-building skills point at the shared step instead of carrying their own commit recipes"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: prompt
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given the precommit-autofix skill and section 5.6 of the building-epics skill after this change,
+  When their instructions for staging and committing are read,
+  Then each directs the reader to record a commit by calling the shared commit step,
+  And neither contains an instruction to stage all tracked files, stage all changed files,
+    stage "all files in scope", or record a commit directly.
+
+  Given the building-epics skill's section 5 commit lock, which names a helper that was never
+    written,
+  When the section is read after this change,
+  Then it states that commits are kept apart by the shared step (BO-4500a-4-ii) and names no
+    helper that does not exist.
+
+  Given the two skills' recipes before this change and the shared step after it,
+  When the migration is reviewed,
+  Then precommit-autofix's single-retry rule is present in the shared step before the skill is
+    moved,
+  And the BO-210c-2 regression tests run against the shared step and pass.
+depends_on: [BO-4500a-5, BO-4500a-3, BO-4500a-4-ii]
+doc_links:
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Stages with add -u today (C6)."
+  - path: templates/skills/building-epics/SKILL.md
+    relationship: modifies
+    status: exists
+    relevance: "Section 5.6 'all in scope' staging; section 5.2 names scripts/epic_lock.py, which does not exist (KI-BO-20260901-0920)."
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence the skills defer to."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The second scenario closes the "control specified in a runbook, absent in the code path" pattern
+  KI-BO-20260901-0920 names: the runbook stops promising a helper and points at the mechanism that
+  exists.

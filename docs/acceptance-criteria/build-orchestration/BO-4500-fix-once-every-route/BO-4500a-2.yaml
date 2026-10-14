@@ -1,0 +1,66 @@
+id: BO-4500a-2
+title: "The message the caller wrote is the message that lands, author credit included, whoever runs the step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a.yaml"
+criteria: |
+  Given a message file whose content is the subject line
+    "fix(build): stage the parent with the child", one blank line, a two-line body, one blank
+    line, and the final line
+    "Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>",
+  And the caller hands that file to the shared commit step together with the files to commit,
+  When the step is run by an agent whose own model is Claude Sonnet 5 and every check passes,
+  Then the recorded commit message is identical to the file's content, line for line,
+  And the trailer in the recorded message names Claude Opus 5.5 (1M context), not the model of
+    the agent that ran the step.
+
+  Given any call of the step,
+  When the step composes the commit,
+  Then the message comes only from the caller's file,
+  And the step adds no line to it, removes no line from it, and changes no line of it.
+depends_on: [BO-4500a]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+    relevance: "Two confirmed occurrences (6a537708, 9e796a16). The second shows the dispatch-prompt workaround does not hold, because the agent discounts a relayed instruction. Moving the message into a file the step carries verbatim takes the decision away from the agent."
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200c-4.yaml
+    relationship: related
+    status: exists
+    relevance: "An approved subject line is never rewritten by hooks or re-staging. This record is wider (the whole message, trailer included) and is the step that makes BO-200c-4 hold on every route."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1100-smart-commit-routing/BO-1100.yaml
+    relationship: related
+    status: exists
+    relevance: "Message KIND and authoring stay upstream of the step (BO-1100). The step carries what it is given."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "The step records the caller's message file unchanged; the commit agent's brief (BO-4500a-5-v) relies on this and stops editing trailers."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-2-i, BO-4500a-2-ii, BO-4500a-2-iii]
+implemented_by: []
+notes: |
+  "Identical line for line" is the falsifiable form: a test reads the recorded message back and
+  compares it with the file. Git's default message cleanup can drop lines (BO-4500a-2-iii); the step
+  must not let it.
+
+  MIGRATION RULE: no copy of this logic is hardened today -- every recipe passes the message through
+  an agent that may edit it. The hardened behaviour is defined here and KI-BO-20260914's regression
+  test (template states a caller-supplied trailer is preserved; no literal model name in the
+  template) runs against the migrated commit agent in BO-4500a-5-v.

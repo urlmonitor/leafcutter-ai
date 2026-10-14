@@ -1,0 +1,62 @@
+id: BO-4500a-4-ii
+title: "Two calls of the shared step in one workspace at once each record only their own commit"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given one workspace on branch feature/x with a.py and b.py changed,
+  And caller A asks the shared commit step to commit a.py while caller B, at an overlapping
+    time, asks it to commit b.py,
+  When both calls finish with every check passing,
+  Then the branch has gained exactly two commits, one containing only a.py and one containing
+    only b.py, each with its own caller's message,
+  And both answers are committed, each with its own commit id,
+  And neither answer is refused or hook_failed because the other call was running.
+
+  Given caller A's call is between staging and recording its commit,
+  When caller B's call reaches the point of recording,
+  Then B waits until A's commit is recorded or A's call has ended, using the serialisation
+    BO-1600a defines, before B stages or records anything.
+depends_on: [BO-4500a-4, BO-1600a-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-0920.md
+    relationship: describes
+    status: exists
+    relevance: "No commit lock in any driver. Its 2026-10-09 update records build-feature now chains commit dispatches on one commitLane; other routes have no such chain. The shared step is where serialisation holds for every route."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600a-1.yaml
+    relationship: consumes
+    status: exists
+    relevance: "Owns the serialisation primitive and its semantics (git-write portion only, cross-process, released on every exit). Not re-specified here."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-1600a-1
+  contract: "The git-write serialisation guard scoped to one shared workspace; this step acquires it around staging and recording."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SEAM FROM THE L1 NOTES: serialising concurrent commits is BO-1600a's promise (prevention only by
+  design) and BO-1800 removes the shared store. This record cites BO-1600a rather than re-specifying
+  the lock; it states only that the shared step is where the lock is taken, for every route. Stale
+  lock recovery is BO-1600b's (KI-BO-20260901-0920's warning: a lock without stale recovery turns
+  corruption into deadlock).
+
+  KI-BO-20260901-0920 is NOT fully closed by this record: its working-tree half
+  (KI-BO-20261009-parallel-tickets-interfere-through-one-worktree) is not a commit concern. The
+  index half closes jointly with BO-4500a-1-i.

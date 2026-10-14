@@ -1,0 +1,57 @@
+id: BO-4500a-1-i
+title: "Work another caller already staged stays out of your commit and stays staged"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-1.yaml"
+criteria: |
+  Given one shared workspace whose index already holds staged changes to
+    tickets/01_TICKET-GE-122d-1.md and tickets/03_TICKET-GE-122d-3.md, staged by two
+    sibling tickets' phases,
+  And a third caller asks the shared commit step to commit exactly
+    tickets/10_TICKET-BP-900h-6.md,
+  When the step runs and every check passes,
+  Then the new commit contains tickets/10_TICKET-BP-900h-6.md and no other file,
+  And afterwards tickets/01_TICKET-GE-122d-1.md and tickets/03_TICKET-GE-122d-3.md are
+    still staged, with exactly the staged content they had before the call,
+  And the answer's paths lists only tickets/10_TICKET-BP-900h-6.md.
+
+  Given the same pre-staged index,
+  When the step's call ends in hook_failed or refused,
+  Then the two sibling files are still staged with their earlier staged content,
+  And none of the caller's named files remains staged by the call.
+depends_on: [BO-4500a-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260901-0920.md
+    relationship: describes
+    status: exists
+    relevance: "The evidence in this criterion is that KI's 'Why nothing broke' sample (d6a7fe470): the commit agent's explicit pathspec took its own file and left three siblings staged. That convention is prose today; this record makes it a property of the one step."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-1
+  contract: "Explicit-path staging rule."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  This is the half of KI-BO-20260901-0920 the shared step can close on its own: a commit can never
+  carry another caller's staged work, whatever else is in the index. The other half -- two git
+  writes at the same instant -- is serialisation, owned by BO-1600a and consumed in BO-4500a-4-ii.
+  The rollback scenario must leave OTHER callers' staging alone: a rollback that restores "the
+  index as it was" by resetting everything would unstage the siblings' work (BO-200b-2 is scoped
+  to one envelope's files, which is the reading taken here).

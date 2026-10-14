@@ -1,0 +1,67 @@
+id: BO-4500a-5-ii
+title: "Plan-feature's three commits -- after a stage, at the end, and when recovering orphans -- go through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - ac_driven_dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a plan-feature run named plan-bo-100k-20261012 whose business-analyst stage reported
+    writing BP-100k-4-iv, BP-100k-4-v, BP-100k-4-vi and BP-100k-4-vii and edited their parent
+    BP-100k-4's covered_by,
+  And the user approved the stage,
+  When the workflow commits the stage's output,
+  Then it calls the shared commit step in supervised mode, naming the four records and the run
+    plan-bo-100k-20261012,
+  And the commit contains the four records and BP-100k-4,
+  And the check that requires each child in its parent's covered_by passes on that commit.
+
+  Given the same run reaches its final commit, and separately a run that recovers orphaned
+    records,
+  When each of those two commits is made,
+  Then each calls the shared step naming exactly the records that commit is for,
+  And the workflow treats any answer other than committed as a failed commit and reports the
+    answer's status, hook_name and failing_files to the user.
+
+  Given plan-feature's commit recipe before this change and the shared step after it,
+  When the migration is reviewed,
+  Then plan-feature's exact-name rule, which kept a stage from sweeping in other stages' or the
+    user's files, is preserved by the shared step,
+  And the KI-BO-20260928 regression test -- a stage adding children to an existing parent,
+    committed through the real checks -- runs against the shared step and passes.
+depends_on: [BO-4500a-5, BO-4500a-4-iv]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260928-stage-commit-leaves-the-edited-parent-unstaged.md
+    relationship: describes
+    status: exists
+    relevance: "commitStageOutput() and the orphan-recovery commit pass ids the same way; fix direction 3 names the missing test this record makes mandatory."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-1-ii
+  contract: "Structural-parent inclusion."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Plan-feature has no AC id for a run (L1 constraint 1), so it names its run (BO-4500a-4-iv). The
+  done-parent gap from the same KI is out of scope (BO-4500a-1-ii notes). Open PR #968
+  (audit/plan-feature-next) edits plan-feature.js; the implementer must rebase onto it, not
+  re-derive its pause-gate fixes.

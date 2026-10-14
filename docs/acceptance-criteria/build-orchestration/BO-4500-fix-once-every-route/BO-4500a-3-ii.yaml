@@ -1,0 +1,52 @@
+id: BO-4500a-3-ii
+title: "After the one retry a failure is reported -- a fixer that never settles cannot loop the step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-3.yaml"
+criteria: |
+  Given on the first run of the checks a fixing check rewrites a.py,
+  And on the second run a judging check fails on a.py,
+  When the shared commit step continues,
+  Then no commit is recorded and the checks have run exactly twice,
+  And the answer is hook_failed naming the judging check, with a.py in failing_files.
+
+  Given a fixing check that rewrites a.py on every run, so its output never settles,
+  When the step has run the checks twice,
+  Then it stops, no commit is recorded, the checks are not run a third time,
+  And the answer is hook_failed naming the fixing check, with a.py in failing_files.
+depends_on: [BO-4500a-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c-2.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-3.yaml
+    relationship: related
+    status: exists
+    relevance: "States up to 3 retries; contradicts the single-retry budget. Flagged on BO-4500a-3."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  "Exactly twice" is the countable form of "probe, then exactly one retry"; a test counts check runs.
+  KI-BO-20260914-autofix-depth (cited in C6) is the recursion shape this bounds.

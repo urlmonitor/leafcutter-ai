@@ -1,0 +1,54 @@
+id: BO-4500a-3-i
+title: "No route can switch the checks off through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-3.yaml"
+criteria: |
+  Given the environment the shared commit step is started in asks the check runner to skip
+    the checks named check-doc-frontmatter and check-ac-schema,
+  When the step runs the checks,
+  Then check-doc-frontmatter and check-ac-schema run like every other check,
+  And the answer states that a request to skip checks was present and was not honoured.
+
+  Given a caller looks for a way to ask the step itself to commit without running the checks,
+  When the step's accepted options are listed,
+  Then no option exists that skips all checks or any named check.
+
+  Given the environment asks to skip a check and that check fails,
+  When the step answers,
+  Then the answer is hook_failed naming that check, exactly as it would be with no skip request.
+depends_on: [BO-4500a-3]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C6 spec: 'never skips hooks'."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION: an inherited skip request is DISREGARDED AND REPORTED, not refused. A refusal would
+  turn a stale variable left in a shell into a failed delivery with nothing wrong in the change;
+  disregarding it keeps the "checks always run" promise and still tells the caller. Hand-run
+  commits outside the step are untouched -- this record constrains the shared step only.

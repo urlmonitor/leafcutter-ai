@@ -1,0 +1,81 @@
+id: BO-4500a-3
+title: "The project's checks always run first, and a failure gets exactly one fix-and-retry before it is reported"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a.yaml"
+criteria: |
+  Given the caller names a.py and notes.md, both changed, with a valid message file,
+  And every check the project runs before a commit passes on both files,
+  When the shared commit step runs,
+  Then the checks run once over the named files before any commit is recorded,
+  And the commit is recorded and the answer is committed.
+
+  Given the same call,
+  And on that first run a fixing check (a formatter) rewrites a.py and every other check passes,
+  When the step continues,
+  Then it takes the rewritten a.py into the named set and runs the checks exactly once more,
+  And when that second run passes, the commit is recorded with the rewritten a.py,
+  And the answer is committed and names the fixing check and a.py as the file it changed.
+
+  Given the same call,
+  And on the first run a judging check that fixes nothing fails on notes.md,
+  When the step continues,
+  Then no commit is recorded and the checks are not run a second time,
+  And the answer is hook_failed with hook_name naming that check and failing_files listing
+    notes.md,
+  And a.py and notes.md hold in the working tree the content they had when the step stopped,
+    with any fixing check's changes kept,
+  And neither file is left staged by the call.
+depends_on: [BO-4500a, BO-4500a-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Cluster C6: three retry policies across the recipes; spec is 'hook probe, then autofix, then exactly one retry; never skips hooks'."
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Approved: after any fixer returns the commit is retried exactly once, and a second failure is surfaced, not retried. This record is that budget made a property of the shared step."
+  - path: docs/acceptance-criteria/build-orchestration/BO-200-atomic-delivery/BO-200b-2.yaml
+    relationship: related
+    status: exists
+    relevance: "Rollback on failure: working-tree content preserved, staging returned. Cited for the last two clauses, not restated."
+  - path: templates/skills/precommit-autofix/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "Current single-retry autofix recipe -- one of the copies the step replaces."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: llm-expert
+  contract: "hook_failed answer carrying hook_name, failing_files and the check's own message, which the commit agent reads to apply autofix judgement (BO-4500a-3-iii, BO-4500a-5-v)."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-3-i, BO-4500a-3-ii, BO-4500a-3-iii]
+implemented_by: []
+notes: |
+  CONTRADICTION FLAGGED, NOT RESOLVED HERE: BO-200b-3 (readiness reviewed, todo) says "retries at
+  most 3 times". BO-210c-2 (approved) and the C6 spec say exactly once. This record follows exactly
+  once; BO-200b-3 needs an amendment or supersession by its owner.
+
+  MIGRATION RULE: the retry budget is taken from the hardened copy -- precommit-autofix's single
+  retry as BO-210c-2 fixed it -- and its regression tests (BO-210c-2-i) run against this step.
+
+  "Fixing" vs "judging" is the check tier the hooks manifest already declares (transform vs
+  judgment, GE-102c / GE-120g). Workspaces where the checks cannot run at all are BO-1700's
+  (fail closed; graceful no-op where a project has none) and are not re-specified here.

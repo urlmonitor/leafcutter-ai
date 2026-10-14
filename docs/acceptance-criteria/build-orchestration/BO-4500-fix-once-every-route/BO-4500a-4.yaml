@@ -1,0 +1,67 @@
+id: BO-4500a-4
+title: "Every call of the shared step ends in one machine-readable answer with one of four outcomes, readable by any orchestrator"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: contract_boundary
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a.yaml"
+criteria: |
+  Given four calls of the shared commit step that end, in turn, in a recorded commit, in no
+    change among the named files, in a refusal, and in a failed check,
+  When each call finishes,
+  Then its whole standard output is exactly one JSON object and nothing else,
+  And that object always carries the keys status, sha, paths, hook_name and failing_files,
+  And status is respectively committed, nothing_to_commit, refused and hook_failed,
+  And sha holds the new commit's id only when status is committed and is null otherwise,
+  And hook_name and failing_files are filled only when status is hook_failed, and are null and
+    an empty list otherwise,
+  And a refused answer carries a reason in plain words.
+
+  Given the step is started as a plain command by a test harness that is not a workflow
+    engine, with the files to commit and the message file given as arguments,
+  When it finishes,
+  Then its answer has exactly the same shape and values as when a workflow route calls it,
+  And reaching the step needs nothing but the ability to run a command in the workspace and
+    read its standard output.
+depends_on: [BO-4500a, BO-4500a-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C6 spec: 'answers one JSON object {status: committed|nothing_to_commit|refused|hook_failed, sha, paths, hook_name, failing_files}'. C2: five reply-reading styles and fallbacks that read an unreadable reply as ok -- the shape this contract exists to end for commits."
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "The E2 engine gives a workflow body no subprocess or filesystem; a step reachable only as a command with a JSON answer is what lets any engine reach it."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  - agent: python-coder
+    contract: "The one-answer contract every migrated route reads (BO-4500a-5): keys status, sha, paths, hook_name, failing_files, reason; status in committed | nothing_to_commit | refused | hook_failed."
+  - agent: documentation-expert
+    contract: "The contract the reference doc (BO-4500a-4-vi) documents."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-4-i, BO-4500a-4-ii, BO-4500a-4-iii, BO-4500a-4-iv, BO-4500a-4-v, BO-4500a-4-vi]
+implemented_by: []
+notes: |
+  FRAMEWORK NEUTRALITY (L0/L1 constraint 4) is the second scenario: a harness that is not the E2
+  engine calls the step and gets the same answer. A LangGraph node or a Claude Agent SDK tool that
+  can run a command can call it unchanged. Nothing in the contract names the engine, an agent or a
+  workflow.
+
+  "reason" is added to the spec's five keys so a refusal is explainable; BO-4500a-1-iii adds one
+  list for files a check changed outside the named set. Both are flagged as extensions of the C6
+  spec for the user's confirmation.

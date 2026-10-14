@@ -1,0 +1,104 @@
+id: BO-4500a-5
+title: "Every route commits through the one shared step, built from the most hardened copy, with every replaced fix still proven"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: [code, prompt]
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a.yaml"
+criteria: |
+  Given the package as shipped, with its workflows plan-feature, quick-fix, fast-lane-ship,
+    finalize-feature and build-feature, its commit agent, and its precommit-autofix and
+    building-epics skills,
+  When every place that records a commit is enumerated, by running each workflow's commit
+    path against a test repository and by listing every commit instruction in the agent and
+    skill text,
+  Then every one of them records its commit by calling the shared commit step,
+  And none of them stages files or records a commit by a recipe of its own,
+  And the enumeration finds the eight workflow sites named in BO-4500a's notes (plan-feature
+    three, quick-fix two, fast-lane-ship one, finalize-feature one, plus the build-feature
+    commit dispatch) and no site that the migration records do not account for.
+
+  Given each piece of commit logic the shared step carries -- which files are staged, how the
+    message is handled, how checks are run and retried, which branches are refused, and how
+    concurrent commits are kept apart,
+  When the change that builds the shared step is reviewed,
+  Then for each piece it names the existing copy the step's version was taken from and the
+    known issues that copy was fixed for,
+  And no piece was taken from a copy that a sibling copy had already fixed and it had not.
+
+  Given every known issue whose fix lived in a recipe the shared step replaces, including
+    KI-BO-029, KI-BO-20260928-stage-commit-leaves-the-edited-parent-unstaged,
+    KI-BO-20260901-0920, KI-BO-20260914-commit-agent-rewrites-co-author-trailer and
+    KI-BO-20260925-commit-agent-pkill-kills-parallel-test-runs,
+  When the test suite runs,
+  Then each such known issue's regression test exercises the shared step itself,
+  And no regression test is left pointing only at a retired recipe.
+depends_on: [BO-4500a, BO-4500a-1, BO-4500a-2, BO-4500a-3, BO-4500a-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Cluster C6 inventory (8+ commit recipes); section 1 'fixed here, not there' (20+ cases) is the origin of the migration rule."
+  - path: docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500.yaml
+    relationship: parent
+    status: exists
+    relevance: "STANDING RULE (1) hardened copy, (2) replaced KIs' regression tests run against the shared step."
+  - path: templates/workflows-js/plan-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/quick-fix.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/fast-lane-ship.js
+    relationship: modifies
+    status: exists
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+  - path: templates/agents/commit.md
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+delivers_to: null
+expects_from:
+  - ac_id: BO-4500a-1
+    contract: "Staging rule."
+  - ac_id: BO-4500a-4
+    contract: "One-answer contract every migrated site reads."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-5-i, BO-4500a-5-ii, BO-4500a-5-iii, BO-4500a-5-iv, BO-4500a-5-v, BO-4500a-5-vi, BO-4500a-5-vii, BO-4500a-5-viii, BO-4500a-5-ix, BO-4500a-5-x]
+implemented_by: []
+notes: |
+  THIS L2 IS THE CENSUS AND THE MIGRATION RULE. Each route's own migration is one L3 below, and
+  every migration L3 repeats the rule as a criterion (the BO-4500 standing rule requires it at
+  every level, not as a note).
+
+  BEHAVIOURAL, NOT GREP (repo CLAUDE.md "Gate / Workflow ACs -- Verify Behaviorally"): the census
+  must run each workflow's commit path, or for a workflow the unit layer cannot run, assert the
+  shared step's answer is consumed in control flow. A grep for the step's name passes on dead code.
+
+  BUILD-FEATURE is listed in the census though the request named eight sites without it: its
+  commit dispatch goes to the commit agent, so it migrates through BO-4500a-5-v rather than a
+  workflow edit. Its commitLane chaining (KI-BO-20260901-0920, 2026-10-09 update) stays.
+
+  BO-3200f (open PR #971, readiness draft, no L2s yet) routes ~40 workflow command steps to the
+  command-step-runner. The commit sites are owned HERE; BO-3200f's L2s must exclude them so the same
+  site is not decomposed twice. Recorded for whoever decomposes BO-3200f.
+
+  KI VERIFICATION AGAINST CODE (L1 notes require it before an L2 claims a KI): the BA does not read
+  source. Each KI was read in its register entry; the IT PO must re-verify the cited line ranges
+  against current code before a ticket is generated. KI-BO-20260901-0920's own 2026-10-09 update
+  already records a code change (build-feature's commitLane).

@@ -1,0 +1,56 @@
+id: BO-4500a-4-vi
+title: "Reference: the shared commit step's inputs and its one-answer contract"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - documentation_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given an author of a new route, or of a route on another orchestration framework, needs to
+    call the shared commit step,
+  When they open its reference page,
+  Then the page lists every input the step accepts -- the files to commit, the message file,
+    supervised mode, and the run or criterion it commits for -- with what each is for,
+  And it lists every key of the answer and, for each of the four statuses, which keys are
+    filled and what a caller must do next,
+  And it states the rules a caller can rely on: only named files and their edited structural
+    parents are committed, the message lands unchanged, checks always run with exactly one
+    retry, main, master, the default branch and a detached checkout are refused,
+  And it shows one complete example answer for each of the four statuses,
+  And it names no workflow engine, agent framework or model as a requirement for calling the step.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Link the reference page from here."
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "The one-answer contract and the behaviours of BO-4500a-1..-4 as built."
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4500a's documentation trigger reference-doc ("the one-answer contract every caller
+  reads"). Placed as an L3 under the contract L2 because BO-4500a holds its five-L2 cap with the
+  behaviours. Written after the step is built (BO-2200d timing).

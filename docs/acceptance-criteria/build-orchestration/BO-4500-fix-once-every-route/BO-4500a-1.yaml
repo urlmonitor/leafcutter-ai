@@ -1,0 +1,76 @@
+id: BO-4500a-1
+title: "Only the files the caller names go into the commit -- the shared step never sweeps up the rest of the workspace"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a.yaml"
+criteria: |
+  Given a workspace on branch feature/x with five changed files -- a.py, b.py, docs/c.md,
+    docs/INDEX.md and tickets/t.md -- none of them staged,
+  And a caller asks the shared commit step to commit exactly a.py and docs/c.md with a
+    message,
+  When the step runs and every check passes,
+  Then the new commit on feature/x contains exactly a.py and docs/c.md,
+  And b.py, docs/INDEX.md and tickets/t.md are still changed and uncommitted in the
+    working tree, with their contents unchanged,
+  And the answer has status committed, the new commit's id, and paths listing exactly a.py
+    and docs/c.md.
+
+  Given the same workspace,
+  When a caller asks the step to commit without naming any file, or asks for "all changed
+    files" or "all tracked files" instead of a list,
+  Then no commit is recorded and nothing is staged by the call,
+  And the answer is refused with a reason stating that an explicit list of files is required.
+
+  Given any call of the step,
+  When the step decides what to stage,
+  Then it never adds a file the caller did not name, apart from the structural-parent
+    inclusion defined by BO-4500a-1-ii,
+  And it has no mode that adds every changed file or every tracked file in the workspace.
+depends_on: [BO-4500a]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Cluster C6: five staging policies (add -A in the fast lane, add -u in precommit-autofix, exact-name-only in plan-feature, 'all in scope' in building-epics 5.6, 'stage by name' in commit.md). The consolidation spec is 'an explicit path set, never git add -A or -u'."
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-029.md
+    relationship: describes
+    status: exists
+    relevance: "The fast lane's add -A carries bootstrap card churn and docs/INDEX.md into every PR. The first scenario is that defect's regression shape."
+  - path: templates/agents/commit.md
+    relationship: describes
+    status: exists
+    relevance: "'Never run git add -A / git add . -- stage by name' is the hardened staging rule today, held only as prose (KI-BO-20260901-0920 'Why nothing broke'). The shared step makes it a property."
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: "The shared commit step's staging rule: the committed set equals the caller's named path set (plus BO-4500a-1-ii's structural parents). Consumed by every route migrated under BO-4500a-5."
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: [BO-4500a-1-i, BO-4500a-1-ii, BO-4500a-1-iii, BO-4500a-1-iv]
+implemented_by: []
+notes: |
+  MIGRATION RULE (BO-4500 standing rule) applied at the source: the staging rule is taken from the
+  HARDENED copy -- commit.md's stage-by-name -- not from the fast lane's add -A or
+  precommit-autofix's add -u, which are the weaker siblings here. KI-BO-029's regression test runs
+  against this step (BO-4500a-5-i).
+
+  The consolidation spec names the step commit_changes.py; the criteria say "the shared commit step"
+  so they do not pin a filename.

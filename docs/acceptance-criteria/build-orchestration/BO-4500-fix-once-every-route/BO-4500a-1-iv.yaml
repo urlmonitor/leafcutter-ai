@@ -1,0 +1,58 @@
+id: BO-4500a-1-iv
+title: "A named file that is missing, outside the workspace or unchanged gets a precise answer, not a guess"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-1.yaml"
+criteria: |
+  Given the caller names a.py (changed) and ../other-repo/z.py, a path outside the workspace,
+  When the shared commit step runs,
+  Then no commit is recorded, a.py is not left staged by the call,
+  And the answer is refused with a reason naming ../other-repo/z.py as outside the workspace.
+
+  Given the caller names a.py (changed) and never-existed.py, which is neither tracked nor
+    present on disk,
+  When the step runs,
+  Then no commit is recorded and the answer is refused with a reason naming never-existed.py.
+
+  Given the caller names only b.py, which is tracked and has no change,
+  When the step runs,
+  Then no commit is recorded,
+  And the answer is nothing_to_commit with an empty paths list and no commit id.
+
+  Given the caller names gone.py, which is tracked and has been deleted from the working tree,
+  When the step runs and every check passes,
+  Then the commit records the deletion of gone.py and the answer is committed with gone.py in
+    paths.
+depends_on: [BO-4500a-1]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Failure shape 2 ('could not check reads as a pass'): a request that names a wrong file must not come back looking like success or like nothing to do."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-1
+  contract: "Explicit-path staging rule."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  nothing_to_commit and refused are deliberately different answers (L1 notes: "distinct outcomes,
+  never a success"). A misspelt path must be refused, not reported as nothing to commit, or a caller
+  whose whole change was misnamed reads "nothing to do" and moves on with the work uncommitted.

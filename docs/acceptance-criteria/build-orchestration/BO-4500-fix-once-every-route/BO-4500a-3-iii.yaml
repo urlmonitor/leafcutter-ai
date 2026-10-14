@@ -1,0 +1,61 @@
+id: BO-4500a-3-iii
+title: "A failure that needs judgement is handed back whole, and the step never guesses at the fix"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - precommit_hooks
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-3.yaml"
+criteria: |
+  Given a judging check, check-file-size, fails on scripts/big.py with the message
+    "scripts/big.py: 1210 lines exceeds the 1000-line limit",
+  When the shared commit step answers,
+  Then the answer is hook_failed with hook_name check-file-size, failing_files listing
+    scripts/big.py, and that message reproduced exactly as the check printed it,
+  And the step has started no agent, changed no file to satisfy the check, and recorded no
+    commit.
+
+  Given the caller then changes scripts/big.py and calls the step again with the same names
+    and message file,
+  When the second call runs,
+  Then it runs the checks from the start with its own single retry, independent of the first
+    call.
+depends_on: [BO-4500a-3]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-210-precommit-safety-net/BO-210.yaml
+    relationship: related
+    status: exists
+    relevance: "Who fixes a hook failure: the originating agent type with its context. Plugs in at the hand-back this record defines."
+  - path: docs/acceptance-criteria/build-orchestration/BO-3800-refusal-summons-specialist/BO-3800.yaml
+    relationship: related
+    status: exists
+    relevance: "A standard that turns work away summons a restructuring craft, bounded give-up (BO-3800d). Also plugs in here; the step neither re-specifies nor performs it."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to:
+  agent: llm-expert
+  contract: "hook_failed answer with the check's verbatim message, read by the commit agent (BO-4500a-5-v)."
+expects_from:
+  ac_id: BO-4500a-3
+  contract: "Check-run sequence."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The L1 split: "message authoring and autofix judgement stay agent work". The step is
+  deterministic; the boundary is the hand-back. The verbatim message is BO-3800c's "the named file
+  and the named demand are CARRIED, never reconstructed" -- if the step paraphrased it, BO-3800c
+  would be unbuildable on any route that goes through the step. How many fresh calls an agent may
+  make is BO-3800d's / BO-210's bound, not this step's.

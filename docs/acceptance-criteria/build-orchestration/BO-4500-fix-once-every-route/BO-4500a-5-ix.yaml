@@ -1,0 +1,53 @@
+id: BO-4500a-5-ix
+title: "Component diagram: the shared commit step, its callers and the commit agent's new role"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - documentation_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a reader wants to see where committing happens after the migration,
+  When they open the component diagram,
+  Then it shows the shared commit step as one component, and every route that reaches it --
+    plan-feature, quick-fix, fast-lane-ship, finalize-feature and build-feature -- with a
+    connection to it through the commit agent,
+  And it shows the commit agent's remaining responsibilities as message authoring and autofix
+    judgement, and the step's as staging, checks with one retry, branch refusal and the answer,
+  And it shows the project's checks and the commit serialisation guard as components the step
+    uses,
+  And it shows no connection from any route to the version-control system that bypasses the
+    step.
+depends_on: [BO-4500a-5]
+doc_links:
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+    relevance: "Link the diagram from the component page."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-5
+  contract: "The migrated topology as built."
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4500a's documentation trigger component-diagram ("a new shared script plus a changed
+  commit-agent role"). Diagram id: run the next-free-number allocator immediately before publishing
+  (repo CLAUDE.md "Ticket-Mandated Sequential Resource Paths Go Stale"). If Q1 is answered with the
+  command-step-runner as a runner, it appears as a second path to the step.

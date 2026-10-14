@@ -1,0 +1,59 @@
+id: BO-4500a-4-v
+title: "When the step itself cannot finish, the answer says so -- it never looks like a commit or like nothing to do"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given the workspace's index is held by another version-control process that has not
+    released it,
+  When the shared commit step tries to stage the named file a.py,
+  Then no commit is recorded,
+  And the answer is one JSON object with status refused, sha null, and a reason that quotes
+    the version-control system's own error text,
+  And a.py's working-tree content is unchanged.
+
+  Given the version-control system reports an error while the commit is being recorded,
+    after every check has passed,
+  When the step answers,
+  Then the answer's status is refused with the error quoted in the reason, never committed and
+    never nothing_to_commit,
+  And no partial commit exists on the branch.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "Failure shape 2: 'could not check' reads as a pass. C2: fallbacks invert failure (unreadable read as ok)."
+  - path: docs/acceptance-criteria/build-orchestration/BO-1600-safe-concurrent-dispatch/BO-1600b.yaml
+    relationship: related
+    status: exists
+    relevance: "An interrupted commit leaves no poisoned index or stranded lock -- owned there, not restated."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  QUESTION Q4 FOR THE GATE: the C6 spec has four statuses and none means "the step broke". This
+  record maps it to refused-with-reason, because the alternative inside the spec (nothing_to_commit)
+  is success-shaped. A fifth status "error" would match C2's runCommand vocabulary
+  (ok | refused | error) and is the cleaner contract; if the user chooses it, only the status value
+  in both Thens changes.

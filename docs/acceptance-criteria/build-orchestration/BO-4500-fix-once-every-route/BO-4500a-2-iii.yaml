@@ -1,0 +1,54 @@
+id: BO-4500a-2-iii
+title: "A message line that starts with # or ends in blank lines is kept, not tidied away"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-2.yaml"
+criteria: |
+  Given a message file whose body contains the line "# covers: BO-4500a-2" and the line
+    "#1043 is the fix this follows",
+  When the shared commit step commits,
+  Then both lines appear in the recorded message, unchanged and in place.
+
+  Given a message file whose body contains a line indented with four spaces and a line with
+    trailing spaces,
+  When the step commits,
+  Then the indented line keeps its four leading spaces,
+  And the only differences between the file and the recorded message are trailing whitespace
+    at line ends and blank lines at the very end of the message, which the version-control
+    system always removes.
+depends_on: [BO-4500a-2]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-20260914-commit-agent-rewrites-co-author-trailer.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-2
+  contract: "Message-from-file rule."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS IS NOT OBVIOUS. A commit taken from a message file is, by default, cleaned as if it had
+  been typed in an editor: lines beginning with "#" are treated as comments and deleted. "# covers:"
+  lines are this repo's own test-tag convention and issue numbers are routinely written "#1043", so
+  the default silently edits caller messages -- the same failure as KI-BO-20260914 by a different
+  hand. The second scenario's carve-out names the whitespace the step may not be able to preserve
+  under any cleanup setting; the IT PO should confirm the exact set against the version-control
+  system's "verbatim"/"whitespace" cleanup modes and narrow the carve-out if more can be kept.

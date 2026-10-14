@@ -1,0 +1,59 @@
+id: BO-4500a-5-iii
+title: "Quick-fix's two commits go through the shared step, keeping the protections quick-fix already had"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a quick-fix run for the criterion BP-601 that changed scripts/target.py, wrote
+    unit_tests/test_bp_601.py, created the record BP-601 and wrote a changelog entry,
+  When the workflow makes each of its two commits,
+  Then each calls the shared commit step in supervised mode naming BP-601 and exactly the
+    files that commit is for,
+  And the workflow continues past a commit only on a committed answer, and stops reporting the
+    answer's status and reason on any other.
+
+  Given the same run is started in a workspace whose current branch is main,
+  When the workflow reaches a commit,
+  Then the shared step refuses and the workflow stops with that refusal, recording nothing.
+
+  Given quick-fix's commit recipes before this change and the shared step after it,
+  When the migration is reviewed,
+  Then quick-fix's ban on the shared stash (BP-600c-3-ii) and its protected-branch refusal
+    (BP-600f) are each present in the shared step before quick-fix is moved,
+  And their regression tests run against the shared step and pass.
+depends_on: [BO-4500a-5, BO-4500a-4-i, BO-4500a-4-iii]
+doc_links:
+  - path: templates/workflows-js/quick-fix.js
+    relationship: modifies
+    status: exists
+  - path: templates/skills/quick-fix/SKILL.md
+    relationship: describes
+    status: exists
+    relevance: "BP-600c-3-ii forbids a bare stash; the hardened copy of BO-4500a-4-iii's rule."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The two sites are counted from the request (quick-fix x2); which phases they belong to must be
+  confirmed against the workflow by the IT PO. The second scenario is the in-place-workflow
+  protected-branch rule from the repo CLAUDE.md, now satisfied by the step.

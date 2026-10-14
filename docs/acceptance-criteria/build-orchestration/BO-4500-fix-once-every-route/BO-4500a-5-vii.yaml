@@ -1,0 +1,61 @@
+id: BO-4500a-5-vii
+title: "Running the shared step is guarded exactly like a direct commit, so it opens no new way around commit delegation"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a session that is not the commit agent runs the shared commit step as a command,
+  When the commit-delegation guard inspects that command,
+  Then it blocks the command with the same message it gives a direct commit attempt,
+  And no commit is recorded.
+
+  Given the commit agent runs the shared commit step as a command,
+  When the guard inspects that command,
+  Then it allows the command.
+
+  Given a session runs a command that only mentions the shared step's name inside quoted text,
+    such as a pull-request body passed on the command line,
+  When the guard inspects that command,
+  Then it allows the command, because no commit is being made.
+depends_on: [BO-4500a-5, BO-4500a-5-v]
+doc_links:
+  - path: templates/hooks/enforce_commit_delegation.py
+    relationship: modifies
+    status: exists
+    relevance: "Parses argv since PR #915 (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c, resolved). A script that records a commit internally is invisible to a guard that looks for a git commit argv, so without this record the shared step is an unguarded commit path."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "The guard authorises by a published token, not identity. This record gives the step parity with that guard; it does not fix the identity gap. Third scenario is the false-positive half of that KI."
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-5-v
+  contract: "The commit agent is the runner of the step (Q1 default)."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS EXISTS (unasked-for, keep it): moving the commit into a script hides it from a guard that
+  recognises commits by their command line. Without parity the consolidation silently widens who can
+  commit. "Is the commit agent" means whatever the guard accepts today; strengthening that to a real
+  identity is KI-CG-20260907's, cited not closed.
+
+  If the user answers Q1 with "the command-step-runner runs the step for workflows", the second
+  scenario gains that runner too and the first stays as written.

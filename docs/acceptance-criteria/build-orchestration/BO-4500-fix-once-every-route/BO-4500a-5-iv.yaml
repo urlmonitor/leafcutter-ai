@@ -1,0 +1,63 @@
+id: BO-4500a-5-iv
+title: "Finalize-feature's closing commit names the feature's own records and goes through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a finalize-feature run named finalize-epic-x-20261012 closing an epic whose three
+    tickets and four acceptance-criterion records changed status,
+  And the inbox also holds two tickets of an unrelated epic with uncommitted edits,
+  When the workflow records its closing commit,
+  Then it calls the shared commit step in supervised mode naming the run and exactly the three
+    tickets and four records,
+  And the commit contains those seven files plus any edited structural parent record, and
+    neither of the unrelated epic's tickets,
+  And the workflow proceeds only on a committed answer and otherwise stops before any merge,
+    reporting the answer's status and reason.
+
+  Given finalize-feature's commit before this change and the shared step after it,
+  When the migration is reviewed,
+  Then no protection the finalize copy had and the shared step lacked is lost,
+  And the regression tests behind every known issue fixed in finalize's commit path run against
+    the shared step and pass.
+depends_on: [BO-4500a-5, BO-4500a-4-iv]
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C2 lists finalize's raw git commit dispatched to status-checker; C3 its gate that accepts agent answers. The gate is not this record's."
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract."
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SCOPE: the closing commit only. A merge commit made while catching up with main belongs to the
+  future "catching up with the shared line safely" sibling of BO-4500a (C6's sync_with_main) and is
+  out of scope here, as is the PR step. Finalize has no AC id for a run, hence the run name.
+
+  The unrelated-epic scenario is the cross-epic closure shape the user's memory records against
+  finalize step 3.5 (flips every inbox ticket). Explicit paths stop the COMMIT carrying it; whether
+  step 3.5 edits those files at all is a separate finalize defect, not closed here.
