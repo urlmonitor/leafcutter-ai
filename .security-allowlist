@@ -1019,3 +1019,7 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+# False positive (user-approved 2026-10-14): the rule-check tests name the family constant
+# FAMILY_DOC_TRIGGERS in findings_for(...) calls; a SCREAMING_SNAKE identifier, not a secret.
+ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2.py:*
+ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2_v.py:*
