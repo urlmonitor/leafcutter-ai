@@ -55,6 +55,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import config_paths
 from build_colors import dry_run as _dry_run
 from build_colors import info as _info
 from build_colors import success as _success
@@ -767,18 +768,14 @@ def _compute_output_mappings(
         if on_disk != content:
             return  # Customised by the project — not this build's to register.
         _add(template_path, output_path, content)
-
     precommit_autofix_tpl = templates_dir / "scripts" / "precommit-autofix.json"
-    if precommit_autofix_tpl.is_file():
-        precommit_autofix_rel = config.get(
-            "precommit_autofix_config_path", ".claude/precommit-autofix.json"
-        )
+    precommit_autofix_path = config_paths.scaffold_target(precommit_autofix_tpl, config, "precommit_autofix_config_path", target_root)
+    if precommit_autofix_path is not None:
         _register_scaffold_if_unmodified(
             precommit_autofix_tpl,
-            target_root / precommit_autofix_rel,
+            precommit_autofix_path,
             precommit_autofix_tpl.read_text(encoding="utf-8"),
         )
-
     # changelog_categories.md has no template FILE of its own — its content
     # is a hardcoded string constant in build_config_scaffolds.py — so the
     # constant is imported (never duplicated as a second, driftable literal
@@ -788,11 +785,9 @@ def _compute_output_mappings(
     # already active is safe even though build_config_scaffolds.py, like
     # build_phases.py, resolves other (unused-here) constants from its own
     # ``__file__`` at import time.
-    changelog_categories_rel = config.get(
-        "changelog_categories_path", ".claude/changelog_categories.md"
-    )
     build_config_scaffolds_src = package_root / "scripts" / "build_config_scaffolds.py"
-    if build_config_scaffolds_src.is_file():
+    changelog_categories_path = config_paths.scaffold_target(build_config_scaffolds_src, config, "changelog_categories_path", target_root)
+    if changelog_categories_path is not None:
         try:
             from build_config_scaffolds import (  # type: ignore[import]
                 _CHANGELOG_CATEGORIES_SCAFFOLD,
@@ -802,10 +797,9 @@ def _compute_output_mappings(
         else:
             _register_scaffold_if_unmodified(
                 build_config_scaffolds_src,
-                target_root / changelog_categories_rel,
+                changelog_categories_path,
                 _CHANGELOG_CATEGORIES_SCAFFOLD,
             )
-
     # --- committed .claude/ scaffold mirror (BP-100k-5-ii) ---
     # BP-100k-5's longest-prefix-first canonicalisation put ".claude" itself
     # into check_output_drift.py's scan set: ANY bare-".claude"-parented key
@@ -843,7 +837,6 @@ def _compute_output_mappings(
     # owned by the project, so a pristine-render comparison would only ever
     # buy one commit before flipping back to an unregistered gap).
     _claude_tickets_dir = target_root / ".claude" / "tickets"
-
     ticket_lifecycle_manifest_tpl = package_root / "config" / "ticket_lifecycle.json"
     if ticket_lifecycle_manifest_tpl.is_file():
         _register_scaffold_if_unmodified(

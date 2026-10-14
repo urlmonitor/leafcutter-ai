@@ -165,6 +165,11 @@
       "description": "Path to a Markdown file containing project-specific commit categorization rules. Read at runtime by changelog-agent Step 3. If the file does not exist, changelog-agent falls back to conventional-commit prefix heuristics only.",
       "default": ".claude/changelog_categories.md"
     },
+    "reachability_exemptions_path": {
+      "type": "string",
+      "description": "Path to the reachability-exemption registry the done-proof reachability guard reads. Set to an empty string to turn the feature off; leave the key out to use the shipped default.",
+      "default": "config/reachability_exemptions.yaml"
+    },
     "worktree_cleanup": {
       "type": "object",
       "description": "Controls pre-removal process and log cleanup in the close-worktree flow.",

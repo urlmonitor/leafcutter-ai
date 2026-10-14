@@ -41,6 +41,7 @@
   "settings_module": "settings",
   "changelog_folder": "changelogs/",
   "changelog_categories_path": ".claude/changelog_categories.md",
+  "reachability_exemptions_path": "config/reachability_exemptions.yaml",
 
   "glossary": {
     "exclude_paths": []
