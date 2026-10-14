@@ -73,3 +73,14 @@ notes: |
   slots, two of which its documentation triggers take, and the folder holds at most 15 files.
   Open: the flow contract allows a step's actorKind to be null; the dataset assumes every node
   has one. What a card with no stored actor shows is not specified.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: actorBadge
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNode
+    source: real
+    asof: '2026-10-14'

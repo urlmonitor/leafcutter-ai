@@ -83,3 +83,15 @@ notes: |
   The counts are the store as measured for the dataset; tests should replay the
   dataset record, or derive the expected counts from the Flow records, rather than pin
   28 against a live store that grows.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderOverview
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+    source: real
+    asof: '2026-10-14'

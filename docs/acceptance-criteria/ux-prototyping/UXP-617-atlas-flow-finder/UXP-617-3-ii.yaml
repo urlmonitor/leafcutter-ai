@@ -63,3 +63,16 @@ notes: |
   UXP-617-3 for the cap reasons that AC records. The title must be right on first load
   (server-rendered) as well as after client-side drills and Back, which are two different
   paths.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: pageTitle
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - Flow
+      - FlowNavigation
+      - FlowRoute
+    source: real
+    asof: '2026-10-14'

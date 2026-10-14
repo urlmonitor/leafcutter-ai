@@ -62,3 +62,14 @@ notes: |
   suggestion per chosen filter value. A search that matches nothing with no filter chosen has
   no suggestion to offer; the dataset does not model that case, so its empty-state wording is
   left open.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderNoMatch
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - FlowFinderQuery
+    source: real
+    asof: '2026-10-14'

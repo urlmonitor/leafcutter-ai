@@ -81,3 +81,16 @@ notes: |
   contract_boundary because a shared or bookmarked link depends on the parameter names and
   stored values staying stable; UXP-617-5 documents them. The legacy-link redirect is the one
   UXP-591-2-iii keys on the 'flow' parameter alone.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderUrl
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - FlowFinderQuery
+      - FlowNavigation
+      - FlowRoute
+    source: real
+    asof: '2026-10-14'

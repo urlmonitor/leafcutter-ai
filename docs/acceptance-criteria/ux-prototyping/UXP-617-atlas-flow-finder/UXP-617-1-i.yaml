@@ -69,3 +69,16 @@ notes: |
   FlowFinderQuery finder-ac-prefix, status_text field), not from the scenario. The one-target
   rule is the clause most likely to be built wrong: a search that pools all of a step's text
   matches more steps and still passes the 'selected option' example.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderSearch
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+      - FlowNode
+    source: real
+    asof: '2026-10-14'

@@ -67,3 +67,25 @@ notes: |
   to one drawer and share every precondition; the folder's 15-file cap left no room for two.
   The 'exactly as a click' clauses mean the key path must reuse the click path, not a second
   history write.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerByKey
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+      - FlowNode
+    source: real
+    asof: '2026-10-14'
+  - flow: leafcutter/explore-flows-in-atlas
+    node: drawerCloseByKey
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNavigation
+    source: real
+    asof: '2026-10-14'

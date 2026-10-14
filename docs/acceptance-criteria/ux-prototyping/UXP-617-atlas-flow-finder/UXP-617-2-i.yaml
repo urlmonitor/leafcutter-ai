@@ -67,3 +67,16 @@ notes: |
   is a navigation (one entry added), unlike search and filter edits on the finder (rewritten
   in place, UXP-617-2). The opened flow's filters are its own source and kind with Realization
   All, as for any canonical address (UXP-591-1).
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: openResult
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+      - FlowNavigation
+    source: real
+    asof: '2026-10-14'

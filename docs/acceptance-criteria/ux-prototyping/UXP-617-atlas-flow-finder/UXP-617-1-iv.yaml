@@ -62,3 +62,15 @@ notes: |
   as undefined when its input/output contracts declare missing bindings. A field search can
   miss these steps, which is why the option exists. The 'none more and none fewer' clause
   guards against counting every step of a flow that has one gap.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderIoGap
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - FlowFinderQuery
+      - FlowNode
+    source: real
+    asof: '2026-10-14'

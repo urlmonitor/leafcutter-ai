@@ -69,3 +69,16 @@ notes: |
   the panel does not jump. Not specified by the flow or dataset: a concrete count for
   'Person' plus 'Code' together; the test should derive it from the dataset's FlowNode
   records rather than this AC pinning a number.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: finderFacets
+    node_kind: step
+    flow_kind: user
+    screen: atlas-flows-finder
+    mock_data: null
+    entities:
+      - Flow
+      - FlowFinderQuery
+      - FlowNode
+    source: real
+    asof: '2026-10-14'

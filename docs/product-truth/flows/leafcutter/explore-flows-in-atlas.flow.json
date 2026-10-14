@@ -49,7 +49,9 @@
         "Flow",
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -299,7 +301,9 @@
         "FlowNode",
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1-i"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -589,7 +593,9 @@
         "FlowNode",
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1-iii"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -837,7 +843,9 @@
         "FlowRoute",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-2"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -937,7 +945,9 @@
         "FlowNode",
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1-ii"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -1141,7 +1151,9 @@
         "FlowFinderQuery",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-2-i"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -1499,7 +1511,9 @@
       "reads": [
         "FlowNode"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-3"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -1675,7 +1689,9 @@
         "FlowRoute",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-3-ii"
+      ],
       "io_contracts": {
         "consumes": [
           {
@@ -2921,7 +2937,9 @@
       "reads": [
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1-v"
+      ],
       "outcome_kind": "failure",
       "io_contracts": {
         "consumes": [],
@@ -3046,7 +3064,9 @@
         "FlowNode",
         "FlowFinderQuery"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-1-iv"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "consumes": [
@@ -3201,7 +3221,9 @@
       "reads": [
         "FlowNode"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-3-iii"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "consumes": [
@@ -3338,7 +3360,9 @@
         "FlowNode",
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-3-i"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "not_applicable": "A keypress of Enter on a focused step or branch card triggers the same open-drawer state change and in-place history replace of the address (<canonical URL>?step=<id>) as a click on it. No request is made and no JSON payload is passed; the card's accessible name is documented on actorBadge and the drawer's contents on inspect."
@@ -3360,7 +3384,9 @@
       "reads": [
         "FlowNavigation"
       ],
-      "implements": [],
+      "implements": [
+        "UXP-617-3-i"
+      ],
       "outcome_kind": "alternative",
       "io_contracts": {
         "not_applicable": "A keypress of Enter on the drawer's close button, whose accessible name is 'Close step details', clears the open-drawer state and rewrites the current history entry's URL to the flow's canonical URL without a query (history replace), as a click does. No request is made and no JSON payload is passed."

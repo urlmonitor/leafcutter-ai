@@ -61,3 +61,14 @@ notes: |
   component overview, per the dataset invariant). The direct-open clause is added so the fix
   lands on the Atlas page and not as a click handler on the chip. What the Atlas shows for
   /atlas?ac=<unknown id> is not specified.
+product_truth:
+  - flow: leafcutter/explore-flows-in-atlas
+    node: acChipLink
+    node_kind: branch
+    flow_kind: user
+    screen: atlas-flows-canonical-url
+    mock_data: null
+    entities:
+      - FlowNode
+    source: real
+    asof: '2026-10-14'
