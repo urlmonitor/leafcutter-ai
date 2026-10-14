@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -58,8 +58,11 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400c_1_unmentioned_grant_silent.py
+implemented_by:
+  - scripts/registry_validator.py
+  - scripts/check_skill_refs.py
 notes: |
   Over-correction control: deleting the whole ability-reference check satisfies
   AR-400c-1 and fails this.

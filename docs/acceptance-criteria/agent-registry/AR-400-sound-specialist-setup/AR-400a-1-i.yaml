@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -25,7 +25,7 @@ criteria: |
 depends_on:
   - AR-400a-1
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "The checker this goal wires in was run by hand from the wrong directory before; a zero-input run must not read as clean."
@@ -79,8 +79,10 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400a_1_i_zero_population.py
+implemented_by:
+  - scripts/check_skill_refs.py
 notes: |
   NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR: "a check that examined zero
   templates fails". A universal over an empty set is true; a refusing check

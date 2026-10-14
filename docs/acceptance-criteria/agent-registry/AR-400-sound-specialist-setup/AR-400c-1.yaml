@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -83,7 +83,9 @@ amended_by: []
 superseded_by: null
 covered_by:
   - AR-400c-1-i
-implemented_by: []
+implemented_by:
+  - scripts/registry_validator.py
+  - config/agent_registry.schema.json
 notes: |
   REMOVED, NOT QUIETED (AR-400c: "A message nobody acts on is the defect, however
   quietly it is printed"). The second clause guards against the over-correction:

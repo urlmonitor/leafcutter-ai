@@ -28,7 +28,7 @@ depends_on:
   - AR-400a-1
   - AR-400b-1
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "The existing checker runs only by hand; this record is what makes it part of the validation the build already runs."

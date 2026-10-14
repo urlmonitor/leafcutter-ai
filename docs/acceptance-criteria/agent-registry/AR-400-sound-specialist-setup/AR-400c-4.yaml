@@ -34,7 +34,7 @@ depends_on:
   - AR-400d-1
   - AR-400f-2
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "Closes when this passes and the reference check is wired (AR-400a-1, AR-400b-4)."

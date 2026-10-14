@@ -33,7 +33,7 @@ criteria: |
 depends_on:
   - AR-400b
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "Documents the imperative-versus-descriptive discriminator the existing checker applies."

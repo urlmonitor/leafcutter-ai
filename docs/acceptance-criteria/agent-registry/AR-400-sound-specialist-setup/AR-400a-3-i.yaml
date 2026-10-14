@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -70,8 +70,11 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-3.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400a_3_template_refs.py
+implemented_by:
+  - templates/agents/research-agent.md
+  - scripts/check_skill_refs.py
 notes: |
   THE IMPORT QUESTION IS KEPT, ONLY ITS TARGET CHANGES. "Who imports this
   symbol" is a legitimate research question this package's research-agent

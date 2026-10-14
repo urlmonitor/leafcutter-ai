@@ -32,6 +32,11 @@ legitimately name deleted skills — e.g. ``plan-feature/SKILL.md`` records the
 ``create-ac`` migration (#184) long after ``create-ac/`` was correctly removed.
 Scanning them would fail the build on accurate history.
 
+The same scan also backs the registry validator's existence gate (AR-400a-1/-2):
+``ability_reference_verdict`` returns the definitions/guides examined counts and one
+error per dangling imperative reference, and treats zero examined as an error. The
+CLI ``main`` below keeps its original report format and exit codes.
+
 Usage:
     python3 scripts/check_skill_refs.py [--repo-root <path>] [--verbose]
 
@@ -149,6 +154,72 @@ def scan(templates_dir: Path, known: set[str]) -> tuple[list[dict], list[dict]]:
                       "reason": reason, "text": line}
             (bad if imperative else mentions).append(record)
     return bad, mentions
+
+
+def _definition_paths(agents: list[dict], package_root: Path) -> dict[Path, str]:
+    """Map resolved template path -> agent id for registry agents whose template is a
+    file directly inside ``templates/agents/`` (a specialist *definition*)."""
+    agents_dir = (package_root / "templates" / "agents").resolve()
+    found: dict[Path, str] = {}
+    for rec in agents:
+        tp = rec.get("template_path")
+        path = package_root / tp if tp else None
+        if path is not None and path.is_file() and path.resolve().parent == agents_dir:
+            found[path.resolve()] = str(rec.get("id", "<unknown>"))
+    return found
+
+
+def _finding(subject: str, rel: Path, hit: tuple, reason: str) -> str:
+    """One returned error for a nonexistent ability referenced at ``rel``:line."""
+    return (f"{subject}: ability does not exist: '{hit[1]}' referenced at "
+            f"{rel.as_posix()}:{hit[0]} ({reason})")
+
+
+def _population_errors(defs: int, guides: int, templates_dir: Path) -> list[str]:
+    """Zero examined in either population is an error, never a pass."""
+    errors: list[str] = []
+    if defs == 0:
+        errors.append(f"zero specialist definitions examined: no registry agent "
+                      f"template found in {templates_dir / 'agents'}")
+    if guides == 0:
+        errors.append(f"zero guides examined: no shared guide (.md) found under {templates_dir}")
+    return errors
+
+
+def ability_reference_verdict(package_root: Path, agents: list[dict]) -> tuple[int, int, list[str]]:
+    """Return (definitions_examined, guides_examined, errors) for ability references.
+
+    Definitions are registry agents whose template is a file in ``templates/agents/``;
+    guides are every other ``.md`` under ``templates/``. Each imperative reference to
+    an ability (or bundled file) the package does not ship is one error naming the
+    subject (agent id, or the guide's repo-relative path), the ability, the file and
+    the 1-based line. HTML comments (DECISION HISTORY) are excluded by position. An
+    unreadable file is an error, not a skipped warning.
+    """
+    templates_dir = package_root / "templates"
+    skills_dir = templates_dir / "skills"
+    try:
+        known = {d.name for d in skills_dir.iterdir() if d.is_dir()}
+    except OSError as exc:
+        return 0, 0, [f"cannot read ability directory {skills_dir}: {exc}"]
+    defs = _definition_paths(agents, package_root)
+    errors: list[str] = []
+    counts = {"definitions": 0, "guides": 0}
+    for path in sorted(templates_dir.rglob("*.md")):
+        rel = path.relative_to(package_root)
+        subject = defs.get(path.resolve())
+        counts["definitions" if subject else "guides"] += 1
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{rel.as_posix()}: cannot read file to check ability references: {exc}")
+            continue
+        for hit in _scan_text(text):
+            reason = _missing_target(skills_dir, hit[1], hit[2], known)
+            if reason is not None and hit[3]:
+                errors.append(_finding(subject or rel.as_posix(), rel, hit, reason))
+    errors.extend(_population_errors(counts["definitions"], counts["guides"], templates_dir))
+    return counts["definitions"], counts["guides"], errors
 
 
 def _report(bad: list[dict], repo_root: Path) -> None:
