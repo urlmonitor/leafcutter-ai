@@ -272,7 +272,7 @@ The response carries the `bound` with its configuration source, a `generations` 
 - `inside_count_bound`: it ranks within the newest `retention_max_generations`.
 - `younger_than_minimum_age`: it was retired (or, if never retired, created) less than `retention_min_age_seconds` ago.
 - `pinned_continuation_unexpired`: a continuation pinned to it has not yet expired. **This reason does not currently fire against a real store.** It reads `pinned_until` on the `Snapshot` node, and nothing writes that property yet — continuation pinning lives in the retrieval path instead. So a generation holding a live continuation is reported reclaimable today. That is safe while this command only reports; it would not be safe for anything that deletes what it names. See [the retention bound reference](../reference/knowledge-retention-bound.md) for the full caveat.
-- `reclaimable`: none of the above applies.
+- `reclaimable`: none of the above applies. It also names why in `reclaimable_bases`: `outside_count_bound` (routine retention) or `publication_failed` (an accumulated failed publication), or both. The response's `reclaimable_by_basis` counts each basis separately and always states both, including a `0`. A generation holding both bases is counted under each, so the counts may overlap and are not a total; use the length of `reclaimable` for the total. A rising `publication_failed` count calls for a different response (find why publications fail) than a rising `outside_count_bound` count. See [the retention bound reference](../reference/knowledge-retention-bound.md#reclaimable-bases).
 
 The command refuses an incomplete bound before connecting to Neo4j, with a nonzero exit and a JSON error on stderr:
 

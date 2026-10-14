@@ -97,6 +97,8 @@ Defined in `knowledge/adapters/neo4j_retention.py`. Read-only. `now` is an optio
 | `assessed` | integer | Count of generation records evaluated. Equals the length of `generations`. |
 | `generations` | list of verdicts | One entry per generation record, whatever its publication outcome, newest first by `created_at`, ties by `generation_id` ascending. |
 | `reclaimable` | list of strings | `generation_id` of each verdict whose `reclaimable` is `true`. |
+| `reclaimable_by_basis` | object | Count of reclaimable generations per basis: `{"outside_count_bound": N, "publication_failed": M}`. Both keys are always present; a basis nobody holds is the integer `0`, never omitted. See [Reclaimable bases](#reclaimable-bases). |
+| `reclaimable_by_basis_note` | string | States that the per-basis counts may overlap and are not a total. |
 | `active_generation` | string or null | `generation_id` of the generation the active pointer references; `null` when no generation is flagged active. |
 | `findings` | list of strings | Statements about the active pointer; empty when the active generation's publication completed. See [Active generation](#active-generation). |
 
@@ -107,6 +109,7 @@ Defined in `knowledge/adapters/neo4j_retention.py`. Read-only. `now` is an optio
 | `generation_id` | string | Generation identifier. |
 | `reclaimable` | boolean | Whether the bound permits reclaiming the generation. |
 | `reason` | string | One value from the reason vocabulary. |
+| `reclaimable_bases` | list of strings | AC `KM-400f-1-iv`. The named bases on which a reclaimable generation is reclaimable: `outside_count_bound`, `publication_failed`, or both. Empty when the generation is not reclaimable. |
 | `reason_detail` | string | Present on `active_generation` and `active_generation_unidentified` verdicts only. Prose naming the active pointer; it never states the generation's publication outcome or age. |
 | `age_basis` | string | The recorded time the age was measured from: `retired_at` when the generation carries a retirement time, else `created_at`, else `undetermined`. Every generation never retired is aged from `created_at`, the same basis for all of them. |
 | `age_seconds` | number or null | Age in seconds measured from `age_basis`; `null` when `age_basis` is `undetermined`. |
@@ -155,6 +158,19 @@ The age basis is operator-visible: an operator reading a `reclaimable` verdict c
 
 Grounding: on the live store on 2026-10-12 every generation record was a failed publication and none was ready, so before this change the evaluation reported zero generations while the store was full.
 
+### Reclaimable bases
+
+AC `KM-400f-1-iv`. Routine retention and accumulated failed publications call for different operator responses, so each reclaimable generation names why.
+
+| Basis | Holds when |
+|---|---|
+| `outside_count_bound` | The generation is outside the declared count bound. |
+| `publication_failed` | The generation records a failed publication (status `failed`). |
+
+A generation holding both lists both, whatever the input order. `reclaimable_by_basis` counts a generation under each basis it holds, so the counts may overlap and must not be read as a total; the length of `reclaimable` is the total.
+
+Count rank is taken over generations whose publication did not fail. A failed generation never occupies a count slot; it is outside the bound when at least `generation_limit` non-failed generations are newer than it. A failed generation inside the bound is still reclaimable on the `publication_failed` basis once the age, pin and active checks pass. The `retention` command output carries the same fields.
+
 ---
 
 ## Reason vocabulary
@@ -165,7 +181,7 @@ Grounding: on the live store on 2026-10-12 every generation record was a failed 
 |---|---|---|---|
 | 0 | `active_generation_unidentified` | `false` | No generation is flagged active; replaces the verdict of every generation, so checks 1 to 6 do not apply. |
 | 1 | `active_generation` | `false` | The generation is the one the active pointer references, whatever its publication outcome. |
-| 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. |
+| 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. Does not apply to a failed-publication generation. |
 | 3 | `age_undetermined` | `false` | Neither `retired_at` nor `created_at` is recorded. |
 | 4 | `younger_than_minimum_age` | `false` | `age_seconds` (from `age_basis`) is less than `minimum_age_seconds`. |
 | 5 | `pinned_continuation_unexpired` | `false` | `pinned_until` is set and later than `now`. |
@@ -233,7 +249,7 @@ The outcome is recorded on the backend as `publication_removal`:
 
 `remaining` is `{"nodes": N, "relationships": M}` or `"undetermined"`.
 
-This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. Reporting it as reclaimable on a failed-publication basis is specified by KM-400f-1-iv and not yet built, so nothing removes a left-behind generation automatically yet. A read-only refusal has to be resolved first, because removal needs writes.
+This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. The evaluation reports it reclaimable on the `publication_failed` basis (KM-400f-1-iv), but nothing removes a left-behind generation automatically yet. A read-only refusal has to be resolved first, because removal needs writes.
 
 ---
 
@@ -245,6 +261,7 @@ This removal is separate from retention reclaiming. A failed publication reclaim
 - [ADR-062](../architecture/adrs/ADR-062-standalone-knowledge-retrieval.md) - Immutable standalone projection decision.
 - [AC schema reference](ac-schema.md) - Schema of the acceptance-criteria records cited here.
 - [KM-400f-1](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml) - Parent AC declaring the retention bound.
+- [KM-400f-4](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml) - Operator listing and sweep; reports the reclaimable bases rather than recomputing them.
 - [KM-400b-3](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml) - Pinning constraint that outranks the age basis.
 - `knowledge/config.py` - Settings, `RetentionBound`, `resolve_retention_bound`.
 - `knowledge/adapters/neo4j_retention.py` - `evaluate_retention`, `retention_facts`, `_verdict`.

@@ -5,6 +5,7 @@ ARCHITECTURE: Read-only evaluation over generation facts; reclaiming lives elsew
 
 DECISION HISTORY
 ========================================
+- 2026-10-14 23:50 [python-coder]: Name every reclaimability basis per generation and count each basis apart, stating a zero and the overlap; failed publications take no count slot. (#KM-400f-1-iv)
 - 2026-10-14 23:30 [python-coder]: Keep retention evaluation in its own module so projection stays under the file-size limit and further retention work lands here. (#KM-400f-1-iii)
 - 2026-10-14 23:00 [python-coder]: Protect the active generation by the active pointer alone; with no pointer, report that and reclaim nothing. (#KM-400f-1-iii)
 - 2026-10-14 22:00 [python-coder]: State each verdict's age basis (retired_at, created_at or undetermined); an undetermined age is never reclaimable. (#KM-400f-1-ii)
@@ -23,6 +24,12 @@ if TYPE_CHECKING:
 _INCOMPLETE_ACTIVE = "the active pointer references a generation whose publication did not complete"
 _NO_ACTIVE = "no active generation could be identified"
 _NO_BOUND = "retention bound is not declared; evaluation refused"
+OUTSIDE_COUNT_BOUND = "outside_count_bound"
+PUBLICATION_FAILED = "publication_failed"
+_BASIS_NOTE = (
+    "per-basis counts may overlap: a generation holding both bases is counted under each, "
+    "so the counts are not a total; see reclaimable for the total"
+)
 
 
 async def evaluate_retention(
@@ -70,7 +77,7 @@ async def evaluate_retention(
     active = active_generation_verdict(facts)
     verdicts = [
         {"generation_id": f["generation_id"], **_verdict(f, rank, bound, clock)}
-        for rank, f in enumerate(ordered)
+        for f, rank in zip(ordered, _count_ranks(ordered))
     ]
     if not active["identified"]:
         verdicts = [_withhold(v) for v in verdicts]
@@ -81,6 +88,45 @@ async def evaluate_retention(
         "findings": [active["finding"]] if active["finding"] else [],
         "generations": verdicts,
         "reclaimable": [v["generation_id"] for v in verdicts if v["reclaimable"]],
+        "reclaimable_by_basis": _basis_counts(verdicts),
+        "reclaimable_by_basis_note": _BASIS_NOTE,
+    }
+
+
+def _count_ranks(ordered: list[dict]) -> list[int]:
+    """Rank each generation by how many completed-publication generations are newer.
+
+    A generation that records a failed publication never occupies a count slot, so it
+    does not push an older generation outside the bound; its own rank is the number of
+    non-failed generations newer than it.
+
+    Args:
+        ordered: Generation rows, newest first.
+
+    Returns:
+        One rank per row, in the same order.
+    """
+    ranks = []
+    occupied = 0
+    for fact in ordered:
+        ranks.append(occupied)
+        if fact.get("publication_status") != "failed":
+            occupied += 1
+    return ranks
+
+
+def _basis_counts(verdicts: list[dict]) -> dict[str, int]:
+    """Count reclaimable generations per basis; both keys are always present.
+
+    Args:
+        verdicts: Per-generation verdicts carrying ``reclaimable_bases``.
+
+    Returns:
+        Mapping of each named basis to its count, 0 stated when none holds it.
+    """
+    return {
+        basis: sum(1 for v in verdicts if basis in v["reclaimable_bases"])
+        for basis in (OUTSIDE_COUNT_BOUND, PUBLICATION_FAILED)
     }
 
 
@@ -128,6 +174,7 @@ def _withhold(verdict: dict) -> dict:
     return {
         **verdict,
         "reclaimable": False,
+        "reclaimable_bases": [],
         "reason": "active_generation_unidentified",
         "reason_detail": "no generation is reclaimable while the active pointer references none",
     }
@@ -170,7 +217,30 @@ def _verdict(fact: dict, rank: int, bound: RetentionBound, now: float) -> dict:
         Mapping with ``reclaimable`` and ``reason``.
     """
     age = _age_basis(fact, now)
-    return {**_decide(fact, rank, bound, now, age), **age}
+    decision = _decide(fact, rank, bound, now, age)
+    return {**decision, "reclaimable_bases": _bases(fact, rank, bound, decision), **age}
+
+
+def _bases(fact: dict, rank: int, bound: RetentionBound, decision: dict) -> list[str]:
+    """Name every basis on which a reclaimable generation is reclaimable.
+
+    Args:
+        fact: Generation row with publication_status.
+        rank: Count rank from ``_count_ranks``.
+        bound: Declared RetentionBound.
+        decision: Result of ``_decide``.
+
+    Returns:
+        Both bases when both hold, never only the first; empty when not reclaimable.
+    """
+    if not decision["reclaimable"]:
+        return []
+    bases = []
+    if rank >= bound.generation_limit:
+        bases.append(OUTSIDE_COUNT_BOUND)
+    if fact.get("publication_status") == "failed":
+        bases.append(PUBLICATION_FAILED)
+    return bases
 
 
 def _age_basis(fact: dict, now: float) -> dict:
@@ -211,7 +281,7 @@ def _decide(fact: dict, rank: int, bound: RetentionBound, now: float, age: dict)
             "reason": "active_generation",
             "reason_detail": "the generation the active pointer references is never reclaimable",
         }
-    if rank < bound.generation_limit:
+    if rank < bound.generation_limit and fact.get("publication_status") != "failed":
         return {"reclaimable": False, "reason": "inside_count_bound"}
     if age["age_seconds"] is None:
         return {"reclaimable": False, "reason": "age_undetermined"}
