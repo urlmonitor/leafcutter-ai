@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: '2026-08-18'
-last_updated: '2026-08-18'
+last_updated: '2026-10-14'
 components:
   - ac_store
 related_docs:
@@ -22,8 +22,8 @@ related_docs:
 
 - **Severity:** medium
 - **Status:** open
-- **Occurrences:** 3
-- **First seen:** 2026-08-25 · **Last seen:** 2026-08-26
+- **Occurrences:** 4 (the fourth, 2026-10-12, is the latent block firing on `INF-400c-4`; see Occurrence 4)
+- **First seen:** 2026-08-25 · **Last seen:** 2026-10-12
 - **Where:** `scripts/ac_store/done_proof.py` / the `check-done-proof` hook; the
   `work_status` enum in the AC store schema
 
@@ -75,5 +75,82 @@ draft number `KI-ACS-014` and should be read as pointing here.
 the same proof set, corrupted from the writing side). `KI-KM-009` (the supersessions that
 surfaced this). The "AC-store commits — stage the parent alongside the child" rule in
 `CLAUDE.md`, which explains why the `INF-400c-2` instance passes.
+
+---
+
+## Occurrence 4 — 2026-10-12 (filed 2026-10-14): the latent block fired on `INF-400c-4`
+
+- **Occurrences:** now 4. **Last seen:** 2026-10-12.
+- **Severity:** unchanged at medium. The refusal is loud, and the cost is composites held at a
+  false `todo`. It is no longer latent: it fired on real work.
+
+**What happened.** On 2026-10-12, flipping `INF-400c-4` to `done` was refused by
+`check-done-proof`:
+
+```text
+composite INF-400c-4 is marked done but its covered_by children are not all done-and-covered — unproven: INF-400c-4-ii
+```
+
+`INF-400c-4-ii` has `req_status: superseded`, `superseded_by: [INF-700c-2]` and `work_status:
+todo`. This is the case the "latent, not live" paragraph above predicted.
+
+**Where, on `origin/main` `435c11395`.** Both composite paths still ignore supersession:
+
+- `scripts/ac_store/_done_proof_composite.py:247-262` (`_unproven_composite_children`, the
+  pre-commit path that `templates/scripts/commit_guardian/check_done_proof.py:442-455` calls).
+  Every AC-id child that is not `work_status: done` goes onto `unproven`. Nothing reads
+  `superseded_by` or `req_status`.
+- `scripts/ac_store/done_proof.py:1505-1516` (`_resolve_all_child_ids`, used by
+  `_verify_composite_eligible` in CI). A superseded child is kept as a leaf that needs a linked
+  test.
+
+The store's field has moved since the original filing. Supersession is now
+`req_status: superseded` plus `superseded_by`, not `status: superseded_by`. A fix should test
+`superseded_by` non-empty or `req_status == "superseded"`.
+
+Reproduced read-only. The origin/main source copy of `_unproven_composite_children`, run on
+`INF-400c-4` with `work_status` set to `done` in memory, returns `['INF-400c-4-ii']`. Nothing was
+written.
+
+**Blocked composites today.** A read-only scan of the store on `435c11395` ran
+`_unproven_composite_children` on every composite that is not itself superseded, as if flipped
+to `done`. It then sorted each unproven id into "superseded", "done and waived", or "other".
+These 7 composites are refused only because of superseded descendants, and would pass if those
+were excluded:
+
+| Composite | `work_status` | Superseded children reported unproven |
+|---|---|---|
+| `BO-100d` | todo | `BO-100d-1`, `BO-100d-2` |
+| `BO-530-3` | todo | `BO-530-3-i` |
+| `GE-128a` | todo | `GE-128a-1` |
+| `INF-400c-2` | **done** | `INF-400c-2-i` |
+| `INF-400c-4` | todo | `INF-400c-4-ii` (this occurrence) |
+| `INF-400c-5` | **done** | `INF-400c-5-ii` |
+| `TKT-500f-6` | todo | `TKT-500f-6-iii` |
+
+`INF-400c-2` and `INF-400c-5` are already `done`. They will be refused the next time either
+file is staged. A further 22 composites have a superseded unproven child as well as other
+unfinished children, so supersession is not their only blocker. Among them are `ACD-1800b`,
+`ACS-300g`, `BO-2300` / `BO-2300a` (both `done`), `BP-1000a`, `PER-100d` and `TQ-600a`.
+
+No composite is blocked today by the docs-only waiver gap
+(KI-CG-20260914-done-proof-precommit-ignores-test-required). PR #1165 fixed it at source. An
+`INF-500d-4` refusal on 2026-10-14 came from an install built before that fix (see that entry's
+Occurrence 4).
+
+**Fix direction, sharpened.** Use the second option above, with one shared predicate:
+`superseded_by` non-empty or `req_status == "superseded"`. Skip such children in
+`_unproven_composite_children` and in `_resolve_all_child_ids`. Keep them in `covered_by` for the
+audit trail. Keep refusing:
+
+- a composite whose children are all superseded, since that leaves nothing to derive from;
+- a non-superseded child that is not `done`.
+
+Add a pre-commit/CI parity test with one superseded child and one done, covered child. After
+the fix, the 7 composites above should pass `pre-commit run check-done-proof` when flipped.
+
+**Related.** KI-CG-20260914-done-proof-precommit-ignores-test-required is the sibling exemption
+in the same two functions (waived children). It was fixed by PR #1165 without covering
+supersession.
 
 ---
