@@ -1,0 +1,90 @@
+id: AR-400d-1-ii
+title: "python-coder's trading-project collector-enforcer section is deleted, not converted to a project-supplied grant"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given python-coder's definition in the package's real tree,
+  When the build compiles python-coder's prompt,
+  Then the compiled prompt contains no mention of "collector-enforcer" and no
+    rule about paths under "collector/" -- not the auto-pick section, not the
+    implementation-sequence step, not the "Skills run" report line,
+    And python-coder's own definition does not grant "collector-enforcer",
+      with or without a `provided_by: project` marking,
+    And python-coder's settings no longer declare a setting describing "paths
+      that trigger the collector-enforcer skill",
+    And python-coder's remaining grants -- signoff, doc-enforcer,
+      complexity-reduction -- are unchanged in the compiled abilities section.
+depends_on:
+  - AR-400d-1
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "config_keys description at line 45, 'Collector-Enforcer Auto-Pick' at 275, sequence step at 357, report line at 442 (dated snapshot, 2026-10-12)."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target:
+  - code
+  - prompt
+  - config
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "templates/agents/python-coder.md: delete the `collector_enforcer_paths` entry from `config_keys` (~lines 43-45), the 'Collector-Enforcer Auto-Pick' section (~275-279), the sequence step (~357) and the report line (~442). Keep signoff, doc-enforcer and complexity-reduction grants byte for byte."
+  - "READERS OF THE SETTING, ALL UPDATED IN THIS CHANGE (enumerated 2026-10-12): config/skills_config.schema.json (collector_enforcer_paths property ~121-125; the top_level_packages default naming 'collector' ~131 is trading residue too -- flag, do not widen); config/skills_config.default.json (~27 collector_enforcer_paths; ~30 'collector' in a packages list -- flag); templates/agents/onboard-config-section.md (~106 table row; ~56 example); docs/reference/skills-config-fields.md; docs/agents/coding/python-coder.md; docs/agents/cards/python-coder.card.md (generated -- regenerate, never hand-edit); config/agent_registry.json python-coder knowledge_channels source/description strings (~511-525, authored registry fields, not derived by the hook); scripts/proposals/agent_self_description_python-coder.yaml; unit_tests/test_generate_agent_cards.py (~37, ~73 fixture). Reassigned to python-coder because these are .json/.py (orchestrator call, 2026-10-12); the template prose edit is within python-coder's .md surface."
+  - "Edits to config/agent_registry.json touch only authored fields of the existing python-coder entry; they register no new surface (check_package_surface_declaration counts new entry keys only)."
+  - "A consumer skills_config.json that still sets collector_enforcer_paths must keep validating (a removed key must not become an 'unknown key' build failure for adopters) -- confirm how the settings schema treats unknown keys before deleting the property."
+test_spec:
+  - name: test_compiled_python_coder_has_no_collector_enforcer_content
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile python-coder from the real template; 'collector-enforcer' and 'collector/' appear nowhere, and its delivered abilities section lists exactly signoff, doc-enforcer, complexity-reduction."
+    must_catch:
+      - "the section is converted to a provided_by: project grant instead of deleted"
+  - name: test_python_coder_declares_no_collector_setting
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The real python-coder.md frontmatter has no config_keys entry describing collector-enforcer paths and no grant of collector-enforcer."
+  - name: test_consumer_config_still_setting_the_removed_key_builds
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "A scratch consumer whose skills_config.json still sets collector_enforcer_paths builds successfully."
+test_rationale: >-
+  Deleting a declared setting is a compatibility change as much as a prompt
+  edit; the consumer-config descriptor guards adopters still carrying it.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d-1.yaml
+amended_by:
+  - reason: orchestrator-reassignment
+    agent: it-po
+    date: '2026-10-12'
+    changed: "assigned_agent llm-expert -> python-coder; change_target gains code; package_surface: false set; the setting's readers are now an in-scope update list rather than a flag. WHY: orchestrator call 2026-10-12 -- the readers include .json and .py files. Criteria unchanged."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision 1: "delete python-coder's collector-enforcer section (trading
+  residue)". AR-400d criteria: "Package-specific content that belonged to another
+  project is removed instead of being dressed up this way."
+
+  THE SETTING CLAUSE NEEDS THE IT PO. Removing a declared setting from a
+  specialist may ripple to the settings schema and to any consumer config that
+  sets it; the IT PO must enumerate readers of that setting before it goes.

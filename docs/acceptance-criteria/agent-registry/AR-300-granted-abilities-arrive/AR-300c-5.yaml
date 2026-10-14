@@ -127,6 +127,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-09'
+- reason: contradicted-by-later-decision
+  agent: business-analyst
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, it_requirements, test_spec, status and readiness unchanged. The it_requirement 'Resolution dedupes, so an explicit entry also covered by the macro is named once' TOLERATES a declaration that lists an agent the __ticket_phase_agents__ entry already covers. User decision 4 (BrainCandy, 2026-10-12) makes that declaration a declaration-shape error that stops the build (AR-400f-1, judged on each build per AR-400f-1-ii) and removes ticket-supervisor's explicit llm-expert entry (AR-400f-2). De-duplication at DELIVERY may stay -- the compiled hand-off list still names each agent once -- but ACCEPTING the redundant declaration may not. Where the two disagree, AR-400f-1 governs."
 superseded_by: null
 covered_by:
   - AR-300c-5-i

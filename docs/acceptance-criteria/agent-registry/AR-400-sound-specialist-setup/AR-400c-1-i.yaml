@@ -1,0 +1,65 @@
+id: AR-400c-1-i
+title: "Removing the noise does not silence a real fault about the same specialist"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the tree of AR-400c-1, in which find-structural-smells grants an
+    ability its instructions never mention,
+    And the same instructions additionally say "Load
+      `.claude/skills/ghost-ability/SKILL.md`", for an ability that does not
+      exist,
+  When the build runs,
+  Then the build stops with exactly one finding for find-structural-smells --
+    "ability does not exist" for "ghost-ability" -- and prints nothing about the
+    unmentioned grant.
+depends_on:
+  - AR-400c-1
+  - AR-400a-1
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-1.yaml
+    relationship: related
+    status: exists
+    relevance: "The fault that must survive the noise removal."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "The existence/grant check of AR-400a-1/AR-400b-1 stays wired after the old cross-reference is deleted; the count of findings is exactly one for the fixture."
+test_spec:
+  - name: test_real_fault_survives_noise_removal_as_the_only_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Copied package slice from AR-400c-1 plus \"Load `.claude/skills/ghost-ability/SKILL.md`\" in find-structural-smells' body; the validator CLI fails with exactly one finding (ghost-ability, 'ability does not exist') and prints nothing about the unmentioned grant."
+    must_catch:
+      - "the whole ability-reference check is deleted along with the old cross-reference"
+test_rationale: >-
+  Over-correction control for AR-400c-1: deleting everything satisfies the
+  parent and fails this.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The refusing existence check, still wired after the old cross-reference is deleted."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Over-correction control: deleting the whole ability-reference check satisfies
+  AR-400c-1 and fails this.

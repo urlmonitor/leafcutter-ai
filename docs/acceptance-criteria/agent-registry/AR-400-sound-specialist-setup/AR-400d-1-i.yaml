@@ -1,0 +1,74 @@
+id: AR-400d-1-i
+title: "sql-coder declares postgres and sql-test as supplied by the project"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given sql-coder's definition in the package's real tree,
+  When the build installs the package into a scratch consumer project whose
+    `.leafcutter/skills` area supplies neither "postgres" nor "sql-test",
+  Then sql-coder's own definition grants "postgres" and "sql-test", each marked
+    `provided_by: project`, and still grants "signoff" with its existing
+    condition,
+    And the build passes and reports, once each, that "postgres" and
+      "sql-test" are project-supplied abilities sql-coder is granted and this
+      project does not provide (AR-400d-2),
+    And the build reports no "ability does not exist" or "not granted" finding
+      for sql-coder about either of them.
+depends_on:
+  - AR-400d-1
+  - AR-400d-2
+doc_links:
+  - path: templates/agents/sql-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "Instructions run the postgres skill (Step 2) and the sql-test skill (Step 4); its skills: block grants only signoff today."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Edit only templates/agents/sql-coder.md's `skills:` frontmatter: add postgres and sql-test, each with provided_by: project and a mode/condition matching the step that uses it (Step 2 / Step 4); keep signoff with its existing condition byte for byte."
+  - "The sql-* sibling specialists (sql-table-creator, sql-view-creator, sql-function-creator, sql-procedure-creator, sql-index-creator, sql-query, sql-test-writer) are checked for postgres / sql-test instructions; any found is reported for a follow-up record, not widened into this one."
+  - "Lands after AR-400d-1/-2 are implemented (the marking must be understood by every surface first, or the shape check refuses it)."
+test_spec:
+  - name: test_sql_coder_declares_postgres_and_sql_test_as_project_supplied
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Parse the real templates/agents/sql-coder.md frontmatter: postgres and sql-test are granted with provided_by: project, and signoff is still granted with its prior condition."
+  - name: test_scratch_consumer_without_them_builds_and_reports_each_once
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "Build the real package into a scratch consumer with an empty .leafcutter/skills project area: the build passes, the informational 'project-supplied ... not found' line appears exactly once for postgres and once for sql-test, and no 'does not exist' / 'not granted' finding names sql-coder."
+test_rationale: >-
+  The real template plus a real consumer install is the only setup that
+  exercises the absent path the criteria describe.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-1
+  contract: "The provided_by: project grant shape understood by every surface."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  User decision 1: "sql-coder keeps postgres/sql-test as provided_by: project".
+  The scratch consumer exercises the absent path -- which is why this depends on
+  AR-400d-2 as well. Whether the package's own workspace supplies them was not
+  measured by the BA. The sql-query reference in the same specialist is
+  AR-400b-3-iv.

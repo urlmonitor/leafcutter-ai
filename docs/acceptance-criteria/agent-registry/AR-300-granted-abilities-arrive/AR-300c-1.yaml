@@ -117,6 +117,10 @@ amended_by:
 - action: approved
   agent: approve_acs
   date: '2026-10-01'
+- reason: contradicted-by-later-decision
+  agent: it-po
+  date: '2026-10-12'
+  changed: "NOTE ONLY -- criteria, test contract, status and readiness unchanged. implemented_by names scripts/migrate_agent_abilities.py, which user decision 7 (BrainCandy, 2026-10-12) retires (AR-400e-1-iv deletes it). When that lands, test_ar_300c_1_frontmatter_declaration.py's use of the migration (via _ar_300c_support.run_migration) is retargeted at the transform-agent-registry hook -- not deleted or xfailed -- and the helper is dropped from implemented_by. The criteria do not name the helper."
 superseded_by: null
 covered_by:
   - unit_tests/prompt_assembly/test_ar_300c_1_frontmatter_declaration.py

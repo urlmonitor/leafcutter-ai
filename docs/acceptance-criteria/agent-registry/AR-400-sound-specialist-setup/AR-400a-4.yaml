@@ -1,0 +1,77 @@
+id: AR-400a-4
+title: "The reference for specialist definitions states which ability references stop the build and how to fix each kind"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given an author reading the reference documentation for specialist
+    definitions after AR-400a-1 and AR-400b-1 ship,
+  When they look up what happens to an instruction that names an ability,
+  Then the reference states that the build stops on such an instruction when the
+    ability does not exist, and when it exists but is not granted in the
+    specialist's own definition,
+    And it shows one example failure line for each fault kind ("does not
+      exist", "not granted", "differs only in case", "names an agent"), each
+      with the fix it asks for,
+    And it lists what is not an instruction -- a sentence saying not to use an
+      ability, a sentence about another specialist, a citation of an ability's
+      file, an installer step, a recorded decision history -- with one example
+      of each,
+    And it states that shared guides are checked for existence,
+    And every example failure line in the reference matches, word for word, the
+      line the build prints for that fault on a fixture reproducing it.
+depends_on:
+  - AR-400a-1
+  - AR-400b-1
+  - AR-400b-2
+doc_links:
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: modifies
+    status: exists
+    relevance: "The reference for the `skills:` declaration; natural home for the reference-check section."
+assigned_agent: reference-author
+estimated_complexity: M
+change_target: docs
+risk_surface: internal
+it_requirements:
+  - "Write after AR-400a-1, AR-400b-1 and AR-400b-2 (and its L3s) are implemented: every example failure line is copied from the build's actual output on a fixture, not composed."
+  - "The non-instruction list (negation, another specialist's subject, citation, installer step, decision history) matches the recognition rule's exclusions one for one; if the rule gains or loses an exclusion, this section changes in the same pull request."
+  - "State the shared-guide scope exactly as the check derives it (AR-400a-2) and that guides receive the existence check only."
+  - "Hosted in docs/reference/agent-template-frontmatter.md as one section shared with AR-400b-5 (which owns the grant-comparison paragraph); no second page describing the same check."
+test_spec:
+  - name: test_reference_example_failure_lines_match_build_output_verbatim
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "For each of the four fault kinds, build a fixture reproducing it, run the registry validator, and assert the line it prints for that fault appears verbatim in docs/reference/agent-template-frontmatter.md's reference-check section (fixture-specific names substituted as the doc's example uses them)."
+    must_catch:
+      - "the doc paraphrases a failure line"
+      - "a fault kind's wording changes in code and not in the doc"
+test_rationale: >-
+  The criterion makes the reference falsifiable against real output; a test
+  that runs the check and compares lines is the only way to keep it so.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The exact failure-line wording for each fault kind: one fixed template per kind, importable as constants from the reference-check module."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies AR-400a's documentation_triggers [reference-doc] AND AR-400b's
+  [reference-doc]: the two L1s share one check and one reference section, so
+  AR-400b-5 is scoped to the grant half only to avoid two documents describing
+  one check. The last clause makes the doc falsifiable against the real output.

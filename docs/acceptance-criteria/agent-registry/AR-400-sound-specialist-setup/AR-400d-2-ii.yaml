@@ -1,0 +1,134 @@
+id: AR-400d-2-ii
+title: "A misspelt package grant is not rescued by a same-named ability the project happens to have"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package specialist "probe-coder" that grants "complexity-reductio"
+    (a misspelling of the shipped "complexity-reduction"), WITHOUT a
+    `provided_by: project` marking,
+    And the consumer project's `.leafcutter/skills` area happens to hold an
+      ability named "complexity-reductio",
+  When the build installs the package into that project,
+  Then the build stops with "ability does not exist" for probe-coder /
+    "complexity-reductio",
+    And the finding is not downgraded to the informational project-supplied
+      report of AR-400d-2,
+    And, conversely, a grant marked `provided_by: project` for an ability the
+      package itself ships ("signoff"), in a project whose `.leafcutter/skills`
+      area holds its own "signoff", is a deliberate override: the build passes,
+      probe-coder's compiled prompt delivers the project's copy of "signoff",
+      and the build states once, at informational severity, that probe-coder's
+      "signoff" is supplied by the project in place of the packaged one,
+    And in that project the build neither writes the packaged "signoff" into
+      the project's `.leafcutter/skills` area nor removes the project's copy,
+      on an ordinary build or a cleaning one,
+    And every other specialist that grants "signoff", marked or not, receives
+      the project's copy,
+    And when the project's `.leafcutter/skills` area holds no "signoff", the
+      marked grant falls back to the packaged "signoff", the build passes, and
+      it states once, at informational severity, that the project does not
+      supply "signoff" and the packaged copy is used.
+depends_on:
+  - AR-400d-2
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+    relationship: related
+    status: exists
+    relevance: "'The two must never be confused in either direction -- a typo in a package grant must not be rescued by being treated as project-supplied.'"
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "THE MARKING IS THE ONLY RESCUE: an unmarked grant resolves against the packaged templates/skills/ only, so a misspelt unmarked grant is 'ability does not exist' even when the project area happens to hold that name. It is never downgraded to the informational project-supplied report."
+  - "OVERRIDE (user decision 5): a marked grant for a packaged id resolves to the PROJECT's copy at <project>/<output_root>/skills/<id>/SKILL.md; delivery (the abilities table description and any SKILL.md the agent is pointed at) uses that copy, and one informational line names the specialist, the ability and both locations."
+  - "MARKED IDS ARE NEVER DEPLOYED OR DELETED (user decision 10): compute once per build the set of ids any specialist marks provided_by: project (from frontmatter declarations, the AR-400d-1 parser). The skills phase (scripts/build_phases_agents_skills.py, writes target_root/'skills'/<id>) skips those ids, and stale-path cleanup (_cleanup_stale_paths in scripts/build.py, the --clean path, and the shim step that replaces .claude/skills -- KI-BP-009) never removes <project>/<output_root>/skills/<id> for a marked id. build.py (1541 content lines) and build_helpers.py (1310) may not grow: the protected-id set comes from a new module, and the call sites are net-neutral."
+  - "PROJECT-WIDE SCOPE (user decision 10): one directory per id, so the project's copy applies to EVERY specialist granting that id, marked or not; the delivered table and description for an unmarked grant of a marked id also read the project copy."
+  - "FALLBACK (user decision 10): a marked packaged id the project does NOT supply resolves to the packaged copy -- which, because the id is protected from deploy, must still be reachable for delivery (state where the agent is pointed: the packaged templates/skills/<id> deployed under a non-colliding path, or a one-time deploy into an EMPTY project slot that is then treated as project-owned). The implementer chooses and documents the mechanism; one informational line per id per build says the project does not supply it and the packaged copy is used. A marked id the package does not ship either remains AR-400d-2's 'not installed' case."
+test_spec:
+  - name: test_misspelt_unmarked_grant_is_not_rescued_by_project_copy
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Scratch consumer whose .leafcutter/skills holds complexity-reductio; probe-coder grants complexity-reductio UNMARKED; build.py fails with 'ability does not exist' for probe-coder/complexity-reductio and prints no informational project-supplied line for it."
+    must_catch:
+      - "the project-local fallback in agent_ability_verdict._resolve is left in place"
+  - name: test_marked_grant_for_packaged_id_delivers_project_copy_and_says_so
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Scratch consumer whose .leafcutter/skills/signoff/SKILL.md has distinct project content; probe-coder grants signoff provided_by: project; build.py passes, probe-coder's compiled abilities row for signoff carries the project copy's description, and exactly one informational (non-warning) line states the project's signoff is used in place of the packaged one."
+    must_catch:
+      - "the marked grant is refused as masking a package ability (the superseded clause)"
+      - "the packaged signoff is delivered despite the marking"
+  - name: test_project_override_copy_survives_rebuild
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: failure
+    description: "Rebuild the same scratch consumer without --clean, then again WITH --clean; after each, .leafcutter/skills/signoff/SKILL.md still holds the project bytes and the compiled prompt still reflects them."
+    must_catch:
+      - "the skills phase overwrites the project copy with the packaged one"
+      - "--clean or the .claude/skills shim step removes the project copy (KI-BP-009)"
+  - name: test_unmarked_grant_of_marked_id_receives_project_copy
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "In the same project, a second specialist grants signoff UNMARKED; its compiled abilities row carries the project copy's description, not the packaged one."
+  - name: test_marked_packaged_id_absent_from_project_falls_back_with_one_info_line
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: boundary
+    description: "Project area without signoff; probe-coder marks signoff provided_by: project: build passes, probe-coder's compiled row carries the packaged signoff description, and exactly one informational (non-warning) line says the project does not supply signoff and the packaged copy is used."
+    must_catch:
+      - "the absent marked id is reported 'not installed' and not delivered"
+      - "the fallback line is a warning or is printed per reader"
+test_rationale: >-
+  Both directions now pass through the same resolver, so each needs a real
+  consumer build: the misspelling must still fail, and the override must both
+  be delivered and survive the deploy step that writes the same directory.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-1
+  contract: "The parsed grant with provided_by and the packaged-only / project-only resolution rule."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d-2.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria, third clause only: 'a grant marked provided_by: project for an ability the package itself ships (signoff) stops the build with a finding saying the package already supplies it, so the marking cannot be used to mask a package ability' REPLACED by: such a grant, in a project whose .leafcutter/skills holds its own signoff, is a deliberate override -- the build passes, probe-coder's compiled prompt delivers the project's copy, and the build states once at informational severity that the project's signoff is used in place of the packaged one. WHY: user decision 5 (BrainCandy, 2026-10-12, BA-stage Q3): a project MAY deliberately override a packaged skill with provided_by: project; the project's copy wins and is delivered, and the build states the override at info level. First and second clauses (the misspelling is not rescued) unchanged; title unchanged."
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: three clauses ADDED after the override clause -- the build neither deploys the packaged signoff into the project area nor removes the project's copy (ordinary or cleaning build); every other specialist granting signoff, marked or not, receives the project's copy; when the project supplies no signoff the marked grant falls back to the packaged copy with one informational line. it_requirements: the open collision / scope / absent-copy items replaced by the decided rules; test_spec extends the rebuild-survival test to --clean and adds the project-wide and fallback tests. WHY: user decision 10 (BrainCandy, 2026-10-12): the build never deploys or deletes a packaged id any agent marks provided_by: project (protects against KI-BP-009 cleanup); the project's copy applies project-wide; a marked id the project does not supply falls back to the packaged copy with an info line."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BOTH DIRECTIONS, per AR-400d's notes. The third clause ("marking a shipped
+  ability as project-supplied is a fault") is a BA inference from "never
+  confused in either direction" -- it is the only way the marking could
+  silently override a package ability. Flagged in the BA report in case the
+  user wants a project to be able to shadow a package ability deliberately.
+
+  RESOLVED 2026-10-12 (user decision 5): the user DOES want deliberate
+  shadowing. The third clause now states the override; the "never confused in
+  either direction" rule survives only as the first two clauses (an UNMARKED
+  grant is never rescued by a project copy). See amended_by.

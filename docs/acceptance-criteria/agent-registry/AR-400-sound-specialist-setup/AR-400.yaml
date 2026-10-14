@@ -1,0 +1,129 @@
+id: AR-400
+title: "A specialist's setup is either sound, or the build says exactly what is wrong"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L0
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Real setup faults stop the build; nothing else clutters its report.
+
+  Each specialist is set up by a handful of statements: what it may use, what
+  its instructions tell it to use, and who it may hand work to. Today those
+  statements can contradict each other, point at things that do not exist, or
+  repeat themselves, and the build answers with a long list of warnings in
+  which the handful of real faults are buried among dozens that mean nothing.
+  People learn to scroll past the list, and the real faults ship.
+
+  After this goal, a fault in a specialist's setup stops the build and names
+  the specialist and the fault. Anything that is not a fault is not reported
+  at all. A clean build means every specialist's setup is coherent, and a
+  report from the build is worth reading every time.
+depends_on: []
+doc_links:
+  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: >-
+      The observed defect this goal closes: instructions load abilities by name
+      that do not exist, and no gate checks the instructions themselves. A
+      better check already exists in the repository and is wired to nothing.
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED, AND THE MIRROR IMAGE. AR-300 promises that an ability you GRANT
+      reaches the specialist. This goal promises that an ability the
+      specialist is TOLD TO USE is one it was granted and that exists, and that
+      the build's account of a specialist's setup is coherent and noise-free.
+      AR-300 is work_status done; it cannot host new todo children without
+      becoming a done composite with unfinished work (the ACD-400a defect
+      class), which is why these L1s live here and not under it.
+  - path: docs/acceptance-criteria/agent-registry/AR-200-capability-matches-obligation/AR-200b.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      FENCED. AR-200b matches an obligation to a TOOL the specialist needs to
+      act. This goal matches an instruction to an ABILITY the specialist was
+      granted. Same shape, different subject; reuse its "derive both sides"
+      discipline, do not merge the records.
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      SUPERSEDED BY THIS GOAL. INF-600g-3 (and its child INF-600g-3-i) defined
+      the current two-direction warning check against the central record. Both
+      of its directions are retired or replaced here: the instruction-to-grant
+      direction becomes a refusing check against the specialist's own
+      declaration (AR-400a, AR-400b), and the grant-to-instruction direction is
+      dropped as obsolete since AR-300 delivers granted abilities without
+      prose (AR-400c). The BA must mark both records superseded explicitly.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400a
+  - AR-400b
+  - AR-400c
+  - AR-400d
+  - AR-400e
+  - AR-400f
+implemented_by: []
+notes: |
+  User-authored intent: BrainCandy ("fix the root causes behind the build's
+  warnings"). Framed by product-owner, 2026-10-12. L0/L1 only.
+  Source analysis: /home/henzeh/ar300_probe/warnings_design_2026-10-12.md
+  (rebuild log of 2026-10-12, 32 warnings). The user's four decisions recorded
+  there are BINDING and are carried by the L1s named below -- do not
+  re-litigate them at decomposition.
+
+  WHAT WAS CHANGED FROM THE REQUEST. The request named five fixes. This goal
+  frames them as one outcome -- a specialist's setup is coherent, and the
+  build's report about it contains only real faults -- because the five share
+  one harm: real defects (dangling abilities, missing grants, dead grants, a
+  redundant hand-off permission) were invisible inside a report most of whose
+  lines meant nothing. Two of the five are placed OUTSIDE this tree:
+    - The blank-setting fix (user decision 2) is a build honesty promise, not
+      a specialist-setup promise. It is BP-1500h under BP-1500.
+    - The version-detection fault is handled separately by /quick-fix and is
+      deliberately absent.
+
+  DECISION MAP (user, 2026-10-12):
+    decision 1 (abilities the consumer project supplies)  -> AR-400d
+    decision 2 (blank config path = not configured)        -> BP-1500h
+    decision 3 (retire the second derived abilities field) -> AR-400e
+    decision 4 (redundant hand-off entry is an error;
+                ticket-supervisor's llm-expert entry goes) -> AR-400f
+
+  OUT OF SCOPE, SAME CLASS, FLAGGED. The 14 "a human should verify" warnings
+  from the intra-package closure computation (rebuild log lines 280-294) are
+  the same harm -- a warning nobody can act on -- but were excluded by the
+  design. They are a candidate seventh L1 here if the user wants them; the
+  tree has one slot left.
+
+  STANDING RECORDS THIS GOAL CONTRADICTS -- RECONCILE AT DECOMPOSITION:
+    - INF-600g-3 / INF-600g-3-i: superseded (see doc_links).
+    - INF-600a-1: keeps the older abilities field as a compatibility alias.
+      Decision 3 retires it. See AR-400e.
+    - AR-300c-3: its transform constraint names BOTH derived fields as the
+      ones regenerated. Decision 3 leaves one. See AR-400e.
+    - AR-300c-5: its compile rule silently de-duplicates an explicit hand-off
+      entry already covered by "every ticket-phase agent". Decision 4 makes
+      that declaration a refusal instead. See AR-400f.
+
+  IDENTIFIER. AR-400 confirmed free on 2026-10-12 by a recursive search of
+  docs/ and tickets/ for AR-4NN in this worktree -- zero hits. Re-verify at
+  merge time; id allocation is known-broken (KI-ACD-008).
+
+  PRIORITY AND READINESS ARE AUTHORING DEFAULTS. Every record in this tree is
+  draft/medium; the user sets both at the approval gate.

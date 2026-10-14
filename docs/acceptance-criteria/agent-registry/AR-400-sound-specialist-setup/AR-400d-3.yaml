@@ -1,0 +1,122 @@
+id: AR-400d-3
+title: "Every part of the system that reads a grant understands the project-supplied marking the same way"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given probe-coder grants "postgres" marked `provided_by: project`, in a
+    project that does not provide it, and its instructions say "Apply the
+    `postgres` skill",
+  When each of the following is run over that tree --
+      the declaration-shape check of the specialist's header,
+      the commit-time step that regenerates the derived central registry,
+      the instruction-to-grant reference check (AR-400a-1, AR-400b-1),
+      the verdict that decides whether a specialist's abilities work is done,
+      the prompt compile that delivers abilities to the specialist,
+  Then the shape check accepts the marking and rejects any other value of it
+    ("provided_by: vendor") with a finding naming the specialist, the grant and
+    the value,
+    And the regenerated central registry keeps the marking on that grant, and a
+      second regeneration is byte-identical,
+    And the reference check reports neither "does not exist" nor "not granted"
+      for the instruction,
+    And the done verdict counts the grant as declared and not as a missing
+      package ability,
+    And the compiled prompt states the ability is project-supplied and not
+      installed here (AR-400d-2),
+    And the five classifications are made from the one parsed grant, so changing
+      only the marking changes all five together on the next run.
+depends_on:
+  - AR-400d-1
+  - AR-400d-2
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-3.yaml
+    relationship: related
+    status: exists
+    relevance: "The commit-time transform that regenerates the derived registry fields from the declaration."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The transform-agent-registry hook, one of the five surfaces."
+  - path: docs/architecture/components/template-compiler.md
+    relationship: describes
+    status: exists
+    relevance: "The prompt compile that delivers the abilities table."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "THE FIVE SURFACES, BY FILE: (1) shape check -- scripts/agent_declaration_shape._skill_entry_problem AND its deployed twin templates/scripts/commit_guardian/_agent_ability_sync._skill_problem; (2) commit-time regeneration -- _agent_ability_sync.normalize_declared + regenerate_record (transform_agent_registry.py); (3) reference check -- the AR-400a-1/AR-400b-1 modules; (4) done verdict -- agent_ability_verdict.normalize_entries, _resolve, _agrees/_record_abilities (provided_by must take part in the declaration-vs-record comparison, or a dropped marking reads as agreement); (5) delivery -- agent_skills_declaration.build_declared_skills_table, plus scripts/render_effective_prompt.py's registry read (~404), which must carry the marking too."
+  - "SIXTH READER OF THE MARKING (user decision 10, outside the five classifications the criteria list): the deploy and cleanup paths -- scripts/build_phases_agents_skills.py (skills phase), _cleanup_stale_paths / --clean in scripts/build.py and the .claude/skills shim -- read the same parsed grants to compute the protected-id set (every marked id is never deployed over or deleted). It uses the same parser; a separate scan of frontmatter text is forbidden."
+  - "The shape check accepts exactly provided_by: project and rejects any other value naming the specialist, the grant and the value; the same rule in both copies."
+  - "SINGLE PARSE IS NOT LITERALLY AVAILABLE FOR THE HOOK: _agent_ability_sync is deployed alone and cannot import scripts/. 'Made from the one parsed grant' is therefore satisfied by (a) every scripts/ surface calling agent_ability_verdict.normalize_entries and (b) a parity test proving the hook's normalize_declared returns identical entries for every real template and for the marked fixtures."
+  - "Regeneration idempotency: a second transform run leaves config/agent_registry.json byte-identical (dump_registry format)."
+  - "config/agent_registry.schema.json skills_invoked items gain `provided_by` (enum ['project']) and `condition` (string); additionalProperties stays false."
+  - "Mutation discipline for the evidence: changing ONLY the marking in the fixture flips all five classifications on the next run; the test asserts all five in one run, not five separately-built fixtures."
+test_spec:
+  - name: test_marking_flips_all_five_surfaces_together
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: seam
+    description: "Package copy + scratch consumer lacking postgres; probe-coder grants postgres provided_by: project. Run shape check, transform hook, validator, ability gate and compile; assert: shape ok, regenerated entry keeps the marking, no does-not-exist/not-granted, verdict counts it declared, compiled prompt says project-supplied and not installed. Remove only the marking and rerun: all five change (shape ok, entry unmarked, 'does not exist' in validator and gate, prompt no longer says project-supplied)."
+    must_catch:
+      - "one surface ignores provided_by and keeps today's behaviour"
+      - "the verdict's comparison ignores provided_by so a dropped marking reads as agreement"
+  - name: test_unknown_provided_by_value_is_refused_by_both_shape_copies
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: failure
+    description: "provided_by: vendor is refused by the build's shape check (naming specialist, grant, value) and by the transform hook's copy (MalformedDeclarationError naming the value)."
+  - name: test_hook_and_scripts_parsers_agree_on_every_real_template
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "For every real templates/agents/*.md plus the marked fixtures, _agent_ability_sync.normalize_declared and agent_ability_verdict.normalize_entries return identical lists."
+  - name: test_second_regeneration_is_byte_identical
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "Running the transform hook twice over the marked fixture leaves config/agent_registry.json byte-identical."
+test_rationale: >-
+  The criterion's discriminator is that one change of the marking moves all
+  five surfaces together; running all five against the same mutated fixture
+  is the test, and the parser-parity descriptor stands in for the 'one parse'
+  the deployed hook cannot literally share.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-1
+  contract: "The single parsed grant shape with provided_by."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria unchanged. it_requirements: the deploy/cleanup paths are named as a sixth reader of the marking, computing the protected-id set from the same parser. WHY: user decision 10 (BrainCandy, 2026-10-12)."
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AR-400d's notes: "A declaration understood by some and not others is the
+  split-record defect again." The design lists the surfaces as shape, hook,
+  verdict, renderer, docs; docs are AR-400d-4/-5. Each surface is run, not
+  inspected -- the last clause is the discriminator against five independent
+  parsers that happen to agree today.

@@ -1,0 +1,71 @@
+id: AR-400f-1-ii
+title: "Redundancy is judged against the ticket-phase membership on each build, not when the entry was written"
+component: agent-registry
+components:
+  - agent_registry
+  - build_orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given probe-supervisor's declaration lists `__ticket_phase_agents__` and
+    "brainstorm-lead", and the build passes,
+  When brainstorm-lead is then marked as a ticket-phase agent, with no edit to
+    probe-supervisor's definition, and the build runs again,
+  Then that build stops with the redundant-entry finding for probe-supervisor /
+    "brainstorm-lead",
+    And when the mark is removed again, the next build passes with no finding,
+      and probe-supervisor's compiled hand-off list still names brainstorm-lead.
+depends_on:
+  - AR-400f-1
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c-5.yaml
+    relationship: related
+    status: exists
+    relevance: "The covering entry is resolved against is_ticket_phase on every build."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Ticket-phase membership is read from the registry's is_ticket_phase on every run; no cache, snapshot or membership list baked into the check or into the regenerated registry."
+  - "The explicit entry is never stripped automatically (by the build or the transform hook) when it becomes redundant; once membership flips back, the explicit entry is the only grant."
+test_spec:
+  - name: test_entry_becomes_redundant_when_target_turns_ticket_phase
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-supervisor declares [__ticket_phase_agents__, brainstorm-lead] and passes; set brainstorm-lead is_ticket_phase true in the registry only; the validator now fails with the redundant-entry finding for probe-supervisor/brainstorm-lead."
+  - name: test_reverting_membership_passes_and_keeps_the_hand_off
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Set is_ticket_phase back to false: the validator passes and probe-supervisor's compiled hand-off list still names brainstorm-lead."
+    must_catch:
+      - "the redundant entry is auto-stripped from the declaration or the registry"
+test_rationale: >-
+  Membership is the variable, so the test flips only membership and holds the
+  declaration constant.
+delivers_to: null
+expects_from:
+  ac_id: AR-400f-1
+  contract: "The redundant-entry check, judged against registry is_ticket_phase at run time."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400f-1.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  AR-400f's WHY: a redundant entry is "misleading the day the covering entry
+  changes". The second clause is the reverse direction -- the reason the entry
+  must not be stripped silently: once brainstorm-lead leaves the covered set,
+  the explicit entry is the only thing granting it.
