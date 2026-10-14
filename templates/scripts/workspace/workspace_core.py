@@ -20,6 +20,9 @@ ARCHITECTURE: Stdlib-only, imported by name from the maker's own directory.
 #   create modules, each with a named deploy entry. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
 # - 2026-10-14 17:00 [python-coder]: Added discard_tree and run(extra_env).
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-070)
+# - 2026-10-14 18:00 [python-coder]: REFUSAL_CODES: a declined request answers
+#   status "refused" (TICKET_NOT_ON_BASE, OCCUPIED), not "error".
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/04) (BO-4300a-1-ii)
 """
 from __future__ import annotations
 
@@ -37,6 +40,8 @@ from workspace.workspace_root import LANDING_NAME, MARKER_NAME, resolve_project_
 MAKER_VERSION = "1.0.0"
 SCHEMA_VERSION = 1
 PROTECTED = frozenset({"main", "master"})
+# Requests the maker declines (answer status "refused", exit 2) rather than fails.
+REFUSAL_CODES = frozenset({"TICKET_NOT_ON_BASE", "OCCUPIED"})
 KINDS = ("ticket", "feature", "ac", "fastlane", "epic", "scratch")
 _PREFIX = {"ticket": "ticket/", "feature": "feature/", "ac": "ac/",
            "fastlane": "fastlane/", "epic": "EPIC-", "scratch": ""}
@@ -47,16 +52,21 @@ log = logging.getLogger("worktree")
 
 
 class MakerError(Exception):
-    """A classified failure, emitted as an error answer."""
+    """A classified failure, emitted as an error or refused answer."""
 
     def __init__(self, code: str, message: str, **extra: object) -> None:
         super().__init__(message)
         self.code, self.extra = code, extra
 
+    @property
+    def refused(self) -> bool:
+        """True when the maker declined the request (as opposed to failing)."""
+        return self.code in REFUSAL_CODES
+
     def payload(self, verb: str) -> dict:
-        """Return the error answer for this failure."""
-        return {"status": "error", "code": self.code, "verb": verb,
-                "message": str(self), **self.extra}
+        """Return the error or refused answer for this failure."""
+        return {"status": "refused" if self.refused else "error", "code": self.code,
+                "verb": verb, "message": str(self), **self.extra}
 
 
 def run(cmd: list[str], cwd: Path, timeout: int = 900,

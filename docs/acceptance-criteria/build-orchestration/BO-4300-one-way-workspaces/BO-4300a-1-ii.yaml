@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -192,9 +192,13 @@ amended_by:
     before the answer. The absent-ticket test asserts the code; a new test covers the 'differs' case.
     Notes changed from PROPOSAL to DECIDED. readiness stays reviewed.
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300a_1_ii.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260927-BO-4300a-1-ii.md
+- templates/scripts/worktree.py
+- templates/scripts/workspace/workspace_core.py
+- templates/scripts/workspace/workspace_create.py
 notes: |
   KI-BO-20260925-build-single-ticket-treats-ticket-path-final-as-worktree-path: the retiring
   set-up script reports the resolved INPUT ticket path (usually the main copy's) under a name
