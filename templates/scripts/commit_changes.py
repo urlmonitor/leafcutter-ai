@@ -122,7 +122,7 @@ def parse_args(argv: list[str]) -> tuple[str, list[str]]:
         else:
             raise StepRefusal("policy_unknown_option", f"unknown option {item!r}; only --message-file is accepted")
     if message_file is None:
-        raise StepRefusal("policy_no_message_file", "--message-file FILE is required")
+        raise StepRefusal("policy_message_missing", "a message file (--message-file FILE) is required")
     if not entries:
         raise StepRefusal("policy_no_explicit_paths", "an explicit list of files is required")
     return message_file, entries
@@ -281,7 +281,20 @@ def _sync_shared_index(root: Path, paths: list[str]) -> None:
 
 def _run_commit(root: Path, env: dict, msg_file: str) -> subprocess.CompletedProcess:
     """Run the real `git commit` (hooks active) against the private index."""
-    return _git(["commit", "-q", "-F", msg_file], root, env)
+    return _git(["commit", "-q", "--cleanup=verbatim", "-F", msg_file], root, env)
+
+
+def _check_message_file(message_file: str) -> None:
+    """Refuse a message file that is absent, unreadable or only whitespace."""
+    path = Path(message_file)
+    if not path.is_file():
+        raise StepRefusal("policy_message_not_found", f"message file not found: {message_file}")
+    try:
+        text = path.read_bytes().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise StepRefusal("policy_message_unreadable", f"message file unreadable: {message_file} ({exc})") from exc
+    if not text.strip():
+        raise StepRefusal("policy_message_empty", f"message file is empty: {message_file}")
 
 
 def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratch: Path) -> dict:
@@ -298,6 +311,11 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
         return _answer("nothing_to_commit", reason_code="nothing_changed", reason="named paths have no changes")
     added = [p for p in parents if p in changed]
     proc = _run_commit(root, env, msg_file)
+    if proc.returncode != 0 and _hooks_present(root):
+        # A fixing check may have rewritten the named files: re-read them and retry
+        # ONCE with the caller's unchanged message file.
+        _git_out(["update-index", "--add", "--remove", "--", *named], root, env)
+        proc = _run_commit(root, env, msg_file)
     if proc.returncode != 0:
         return _failed_commit(root, proc)
     return _finish(root, env, base, paths, added, msg_file)
@@ -327,8 +345,7 @@ def _finish(root: Path, env: dict, base: str | None, paths: list[str], added: li
 def _checked_run(argv: list[str]) -> dict:
     """Validate the request, then commit; refusals propagate as StepRefusal."""
     message_file, entries = parse_args(argv)
-    if not Path(message_file).is_file():
-        raise StepRefusal("policy_message_file_missing", f"message file not found: {message_file}")
+    _check_message_file(message_file)
     cwd = Path.cwd()
     root = Path(_git_out(["rev-parse", "--show-toplevel"], cwd).strip())
     tracked = {p for p in _git_out(["ls-files", "-z"], root).split("\0") if p}
