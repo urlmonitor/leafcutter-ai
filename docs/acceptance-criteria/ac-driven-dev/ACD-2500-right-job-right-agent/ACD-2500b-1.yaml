@@ -67,12 +67,19 @@ delivers_to:
     bool, reason: str (one sentence)}; exactly one entry per Then/And outcome clause; no test names, directories,
     frameworks, types, angles or strategy. Read by the code-aware test-design procedure (ACD-2500c-1);
     only needs_test: true entries are designed.'
-expects_from: null
+expects_from:
+  ac_id: ACD-2500b-1-i
+  contract: test_intent declared in config/ac_store_schema.json with the closed item shape {clause, needs_test,
+    reason}.
 test_required: false
 test_rationale: "Prompt-only deliverable (section 2.7 of templates/agents/it-po.md) whose behaviour is an LLM following instructions; the structural tests in unit_tests/ac_driven_dev/it_po_prompt/ pin the rules and validate the prompt's example against the real schema, and the record rule check enforces the written intent."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
+- reason: "expects_from contract on ACD-2500b-1-i restored after EPIC-RightJobRightAgent shipped (PR #1245); it had been removed on 2026-10-12 only so the epic could be ordered, and both records are now done"
+  date: '2026-10-15'
+  by: main-session
+  directed_by: user
 - reason: "ordering edge removed: it closed a dependency cycle with the child's parent link, so the epic could not be ordered; the contract stays on the producer's delivers_to and both ship in the same epic PR (with ACD-2500b-1-i)"
   date: '2026-10-12'
   by: main-session
