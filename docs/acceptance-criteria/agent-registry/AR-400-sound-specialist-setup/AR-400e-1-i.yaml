@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -74,8 +74,12 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_i_briefing_validation.py
+implemented_by:
+  - templates/scripts/commit_guardian/_agent_ability_sync.py
+  - scripts/render_effective_prompt.py
+  - config/agent_registry.json
 notes: |
   The four names are a 2026-10-12 measurement, recorded so the population is
   checkable; the test should derive "specialists that carried only the older

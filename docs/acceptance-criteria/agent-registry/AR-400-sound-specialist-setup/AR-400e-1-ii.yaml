@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -92,8 +92,11 @@ amended_by:
     date: '2026-10-12'
     changed: "NOTE ONLY -- criteria unchanged. it_requirements: the open edge-label question replaced by the decided rule (label stays 'skills_used', sourced from skills_invoked skill ids via a declared field->label and item-key mapping in config/paths.json agents surface); test_spec asserts the label and validate_knowledge_map. WHY: user decision 12 (BrainCandy, 2026-10-12)."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_ii_diagram_graph.py
+implemented_by:
+  - scripts/generate_agent_diagram.py
+  - scripts/knowledge_edges.py
 notes: |
   The diagram and the graph are the two views that silently EMPTY if the field
   is removed before they move -- the exact failure AR-400e's notes warn about.

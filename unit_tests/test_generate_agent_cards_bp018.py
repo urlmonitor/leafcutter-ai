@@ -65,7 +65,7 @@ TEMPLATE_FM = {
     "tools": "Bash, Read",
     "portable": True,
     "signoff": True,
-    "skills_used": ["signoff"],
+    "skills": [{"skill_id": "signoff", "mode": "always"}],
 }
 
 REGISTRY_ENTRY = {
@@ -75,7 +75,7 @@ REGISTRY_ENTRY = {
     "priority": 6,
     "spawned_by": ["ticket-supervisor"],
     "spawn_allowlist": [],
-    "skills_used": ["signoff"],
+    "skills_invoked": [{"skill_id": "signoff", "mode": "always"}],
 }
 
 

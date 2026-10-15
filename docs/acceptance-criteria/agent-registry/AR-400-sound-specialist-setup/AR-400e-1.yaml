@@ -8,7 +8,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -100,7 +100,12 @@ covered_by:
   - AR-400e-1-ii
   - AR-400e-1-iii
   - AR-400e-1-iv
-implemented_by: []
+implemented_by:
+  - scripts/generate_agent_diagram.py
+  - scripts/knowledge_edges.py
+  - scripts/generate_agent_cards.py
+  - scripts/agent_ability_verdict.py
+  - scripts/render_effective_prompt.py
 notes: |
   THE READERS ARE THE TEST (AR-400e notes). The design names, per view, which
   field each reader picks today -- the L3s pin the populations that each reader

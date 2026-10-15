@@ -22,6 +22,13 @@ ARCHITECTURE: Sibling module to knowledge_query.py, loaded the same way as
     sibling modules it needs (frontmatter reader, path resolver) itself by
     the same file-path rule, sharing their ``sys.modules`` entries.
     Stdlib-only (KM-KQS-007).
+
+DECISION HISTORY
+- 2026-10-15 [python-coder/AR-400e-1-ii]: The ``skills_used`` edge label is
+  now read from the registry's ``skills_invoked`` ids (``_LABEL_SOURCES``,
+  decision 12: the label stays, the retired field is not read). paths.json
+  still declares the LABEL, so ``validate_knowledge_map`` and the per-field
+  counts are unchanged. (#AR-400e-1-ii)
 """
 from __future__ import annotations
 
@@ -78,6 +85,36 @@ _SURFACE_EDGE_FIELDS: dict[str, list[str]] = {
     "roadmap": ["components"],
     "glossary": [],
 }
+
+# Declared edge label -> the record key its targets are read from (AR-400e-1-ii,
+# decision 12). The agent->ability edge keeps its long-standing label
+# ``skills_used`` (paths.json declares that label) while the registry's ability
+# list is now ``skills_invoked`` (``skills_used`` is retired); only the ids of
+# its non-descriptive entries become edges.
+_LABEL_SOURCES: dict[str, str] = {"skills_used": "skills_invoked"}
+
+
+def _field_value(raw_data: dict[str, Any], field: str) -> Any:
+    """Return the value an edge ``field`` (label) is read from, mapped through ``_LABEL_SOURCES``.
+
+    Args:
+        raw_data: The node's raw data (registry entry, frontmatter, YAML).
+        field: The declared edge label.
+
+    Returns:
+        ``raw_data[field]`` for an unmapped label; for a mapped one the skill ids
+        of the source list's grants (``descriptive_only`` entries describe
+        behaviour and are not abilities), or None when the source key is absent.
+    """
+    source = _LABEL_SOURCES.get(field)
+    if source is None:
+        return raw_data.get(field)
+    items = raw_data.get(source)
+    if not isinstance(items, list):
+        return None
+    return [i.get("skill_id") if isinstance(i, dict) else i for i in items
+            if not (isinstance(i, dict) and i.get("descriptive_only"))]
+
 
 # Fields that use "component_membership" edge type (targeting component hub nodes)
 _COMPONENT_FIELDS: frozenset[str] = frozenset({"components"})
@@ -189,7 +226,7 @@ def extract_edges(
         # Register the field BEFORE reading its value so a field the document
         # does not declare is still stated as edges=0 declined=0.
         figures = field_counts.setdefault(field, {"edges": 0, "declined": 0}) if field_counts is not None else None
-        value = raw_data.get(field)
+        value = _field_value(raw_data, field)
         if value is None:
             continue
         # Determine edge type: components field uses "component_membership"

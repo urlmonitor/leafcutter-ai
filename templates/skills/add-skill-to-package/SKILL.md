@@ -103,9 +103,9 @@ If no category fits, add it to the most relevant existing category.
 
 If `workflow-architect` (or another agent) is the primary caller of this skill, add the
 skill to that agent's own frontmatter `skills:` declaration, beside `tools:`. Do NOT edit
-`skills_used` / `skills_invoked` in `leafcutter/config/agent_registry.json`: those are
-derived copies regenerated from the declarations by the "Transform agent registry"
-pre-commit hook.
+`skills_invoked` in `leafcutter/config/agent_registry.json`: it is a derived copy
+regenerated from the declarations by the "Transform agent registry" pre-commit hook.
+Never write `skills_used`: it is retired and the registry validator and build refuse it.
 
 Run `build.py --validate-only` again to confirm.
 

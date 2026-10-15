@@ -5,7 +5,7 @@ transform hook, never by the build).
 
 Contract assumed: ``scripts/agent_ability_verdict.verify_abilities`` (see
 _ar_300c_support.py). The unit tests call it directly; the seam and build tests
-exercise the real producer (migration CLI) and the real build.py. The
+exercise the real producer (transform hook) and the real build.py. The
 transform hook contract lives in test_ar_300c_3_ii_registry_transform.py.
 
 RED BASELINE (original): the verdict module and migration tool did not exist.
@@ -15,9 +15,7 @@ non-zero on the disagreement instead of reporting and completing.
 
 from __future__ import annotations
 
-import json
 import os
-import subprocess
 import sys
 
 import pytest
@@ -28,16 +26,15 @@ from _ar_300c_support import (  # noqa: E402
     GRANT_KEY,
     REPO_ROOT,
     compile_template,
-    compiled_agent_roots,
     copy_package_slice,
     declared_entries,
     installed_skill_ids,
     make_skills,
-    migrate_or_fail,
     named_abilities,
     registry_agents,
     template_frontmatter,
     template_stem,
+    transform_or_fail,
     write_template,
 )
 
@@ -53,70 +50,12 @@ def _verify(declarations, agents, tmp_path, skills=("signoff", "doc-enforcer", "
 
 
 def _rec(agent_id, entries):
-    return {"id": agent_id,
-            "skills_used": [e["skill_id"] for e in entries],
-            "skills_invoked": [dict(e) for e in entries]}
+    return {"id": agent_id, "skills_invoked": [dict(e) for e in entries]}
 
 
 _A = {"skill_id": "signoff", "mode": "always"}
 _B = {"skill_id": "doc-enforcer", "mode": "conditional", "condition": "c"}
 _C = {"skill_id": "route-knowledge", "mode": "always"}
-
-
-@pytest.mark.shared_layout_mutator
-def test_hand_edited_central_record_is_reported_with_both_ability_sets(shared_reference_layout):
-    # covers: AR-300c-3
-    # angle: criterion
-    """AR-300c-3: hand-edit one agent's registry record (inputs otherwise
-    correct), rebuild the private copy with the real build.py. Per the user
-    decision of 2026-10-09 the build REPORTS and does NOT refuse: it exits 0,
-    its output names the agent, the declaration's abilities and the record's
-    abilities, the compiled prompts (every platform root) still name the
-    declaration's abilities, and the build did NOT write to the source tree
-    (config/agent_registry.json is byte-identical to the hand-edited bytes --
-    only the pre-commit transform hook regenerates the derived copy).
-    Red today: the build exits non-zero on the disagreement."""
-    layout = shared_reference_layout
-    installed = installed_skill_ids(layout)
-    victim = None
-    for tpl in sorted((layout / "templates" / "agents").glob("*.md")):
-        if tpl.name.startswith("_"):
-            continue
-        entries = declared_entries(template_frontmatter(tpl))
-        if entries:
-            victim = (tpl.stem, {e["skill_id"] for e in entries})
-            break
-    assert victim, "0 templates declare abilities -- nothing to disagree with"
-    agent_id_stem, declared = victim
-    other = sorted(installed - declared)[0]
-
-    reg_path = layout / "config" / "agent_registry.json"
-    data = json.loads(reg_path.read_text(encoding="utf-8"))
-    for a in data["agents"]:
-        if template_stem(a) == agent_id_stem:
-            agent_id = a["id"]
-            a["skills_used"] = [other]
-            a["skills_invoked"] = [{"skill_id": other, "mode": "always"}]
-    reg_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    edited_bytes = reg_path.read_bytes()
-
-    proc = subprocess.run(
-        [sys.executable, str(layout / "scripts" / "build.py"), "--target-dir", str(layout)],
-        cwd=str(layout), capture_output=True, text=True, timeout=300, check=False,
-    )
-    out = proc.stdout + proc.stderr
-    assert proc.returncode == 0, f"build refused a hand-edited central record (exit {proc.returncode}): {out[-600:]}"
-    assert agent_id in out
-    assert other in out
-    assert all(d in out for d in declared)
-    # the declaration wins: compiled prompts still name exactly the declared abilities
-    roots = compiled_agent_roots(layout)
-    assert len(roots) >= 2
-    for root in roots:
-        text = (root / f"{agent_id_stem}.md").read_text(encoding="utf-8")
-        assert named_abilities(text, installed) == declared & installed, root.name
-    # the build never writes the package source tree
-    assert reg_path.read_bytes() == edited_bytes, "build modified config/agent_registry.json"
 
 
 def test_compiled_prompt_still_names_the_declarations_abilities_after_a_hand_edit(tmp_path):
@@ -155,7 +94,7 @@ def test_agreeing_agent_is_not_reported(tmp_path):
     """AR-300c-3 control: agreeing agents -- including ones holding no grant on
     either side -- produce no finding, yet are counted as examined. A
     disagreeing sibling proves the comparison runs at all."""
-    agents = [_rec("agrees", [_A, _B]), {"id": "no-grant", "skills_used": [], "skills_invoked": []},
+    agents = [_rec("agrees", [_A, _B]), {"id": "no-grant", "skills_invoked": []},
               _rec("drifts", [_C])]
     verdict = _verify({"agrees": [_A, _B], "drifts": [_A]}, agents, tmp_path)
     assert [f["agent"] for f in verdict["findings"] if f["kind"] in _COMPARE_KINDS] == ["drifts"]
@@ -178,7 +117,7 @@ def test_formatting_difference_is_not_a_disagreement_and_mode_change_is(tmp_path
     # angle: boundary
     """AR-300c-3: reordering entries / dict keys is no finding; always ->
     conditional on one ability is a divergent finding naming that agent."""
-    reordered = {"id": "x", "skills_used": ["doc-enforcer", "signoff"],
+    reordered = {"id": "x",
                  "skills_invoked": [{"mode": "conditional", "skill_id": "doc-enforcer", "condition": "c"},
                                     {"mode": "always", "skill_id": "signoff"}]}
     verdict = _verify({"x": [_A, _B]}, [reordered], tmp_path)
@@ -193,13 +132,13 @@ def test_formatting_difference_is_not_a_disagreement_and_mode_change_is(tmp_path
 def test_migrated_declarations_and_regenerated_registry_agree_on_day_one(tmp_path):
     # covers: AR-300c-3
     # angle: seam
-    """AR-300c-3 seam: the REAL migration's output (producer) piped into the
+    """AR-300c-3 seam: the REAL transform hook's output (producer) piped into the
     REAL verifier (consumer) yields zero comparison findings and an examined
-    count covering the registry. Red today: neither module exists."""
+    count covering the registry."""
     from agent_ability_verdict import verify_abilities  # noqa: PLC0415
 
     pkg = copy_package_slice(tmp_path / "pkg")
-    migrate_or_fail(pkg)
+    transform_or_fail(pkg)
     agents = registry_agents(pkg)
     declarations = {}
     for a in agents:

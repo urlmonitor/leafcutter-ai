@@ -3,7 +3,7 @@ title: 'Reference: Agent Template Frontmatter Fields'
 type: reference
 status: active
 created: 2026-05-28
-last_updated: 2026-10-09
+last_updated: 2026-10-15
 components:
 - build_pipeline
 - config_loader
@@ -158,11 +158,13 @@ otherwise the build refuses. Project-local agent definitions are not yet
 looked up (deferred: `docs/known-issues/agent-registry/open-low-ki-ar-005.md`,
 KI-AR-005), and a registry row or an earlier compiled prompt does not count.
 
-**The registry copy is derived.** `skills_used` / `skills_invoked` and
-`spawn_allowlist` in `config/agent_registry.json` are regenerated from the
-declarations by the `transform-agent-registry` pre-commit hook ("Transform agent
-registry"), which re-stages the registry when it changes. Do not edit them by
-hand. If the copy disagrees with a declaration, the build reports the
+**The registry copy is derived.** `skills_invoked` and `spawn_allowlist` in
+`config/agent_registry.json` are regenerated from the declarations by the
+`transform-agent-registry` pre-commit hook ("Transform agent registry"), which
+re-stages the registry when it changes. `skills:` derives the one field
+`skills_invoked`; `skills_used` is retired, and the registry validator and the
+build refuse any entry that carries it, even `[]`. Do not edit the derived
+fields by hand. If the copy disagrees with a declaration, the build reports the
 disagreement (`divergent`, `declaration-only` or `record-only`), the
 declaration wins in the compiled prompt, and the next hook run overwrites the
 hand edit. `spawned_by` and `is_ticket_phase` are not derived; they stay
@@ -170,7 +172,7 @@ hand-authored.
 
 **Retired routes.** None of these grants anything: the `{{my_skills_used}}` and
 `{{my_spawn_allowlist}}` body markers (stripped at compile time with a warning),
-a registry-only grant, a template-level `skills_used` key, and a hand-written
+a registry-only grant, a template-level `skills_used` or `skills_invoked` key, and a hand-written
 skills or sub-agent table in the body. The compiler warns on a body section that
 states its own skills or sub-agents (`duplicate` or `contradiction` against the
 declaration); remove it.
@@ -200,7 +202,7 @@ The fields below are **registry fields**, not frontmatter fields.
 | `selection_criteria` | object or null | **yes** | Structured criteria used by `business-analyst` to decide whether to include this agent in a ticket's `agents:` map. `null` when the agent is not ticket-phase or is always/never included. |
 | `template_path` | string | for portable | Relative path from the leafcutter workspace root to the template file. Format: `templates/agents/<id>.md`. |
 | `model` | string | **yes** | Default model, mirroring the frontmatter `model` field. |
-| `skills_used` / `skills_invoked` | array of string / array of entry | no | **Derived** from the frontmatter `skills` by the transform hook; do not hand-edit. `descriptive_only` entries in `skills_invoked` describe behaviour and are not grants. |
+| `skills_invoked` | array of entry | no | **Derived** from the frontmatter `skills` by the transform hook; do not hand-edit. `descriptive_only` entries describe behaviour and are not grants. (`skills_used` is retired; the validator refuses it.) |
 | `priority` | number or null | no | Numeric dispatch priority for ticket-phase agents. Lower numbers run earlier. See [priority values](#registry-priority-values) below. |
 | `priority_rationale` | string | no | Human-readable explanation for the priority value. |
 | `requires_ticket_section` | boolean | no | When `true`, the agent requires a named section (e.g. `## Smoke Fixture`) in the ticket body to operate. |
@@ -273,7 +275,7 @@ description: ...         ←── doc source  ──→  (registry may override
 model: sonnet            ←── mirrors     ──→  "model": "sonnet"
 portable: true           ←── mirrors     ──→  "portable": true
 spawn_allowlist: [...]   ── derives ──→  "spawn_allowlist": [...]
-skills: [...]            ── derives ──→  "skills_used" / "skills_invoked"
+skills: [...]            ── derives ──→  "skills_invoked"
 ```
 
 The frontmatter is the human-editable source; `build.py` reads it and writes

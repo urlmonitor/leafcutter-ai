@@ -31,7 +31,6 @@ visibility: internal
 domain: null
 produces: test_artifact
 config_keys: {}
-skills_used: []
 spawn_allowlist: []
 adopter_notes: |
   Internal. Dispatched by the build routes ahead of the shared wrong-version

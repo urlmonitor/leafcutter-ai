@@ -16,6 +16,10 @@ ARCHITECTURE: Standalone script. Reads leafcutter/config/agent_registry.json.
 #   Marker-based embedding chosen over full-file rewrite to preserve surrounding
 #   prose when diagrams are updated. Hash-based staleness detection stores a
 #   content hash inside the marker block for build-time validation.
+# - 2026-10-15 [python-coder/AR-400e-1-ii]: The skill map reads the abilities from
+#   ``skills_invoked`` (descriptive_only entries excluded) instead of the retired
+#   ``skills_used``, and every specialist gets a node in the Agents subgraph,
+#   including one that declares no ability. (#AR-400e-1-ii)
 """
 
 from __future__ import annotations
@@ -64,6 +68,22 @@ def load_registry(registry_path: Path | None = None) -> list[dict[str, Any]]:
         return []
     data = json.loads(path.read_text(encoding="utf-8"))
     return data.get("agents", [])
+
+
+def _ability_ids(agent: dict[str, Any]) -> list[str]:
+    """Return the skill ids the agent is granted (``skills_invoked``, descriptive_only excluded).
+
+    Args:
+        agent: One registry agent entry.
+
+    Returns:
+        The ids in recorded order; ``[]`` for an agent that declares none.
+    """
+    return [
+        e["skill_id"] if isinstance(e, dict) else e
+        for e in agent.get("skills_invoked") or []
+        if not (isinstance(e, dict) and e.get("descriptive_only"))
+    ]
 
 
 def expand_ticket_phase_agents(agents: list[dict[str, Any]]) -> list[str]:
@@ -155,20 +175,16 @@ def generate_skill_map(agents: list[dict[str, Any]]) -> str:
     lines: list[str] = ["graph LR"]
 
     # Collect unique skills
-    all_skills: set[str] = set()
-    for agent in agents:
-        for skill in agent.get("skills_used", []):
-            all_skills.add(skill)
+    all_skills: set[str] = {skill for agent in agents for skill in _ability_ids(agent)}
 
     if not all_skills:
-        lines.append("    note[No skills_used data in registry yet]")
+        lines.append("    note[No skills_invoked data in registry yet]")
         return "\n".join(lines)
 
     lines.append("    subgraph Agents")
     for agent in agents:
-        if agent.get("skills_used"):
-            node_id = "a_" + agent["id"].replace("-", "_")
-            lines.append(f'        {node_id}["{agent["id"]}"]')
+        node_id = "a_" + agent["id"].replace("-", "_")
+        lines.append(f'        {node_id}["{agent["id"]}"]')
     lines.append("    end")
 
     lines.append("    subgraph Skills")
@@ -179,7 +195,7 @@ def generate_skill_map(agents: list[dict[str, Any]]) -> str:
 
     for agent in agents:
         a_node = "a_" + agent["id"].replace("-", "_")
-        for skill in agent.get("skills_used", []):
+        for skill in _ability_ids(agent):
             s_node = "s_" + skill.replace("-", "_")
             lines.append(f"    {a_node} --> {s_node}")
 
