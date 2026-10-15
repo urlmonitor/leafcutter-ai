@@ -20,7 +20,14 @@ ARCHITECTURE: Stdlib only. The commit is built in a PRIVATE temporary index
 CLI: commit_changes.py --message-file FILE PATH [PATH ...]   (cwd = workspace)
 
 Answer keys (always present): status, sha, paths, added_parents, unlisted_changes,
-    hook_name, failing_files, reason_code, reason.
+    hook_name, failing_files, reason_code, reason, hook_output, autofixed,
+    skip_request_ignored, remedy, handoff.
+
+Checks (BO-4500a-3): run once over the named files; a fixing check's rewrite is
+    taken in and the checks re-run up to config/commit_step.json
+    max_automated_fix_retries (default 3); a judging failure is reported at once as
+    hook_failed (reason_code check_failed) with the check's output verbatim; a skip
+    request in the environment is dropped and named in skip_request_ignored.
 
 DECISION HISTORY:
   - 2026-10-15 [python-coder/BO-4500a-1]: Created. Staging rule taken from
@@ -42,6 +49,9 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+_CONFIG_ENV = "LEAFCUTTER_COMMIT_STEP_CONFIG"
+_CEILING_KEY = "max_automated_fix_retries"
+_DEFAULT_CEILING = 3
 _AC_STORE_DEFAULT = "docs/acceptance-criteria"
 _AC_STORE_ENV = "LEAFCUTTER_AC_STORE_ROOT"
 _USAGE = (
@@ -64,17 +74,9 @@ class StepRefusal(Exception):
 
 def _answer(status: str, **fields: object) -> dict:
     """Build the one answer object with every contract key present."""
-    answer: dict = {
-        "status": status,
-        "sha": None,
-        "paths": [],
-        "added_parents": [],
-        "unlisted_changes": [],
-        "hook_name": None,
-        "failing_files": [],
-        "reason_code": None,
-        "reason": None,
-    }
+    answer: dict = {"status": status, "sha": None, "paths": [], "added_parents": [], "unlisted_changes": []}
+    answer.update(hook_name=None, failing_files=[], reason_code=None, reason=None, hook_output=None)
+    answer.update(autofixed=[], skip_request_ignored=[], remedy=None, handoff=None)
     answer.update(fields)
     return answer
 
@@ -82,15 +84,7 @@ def _answer(status: str, **fields: object) -> dict:
 def _git(args: list[str], cwd: Path, env: dict | None = None, stdin: str | None = None):
     """Run git; an unrunnable git is a refusal, a non-zero exit is the caller's to read."""
     try:
-        return subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            env=env,
-            input=stdin,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        return subprocess.run(["git", *args], cwd=cwd, env=env, input=stdin, capture_output=True, text=True, check=False)
     except OSError as exc:
         raise StepRefusal("git_unavailable", f"cannot run git: {exc}") from exc
 
@@ -234,16 +228,10 @@ def _changed_vs_base(root: Path, env: dict, base: str | None) -> set[str]:
     return {p for p in out.split("\0") if p}
 
 
-def _hook_name(output: str) -> str | None:
-    """Pull a failing hook's name from pre-commit style output, when present."""
-    match = re.search(r"^(.+?)\.{3,}.*Failed\s*$", output, re.MULTILINE)
-    return match.group(1).strip() if match else None
-
-
-def _hooks_present(root: Path) -> bool:
+def _hooks_present(root: Path, env: dict | None = None) -> bool:
     """True when the repository carries an executable pre-commit or commit-msg hook."""
     for name in ("pre-commit", "commit-msg"):
-        path = _git(["rev-parse", "--git-path", f"hooks/{name}"], root).stdout.strip()
+        path = _git(["rev-parse", "--git-path", f"hooks/{name}"], root, env).stdout.strip()
         if path and os.access(root / path, os.X_OK):
             return True
     return False
@@ -322,7 +310,8 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
     """Build HEAD + named paths (+ parents) in a private index and commit it."""
     base_proc = _git(["rev-parse", "--verify", "-q", "HEAD"], root)
     base = base_proc.stdout.strip() if base_proc.returncode == 0 else None
-    env = {**os.environ, "GIT_INDEX_FILE": str(scratch / "index")}
+    env, ignored = _scrub_environment(dict(os.environ))
+    env["GIT_INDEX_FILE"] = str(scratch / "index")
     _git_out(["read-tree", base] if base else ["read-tree", "--empty"], root, env)
     parents = parent_candidates(named, root)
     _git_out(["update-index", "--add", "--remove", "--", *named, *parents], root, env)
@@ -331,27 +320,111 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
     if not paths:
         return _answer("nothing_to_commit", reason_code="nothing_changed", reason="named paths have no changes")
     added = [p for p in parents if p in changed]
-    carried = [*named, *parents]
+    failure, fixed = _run_checks_and_commit(root, env, msg_file, [*named, *parents])
+    extra = {"autofixed": fixed, "skip_request_ignored": ignored}
+    if failure is not None:
+        return {**failure, **extra}
+    return {**_finish(root, env, base, paths, added, msg_file), **extra}
+
+
+def _ceiling() -> int:
+    """Read max_automated_fix_retries once, before any check runs (BO-4500a-3-ii).
+
+    Source: the file named by LEAFCUTTER_COMMIT_STEP_CONFIG, else config/commit_step.json
+    beside the source tree or the deployed install; default 3 when no file exists.
+    """
+    here = Path(__file__).resolve().parent
+    override = os.environ.get(_CONFIG_ENV)
+    for path in [Path(override)] if override else [here.parent.parent / "config" / "commit_step.json", here.parent / "config" / "commit_step.json"]:
+        if not path.is_file():
+            continue
+        try:
+            value = json.loads(path.read_text(encoding="utf-8")).get(_CEILING_KEY, _DEFAULT_CEILING)
+        except (OSError, ValueError, AttributeError) as exc:
+            raise StepRefusal("step_config_unreadable", f"cannot read {path}: {exc}") from exc
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise StepRefusal("step_config_unreadable", f"{path}: {_CEILING_KEY} must be a non-negative integer")
+        return value
+    return _DEFAULT_CEILING
+
+
+def _scrub_environment(env: dict) -> tuple[dict, list[str]]:
+    """Return (environment the checks run in, skip requests dropped) -- BO-4500a-3-i.
+
+    Drops SKIP, PRE_COMMIT_ALLOW_NO_CONFIG and any inherited git config injection
+    that sets core.hooksPath (the whole GIT_CONFIG_COUNT/KEY_n/VALUE_n set goes),
+    so no route can switch the checks off through this step.
+    """
+    clean = dict(env)
+    ignored = [name.strip() for name in clean.pop("SKIP", "").split(",") if name.strip()]
+    if clean.pop("PRE_COMMIT_ALLOW_NO_CONFIG", ""):
+        ignored.append("PRE_COMMIT_ALLOW_NO_CONFIG")
+    if any(key.lower() == "core.hookspath" for name, key in env.items() if name.startswith("GIT_CONFIG_KEY_")):
+        ignored.append("core.hooksPath")
+        clean = {k: v for k, v in clean.items() if not k.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_", "GIT_CONFIG_COUNT"))}
+    return clean, ignored
+
+
+def _handoff(root: Path, check: str | None, output: str) -> dict | None:
+    """Run remedy_handoff.py (BO-3800a) on the check's output; None when none applies.
+
+    A check without an engage-specialist declaration makes the script exit non-zero;
+    that is the "author clears it" case, not an error.
+    """
+    here = Path(__file__).resolve().parent
+    script = next((c for c in (root / "scripts" / "commit_guardian" / "remedy_handoff.py", here / "commit_guardian" / "remedy_handoff.py") if c.is_file()), None)
+    if check is None or script is None:
+        return None
+    try:
+        proc = subprocess.run([sys.executable, str(script), "--hook-id", check], cwd=root, input=output, capture_output=True, text=True, check=False)
+        return json.loads(proc.stdout) if proc.returncode == 0 else None
+    except (OSError, ValueError) as exc:
+        print(f"[commit_changes] warning: no handoff built: {exc}", file=sys.stderr)
+        return None
+
+
+def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[str]) -> tuple[dict | None, list[dict]]:
+    """Run the checks through `git commit`; return (failure answer or None, autofixed).
+
+    Only a fixing check that rewrote a file this commit carries earns a re-run, and
+    at most `max_automated_fix_retries` of them, read before the first run; a judging
+    failure is reported at once (BO-4500a-3, -3-ii).
+    """
+    ceiling = _ceiling()
+    fixed: list[dict] = []
     before = _content_ids(root, carried)
-    proc = _run_commit(root, env, msg_file)
-    rewritten = _rewritten_by_checks(root, before, carried) if proc.returncode != 0 else []
-    if rewritten and _hooks_present(root):
-        # Only a fixing check that rewrote a file this commit carries earns a retry
-        # (BO-4500a-3: a judging failure is never retried in-call). Re-read exactly
-        # the rewritten files and retry ONCE with the caller's unchanged message.
-        _git_out(["update-index", "--add", "--remove", "--", *rewritten], root, env)
+    retries = 0
+    while True:
         proc = _run_commit(root, env, msg_file)
-    if proc.returncode != 0:
-        return _failed_commit(root, proc)
-    return _finish(root, env, base, paths, added, msg_file)
+        if proc.returncode == 0:
+            return None, fixed
+        output = proc.stdout + proc.stderr
+        rewritten = _rewritten_by_checks(root, before, carried)
+        if not rewritten or not _hooks_present(root, env):
+            return _failed_commit(root, env, output, carried), fixed
+        fixed.append({"hook_name": _hook_name(output), "files": rewritten})
+        if retries >= ceiling:  # a fixer still rewriting on the last allowed run
+            last = fixed[-1]
+            return _answer("hook_failed", hook_name=last["hook_name"], failing_files=last["files"], reason_code="check_unsettled", reason=output.strip()[-400:], hook_output=output), fixed
+        _git_out(["update-index", "--add", "--remove", "--", *rewritten], root, env)
+        before = _content_ids(root, carried)
+        retries += 1
 
 
-def _failed_commit(root: Path, proc: subprocess.CompletedProcess) -> dict:
+def _hook_name(output: str) -> str | None:
+    """Name the first failing check in pre-commit style output, when present."""
+    match = re.search(r"^(.+?)\.{3,}.*Failed\s*$", output, re.MULTILINE)
+    return match.group(1).strip() if match else None
+
+
+def _failed_commit(root: Path, env: dict, output: str, carried: list[str]) -> dict:
     """Map a failed `git commit` to hook_failed or refused; nothing was recorded."""
-    output = f"{proc.stdout}\n{proc.stderr}"
-    if _hooks_present(root):
-        return _answer("hook_failed", hook_name=_hook_name(output), reason_code="hook_failed", reason=output.strip()[-400:])
-    return _answer("refused", reason_code="commit_error", reason=output.strip()[-400:])
+    if not _hooks_present(root, env):
+        return _answer("refused", reason_code="commit_error", reason=output.strip()[-400:])
+    check = _hook_name(output)
+    handoff = _handoff(root, check, output)
+    named_in_output = [p for p in carried if re.search(rf"(?<![\w/.-]){re.escape(p)}(?![\w])", output)]
+    return _answer("hook_failed", hook_name=check, failing_files=named_in_output, reason_code="check_failed", reason=output.strip()[-400:], hook_output=output, remedy=handoff["remedy"] if handoff else None, handoff=handoff)
 
 
 def _finish(root: Path, env: dict, base: str | None, paths: list[str], added: list[str], msg_file: str) -> dict:
