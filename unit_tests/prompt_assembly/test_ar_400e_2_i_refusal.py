@@ -12,7 +12,6 @@ retired field hand-removed so the planted entry is the only candidate for a find
 
 from __future__ import annotations
 
-import logging
 import os
 import sys
 import tempfile
@@ -22,7 +21,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _ar_400a_1_support as A  # noqa: E402
 
-logging.disable(logging.CRITICAL)
 AGENT = "probe-agent"
 
 

@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import importlib
 import io
 import json
 import re
@@ -200,10 +201,27 @@ def snapshot_populations() -> tuple[list[str], list[str]]:
 # ---------------------------------------------------------------- views
 
 
+def _render_effective_prompt():
+    """Import scripts/render_effective_prompt.py with ``ac_store`` resolving to scripts/ac_store.
+
+    In a mixed pytest process the test package unit_tests/ac_store may already own the
+    name ``ac_store``; the module's ``from ac_store.ac_parent_id import ...`` would then
+    fail. Its ``ac_store`` entries are set aside for the import and put back afterwards.
+    """
+    if "render_effective_prompt" in sys.modules:
+        return sys.modules["render_effective_prompt"]
+    saved = {k: sys.modules.pop(k) for k in list(sys.modules) if k == "ac_store" or k.startswith("ac_store.")}
+    try:
+        return importlib.import_module("render_effective_prompt")
+    finally:
+        for k in [k for k in sys.modules if k == "ac_store" or k.startswith("ac_store.")]:
+            del sys.modules[k]
+        sys.modules.update(saved)
+
+
 def briefing_markdown(root: Path, agent: str) -> str:
     """The rendered effective prompt (brief form) of one specialist over ``root``."""
-    import render_effective_prompt as rep
-
+    rep = _render_effective_prompt()
     payload = rep.assemble(agent=agent, ac_id=None, ticket_path=None, repo_root=root, dep_depth=0)
     return rep.render_markdown(payload, root, 0, brief=True)
 

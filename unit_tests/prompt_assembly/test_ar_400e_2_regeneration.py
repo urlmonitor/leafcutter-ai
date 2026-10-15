@@ -12,7 +12,6 @@ templates' own frontmatter, never by the production normaliser.
 from __future__ import annotations
 
 import json
-import logging
 import os
 import sys
 import tempfile
@@ -24,7 +23,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _ar_400e_support as H  # noqa: E402
 from template_compiler import parse_frontmatter  # noqa: E402
 
-logging.disable(logging.CRITICAL)
 OWNED = {"skills_invoked", "skills_used", "spawn_allowlist"}
 
 

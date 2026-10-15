@@ -10,7 +10,6 @@ decision-12 label ``skills_used`` is asserted on the edges the graph actually pr
 
 from __future__ import annotations
 
-import logging
 import os
 import sys
 import tempfile
@@ -21,7 +20,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _ar_400e_support as H  # noqa: E402
 
-logging.disable(logging.CRITICAL)
 
 
 def test_diagram_draws_one_link_per_declared_ability(tmp_path):

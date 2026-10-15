@@ -9,7 +9,6 @@ never hard-coded.
 
 from __future__ import annotations
 
-import logging
 import os
 import sys
 
@@ -17,7 +16,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _ar_400e_support as H  # noqa: E402
 
-logging.disable(logging.CRITICAL)  # the scanners warn about the slice's absent AC store / CLAUDE.md
 
 
 def test_every_view_lists_exactly_the_declared_abilities_for_every_specialist(tmp_path):

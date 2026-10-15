@@ -8,7 +8,6 @@ registry), never hard-coded; abilities come from the templates' own ``skills:`` 
 
 from __future__ import annotations
 
-import logging
 import os
 import sys
 import tempfile
@@ -19,7 +18,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import _ar_400e_support as H  # noqa: E402
 
-logging.disable(logging.CRITICAL)
 
 
 def test_briefing_lists_declared_abilities_for_former_older_field_specialists(tmp_path):

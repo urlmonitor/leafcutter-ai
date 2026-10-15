@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 import os
 import sys
 import tempfile
@@ -25,7 +24,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _ar_400e_support as H  # noqa: E402
 import agent_ability_verdict as verdict  # noqa: E402  (scripts/ is on sys.path via the support module)
 
-logging.disable(logging.CRITICAL)
 
 
 def test_cards_list_exactly_declared_abilities_with_mode_and_condition(tmp_path):
