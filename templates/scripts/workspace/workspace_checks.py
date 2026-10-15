@@ -21,11 +21,15 @@ ARCHITECTURE: Stdlib-only helper of worktree.py, deployed beside it by its own
 #   dirty tree, stages with -f (the canary is excluded), and needs a passing
 #   --no-verify control commit before a rejection counts as proof.
 #   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01) (ADR-070)
+# - 2026-10-14 23:00 [python-coder]: New install_paths_regular check: lstat walk of
+#   the install, the hook config and the hook files, rejecting any symlink or
+#   junction. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/15) (BO-4300b-4)
 """
 from __future__ import annotations
 
 import os
 import re
+import stat
 from pathlib import Path
 
 from workspace.workspace_core import PROTECTED, MakerError, git, log, out, run
@@ -125,6 +129,32 @@ def hub_tip(ws: Path) -> str | None:
     return line.split()[0] if line else None
 
 
+def _is_link(path: Path) -> bool:
+    """True when ``path`` is itself a symlink or a Windows junction (lstat, never followed)."""
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return False
+    reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & reparse)
+
+
+def install_paths_regular(ws: Path) -> bool:
+    """True when nothing in the install or the protections is a link or junction.
+
+    Covers the ``.leafcutter`` install tree, ``.pre-commit-config.yaml`` and the
+    installed hook files. Decided by lstat so a link is never followed.
+    """
+    spots = (ws / ".leafcutter", ws / ".pre-commit-config.yaml", ws / ".git" / "hooks")
+    for spot in spots:
+        if _is_link(spot):
+            return False
+        for dirpath, dirnames, filenames in os.walk(spot, followlinks=False):
+            if any(_is_link(Path(dirpath, name)) for name in (*dirnames, *filenames)):
+                return False
+    return True
+
+
 def checks_for(plan: dict, base: str) -> dict:
     """Recompute every readiness check from the workspace on disk."""
     ws, branch = plan["ws"], plan["branch"]
@@ -141,6 +171,7 @@ def checks_for(plan: dict, base: str) -> dict:
         "build_ok": (ws / ".leafcutter").is_dir(),
         "tree_clean": out(ws, "status", "--porcelain") == "",
         "precommit_config_present": config.is_file() and not config.is_symlink(),
+        "install_paths_regular": install_paths_regular(ws),
     }
     for stage in hook_stages(ws):
         checks[f"hooks_{stage.replace('-', '_')}_fired"] = (

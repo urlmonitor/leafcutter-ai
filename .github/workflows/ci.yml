@@ -307,6 +307,27 @@ jobs:
       - name: Check shipped sources for database connection addresses
         run: python scripts/portability/check_shipped_addresses.py
 
+  workspace-no-links-windows:
+    name: Workspace ready without link permission (BO-4300b-4, Windows)
+    # Arm 1 of BO-4300b-4: a real Windows runner, with no setting changed to
+    # permit link creation. The module's own Windows-only tests report "not
+    # run" (skipped) wherever the runner does hold the link permission, never
+    # a pass.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run the BO-4300b-4 module
+        run: python -m pytest unit_tests/build_orchestration/test_bo_4300b_4.py -q -rs
+
   test-shard:
     name: Test suite shard ${{ matrix.group }}/${{ strategy.job-total }}
     # Re-enables the suite that was disabled on 2026-10-02 for runtime, by

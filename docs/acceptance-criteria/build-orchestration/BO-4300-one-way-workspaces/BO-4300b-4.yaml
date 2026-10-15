@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -112,9 +112,15 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300b_4.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260927-BO-4300b-4.md
+- templates/scripts/workspace/workspace_create.py
+- templates/scripts/workspace/workspace_checks.py
+- .github/workflows/ci.yml
+- unit_tests/build_orchestration/test_bo_4300b_4.py
+- docs/architecture/components/worktree-manager.md
 notes: |
   F5's sandbox run: without Developer Mode, WinError 1314 on both links, bootstrap failed and
   left a half-made worktree. Decision 2 (real install files, never a symlink) is the answer;
