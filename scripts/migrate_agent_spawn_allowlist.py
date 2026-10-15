@@ -33,7 +33,7 @@ ARCHITECTURE: ``python scripts/migrate_agent_spawn_allowlist.py --package-root
 
 DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300c-5-i]: Created, modelled on
-  ``migrate_agent_abilities``. A registry record with permissions but no
+  the one-shot abilities migration (retired in AR-400e). A registry record with permissions but no
   template file cannot receive a declaration and is listed under ``review``
   instead of being dropped silently. (#AR-300c-5-i)
 """

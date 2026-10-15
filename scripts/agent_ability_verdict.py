@@ -5,7 +5,7 @@ GOAL: Compare each agent's own frontmatter ``skills`` declaration against the
     resolves to an installed skill — returning one structured verdict.
 BUSINESS CONTEXT: AR-300c made the agent's own template frontmatter the single
     source of truth for the abilities it is granted; the registry's
-    ``skills_used`` / ``skills_invoked`` fields became a DERIVED copy. A derived
+    ``skills_invoked`` field is a DERIVED copy (``skills_used`` is retired). A derived
     copy that silently drifts from its source is how an agent ends up described
     one way and prompted another, so this verdict makes drift loud (the build
     refuses on it, ADR-050) and makes an ability that names no installed skill
@@ -56,6 +56,9 @@ DECISION HISTORY
   ``unresolvable-sub-agent`` kind. The comparison kinds are shared with the
   skills verdict so ``REPORT_ONLY_KINDS`` already splits report from refuse.
   (#AR-300c-5-ii, #AR-300c-5-iii)
+- 2026-10-15 [python-coder/AR-400e-1-iii]: ``_record_abilities`` reads only
+  ``skills_invoked``; the retired ``skills_used`` list no longer contributes
+  abilities to the comparison. (#AR-400e-1-iii)
 """
 
 from __future__ import annotations
@@ -111,13 +114,9 @@ def normalize_entries(raw: Any) -> list[dict[str, str]]:
 
 
 def _record_abilities(record: dict[str, Any]) -> dict[str, dict[str, str | None]]:
-    """Return the record's grants: id -> {mode, condition} (None when unrecorded)."""
+    """Return the record's grants (from ``skills_invoked`` only): id -> {mode, condition}."""
     abilities: dict[str, dict[str, str | None]] = {}
     descriptive: set[str] = set()
-    for item in record.get("skills_used") or []:
-        sid = item.get("skill_id") if isinstance(item, dict) else item
-        if isinstance(sid, str):
-            abilities.setdefault(sid, {"mode": None, "condition": None})
     for item in record.get("skills_invoked") or []:
         entry = {"skill_id": item} if isinstance(item, str) else item
         if not isinstance(entry, dict) or not isinstance(entry.get("skill_id"), str):

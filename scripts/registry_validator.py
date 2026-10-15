@@ -55,8 +55,7 @@ def validate_agent_registry(package_root: Path) -> list[str]:
       3. Every agent template in templates/agents/ has a matching registry entry.
       4. spawn_allowlist / spawned_by bidirectional consistency.
       5. No self-loops in the spawn graph.
-      6. Every skills_used entry for portable agents references an existing
-         skill directory in templates/skills/. Domain skills are skipped.
+      6. No entry carries the retired skills_used key (AR-400e-2-i).
       7. (Warning only) If an agent's spawn_allowlist contains both the
          __ticket_phase_agents__ macro and an individually-listed agent whose
          is_ticket_phase is true, a warning is printed identifying the
@@ -86,17 +85,15 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     spawned_by_map = {a["id"]: a.get("spawned_by", []) for a in agents}
     errors.extend(check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids, package_root))
     errors.extend(_check_self_loops(spawn_map))
-    errors.extend(_check_skills_used(portable_agents, package_root))
+    errors.extend(_check_skills_used(agents))
     errors.extend(check_step_kinds(agents, package_root))
     errors.extend(validate_verification_flags(template_dir) + validate_produces_field(agents, template_dir))
     errors.extend(validate_tool_grants(template_dir) + signoff_grant_errors(agents, package_root))  # AR-200b-2/3; AR-400c-5
     warn_redundant_phase_agents(agents)
-
     # Ability-reference existence gate (AR-400a-1/-2): returned errors, plus the examined counts.
     defs_examined, guides_examined, ref_errors = ability_reference_verdict(package_root, agents)
     errors.extend(ref_errors)
     print(f"  [INFO] ability references: definitions examined: {defs_examined}, guides examined: {guides_examined}")
-
     # Validate category field values against agent_categories (if present in registry)
     registry_path = package_root / "config" / "agent_registry.json"
     try:
@@ -106,7 +103,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
         # Registry already loaded successfully above via _load_agents; a second
         # read failure here is unlikely but non-fatal — log and skip category check.
         print(f"  [WARNING] Could not re-read registry for category validation: {exc}")
-
     domain_count = len(domain_agents)
     if domain_count:
         # Informational — not an error
@@ -115,7 +111,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
             f"(portable: false — not compiled by build.py): "
             + ", ".join(a["id"] for a in domain_agents)
         )
-
     return errors
 
 
@@ -201,32 +196,25 @@ def _check_orphan_templates(
     return errors
 
 
-def _check_skills_used(
-    portable_agents: list[dict[str, Any]], package_root: Path
-) -> list[str]:
-    """Check that every skills_used entry references an existing skill directory.
+def _check_skills_used(agents: list[dict[str, Any]]) -> list[str]:
+    """Refuse any registry entry that still carries the retired ``skills_used`` key (AR-400e-2-i).
 
-    Only validates portable agents. Domain agents may reference skills that
-    exist in their target project but not in the portable package.
+    Presence alone is refused (even ``[]``): the ability list is the regenerated
+    ``skills_invoked``, derived from the template's ``skills:`` declaration.
 
     Args:
-        portable_agents: List of agent dicts with portable: true.
-        package_root: Absolute path to the leafcutter package root.
+        agents: Every registry agent record.
 
     Returns:
-        List of error strings, one per missing skill directory.
+        One error string per entry carrying the key.
     """
-    errors = []
-    skills_dir = package_root / "templates" / "skills"
-    for agent in portable_agents:
-        for skill in agent.get("skills_used", []):
-            skill_path = skills_dir / skill
-            if not skill_path.exists():
-                errors.append(
-                    f"Agent '{agent['id']}' skills_used references skill '{skill}' "
-                    f"but no directory exists at {skill_path}."
-                )
-    return errors
+    return [
+        f"Agent '{a['id']}' carries 'skills_used', a retired field: abilities are regenerated "
+        "into 'skills_invoked' from the template's frontmatter 'skills:' declaration, so "
+        "'skills_used' must not be authored. Remove it."
+        for a in agents
+        if "skills_used" in a
+    ]
 
 
 def _check_agent_categories(
@@ -317,13 +305,10 @@ def validate_produces_field(
         "test_artifact",
         "analysis",
     }
-
     errors: list[str] = []
-
     # --- Registry check ---
     for agent in agents:
         agent_id = agent.get("id", "<unknown>")
-
         # Distinguish between an absent key and an explicit null value.
         # - Key absent entirely:  developer forgot to add produces → "missing" error.
         # - Key present as null:  llm-expert flagged this as ambiguous →
@@ -356,11 +341,9 @@ def validate_produces_field(
                     f"Agent '{agent_id}' in agent_registry.json has invalid 'produces' value "
                     f"'{produces}'. Expected one of: {sorted(_VALID_PRODUCES)}"
                 )
-
     # --- Template frontmatter check ---
     if not template_dir.exists():
         return errors
-
     try:
         from template_compiler import parse_frontmatter
     except ModuleNotFoundError as exc:
@@ -731,4 +714,7 @@ if __name__ == "__main__":
 #   ability_reference_verdict() (AR-400a-1/-2): nonexistent-ability references are
 #   RETURNED errors, the examined definitions/guides counts are printed, and zero
 #   in either population is an error. (#TICKETLESS reason=ar-400a-1-existence-gate)
+# - 2026-10-15 [python-coder/AR-400e-2-i]: _check_skills_used() now refuses any entry
+#   carrying the retired skills_used key (returned error) instead of validating its ids.
+#   (#TICKETLESS reason=ar-400e-2-i-retired-field-refusal)
 # ====================================================================

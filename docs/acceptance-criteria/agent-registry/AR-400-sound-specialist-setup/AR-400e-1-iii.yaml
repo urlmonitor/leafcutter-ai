@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -73,8 +73,11 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_iii_card_verdict.py
+implemented_by:
+  - scripts/generate_agent_cards.py
+  - scripts/agent_ability_verdict.py
 notes: |
   The design lists "cards" and "verdict" among the readers to move. Which field
   each reads today was not measured by the BA; the third clause is the

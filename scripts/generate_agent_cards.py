@@ -423,60 +423,31 @@ def render_io_contract(template_frontmatter: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def render_skills(
-    template_frontmatter: dict[str, Any],
-    registry_entry: dict[str, Any],
-) -> str:
-    """Render the '## Skills Used' card section.
+def render_skills(template_frontmatter: dict[str, Any]) -> str:
+    """Render the '## Skills Used' card section from the template's ``skills:`` declaration.
 
-    Precedence rule: ``skills_invoked`` (structured, from template or registry)
-    takes precedence over the legacy ``skills_used`` string list. This prevents
-    double-listing when both fields are present.
+    The declaration is the one source (AR-400e-1-iii): the registry's derived
+    copy is not read. Each grant lists its mode (default ``always``) and, when
+    declared, its condition; ``descriptive_only`` entries are not grants and
+    are not listed.
 
     Args:
         template_frontmatter: Parsed frontmatter dict from the agent template.
-        registry_entry: Registry entry dict for the agent.
 
     Returns:
         Markdown string for the Skills Used section.
     """
-    # Precedence: skills_invoked from template FM, then from registry, then legacy skills_used
-    skills_invoked: list[dict] | None = (
-        template_frontmatter.get("skills_invoked")
-        or registry_entry.get("skills_invoked")
-    )
-
     lines: list[str] = ["## Skills Used", ""]
-
-    if skills_invoked:
-        lines += ["| Skill | Mode | Condition |", "|-------|------|-----------|"]
-        for item in skills_invoked:
-            if isinstance(item, dict):
-                skill_id = item.get("skill_id", "—")
-                mode = item.get("mode", "—")
-                condition = item.get("condition", "—")
-            else:
-                skill_id = str(item)
-                mode = "—"
-                condition = "—"
-            lines.append(f"| `{skill_id}` | {mode} | {condition} |")
-        lines.append("")
-        return "\n".join(lines)
-
-    # Fallback: legacy skills_used string list
-    skills_used = (
-        template_frontmatter.get("skills_used")
-        or registry_entry.get("skills_used")
-        or []
-    )
-    if skills_used:
-        lines += ["| Skill | Mode | Condition |", "|-------|------|-----------|"]
-        for skill in skills_used:
-            lines.append(f"| `{skill}` | — | — |")
-        lines.append("")
-    else:
-        lines.append("*No skills declared.*\n")
-
+    grants = [
+        item if isinstance(item, dict) else {"skill_id": item}
+        for item in template_frontmatter.get("skills") or []
+    ]
+    grants = [g for g in grants if not g.get("descriptive_only")]
+    if not grants:
+        return "\n".join([*lines, "*No skills declared.*\n"])
+    lines += ["| Skill | Mode | Condition |", "|-------|------|-----------|"]
+    lines += [f"| `{g['skill_id']}` | {g.get('mode') or 'always'} | {g.get('condition') or '—'} |" for g in grants]
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -778,7 +749,7 @@ def generate_card(
         "---\n\n",
         render_tools(template_frontmatter),
         "---\n\n",
-        render_skills(template_frontmatter, registry_entry),
+        render_skills(template_frontmatter),
         "---\n\n",
         render_configuration(template_frontmatter),
         "---\n\n",
@@ -1011,4 +982,10 @@ def build_agent_cards(
 #   refusal. Consumers group by `assigned_agent` at read time. The section
 #   was 33% of all card lines yet present in only 17 of 64 cards. The
 #   earlier entries above that describe the walk are historical.
+#
+# - 2026-10-15 [python-coder/AR-400e-1-iii]:
+#   render_skills() now reads the template's own `skills:` declaration (mode
+#   and condition as declared, descriptive_only entries not listed) and no
+#   longer consults the registry or the retired `skills_used`; its
+#   registry_entry parameter is gone. (#AR-400e-1-iii)
 # ====================================================================

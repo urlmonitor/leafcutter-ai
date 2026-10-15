@@ -129,7 +129,6 @@ flowchart TD
 | `signoff` | conditional | When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket. |
 | `doc-enforcer` | always | — |
 | `complexity-reduction` | always | — |
-| `run-tests` | conditional | — |
 ---
 
 ## Configuration
