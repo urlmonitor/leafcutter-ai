@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a batch of 3 requirements handed to the code-aware step:
       R1 declares the existing file scripts/a.py and names the existing test directory unit_tests/ac_store/,
