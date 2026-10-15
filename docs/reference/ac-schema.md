@@ -218,8 +218,8 @@ active ──── deprecated
 |---|---|---|
 | `active` | Criterion is currently enforced. | `check_ac_coverage.py` requires at least one `covered_by` entry. |
 | `deprecated` | Criterion is retired; retained for audit. | `check_ac_coverage.py` skips this AC. `check_test_ac_tags.py` emits a warning if any test still tags this AC. |
-| `superseded_by` | Criterion was replaced by another AC. `superseded_by` field identifies the replacement. Canonical form for new records. | Same as `deprecated` — excluded from active enforcement. |
-| `superseded` | Alternate form of `superseded_by` accepted by the schema for older records. Functionally equivalent. | Same as `deprecated` — excluded from active enforcement. |
+| `superseded_by` | Criterion was replaced by another AC named in `superseded_by`. Canonical form. | Retired when every named successor exists and none is itself: exempt from `check-done-proof` covering-test proof, the `check-ac-schema` test-contract rule and unfinished-children blocking. Structural rules still apply (non-empty, existing, non-self successor; parent `covered_by` link). `deprecated` is never retired. |
+| `superseded` | Older spelling of `superseded_by`; identical. | Same as `superseded_by`. |
 
 **Transition rules:**
 

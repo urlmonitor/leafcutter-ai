@@ -15,14 +15,19 @@ related_docs:
 
 # KI-ACS-20261015-superseded-records-held-to-forward-rules — retiring a done AC has no honest path
 
-> Filed 2026-10-15 during AR-400 slice 2b-i. Index: [ac-store.md](../ac-store.md).
+> Filed 2026-10-15 during AR-400 slice 2b-i. Index: [ac-store.md](../../ac-store.md).
 > Filename severity is the three-level index bucket (`high`); the original grading is the
 > `**Severity:**` line below.
 
 - **Severity:** high. The store keeps claiming `done` for behaviour that was deliberately
   deleted, which is the phantom-done failure the store exists to prevent, and the commit
   gates actively block the correction.
-- **Status:** open, no AC.
+- **Status:** **RESOLVED** (ACS-900d-4, branch `feature/acs-900d-4-superseded-retire`). The
+  shared predicate `scripts/ac_store/ac_retirement.is_retired` is consulted by check-done-proof
+  (all paths), both composite rollups, the test-contract rule and check-ac-limits.
+  check-ac-schema now refuses a missing, empty, null or self successor. Verified by retiring
+  INF-600g-3 and INF-600g-3-i (superseded by AR-400c-1) in commit `b988ab475`, which passed
+  every AC-store gate with no other field edited.
 - **Occurrences:** 2 (the same day, two attempts on one commit).
 - **Where:** `scripts/ac_store/done_proof.py` (via `check-done-proof`) and the approved-code
   test-contract rule behind `check-ac-schema` (`validate_ac_schema`). Neither consults
@@ -43,9 +48,8 @@ INF-600a-1 passes only because it happens to be `readiness: reviewed` and
 `change_target: schema`. Copying that onto these records would be editing requirement fields
 to slip past a gate, not retiring them.
 
-**Workaround in force.** The two INF records were left exactly as on `main` (`active`,
-`done`). They are now false: the check they describe no longer exists. The AR-400 slice 2b-i
-PR and changelog say so.
+**Workaround (retired).** Until the fix, the two INF records stayed as they were on `main`
+(`active`, `done`), which was false. Both are now retired honestly (see Status).
 
 **Fix direction.** A record whose `status` is `superseded_by` (with a non-empty
 `superseded_by:` list naming existing records) is retired: it is exempt from the forward

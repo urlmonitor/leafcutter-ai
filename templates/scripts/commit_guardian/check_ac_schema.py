@@ -59,6 +59,22 @@ DECISION HISTORY:
   - 2026-09-28 [python-coder/ACD-1600c-4]: Wired declared_files (both
     branches) via sibling _declared_files_bridge.py (carries import/fail-open
     logic; this file must not grow further past its ratchet).
+  - 2026-10-15 [python-coder/ACS-900d-4]: Wired the supersession rules via sibling
+    _ac_supersession_validators.py: a retired record (superseded status naming
+    existing successors) is exempt from the test-contract REQUIREMENT only
+    (validate_test_contract(retired=...)), and a superseded record with no
+    successor, a missing successor or itself as successor is refused. The
+    merge-commit rationale that used to sit as an 11-line comment in
+    _get_staged_ac_paths moved here to repay this file's size ratchet. A merge
+    stages the ENTIRE incoming branch, so this gate would validate every AC
+    file on the other side, including files that already violate the schema on
+    the target branch. That is the other branch's pre-existing debt: the merge
+    inherits it byte-for-byte and cannot make it better or worse, and blocking
+    does not fix it, it only makes merging impossible (or teaches people to
+    SKIP the gate). The gate narrows to files whose result differs from BOTH
+    parents, the content the merge itself introduces; non-merge commits are
+    unaffected. Same fix as check_ac_limits / check_ac_parent_covered_by.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -77,6 +93,7 @@ from _ac_schema_validators import (  # noqa: E402
     validate_pattern_bindings_completeness, validate_test_contract,
     validate_with_jsonschema,
 )
+from _ac_supersession_validators import is_retired_record, supersession_errors  # noqa: E402
 from _test_spec_entry_bridge import test_spec_entry_errors  # noqa: E402
 from _ac_store_file_discovery import find_ac_files  # noqa: E402
 from _declared_files_bridge import declared_files_messages, drain_reports  # noqa: E402
@@ -367,17 +384,7 @@ def _get_staged_ac_paths(root: Path | None = None) -> list[Path]:
 
     staged_lines = result.stdout.splitlines()
 
-    # Merge commits: a merge stages the ENTIRE incoming branch, so this gate
-    # would validate every AC file on the other side — including files that
-    # already violate the schema on the target branch today. Those are that
-    # branch's pre-existing debt: the merge inherits them byte-for-byte and
-    # cannot make them better or worse, and the merge author cannot be the one
-    # to author 30+ missing test_spec blocks. Blocking here does not fix the
-    # debt, it only makes merging impossible (or teaches people to SKIP the
-    # gate). Narrow to files whose result differs from BOTH parents — the
-    # content the merge itself introduces. Non-merge commits are unaffected,
-    # so a newly added or edited AC is still fully validated.
-    # Same fix as check_ac_limits / check_ac_parent_covered_by.
+    # Merge commits: narrow to files differing from BOTH parents (see DECISION HISTORY).
     try:
         merge_probe = subprocess.run(
             ["git", "rev-parse", "-q", "--verify", "MERGE_HEAD"],
@@ -606,8 +613,9 @@ def _validate_file(
         errors.extend(validate_manually(data))
 
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1/-2-i
-    # Test-contract gate: a leaf code AC must declare test_spec or test_required: false.
-    errors.extend(validate_test_contract(path, data))
+    # Test-contract gate (a retired record is exempt from the requirement, ACS-900d-4-i).
+    errors.extend(validate_test_contract(path, data, retired=is_retired_record(data, all_ac_data)))
+    errors.extend(supersession_errors(path, data, all_ac_data))  # ACS-900d-4-ii/-iii
 
     # declares_side_effect gate: DERIVED from criteria, never opinion (BO-2900g-2/-i).
     errors.extend(validate_declares_side_effect(path, data))
