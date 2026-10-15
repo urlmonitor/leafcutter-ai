@@ -64,6 +64,20 @@ hook.chmod(hook.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 print("stub build ok")
 '''
 
+
+
+def stub_build_text(hook: str = "reject") -> str:
+    """Return the stub build entry point's text for ``hook`` ('reject' or 'accept').
+
+    The default is byte-identical to ``STUB_BUILD``: the installed hook rejects
+    every commit. 'accept' installs a hook that lets commits through.
+    """
+    assert hook in ("reject", "accept"), f"unknown hook kind: {hook!r}"
+    if hook == "reject":
+        return STUB_BUILD
+    return STUB_BUILD.replace("exit 1\\n", "exit 0\\n").replace("commit rejected", "commit accepted")
+
+
 # (route name, kind, how the request is made)
 ROUTES = (
     ("long_running_build", "epic", "elsewhere"),
@@ -243,3 +257,8 @@ def find_marker(workspace: Path) -> tuple[Path, dict]:
 
 def true_checks(answer: dict) -> set[str]:
     return {k for k, v in (answer.get("checks") or {}).items() if v is True}
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-15 12:00 [python-coder]: Added stub_build_text so the shared maker fixtures can install an accepting or rejecting hook from one stub. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/58)

@@ -51,7 +51,27 @@ from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 TEMPLATE_SCRIPT = _REPO_ROOT / "templates" / "scripts" / "setup_ticket_worktree.py"
-DEPLOYED_SCRIPT = _REPO_ROOT / "scripts" / "setup_ticket_worktree.py"
+
+
+def deployed_script() -> Path:
+    """Return the DEPLOYED copy of setup_ticket_worktree.py (BO-4300f-4).
+
+    It comes from the shared deployed layout the install delivers
+    (``<layout>/.leafcutter/scripts/``), never from the tracked ``scripts/``
+    copy of this repository. Resolved on use, so importing this module never
+    triggers a build; it FAILS (never skips) when the copy is absent.
+    """
+    from scripts.suite_performance._shared_layout_producer import get_or_produce_shared_layout
+    found = Path(get_or_produce_shared_layout()) / ".leafcutter" / "scripts" / "setup_ticket_worktree.py"
+    assert found.is_file(), f"deployed setup_ticket_worktree.py absent: {found}"
+    return found
+
+
+def __getattr__(name: str) -> Path:
+    """Resolve ``DEPLOYED_SCRIPT`` lazily to the delivered copy (PEP 562)."""
+    if name == "DEPLOYED_SCRIPT":
+        return deployed_script()
+    raise AttributeError(name)
 
 _GIT_USER_EMAIL = "test-writer@example.com"
 _GIT_USER_NAME = "Test Writer"
@@ -111,7 +131,7 @@ def clone_repo_root(origin: Path, tmp_path: Path, dirname: str = "repo_root") ->
     return repo_root
 
 
-def stage_script(repo_root: Path, source: Path = DEPLOYED_SCRIPT) -> Path:
+def stage_script(repo_root: Path, source: Path | None = None) -> Path:
     """Copy *source* (the script under test) into ``repo_root/scripts/``.
 
     This is the anchoring trick documented in the module docstring: it makes
@@ -120,6 +140,7 @@ def stage_script(repo_root: Path, source: Path = DEPLOYED_SCRIPT) -> Path:
 
     Returns the path to the copied script.
     """
+    source = source if source is not None else deployed_script()
     dest_dir = repo_root / "scripts"
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / "setup_ticket_worktree.py"
@@ -212,9 +233,15 @@ def make_fresh_fastlane_worktree(script_path: Path, slug: str, timeout: int = 60
     proc = run_create_fastlane_worktree(script_path, slug, timeout=timeout)
     payload = parse_json_stdout(proc)
     if proc.returncode != 0 or not payload or not payload.get("worktree_path"):
-        raise AssertionError(
+        msg = (
             "Fixture precondition failed: could not create a prior fast-lane "
             f"worktree for slug={slug!r}. exit={proc.returncode} "
             f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
         )
+        raise AssertionError(msg)
     return Path(payload["worktree_path"])
+
+
+# DECISION HISTORY
+# ================================================================================
+# - 2026-10-15 12:00 [python-coder]: DEPLOYED_SCRIPT now resolves lazily to the delivered copy in the shared deployed layout, never the tracked scripts/ copy. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/58)

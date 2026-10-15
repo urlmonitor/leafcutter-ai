@@ -4,7 +4,7 @@ description: "Lookup reference for the fixture authenticity rules: which data ki
 type: reference
 status: active
 created: 2026-07-21
-last_updated: 2026-07-21
+last_updated: 2026-10-15
 components:
   - build_orchestration
   - testing_quality
@@ -184,6 +184,25 @@ The defect was invisible to the test suite because the fixtures reproduced the s
 
 ---
 
+## Deployed-Copy Fixtures (workspace maker, BO-4300f-4)
+
+A proof of a script that an install delivers must run the **delivered** copy, never a tracked source copy. The shared fixture module `unit_tests/build_orchestration/_workspace_maker_fixtures.py` is the only way a workspace-maker test reaches the maker.
+
+| Function | Contract |
+|---|---|
+| `deployed_maker_path(layout_root=None)` | Absolute path of `<layout>/.leafcutter/scripts/worktree.py` from the shared deployed layout. **Raises** (never skips, never falls back to `templates/`) when the file is absent. |
+| `maker_override(path)` | Context manager for the meta-test only: points the locator at a faulted copy. The path is validated exactly like a search result. |
+| `make_project(tmp, layout, stub_build, hook)` | Real bare hub plus a real clone under `tmp`; returns `{project, hub, landing_place}`. The build entry is a minimal stub that installs a real commit hook (`reject` or `accept`); no package `build.py` is spawned. |
+| `run_maker(args, cwd, env=None, timeout=300)` | Runs the delivered maker as a separate process; returns `{answer, exit_code, stdout, stderr}` and fails when stdout is not exactly one JSON object. |
+| `starting_points(project)` | The six BO-4300b-1 starting folders, after making W1 (`alpha`) and `beta` through the delivered maker. |
+| `legacy_worktree(project, name, unsent=False)` | The one test-side creator of a real legacy `git worktree` registration. |
+
+**Rejected:** any path under this repository's `scripts/` or `templates/` is refused by the locator, even through the override seam, because a tracked stray copy becoming the thing under test is how the mutation probe of KI-TQ-20260831 landed in the wrong copy. `unit_tests/build_orchestration/_bo2400f13_fixtures.py` resolves `DEPLOYED_SCRIPT` the same way (lazily, from the shared deployed layout).
+
+Fixture commits run git with the working directory set to the repository, never as `git -C <path> commit`.
+
+---
+
 ## Relationship to load_fixture() (ADR-028)
 
 `load_fixture('<module>/<name>')`, defined in `tests/conftest.py` per [ADR-028](../architecture/adrs/ADR-028-test-fixture-convention.md), handles the **storage and retrieval** of fixtures whose data blob would push a test file past the 500-line ceiling.
@@ -201,3 +220,4 @@ The Fixture Authenticity Rule governs how the fixture **content is produced**. B
 - `docs/how-to/real-artifact-fixtures.md` — task guide for authoring real-producer fixtures and round-trip tests, with step-by-step instructions.
 - `docs/architecture/adrs/ADR-028-test-fixture-convention.md` — architectural decision for the `load_fixture()` helper and `tests/fixtures/` directory layout.
 - `templates/agents/test-writer.md` §2h.2 — the authoritative rule enforced in every `test-writer` invocation.
+- `unit_tests/build_orchestration/_workspace_maker_fixtures.py` — the deployed-copy fixture module described in "Deployed-Copy Fixtures"; proven by `unit_tests/build_orchestration/test_bo_4300f_4.py`.
