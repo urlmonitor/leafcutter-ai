@@ -76,6 +76,27 @@ class TestChecksCannotBeSkipped(unittest.TestCase):
         self.assertIn("check-doc-frontmatter", reported)
         self.assertIn("check-ac-schema", reported)
 
+    def test_hooks_path_passed_as_git_config_parameters_is_ignored_and_reported(self):
+        # covers: BO-4500a-3-i
+        # angle: discrimination
+        """core.hooksPath handed down the way `git -c` does it still cannot turn the checks off.
+
+        Wrong version caught: scrubbing only the GIT_CONFIG_COUNT/KEY_n/VALUE_n form,
+        so a GIT_CONFIG_PARAMETERS override points the hooks at nothing and a failing
+        check never runs.
+        """
+        sc = scenario3(self)
+        install_checks(sc, _FAILING)
+        sc.env["GIT_CONFIG_PARAMETERS"] = f"'core.hooksPath'='{sc.scratch / 'no-such-hooks-dir'}'"
+        baseline_commits = sc.commit_count()
+
+        answer = sc.run_step(["a.py", "notes.md"])
+
+        self.assertEqual(answer.get("status"), "hook_failed", answer)
+        self.assertEqual(ran_checks(sc), ["check-ac-schema"], "the failing check never ran")
+        self.assertIn("core.hooksPath", repr(answer.get("skip_request_ignored")), answer)
+        self.assertEqual(sc.commit_count(), baseline_commits, "a commit was recorded")
+
     def test_step_options_offer_no_way_to_skip_checks(self):
         # covers: BO-4500a-3-i
         # angle: criterion

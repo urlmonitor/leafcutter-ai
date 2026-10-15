@@ -351,17 +351,28 @@ def _ceiling() -> int:
 def _scrub_environment(env: dict) -> tuple[dict, list[str]]:
     """Return (environment the checks run in, skip requests dropped) -- BO-4500a-3-i.
 
-    Drops SKIP, PRE_COMMIT_ALLOW_NO_CONFIG and any inherited git config injection
-    that sets core.hooksPath (the whole GIT_CONFIG_COUNT/KEY_n/VALUE_n set goes),
-    so no route can switch the checks off through this step.
+    Removes every way a CALLER can switch the checks off through the environment
+    it hands this step: SKIP, PRE_COMMIT_ALLOW_NO_CONFIG, and a core.hooksPath
+    injected through either git config-in-environment form --
+    GIT_CONFIG_COUNT/KEY_n/VALUE_n (the whole numbered set goes) or
+    GIT_CONFIG_PARAMETERS (what `git -c core.hooksPath=...` hands its children).
+
+    A core.hooksPath set in the repository's own git config is deliberately NOT
+    overridden: that is the project choosing where its checks live (husky and
+    similar tools use it), not a caller turning them off.
     """
     clean = dict(env)
     ignored = [name.strip() for name in clean.pop("SKIP", "").split(",") if name.strip()]
     if clean.pop("PRE_COMMIT_ALLOW_NO_CONFIG", ""):
         ignored.append("PRE_COMMIT_ALLOW_NO_CONFIG")
-    if any(key.lower() == "core.hookspath" for name, key in env.items() if name.startswith("GIT_CONFIG_KEY_")):
-        ignored.append("core.hooksPath")
+    numbered = any(k.lower() == "core.hookspath" for n, k in env.items() if n.startswith("GIT_CONFIG_KEY_"))
+    if numbered:
         clean = {k: v for k, v in clean.items() if not k.startswith(("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_", "GIT_CONFIG_COUNT"))}
+    parameters = "core.hookspath" in clean.get("GIT_CONFIG_PARAMETERS", "").lower()
+    if parameters:
+        clean.pop("GIT_CONFIG_PARAMETERS")
+    if numbered or parameters:
+        ignored.append("core.hooksPath")
     return clean, ignored
 
 
