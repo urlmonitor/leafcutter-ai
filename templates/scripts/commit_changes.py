@@ -198,9 +198,20 @@ def _find_parent_file(child: Path, parent_id: str, store: Path) -> Path | None:
 def parent_candidates(named: list[str], root: Path) -> list[str]:
     """Return repo-relative structural parents (one hop) of the named AC records."""
     store_rel = os.environ.get(_AC_STORE_ENV, _AC_STORE_DEFAULT).strip("/")
+    records = [rel for rel in named if rel.endswith(".yaml") and rel.startswith(store_rel + "/")]
+    if not records:
+        return []
     derive = _load_derive_parent_id()
     if derive is None:
-        return []
+        # Fail closed: AC records are being committed but their parents cannot be
+        # worked out, so silently committing without them would recreate
+        # KI-BO-20260928 (the edited parent left unstaged) as an apparent success.
+        msg = (
+            "AC records were named but the parent resolver (ac_store/ac_parent_id.py) "
+            "is not deployed beside this script, so their edited parents cannot be "
+            f"included: {', '.join(records)}"
+        )
+        raise StepRefusal("step_parent_resolver_unavailable", msg)
     found: list[str] = []
     for rel in named:
         if not rel.endswith(".yaml") or not rel.startswith(store_rel + "/"):
