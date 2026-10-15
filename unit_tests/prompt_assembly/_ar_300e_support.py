@@ -144,7 +144,9 @@ def spawn_accounts(text: str, known: set[str]) -> list[dict]:
     a fenced block (ticket-supervisor's former shape). Anchored on structure, never on a bare
     word count: prose that merely mentions the heading, and a heading over nothing that
     names an agent, are not accounts."""
-    found, cur, fence = [], None, None
+    found: list[dict] = []
+    cur: dict | None = None
+    fence: str | None = None
     for line in text.splitlines():
         fm = _FENCE_LINE_RE.match(line)
         if fm:
@@ -158,6 +160,7 @@ def spawn_accounts(text: str, known: set[str]) -> list[dict]:
         if fence is not None:
             m = _FENCED_ID_RE.match(line) if cur is not None else None
             if m and m.group(1) in known:
+                assert cur is not None  # m is only set while an account is open
                 cur["ids"].append(m.group(1))
             continue
         hm = _HEADING_LINE_RE.match(line)

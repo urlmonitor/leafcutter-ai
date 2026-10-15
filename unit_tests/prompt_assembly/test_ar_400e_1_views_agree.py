@@ -78,8 +78,8 @@ def test_empty_declaration_appears_in_every_view_with_no_abilities(tmp_path):
     problems: list[str] = []
     for name, view in H.all_views(root, tmp_path).items():
         problems += [m for m in H.mismatches(f"{name}[empty]", view, empties) if "examined" not in m]
-        if view.count != len(decl):
-            problems.append(f"{name}: examined {view.count}, tree has {len(decl)}")
+        if view.examined != len(decl):
+            problems.append(f"{name}: examined {view.examined}, tree has {len(decl)}")
     assert not problems, f"{len(problems)} problem(s):\n" + "\n".join(sorted(set(problems))[:30])
 
 
@@ -92,5 +92,5 @@ def test_each_view_reports_examined_count_equal_to_definitions(tmp_path):
     from_templates = set(H.declared(root))
     from_registry = {a["id"] for a in H.registry(root)["agents"]}
     assert from_templates == from_registry and from_templates, (from_templates ^ from_registry)
-    wrong = {n: v.count for n, v in H.all_views(root, tmp_path).items() if v.count != len(from_templates)}
+    wrong = {n: v.examined for n, v in H.all_views(root, tmp_path).items() if v.examined != len(from_templates)}
     assert not wrong, f"views whose examined count != {len(from_templates)} definitions: {wrong}"

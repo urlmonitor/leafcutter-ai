@@ -58,7 +58,7 @@ ABILITY_LABELS = ("skills_used", "skills_invoked")
 
 
 class View(NamedTuple):
-    count: int
+    examined: int
     abilities: dict[str, set[str]]
 
 
@@ -131,7 +131,7 @@ def plant_stray(root: Path, count: int = 8) -> dict[str, str]:
     """Hand-plant ``skills_used`` naming one real skill the agent does NOT declare."""
     decl = declared_ids(root)
     skills = sorted(p.name for p in (root / "templates" / "skills").iterdir() if (p / "SKILL.md").is_file())
-    data, planted = registry(root), {}
+    data, planted = registry(root), dict[str, str]()
     for rec in data["agents"]:
         spare = [s for s in skills if s not in decl.get(rec["id"], set())]
         if spare and len(planted) < count:
@@ -146,7 +146,7 @@ def plant_descriptive(root: Path, count: int = 4) -> dict[str, str]:
     """Add a ``descriptive_only`` ``skills_invoked`` entry naming a real, undeclared skill."""
     decl = declared_ids(root)
     skills = sorted(p.name for p in (root / "templates" / "skills").iterdir() if (p / "SKILL.md").is_file())
-    data, planted = registry(root), {}
+    data, planted = registry(root), dict[str, str]()
     for rec in data["agents"]:
         spare = [s for s in skills if s not in decl.get(rec["id"], set())]
         if spare and len(planted) < count:
@@ -239,7 +239,7 @@ def view_validation(root: Path, scratch: Path) -> View:
         val.validate_agent_self_description(pkg, {}, False, "error", package_root=pkg)
     text = buf.getvalue()
     examined = set(re.findall(r"Registry entry '([^']+)' missing required field 'category'", text))
-    abilities = {a: set() for a in examined}
+    abilities: dict[str, set[str]] = {a: set() for a in examined}
     for agent, sid in re.findall(r"Registry entry '([^']+)' has unresolvable \w+ skill_id '([^']+)'", text):
         abilities.setdefault(agent, set()).add(sid)
     return View(len(examined), abilities)
@@ -328,7 +328,7 @@ def view_cards(root: Path) -> tuple[View, dict[str, list[tuple[str, str, str]]]]
             continue
         section = re.split(r"^## Skills Used\s*\n", card.read_text(encoding="utf-8"), maxsplit=1, flags=re.M)[1]
         body = re.split(r"^(?:---|## )", section, maxsplit=1, flags=re.M)[0]
-        rows[agent] = [m.groups() for m in map(_ROW.match, body.splitlines()) if m]
+        rows[agent] = [(m[1], m[2], m[3]) for m in map(_ROW.match, body.splitlines()) if m]
         out[agent] = {r[0] for r in rows[agent]}
     return View(len(out), out), rows
 
@@ -364,6 +364,6 @@ def mismatches(name: str, view: View, expected: dict[str, set[str]]) -> list[str
     bad = [f"{name}: {a} lists {sorted(view.abilities.get(a, set()))} != declared {sorted(want)}"
            for a, want in sorted(expected.items()) if a in view.abilities and view.abilities[a] != want]
     bad += [f"{name}: {a} is absent from the view" for a in sorted(expected) if a not in view.abilities]
-    if view.count != len(expected):
-        bad.append(f"{name}: examined {view.count} specialists, tree has {len(expected)}")
+    if view.examined != len(expected):
+        bad.append(f"{name}: examined {view.examined} specialists, tree has {len(expected)}")
     return bad

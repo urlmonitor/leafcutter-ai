@@ -80,7 +80,8 @@ def units(text: str):
                 yield row, ""
             continue
         if _BULLET.match(lines[0]):
-            items, cur = [], []
+            items: list[str] = []
+            cur: list[str] = []
             for ln in lines:
                 if _BULLET.match(ln) and cur:
                     items.append(" ".join(cur))

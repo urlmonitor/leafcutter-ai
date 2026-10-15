@@ -192,7 +192,7 @@ def expected_declared_ids(agent: dict, template_level: dict[str, set[str]]) -> s
     template's own lists, less the recorded later revocations, plus the
     recorded later additions (``fixtures_ar_300c/post_consolidation_changes.json``)."""
     changes = recorded_changes()
-    stem = template_stem(agent)
+    stem = template_stem(agent) or ""
     base = granted_ids(agent) | template_level.get(stem, set())
     return (base - set(changes["revoked"].get(stem, []))) | set(changes["added"].get(stem, []))
 

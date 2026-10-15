@@ -28,7 +28,7 @@ ASSIGNED_AGENT = "python-coder"
 OTHER_AGENT = "plain-agent"
 HEADING = "## AC Assignments"
 
-_TEMPLATE_FM = {
+_TEMPLATE_FM: dict[str, dict] = {
     ASSIGNED_AGENT: {
         "name": ASSIGNED_AGENT,
         "description": "Standards-enforcing Python implementation agent.",
