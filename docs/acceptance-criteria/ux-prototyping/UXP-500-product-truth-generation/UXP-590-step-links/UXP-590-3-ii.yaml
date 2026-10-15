@@ -1,0 +1,41 @@
+id: UXP-590-3-ii
+title: "A step claim that names a step the flow does not have is an error"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the product-truth generation flow has steps map, derive, invert, backref and validate,
+  And UXP-512 claims it specifies step "write-backrefs" of that flow,
+  When the product-truth validator runs,
+  Then it exits non-zero,
+  And it reports an error naming UXP-512, the flow id and the unknown step id
+    "write-backrefs", and listing the flow's five existing step ids,
+  And a claim naming a flow id that does not exist in the store is reported as an error
+    naming the AC and the unknown flow id.
+depends_on:
+  - UXP-590-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-590-3
+  contract: "The step-claim cross-check this edge case extends"
+notes: |
+  Guards the rename case: a step id renamed in the flow would otherwise leave every claim
+  pointing at it silently unsupported and indistinguishable from a mislink.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

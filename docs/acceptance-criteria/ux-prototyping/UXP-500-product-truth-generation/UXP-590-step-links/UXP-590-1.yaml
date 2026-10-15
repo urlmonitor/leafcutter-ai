@@ -1,0 +1,53 @@
+id: UXP-590-1
+title: "Each step of the product-truth generation flow links the ACs that specify that step"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the "How product-truth links are generated and kept truthful" flow has five steps
+    map, derive, invert, backref and validate,
+  And the step links are shifted by one step today
+    (derive -> [UXP-511, UXP-700e-2-ii], invert -> [UXP-512], backref -> [UXP-513]),
+  When the flow's authored step links are corrected,
+  Then the map step links exactly [UXP-510],
+  And the derive step links exactly [UXP-510, UXP-700e-2-ii],
+  And the invert step links exactly [UXP-511],
+  And the backref step links exactly [UXP-512],
+  And the validate step links exactly [UXP-513, UXP-514, UXP-300-1, UXP-300-2, UXP-300-3],
+  And each of UXP-510, UXP-511, UXP-512, UXP-513 and UXP-514 is linked from at least one
+    step of this flow,
+  And no step label, description, order or acceptance scenario of the flow is changed.
+depends_on:
+  - UXP-590
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-510.yaml
+    relationship: context
+    status: exists
+    relevance: "UXP-510 specifies both the map and the derive steps; UXP-511..514 each specify one step"
+assigned_agent: flow-author
+estimated_complexity: S
+delivers_to:
+  agent: python-coder
+  contract: "A flow whose step links name the ACs that specify each step, ready for the derived data to be regenerated (UXP-590-2)"
+expects_from: null
+notes: |
+  UXP-513 (generator idempotency and check-only mode) is placed on the validate step: its
+  check-only mode is the CI gate that fails on stale derived data, which is the validate
+  step's outcome ("Fail on derived-vs-source drift"). The alternative - a sixth step for
+  the check-only gate - was not taken because it would change the flow's narrative and
+  ordering, which this correction deliberately leaves untouched.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

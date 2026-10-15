@@ -1,0 +1,49 @@
+id: UXP-590-2
+title: "Derived step status, by_ac index and AC back-references follow the corrected step links"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the product-truth generation flow's step links have been corrected per UXP-590-1,
+  When the product-truth generator runs over the store,
+  Then the by_ac entry for UXP-510 names exactly the nodes map and derive of that flow,
+  And the by_ac entry for UXP-511 names exactly the invert node,
+  And the by_ac entry for UXP-512 names exactly the backref node,
+  And the by_ac entry for UXP-513 names exactly the validate node,
+  And the by_ac entry for UXP-514 names exactly the validate node,
+  And the product_truth back-reference on each of UXP-510..UXP-514 equals its by_ac entry,
+  And no by_ac entry or AC back-reference names a node of this flow that the step links
+    no longer support (for example UXP-511 -> derive or UXP-513 -> backref),
+  And each step's impl_status equals the value recomputed from its linked ACs' work_status,
+  And a following run of the generator in check-only mode reports no pending change
+    and the product-truth validator reports zero errors.
+depends_on:
+  - UXP-590
+  - UXP-590-1
+  - UXP-590-4
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/product-truth/index.json
+    relationship: context
+    status: exists
+    relevance: "Holds the by_ac index whose entries this AC asserts"
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-590-1
+  contract: "Flow step links corrected to the specifying ACs"
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

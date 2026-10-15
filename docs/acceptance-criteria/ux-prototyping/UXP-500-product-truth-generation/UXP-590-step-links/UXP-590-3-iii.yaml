@@ -1,0 +1,45 @@
+id: UXP-590-3-iii
+title: "An AC that specifies several steps or several flows is not flagged when every claim is linked"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given UXP-510 claims steps [map, derive] of the product-truth generation flow,
+  And the map step links [UXP-510] and the derive step links [UXP-510, UXP-700e-2-ii],
+  And UXP-700e-2-ii claims step derive of that flow,
+  And a fixture flow "leafcutter/fixture-flow" has a step "rollup" linking [UXP-510]
+    and UXP-510 also claims step rollup of "leafcutter/fixture-flow",
+  When the product-truth validator runs,
+  Then it reports zero mislink errors for UXP-510 and UXP-700e-2-ii,
+  And removing UXP-510 from the derive step's links produces exactly one error,
+    "UXP-510 claims derive, but derive does not link it",
+  And removing the rollup claim from UXP-510 while the rollup step still links it produces
+    exactly one error naming "leafcutter/fixture-flow", rollup and UXP-510.
+depends_on:
+  - UXP-590-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-590-3
+  contract: "The step-claim cross-check this edge case bounds"
+notes: |
+  The step-to-AC relationship is many-to-many (UXP-512). A check that assumes one AC per
+  step, or one step per AC, would flag the corrected UXP-510 links as wrong. The second
+  flow in the Given is a test fixture.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []

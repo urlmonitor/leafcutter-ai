@@ -1,0 +1,70 @@
+id: UXP-590-3
+title: "Validator errors when a step links an AC that declares it specifies a different step"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given each AC that specifies a flow step names, in its own authored record, the flow and
+    the step id(s) it specifies (a claim independent of the flow's step links and of the
+    generated product_truth back-reference),
+  And the product-truth generation flow is in the shifted state:
+    derive links [UXP-511], invert links [UXP-512], backref links [UXP-513],
+  And UXP-510 claims [map, derive], UXP-511 claims [invert], UXP-512 claims [backref],
+    UXP-513 claims [validate],
+  When the product-truth validator runs,
+  Then it exits non-zero,
+  And it reports one error for each step link whose AC does not claim that step:
+    "derive links UXP-511, which claims invert",
+    "invert links UXP-512, which claims backref",
+    "backref links UXP-513, which claims validate",
+  And it reports one error for each claim that no step link supports:
+    "UXP-510 claims derive, but derive does not link it",
+    "UXP-511 claims invert, but invert does not link it",
+    "UXP-512 claims backref, but backref does not link it",
+    "UXP-513 claims validate, but validate does not link it",
+  And every error names the flow id, the step id and the AC id,
+  And when the same store is checked with the corrected links of UXP-590-1, these errors
+    are absent.
+depends_on:
+  - UXP-590
+  - UXP-514
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-514.yaml
+    relationship: context
+    status: exists
+    relevance: "The existing drift validator (D1-D4) this check joins; drift checks are errors"
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+    relevance: "Where the AC-side step claim must be documented as an authored (not generated) field"
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: business-analyst
+  contract: "A documented AC-side step claim that UXP-590-4 populates on the generation-flow ACs"
+expects_from: null
+notes: |
+  Why an AC-side claim: the product_truth back-reference is generated from the step links,
+  so comparing the two can never detect a wrong link - both sides move together. A second,
+  independently authored statement on the AC is the only deterministic source a mislink
+  can disagree with. A judgment-based reading of step text against AC criteria was
+  considered and not chosen as the gate: it cannot give the same answer on every run, so it
+  cannot fail CI. It remains a possible advisory follow-up.
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by:
+  - UXP-590-3-i
+  - UXP-590-3-ii
+  - UXP-590-3-iii
+implemented_by: []

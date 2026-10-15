@@ -1,0 +1,44 @@
+id: UXP-590-4
+title: "The generation-flow ACs each declare the step(s) they specify"
+component: ux-prototyping
+components:
+  - ux_prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+criteria: |
+  Given the AC-side step claim defined by UXP-590-3,
+  When the step claims are added to the generation-flow ACs,
+  Then UXP-510 claims steps [map, derive] of flow "leafcutter/generate-product-truth",
+  And UXP-511 claims [invert], UXP-512 claims [backref], UXP-513 claims [validate]
+    and UXP-514 claims [validate] of that flow,
+  And UXP-700e-2-ii claims [derive] and UXP-300-1, UXP-300-2 and UXP-300-3 each claim
+    [validate] of that flow,
+  And no other field of those nine ACs changes,
+  And with the corrected links of UXP-590-1 in place the product-truth validator reports
+    zero mislink errors and zero unchecked links for that flow.
+depends_on:
+  - UXP-590
+  - UXP-590-3
+doc_links:
+  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+    relationship: implements
+    status: exists
+  - path: docs/acceptance-criteria/ux-prototyping/UXP-500-product-truth-generation/UXP-510.yaml
+    relationship: context
+    status: exists
+assigned_agent: business-analyst
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-590-3
+  contract: "The documented AC-side step-claim field"
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
