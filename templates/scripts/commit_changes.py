@@ -284,6 +284,27 @@ def _run_commit(root: Path, env: dict, msg_file: str) -> subprocess.CompletedPro
     return _git(["commit", "-q", "--cleanup=verbatim", "-F", msg_file], root, env)
 
 
+def _content_ids(root: Path, paths: list[str]) -> dict[str, str]:
+    """Map each of *paths* that exists on disk to the git object id of its content."""
+    present = [p for p in paths if (root / p).is_file()]
+    if not present:
+        return {}
+    out = _git_out(["hash-object", "--", *present], root)
+    return dict(zip(present, out.split(), strict=True))
+
+
+def _rewritten_by_checks(root: Path, before: dict[str, str], paths: list[str]) -> list[str]:
+    """Return which of *paths* changed on disk since *before* was taken.
+
+    A change means a fixing check rewrote that file while the commit ran -- whether
+    or not the check also staged it. No change means the failure came from a check
+    that judges rather than fixes (or from git itself), and that kind of failure is
+    reported, not retried (BO-4500a-3).
+    """
+    after = _content_ids(root, paths)
+    return [p for p in paths if before.get(p) != after.get(p)]
+
+
 def _check_message_file(message_file: str) -> None:
     """Refuse a message file that is absent, unreadable or only whitespace."""
     path = Path(message_file)
@@ -310,11 +331,15 @@ def _commit_in_private_index(root: Path, named: list[str], msg_file: str, scratc
     if not paths:
         return _answer("nothing_to_commit", reason_code="nothing_changed", reason="named paths have no changes")
     added = [p for p in parents if p in changed]
+    carried = [*named, *parents]
+    before = _content_ids(root, carried)
     proc = _run_commit(root, env, msg_file)
-    if proc.returncode != 0 and _hooks_present(root):
-        # A fixing check may have rewritten the named files: re-read them and retry
-        # ONCE with the caller's unchanged message file.
-        _git_out(["update-index", "--add", "--remove", "--", *named], root, env)
+    rewritten = _rewritten_by_checks(root, before, carried) if proc.returncode != 0 else []
+    if rewritten and _hooks_present(root):
+        # Only a fixing check that rewrote a file this commit carries earns a retry
+        # (BO-4500a-3: a judging failure is never retried in-call). Re-read exactly
+        # the rewritten files and retry ONCE with the caller's unchanged message.
+        _git_out(["update-index", "--add", "--remove", "--", *rewritten], root, env)
         proc = _run_commit(root, env, msg_file)
     if proc.returncode != 0:
         return _failed_commit(root, proc)
