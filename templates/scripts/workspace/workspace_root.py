@@ -22,6 +22,12 @@ ARCHITECTURE: Deployed beside the maker as ``<install>/scripts/workspace/workspa
 # - 2026-10-14 12:00 [python-coder]: Created as the separate resolver
 #   module the ticket requires; the marker file name lives here so the maker
 #   and the resolver can never disagree on it. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/01)
+# - 2026-10-14 21:00 [python-coder]: A candidate counts only when git confirms
+#   it is a repository (an empty .git is not one); a child workspace counts as
+#   its recorded project, de-duplicated before the one-match rule; a marker
+#   whose recorded project is missing answers NO_REPO naming the marker instead
+#   of falling through to the workspace itself. ADR-001 Amendment 1.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08) (BO-4300b-1)
 """
 from __future__ import annotations
 
@@ -38,25 +44,45 @@ _log = logging.getLogger("workspace_root")
 
 
 def _is_repo_root(path: Path) -> bool:
-    """Return True when ``path`` is a directory that holds its own ``.git``."""
-    return path.is_dir() and (path / ".git").exists()
+    """Return True when git itself says ``path`` is the top of a repository.
+
+    An empty ``.git`` folder (the dev layout's workspace parent has one) is not
+    a repository: git refuses it, so it never counts.
+    """
+    if not (path.is_dir() and (path / ".git").exists()):
+        return False
+    try:
+        done = subprocess.run(  # noqa: S603
+            ["git", "rev-parse", "--show-toplevel"], cwd=str(path),
+            stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            timeout=30, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        _log.warning("git rev-parse failed in %s: %s", path, exc)
+        return False
+    top = done.stdout.strip()
+    return (done.returncode == 0 and bool(top)
+            and os.path.realpath(top) == os.path.realpath(path))
 
 
-def _marker_project(start: Path) -> Path | None:
-    """Walk up from ``start`` to a workspace marker and return its project root."""
+def _recorded_project(marker: Path) -> Path | None:
+    """Return the project a marker records, or None when it is unreadable or not a repo."""
+    try:
+        data = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        _log.warning("unreadable workspace marker %s: %s", marker, exc)
+        return None
+    root = data.get("project_root") if isinstance(data, dict) else None
+    if isinstance(root, str) and root and _is_repo_root(Path(root)):
+        return Path(root)
+    return None
+
+
+def _find_marker(start: Path) -> Path | None:
+    """Return the nearest workspace marker file at or above ``start``."""
     for folder in (start, *start.parents):
         marker = folder / MARKER_NAME
-        if not marker.is_file():
-            continue
-        try:
-            data = json.loads(marker.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            _log.warning("unreadable workspace marker %s: %s", marker, exc)
-            return None
-        root = data.get("project_root") if isinstance(data, dict) else None
-        if isinstance(root, str) and _is_repo_root(Path(root)):
-            return Path(root)
-        return None
+        if marker.is_file():
+            return marker
     return None
 
 
@@ -77,16 +103,29 @@ def _common_dir_project(start: Path) -> Path | None:
     return common.parent if common.name == ".git" else None
 
 
+def _child_project(child: Path) -> Path | None:
+    """Return the project a child folder stands for: a repository, or a workspace's record."""
+    marker = child / MARKER_NAME
+    if marker.is_file():
+        return _recorded_project(marker)
+    return child if _is_repo_root(child) else None
+
+
 def _repo_children(folder: Path) -> list[Path]:
-    """Return the repository folders directly inside ``folder``, sorted."""
+    """Return the distinct projects of the folders directly inside ``folder``, sorted."""
     try:
         children = sorted(folder.iterdir())
     except OSError as exc:
         _log.warning("cannot list %s: %s", folder, exc)
         return []
-    return [c for c in children
-            if not c.name.startswith(".") and c.name != LANDING_NAME
-            and _is_repo_root(c)]
+    found: dict[str, Path] = {}
+    for child in children:
+        if child.name.startswith(".") or child.name == LANDING_NAME:
+            continue
+        project = _child_project(child)
+        if project is not None:
+            found.setdefault(os.path.realpath(project), project)
+    return sorted(found.values())
 
 
 def _search(folder: Path, how: str) -> dict | None:
@@ -110,7 +149,8 @@ def resolve_project_root(cwd: str | os.PathLike, repo_root: str | os.PathLike | 
     Returns:
         A dict with ``status`` of ok, NO_REPO or AMBIGUOUS_REPO. ``project_root``
         and ``how`` are present on ok; ``candidates`` on AMBIGUOUS_REPO;
-        ``searched_from`` on NO_REPO.
+        ``searched_from`` on NO_REPO (plus ``marker`` when a workspace's
+        recorded project is gone).
     """
     start = Path(os.path.abspath(cwd))
     if repo_root:
@@ -118,11 +158,18 @@ def resolve_project_root(cwd: str | os.PathLike, repo_root: str | os.PathLike | 
         if _is_repo_root(given):
             return {"status": "ok", "project_root": str(given), "how": "argument"}
         return {"status": "NO_REPO", "searched_from": str(given)}
-    for finder, how in ((_marker_project, "workspace-marker"),
-                        (_common_dir_project, "git-common-dir")):
-        root = finder(start)
-        if root is not None:
-            return {"status": "ok", "project_root": str(root), "how": how}
+    marker = _find_marker(start)
+    if marker is not None:
+        # A workspace names its project ONLY through its marker: never itself,
+        # never a folder guessed from where it sits.
+        root = _recorded_project(marker)
+        if root is None:
+            return {"status": "NO_REPO", "searched_from": str(start),
+                    "marker": str(marker)}
+        return {"status": "ok", "project_root": str(root), "how": "workspace-marker"}
+    root = _common_dir_project(start)
+    if root is not None:
+        return {"status": "ok", "project_root": str(root), "how": "git-common-dir"}
     for folder, how in ((start, "child-search"), (start.parent, "sibling-search")):
         answer = _search(folder, how)
         if answer is not None:

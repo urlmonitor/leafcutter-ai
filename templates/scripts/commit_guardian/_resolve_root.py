@@ -82,6 +82,11 @@ _PROJECT_ROOT: Path | None = None
 def find_project_root() -> Path:
     """Return the project root, preferring ``git rev-parse --show-toplevel``.
 
+    This is NOT the workspace maker's project resolver: it caches its answer
+    and falls back to ``__file__`` and ".git or CLAUDE.md exists" walks. The
+    maker resolves projects through ``workspace.workspace_root`` instead
+    (ADR-001 Amendment 1).
+
     Tries ``git rev-parse --show-toplevel`` first (correct in symlinked
     deployed layouts).  Falls back to walking ancestors of ``__file__``
     when git exits non-zero or raises ``OSError`` (e.g. git not installed).
@@ -437,4 +442,7 @@ def resolve_package_root(hook_file: Path) -> tuple[Path | None, list[str]]:
 #   Identical result for the three existing top-level callers (verified: the
 #   GE-113c-1-vi, GE-118b, and drift-hook suites all still pass unchanged).
 #   (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-10-14 21:00 [python-coder]: Docstring-only: find_project_root() is
+#   marked as not the workspace maker's project resolver; behaviour unchanged
+#   for its callers. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/08) (ADR-001)
 # ====================================================================
