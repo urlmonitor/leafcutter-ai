@@ -7,7 +7,7 @@ diagram_type: component
 status: draft
 parent: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-15
 source_ticket: "tickets/00_inbox/epics/EPIC-RightJobRightAgent/34_TICKET-20261012-ACD-2500c-5.md"
 components:
   - ac_driven_dev
@@ -111,7 +111,7 @@ See also: [Code-Aware Test Design — Sequence Diagram](c3-032-code-aware-test-d
 | Test design | `test_spec`, `test_design_authorship`, `test_design_opened_files` | test-designer | it-po never writes `test_spec`. test-writer reads it only |
 | File findings | `file_findings` (all keys except `decision`), `file_findings_opened_files` | test-designer | it-po writes only `decision` and never edits a verdict, reason, line range or `found_in` |
 | Finding decisions | `file_findings[].decision` (`choice`, `reason`, `by: it-po`) | it-po | Written in the hand-back rounds of `/plan-feature` |
-| Reference file | `it_requirements.reference_file_path` on a record marked `hold_reason: reference file pending` | test-designer | Chosen only from pre-pass candidates. The marker is cleared after the path is filled |
+| Reference file | `it_requirements.reference_file_path` on a record marked `hold_reason: reference file pending` | test-designer | Chosen only from pre-pass candidates. it-po sets the marker, the test-designer clears it after the path is filled |
 | Rule-checked fields | `covered_by`, `components`, `readiness` | requirement rule check | `_rc_edit` refuses any other field. Every authoring agent's `readiness: approved` is restored |
 | Tests | test files in the repository | test-writer | Not a record field |
 
@@ -135,6 +135,6 @@ Green owners may read source code. Brown owners may not.
 
 ## Note on the reference-file marker
 
-The marker `hold_reason: reference file pending` is cleared by the test designer. Today no
-built agent sets it. `it-po.md` says it never sets `hold_reason`, and the planner's side of
-the marker is not in this group.
+The marker `hold_reason: reference file pending` is set by the planner and cleared by the
+test designer. `it-po.md` sets it only while `reference_file_path` is absent, and never sets
+any other `hold_reason` value (ADR-072 section 6). The test designer fills the path.

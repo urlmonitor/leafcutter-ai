@@ -1,9 +1,9 @@
 ---
 agent_id: it-po
 title: 'Agent Card: it-po'
-description: 'IT Product Owner — technical enrichment agent for the AC pipeline. Operates
-  AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields:
-  assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from
+description: 'IT Product Owner — technical enrichment agent for the v3 AC pipeline.
+  Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
+  fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from
   contracts, doc_links to architecture documents, and the test intent (test_intent
   / test_required): per outcome clause, whether a test is needed and why. It writes
   no test design.  Does NOT create tickets. Does NOT modify the BA''s criteria field.
@@ -20,7 +20,7 @@ last_updated: '2026-08-13'
 ---
 # it-po
 
-**IT Product Owner — technical enrichment agent for the AC pipeline. Operates
+**IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates
 AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical
 fields: assigned_agent, it_requirements, estimated_complexity,
 delivers_to/expects_from contracts, doc_links to architecture documents, and
@@ -81,12 +81,13 @@ flowchart TD
 | Name | Type | Description |
 |------|------|-------------|
 | `completion_report` | structured_response | Structured completion payload or sign-off comment |
+| `requirement_records` | record_fields | the enriched requirement records (assigned_agent, it_requirements, estimated_complexity, delivers_to, expects_from, doc_links, test_intent or test_required, and the reference-file-pending marker on package-surface records) |
 
 ### Mutates (Side Effects)
 
 | Name | Type | Description |
 |------|------|-------------|
-| `none` | — | Read-only agent — no filesystem mutations |
+| `requirement_records` | — | Edits the technical fields of a requirement record, field by field; never criteria |
 ---
 
 ## Tools Available

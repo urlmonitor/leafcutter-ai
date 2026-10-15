@@ -292,14 +292,15 @@
                 "review_verdict",
                 "orchestration",
                 "test_artifact",
-                "analysis"
+                "analysis",
+                "requirement_records"
               ]
             },
             {
               "type": "null"
             }
           ],
-          "description": "The primary artifact type this agent produces. Null means llm-expert flagged this agent as ambiguous and the value needs human resolution (see llm_ambiguity_comment). Used for capability inference, tooling integrations, and audit reporting. Enum values: production_code (coders producing executable/importable source), documentation (doc authors, ADR authors, diagram authors), configuration (config-only changes), prompt (agent templates, skill bodies, slash-command files), review_verdict (reviewer agents producing ok/blocker verdicts), orchestration (supervisors and commit-chain agents), test_artifact (test writers, runners, and validators), analysis (research, triage, and planning agents)."
+          "description": "The primary artifact type this agent produces. Null means llm-expert flagged this agent as ambiguous and the value needs human resolution (see llm_ambiguity_comment). Used for capability inference, tooling integrations, and audit reporting. Enum values: production_code (coders producing executable/importable source), documentation (doc authors, ADR authors, diagram authors), configuration (config-only changes), prompt (agent templates, skill bodies, slash-command files), review_verdict (reviewer agents producing ok/blocker verdicts), orchestration (supervisors and commit-chain agents), test_artifact (test writers, runners, and validators), analysis (research, triage, and planning agents), requirement_records (planners that enrich requirement records in the AC store)."
         },
         "llm_ambiguity_comment": {
           "type": "object",
@@ -326,7 +327,8 @@
                   "review_verdict",
                   "orchestration",
                   "test_artifact",
-                  "analysis"
+                  "analysis",
+                  "requirement_records"
                 ]
               },
               "minItems": 2,

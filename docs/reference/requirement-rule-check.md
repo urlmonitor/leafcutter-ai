@@ -14,6 +14,7 @@ related_docs:
   - docs/reference/ac-declared-files.md
   - docs/reference/ac-id-hierarchy.md
   - docs/reference/code-aware-step.md
+  - docs/reference/technical-planner-role.md
   - docs/architecture/components/ac-driven-dev.md
   - docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
   - scripts/ac_store/requirement_rule_check.py

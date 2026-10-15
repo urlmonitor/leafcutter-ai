@@ -4,7 +4,7 @@ description: "The IT PO's per-clause test_intent records only which outcomes nee
 type: "adr"
 status: "active"
 created: "2026-10-14"
-last_updated: "2026-10-14"
+last_updated: "2026-10-15"
 deciders:
   - BrainCandy
   - adr-author
@@ -99,6 +99,8 @@ The IT PO (`templates/agents/it-po.md`) MUST write `test_intent` and MUST NOT wr
 written by the code-aware test-design step (ACD-2500c), which marks its output with the
 record-level authorship mark defined in ACD-2500c-3. A record that already carries a
 `test_spec` is left untouched by the IT PO and gets no `test_intent`.
+
+Narrowed by ADR-072 section 6: the IT PO may set `hold_reason` to exactly `reference file pending` and no other value.
 
 ### 3. Intent alone is held at every point it could slip through
 

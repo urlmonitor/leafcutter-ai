@@ -11,6 +11,7 @@ components:
 related_docs:
   - docs/reference/test-intent.md
   - docs/reference/requirement-rule-check.md
+  - docs/reference/technical-planner-role.md
   - docs/reference/ac-declared-files.md
   - docs/architecture/adrs/ADR-071-test-intent-is-not-a-test-contract.md
   - docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md

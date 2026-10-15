@@ -583,6 +583,7 @@ read happens once per agent dispatch, before the agent is spawned.
 | `test_artifact` | NO | Wrapping a test-producing agent in test-writer/test-runner would be circular. |
 | `review_verdict` | NO | Review agents produce verdicts, not executable code. |
 | `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
+| `requirement_records` | NO | Planners that enrich requirement records in the AC store produce records, not executable logic. |
 | `orchestration` | NO | Orchestrators drive other agents; TDD guardrails do not apply. |
 | `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). Default: NO. |
 | `null` | WARN + NO | Log a warning that the agent has an ambiguous or missing produces trait, then treat as `documentation` (no TDD guardrails). Do NOT block the dispatch. |

@@ -3252,7 +3252,7 @@
             "id": "it-po",
             "name": "IT Product Owner",
             "tier": "utility",
-            "role": "analysis",
+            "role": "planning",
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
@@ -3264,7 +3264,7 @@
             "skills_used": [
                 "knowledge-query"
             ],
-            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
+            "description": "IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, doc_links to architecture documents, and the test intent (test_intent / test_required): per outcome clause, whether a test is needed and why. It writes no test design. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
             "category": "planning",
             "skills_invoked": [],
             "knowledge_channels": [
@@ -3285,7 +3285,7 @@
                     "source": "PROJECT_CONTEXT.md"
                 }
             ],
-            "produces": "analysis",
+            "produces": "requirement_records",
             "components": [
                 "product_ownership"
             ]

@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-14
+last_updated: 2026-10-15
 components:
   - build_pipeline
 related_docs:
@@ -49,7 +49,7 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `readiness` | enum or null | no | Lifecycle readiness state: `draft`, `reviewed`, or `approved`. Present on ~69 % of records. |
 | `priority` | enum or null | no | Implementation priority: `critical`, `high`, `medium`, or `low`. Present on ~69 % of records. |
-| `hold_reason` | string or absent | no | Why a gate holds the record back: one of the closed `HOLD_REASONS` vocabulary (the schema enum equals it), set by the gate that owns the reason. `reference file pending` is the explicit marker that lets an object-form `it_requirements` omit `reference_file_path` until the file-aware step names it; the key's absence never means pending. See [ac-readiness-and-assignment-gates.md](ac-readiness-and-assignment-gates.md#hold-reasons). |
+| `hold_reason` | string or absent | no | Why a gate holds the record back: one of the closed `HOLD_REASONS` vocabulary (the schema enum equals it), set by the gate that owns the reason. `reference file pending` is set by the technical planner and cleared by the test-designer; it is the explicit marker that lets an object-form `it_requirements` omit `reference_file_path` until the file-aware step names it; the key's absence never means pending. See [ac-readiness-and-assignment-gates.md](ac-readiness-and-assignment-gates.md#hold-reasons). |
 | `level` | enum or null | no | Hierarchy level: `L0` (portfolio), `L1` (feature), `L2` (story/task), `L3` (sub-task). |
 | `work_status` | enum or null | no | Implementation lifecycle: `not_started` / `todo` (aliases), `in_progress`, `done`. |
 | `req_status` | enum | no | Requirement lifecycle status from a product perspective: `active`, `draft`, `approved`, or `superseded`. Independent of `work_status`. |
