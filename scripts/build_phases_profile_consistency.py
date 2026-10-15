@@ -162,8 +162,12 @@ def check_profiles(registry: Path, package_root: Path) -> tuple[list[str], int, 
 def profile_warning_count(registry: Path, package_root: Path) -> int:
     """Print the findings as warnings and return how many there were (build wiring)."""
     flagged, _, errors = check_profiles(registry, package_root)
-    for agent_id in flagged:
-        print(f"  [WARNING] Agent '{agent_id}' has write tools but declares mutates: none.")
+    if flagged:
+        print(
+            f"  [WARNING] Profile consistency: {len(flagged)} write-capable agent(s) "
+            "declare mutates: none; run python scripts/build_phases_profile_consistency.py "
+            "--registry config/agent_registry.json --templates templates/agents for the list"
+        )
     for error in errors:
         print(f"  [WARNING] Profile consistency check: {error}")
     return len(flagged) + len(errors)
