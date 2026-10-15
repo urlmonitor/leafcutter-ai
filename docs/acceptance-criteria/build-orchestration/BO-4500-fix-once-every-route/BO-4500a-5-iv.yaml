@@ -1,0 +1,112 @@
+id: BO-4500a-5-iv
+title: "Finalize-feature's closing commit names the feature's own records and goes through the shared step"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a finalize-feature run named finalize-epic-x-20261012 closing an epic whose three
+    tickets and four acceptance-criterion records changed status,
+  And the inbox also holds two tickets of an unrelated epic with uncommitted edits,
+  When the workflow records its closing commit,
+  Then it calls the shared commit step in supervised mode naming the run and exactly the three
+    tickets and four records,
+  And the commit contains those seven files plus any edited structural parent record, and
+    neither of the unrelated epic's tickets,
+  And the workflow proceeds only on a committed answer and otherwise stops before any merge,
+    reporting the answer's status and reason.
+
+  Given finalize-feature's commit before this change and the shared step after it,
+  When the migration is reviewed,
+  Then no protection the finalize copy had and the shared step lacked is lost,
+  And the regression tests behind every known issue fixed in finalize's commit path run against
+    the shared step and pass.
+depends_on: [BO-4500a-5, BO-4500a-4-iv]
+doc_links:
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: modifies
+    status: exists
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C2 lists finalize's raw git commit dispatched to status-checker; C3 its gate that accepts agent answers. The gate is not this record's."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The closing commit, verified 2026-10-14 as a raw COMMIT_AGENT_MODE=1 git commit inside a
+    dispatched prompt in finalize-feature.js, is replaced by a commit-agent dispatch that runs the
+    shared step in supervised mode naming the run and exactly the tickets and AC records the
+    workflow itself changed status on. The path list is the workflow's own record of what it
+    edited, never a directory listing of the inbox.
+  - >-
+    The result is read through the shared COMMIT-ANSWER block: proceed only on committed; on any
+    other answer stop BEFORE any merge, reporting status, reason_code and reason. A policy_ code is
+    never retried; a step_ code gets up to max_transient_retries fresh calls (config, default 3). finalize's closing commit has no
+    specialist path expected, but a handoff answer is still handled by the block, not dropped.
+  - >-
+    No protection the finalize copy had is lost: any guard on its commit path (protected-branch,
+    worktree-root checks) is either present in the step or kept in the workflow. The regression
+    tests behind KIs fixed in finalize's commit path run against the step.
+  - Out of scope, stated so it is not mistaken for coverage -- the catch-up merge commit (future sync_with_main sibling), the PR step, and whether step 3.5 edits unrelated epics' tickets at all.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract (status, reason_code family, handoff) read through the commit agent's commit_answer."
+test_required: true
+test_spec:
+  - name: test_closing_commit_calls_the_step_with_the_run_and_its_own_records
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Run finalize-feature.js under the workflow-engine harness; the closing commit dispatch instructs the shared step in supervised mode naming run finalize-epic-x-20261012 and exactly the three tickets and four records."
+  - name: test_unrelated_epic_tickets_stay_out_of_the_closing_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With two unrelated-epic tickets edited in the scratch inbox, the commit made by the real step with finalize's path list contains the seven files plus any edited parent and neither unrelated ticket."
+    must_catch:
+      - "stage the whole tickets/ folder"
+  - name: test_finalize_stops_before_merge_on_any_non_committed_answer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Scripting each non-committed answer records no merge dispatch and reports status and reason_code."
+  - name: test_no_raw_commit_command_remains_in_finalize_prompts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "No dispatch recorded across a full harness run of finalize-feature.js instructs a raw git commit."
+test_rationale: >-
+  The closing commit is where cross-epic closure leaks into a commit; the discrimination test runs
+  the real step over a scratch inbox holding unrelated edits.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  SCOPE: the closing commit only. A merge commit made while catching up with main belongs to the
+  future "catching up with the shared line safely" sibling of BO-4500a (C6's sync_with_main) and is
+  out of scope here, as is the PR step. Finalize has no AC id for a run, hence the run name.
+
+  The unrelated-epic scenario is the cross-epic closure shape the user's memory records against
+  finalize step 3.5 (flips every inbox ticket). Explicit paths stop the COMMIT carrying it; whether
+  step 3.5 edits those files at all is a separate finalize defect, not closed here.

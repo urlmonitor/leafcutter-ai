@@ -24,10 +24,10 @@ export function replaceFlowAddress(
   window.history.replaceState(state, "", flowHref(flowId, stepId));
 }
 
-/** Add ONE Back entry at a flow's canonical address (select, drill, breadcrumb). */
-export function pushFlowAddress(flowId: string, viewState: FlowViewState): void {
+/** Add ONE Back entry at a flow's canonical address (select, drill, breadcrumb, an opened result). */
+export function pushFlowAddress(flowId: string, viewState: FlowViewState, stepId: string | null = null): void {
   const state = { ...(window.history.state ?? {}), [FLOW_VIEW_STATE_KEY]: viewState };
-  window.history.pushState(state, "", flowHref(flowId));
+  window.history.pushState(state, "", flowHref(flowId, stepId));
 }
 
 /** Update only the current entry's stored view state; its address stays as it is. */

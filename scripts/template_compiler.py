@@ -46,6 +46,7 @@ from agent_declared_sections import append_declared_sections
 from agent_inplace_abilities import report_inplace_accounts
 from agent_preparation_delivery import inject_prepared_placeholder
 from agent_retired_markers import strip_retired_markers
+from compile_computed_steps import render_categories_step
 from injection_builders import (  # noqa: E402
     _load_registry,  # noqa: F401  # re-exported; consumed by build_phases / build_helpers
     build_agent_priority_table,
@@ -360,6 +361,7 @@ def compile_agent_template(
     body = strip_metadata_sections(body)
     body = strip_retired_markers(body, template_path.name)  # AR-300d-4: never substituted
     report_inplace_accounts(template_path, fm, body, skills_root, agents)  # AR-300a-4-i / AR-300a-5-i
+    body = render_categories_step(body, config)  # BP-1500h-2: compile-time choice, no template conditionals
     body = inject_config(body, config)
 
     if agents is not None:
@@ -462,4 +464,7 @@ def compile_skill_template(template_path: Path, config: dict[str, Any]) -> str:
 #   compile_agent_template(). build_project_paths_table() now receives config so
 #   that the {{project_paths_table}} placeholder reflects config-overridden paths
 #   (e.g. tickets_inbox_path) in compiled agent prompts. (#TICKET-20260603-ConfigDrivenBuildPaths)
+# - 2026-10-14 12:00 [python-coder]: compile_agent_template fills the
+#   changelog-agent categorisation step via compile_computed_steps (the choice
+#   is made at compile time; templates have no conditionals). (#BP-1500h/2)
 # ====================================================================

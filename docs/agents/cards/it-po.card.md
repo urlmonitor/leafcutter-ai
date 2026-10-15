@@ -105,7 +105,7 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `knowledge-query` | — | — |
+| `knowledge-query` | conditional | Use when you need to search a keyword across agents, skills, docs and ADRs for component context. |
 ---
 
 ## Configuration

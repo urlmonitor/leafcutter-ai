@@ -9,9 +9,6 @@
  * never carried in a query string.
  */
 
-/** The flow the bare /flows address opens. Single definition. */
-export const DEFAULT_ENTRY_FLOW_ID = "leafcutter/deliver-a-feature";
-
 /** Request header middleware uses to hand the raw (still-encoded) id to the route. */
 export const RAW_FLOW_ID_HEADER = "x-flow-raw-id";
 

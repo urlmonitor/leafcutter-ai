@@ -27,7 +27,7 @@ depends_on:
   - AR-400a-1
   - AR-400a-2
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "Lists the four dangling targets that remain (5 references). This AC is KI-BP-007's instance closure; wiring (AR-400a-1) is its gate closure. Close the KI when both are done."
@@ -50,7 +50,7 @@ risk_surface: internal
 it_requirements:
   - "SAME CHANGE AS THE WIRING: the three template fixes (AR-400a-3-i/-ii/-iii) land in the same pull request as AR-400a-1's wiring. Wiring first breaks every build; fixing first leaves nothing guarding them."
   - "Evidence is a run of the wired check on the REAL tree (the validator CLI or build.py over the checked-out package), reporting zero 'ability does not exist' findings AND non-zero examined counts equal to the population present -- not a grep of the edited templates."
-  - "KI-BP-007 (docs/known-issues/build-pipeline/open-high-ki-bp-007.md) is closed only when this AC and AR-400a-1 are both done; closing it is part of this change's evidence, via the known-issue's own resolution procedure."
+  - "KI-BP-007 (docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md) is closed only when this AC and AR-400a-1 are both done; closing it is part of this change's evidence, via the known-issue's own resolution procedure."
   - "Edits are confined to the named instruction lines; no unrelated rewording of the three files."
 test_spec:
   - name: test_real_tree_reports_zero_nonexistent_findings_with_full_counts

@@ -1,0 +1,62 @@
+id: BO-4500a-5-x
+title: "Sequence diagram: a route commits -- dispatch, step, checks, one fix-and-retry, answer"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - documentation_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: docs
+risk_surface: internal
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a reader wants to follow one commit from a route to its answer,
+  When they open the sequence diagram,
+  Then it shows, in order, the route dispatching the commit agent, the agent authoring a message
+    when none was given, the agent calling the shared step, the step refusing on a protected or
+    missing branch, the step running the checks, a fixing check changing a named file, the
+    single second run of the checks, and the step's answer returning to the route,
+  And it shows each of the four answers and what the route does on each,
+  And it shows the hook_failed path returning to the commit agent for autofix judgement before
+    any fresh call of the step,
+  And it shows no path that runs the checks a third time within one call.
+depends_on: [BO-4500a-5]
+doc_links:
+  - path: docs/architecture/agent_delivery_workflows.md
+    relationship: describes
+    status: exists
+    relevance: "Link the diagram from here."
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    The hook_failed path is drawn per disposition: mechanical-autofix returns to the commit agent
+    for an own-context fix and a fresh call (repeatable up to max_automated_fix_retries, default
+    3); engage-specialist continues past the commit agent
+    (which cannot spawn at depth 1) to the depth-0 caller, which engages the specialist at most once
+    and re-offers the identical commit through a fresh step call; author-clears is reported. The
+    criteria's "returning to the commit agent for autofix judgement" is the first branch; the
+    second is BO-3800a's and must also be shown.
+  - Each non-committed answer is labelled with its reason_code family (policy_ stop, step_ may retry, check_ by disposition, nothing_changed) so the route's action is visible.
+  - Allocate the diagram id immediately before publishing; link it from docs/architecture/agent_delivery_workflows.md.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-5
+  contract: "The migrated commit flow as built."
+test_required: false
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Satisfies BO-4500a's documentation trigger sequence-diagram (workflow -> commit agent -> step ->
+  checks -> autofix -> retry is a multi-actor flow). Allocate the diagram id immediately before
+  publishing.

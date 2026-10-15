@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-10-12'
+last_updated: '2026-10-14'
 components:
   - commit_guardian
 related_docs:
@@ -73,7 +73,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 79** (2 blocker, 35 high, 42 low) · **Resolved: 18**
+**Open: 87** (2 blocker, 37 high, 48 low) · **Resolved: 21** (recounted from the directory 2026-10-14)
 
 ## Open
 
@@ -160,6 +160,8 @@ Fixed issues move to [`commit-guardian/resolved/`](commit-guardian/resolved/) an
 | `low` | KI-CG-20261012-folder-density-conflicts-with-flat-ac-store — `check-folder-density` (GE-120h-3) caps every folder at 15 files with no exemption for `docs/acceptance-criteria/`, while the AC store keeps each L0 tree flat in one folder (BO-4300 holds 68, BO-4400 49), so every BA-stage commit of a normal-sized tree is refused; graded medium | [open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md](commit-guardian/open-low-ki-cg-20261012-folder-density-conflicts-with-flat-ac-store.md) |
 | `low` | KI-CG-20261012-file-size-repayment-counts-modified-lines-as-added — `check-file-size`'s GE-127f repayment counts every rewritten line as added, so a one-line edit to an oversized file forces a far larger restructure and merging two lines into one never pays for itself; graded medium | [open-low-ki-cg-20261012-file-size-repayment-counts-modified-lines-as-added.md](commit-guardian/open-low-ki-cg-20261012-file-size-repayment-counts-modified-lines-as-added.md) |
 | `low` | KI-CG-20261014-predone-scope-unions-only-staged-tickets — `check-predone-scope` compares the whole branch diff with only the done tickets staged in this commit, so every later group of a multi-commit epic branch is refused for files earlier groups' tickets declare; graded medium | [open-low-ki-cg-20261014-predone-scope-unions-only-staged-tickets.md](commit-guardian/open-low-ki-cg-20261014-predone-scope-unions-only-staged-tickets.md) |
+| `low` | KI-CG-20261014-doc-length-gate-crashes-instead-of-reporting — `check-doc-length` ends in a traceback, not a stated outcome, when a set-aside document matches no declared entry (`StopIteration` in `matching_entry`) or `commit_guardian.json` is not valid UTF-8 (`UnicodeDecodeError` past the DECLARATION PROBLEM report); both still refuse the commit | [open-low-ki-cg-20261014-doc-length-gate-crashes-instead-of-reporting.md](commit-guardian/open-low-ki-cg-20261014-doc-length-gate-crashes-instead-of-reporting.md) |
+| `low` | KI-CG-20261014-no-gate-keeps-the-document-length-standard-in-step — nothing checks `docs/reference/document-length-standard.md` against `doc_length.set_aside_locations`, so a location or ceiling changed in config leaves the published standard silently stale; the file-size rule has a parity gate, the doc-length rule has none | [open-low-ki-cg-20261014-no-gate-keeps-the-document-length-standard-in-step.md](commit-guardian/open-low-ki-cg-20261014-no-gate-keeps-the-document-length-standard-in-step.md) |
 
 ## Resolved
 

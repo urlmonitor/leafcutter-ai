@@ -1,0 +1,85 @@
+id: UXP-617-5
+components:
+  - ux_prototyping
+  - documentation_system
+  - atlas_frontend
+readiness: approved
+priority: medium
+title: "A reference lists every /flows finder address parameter with its stored values and labels"
+component: ux-prototyping
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+created_by: docs/acceptance-criteria/ux-prototyping/UXP-617-atlas-flow-finder/UXP-617.yaml
+criteria: |
+  Given a shared finder link such as /flows?q=selected+option&actor=human depends on its
+    parameter names and values staying stable,
+  When a person looks up what a finder address means in the reference documentation,
+  Then the reference lists the eleven parameters q, product, actor, kind, realization, level,
+    uses, produces, io, entity and screen, each with the filter label it belongs to,
+  And for each parameter with a fixed vocabulary it lists every stored value next to the label
+    the finder shows: actor deterministic = Code, llm = AI agent, human = Person and jev = Jev;
+    kind user = User, data = Data and architecture = Architecture; realization built = Built,
+    spec = Spec and mock = Sample; level journey = Journey, pipeline = Pipeline and
+    agent = Agent; io gap = 'I/O not yet defined',
+  And it states that product, uses, produces, entity and screen take a product slug, a field
+    key, an entity name and a screen id respectively, never a display label,
+  And it states that repeating a parameter combines its values with OR and that different
+    parameters combine with AND,
+  And it states that a finder address never carries a flow or a step parameter, and that a flow
+    has its own address /flows/<product>/<flow>, optionally with ?step=<id>,
+  And the Atlas routes table lists the bare /flows as the finder rather than a default flow.
+depends_on:
+  - UXP-617
+  - UXP-617-2
+doc_links:
+  - path: docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json
+    relationship: specifies
+    status: exists
+    relevance: "FlowFinderQuery.facets field description and the applied_chips label invariant: the source of the value/label table."
+  - path: docs/product-truth/mockups/leafcutter/atlas-flows-canonical-url.mockup.json
+    relationship: describes
+    status: exists
+  - path: leafcutter-web/README.md
+    relationship: describes
+    status: exists
+    relevance: "'The views' routes table that must list /flows as the finder."
+  - path: docs/how-to/product-truth-schema-reference.md
+    relationship: context
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: UXP-617-2
+  contract: Parameter names and stored values with labels from the facet vocabulary.
+it_requirements:
+- A reference page (proposed docs/reference/atlas-flows-finder-address.md) plus the 'The views' routes
+  table in leafcutter-web/README.md listing the bare /flows as the finder.
+- The value/label table is copied from the facet vocabulary declared in leafcutter-web/lib/flow-finder/
+  and cross-checked against the dataset's applied_chips invariant; any difference is reported, not silently
+  resolved.
+- 'Marked as a stable public contract: the page says renaming a parameter or a stored value breaks shared
+  links.'
+test_required: false
+test_rationale: Documentation only (change_target docs); no executable behaviour.
+declares_side_effect: false
+origin_agent: business-analyst
+created: 2026-10-14
+amended_by:
+- action: approved
+  agent: approve_acs
+  date: '2026-10-14'
+superseded_by: null
+covered_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-UXP-617-5.md
+change_target: docs
+risk_surface: contract_boundary
+notes: |
+  Documentation AC for UXP-617's 'reference-doc' documentation trigger. The L1 notes ask for it
+  because the address stores values, not labels. The Realization value 'mock' is labelled
+  'Sample' in the finder (dataset applied_chips invariant), which is the mapping most likely to
+  surprise a reader.

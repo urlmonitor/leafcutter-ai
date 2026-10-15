@@ -22,7 +22,7 @@ criteria: |
 depends_on:
   - AR-400
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "The open defect this closes. Its own measurement: references to abilities that were never written, the build printing success every time. Close it when this L1 is done."

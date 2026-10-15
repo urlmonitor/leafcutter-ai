@@ -3,19 +3,16 @@ MODULE: _agent_ability_sync
 GOAL: Shared, pure helpers that turn an agent template's frontmatter ``skills``
     declaration into the ability fields of that agent's registry record.
 BUSINESS CONTEXT: AR-300c made each template's frontmatter ``skills:`` list the
-    source of truth for an agent's abilities; the registry's ``skills_used`` /
-    ``skills_invoked`` fields are a DERIVED copy. Two tools write that copy --
-    the one-shot migration (``scripts/migrate_agent_abilities.py``) and the
-    pre-commit transform hook (``transform_agent_registry.py``). Both must
-    produce the identical record or the build would report a disagreement the
-    tools themselves created, so the regeneration rule lives here once.
+    source of truth for an agent's abilities; the registry's ``skills_invoked``
+    field is a DERIVED copy (the older ``skills_used`` list is retired, AR-400e).
+    The pre-commit transform hook (``transform_agent_registry.py``) writes that
+    copy, so the regeneration rule lives here once.
 ARCHITECTURE: Pure functions, no git and no network. ``declared_entries``
-    parses a template's frontmatter into ``{skill_id, mode[, condition]}``
-    entries; ``regenerate_record`` rewrites ONE registry record's ability
-    fields in place, keeping each field's population (an agent recorded in only
-    one field stays in only that field; an agent in neither goes to the newer
-    ``skills_invoked``) and keeping ``descriptive_only`` entries, which
-    describe behaviour and are not grants; ``declared_spawn`` and
+    parses a template's frontmatter into ``{skill_id, mode[, condition]
+    [, provided_by]}`` entries; ``regenerate_record`` rewrites ONE registry
+    record's ``skills_invoked`` in place (exactly the declared grants, then the
+    ``descriptive_only`` entries, which describe behaviour and are not grants)
+    and drops ``skills_used`` from the record; ``declared_spawn`` and
     ``regenerate_spawn`` do the same for the sub-agent permission (AR-300c-5-ii:
     the registry's ``spawn_allowlist`` is the derived copy of the template's
     ``spawn_allowlist`` declaration, macro kept as written, absent -> ``[]``);
@@ -37,6 +34,11 @@ DECISION HISTORY
 - 2026-10-09 [python-coder/AR-300c-5]: Added ``declared_spawn`` and
   ``regenerate_spawn`` so the transform hook regenerates the registry's
   sub-agent lists from the declarations too. (#AR-300c-5-ii)
+- 2026-10-12 [python-coder/AR-400e-2]: ``regenerate_record`` now writes ONLY
+  ``skills_invoked`` (declared grants incl. ``provided_by``, then preserved
+  descriptive_only entries) and drops ``skills_used``; the per-field
+  population rule is gone and the one-shot migration helper is retired.
+  (#AR-400e-2)
 """
 
 from __future__ import annotations
@@ -45,7 +47,10 @@ import json
 from typing import Any
 
 DEFAULT_MODE = "always"
-_ABILITY_FIELDS = ("skills_used", "skills_invoked")
+INVOKED_FIELD = "skills_invoked"
+RETIRED_FIELD = "skills_used"  # retired (AR-400e): never written, dropped from records that carry it
+_ABILITY_FIELDS = (RETIRED_FIELD, INVOKED_FIELD)
+_OPTIONAL_KEYS = ("condition", "provided_by")
 SPAWN_FIELD = "spawn_allowlist"
 
 
@@ -125,8 +130,9 @@ def normalize_declared(raw: Any) -> list[dict[str, str]]:
     for item in raw:
         entry = {"skill_id": item} if isinstance(item, str) else item
         norm = {"skill_id": entry["skill_id"], "mode": entry.get("mode") or DEFAULT_MODE}
-        if entry.get("condition"):
-            norm["condition"] = str(entry["condition"])
+        for key in _OPTIONAL_KEYS:
+            if entry.get(key):
+                norm[key] = str(entry[key])
         out.append(norm)
     return out
 
@@ -185,23 +191,20 @@ def regenerate_spawn(agent: dict[str, Any], declared: list[str]) -> None:
 
 
 def regenerate_record(agent: dict[str, Any], entries: list[dict[str, str]]) -> None:
-    """Rewrite the record's ability fields from ``entries`` in place.
+    """Rewrite the record's one ability field, ``skills_invoked``, from ``entries`` in place.
 
-    Each field keeps its population: a field that was empty stays empty, unless
-    BOTH were empty and ``entries`` is not, in which case the newer
-    ``skills_invoked`` receives them. descriptive_only entries are preserved
-    after the grants in ``skills_invoked``.
+    ``skills_invoked`` becomes exactly the declared grants (mode, condition and
+    ``provided_by`` as declared) followed by the record's preserved
+    descriptive_only entries. The retired ``skills_used`` field is never
+    written and is dropped from a record that still carries it.
 
     Args:
         agent: The registry agent record to update.
         entries: The agent's declaration entries.
     """
     descriptive = [item for _f, item in descriptive_entries(agent)]
-    used, invoked = bool(field_ids(agent, "skills_used")), bool(field_ids(agent, "skills_invoked"))
-    if used:
-        agent["skills_used"] = [e["skill_id"] for e in entries]
-    if invoked or (entries and not used):
-        agent["skills_invoked"] = [dict(e) for e in entries] + descriptive
+    agent[INVOKED_FIELD] = [dict(e) for e in entries] + descriptive
+    agent.pop(RETIRED_FIELD, None)
 
 
 def dump_registry(data: dict[str, Any]) -> str:

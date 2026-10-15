@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This directory contains skill definitions — reusable instruction sets that agents load via `Read` and then follow. A skill is a how-to document written for Claude agents, not for human developers. Skills encode repeatable procedures that multiple agents may need: the `signoff` skill, the `route-learning` decision tree, the `capture-learning` write executor, etc.
+This directory contains skill definitions — reusable instruction sets that agents load via `Read` and then follow. A skill is a how-to document written for Claude agents, not for human developers. Skills encode repeatable procedures that multiple agents may need: the `signoff` skill, the `route-knowledge` routing classifier, the `building-epics` drive procedure, etc.
 
 ## SKILL.md Frontmatter Schema
 
@@ -24,7 +24,7 @@ allowed-tools: Read, Edit, Write   # Tools this skill's instructions use.
 
 ## Naming Conventions
 
-- Skill folder names are **kebab-case**: `route-learning/`, `capture-learning/`, `signoff/`, `building-epics/`.
+- Skill folder names are **kebab-case**: `route-knowledge/`, `signoff/`, `building-epics/`.
 - The `name` frontmatter field should match the folder name.
 - Supporting files (JSON configs, schema files) live alongside `SKILL.md` in the same folder.
 
@@ -33,14 +33,14 @@ allowed-tools: Read, Edit, Write   # Tools this skill's instructions use.
 Agents load a skill by reading the SKILL.md file and then following the instructions within it. Example:
 
 ```
-Load `.claude/skills/route-learning/SKILL.md` and apply the decision tree to classify the learning.
+Load `.claude/skills/route-knowledge/SKILL.md` and apply it to classify the learning.
 ```
 
 Skills do NOT spawn sub-agents or use tools themselves — they are instruction documents. The invoking agent uses the allowed tools listed in `allowed-tools`.
 
 ## Cross-cutting vs. Module-local Skills
 
-- **Cross-cutting skills** are used by multiple agents and encode project-wide procedures (`signoff`, `building-epics`, `route-learning`, `capture-learning`).
+- **Cross-cutting skills** are used by multiple agents and encode project-wide procedures (`signoff`, `building-epics`, `route-knowledge`).
 - **Module-local skills** are used only within a specific workflow (`feature`, `close-worktree`, `precommit-autofix`).
 
 ## How to add a new skill

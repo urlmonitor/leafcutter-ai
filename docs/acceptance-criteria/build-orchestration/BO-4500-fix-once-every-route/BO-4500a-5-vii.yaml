@@ -1,0 +1,105 @@
+id: BO-4500a-5-vii
+title: "Running the shared step is guarded exactly like a direct commit, so it opens no new way around commit delegation"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-5.yaml"
+criteria: |
+  Given a session that is not the commit agent runs the shared commit step as a command,
+  When the commit-delegation guard inspects that command,
+  Then it blocks the command with the same message it gives a direct commit attempt,
+  And no commit is recorded.
+
+  Given the commit agent runs the shared commit step as a command,
+  When the guard inspects that command,
+  Then it allows the command.
+
+  Given a session runs a command that only mentions the shared step's name inside quoted text,
+    such as a pull-request body passed on the command line,
+  When the guard inspects that command,
+  Then it allows the command, because no commit is being made.
+depends_on: [BO-4500a-5, BO-4500a-5-v]
+doc_links:
+  - path: templates/hooks/enforce_commit_delegation.py
+    relationship: modifies
+    status: exists
+    relevance: "Parses argv since PR #915 (KI-CG-20260925-commit-delegation-hook-misses-git-dash-c, resolved). A script that records a commit internally is invisible to a guard that looks for a git commit argv, so without this record the shared step is an unguarded commit path."
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260907-commit-delegation-is-a-password-not-an-identity.md
+    relationship: describes
+    status: exists
+    relevance: "The guard authorises by a published token, not identity. This record gives the step parity with that guard; it does not fix the identity gap. Third scenario is the false-positive half of that KI."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    enforce_commit_delegation recognises an invocation of the shared step by argv parsing (the
+    PR #915 mechanism), whatever interpreter, path form (relative, absolute, deployed or template)
+    or git -C prefix is used, and applies to it exactly the decision it applies to a direct git
+    commit. Mentions inside quoted arguments are not invocations.
+  - >-
+    The recogniser keys on the step's deployed path(s) read from one place (the same name the
+    build deploys), not a second hard-coded copy, so renaming the step cannot silently unguard it.
+  - The guard's allow decision for the commit agent is whatever it accepts today; identity hardening is KI-CG-20260907's, cited not closed.
+  - Edit templates/hooks/ source and verify the deployed hook (ADR-001 parity; deployed-layout no-op trap).
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-5-v
+  contract: "The commit agent is the runner of the step (Q1 default)."
+test_required: true
+test_spec:
+  - name: test_non_commit_agent_running_the_step_is_blocked
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Feeding the deployed hook a Bash tool call that runs the shared step from a non-commit-agent session blocks it with the same message as a direct git commit."
+    must_catch:
+      - "match only the literal string git commit"
+  - name: test_commit_agent_running_the_step_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "The same call from the commit agent context is allowed."
+  - name: test_step_name_inside_quoted_text_is_allowed
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "A gh pr create call whose --body mentions the step's name is allowed."
+  - name: test_path_and_interpreter_variants_are_all_recognised
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "python, python3 and direct execution, absolute and relative paths, and the template and deployed locations are each blocked outside the commit agent."
+test_rationale: >-
+  The hook decides on a real tool-call payload, so each case feeds the deployed hook a real
+  payload and reads its decision; unit-testing the matcher alone would miss the deployed-layout
+  no-op trap.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  WHY THIS EXISTS (unasked-for, keep it): moving the commit into a script hides it from a guard that
+  recognises commits by their command line. Without parity the consolidation silently widens who can
+  commit. "Is the commit agent" means whatever the guard accepts today; strengthening that to a real
+  identity is KI-CG-20260907's, cited not closed.
+
+  If the user answers Q1 with "the command-step-runner runs the step for workflows", the second
+  scenario gains that runner too and the first stays as written.

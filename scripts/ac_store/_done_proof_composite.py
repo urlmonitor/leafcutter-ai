@@ -116,6 +116,25 @@ def _composite_child_ids(covered_by: object) -> list[str]:
     return [e for e in map(str, covered_by if isinstance(covered_by, list) else []) if not re.search(r"[/\\]|\.(py|ts|tsx)$", e)]
 
 
+def is_superseded_ac(ac_info: dict | None) -> bool:
+    """Return whether an AC record has been withdrawn in favour of another (KI-ACS-016).
+
+    The ONE shared predicate for both composite paths -- the pre-commit
+    :func:`_unproven_composite_children` and the CI ``_resolve_all_child_ids`` --
+    so they cannot disagree about a withdrawn child. A record is superseded
+    when ``superseded_by`` is non-empty or ``req_status`` is ``"superseded"``.
+
+    Args:
+        ac_info: A parsed AC record or an ``_build_ac_status_map`` entry.
+
+    Returns:
+        ``True`` for a superseded record; ``False`` for ``None`` or any other.
+    """
+    if not isinstance(ac_info, dict):
+        return False
+    return bool(ac_info.get("superseded_by")) or ac_info.get("req_status") == "superseded"
+
+
 def _find_ac_root(yaml_path: Path) -> Path | None:
     """Return the ancestor ``acceptance-criteria`` directory of *yaml_path*.
 
@@ -244,6 +263,7 @@ def _unproven_composite_children(
         return [str(data.get("id", "?"))]
 
     unproven: list[str] = []
+    live_children = 0
     for child_id_str in child_ids:
         if child_id_str in seen:
             continue
@@ -257,6 +277,9 @@ def _unproven_composite_children(
         if child_data is None:
             unproven.append(child_id_str)
             continue
+        if is_superseded_ac(child_data):
+            continue  # KI-ACS-016: withdrawn child stays in covered_by, owes no proof
+        live_children += 1
         if child_data.get("work_status") != "done":
             unproven.append(child_id_str)
             continue
@@ -269,6 +292,8 @@ def _unproven_composite_children(
         elif child_id_str not in all_covered_ids and not is_covers_tag_waived(child_data):
             unproven.append(child_id_str)
 
+    if live_children == 0 and not unproven:
+        return [str(data.get("id", "?"))]  # all superseded: nothing to derive from
     return unproven
 
 

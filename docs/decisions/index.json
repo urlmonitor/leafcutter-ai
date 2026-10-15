@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "generated_by": "python -m kernel decisions index",
   "_comment": "Generated; never edit by hand. Regenerate with the command in generated_by.",
-  "count": 13,
+  "count": 14,
   "records": [
     {
       "id": "dec-46476988badbd5e6",
@@ -224,6 +224,28 @@
       "related": [
         "dec-ef8ddcb79d668a67"
       ],
+      "corrections": 0
+    },
+    {
+      "id": "dec-e34583d93c00584f",
+      "file": "dec-e34583d93c00584f.yaml",
+      "sha256": "f6fc118a9a99df8dfd8eac999bcd46937e3e7de93a3eb60455f00f2f8bf530a5",
+      "title": "build GE-133 with both stores declared, then commit the E1 merge",
+      "question": "The merge of main into DK-400 E1 passes every pre-commit hook except check-folder-density on docs/decisions/ (16 files, limit 15, over the limit in neither parent). How should the E1 merge be committed with every hook running, and how do E1's two decision records reach main? Judge each criterion as if the option is carried out exactly as described.",
+      "decision_type": "design",
+      "selected_option_id": "opt.declare_then_merge",
+      "selected_option_title": "build GE-133 with both stores declared, then commit the E1 merge",
+      "approved_by": "human:user",
+      "approved_at": "2026-10-12T12:52:47Z",
+      "components": [],
+      "change_target": [],
+      "risk_surface": [],
+      "roadmap_phase": [],
+      "file_globs": [],
+      "repository_wide": true,
+      "supersedes": [],
+      "superseded_by": [],
+      "related": [],
       "corrections": 0
     },
     {

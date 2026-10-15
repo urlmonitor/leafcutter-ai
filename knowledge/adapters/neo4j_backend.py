@@ -60,6 +60,11 @@ def entity_from_row(row: dict) -> Entity:
 class Neo4jBackend:
     """Optional Neo4j read/write adapter with one explicitly closed connection pool."""
 
+    # Expected and kept counts of the last publication's build, set by neo4j_projection.publish.
+    publication_counts: dict | None = None
+    # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
+    publication_removal: dict | None = None
+
     def __init__(
         self,
         uri: str,
@@ -409,9 +414,22 @@ class Neo4jBackend:
         Returns:
             One row per retained ready generation.
         """
-        from knowledge.adapters.neo4j_projection import retention_facts
+        from knowledge.adapters.neo4j_retention import retention_facts
 
         return await retention_facts(self, repository_id)
+
+    async def entity_node_counts(self, repository_id: str) -> list[dict]:
+        """Read, without writing, how many entity nodes name each generation key.
+
+        Args:
+            repository_id: Trusted repository namespace that isolates all reads.
+
+        Returns:
+            One row per distinct generation key carried by entity nodes.
+        """
+        from knowledge.adapters.neo4j_retention import entity_node_counts
+
+        return await entity_node_counts(self, repository_id)
 
     async def close(self) -> None:
         """Close the configured driver's pool."""

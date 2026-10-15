@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -64,8 +64,10 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e-2.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_2_i_refusal.py
+implemented_by:
+  - scripts/registry_validator.py
 notes: |
   The schema half of the design's reader list. A refusal rather than a silent
   drop, because a hand-authored older-field entry is exactly the second source

@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -78,8 +78,15 @@ amended_by:
     date: '2026-10-12'
     changed: "assigned_agent llm-expert -> python-coder; change_target gains code; package_surface: false set; the setting's readers are now an in-scope update list rather than a flag. WHY: orchestrator call 2026-10-12 -- the readers include .json and .py files. Criteria unchanged."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400d_1_ii_and_f_2.py
+implemented_by:
+  - templates/agents/python-coder.md
+  - templates/agents/onboard-config-section.md
+  - config/skills_config.schema.json
+  - config/skills_config.default.json
+  - docs/reference/skills-config-fields.md
+  - docs/agents/coding/python-coder.md
 notes: |
   User decision 1: "delete python-coder's collector-enforcer section (trading
   residue)". AR-400d criteria: "Package-specific content that belonged to another

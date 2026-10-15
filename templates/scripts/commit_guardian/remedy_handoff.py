@@ -22,7 +22,7 @@ import json
 import re
 import sys
 
-from _remedy_declarations import RemedyInputError, load
+from _remedy_declarations import RemedyInputError, gating_hook_ids, load
 
 RECORD_LINE = re.compile(r"^\s*[A-Z_]*REFUSAL_RECORD:\s*(\[.*\])\s*$")
 
@@ -75,10 +75,14 @@ def build_payload(hook_id: str, refusal_output: str) -> dict:
             naming a party, or no readable demand.
     """
     try:
+        gating = gating_hook_ids()
         decl = load(hook_id)
     except RemedyInputError as exc:
         msg = f"cannot read the remedy declaration of {hook_id}: {exc}"
         raise HandoffInputError(msg) from exc
+    if gating is None or hook_id not in gating:
+        msg = f"{hook_id} is not listed in blocking_hook_ids, so it does not gate a commit; no handoff is produced"
+        raise HandoffInputError(msg)
     if not decl or decl.get("disposition") != "engage-specialist" or not decl.get("agent"):
         msg = f"{hook_id} has no engage-specialist declaration naming a party"
         raise HandoffInputError(msg)

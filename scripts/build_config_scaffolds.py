@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import config_paths
+
 # Canonical template source for the precommit-autofix config.
 # Resolved relative to this file's package root (one level up from scripts/).
 _PRECOMMIT_AUTOFIX_TEMPLATE_PATH = (
@@ -139,27 +141,22 @@ def build_config_scaffolds(
     """
     written = 0
 
-    scaffolds: list[tuple[str, str]] = [
-        (
-            config.get("precommit_autofix_config_path", ".claude/precommit-autofix.json"),
-            _load_precommit_autofix_scaffold(),
-        ),
-        (
-            config.get("changelog_categories_path", ".claude/changelog_categories.md"),
-            _CHANGELOG_CATEGORIES_SCAFFOLD,
-        ),
-        (
-            config.get(
-                "reachability_exemptions_path", "config/reachability_exemptions.yaml"
-            ),
-            _REACHABILITY_EXEMPTIONS_SCAFFOLD,
-        ),
-    ]
-
-    testing_ctx = config.get("testing_context", {})
-    readme_path = testing_ctx.get("readme_path")
-    if readme_path:
-        scaffolds.append((readme_path, _TESTS_README_SCAFFOLD))
+    # BP-1500h-1: each file-location setting is read through the one shared
+    # helper -- an empty or broken setting yields no path (nothing installed,
+    # never a fallback to the default); an absent key yields the shipped default.
+    scaffolds: list[tuple[str, str]] = []
+    for key, content in (
+        ("precommit_autofix_config_path", _load_precommit_autofix_scaffold()),
+        ("changelog_categories_path", _CHANGELOG_CATEGORIES_SCAFFOLD),
+        ("reachability_exemptions_path", _REACHABILITY_EXEMPTIONS_SCAFFOLD),
+        ("testing_context.readme_path", _TESTS_README_SCAFFOLD),
+    ):
+        setting_path = config_paths.setting_file(config, key, target_root)
+        if setting_path is not None:
+            inside = setting_path.is_relative_to(target_root)  # absolute values stay as given
+            scaffolds.append(
+                ((setting_path.relative_to(target_root) if inside else setting_path).as_posix(), content)
+            )
 
     changelog_folder = config.get("changelog_folder", "changelogs/")
     if changelog_folder:
@@ -194,3 +191,12 @@ def build_config_scaffolds(
             written += 1
 
     return written
+
+
+# ====================================================================
+# DECISION HISTORY
+# ====================================================================
+# - 2026-10-14 12:00 [python-coder]: The four file-location scaffolds resolve
+#   through config_paths.setting_file: empty = nothing installed, absent = shipped
+#   default, missing/folder = warned and skipped. (#BP-1500h/1)
+# ====================================================================

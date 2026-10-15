@@ -16,12 +16,13 @@ related_docs:
 # KI-ACS-016 — There is no retired `work_status`, so a superseded child stays in its parent's `covered_by` and the parent can never be proved done
 
 > One known issue, split out of `docs/known-issues/ac-store.md` on
-> 2026-09-14. Index: [ac-store.md](../ac-store.md).
+> 2026-09-14. Index: [ac-store.md](../../ac-store.md).
 > Filename severity is the three-level index bucket (`low`); the
 > original grading is the `**Severity:**` line below, unchanged.
 
 - **Severity:** medium
-- **Status:** open
+- **Status:** **RESOLVED** — the KI-ACS-016 fix on branch
+  `fix/open-items-ki-fc-001-links-and-acs-016` (PR pending). See the resolution section at the end.
 - **Occurrences:** 4 (the fourth, 2026-10-12, is the latent block firing on `INF-400c-4`; see Occurrence 4)
 - **First seen:** 2026-08-25 · **Last seen:** 2026-10-12
 - **Where:** `scripts/ac_store/done_proof.py` / the `check-done-proof` hook; the
@@ -154,3 +155,27 @@ in the same two functions (waived children). It was fixed by PR #1165 without co
 supersession.
 
 ---
+
+## Resolution — 2026-10-14
+
+**Fixed by** the KI-ACS-016 fix on branch `fix/open-items-ki-fc-001-links-and-acs-016` (PR pending).
+
+- **One shared predicate.** `is_superseded_ac` in `scripts/ac_store/_done_proof_composite.py`
+  treats a child as superseded when `superseded_by` is non-empty or `req_status == "superseded"`.
+- **Both composite paths use it.** `_unproven_composite_children` (pre-commit) and
+  `done_proof._resolve_all_child_ids` (CI) skip superseded children.
+  `_done_proof_phase_helpers._build_ac_status_map` now carries `req_status` and `superseded_by`, so
+  the CI path can see supersession.
+- **Audit trail kept.** Superseded children stay in `covered_by`.
+- **Still refused.** A composite whose children are all superseded, and any live child that is not
+  `done`.
+- **Tests.** `unit_tests/commit_guardian/test_ki_acs_016_superseded_child.py` ran red before the fix
+  (6 failed, 2 passed) and green after. The related done-proof suites show 19 passed, 6 subtests.
+
+**Real-store spot-check** (in memory, as if flipped to `done`). `INF-400c-4`, `INF-400c-2`,
+`INF-400c-5` and `TKT-500f-6` now pass. `BO-100d`, `BO-530-3` and `GE-128a` are still refused,
+correctly, because every child they list is superseded. This corrects the Occurrence 4 table's
+claim that all seven "would pass if those were excluded".
+
+**Not done here.** `BO-100d`, `BO-530-3` and `GE-128a` need their owners to revisit `covered_by`,
+or to supersede or retire the parent.

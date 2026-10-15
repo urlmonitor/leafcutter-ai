@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -110,7 +110,12 @@ superseded_by: null
 covered_by:
   - BP-1500h-1-i
   - BP-1500h-1-ii
-implemented_by: []
+implemented_by:
+  - scripts/config_paths.py
+  - scripts/build_config_scaffolds.py
+  - scripts/build_helpers.py
+  - scripts/build_referential_integrity.py
+  - config/skills_config.default.json
 notes: |
   USER DECISION 2 (BrainCandy, 2026-10-12), BINDING: empty = not configured,
   decided in ONE place every reader uses. The design names the readers: the

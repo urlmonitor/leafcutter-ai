@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: active
-work_status: todo
+work_status: done
 priority: high
 readiness: reviewed
 created_by: "docs/acceptance-criteria/infrastructure/INF-400-agent-learning/INF-400c.yaml"
@@ -123,6 +123,9 @@ amended_by:
   - reason: "REOPENED, work_status done -> todo, criteria unchanged (BrainCandy decision 2026-10-09, on evidence found by the INF-500d-4 IT PO and re-verified on origin/main ed83d9f77). VIOLATED CLAUSES: 'two reads of the declaration made from two different current directories -- one from inside an isolated working directory of the project, one from the project root -- yield the identical path, and that path lies outside every isolated working directory' and 'a record appended at that path from inside an isolated working directory is still readable there, unchanged, after that working directory has been removed'. EVIDENCE (1) templates/scripts/setup_ticket_worktree.py:1582 (mirrored at scripts/setup_ticket_worktree.py:1483) runs build.py --target-dir <worktree> in every new per-drive worktree, and scripts/build_phases_knowledge.py:319-337 derives the declared sink from that target, so each worktree's .leafcutter/config/knowledge_sink.json names the worktree itself: worktrees/ge120f-drive declares /home/henzeh/projects/leafcutter/worktrees/ge120f-drive/debugging/logs/knowledge_emissions.jsonl, worktrees/guardrail-engine and worktrees/ac-20261009 likewise name themselves, while the workspace install declares /home/henzeh/projects/leafcutter/debugging/logs/knowledge_emissions.jsonl. harvest_learnings.py --print-sink run from the ge120f-drive deployed copy prints the worktree path, from the workspace deployed copy the workspace path. Eight worktrees hold their own knowledge_emissions.jsonl (34 records in total) that die with the worktree. (2) The emitting side of the operational stream never reaches the declaration at all: templates/skills/agent-telemetry/scripts/emit_event.py:165 looks for <dir>/config/knowledge_sink.json among cwd ancestors, but the file lives at <project>/.leafcutter/config/; calling the deployed _resolve_default_log_path from the workspace root, the package clone and two worktrees returns None for the declaration and the bare relative debugging/logs/agent_telemetry.jsonl (emit_event.py:188-190, :91). Will be fixed by the INF-500d-4 feedback-sink feature (INF-500d-4-iii and INF-500d-4-iv); return to done when that lands. Reopened also because its children INF-400c-4-i, -iii and -v are reopened in the same commit."
     by: BrainCandy
     at: 2026-10-09
+  - reason: "work_status todo -> done, criteria unchanged. The reopening condition is met: the INF-500d-4 feedback-sink feature landed (PR #1169, then #1207 and #1221; INF-500d-4 done). Every worktree bootstrap now passes the main install's recorded log root, and emit_event reads the deployed declaration, so the sink is one absolute path outside every worktree. Reopened children -i, -iii and -v are done, and so are -iv and -vi. The only other child, INF-400c-4-ii, is superseded (req_status superseded, superseded_by set). check-done-proof skips superseded children since the KI-ACS-016 fix (PR #1229, merge 41e2922e2); before it, -ii was the sole reason this flip was refused on 2026-10-12."
+    by: orchestrator
+    at: 2026-10-14
 superseded_by: null
 covered_by: [INF-400c-4-i, INF-400c-4-ii, INF-400c-4-iii, INF-400c-4-iv, INF-400c-4-v, INF-400c-4-vi]
 implemented_by:

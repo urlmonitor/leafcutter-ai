@@ -87,8 +87,7 @@ Each AC file is a single YAML document with the following fields.
 
 #### `test_spec` item fields
 
-Each entry in `test_spec` is an object. Unknown keys are rejected (`additionalProperties: false`),
-so a typo fails the `check-ac-schema` hook rather than being silently ignored.
+Each entry in `test_spec` is an object. Unknown keys are rejected (`additionalProperties: false`), so a typo fails the `check-ac-schema` hook rather than being silently ignored.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -105,6 +104,7 @@ so a typo fails the `check-ac-schema` hook rather than being silently ignored.
 | `to_be_created` | boolean | no | ACD-2500c-3: true when `code_file` does not exist yet. Absent means false. |
 | `convention_test_file` | string | no | ACD-2500c-3: the neighbouring existing test file cited as the convention for a to-be-created `code_file`. |
 | `requires_db` | boolean | no | Whether the test needs a live database (drives slow-test marking). |
+| `in_scope_files` | list of strings | no | The repo-relative POSIX paths of the files a wrong version named in this entry's `must_catch` may alter (TQ-500g-1-ix). Optional; when present it must be a **non-empty** list and every item must contain at least one non-whitespace character; any other unknown `test_spec` key is still refused. The wrong-version writer (`scripts/build_orchestration/wrong_version_writer.py`, steps `list` and `write`) reads it through the runner's declared-scope reader: a name's in-scope files are the union of `in_scope_files` over every in-scope entry whose `must_catch` carries that exact name, in order of first declaration, duplicates dropped, minus every test file. A name whose entries carry no `in_scope_files` has no in-scope file, so every replacement for it is refused (fail closed). `generate_ticket_from_ac.py` does not copy it onto the ticket; if it ever does, widen `config/test_requirements.schema.json` in the same change. |
 
 An undeclared entry key is rejected by name by both validators; designs and their authorship: [test-intent.md](test-intent.md).
 

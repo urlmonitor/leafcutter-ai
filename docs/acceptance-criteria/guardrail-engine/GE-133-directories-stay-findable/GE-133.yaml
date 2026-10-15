@@ -7,7 +7,7 @@ level: L0
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 roadmap_phase: phase_1
 criteria: |
@@ -72,7 +72,18 @@ delivers_to: null
 expects_from: null
 origin_agent: business-analyst
 created: 2026-10-09
-amended_by: []
+amended_by:
+  - reason: approved-by-user-decision
+    date: '2026-10-12'
+    by: it-po
+    entry: >-
+      BrainCandy's decision dec-e34583d93c00584f (2026-10-12, "Build GE-133, both
+      stores") approved this goal and its tree: readiness moved draft -> approved. In the
+      same decision GE-133a-1's shipped declaration grew to two set-aside locations,
+      docs/acceptance-criteria/ and docs/decisions/; GE-133a-1 and GE-133a-2 moved back
+      from done to todo until the second entry and its docs line ship. Nothing else in
+      this record changed; criteria, title, req_status, depends_on and work_status are
+      untouched.
 superseded_by: null
 covered_by:
   - GE-133a

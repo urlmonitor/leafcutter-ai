@@ -7,7 +7,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -88,8 +88,10 @@ amended_by:
     date: '2026-10-12'
     changed: "title and criteria REPLACED. Was: 'The abilities migration helper neither reads nor writes the retired list' -- the helper, run over a fixture whose specialist carried only skills_used, builds its proposal from skills_invoked and the definition, reports the ignored ids, writes no skills_used, and proposes no change on the real tree. Now: the helper is retired (scripts/migrate_agent_abilities.py deleted and not deployed), nothing imports or invokes it, nothing but the validator's refusal reads skills_used, and the tests that used it reach the registry through the commit-time regeneration and pass. WHY: user decision 7 (BrainCandy, 2026-10-12, BA-stage Q7): retire scripts/migrate_agent_abilities.py (a one-time AR-300 migration that has already run) and its tests' dependence on skills_used; AR-400e-1-iv changes from 'ignores and says so' to 'is removed'. depends_on gains AR-400e-2 (the retargeted tests need the skills_invoked-only regeneration)."
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400e_1_iv_helper_retired.py
+implemented_by:
+  - unit_tests/prompt_assembly/_ar_300c_support.py
 notes: |
   USER DECISION 7 (BrainCandy, 2026-10-12), BINDING: the migration helper is
   retired, not taught to ignore the retired field. The BA's ignore-and-report

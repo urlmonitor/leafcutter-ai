@@ -7,7 +7,7 @@ status: active
 req_status: active
 readiness: approved
 priority: high
-work_status: todo
+work_status: done
 parent: KM-400f-1
 criteria: |
   Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours

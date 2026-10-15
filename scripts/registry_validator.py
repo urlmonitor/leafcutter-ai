@@ -11,12 +11,12 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
     to four private checkers (_check_template_paths, _check_orphan_templates,
     check_spawn_bidirectionality, _check_self_loops). Each returns a list of
     error strings. Callers decide whether errors are fatal or advisory.
-    check_skills_invoked_xref(package_root) cross-references each agent's
-    skills_invoked registry array against skill references found in its
-    template body, emitting advisory warnings for both directions of mismatch
-    (AC INF-600g-3). Entries with descriptive_only: true are excluded from the
-    cross-reference check — they document inline capabilities and have no
-    corresponding skill directory or template body reference by design (M-1).
+    The ability-reference existence gate (AR-400a-1/-2) lives in
+    check_skill_refs.ability_reference_verdict(): it returns one error per
+    path-form reference to an ability the package does not ship (specialist
+    definitions and shared guides alike) plus the examined counts, which this
+    module prints; zero definitions or zero guides is itself an error. It replaced
+    the advisory skills_invoked cross-reference (AR-400c-1), which is deleted.
     The tool-grant checks (validate_tool_grants: Skill, AR-200b-2; Agent, AR-200b-3) live
     in skill_tool_grant_validator.py and are wired into validate_agent_registry().
     step_kinds validation (check_step_kinds), the requires_verification flag
@@ -34,49 +34,15 @@ ARCHITECTURE: Public function validate_agent_registry(package_root) delegates
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
+from agent_signoff_grant_check import signoff_grant_errors
+from check_skill_refs import ability_reference_verdict
 from registry_verification_flags import validate_verification_flags
 from skill_tool_grant_validator import validate_tool_grants
 from spawn_bidirectionality_validator import check_spawn_bidirectionality, warn_redundant_phase_agents
 from step_kinds_validator import check_step_kinds, get_agent_step_kinds  # noqa: F401 (shared reader re-export for BO-2400f-5-ii)
-
-# ---------------------------------------------------------------------------
-# Skill reference detection patterns (AC INF-600g-3)
-# ---------------------------------------------------------------------------
-#
-# Matches skill-id references in template body text.  Three patterns are used:
-#
-#   1. Path-based:   .claude/skills/<skill-id>/SKILL.md  (runtime load path)
-#   2. Directive:    load the <skill-id> skill            (natural-language directive)
-#   3. Skill tool:   Skill tool invocation referencing <skill-id>  (structured form)
-#
-# The captured group (group 1) is the raw skill-id string extracted from the
-# match.  Leading/trailing whitespace is stripped by the caller.  Hyphens and
-# alphanumeric chars are the only characters used in skill IDs.
-
-_SKILL_PATH_RE = re.compile(
-    r"(?:\.claude/|(?:^|\s))skills/([a-zA-Z0-9_-]+)/SKILL\.md"
-)
-# Common English stop words that appear in "use <word> skill" phrases but are
-# NOT skill IDs.  These are excluded from skill-directive matches to prevent
-# false positives like "Use this skill" (table header) being captured as a
-# reference to a skill named "this".
-_SKILL_DIRECTIVE_STOPWORDS = frozenset({
-    "this", "the", "a", "an", "any", "each", "your", "my", "our", "their",
-    "its", "that", "which", "what", "these", "those", "all", "both", "one",
-})
-
-_SKILL_DIRECTIVE_RE = re.compile(
-    r"(?:load|invoke|run)\s+(?:the\s+)?[`'\"]?([a-zA-Z0-9_-]+)[`'\"]?\s+skill",
-    re.IGNORECASE,
-)
-_SKILL_TOOL_RE = re.compile(
-    r"""Skill\s+tool\s+(?:invocation\s+)?(?:pattern\s+)?referencing\s+[`'\"]([a-zA-Z0-9_-]+)[`'\"]""",
-    re.IGNORECASE,
-)
 
 
 def validate_agent_registry(package_root: Path) -> list[str]:
@@ -89,8 +55,7 @@ def validate_agent_registry(package_root: Path) -> list[str]:
       3. Every agent template in templates/agents/ has a matching registry entry.
       4. spawn_allowlist / spawned_by bidirectional consistency.
       5. No self-loops in the spawn graph.
-      6. Every skills_used entry for portable agents references an existing
-         skill directory in templates/skills/. Domain skills are skipped.
+      6. No entry carries the retired skills_used key (AR-400e-2-i).
       7. (Warning only) If an agent's spawn_allowlist contains both the
          __ticket_phase_agents__ macro and an individually-listed agent whose
          is_ticket_phase is true, a warning is printed identifying the
@@ -106,7 +71,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
         whether to abort.
     """
     errors: list[str] = []
-
     agents, load_errors = _load_agents(package_root)
     errors.extend(load_errors)
     if load_errors:
@@ -115,28 +79,21 @@ def validate_agent_registry(package_root: Path) -> list[str]:
     domain_agents = [a for a in agents if not a.get("portable", True)]
     registry_ids = {a["id"] for a in agents}
     template_dir = package_root / "templates" / "agents"
-
     errors.extend(_check_template_paths(portable_agents, package_root))
     errors.extend(_check_orphan_templates(registry_ids, template_dir))
-
     spawn_map = {a["id"]: a.get("spawn_allowlist", []) for a in agents}
     spawned_by_map = {a["id"]: a.get("spawned_by", []) for a in agents}
     errors.extend(check_spawn_bidirectionality(spawn_map, spawned_by_map, registry_ids, package_root))
     errors.extend(_check_self_loops(spawn_map))
-    errors.extend(_check_skills_used(portable_agents, package_root))
+    errors.extend(_check_skills_used(agents))
     errors.extend(check_step_kinds(agents, package_root))
-    errors.extend(validate_verification_flags(template_dir))
-    errors.extend(validate_produces_field(agents, template_dir))
-    errors.extend(validate_tool_grants(template_dir))  # Skill and Agent pairs (AR-200b-2, AR-200b-3)
+    errors.extend(validate_verification_flags(template_dir) + validate_produces_field(agents, template_dir))
+    errors.extend(validate_tool_grants(template_dir) + signoff_grant_errors(agents, package_root))  # AR-200b-2/3; AR-400c-5
     warn_redundant_phase_agents(agents)
-
-    # Cross-reference skills_invoked against template body references (AC INF-600g-3).
-    # Warnings are advisory — not returned as errors — because the extraction patterns
-    # may miss prose-only skill references or implicit skill loads.
-    xref_warnings = check_skills_invoked_xref(package_root)
-    for w in xref_warnings:
-        print(f"  [WARNING] {w}")
-
+    # Ability-reference existence gate (AR-400a-1/-2): returned errors, plus the examined counts.
+    defs_examined, guides_examined, ref_errors = ability_reference_verdict(package_root, agents)
+    errors.extend(ref_errors)
+    print(f"  [INFO] ability references: definitions examined: {defs_examined}, guides examined: {guides_examined}")
     # Validate category field values against agent_categories (if present in registry)
     registry_path = package_root / "config" / "agent_registry.json"
     try:
@@ -146,7 +103,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
         # Registry already loaded successfully above via _load_agents; a second
         # read failure here is unlikely but non-fatal — log and skip category check.
         print(f"  [WARNING] Could not re-read registry for category validation: {exc}")
-
     domain_count = len(domain_agents)
     if domain_count:
         # Informational — not an error
@@ -155,7 +111,6 @@ def validate_agent_registry(package_root: Path) -> list[str]:
             f"(portable: false — not compiled by build.py): "
             + ", ".join(a["id"] for a in domain_agents)
         )
-
     return errors
 
 
@@ -241,32 +196,25 @@ def _check_orphan_templates(
     return errors
 
 
-def _check_skills_used(
-    portable_agents: list[dict[str, Any]], package_root: Path
-) -> list[str]:
-    """Check that every skills_used entry references an existing skill directory.
+def _check_skills_used(agents: list[dict[str, Any]]) -> list[str]:
+    """Refuse any registry entry that still carries the retired ``skills_used`` key (AR-400e-2-i).
 
-    Only validates portable agents. Domain agents may reference skills that
-    exist in their target project but not in the portable package.
+    Presence alone is refused (even ``[]``): the ability list is the regenerated
+    ``skills_invoked``, derived from the template's ``skills:`` declaration.
 
     Args:
-        portable_agents: List of agent dicts with portable: true.
-        package_root: Absolute path to the leafcutter package root.
+        agents: Every registry agent record.
 
     Returns:
-        List of error strings, one per missing skill directory.
+        One error string per entry carrying the key.
     """
-    errors = []
-    skills_dir = package_root / "templates" / "skills"
-    for agent in portable_agents:
-        for skill in agent.get("skills_used", []):
-            skill_path = skills_dir / skill
-            if not skill_path.exists():
-                errors.append(
-                    f"Agent '{agent['id']}' skills_used references skill '{skill}' "
-                    f"but no directory exists at {skill_path}."
-                )
-    return errors
+    return [
+        f"Agent '{a['id']}' carries 'skills_used', a retired field: abilities are regenerated "
+        "into 'skills_invoked' from the template's frontmatter 'skills:' declaration, so "
+        "'skills_used' must not be authored. Remove it."
+        for a in agents
+        if "skills_used" in a
+    ]
 
 
 def _check_agent_categories(
@@ -358,13 +306,10 @@ def validate_produces_field(
         "analysis",
         "requirement_records",
     }
-
     errors: list[str] = []
-
     # --- Registry check ---
     for agent in agents:
         agent_id = agent.get("id", "<unknown>")
-
         # Distinguish between an absent key and an explicit null value.
         # - Key absent entirely:  developer forgot to add produces → "missing" error.
         # - Key present as null:  llm-expert flagged this as ambiguous →
@@ -397,11 +342,9 @@ def validate_produces_field(
                     f"Agent '{agent_id}' in agent_registry.json has invalid 'produces' value "
                     f"'{produces}'. Expected one of: {sorted(_VALID_PRODUCES)}"
                 )
-
     # --- Template frontmatter check ---
     if not template_dir.exists():
         return errors
-
     try:
         from template_compiler import parse_frontmatter
     except ModuleNotFoundError as exc:
@@ -622,144 +565,6 @@ def main_skill_registry() -> None:
     raise SystemExit(1)
 
 
-def _extract_skill_refs_from_template(template_text: str) -> set[str]:
-    """Extract skill IDs referenced in an agent template body.
-
-    Scans the template body text for three classes of skill reference:
-
-    1. Path-based references: ``.claude/skills/<skill-id>/SKILL.md`` or
-       ``skills/<skill-id>/SKILL.md`` (the runtime load path injected by most
-       phase agent templates in their Sign-off section).
-    2. Natural-language directives: ``load the <skill-id> skill``,
-       ``invoke the <skill-id> skill``, etc.  (Used in supervisors and
-       instruction-heavy templates.)
-    3. Skill tool invocation patterns: ``Skill tool invocation pattern
-       referencing "<skill-id>"`` — the prose form used in AC acceptance
-       criteria and onboarding text.
-
-    The function is intentionally liberal: it matches any token that looks
-    like a skill ID (alphanumeric + hyphens/underscores) in a known context
-    phrase, so false positives are possible.  Callers should treat the result
-    as a best-effort hint for the advisory cross-reference check.
-
-    Args:
-        template_text: Full UTF-8 text of an agent template file.
-
-    Returns:
-        Set of skill-id strings found in the template body.  Returns an empty
-        set when no skill references are detected.
-    """
-    found: set[str] = set()
-    for pattern in (_SKILL_PATH_RE, _SKILL_TOOL_RE):
-        for match in pattern.finditer(template_text):
-            found.add(match.group(1).strip())
-    for match in _SKILL_DIRECTIVE_RE.finditer(template_text):
-        candidate = match.group(1).strip()
-        if candidate.lower() not in _SKILL_DIRECTIVE_STOPWORDS:
-            found.add(candidate)
-    return found
-
-
-def check_skills_invoked_xref(package_root: Path) -> list[str]:
-    """Cross-reference each agent's skills_invoked registry array against its template body.
-
-    For every agent in ``agent_registry.json`` that has a non-empty
-    ``skills_invoked`` array *or* whose template body references at least one
-    skill, this function checks both directions:
-
-    **Direction 1 — template → registry:**
-    For every skill ID found in the template body, check that it appears in
-    ``skills_invoked``.  When a template references a skill that is absent
-    from ``skills_invoked``, a warning is emitted:
-
-        "<agent-id>: template references skill '<skill-id>' but skills_invoked
-         does not declare it"
-
-    **Direction 2 — registry → template:**
-    For every ``skill_id`` declared in ``skills_invoked``, check that the
-    skill is referenced somewhere in the template body.  When a declared skill
-    has no corresponding reference in the template, a warning is emitted:
-
-        "<agent-id>: skills_invoked declares '<skill-id>' but no reference
-         found in template body"
-
-    **Descriptive-only exclusion (M-1):**
-    Entries with ``descriptive_only: True`` are excluded from both ``declared_ids``
-    and the Direction 2 check entirely.  These entries document inline capabilities
-    (e.g. ``run-tests`` for python-coder, ``direct-write`` for documentation-expert)
-    that have no deployed skill directory and no template body reference by design.
-    Excluding them prevents spurious advisory warnings for intentional, marked entries
-    while preserving warnings for all unmarked entries.  The exclusion uses a strict
-    ``is True`` identity test — the same guard as ``validate_agent_self_description``
-    — so only the boolean literal ``True`` triggers the skip (not strings or integers).
-
-    Both warnings are advisory (printed, not returned as hard errors) because
-    skill references may be present as prose that does not match the extraction
-    patterns, or the skill may be loaded implicitly.
-
-    Args:
-        package_root: Absolute path to the leafcutter package root
-            (the directory containing config/, skills/, templates/).
-
-    Returns:
-        List of warning strings, one per mismatch in either direction.  Returns
-        an empty list when no mismatches are found or when no portable agents
-        have non-empty ``skills_invoked`` arrays with readable templates.
-    """
-    warnings: list[str] = []
-    agents, load_errors = _load_agents(package_root)
-    if load_errors:
-        return warnings  # Registry unreadable — skip cross-reference check.
-
-    for agent in agents:
-        if not agent.get("portable", True):
-            continue  # Domain agents may reference project-local skills.
-
-        agent_id = agent.get("id", "<unknown>")
-        skills_invoked_entries: list[dict[str, Any]] = agent.get("skills_invoked") or []
-        # Exclude descriptive_only entries (strict is-True check, mirroring
-        # validate_agent_self_description): they document inline capabilities
-        # with no deployed skill dir or template body reference — no xref warning
-        # should be emitted for them (M-1 consistency fix).
-        declared_ids: set[str] = {
-            e["skill_id"]
-            for e in skills_invoked_entries
-            if "skill_id" in e and e.get("descriptive_only") is not True
-        }
-
-        template_path_str: str = agent.get("template_path") or ""
-        if not template_path_str:
-            continue  # No template — skip.
-
-        tmpl_path = package_root / template_path_str
-        if not tmpl_path.exists():
-            continue  # Missing template already caught by _check_template_paths.
-
-        try:
-            template_text = tmpl_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            print(f"  [WARNING] Could not read template '{template_path_str}': {exc}")
-            continue
-
-        referenced_ids = _extract_skill_refs_from_template(template_text)
-
-        # Direction 1: template references a skill not declared in skills_invoked.
-        for skill_id in sorted(referenced_ids - declared_ids):
-            warnings.append(
-                f"{agent_id}: template references skill '{skill_id}' but "
-                f"skills_invoked does not declare it"
-            )
-
-        # Direction 2: skills_invoked declares a skill with no template reference.
-        for skill_id in sorted(declared_ids - referenced_ids):
-            warnings.append(
-                f"{agent_id}: skills_invoked declares '{skill_id}' but "
-                f"no reference found in template body"
-            )
-
-    return warnings
-
-
 if __name__ == "__main__":
     import sys as _sys
 
@@ -894,4 +699,14 @@ if __name__ == "__main__":
 #   no literal caller set remains, and fast-lane-ship.js is accepted because
 #   templates/workflows-js/fast-lane-ship.js exists. #967's other changes are
 #   kept unchanged. (#TICKETLESS reason=inf-600k-1-workflow-callers)
+# - 2026-10-14 [python-coder/AR-400a-1]: Deleted check_skills_invoked_xref(),
+#   _extract_skill_refs_from_template() and their regexes (AR-400c-1: a grant the
+#   instructions never mention is not a fault; it printed ~21 advisory [WARNING]
+#   lines). validate_agent_registry() now calls check_skill_refs.
+#   ability_reference_verdict() (AR-400a-1/-2): nonexistent-ability references are
+#   RETURNED errors, the examined definitions/guides counts are printed, and zero
+#   in either population is an error. (#TICKETLESS reason=ar-400a-1-existence-gate)
+# - 2026-10-15 [python-coder/AR-400e-2-i]: _check_skills_used() now refuses any entry
+#   carrying the retired skills_used key (returned error) instead of validating its ids.
+#   (#TICKETLESS reason=ar-400e-2-i-retired-field-refusal)
 # ====================================================================

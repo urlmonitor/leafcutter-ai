@@ -171,6 +171,7 @@ notes: |
   FOLLOW-UP (not authored here): workflows-js/finalize-feature.js and fast-lane-ship.js
   are deterministic code that classifies check failures; they need a sibling code record,
   agent chosen by file type.
+  Authored as TQ-600a-13-xx (2026-10-14).
   Scenario fixtures: TQ-600a-13-xviii-scenarios/.
 
   SCENARIO EVALUATION RESULTS (2026-10-12; model: default subagent model; one agent per

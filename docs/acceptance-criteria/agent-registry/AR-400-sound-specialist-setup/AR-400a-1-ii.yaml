@@ -8,7 +8,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -24,7 +24,7 @@ criteria: |
 depends_on:
   - AR-400a-1
 doc_links:
-  - path: docs/known-issues/build-pipeline/open-high-ki-bp-007.md
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
     relationship: describes
     status: exists
     relevance: "Documents the create-ac control case and the two discriminators (comment blocks are history, only imperative lines are references)."
@@ -66,8 +66,10 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400a_1_ii_decision_history.py
+implemented_by:
+  - scripts/check_skill_refs.py
 notes: |
   AR-400a's notes: "a reference inside a recorded decision history (not an
   instruction) is not a reference; KI-BP-007 already documents that exclusion".

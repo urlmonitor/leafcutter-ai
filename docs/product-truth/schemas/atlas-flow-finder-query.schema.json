@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PROPOSED Atlas Flow finder state (FlowFinderQuery) illustrative design",
+  "description": "Transcribed from docs/product-truth/mock-data/leafcutter/atlas-flows.mock.json entities.FlowFinderQuery.fields (v4, the Atlas Flow finder on the bare /flows address). One record is what one finder address shows: the search text and chosen facet values it carries, the result summary, the applied-filter chips, the results grouped by flow and the count beside every facet option. id is the dataset's fixture handle, not part of the finder state. No finder, route parameter, view prop or runtime validation exists yet; the matching, ordering and counting rules are stated in the dataset's invariants and are not expressed here.",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "values": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "string — fixture handle for this finder state"
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^/flows(\\?.+)?$",
+      "description": "string — the canonical /flows address of this state; the query string IS the finder state"
+    },
+    "q": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "string | null — the search text as typed (trimmed); null when the search box is empty"
+    },
+    "facets": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "object — the chosen values per facet (stored values, never labels); [] when none",
+      "properties": {
+        "product": {
+          "$ref": "#/$defs/values"
+        },
+        "actor": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "deterministic",
+              "llm",
+              "human",
+              "jev"
+            ]
+          }
+        },
+        "kind": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "user",
+              "data",
+              "architecture"
+            ]
+          }
+        },
+        "realization": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "built",
+              "spec",
+              "mock"
+            ]
+          }
+        },
+        "level": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "journey",
+              "pipeline",
+              "agent"
+            ]
+          }
+        },
+        "uses": {
+          "$ref": "#/$defs/values"
+        },
+        "produces": {
+          "$ref": "#/$defs/values"
+        },
+        "io": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "gap"
+            ]
+          }
+        },
+        "entity": {
+          "$ref": "#/$defs/values"
+        },
+        "screen": {
+          "$ref": "#/$defs/values"
+        }
+      },
+      "required": [
+        "product",
+        "actor",
+        "kind",
+        "realization",
+        "level",
+        "uses",
+        "produces",
+        "io",
+        "entity",
+        "screen"
+      ]
+    },
+    "status_text": {
+      "type": "string",
+      "description": "string — the result summary, also announced by a polite live region"
+    },
+    "result_count": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "object — flows listed and matching steps across them",
+      "properties": {
+        "flows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "steps": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "flows",
+        "steps"
+      ]
+    },
+    "applied_chips": {
+      "type": "array",
+      "description": "array — one removable chip per chosen facet value, in URL order",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "facet": {
+            "enum": [
+              "product",
+              "actor",
+              "kind",
+              "realization",
+              "level",
+              "uses",
+              "produces",
+              "io",
+              "entity",
+              "screen"
+            ]
+          },
+          "value": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "remove_href": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facet",
+          "value",
+          "label",
+          "remove_href"
+        ]
+      }
+    },
+    "clear_all_href": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "string | null — the 'Clear all' link: url with every facet removed and q kept; null when no facet is chosen"
+    },
+    "empty_state": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "description": "object | null — shown when nothing matches; each suggestion removes one chosen filter and says how many flows that would list",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "suggestions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "href": {
+                "type": "string"
+              },
+              "flows": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "label",
+              "href",
+              "flows"
+            ]
+          }
+        }
+      },
+      "required": [
+        "title",
+        "detail",
+        "suggestions"
+      ]
+    },
+    "results": {
+      "type": "array",
+      "description": "array — results grouped by flow; a step row opens the flow at that step",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "flow_id": {
+            "type": "string"
+          },
+          "flow_name": {
+            "type": "string"
+          },
+          "href": {
+            "type": "string"
+          },
+          "flow_match": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "matching_steps": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "step_rows": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "node_id": {
+                  "type": "string"
+                },
+                "node_kind": {
+                  "enum": [
+                    "step",
+                    "branch"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                },
+                "actor_kind": {
+                  "enum": [
+                    "deterministic",
+                    "llm",
+                    "human",
+                    "jev"
+                  ]
+                },
+                "actor_label": {
+                  "enum": [
+                    "Code",
+                    "AI agent",
+                    "Person",
+                    "Jev"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "href": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "node_id",
+                "node_kind",
+                "label",
+                "actor_kind",
+                "actor_label",
+                "reason",
+                "href"
+              ]
+            }
+          },
+          "more_steps": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "flow_id",
+          "flow_name",
+          "href",
+          "flow_match",
+          "matching_steps",
+          "step_rows",
+          "more_steps"
+        ]
+      }
+    },
+    "facet_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "object facet -> { value: flows } — how many flows the finder would list if that option alone were chosen in its facet",
+      "properties": {
+        "product": {
+          "$ref": "#/$defs/counts"
+        },
+        "actor": {
+          "$ref": "#/$defs/counts"
+        },
+        "kind": {
+          "$ref": "#/$defs/counts"
+        },
+        "realization": {
+          "$ref": "#/$defs/counts"
+        },
+        "level": {
+          "$ref": "#/$defs/counts"
+        },
+        "uses": {
+          "$ref": "#/$defs/counts"
+        },
+        "produces": {
+          "$ref": "#/$defs/counts"
+        },
+        "io": {
+          "$ref": "#/$defs/counts"
+        },
+        "entity": {
+          "$ref": "#/$defs/counts"
+        },
+        "screen": {
+          "$ref": "#/$defs/counts"
+        }
+      },
+      "required": [
+        "product",
+        "actor",
+        "kind",
+        "realization",
+        "level",
+        "uses",
+        "produces",
+        "io",
+        "entity",
+        "screen"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "url",
+    "q",
+    "facets",
+    "status_text",
+    "result_count",
+    "applied_chips",
+    "clear_all_href",
+    "empty_state",
+    "results",
+    "facet_counts"
+  ]
+}

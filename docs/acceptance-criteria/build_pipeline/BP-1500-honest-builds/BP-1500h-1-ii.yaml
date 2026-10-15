@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -63,8 +63,11 @@ created: 2026-10-12
 created_by: docs/acceptance-criteria/build_pipeline/BP-1500-honest-builds/BP-1500h-1.yaml
 amended_by: []
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+  - unit_tests/build_guards/test_bp_1500h_1_ii.py
+implemented_by:
+  - scripts/config_paths.py
+  - scripts/build_phases_local_change.py
 notes: |
   Not a warning because leaving a feature unconfigured is a legitimate choice;
   AR-400's "anything that is not a fault is not reported" posture applies. It is

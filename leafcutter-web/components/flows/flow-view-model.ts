@@ -2,7 +2,6 @@
  * Pure model of the Flows view: how the filters resolve to a flow list, and how
  * a history entry (stored view state, or just its URL) maps back to a view.
  */
-import { DEFAULT_ENTRY_FLOW_ID } from "@/lib/flow-url";
 import type { Flow, FlowKind, FlowRealization, FlowSource } from "@/lib/data/types";
 import { FLOW_VIEW_STATE_KEY, type FlowViewState } from "./flow-history";
 import { KINDS, REALIZATIONS, type RealizationFilter } from "./parts/flows-view-controls";
@@ -42,6 +41,8 @@ export function resolveFilters(flows: Flow[], f: FlowsViewFilters) {
 
 /** A history entry as the view shows it. flowId null = the 'Flow not found' state. */
 export interface ViewEntry {
+  /** True when the entry's path is exactly /flows: the finder, no flow drawn. */
+  finder?: boolean;
   flowId: string | null;
   crumbs: string[];
   filters: FlowsViewFilters;
@@ -49,11 +50,14 @@ export interface ViewEntry {
   rawId: string;
 }
 
-/** The entry under the cursor: its stored view state, else what its URL alone says. */
+/** The entry under the cursor: its URL says what it shows, its stored view state the crumbs and filters. */
 export function viewForEntry(flows: Flow[]): ViewEntry {
   const { pathname, search } = window.location;
   const step = new URLSearchParams(search).get("step");
   const stored = (window.history.state ?? {})[FLOW_VIEW_STATE_KEY] as FlowViewState | undefined;
+  if (pathname.replace(/\/$/, "") === "/flows") {
+    return { finder: true, flowId: null, crumbs: [], filters: DEFAULT_FILTERS, step: null, rawId: "" };
+  }
   if (stored && stored.crumbs.length > 0) {
     return {
       flowId: stored.crumbs[stored.crumbs.length - 1],
@@ -64,10 +68,12 @@ export function viewForEntry(flows: Flow[]): ViewEntry {
     };
   }
   const rawId = pathname.startsWith("/flows/") ? pathname.slice("/flows/".length) : "";
-  const flow = rawId
-    ? flows.find((f) => f.id === rawId)
-    : flows.find((f) => f.id === DEFAULT_ENTRY_FLOW_ID) ?? flows[0];
-  if (!flow) return { flowId: null, crumbs: [], filters: DEFAULT_FILTERS, step: null, rawId };
+  const flow = flows.find((f) => f.id === rawId);
+  // An unknown id keeps the filters the entry was left with, not the boundary's server defaults.
+  if (!flow) {
+    const filters = (stored?.filters as FlowsViewFilters | undefined) ?? DEFAULT_FILTERS;
+    return { flowId: null, crumbs: [], filters, step: null, rawId };
+  }
   return {
     flowId: flow.id,
     crumbs: [flow.id],

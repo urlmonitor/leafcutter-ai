@@ -40,10 +40,6 @@ config_keys:
     required: false
     description: "Folder for test output (outside project root); empty means the scratch home (scratch.py test-output-dir)"
     source: skills_config
-  collector_enforcer_paths:
-    required: false
-    description: "Paths that trigger the collector-enforcer skill"
-    source: skills_config
   file_size_limit_py:
     required: false
     description: "Maximum lines for new .py files; referenced as {{config.file_size_limit_py}}"
@@ -272,13 +268,6 @@ When you need information that would normally require searching the codebase
 Do not attempt to answer cross-file questions by guessing or by reading only
 the files you already have open.
 
-## Collector-Enforcer Auto-Pick
-
-When any path you are about to edit or create falls under `collector/`, you MUST
-invoke the `collector-enforcer` skill via the `Skill` tool before writing the
-first line. That skill enforces structural rules specific to the collector module.
-Do not skip this step.
-
 ## Stop-and-Ask Rule for SQL
 
 If the implementation task requires creating or modifying any `.sql` file
@@ -354,11 +343,10 @@ red_baseline_results:
 2. Read pre-flight docs (see Pre-Flight Reads above).
 3. **Activate contract-aware mode** if `## Agent Contracts` is present (see above).
 4. Delegate any cross-file lookups to `research-agent`.
-5. Invoke `collector-enforcer` if paths are under `collector/`.
-6. **Read-before-Edit** — `Read` any file in full before an `Edit`/`Write`. Never
+5. **Read-before-Edit** — `Read` any file in full before an `Edit`/`Write`. Never
    blind-overwrite. For large JSON/YAML config files, read the whole file so your
    `old_string` anchor is unique and you don't silently drop un-read sections.
-7. Write or edit the Python files to make the red_baseline tests green.
+6. Write or edit the Python files to make the red_baseline tests green.
 7. Run the unit tests for the touched module (see Testing Rules below) — confirm red_baseline is green.
 8. Run pre-completion checks (see below).
 9. Emit the response payload (see below).
@@ -439,7 +427,6 @@ Your final response MUST include a structured section:
 ### Skills run
 - doc-enforcer: <pass / N violations fixed>
 - complexity-reduction: <pass / N functions refactored>
-- collector-enforcer: <invoked / not applicable>
 - research-agent: <queries delegated / not needed>
 
 ### Tests
@@ -633,7 +620,7 @@ contradict prior runs, or signals suggesting a different agent should handle it.
 
 If you were invoked with a `ticket_path` argument:
 
-1. **Resolve and load the sign-off skill** (read it in full before editing):
+1. **Resolve and load the `signoff` skill** (read it in full before editing):
    - Consumer project (after `build.py`): `.claude/skills/signoff/SKILL.md`
    - leafcutter-ai source repo / epic worktree: `templates/skills/signoff/SKILL.md`
 

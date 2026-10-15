@@ -1,27 +1,22 @@
 /**
- * UXP-591-1-i - the bare /flows address keeps its address and opens the
- * default entry flow. (Ticket names test_uxp_591_1_i.py; vitest only collects
- * *.test.{ts,tsx}.)
+ * UXP-591-1-i (amended 2026-10-14) - the bare /flows address is the finder
+ * overview: 200, no redirect, the address stays, no flow is drawn or selected.
+ * (Ticket names test_uxp_591_1_i.py; vitest only collects *.test.{ts,tsx}.)
  *
- * Planned design pinned here, shared with the UXP-591-1 tests:
- *  - lib/flow-url.ts exports DEFAULT_ENTRY_FLOW_ID (the single definition of
- *    "leafcutter/deliver-a-feature"; no second literal in the bare page or
- *    FlowsView).
- *  - app/flows/page.tsx hands FlowsView the same flat initial props as a
- *    canonical address: flowId, crumbs, filters, step.
- *
- * The middleware pass-through for bare /flows already holds today (it is
- * green before this AC), so it carries no red test of its own.
+ * Replaces the PR #1176 tests that asserted a default entry flow on bare
+ * /flows. The finder's content is UXP-617-1 (tests under __tests__/uxp-617-1/);
+ * this file keeps the route half: what the route answers and never rewrites.
  */
-import React from "react";
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { activeOf, load } from "../helpers/flow-routes";
+import React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, screen } from "@testing-library/react";
+import { addressOf, redirectOf, runMiddleware } from "../helpers/flow-routes";
+import { pageElement, renderFinderPage, searchBox, statusText } from "../helpers/flow-finder-ui";
 
 const hoisted = vi.hoisted(() => ({
-  captured: [] as Array<Record<string, unknown>>,
+  flowsViewMounted: 0,
   routerPush: vi.fn(),
   routerReplace: vi.fn(),
 }));
@@ -33,9 +28,9 @@ vi.mock("next/navigation", () => ({
   }),
   useRouter: () => ({ push: hoisted.routerPush, replace: hoisted.routerReplace }),
   usePathname: () => "/flows",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
-// Record the props the page hands FlowsView, then render the real component.
+// Count how often the page mounts the flow view; render the real component when it does.
 vi.mock("@/components/flows/flows-view", async () => {
   const actual = await vi.importActual<typeof import("@/components/flows/flows-view")>(
     "@/components/flows/flows-view",
@@ -43,7 +38,7 @@ vi.mock("@/components/flows/flows-view", async () => {
   return {
     ...actual,
     FlowsView: (props: Record<string, unknown>) => {
-      hoisted.captured.push(props);
+      hoisted.flowsViewMounted += 1;
       return React.createElement(actual.FlowsView as React.ComponentType<any>, props);
     },
   };
@@ -51,109 +46,129 @@ vi.mock("@/components/flows/flows-view", async () => {
 
 import { getFlows } from "@/lib/data/flows";
 
-beforeAll(() => {
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  );
-});
+// first render pulls in the page's whole component tree; allow for a cold transform
+vi.setConfig({ testTimeout: 180000 });
+
 beforeEach(() => {
-  hoisted.captured.length = 0;
+  hoisted.flowsViewMounted = 0;
   hoisted.routerPush.mockClear();
   hoisted.routerReplace.mockClear();
 });
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
-// first render pulls in the whole flow explorer; allow for a cold transform
-vi.setConfig({ testTimeout: 180000 });
-
-const DEFAULT_ID = "leafcutter/deliver-a-feature";
-
-async function renderBare() {
-  const mod = await load("@/app/flows/page");
-  const el = await (mod.default as unknown as (p: unknown) => Promise<React.ReactElement>)({
-    searchParams: {},
-  });
-  return render(el);
-}
+const BASE = "http://localhost";
 
 describe("bare /flows route", () => {
-  it("draws the default entry flow at Real/User/All with a one-flow breadcrumb, no drawer, no notice", async () => {
+  it("shows the finder instead of a flow: no flow drawn or selected, no breadcrumb, drawer or notice", async () => {
     // covers: UXP-591-1-i
     // angle: reachability
-    const { DEFAULT_ENTRY_FLOW_ID } = await load("@/lib/flow-url");
-    expect(DEFAULT_ENTRY_FLOW_ID).toBe(DEFAULT_ID);
-    const name = getFlows().find((f) => f.id === DEFAULT_ENTRY_FLOW_ID)!.name;
-    expect(name).toBe("Deliver a feature end-to-end");
+    await renderFinderPage({});
 
-    await renderBare();
-
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(name);
-    expect(activeOf("Source")).toBe("Real");
-    expect(activeOf("Kind")).toBe("User");
-    expect(activeOf("Flow")).toContain(name);
-    for (const n of screen.queryAllByRole("navigation")) {
-      expect(within(n).queryAllByRole("button").length).toBeLessThanOrEqual(1);
-    }
+    expect(statusText()).toBe(`${getFlows().length} flows`);
+    expect(searchBox().value).toBe("");
+    expect(hoisted.flowsViewMounted).toBe(0); // the flow view is not what /flows serves
+    expect(document.querySelector(".react-flow")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Flows");
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("navigation", { name: /breadcrumb/i })).toBeNull();
+    expect(document.querySelector("nav button")).toBeNull();
     expect(document.body.textContent).not.toContain("Flow not found");
     expect(document.body.textContent).not.toContain("Step not found");
+    expect(document.body.textContent).not.toContain("Outside the current filters");
   });
 
-  it("passes FlowsView the same initial props as a canonical address", async () => {
+  it("/flows?q=selected+option&actor=human opens the finder with the search and the Person value", async () => {
     // covers: UXP-591-1-i
-    // angle: seam
-    await renderBare();
-    expect(hoisted.captured.length).toBeGreaterThan(0);
-    const props = hoisted.captured[0];
-    expect(props.flowId).toBe(DEFAULT_ID);
-    expect(props.crumbs).toEqual([DEFAULT_ID]);
-    expect(props.filters).toEqual({ source: "real", kind: "user", realization: "all" });
-    expect(props.step).toBeNull();
+    // angle: criterion
+    await renderFinderPage({ q: "selected option", actor: "human" });
+
+    expect(hoisted.flowsViewMounted).toBe(0);
+    expect(searchBox().value).toBe("selected option");
+    expect(screen.getByRole("button", { name: "Remove filter Actor: Person" })).toBeTruthy();
+    expect(statusText()).toMatch(/^\d+ flows?, \d+ steps? match$/);
+    expect(document.querySelector(".react-flow")).toBeNull();
   });
 
-  it("keeps the address at /flows after mount: no history rewrite, no router navigation", async () => {
+  it("the page never answers notFound() or a redirect for /flows with or without a finder query", async () => {
     // covers: UXP-591-1-i
     // angle: failure
-    const { DEFAULT_ENTRY_FLOW_ID } = await load("@/lib/flow-url");
-    window.history.pushState({}, "", "/flows");
+    for (const sp of [{}, { q: "selected option", actor: "human" }, { q: "zzzzqx" }]) {
+      await expect(pageElement(sp)).resolves.toBeTruthy();
+    }
+  });
+
+  it.each([
+    ["the address as typed, in non-canonical parameter order", { actor: "human", q: "selected option" }],
+    ["a bare /flows", {}],
+  ])("keeps %s after mount: no history rewrite, no router navigation", async (_name, sp) => {
+    // covers: UXP-591-1-i
+    // angle: failure
+    const qs = new URLSearchParams(sp as Record<string, string>).toString();
+    const typed = "/flows" + (qs ? "?" + qs : "");
+    window.history.replaceState({}, "", typed);
     const replaceState = vi.spyOn(window.history, "replaceState");
     const pushState = vi.spyOn(window.history, "pushState");
 
-    await renderBare();
+    await renderFinderPage(sp as Record<string, string>);
     await new Promise((r) => setTimeout(r, 0)); // let mount effects run
 
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
-      getFlows().find((f) => f.id === DEFAULT_ENTRY_FLOW_ID)!.name,
-    );
-    expect(window.location.pathname).toBe("/flows");
-    expect(replaceState).not.toHaveBeenCalled();
+    // every write (the harness's own address setup is the same typed address) is the typed address
+    for (const call of replaceState.mock.calls) expect(addressOf(call[2])).toBe(typed);
     expect(pushState).not.toHaveBeenCalled();
     expect(hoisted.routerReplace).not.toHaveBeenCalled();
     expect(hoisted.routerPush).not.toHaveBeenCalled();
+    expect(window.location.pathname + window.location.search).toBe(typed);
   });
 });
 
-describe("default entry flow id has exactly one definition", () => {
-  it("is not re-typed in the bare page or FlowsView", () => {
+describe("middleware leaves /flows alone", () => {
+  it.each([`${BASE}/flows`, `${BASE}/flows?q=selected+option&actor=human`])(
+    "%s passes through with no redirect or rewrite",
+    async (url) => {
+      // covers: UXP-591-1-i
+      // angle: criterion
+      const res = await runMiddleware(url);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+    },
+  );
+
+  it("control: only a 'flow' parameter makes /flows a legacy redirect (308)", async () => {
+    // covers: UXP-591-1-i
+    // angle: discrimination
+    const r = await redirectOf(`${BASE}/flows?flow=leafcutter%2Fflow-render-pipeline&step=resolve`);
+    expect(r.res.status).toBe(308);
+    expect(r.path).toBe("/flows/leafcutter/flow-render-pipeline");
+    // a finder query that merely mentions a step or a flow word in q is not a legacy link
+    const finder = await redirectOf(`${BASE}/flows?q=flow+step`);
+    expect(finder.location).toBeNull();
+  });
+});
+
+describe("no default entry flow remains", () => {
+  it("the default-entry constant and its flow id are gone from the page, the view model and the url helper", () => {
     // covers: UXP-591-1-i
     // angle: discrimination
     const root = process.cwd();
     const files = [
       "app/flows/page.tsx",
+      "components/flows/flow-view-model.ts",
       "components/flows/flows-view.tsx",
-      "app/flows/[...id]/page.tsx",
+      "lib/flow-url.ts",
     ].filter((f) => fs.existsSync(path.join(root, f)));
-    const hits = files.filter((f) =>
-      fs.readFileSync(path.join(root, f), "utf8").includes(`"${DEFAULT_ID}"`),
-    );
+    expect(files.length).toBeGreaterThan(0);
+    const hits = files.flatMap((f) => {
+      const src = fs.readFileSync(path.join(root, f), "utf8");
+      return [
+        src.includes("DEFAULT_ENTRY_FLOW_ID") ? `${f}: DEFAULT_ENTRY_FLOW_ID` : null,
+        src.includes('"leafcutter/deliver-a-feature"') ? `${f}: "leafcutter/deliver-a-feature"` : null,
+      ].filter(Boolean);
+    });
     expect(hits).toEqual([]);
   });
 });

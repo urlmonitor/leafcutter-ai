@@ -13,8 +13,6 @@ skills:
 - skill_id: signoff
   mode: conditional
   condition: When invoked with a ticket_path, load signoff to record your phase sign-off on the ticket.
-- skill_id: doc-enforcer
-  mode: always
 portable: true
 signoff: true
 requires_verification: true

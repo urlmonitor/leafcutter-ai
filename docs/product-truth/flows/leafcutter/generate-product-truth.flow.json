@@ -29,8 +29,8 @@
       "implements": [
         "UXP-510"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-09-07",
+      "impl_status": "done",
+      "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
           {
@@ -84,8 +84,8 @@
         "UXP-511",
         "UXP-700e-2-ii"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-09-07",
+      "impl_status": "done",
+      "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
           {
@@ -232,8 +232,8 @@
       "implements": [
         "UXP-512"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-09-07",
+      "impl_status": "done",
+      "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
           {
@@ -418,8 +418,8 @@
       "implements": [
         "UXP-513"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-09-07",
+      "impl_status": "done",
+      "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
           {
@@ -557,8 +557,8 @@
         "UXP-300-2",
         "UXP-300-3"
       ],
-      "impl_status": "in_progress",
-      "impl_asof": "2026-09-07",
+      "impl_status": "done",
+      "impl_asof": "2026-10-14",
       "io_contracts": {
         "consumes": [
           {
@@ -864,11 +864,11 @@
   ],
   "branches": [],
   "impl_summary": {
-    "done": 0,
-    "in_progress": 5,
+    "done": 5,
+    "in_progress": 0,
     "not_started": 0,
     "total": 5,
-    "asof": "2026-09-07"
+    "asof": "2026-10-14"
   },
   "acceptance_scenarios": [
     {

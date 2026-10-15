@@ -1,0 +1,16 @@
+{
+  "_comment": "Deliberate edits made to template ``skills:`` declarations AFTER the one-time consolidation of the two old registry fields (measured by diffing the committed templates against agent_registry.pre_migration.json plus the pre-migration templates' own lists). Keyed by template stem. revoked = granted by the frozen pre-consolidation sources but no longer declared (AR-300d-3 revocations and removals of ids that resolve to no installed skill); added = declared now but granted by none of the frozen sources. Mode/condition edits are not listed: no test compares modes against the frozen registry. The consolidation tests assert declaration == (frozen union - revoked) + added, so an UNRECORDED narrowing or widening still fails them.",
+  "revoked": {
+    "brainstorm-worker": ["signoff"],
+    "research-agent": ["signoff"],
+    "worktree-agent": ["signoff"],
+    "adr-author": ["doc-enforcer"],
+    "onboard": ["webapp-testing"],
+    "product-owner": ["signoff"]
+  },
+  "added": {
+    "research-agent": ["knowledge-query"],
+    "python-coder": ["complexity-reduction"],
+    "retrospective-agent": ["route-knowledge"]
+  }
+}
