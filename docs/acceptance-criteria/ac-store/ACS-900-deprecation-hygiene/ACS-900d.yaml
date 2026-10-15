@@ -27,7 +27,7 @@ origin_agent: BrainCandy
 created: 2026-06-22
 amended_by: []
 superseded_by: null
-covered_by: [ACS-900d-1, ACS-900d-2, ACS-900d-1-i, ACS-900d-3]
+covered_by: [ACS-900d-1, ACS-900d-2, ACS-900d-3, ACS-900d-4, ACS-900d-5]
 implemented_by: []
 documentation_triggers: [how-to]
 notes: |

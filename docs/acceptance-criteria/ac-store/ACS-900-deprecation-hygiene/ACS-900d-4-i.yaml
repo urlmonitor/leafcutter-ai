@@ -1,0 +1,96 @@
+id: ACS-900d-4-i
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "A record retired at work_status todo is not asked for a test contract"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains an active record AR-400c-1,
+    And a commit stages an L3 record X-1-i with status "superseded_by",
+    superseded_by: [AR-400c-1], work_status "todo", readiness "approved",
+    change_target "code", and no test contract,
+  When the AC schema gate runs on that commit,
+  Then it does not refuse X-1-i with "approved code AC must declare a test
+    contract",
+  And X-1-i's readiness and change_target are left exactly as authored
+    (the record passes without being edited to "reviewed" or "schema"),
+  And a record identical to X-1-i except status "active" and superseded_by
+    null is still refused with "approved code AC must declare a test contract".
+depends_on: [ACS-900d-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The call site is validate_test_contract() in templates/scripts/commit_guardian/_ac_schema_validators.py, which check_ac_schema.py calls per staged file. It must skip its 'approved code AC must declare a test contract' refusal when the shared retired predicate from ACS-900d-4 returns True. It must not copy the predicate's logic."
+  - "Only the requirement for a test contract is exempted. The contradiction check (a non-empty test_spec together with test_required: false) still applies to retired records, because it is a check on the record's shape, not on whether the work is built."
+  - "check_ac_schema validates staged files one at a time, but successor existence needs every store id. Take the id set from the existing commit_guardian store index (_ac_store_index / _ac_store_index_disk) or one store walk per hook run, never one walk per file. If the store root cannot be resolved, the record counts as not retired and the rule applies. Fail closed."
+  - "scripts/ac_store/validate_ac_schema.py (the 'AC store valid' CI check) has no test-contract rule today (verified by grep). Do not add one there. If one is added later, it must consult the same predicate."
+  - "The refusal string 'approved code AC must declare a test contract' must stay byte-identical for live records, because the BP and TQ tooling and existing tests match on it."
+  - "Template and deployed copies of check_ac_schema.py and _ac_schema_validators.py must stay in parity (ADR-001)."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The shared pure predicate (record mapping with id/status/superseded_by + set[str] of all store ids -> bool) that validate_test_contract consults before applying the approved-code test-contract rule"
+test_spec:
+  - name: test_retired_todo_approved_code_ac_not_asked_for_test_contract
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_ac_schema.py, run as a subprocess on a staged retired L3 record (work_status todo, readiness approved, change_target code, no test_spec), emits no 'approved code AC must declare a test contract' refusal."
+    covers: [ACS-900d-4-i]
+  - name: test_retired_record_readiness_and_change_target_untouched
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "The retired record passes while readiness stays approved and change_target stays code, and the file is byte-identical after the hook runs."
+    covers: [ACS-900d-4-i]
+  - name: test_active_twin_refused_for_missing_test_contract
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "The same record with status active and superseded_by null is refused with 'approved code AC must declare a test contract'."
+    must_catch:
+      - "validate_test_contract skips every todo record"
+      - "validate_test_contract skips any record that has a superseded_by key"
+    covers: [ACS-900d-4-i]
+  - name: test_retired_record_with_contradictory_test_contract_still_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: unit
+    angle: boundary
+    description: "A retired record that has both a non-empty test_spec and test_required false is still refused for the contradiction, so only the forward requirement is exempted."
+    covers: [ACS-900d-4-i]
+test_rationale: "Test file: unit_tests/commit_guardian/test_acs_900d_4_i_retired_todo_test_contract.py. Run the real check_ac_schema.py entry point, because a direct call to validate_test_contract would miss whether the hook can resolve the store-id set it needs from its staged-file context. The discrimination test is the only thing that separates 'retired is exempt' from 'todo is exempt'."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The second refusal in the KI (attempt 2): retiring at todo hit the test-contract
+  rule. INF-600a-1 only passes today because it happens to be readiness reviewed
+  and change_target schema; the second Then forbids that as the route.
+
+  IT-PO enrichment (2026-10-15): the refusal comes from
+  _ac_schema_validators.validate_test_contract, called at check_ac_schema.py
+  per staged file. It is not in scripts/ac_store/validate_ac_schema.py, which
+  has no test-contract rule. Only the forward requirement is exempted. The
+  contradiction check stays.
+change_target: code
+risk_surface: internal

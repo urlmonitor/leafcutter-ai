@@ -1,0 +1,134 @@
+id: ACS-900d-4-ii
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "Retirement does not exempt a record from the structural rules"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the AC store contains no record with id ZZ-999,
+    And a commit stages a record X-1 with status "superseded_by",
+    superseded_by: [ZZ-999], and work_status "done",
+  When the AC-store commit gates run on that commit,
+  Then the commit is refused with a message naming X-1 and the missing
+    successor id ZZ-999,
+  And X-1 is not treated as retired, so the done-proof gate also reports X-1's
+    missing covering test;
+  Given instead a commit stages a record X-1 with status "superseded_by" and
+    superseded_by: [] (empty list) or superseded_by null,
+  When the AC-store commit gates run on that commit,
+  Then the commit is refused with a message naming X-1 and stating that a
+    superseded record must name at least one successor;
+  Given instead X-1 is correctly retired (superseded_by: [AR-400c-1], an
+    existing record) but its parent's covered_by list does not name X-1,
+  When the AC-store commit gates run on that commit,
+  Then the commit is refused for the missing parent-to-child link exactly as
+    it would be for an active record,
+  And a retired record whose fields do not match the AC schema shape (for
+    example work_status "finished") is refused exactly as an active one is.
+depends_on: [ACS-900d-4]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: specifies
+    status: exists
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  - "New structural rule: for any staged record whose status is 'superseded_by' or 'superseded', check_ac_schema.py must refuse when superseded_by is null or empty ('a superseded record must name at least one successor'), and must refuse once for each successor id that is not in the store, naming both the record id and the missing successor id. No such check exists today (verified by grep of templates/scripts/commit_guardian/). It belongs in the schema gate because it is a structural rule, not a forward-build rule."
+  - "Successor existence must be checked against the WHOLE AC store, using the same store-id set the retired predicate uses (one walk or one index load per hook run). A successor that already exists on main and is not restaged must resolve."
+  - "This structural rule and the retired predicate from ACS-900d-4 must agree. Whenever this rule refuses a record, the predicate returns not-retired for it, so check-done-proof also reports the missing covering test in the same run. Both messages appear. Neither may hide the other."
+  - "Parent-to-child links: check_ac_parent_covered_by.py must apply to retired records exactly as to active ones. It must NOT consult the retired predicate. Leaving it unchanged satisfies this, but a test must pin it."
+  - "Schema shape: both enforcement points must apply unchanged to retired records. These are the jsonschema path (config/ac_store_schema.json) with the validate_manually fallback in _ac_schema_validators.py, and scripts/ac_store/validate_ac_schema.py (the required 'AC store valid' CI check). Neither may consult the retired predicate."
+  - "Known enforcement-point disagreement to reconcile, not to work around: config/ac_store_schema.json accepts status 'superseded', but _ac_schema_validators.VALID_STATUSES and validate_ac_schema._STATUS_VALUES do not. So a status 'superseded' record is refused for shape by the manual and CI paths even though the predicate counts it as retired. Fix the two constants so all three agree with ac-schema.md, which says 'superseded' is accepted for older records. Do not narrow the predicate instead."
+  - "check_ac_limits.py has its own _SUPERSEDED_STATUSES set, which leaves superseded children out of the child cap. A record that fails the structural rule above is not retired, so this module should use the shared predicate. Otherwise a bogus supersession still escapes the cap. If the coder leaves it as is, record the reason in the ticket."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The shared pure predicate, which returns not-retired when superseded_by is null or empty, or when any successor id is missing from the store-id set; plus that same store-id set, reused for the structural successor check"
+test_spec:
+  - name: test_missing_successor_refused_naming_record_and_successor
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_ac_schema.py refuses a staged record with superseded_by [ZZ-999] when ZZ-999 is absent from the store, and the message names X-1 and ZZ-999."
+    covers: [ACS-900d-4-ii]
+  - name: test_missing_successor_record_not_retired_done_proof_reports_missing_cover
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "In the same staged set, check_done_proof.py also reports X-1's missing covering test, because a record whose successor is missing is not retired."
+    must_catch:
+      - "the predicate counts any non-empty superseded_by as retired without checking that the successor exists"
+    covers: [ACS-900d-4-ii]
+  - name: test_empty_successor_list_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "status superseded_by with superseded_by [] is refused with a message naming X-1 and saying a superseded record must name at least one successor."
+    covers: [ACS-900d-4-ii]
+  - name: test_null_successor_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "status superseded_by with superseded_by null is refused with the same at-least-one-successor message."
+    covers: [ACS-900d-4-ii]
+  - name: test_successor_resolved_against_whole_store_not_staged_set
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A successor that exists in the committed store but is not staged resolves, and no missing-successor refusal is raised."
+    covers: [ACS-900d-4-ii]
+  - name: test_retired_child_missing_from_parent_covered_by_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "check_ac_parent_covered_by.py refuses a correctly retired child whose parent's covered_by does not name it, with the same message it gives for an active child."
+    covers: [ACS-900d-4-ii]
+  - name: test_retired_record_invalid_work_status_refused
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A correctly retired record with work_status finished is refused for shape by check_ac_schema.py and by validate_ac_schema.py, the same as an active record."
+    covers: [ACS-900d-4-ii]
+test_rationale: "Test file: unit_tests/commit_guardian/test_acs_900d_4_ii_retirement_structural_rules.py. This is the anti-gaming guard, so every scenario runs the real hook entry points against a temp git repo and store. The done-proof cross-check proves the structural rule and the predicate agree. Without it, a bogus supersession could be refused by the schema gate yet silently skipped by done-proof whenever the schema gate is bypassed."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The anti-gaming guard. Without it, marking any unfinished record
+  "superseded_by: [anything]" would silently dodge done-proof — the exact
+  phantom-done route the store exists to prevent. The request keeps schema
+  shape, successor existence, and parent/child links in force for retired
+  records; this L3 makes each of those observable.
+
+  Successor existence is checked against the whole store, not only the staged
+  set (a successor usually already exists on main and is not restaged).
+
+  IT-PO enrichment (2026-10-15): the successor-existence and empty-list checks
+  are NEW. No gate checks them today. They go in check_ac_schema.py. Parent
+  links (check_ac_parent_covered_by.py) and schema shape need no change, only
+  pinning tests. Found an enforcement-point disagreement: the JSON schema
+  accepts status "superseded" but the manual validator and
+  validate_ac_schema.py reject it. It is named in it_requirements for
+  reconciliation. check_ac_limits.py keeps its own superseded set and should
+  move to the shared predicate.
+change_target: code
+risk_surface: contract_boundary

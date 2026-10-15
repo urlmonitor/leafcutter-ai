@@ -1,0 +1,105 @@
+id: ACS-900d-4-v
+components:
+  - ac_store
+  - commit_guardian
+readiness: approved
+priority: high
+title: "First real retirement: INF-600g-3 and INF-600g-3-i superseded by AR-400c-1 pass every AC-store gate"
+component: ac-store
+level: L3
+status: active
+req_status: draft
+work_status: todo
+criteria: |
+  Given the real store records INF-600g-3 (L2, work_status "done") and
+    INF-600g-3-i (L3, work_status "done", no test tagged as covering it),
+    which specify the advisory skills_invoked cross-reference that AR-400c-1
+    deleted,
+    And AR-400c-1 exists in the store,
+  When both records are changed to status "superseded_by" with
+    superseded_by: [AR-400c-1], leaving work_status "done", readiness
+    "approved" and change_target "code" untouched, and the change is staged
+    together with their parent INF-600g,
+  Then every AC-store commit gate passes on that staged set with no refusal
+    naming INF-600g-3, INF-600g-3-i or INF-600g,
+  And neither record gains a test contract, a covering-test tag, or a changed
+    readiness or change_target in order to pass.
+depends_on: [ACS-900d-4, ACS-900d-4-i, ACS-900d-4-iv]
+doc_links:
+  - path: docs/known-issues/ac-store/open-high-ki-acs-20261015-superseded-records-held-to-forward-rules.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3.yaml
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3-i.yaml
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  - "The test must feed the gates the REAL on-disk records. Copy the whole docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/ folder, so that INF-600g's other children INF-600g-1 and INF-600g-2 resolve, and docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c-1.yaml byte-for-byte into a temp git repo's AC store. Then apply ONLY the two-field retirement edit (status and superseded_by) to INF-600g-3 and INF-600g-3-i, and stage those two files plus INF-600g.yaml. Hand-authored fixtures that imitate these records are not acceptable (CLAUDE.md: Real-artifact behavioral spot-check). Note: on this branch INF-600g has no work_status, so the done-proof composite path does not judge it. INF-600g-3 is a done composite whose only child, INF-600g-3-i, is being retired, but INF-600g-3 is retired too, so its own done-proof is exempt and decision 2 does not apply to it."
+  - "'Every AC-store commit gate' means running each of these as a fresh subprocess against that staged set: check_done_proof.py (pre-commit mode and the CI changed-scope mode), check_ac_schema.py, check_ac_parent_covered_by.py, check_ac_limits.py and scripts/ac_store/validate_ac_schema.py. Each must exit 0 and print no refusal naming INF-600g-3, INF-600g-3-i or INF-600g."
+  - "These hooks read the git index or HOOK_TEST_FILES and ignore argv, and silence is not a pass. So for every hook the test must prove that the hook actually inspected the staged INF files, for example by staging a deliberately broken copy in a control run and observing a refusal, before trusting a clean exit."
+  - "At least one run must use the DEPLOYED hook layout produced by build.py, through the shared_reference_layout fixture marked @pytest.mark.shared_layout_reader. A test must not start its own build.py. This catches a predicate module that is missing from the build_ac_store deploy list."
+  - "After the gates pass, the retired records must still be byte-identical to the edited copies: readiness approved, change_target code, work_status done, and no test_spec or test_required added. The test must not add any '# covers: INF-600g-3*' tag."
+  - "The same PR then applies the real store edit: INF-600g-3 and INF-600g-3-i become status superseded_by with superseded_by [AR-400c-1], and INF-600g is staged alongside them. After that the KI is moved to resolved. The test must not depend on that edit having landed. It works on copies, so it stays valid before and after."
+delivers_to: null
+expects_from:
+  ac_id: ACS-900d-4
+  contract: "The retired-record exemption live in check_done_proof.py, check_ac_schema.py (via validate_test_contract) and both composite rollup paths, and present in the deployed layout, run against the real on-disk INF-600g, INF-600g-3, INF-600g-3-i and AR-400c-1 records"
+test_spec:
+  - name: test_real_inf_600g_3_retirement_passes_every_ac_store_gate
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    description: "The real INF-600g, INF-600g-3 and INF-600g-3-i records, copied byte-for-byte with only the retirement edit applied and staged together, pass every listed AC-store gate with no refusal naming any of the three."
+    covers: [ACS-900d-4-v]
+  - name: test_real_retirement_passes_in_deployed_layout
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: e2e
+    angle: deployed
+    description: "The same staged set passes check_done_proof.py and check_ac_schema.py when they run from the shared deployed reference layout."
+    covers: [ACS-900d-4-v]
+  - name: test_real_retirement_needs_no_test_contract_tag_or_field_edit
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: e2e
+    angle: criterion
+    description: "After the gates run, both retired records are byte-identical to the edited copies (readiness, change_target, work_status unchanged, no test_spec or test_required), and no covers tag naming them exists in the temp repo."
+    covers: [ACS-900d-4-v]
+  - name: test_gates_inspected_the_staged_inf_records
+    target_dir: unit_tests/commit_guardian/
+    framework: pytest
+    type: e2e
+    angle: reachability
+    description: "A control run, with INF-600g-3-i left active at done and no covers tag, is refused by check_done_proof.py naming INF-600g-3-i. This proves the hooks saw the staged files, so the clean pass is not a silent no-op."
+    must_catch:
+      - "the hook reads a different index or path and inspects nothing"
+    covers: [ACS-900d-4-v]
+test_rationale: "Test file: unit_tests/commit_guardian/test_acs_900d_4_v_first_real_retirement.py. This is the real-artifact proof the user asked for. The synthetic fixtures in -i to -iv can share an authoring bias, so this test runs the gates on the exact records that exposed the defect. It also runs them in the deployed layout and carries a control run, because the AC hooks read the index rather than argv and a clean exit can mean they inspected nothing."
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Real-artifact proof (the user named this as the first real use). The synthetic
+  fixtures in -i..-iv can reproduce a fixture bias; this one runs the gates on
+  the two records that exposed the defect, exactly as they sit on main.
+
+  Once this passes, the KI can be resolved and the false "done" on the two INF
+  records is replaced by an honest retirement. AR-400c-1 is deliberately not in
+  depends_on: it is an agent-registry record and is referenced here only as the
+  successor value.
+
+  IT-PO enrichment (2026-10-15): the gate list is pinned, and so is the proof
+  that each hook inspected the staged files, because the AC hooks ignore argv.
+  One run uses the deployed layout to catch a predicate module that was never
+  deployed. The real store edit to the INF records rides in the same PR. The
+  test works on copies so it does not depend on that edit.
+change_target: code
+risk_surface: internal
