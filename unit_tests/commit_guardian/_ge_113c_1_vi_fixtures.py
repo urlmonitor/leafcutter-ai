@@ -145,7 +145,7 @@ def make_fixture_agent(
         "spawned_by": [],
         "is_ticket_phase": False,
         "template_path": template_path,
-        "skills_used": [],
+        "skills_invoked": [],
         "produces": "configuration",
     }
     entry.update(overrides)

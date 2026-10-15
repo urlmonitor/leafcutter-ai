@@ -366,8 +366,7 @@ def test_bp200c_3_spawn_wiring_and_skills_used():
     assert "__ticket_phase_agents__" in supervisor["spawn_allowlist"] and entry.get("is_ticket_phase")  # AR-400f-2
     assert "ticket-supervisor" in entry["spawned_by"]
     assert "research-agent" in entry["spawn_allowlist"]
-    for skill in ("add-agent-to-package", "add-skill-to-package", "signoff"):
-        assert skill in entry["skills_used"], f"skills_used missing {skill}"
+    assert {"add-agent-to-package", "add-skill-to-package", "signoff"} <= {s["skill_id"] for s in entry["skills_invoked"]}
 
 
 def test_bp200c_4_readme_phase_agents_row():

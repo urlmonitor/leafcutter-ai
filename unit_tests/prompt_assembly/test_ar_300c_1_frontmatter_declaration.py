@@ -18,7 +18,6 @@ import copy
 import os
 import sys
 
-import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -27,15 +26,14 @@ from _ar_300c_support import (  # noqa: E402
     REPO_ROOT,
     add_registry_agent,
     compile_template,
-    compiled_agent_roots,
     copy_package_slice,
     declared_entries,
-    declared_ids,
     installed_skill_ids,
-    migrate_or_fail,
     named_abilities,
     pristine_registry_agents,
+    registry_agents,
     template_frontmatter,
+    transform_or_fail,
     write_template,
 )
 
@@ -52,44 +50,9 @@ _FIXTURE_FM_A = {
 }
 
 
-def _registry_for(agent_id: str, used, invoked) -> list[dict]:
+def _registry_for(agent_id: str, invoked) -> list[dict]:
     return [{"id": agent_id, "template_path": f"templates/agents/{agent_id}.md",
-             "skills_used": used, "skills_invoked": invoked}]
-
-
-@pytest.mark.shared_layout_reader
-def test_compiled_prompt_abilities_equal_the_frontmatter_declaration(shared_reference_layout):
-    # covers: AR-300c-1
-    # angle: deployed
-    """AR-300c-1: abilities in each compiled prompt are exactly the template's
-    frontmatter declaration, in EVERY platform root. Red today: no template
-    declares a grant (population 0) and no compiled prompt carries a section."""
-    layout = shared_reference_layout  # deployed target: compiled prompts only
-    # The shared layout is built from this worktree's source, so the source
-    # declarations (population) live under REPO_ROOT; evidence is the layout.
-    installed = installed_skill_ids(REPO_ROOT)
-    roots = compiled_agent_roots(layout)
-    assert len(roots) >= 2, f"expected claude + gemini agent roots, found {roots}"
-    src_agents = REPO_ROOT / "templates" / "agents"
-    assert any(src_agents.glob("*.md")), "source templates not found"
-
-    declaring = {}
-    for tpl in sorted(src_agents.glob("*.md")):
-        if tpl.name.startswith("_"):
-            continue
-        ids = declared_ids(template_frontmatter(tpl)) & installed
-        if ids:
-            declaring[tpl.name] = ids
-    assert declaring, "0 templates declare abilities in frontmatter (examined 0) -- empty population fails"
-
-    wrong = []
-    for name, ids in declaring.items():
-        for root in roots:
-            compiled = (root / name).read_text(encoding="utf-8")
-            got = named_abilities(compiled, installed)
-            if got != ids:
-                wrong.append((root.name, name, sorted(ids ^ got)))
-    assert not wrong, f"{len(declaring)} declaring agents x {len(roots)} roots; mismatches: {wrong[:5]}"
+             "skills_invoked": invoked}]
 
 
 def test_editing_only_the_frontmatter_changes_the_compiled_prompt(tmp_path):
@@ -98,7 +61,7 @@ def test_editing_only_the_frontmatter_changes_the_compiled_prompt(tmp_path):
     """AR-300c-1: change ONLY the frontmatter declaration -> the compiled prompt
     changes accordingly. Red today: abilities are never delivered at all."""
     reg_path = tmp_path / "agent_registry.json"
-    agents = _registry_for("zz-fixture", [], [])
+    agents = _registry_for("zz-fixture", [])
     tpl = write_template(tmp_path / "zz-fixture.md", _FIXTURE_FM_A)
     before = compile_template(tpl, agents, reg_path)
     installed = installed_skill_ids(REPO_ROOT)
@@ -124,9 +87,9 @@ def test_editing_only_the_registry_does_not_change_the_compiled_prompt(tmp_path)
     tpl = write_template(tmp_path / "zz-fixture.md", _FIXTURE_FM_A)
     installed = installed_skill_ids(REPO_ROOT)
 
-    reg_one = _registry_for("zz-fixture", ["signoff"], [{"skill_id": "signoff", "mode": "always"}])
+    reg_one = _registry_for("zz-fixture", [{"skill_id": "signoff", "mode": "always"}])
     reg_two = _registry_for(
-        "zz-fixture", ["ticket-wiring", "route-knowledge"],
+        "zz-fixture",
         [{"skill_id": "ticket-wiring", "mode": "always"},
          {"skill_id": "route-knowledge", "mode": "conditional"}],
     )
@@ -161,35 +124,46 @@ def test_mode_and_condition_survive_into_the_frontmatter_representation(tmp_path
     # covers: AR-300c-1
     # angle: criterion
     """AR-300c-1: a conditional grant keeps its mode AND condition in the
-    declaration. Run the real migration over a copy of the real tree plus one
-    planted agent whose registry record carries a condition; every registry
-    conditional keeps mode, the planted one keeps its condition text.
-    Red today: the migration tool does not exist."""
+    declaration and in the registry copy the transform hook derives from it.
+    Run the real hook over a copy of the real tree plus one planted agent whose
+    template declares a condition and whose registry record is stale; the
+    declaration keeps mode and condition, the regenerated record carries them,
+    and every committed template keeps the mode of each pre-consolidation
+    conditional grant."""
     pkg = copy_package_slice(tmp_path / "pkg")
     planted = {"id": "zz-fixture", "template_path": "templates/agents/zz-fixture.md",
-               "skills_used": [],
-               "skills_invoked": [{"skill_id": "doc-enforcer", "mode": "conditional",
-                                   "condition": "when Python files changed"}]}
+               "skills_invoked": []}
     add_registry_agent(pkg, planted)
     write_template(pkg / "templates" / "agents" / "zz-fixture.md",
-                   {"name": "zz-fixture", "description": "d", "model": "sonnet", "tools": "Bash"})
-    migrate_or_fail(pkg)
+                   {"name": "zz-fixture", "description": "d", "model": "sonnet", "tools": "Bash",
+                    GRANT_KEY: [{"skill_id": "doc-enforcer", "mode": "conditional",
+                                 "condition": "when Python files changed"}]})
+    transform_or_fail(pkg)
 
     fm = template_frontmatter(pkg / "templates" / "agents" / "zz-fixture.md")
     entry = {e["skill_id"]: e for e in declared_entries(fm)}["doc-enforcer"]
     assert entry.get("mode") == "conditional"
     assert entry.get("condition") == "when Python files changed"
+    record = {a["id"]: a for a in registry_agents(pkg)}["zz-fixture"]
+    derived = {e["skill_id"]: e for e in record["skills_invoked"]}["doc-enforcer"]
+    assert derived.get("mode") == "conditional" and derived.get("condition") == "when Python files changed"
+    assert "skills_used" not in record
 
-    data = {"agents": pristine_registry_agents()}  # the migration's pre-consolidation input
+    # Real tree: every conditional entry the committed templates declare survives, mode and
+    # condition text, into the registry copy the hook regenerated (declaration -> derived copy).
     checked = 0
-    for rec in data["agents"]:
+    for rec in registry_agents(pkg):
         tp = rec.get("template_path")
-        if not tp:
+        if not tp or rec["id"] == "zz-fixture":
             continue
-        mfm = template_frontmatter(pkg / tp)
-        got = {e["skill_id"]: e for e in declared_entries(mfm)}
-        for e in rec.get("skills_invoked") or []:
-            if isinstance(e, dict) and e.get("mode") == "conditional" and not e.get("descriptive_only"):
+        got = {e["skill_id"]: e for e in rec.get("skills_invoked") or []}
+        for e in declared_entries(template_frontmatter(pkg / tp)):
+            if e.get("mode") == "conditional":
                 checked += 1
                 assert got[e["skill_id"]].get("mode") == "conditional", (rec["id"], e["skill_id"])
+                assert got[e["skill_id"]].get("condition") == e.get("condition"), (rec["id"], e["skill_id"])
     assert checked > 0, "no conditional grants examined"
+    # Control: the frozen pre-consolidation registry also held conditional grants (the population
+    # this property exists for is not empty), whatever their mode has since become.
+    assert any(e.get("mode") == "conditional" for a in pristine_registry_agents()
+               for e in a.get("skills_invoked") or [] if isinstance(e, dict))

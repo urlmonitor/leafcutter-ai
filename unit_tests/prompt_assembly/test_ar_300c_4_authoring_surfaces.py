@@ -181,12 +181,12 @@ class TestReferenceNamesOnePlace(unittest.TestCase):
         # covers: AR-300c-5-iv
         # angle: criterion
         self.assertRegex(self.section, r"registry copy is derived")
-        self.assertRegex(self.section, r"Do not edit them by\s+hand")
+        self.assertRegex(self.section, r"Do not edit the derived\s+fields by hand")
         for consequence in ("divergent", "declaration wins"):
             self.assertIn(consequence, " ".join(self.section.split()))
         derived_skills = [
             r for r in self.text.splitlines()
-            if r.startswith("| `skills_used` / `skills_invoked` |")
+            if r.startswith("| `skills_invoked` | array of entry")
         ]
         self.assertEqual(len(derived_skills), 1)
         self.assertIn("**Derived**", derived_skills[0])

@@ -218,7 +218,7 @@ def records_for(templates: dict, *, ticket_phase=(), registry_spawn=None) -> lis
         copy = (registry_spawn or {}).get(stem, fm.get(KEY, []))
         out.append({"id": stem, "template_path": f"templates/agents/{stem}.md", "role": f"{stem} role",
                     "tier": "phase", "is_ticket_phase": stem in ticket_phase, "spawn_allowlist": list(copy),
-                    "skills_used": [], "skills_invoked": [dict(e) for e in fm.get("skills", [])]})
+                    "skills_invoked": [dict(e) for e in fm.get("skills", [])]})
     return out
 
 
