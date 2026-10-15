@@ -483,8 +483,7 @@ def build_ac_store(target_root: Path, config: dict[str, Any],
         "diagram_types.json",
         "skill_registry.json",
         "guardrail_gates.yaml",
-        "paths.json",
-        "surface_craft_map.yaml",
+        "paths.json", "surface_craft_map.yaml", "commit_step.json",
     ):
         core_config_src = _bp.PACKAGE_ROOT / "config" / core_config_name
         if not core_config_src.is_file():
