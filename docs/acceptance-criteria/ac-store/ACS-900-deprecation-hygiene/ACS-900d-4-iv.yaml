@@ -9,7 +9,7 @@ component: ac-store
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a commit stages a parent L1 record P with work_status "done" and
     covered_by: [P-1, P-2, P-3],

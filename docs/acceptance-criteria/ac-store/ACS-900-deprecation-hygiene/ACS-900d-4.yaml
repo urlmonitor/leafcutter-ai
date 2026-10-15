@@ -9,7 +9,7 @@ component: ac-store
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the AC store contains an active record AR-400c-1,
     And a commit stages an L2 record X-1 with status "superseded_by",

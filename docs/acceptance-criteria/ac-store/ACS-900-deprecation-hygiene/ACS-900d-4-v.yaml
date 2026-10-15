@@ -9,7 +9,7 @@ component: ac-store
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the real store records INF-600g-3 (L2, work_status "done") and
     INF-600g-3-i (L3, work_status "done", no test tagged as covering it),

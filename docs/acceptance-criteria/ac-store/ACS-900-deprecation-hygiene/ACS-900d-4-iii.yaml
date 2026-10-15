@@ -9,7 +9,7 @@ component: ac-store
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a commit stages a record X-1 with status "superseded_by",
     superseded_by: [X-1], and work_status "done", and no test is tagged as
