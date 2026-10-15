@@ -181,9 +181,9 @@ def hand_manifest(sb: XSandbox, entries: dict[str, list[tuple[str, str, str]]], 
             _wb(copy, text.replace(old, new, 1))
             files.append({"path": path, "altered_copy": str(copy)})
         out.append({"name": wv, "status": "prepared", "reason": None, "diff": "", "files": files})
-    path = sb.root / name
-    path.write_text(json.dumps({"work_key": ix.WORK_KEY, "entries": out}), encoding="utf-8")
-    return path
+    manifest = sb.root / name
+    manifest.write_text(json.dumps({"work_key": ix.WORK_KEY, "entries": out}), encoding="utf-8")
+    return manifest
 
 
 def full_manifest(sb: XSandbox) -> Path:
