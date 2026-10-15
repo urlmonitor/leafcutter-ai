@@ -273,7 +273,7 @@ def commit_staged(repo: Path, message: str = "retire") -> None:
     git_ok(repo, "commit", "-q", "--no-verify", "-m", message)
 
 
-def stage_scenario(repo: Path, staged: list[dict], *, base_extra: list[dict] = ()) -> list[Path]:
+def stage_scenario(repo: Path, staged: list[dict], *, base_extra: tuple[dict, ...] = ()) -> list[Path]:
     """Base-commit the successor + *base_extra*; write and stage the *staged* records.
 
     Returns the staged files' paths. Records in *staged* are NOT in the base commit.

@@ -58,12 +58,25 @@ def _retire_bytes(raw: bytes) -> bytes:
     return raw
 
 
+def _unretire_bytes(raw: bytes) -> bytes:
+    """Undo the two-field edit if the real record already carries it (it does once merged)."""
+    raw = re.sub(rb"(?m)^status: superseded_by$", b"status: active", raw)
+    return re.sub(rb"(?m)^superseded_by: \[" + fx.SUCCESSOR.encode() + rb"\]$", b"superseded_by: null", raw)
+
+
 def _copy_real_store(root: Path) -> Path:
-    """A repo whose store holds the real INF-600 folder and AR-400c-1, byte for byte."""
+    """A repo whose store holds the real INF-600 folder and AR-400c-1, byte for byte.
+
+    INF-600g-3 and -3-i are put back in their pre-retirement shape, so the staged
+    change is exactly the two-field edit whether or not the real store is retired.
+    """
     repo = fx.make_repo(root)
     shutil.copytree(REAL_INF, repo / INF_REL, dirs_exist_ok=True)
     (repo / AR_REL).parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(REAL_AR, repo / AR_REL)
+    for ac_id in (MIDDLE, LEAF):
+        path = _path(repo, ac_id)
+        path.write_bytes(_unretire_bytes(path.read_bytes()))
     return repo
 
 

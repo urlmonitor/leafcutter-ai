@@ -33,9 +33,9 @@ PARENT_ID = "RT-100a"
 AT_LEAST_ONE = "must name at least one successor"
 
 
-def _stage(tmp_path: Path, name: str, record: dict, base_extra: list[dict] = ()) -> Path:
+def _stage(tmp_path: Path, name: str, record: dict, base_extra: tuple[dict, ...] = ()) -> Path:
     repo = fx.make_repo(tmp_path / name)
-    fx.stage_scenario(repo, [record], base_extra=list(base_extra))
+    fx.stage_scenario(repo, [record], base_extra=base_extra)
     return repo
 
 
@@ -137,9 +137,9 @@ def test_retired_child_missing_from_parent_covered_by_refused(tmp_path: Path) ->
     retired = fx.retired_record(RECORD_ID, depends_on=[PARENT_ID])
     twin = fx.ac_record(TWIN_ID, depends_on=[PARENT_ID])
 
-    retired_proc = fx.parent_hook(_stage(tmp_path, "retired", retired, [_parent_with([])]))
-    active_proc = fx.parent_hook(_stage(tmp_path, "active", twin, [_parent_with([])]))
-    linked_proc = fx.parent_hook(_stage(tmp_path, "linked", retired, [_parent_with([RECORD_ID])]))
+    retired_proc = fx.parent_hook(_stage(tmp_path, "retired", retired, (_parent_with([]),)))
+    active_proc = fx.parent_hook(_stage(tmp_path, "active", twin, (_parent_with([]),)))
+    linked_proc = fx.parent_hook(_stage(tmp_path, "linked", retired, (_parent_with([RECORD_ID]),)))
 
     assert active_proc.returncode != 0 and _parent_message(active_proc, TWIN_ID), fx.out(active_proc)
     assert retired_proc.returncode != 0, f"retired child with an unlinked parent passed: {fx.out(retired_proc)!r}"
