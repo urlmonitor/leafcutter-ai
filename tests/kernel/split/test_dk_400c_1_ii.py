@@ -26,9 +26,10 @@ from typing import Any
 
 from kernel.adapters.cli import main
 from kernel.contracts import RunEnvelope, RunStatus
+from kernel.contracts.interaction import HumanQuestion
 from kernel.interaction import SubmissionRejected
 from kernel.contracts import ActorKind
-from tests.kernel.helpers import narrow
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.interaction.support import raw_submission
 from tests.kernel.split.support_400c import PROPOSED, ProposalCase
 
@@ -164,7 +165,7 @@ class TestRepair(RefusalCase):
         (split,) = self.splits_of(values)
         self.assertEqual([p["id"] for p in split.parts], ["p1", "p2", "p3"])
         self.assertEqual(split.parts[1]["depends_on"], ["p1"])
-        self.assertIn("separate parts", narrow(after.pending_interaction).question)
+        self.assertIn("separate parts", as_type(narrow(after.pending_interaction), HumanQuestion).question)
 
 
 class TestExhaustedRepairsAbandonSplit(RefusalCase):

@@ -27,11 +27,11 @@ REASON = "quote not found in the goal"
 FILE = "put them into a new file"
 TAIL = "type (needs evaluation)"
 BROKEN_GOAL = GOAL.replace(f"{FILE} {TAIL}", f"{FILE}\n{TAIL}")
-P1 = {"id": "p1", "text": "Store the categories in a new file",
+P1: dict[str, Any] = {"id": "p1", "text": "Store the categories in a new file",
       "covers": f"{FILE} {TAIL}", "depends_on": [], "child_capability": "decision"}
-P2 = {"id": "p2", "text": "Store the categories in a new file kind",
+P2: dict[str, Any] = {"id": "p2", "text": "Store the categories in a new file kind",
       "covers": f"{FILE} kind (needs evaluation)", "depends_on": [], "child_capability": "decision"}
-P3 = {"id": "p3", "text": "Cluster the categories",
+P3: dict[str, Any] = {"id": "p3", "text": "Cluster the categories",
       "covers": "we must make sure that we are able to cluster them somehow",
       "depends_on": [], "child_capability": "decision"}
 

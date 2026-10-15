@@ -27,9 +27,10 @@ from unittest import mock
 
 from kernel.adapters.cli import main
 from kernel.contracts import RunEnvelope, RunStatus
+from kernel.contracts.interaction import HumanQuestion
 from kernel.contracts.split import FoundAt, KeptRouting
 from kernel.scheduler.nodes_split import SplitStep
-from tests.kernel.helpers import narrow
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.integration.scenario_support import answer_human
 from tests.kernel.split.support_400c import PROPOSED, ProposalCase
 
@@ -37,7 +38,7 @@ OPTION_WORK = ("host.generate_options", "decision", "research")
 TRIGGERS = ("bundled_accepted", "mid_run", "jev_none", "ambiguous")
 ROUTES = {"bundled_accepted": "decision", "mid_run": "decision", "jev_none": "__NONE__",
           "ambiguous": "__NEEDS_CONTEXT__"}
-SMALL_PROPOSALS = (("none", []), ("one part", PROPOSED[:1]))
+SMALL_PROPOSALS: tuple[tuple[str, list[Any]], ...] = (("none", []), ("one part", PROPOSED[:1]))
 BUNDLED_ANSWER = ("Decide the storage format for reusable decision criteria and find which "
                   "published decision records repeat the same criteria and decide how to retire them")
 
@@ -121,14 +122,14 @@ class TestOnePartGoesAheadByTrigger(SmallProposalCase):
             self.assertEqual([g.gap_type.value for g in service.list_gaps()], ["unsupported"])
         else:  # ambiguous: today's clarification question, waiting for the person, no gap yet
             self.assertEqual(after.status, RunStatus.WAITING_HUMAN)
-            ids = [c.id for c in narrow(after.pending_interaction).choices]
+            ids = [c.id for c in as_type(narrow(after.pending_interaction), HumanQuestion).choices]
             self.assertIn("decision", ids)
             # gaps persist across subtests, so only this run's own gaps count
             self.assertEqual([g for g in service.list_gaps()
                               if after.run_id in g.example_run_ids], [])
             off = await self.split_off(trigger)
             self.assertEqual(off.status, RunStatus.WAITING_HUMAN)
-            self.assertEqual(ids, [c.id for c in narrow(off.pending_interaction).choices])
+            self.assertEqual(ids, [c.id for c in as_type(narrow(off.pending_interaction), HumanQuestion).choices])
 
     async def split_off(self, trigger: str) -> RunEnvelope:
         """Run the trigger's request with splitting switched off (today's single question)."""

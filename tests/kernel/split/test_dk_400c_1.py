@@ -23,9 +23,11 @@ from typing import Any
 
 from kernel.adapters.cli import main
 from kernel.contracts import RunStatus
+from kernel.contracts.interaction import HumanQuestion
+from kernel.contracts.interaction import HostWorkRequest
 from kernel.contracts.split import GoalDecompositionPayload, PartProposal, SubjectKind
 from kernel.split.convert import ALLOWANCE_REASON, Conversion, convert_proposal
-from tests.kernel.helpers import narrow
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.split.support_400c import GOAL, PROPOSED, RECORD, ProposalCase
 
 CONTRACT_FIELDS = {"proposed_text": None, "review": "proposed", "outcome": "not_run",
@@ -43,7 +45,7 @@ class TestProposalOpensGate(ProposalCase):
         """AC-1..AC-3: p1 to p4 in order, quote, waits-for, capability; waiting_human; not_run."""
         self.arrange()
         _, waiting, after = await self.propose()
-        self.assertEqual(narrow(waiting.pending_interaction).operation, "decompose_goal")
+        self.assertEqual(as_type(narrow(waiting.pending_interaction), HostWorkRequest).operation, "decompose_goal")
         self.assertEqual(after.status, RunStatus.WAITING_HUMAN)
         (split,) = self.splits_of(await self.checkpoint_values(after.run_id))
         self.assertEqual(split.state, "proposed")
@@ -55,7 +57,7 @@ class TestProposalOpensGate(ProposalCase):
             self.assertEqual(part, {**sent, **CONTRACT_FIELDS})  # exact record, every part not run
         self.assertEqual((split.dropped, split.not_covered), ([], []))
         # The gate is one human interaction naming the split, offering quotes in order.
-        gate = narrow(after.pending_interaction)
+        gate = as_type(narrow(after.pending_interaction), HumanQuestion)
         text = gate.question + " " + " ".join(c.label for c in gate.choices)
         self.assertIn(split.id, text)
         positions = [text.index(p["covers"]) for p in split.parts]

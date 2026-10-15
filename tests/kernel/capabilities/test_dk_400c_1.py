@@ -14,8 +14,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from kernel.contracts.interaction import HostWorkRequest
 from kernel.interaction.packets import FORBIDDEN_HOST_OPERATIONS
-from tests.kernel.helpers import narrow
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.split.support_400c import GOAL, ProposalCase
 
 
@@ -28,7 +29,7 @@ class TestDecomposePacket(ProposalCase):
         """Only read_supplied_artifacts and propose_split are allowed; the artifact is bare."""
         self.arrange()
         waiting = await self.service().start_run(self.goal_task())
-        packet = narrow(waiting.pending_interaction)
+        packet = as_type(narrow(waiting.pending_interaction), HostWorkRequest)
         self.assertEqual(packet.operation, "decompose_goal")
         self.assertEqual(packet.allowed_operations, ["read_supplied_artifacts", "propose_split"])
         self.assertEqual(packet.forbidden_operations, list(FORBIDDEN_HOST_OPERATIONS))

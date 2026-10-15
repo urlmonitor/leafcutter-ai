@@ -24,12 +24,13 @@ from typing import Any
 
 from kernel.adapters.cli import main
 from kernel.contracts import RunStatus
+from kernel.contracts.interaction import HumanQuestion
 from kernel.interaction import RejectionCode, SubmissionRejected
-from tests.kernel.helpers import narrow
+from tests.kernel.helpers import as_type, narrow
 from tests.kernel.integration.scenario_support import answer_human
 from tests.kernel.split.support_400c import GOAL, PROPOSED, ProposalCase
 
-FIFTH = {"id": "p5", "text": "Decide when an LLM may generate further categories",
+FIFTH: dict[str, Any] = {"id": "p5", "text": "Decide when an LLM may generate further categories",
          "covers": "generate new categories only when Jev finds some missing",
          "depends_on": [], "child_capability": "decision"}
 REASON = "quote not found in the goal"
@@ -71,7 +72,7 @@ class TestSetAside(ProposalCase):
         for hidden in (FIFTH["text"], FIFTH["covers"]):
             self.assertNotIn(hidden, offered)  # control: only the quoted parts are offered
         # The only things a person can choose are about the split as a whole.
-        choices = [c.id for c in narrow(after.pending_interaction).choices]
+        choices = [c.id for c in as_type(narrow(after.pending_interaction), HumanQuestion).choices]
         self.assertEqual(choices, ["approve", "reject"])
 
     async def test_set_aside_proposal_is_not_counted_as_a_part(self) -> None:
