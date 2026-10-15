@@ -529,7 +529,7 @@ def _get_source_deployable_scripts(package_root: Path) -> set[str]:
         "diagram_types.json",
         "skill_registry.json",
         "guardrail_gates.yaml",
-        "paths.json",
+        "paths.json", "surface_craft_map.yaml",
         # config/reachability_exemptions.yaml: read by both
         # scripts/commit_guardian/_reachability_inventory.py (the shared
         # BO-2900d seam) and scripts/commit_guardian/check_done_proof.py.
@@ -808,14 +808,11 @@ def _guard_source_paths_core_config(package_root: Path) -> set[str]:
         "diagram_types.json",
         "skill_registry.json",
         "guardrail_gates.yaml",
-        "paths.json",
+        "paths.json", "surface_craft_map.yaml",
         # config/reachability_exemptions.yaml: mirrors the matching block in
         # _get_source_deployable_scripts just above -- see that block's
         # DECISION note.
         "reachability_exemptions.yaml",
-        # config/entry_kind_vocabulary.json: mirrors the matching block in
-        # _get_source_deployable_scripts just above -- see that block's
-        # DECISION note.
         "entry_kind_vocabulary.json",
         # Read by check_roadmap_schema.py; undeclared until KI-CG-010 fixed its path.
         "roadmap.schema.json",

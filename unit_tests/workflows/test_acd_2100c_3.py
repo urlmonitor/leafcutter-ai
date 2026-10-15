@@ -62,6 +62,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
+from unit_tests.workflows.test_acd_2100c_2 import (  # noqa: F401 -- shared real-execution helpers
+    _init_git_project, _install_real_pause_store, _parsed_real_result, _real_calls, _run, _strip_exports,
+    _write_shaped_calls,
+)
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -83,36 +87,6 @@ _DRAFT_CONTENT = (
 # ---------------------------------------------------------------------------
 # Fixture builders (self-contained copy of test_acd_2100c_2.py's conventions)
 # ---------------------------------------------------------------------------
-
-
-def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None, check=True, capture_output=True, text=True
-    )
-
-
-def _init_git_project(path: Path) -> None:
-    path.mkdir(parents=True)
-    _run(["git", "init", "-b", "main", str(path)])
-    _run(["git", "-C", str(path), "config", "user.email", "test@example.com"])
-    _run(["git", "-C", str(path), "config", "user.name", "Test"])
-    (path / "README.md").write_text("seed\n", encoding="utf-8")
-    _run(["git", "-C", str(path), "add", "README.md"])
-    _run(["git", "-C", str(path), "commit", "-m", "seed"])
-
-
-def _install_real_pause_store(project_dir: Path) -> Path:
-    """Copy the REAL, verbatim scripts/pause_store.py into the fixture
-    project's untracked `.leafcutter/scripts/` -- matching production, where
-    `.leafcutter/` is build output that is never committed (ADR-001). A
-    hand-authored stand-in would not exercise the real CLI's argument
-    parsing, idempotency, or error-handling contract (2h.2 Fixture
-    Authenticity Rule).
-    """
-    dest = project_dir / ".leafcutter" / "scripts" / "pause_store.py"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
-    return dest
 
 
 def _make_worktree_fixture(tmp_path: Path) -> dict:
@@ -290,24 +264,6 @@ __SCRIPT_BODY__
 """
 
 
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
     """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
     as a brand-new Node child_process each call -- this IS the "new process"
@@ -372,28 +328,22 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     return payload
 
 
-def _real_calls(payload: dict) -> list:
-    """All captured calls whose prompt was real-executed (a pause_store.py dispatch)."""
-    return [c for c in payload.get("calls", []) if c.get("real_result") is not None]
+_DESIGNED_BATCH = {
+    "design-prepass": {"output": json.dumps({"batch": [], "records": [{"id": "DRAFT-8888", "declared_files": [], "test_dirs": [], "reference_files": []}]}), "exit_code": 0},
+    "stage-test-design-author": {"status": "ok", "records": [], "anomalies": []},
+}
 
 
-def _parsed_real_result(call: dict):
-    rr = call.get("real_result") or {}
-    try:
-        return json.loads((rr.get("output") or "").strip())
-    except (ValueError, TypeError):
-        return None
-
-
-def _write_shaped_calls(payload: dict) -> list:
-    """Real-executed calls whose stdout parsed to write_record()'s own output
-    shape (presence of the "ok" key)."""
-    out = []
-    for c in _real_calls(payload):
-        parsed = _parsed_real_result(c)
-        if isinstance(parsed, dict) and "ok" in parsed:
-            out.append((c, parsed))
-    return out
+def _after_itpo_committed(ids: list[str]) -> dict:
+    """Label replies of a RESUMED run under the G4 pipeline (ACD-2500c-2): itpo is auto-approved and
+    committed before the test-design stage, so a real resume finds it in git log and does not re-author it;
+    the approval-hold report approves the run's ids."""
+    body = "plan-feature(IT-PO): test-component\n\nAC IDs: " + (", ".join(ids) or "(none)") + "\nrun-id: r\n"
+    return {
+        "scan-committed-stages": {"output": "abc1234 plan-feature(IT-PO): test-component\n", "exit_code": 0},
+        "resume-log": {"output": body, "exit_code": 0},
+        "approval-holds": {"output": json.dumps({"approved": ids, "held": []}), "exit_code": 0},
+    }
 
 
 def _labels(payload: dict) -> list:
@@ -452,13 +402,13 @@ def _read_via_fresh_process(pause_store_path: Path, project_dir: Path, run_id: s
     return json.loads(proc.stdout.strip())
 
 
-def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str) -> tuple:
+def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str, label_responses: dict | None = None) -> tuple:
     """Run the real production entry point headless (no resume_answer) and
     confirm it pauses with a verified, on-disk record. Returns
     (payload, gate_id).
     """
     payload = _run_plan_feature_real(
-        worktree_path, label_responses={}, args=_permitted_args(run_id=run_id)
+        worktree_path, label_responses=label_responses or {}, args=_permitted_args(run_id=run_id)
     )
     assert not payload.get("error"), (
         f"Unattended run must not crash. error={payload.get('error')} "
@@ -514,10 +464,15 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         _assert_worktree_has_no_installed_leafcutter(fixture["worktree_path"])
 
         run_id = "acd2100c3-criterion-run"
-        payload1, gate_id = _pause_headless(fixture["worktree_path"], fixture["project_dir"], run_id)
+        payload1, gate_id = _pause_headless(
+            fixture["worktree_path"], fixture["project_dir"], run_id, label_responses=_DESIGNED_BATCH
+        )
         labels1 = _labels(payload1)
         assert labels1.count("stage-itpo-author") == 1, (
             f"Sanity: the it-po author step must run exactly once before pausing. Labels: {labels1}"
+        )
+        assert labels1.count("stage-test-design-author") == 1, (
+            f"Sanity: the test-design step (the step right before the final gate) must run once. Labels: {labels1}"
         )
 
         # Run 2: a brand-new process (a fresh Node child_process invocation --
@@ -531,7 +486,7 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed([]),
             args=_permitted_args(run_id=run_id, resume_answer=resume_answer),
         )
         assert not payload2.get("error"), f"Resumed run must not crash. error={payload2.get('error')}"
@@ -546,8 +501,8 @@ def test_resume_in_a_new_process_continues_from_the_decision_point():
 
         # AC-1: the steps BEFORE the decision point must not re-execute -- observed
         # from the RESUMED run's own dispatch record, never a source scan.
-        assert labels2.count("stage-itpo-author") == 0, (
-            "The it-po authoring step -- the step before the final-gate decision on "
+        assert labels2.count("stage-itpo-author") + labels2.count("stage-test-design-author") == 0, (
+            "The it-po authoring step or the test-design step -- the steps before the final-gate decision on "
             "this route -- was re-dispatched by the resumed run. AC-1 requires the "
             "resumed run to continue from the decision point, not repeat the steps "
             f"before it. Resumed run's own labels: {labels2}"
@@ -853,7 +808,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                 },
                 "context": {
                     "stage": "final",
-                    "acs": [itpo_ac_id],
+                    "acs": [ba_ac_id, itpo_ac_id],
                     "all_acs": [ba_ac_id, itpo_ac_id],
                 },
                 "status": "paused_awaiting_input",
@@ -877,7 +832,7 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
             # stubbed, matching this file's existing convention of stubbing
             # every non-pause_store.py dispatch.
             "scan-committed-stages": {
-                "output": "abc1234 plan-feature(BA): test-component\n",
+                "output": "abc1234 plan-feature(BA): test-component\ndef5678 plan-feature(IT-PO): test-component\n",
                 "exit_code": 0,
             },
             "resume-log": {
@@ -885,10 +840,14 @@ def test_h2_duplicate_ac_ids_when_multistage_route_resumes_at_final_gate():
                     "plan-feature(BA): test-component\n\n"
                     f"AC IDs: {ba_ac_id}\n"
                     f"run-id: {run_id}\n"
-                    "mid-pipeline commit\n"
+                    "mid-pipeline commit\n\n"
+                    "plan-feature(IT-PO): test-component\n\n"
+                    f"AC IDs: {itpo_ac_id}\n"
+                    f"run-id: {run_id}\n"
                 ),
                 "exit_code": 0,
             },
+            "approval-holds": {"output": json.dumps({"approved": [ba_ac_id, itpo_ac_id], "held": []}), "exit_code": 0},
             # commitStageOutput()'s internal branch-check + commit dispatch --
             # forced to succeed so the run reaches its real "approve" success
             # path and returns a real `acs_approved` terminal field (rather

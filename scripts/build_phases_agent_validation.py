@@ -45,6 +45,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from build_phases_profile_consistency import profile_warning_count
 from build_phases_self_description import _self_desc_field_hint
 from template_compiler import parse_frontmatter
 
@@ -110,57 +111,11 @@ def validate_agent_self_description(
             Validation reads are always performed regardless.
         enforcement_level: One of ``"warning"`` or ``"error"``.
             ``"warning"`` prints warnings and returns ``(0, warning_count)``.
-            ``"error"`` prints errors and returns ``(error_count, 0)``.
+            ``"error"`` prints errors and returns ``(error_count, profile_warnings)``:
+            the profile-consistency findings (ACD-2500e-1-i) are always warnings.
 
     Returns:
         Tuple ``(error_count, warning_count)`` as integers.
-
-    # DECISION HISTORY
-    # - 2026-06-05 12:30 [python-coder/EPIC-SelfDescribingAgents/04]:
-    #   Added validate_agent_self_description() per INF-600g. Checks
-    #   frontmatter fields (behavioral_patterns, pre_flight_reads, inputs,
-    #   outputs, mutates), registry fields (category, skills_invoked,
-    #   knowledge_channels), skill_id resolvability (package + project-local),
-    #   and knowledge_channels range (1-11). Aggregated output. Two severity
-    #   modes: 'warning' returns (0, N); 'error' returns (N, 0).
-    #   (#EPIC-SelfDescribingAgents/04)
-    # - 2026-06-29 [python-coder/EPIC-SelfDescribingAgentsCorrections/05]:
-    #   Confirmed two-path resolution order per INF-600g-3-i:
-    #   1. templates/skills/{skill_id}/SKILL.md (package-level)
-    #   2. .claude/skills/{skill_id}/SKILL.md (project-local)
-    #   A project-local-only skill passes validation without error.
-    #   Only when neither path resolves is an error emitted.
-    #   (#EPIC-SelfDescribingAgentsCorrections/05)
-    # - 2026-07-08 [python-coder/TICKET-20260708-BP-1300a-descriptive-skills]:
-    #   Added descriptive_only: true support per INF-600d-1. When a skills_invoked
-    #   entry carries "descriptive_only": true, the validator skips skill-dir
-    #   resolution (the entry documents an inline capability — no deployed
-    #   templates/skills/<id>/ exists by design). The strict ``is True`` identity
-    #   test prevents accidental skipping when the key holds a string, int, or None.
-    #   Unmarked unresolvable entries continue to fail (guardrail preserved).
-    #   (#TICKET-20260708-BP-1300a-descriptive-skills)
-    # - 2026-08-18 [python-coder/EPIC-BuildPipelinePhantomRemediation/02_bp1300a1]:
-    #   Dropped the ``in_project`` (deployed ``.claude/skills/``) resolution leg
-    #   per BP-1300a-1 / -1-i / -1-ii. A stale local deploy previously resolved
-    #   ``in_project = True`` for a since-removed skill, masking a genuinely
-    #   dangling pointer in a local checkout while it still failed a fresh CI
-    #   clone — an environment-dependent verdict. Resolution is now against the
-    #   canonical source only (``templates/skills/``); the error message no
-    #   longer names the deployed path. (#02_bp1300a1_canonical_skill_resolution)
-    # - 2026-08-25 [python-coder/EPIC-BuildPipelinePhantomRemediation]:
-    #   Added the ``config/skill_registry.json`` resolution leg per BP-1300a-1's
-    #   literal wording — "canonical source (templates/skills plus the
-    #   registry)". Previously only ``templates/skills/<id>/`` was consulted;
-    #   a registry entry with ``portable: false`` and no ``template_path``
-    #   (a shape ``skill_registry.schema.json`` explicitly permits, for
-    #   domain-specific skills deployed only under ``.claude/skills``) was
-    #   falsely flagged as unresolvable. That gap was latent only because a
-    #   DIFFERENT module (``registry_validator.validate_skill_registry``,
-    #   asserted by ``tests/test_skill_registry.py::test_no_orphaned_entries``)
-    #   happens to enforce full bidirectional parity between the registry and
-    #   ``templates/skills/`` today — an invariant this guard did not name or
-    #   depend on explicitly. Adding the registry leg removes the hidden
-    #   cross-module dependency and matches the AC text exactly.
     """
     # Anchored on the PACKAGE, not on target_root. These three inputs are
     # properties of the leafcutter package being built FROM, never of the
@@ -349,10 +304,11 @@ def validate_agent_self_description(
     # ----------------------------------------------------------------
     # Emit problems according to enforcement_level.
     # ----------------------------------------------------------------
+    profile_warnings = profile_warning_count(registry_path, pkg_root)
     if not problems:
         if not dry_run:
             print("  Self-description validation: all agents pass.")
-        return (0, 0)
+        return (0, profile_warnings)
 
     is_error = enforcement_level == "error"
     prefix = "ERROR" if is_error else "WARNING"
@@ -364,7 +320,7 @@ def validate_agent_self_description(
             f"\n  Self-description validation: {len(problems)} error(s) found. "
             "Fix these fields and re-run the build."
         )
-        return (len(problems), 0)
+        return (len(problems), profile_warnings)
     else:
         print(
             f"\n  Self-description validation: {len(problems)} warning(s). "
@@ -372,7 +328,7 @@ def validate_agent_self_description(
             "Set self_description_enforcement='error' in config/agent_registry.json "
             "once all agents are populated."
         )
-        return (0, len(problems))
+        return (0, len(problems) + profile_warnings)
 
 
 def build_agent_cards(target_root: Path, config: dict[str, Any],

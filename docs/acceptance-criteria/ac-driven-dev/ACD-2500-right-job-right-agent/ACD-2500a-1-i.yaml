@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the requirement rule check is pointed at a location that resolves to 0 requirement
     records (a misspelled feature-folder name, or a folder that holds only a README),

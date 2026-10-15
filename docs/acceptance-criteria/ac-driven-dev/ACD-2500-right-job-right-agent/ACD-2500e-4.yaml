@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the technical planner's reduced role (ACD-2500e-2) and truthful profile (ACD-2500e-1),
   When its reference documentation is authored,
@@ -33,11 +33,14 @@ estimated_complexity: S
 it_requirements:
 - Reference genre in docs/reference/; generated agent cards (docs/agents/cards/*) are never hand-edited.
 - Names the code-aware agent by its registered id (ACD-2500d-5).
+- The "code-aware test-design step" and the "file-aware step" are two output groups of one registered agent,
+  `test-designer` (ADR-072 section 2); the doc says so and names that id for both.
 delivers_to: null
 expects_from:
   ac_id: ACD-2500e-2
   contract: Kept and relocated duty list.
 test_required: false
+test_rationale: "Documentation-only deliverable (docs/reference/technical-planner-role.md and in-place doc fixes) with no executable behaviour for test-writer to exercise. Link resolution, frontmatter validity and length are enforced by the project's documentation checks at commit time, not by a unit test."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:
@@ -52,3 +55,6 @@ change_target: docs
 risk_surface: internal
 notes: |
   Answers ACD-2500e's reference-doc trigger. Deliverable is the document only.
+  Amended 2026-10-15 (G5 architect review, ticket 41 comment 2026-10-14 19:36, D7): the
+  criteria's "code-aware test-design step" and "file-aware step" are one agent,
+  `test-designer`, with two output groups (ADR-072 section 2).

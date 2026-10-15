@@ -10,7 +10,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a batch of 3 business-analyst requirements (one code, one prompt-only, one
     documentation) and one of them declares a pattern reference with bindings,
@@ -44,6 +44,7 @@ expects_from:
   ac_id: ACD-2500e-2
   contract: Reduced it-po.md instructions.
 test_required: false
+test_rationale: "Behaviour of a live LLM run, which no unit test can reproduce; proved operationally instead (ticket 44): the real it-po prompt was run on a scratch BA-shaped store and a deterministic verifier plus the requirement rule check confirmed the outcome, with the output recorded in the ticket."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:

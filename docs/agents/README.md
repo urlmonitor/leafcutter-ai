@@ -444,25 +444,7 @@ PROJECT_CONTEXT.md not found for <agent-name>; running template-only
 
 ### Spawn Graph Consistency Validation
 
-The build system enforces bidirectional consistency of the spawn graph at two levels:
-
-**Build-time (registry_validator.py):** Every build run calls `validate_agent_registry()` which checks that:
-- For each agent A with `spawn_allowlist` entry B: B's `spawned_by` must include A.
-- For each agent A with `spawned_by` entry B: B's `spawn_allowlist` must include A.
-
-Violations are reported using the `"asymmetric spawn:"` prefix to clearly name both agents involved:
-```
-asymmetric spawn: A.spawn_allowlist includes B, but B.spawned_by does not include A
-asymmetric spawn: A.spawned_by includes B, but B.spawn_allowlist does not include A
-```
-
-**Commit-time (check-agent-spawn-consistency hook):** When `config/agent_registry.json` is staged, the `check-agent-spawn-consistency` pre-commit hook runs the same bidirectional check and exits 1 with named-pair errors before a bad registry state can be committed.
-
-Exemptions:
-- `__ticket_phase_agents__` special token in `spawn_allowlist` is silently skipped.
-- External callers (`user`, `finalize-feature.js`) in `spawned_by` are silently skipped.
-
-**Reference**: AC INF-600g-1 — Build validates that spawned_by entries are reciprocal with spawn_allowlist entries.
+Moved to [spawn-graph-consistency.md](spawn-graph-consistency.md).
 
 ## §5 Agent Inventory
 
@@ -524,6 +506,7 @@ Agents are grouped by family and sorted alphabetically within each group. Each e
 | [sql-query](coding/sql-query.md) | Sonnet | User-facing | `/sql-query` | Ad-hoc SELECT query authoring; invokes `sql-query-past-queries` skill to surface reusable prior queries; never executes autonomously. Portable. [EPIC-PortableSQLAgents ticket 05] |
 | [sql-test-writer](coding/sql-test-writer.md) | Sonnet | Internal | — | Dispatched by `sql-coder`; authors SQL test files using transaction-rollback isolation (`unittest.TestCase`); reads PROJECT_CONTEXT for test_folder, framework, slow_test_marker. Portable. [EPIC-PortableSQLAgents ticket 06] |
 | [status-checker](coding/status-checker.md) | Sonnet | User-facing | `/status` | Investigates ticket state via git + prod-puller; closes confirmed-done tickets on explicit user request. [EPIC-CodingAgents ticket 08] |
+| `test-designer` | Sonnet | Internal | — | Code-aware planning agent spawned by `plan-feature.js`; reads the pre-pass report, then source and existing tests, and writes the test design (ACD-2500c) and file findings (ACD-2500d) onto the requirement record in separate fields. Reference doc pending. ADR-072. |
 | [test-breaker](coding/test-breaker.md) | Sonnet | Internal | — | Read-only wrong-version preparer; for each named wrong version a guarding test must catch, replies with the minimal exact-match replacement or `could_not_prepare`. Dispatched by build routes ahead of the shared runner; the writer step makes the copies and manifest. [TQ-500g-1-iv] |
 | [test-runner](coding/test-runner.md) | Sonnet | User-facing | `/test` | Picks right suite from diff; structured failure report; auto-trigger for `python-coder`/`sql-coder` inner loops. Now runs after `test-writer` in the phase sequence. [EPIC-CodingAgents ticket 26] |
 | [test-writer](coding/test-writer.md) | Sonnet | Internal | — | Phase agent dispatched by `ticket-supervisor` when a ticket has a non-empty `test_requirements.tests` array; writes test files using the correct framework and setUp/tearDown pattern; runs after `python-coder`, before `test-runner`. [EPIC-PortableDevWorkflow ticket 36] |

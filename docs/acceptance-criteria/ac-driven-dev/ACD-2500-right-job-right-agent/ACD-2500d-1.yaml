@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given a requirement whose criteria change the retry cap applied when a build step fails,
     and whose declared files are (a) the runbook in which that cap is defined and (b) a
@@ -66,6 +66,7 @@ expects_from:
     reference_files: [{path: str, exists: bool, same_type: bool, same_area: bool}]}]}; paths repo-root-relative
     POSIX. Non-zero exit and no report on error.'
 test_required: false
+test_rationale: "Prompt-only deliverable (the file-findings procedure in templates/agents/test-designer.md) whose behaviour is an LLM following instructions; the structural tests under unit_tests/ (paragraph-scoped rules, the prompt's examples validated against the real schema, the real render CLI) pin the instructions, and the requirement rule check enforces what the agent writes."
 origin_agent: business-analyst
 created: 2026-09-25
 amended_by:

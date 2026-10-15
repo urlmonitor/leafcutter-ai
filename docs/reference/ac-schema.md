@@ -4,7 +4,7 @@ description: "Field-by-field reference for AC YAML files, the hierarchical ID fo
 type: reference
 status: active
 created: 2026-06-04
-last_updated: 2026-10-07
+last_updated: 2026-10-15
 components:
   - build_pipeline
 related_docs:
@@ -12,6 +12,10 @@ related_docs:
   - docs/acceptance-criteria/README.md
   - config/ac_store_schema.json
   - docs/testing/test-angles.md
+  - docs/reference/ac-declared-files.md
+  - docs/reference/ac-assignments.md
+  - docs/reference/ac-readiness-and-assignment-gates.md
+  - docs/reference/test-intent.md
 ---
 
 # AC Traceability Store Schema
@@ -45,6 +49,7 @@ Each AC file is a single YAML document with the following fields.
 | `origin_agent` | string | no | Identity of the agent or workflow that created this AC file. Free-form provenance string — any non-empty value is valid. The field is **not** validated against the current agent registry. Historical agent names (including names of deleted, renamed, or decomissioned agents) remain valid and are never rewritten during schema upgrades. Example values: `business-analyst` (canonical name, also used historically as v1 and promoted from v3), `business-analyst-v2` (deleted agent), `business-analyst-v3` (legacy v3 name, now renamed to `business-analyst`), `create-ticket` (deleted agent), `refinement` (deleted agent), `BrainCandy` (human author), `ticket-wiring` (workflow). |
 | `readiness` | enum or null | no | Lifecycle readiness state: `draft`, `reviewed`, or `approved`. Present on ~69 % of records. |
 | `priority` | enum or null | no | Implementation priority: `critical`, `high`, `medium`, or `low`. Present on ~69 % of records. |
+| `hold_reason` | string or absent | no | Why a gate holds the record back: one of the closed `HOLD_REASONS` vocabulary (the schema enum equals it), set by the gate that owns the reason. `reference file pending` is set by the technical planner and cleared by the test-designer; it is the explicit marker that lets an object-form `it_requirements` omit `reference_file_path` until the file-aware step names it; the key's absence never means pending. See [ac-readiness-and-assignment-gates.md](ac-readiness-and-assignment-gates.md#hold-reasons). |
 | `level` | enum or null | no | Hierarchy level: `L0` (portfolio), `L1` (feature), `L2` (story/task), `L3` (sub-task). |
 | `work_status` | enum or null | no | Implementation lifecycle: `not_started` / `todo` (aliases), `in_progress`, `done`. |
 | `req_status` | enum | no | Requirement lifecycle status from a product perspective: `active`, `draft`, `approved`, or `superseded`. Independent of `work_status`. |
@@ -69,9 +74,15 @@ Each AC file is a single YAML document with the following fields.
 | `change_target` | string or list of strings | no | Classification of what kind of artifact this AC targets (ADR-017 blast-radius vocabulary). Used by the computed quality-gates pipeline (`_build_agents_map`) to look up mandatory guardrail agents. Accepts a single value OR a list when the AC spans multiple targets. Valid values: `code`, `schema`, `ui`, `infrastructure`, `pipeline`, `prompt`, `model`, `config`, `docs`, `dependency`. Optional — absent on ACs that predate the computed-gates pipeline (ticket 10 will backfill). |
 | `risk_surface` | string | no | Classification of the blast-radius / risk exposure of this AC (ADR-017 blast-radius vocabulary). Combined with `change_target` to select mandatory guardrail agents. Valid values: `internal`, `contract_boundary`, `auth`, `privacy`, `safety`, `cost`. Optional — absent on pre-computed-gates ACs. |
 | `declares_side_effect` | boolean or null | no | **DERIVED, not authored by opinion.** Declares that this AC's work produces a durable, observable side-effect (a file written, a record persisted, a state-changing command) rather than only returning a value. `check_ac_schema.py` computes the value from the record's **own `Then` clause** and blocks the commit when the authored value disagrees or is missing — you do not get to choose it. See [declares_side_effect is derived from the Then clause](#declares_side_effect-is-derived-from-the-then-clause) for the exact rule. Effect once set: `generate_ticket_from_ac.py` routes the `user-surface-smoker` phase agent into the generated ticket's `agents` map as `needed` and propagates the flag to the ticket frontmatter (BP-1100f-5). The gate is **non-overridable** — an explicit `user-surface-smoker: not_needed` is ignored while this is true. Absent/false/null means no side-effect claim and no force-routing (BP-1100f-5-i). |
+| `declared_files` | list of objects | no | Files the work changes, each `{path, state}` with `state` `existing` or `to_be_created`. Absent = "no declared files". See [The `declared_files` Field](#the-declared_files-field). |
 | `test_spec` | list or null | no | Source-of-truth test contract for this AC — the AC, not the ticket, owns what must be tested. Authored by it-po on L2/L3 code ACs; `generate_ticket_from_ac.py` derives the ticket's `## Test Requirements` section from it. Null/absent means "no contract authored yet" and the generator falls back to deriving one descriptor per Gherkin `Then` clause plus a mandatory reachability descriptor; an empty list is **not** permitted (use `test_required: false` for genuinely test-free ACs). See the item fields below. |
 | `test_required` | boolean or null | no | Whether `test-writer` must produce failing tests. Distinguishes "intentionally no tests" (`false`) from "contract not yet authored" (null/absent). Defaults to true for code/schema ACs. When `false` the generator omits the `## Test Requirements` section entirely and `test-writer` skips with an accurate reason. |
 | `test_rationale` | string or null | no | Prose justification for the shape of `test_spec`: why this coverage is right and why a weaker shape (typically a direct-import unit test) would not be. Must be a string, never a list. |
+| `test_intent` | list | no | ACD-2500b-1-i: what the IT PO says must be tested, one `{clause, needs_test, reason}` entry per outcome clause of `criteria` (a `Then`, or an `And` after the first `Then`), including clauses that need no test. Intent only, NOT a test contract; a plain closed array (no `oneOf`, no null, `minItems: 1`) so both validators name the bad key. Matching rule and the pending/legacy predicates: [test-intent.md](test-intent.md). |
+| `test_design_authorship` | object | no | ACD-2500c-3: `{step, date}` mark of a design produced by the code-aware step; `step` a non-empty string, `date` `YYYY-MM-DD` (an unquoted YAML date is accepted). Absent means a legacy design. Null is rejected. |
+| `test_design_opened_files` | list of strings | no | ACD-2500c-3: repo-root-relative paths the code-aware step opened. An empty list is schema-valid on purpose (the test-design rule check reports it as not grounded). |
+| `file_findings` | list of objects or absent | no | ACD-2500d-3-i: one finding per file the record names, closed shape `file`, `verdict` (`consistent`, `describes, does not implement`, `absent, not to-be-created`, `behaviour found elsewhere`), `line_range`, `found_in`, `reason`, `decision` (null, or `choice` `reassign`/`split`/`assignment stands` with `reason` and `by: it-po`); an unknown key is refused by name. A non-`consistent` finding with no decision holds the record at `reviewed` as `file finding undecided`. Absent means the step has not run. |
+| `file_findings_opened_files` | list of strings | no | ACD-2500d-1: repo-root-relative paths the file-aware step opened. An empty list is schema-valid on purpose (the rule check reports a verdict on an unopened file). |
 | `product_truth` | list | no | **Tool-owned** derived back-reference into the product-truth store, generated by `docs/product-truth/scripts/generate_product_truth.py` as the inversion of every flow node whose `implements` list names this AC. Never hand-edited; regenerate if it drifts. Omitted when no flow node references the AC. |
 
 #### `test_spec` item fields
@@ -88,8 +99,14 @@ Each entry in `test_spec` is an object. Unknown keys are rejected (`additionalPr
 | `type` | enum | no | Test level: `unit`, `integration`, `e2e`, `behavioral`, or `component`. `component` is a rendered-in-isolation UI test — neither a plain unit test nor end-to-end. Mirrored in `test_requirements.schema.json` under the same coupling as `framework` above. |
 | `angle` | enum | no | Which proof-of-done question this test answers, from the set-cover taxonomy in [docs/testing/test-angles.md](../testing/test-angles.md): eight values — five core angles `criterion`, `reachability`, `seam`, `real_artifact`, `deployed`, plus three conditional ones, `boundary`, `failure` and `discrimination`. `discrimination` fires for bug-fix or gate ACs, or when the entry carries `must_catch`: the test must go red under at least one named plausible wrong version of the code, not only when the code is absent; it never takes one of the four slots by default and may share a test with `criterion`. `generate_ticket_from_ac.py` passes an authored value straight through onto the ticket's `## Test Requirements` entry. Note the criteria-derived fallback (no `test_spec` authored) tags its own descriptors `criterion` and appends one mandatory `reachability` descriptor; an authored `test_spec` is taken as-is and gets no generator-added entries. A red that is only an `ImportError`/`AttributeError` (or other import/name/attribute lookup error raised before any code under test ran) does not count for an entry that declares `discrimination` or `must_catch` — see `must_catch` below. Omit when the angle has not been classified. |
 | `must_catch` | list of strings | no | The wrong versions this entry's test must go red under, in the author's own words (for example `"revert the fix"`, `"drop the second gate condition"`, `"new column is NULL"`). Optional; when present it must be a **non-empty** list and every item must contain at least one non-whitespace character — an empty list or a blank-only item is rejected, and the `check-ac-schema` error names the entry, the field and the rule that failed. Expected on bug-fix and gate ACs (a gate or fix whose wrong versions are not named cannot be checked). `generate_ticket_from_ac.py` copies it **verbatim** (same strings, same order, no trimming, case change or dedupe) onto the generated ticket's `## Test Requirements` entry; the criteria-derived fallback route never adds it. Declaring `must_catch` (or `angle: discrimination`) makes the fast lane's red-baseline reader (`fast_lane.py verify_red_baseline --ac-root <ac_store_root>`) refuse that entry's test as red evidence when its only red is an `ImportError`/`AttributeError`-style absence red: the test moves to the result's `refused` list and the gate fails closed with reason `declared_test_refused_absence_only_red`. Without `--ac-root` the reader does not apply this rule. The same property is mirrored in [config/test_requirements.schema.json](../../config/test_requirements.schema.json); widen one and you must widen both. |
+| `proves_clause` | string | no | ACD-2500c-3: the outcome clause this entry proves, the verbatim `test_intent[].clause` text. Readers match it with `normalise_clause`; the schema does not cross-check. |
+| `code_file` | string | no | ACD-2500c-3: repo-root-relative POSIX path of the code file the entry exercises. Existence is judged by the test-design rule check, not the schema. |
+| `to_be_created` | boolean | no | ACD-2500c-3: true when `code_file` does not exist yet. Absent means false. |
+| `convention_test_file` | string | no | ACD-2500c-3: the neighbouring existing test file cited as the convention for a to-be-created `code_file`. |
 | `requires_db` | boolean | no | Whether the test needs a live database (drives slow-test marking). |
 | `in_scope_files` | list of strings | no | The repo-relative POSIX paths of the files a wrong version named in this entry's `must_catch` may alter (TQ-500g-1-ix). Optional; when present it must be a **non-empty** list and every item must contain at least one non-whitespace character; any other unknown `test_spec` key is still refused. The wrong-version writer (`scripts/build_orchestration/wrong_version_writer.py`, steps `list` and `write`) reads it through the runner's declared-scope reader: a name's in-scope files are the union of `in_scope_files` over every in-scope entry whose `must_catch` carries that exact name, in order of first declaration, duplicates dropped, minus every test file. A name whose entries carry no `in_scope_files` has no in-scope file, so every replacement for it is refused (fail closed). `generate_ticket_from_ac.py` does not copy it onto the ticket; if it ever does, widen `config/test_requirements.schema.json` in the same change. |
+
+An undeclared entry key is rejected by name by both validators; designs and their authorship: [test-intent.md](test-intent.md).
 
 ### Full example
 
@@ -112,62 +129,68 @@ amended_by: []
 origin_agent: business-analyst
 ```
 
-### Pattern AC example (with pattern_slots)
-
-A pattern AC declares the slots that consuming ACs must bind. The `pattern_slots`
-field lists each `{word}` placeholder from the `criteria` field explicitly.
-
-```yaml
-id: ACS-500a-1
-title: "A pattern AC defines shared behavior with parameterized slots"
-component: ac-store
-level: L2
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-PatternReuse/01_define_pattern.md"
-criteria: |
-  Given an AC YAML file with level: L2,
-  When its criteria describes behavior with named slots
-    (e.g. "sortable table with columns {columns}, sorted by {default_sort}"),
-  Then that AC is the single authoritative definition of the shared behavior.
-pattern_slots:
-  - "{columns}"
-  - "{default_sort}"
-readiness: approved
-priority: high
-origin_agent: BrainCandy
-```
+A pattern AC declares the slots that consuming ACs must bind: see [ac-schema-examples.md](ac-schema-examples.md#pattern-ac-example-with-pattern_slots).
 
 ### Pattern-inherited AC example (empty criteria)
 
-When an AC inherits all of its behavior from a reusable pattern, the `criteria`
-field may contain a plain-text placeholder instead of a full `Given`/`When`/`Then`
-scenario. The schema validator accepts this form when `implements_pattern` is set.
-
-```yaml
-id: PAGE-005
-title: "Users list page — standard CRUD table (PTN-001)"
-component: users-ui
-status: active
-created_by: "tickets/00_inbox/epics/EPIC-UsersUI/03_users_list.md"
-criteria: "No page-specific behavior — all behavior inherited from pattern."
-implements_pattern: "PTN-001"
-pattern_bindings:
-  entity_type: "users"
-  columns:
-    - "name"
-    - "email"
-readiness: draft
-priority: medium
-origin_agent: business-analyst
-```
-
-**Key points:**
-- `criteria` must still be a non-empty string (the schema requires `minLength: 1`).
-- A plain-text placeholder like `"No page-specific behavior — all behavior inherited from pattern."` satisfies this requirement.
-- The effective behavior is entirely derived from the pattern referenced in `implements_pattern`, instantiated with the `pattern_bindings` values.
-- The schema validator does **not** enforce `Given`/`When`/`Then` format — any non-empty string is valid.
+A pattern-inherited AC carries a plain-text `criteria` placeholder: see [ac-schema-examples.md](ac-schema-examples.md#pattern-inherited-ac-example-empty-criteria).
 
 ---
+
+### The `declared_files` Field
+
+The only answer, on an AC record, to "which files does this work change"; read only through
+`scripts/ac_store/declared_files.py` (`get_declared_files`).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `declared_files` | list of objects | no | Files the work changes, in declared order. Absent = the state "no declared files". |
+| `declared_files[].path` | string | yes | Repository-root-relative path, forward slashes. |
+| `declared_files[].state` | enum | yes | `existing` (file is in the repository; the work edits it; must be present) or `to_be_created` (the work creates it; expected absent). |
+
+**Path form.** Each rule refuses the record. Relative to the repository root and inside it
+(`/etc/x.py`, `C:/x.py`, `../x.py` refused). Forward slashes only (`scripts\x.py` refused).
+Never a regenerated copy such as `.leafcutter/scripts/x.py` (the message names the source
+path to declare instead). Canonical spelling: no leading `./`, no `//`, no trailing `/`.
+
+**Not a declared file.** `doc_links` entries of any relationship (`modifies`, `describes`, `related`) never count. Nothing fills the list in automatically. A record without the field is in the state "no declared files": never a violation (ADR-026 rule 4); checks report it as `not evaluated: no declared files`, never as passed.
+
+**Refusals and reports.** `check_ac_schema.py` (the load-bearing commit hook) and the
+agent-side `scripts/ac_store/validate_ac_schema.py` share `declared_files_commit_messages`.
+A refusal blocks the commit; a report never does.
+
+| Case | Outcome |
+|---|---|
+| `existing` entry neither present in the tree nor marked `to_be_created` | Refusal |
+| Path outside the repository, with a backslash, inside a regenerated copy, or in non-canonical spelling | Refusal |
+| Empty list (omit the field instead), entry without `path`, or `state` other than the two markers | Refusal |
+| `to_be_created` entry whose file already exists | Report only |
+
+Finished work (`work_status: done`) is exempt from both existence cases; a deleted
+`existing` file appears only in the store-wide report (`python scripts/ac_store/declared_files.py`).
+
+**Migration posture.** Records written before the field have no list. The
+implementation-readiness gate reports them `missing file targets` but, while advisory and
+while they read as `schema_version` < 2, does not hold them (ADR-026 rules 3-4); the
+reasons are in [Hold reasons](ac-readiness-and-assignment-gates.md#hold-reasons). Their
+generated tickets carry a surface labelled "derived, not declared"
+([generated `files_touched`](ac-declared-files.md)).
+
+**Worked example.** One existing file edited, one new file created:
+
+```yaml
+declared_files:
+  - path: scripts/ac_store/scan_ac_store.py
+    state: existing
+  - path: unit_tests/ac_store/test_scan_extra.py
+    state: to_be_created
+```
+
+If `unit_tests/ac_store/test_scan_extra.py` already existed on unfinished work, the
+second entry is the one reported (`declared path '...' is marked to be created but
+already exists`) and the commit proceeds; if `scripts/ac_store/scan_ac_store.py` were
+absent, the first entry would refuse the commit. The requirement rule check
+([requirement-rule-check.md](requirement-rule-check.md)) reads the field for two families.
 
 ## ID Format, Hierarchy, and `covered_by` Scope
 
@@ -245,46 +268,7 @@ The function `resolve_behavior_stack(ac_id, id_index)` in
 `scripts/ac_store/scan_ac_store.py` implements this algorithm and returns
 the stack as an ordered list of `BehaviorLayer` dicts.
 
-### Example: CRUD list page
-
-Given the following ACs:
-
-```yaml
-# Page AC (consumer)
-id: PAGE-001
-implements_pattern: PTN-020
-criteria: "No page-specific wiring — all behavior inherited from PTN-020."
-
-# Composite pattern AC
-id: PTN-020
-depends_on: [PTN-010, PTN-011, PTN-012]
-criteria: |
-  Given a page implements sort, filter, and pagination,
-  When the user changes a filter, Then pagination resets to page 1 ...
-
-# Atomic pattern ACs
-id: PTN-010
-criteria: |
-  Given a page contains a sortable table ...
-id: PTN-011
-criteria: |
-  Given a page contains a filter bar ...
-id: PTN-012
-criteria: |
-  Given a page displays a paginated collection ...
-```
-
-`resolve_behavior_stack("PAGE-001", id_index)` returns:
-
-```python
-[
-  {"layer": "page",      "ac_id": "PAGE-001", "source": "self", ...},
-  {"layer": "composite", "ac_id": "PTN-020",  "source": "implements_pattern", ...},
-  {"layer": "atomic",    "ac_id": "PTN-010",  "source": "depends_on", ...},
-  {"layer": "atomic",    "ac_id": "PTN-011",  "source": "depends_on", ...},
-  {"layer": "atomic",    "ac_id": "PTN-012",  "source": "depends_on", ...},
-]
-```
+The worked CRUD list page example (a page AC, a composite pattern AC and three atomic pattern ACs) is in [ac-schema-examples.md](ac-schema-examples.md#example-crud-list-page).
 
 ### Design invariants
 
@@ -535,64 +519,7 @@ never hard-blocks an unrelated commit.
 
 ## Implementation `.py` in Scope — the Test Requirements signal (TKT-500f-6)
 
-**This section is normative.** It is the single statement of the rule, and both
-sides that apply it are kept in step against this text by SPEC PARITY — not by a
-shared import. One side is Python (`scripts/ac_store/_gtfa_impl_py.py`), the
-other is markdown prose (`templates/agents/ticket-supervisor.md`); there is no
-portable code path across that boundary, so if you change the rule you must
-change this section and BOTH sides in the same commit.
-
-### The predicate
-
-A `files_touched` entry is an **implementation `.py` in scope** when **all** of
-the following hold:
-
-1. it ends in `.py` (which also settles the `.yaml` / `.json` exclusion — a path
-   cannot end in two extensions at once);
-2. no directory component of it is `docs`;
-3. no directory component of it is `tickets`;
-4. its basename matches neither `test_*.py` nor `*_test.py`.
-
-### The signal
-
-Classification is **per entry**, and the section-required decision is a logical
-**OR** over the entries — *any* one qualifying entry obliges the section,
-regardless of how many documentation or configuration entries accompany it. It
-is never a unanimity check: `all(...)` where `any(...)` was meant passes the
-single-file case and the all-excluded case and fails only the mixed one.
-
-- **At least one qualifying entry** → the generated ticket carries a
-  `## Test Requirements` section, and every stub in it names the qualifying
-  implementation files under `implementation_files`. Its presence is the
-  authoritative signal that the test-writer phase is **required**.
-- **Entries present, none qualifying** → no `## Test Requirements` section, and
-  the omission is **silent**. It is the correct answer, not a degraded one; a
-  warning on every docs/config-only ticket is how a warning channel becomes
-  noise. Its absence is the authoritative signal that a test-writer skip is
-  **legitimate**.
-- **`files_touched` empty** → *no evidence either way*, not a No. The AC declared
-  no edit surface the generator could derive anything from, so the decision falls
-  back to the computed agent map's production-code classification (the signal
-  that governed the section before this predicate existed). Reading an empty list
-  as "no implementation file in scope" would strip the section from 769 of the
-  1,100 coder-assigned records with no authored `test_spec` in the real store
-  (measured 2026-09-21). An unnecessary section is noise; a silently withheld one
-  skips test-writer, which is the strictly worse error.
-
-An it-po-authored `test_spec` is an **independent** ground for the section and is
-unaffected by this predicate (see `TKT-500g-1`); `test_required: false` outranks
-both.
-
-### Where it is implemented
-
-`is_implementation_python_path` in `scripts/ac_store/_gtfa_impl_py.py` is the
-**only** implementation of the predicate in the repository. Both AC-to-ticket
-generators reach it: the direct path (`generate_ticket_from_ac.py`, via
-`_gtfa_body` and `_gtfa_tests_section`) and the goal path
-(`scripts/ac_store/epic_tickets.py`, which delegates to that same script as a
-subprocess). Do not inline or duplicate it in either —
-`unit_tests/ac_store/test_tkt_500f_6_iii_a.py` fails on a second implementation
-as well as on none.
+The normative rule for when a ticket carries a `## Test Requirements` section: see [ac-test-requirements-signal.md](ac-test-requirements-signal.md).
 
 ---
 
@@ -737,23 +664,9 @@ applies here: if the quick-fix AC is a child AC, the parent's `covered_by` list
 is updated to include the child AC ID (this was already done by `build-ac` during
 AC creation). The test-writer only updates the child AC's `covered_by` field.
 
-### Agent cards — no AC Assignments section (removed 2026-10-09)
+### AC Assignments and persistence
 
-`generate_agent_cards.py` no longer emits a `## AC Assignments` section in
-`docs/agents/cards/<agent>.card.md` and no longer scans the AC store.
-`render_ac_assignments`, `_scan_ac_assignments`, `_scan_all_ac_assignments`
-and the `ac_assignments=` parameter of `generate_card` were deleted.
-
-Reason: the AC store is the source of truth, and `assigned_agent` can be
-grouped at read time by any consumer. Caching that query into generated
-markdown made every `build.py` run rewrite the cards (a permanently dirty
-working tree), and the regenerated cards could not be committed because of
-the doc-length growth ratchet.
-
-Source today: the AC YAML store, grouped by `assigned_agent` at read time. The
-field is still live: the ticket generator reads `assigned_agent` to build the
-ticket's `agents:` map and render a single `Assigned agent:` line. AC
-INF-600b-2, which specified the section, is retired as superseded.
+Moved to **[ac-assignments.md](ac-assignments.md)**: why agent cards carry no `## AC Assignments` section (removed 2026-10-09), and the AC persistence guarantee after ticket close (AC BP-600b-3).
 
 ### triage agent (glossary-triage, debug)
 
@@ -836,50 +749,6 @@ ${TMPDIR:-/tmp}/leafcutter-quickfix-<component-id>.lock if the process
 is no longer running.
 ```
 
-### AC persistence guarantee after ticket lifecycle close (AC BP-600b-3)
-
-When the quick-fix workflow completes end-to-end — fix committed and the
-workflow's internal ticket closed — the AC YAML file created during the AC
-creation phase MUST remain untouched in the store.
-
-**Invariant:**
-
-```
-Given the quick-fix workflow has completed end-to-end (fix committed
-  and ticket closed),
-When the user lists AC files under docs/acceptance-criteria/,
-Then the AC YAML file created by the quick-fix workflow still exists,
-And its status field is "active",
-And it is not deleted or moved by the ticket lifecycle close step.
-```
-
-**Implementation constraint for the ticket lifecycle close step:**
-
-The step that marks the quick-fix workflow's internal ticket as `done` (e.g.
-flipping `status: in_progress → done` via `set_ticket_status.py`) MUST NOT
-touch or reference any AC YAML file. Specifically:
-
-- The close step operates only on the ticket markdown file (`*.md`) and the
-  git index for that file.
-- It MUST NOT delete, rename, move, or overwrite any file under
-  `docs/acceptance-criteria/`.
-- It MUST NOT set the AC's `status` field to `deprecated` or `superseded_by`
-  as a side-effect of the ticket closing.
-
-The AC lifecycle (active → deprecated → superseded_by) is governed exclusively
-by human or agent intent expressed in separate commits. A ticket closing is not
-a trigger for AC lifecycle transitions.
-
-**Why this guarantee is necessary:**
-
-The quick-fix workflow creates an AC YAML file as a permanent traceability
-artefact. The AC documents what bug was fixed and what criterion the fix must
-satisfy going forward. If the ticket lifecycle close step were to delete or
-deactivate the AC, the traceability record would be destroyed, the pre-commit
-`check_ac_coverage.py` hook would lose its anchor, and any test tagged
-`# covers: <id>` would reference a ghost criterion. The persistence guarantee
-ensures the AC outlives the workflow that created it.
-
 ---
 
 ## Component Registry (`index.yaml`)
@@ -900,6 +769,6 @@ component IDs to their prefix and description.
 ## See Also
 
 - `docs/how-to/ac-traceability-store.md` — creating, amending, and deprecating ACs. `docs/how-to/declare-component-membership.md` — adding the `components` list to an AC (or any knowledge item) so it joins the component view, and querying a component back to its criteria and delivering code.
-- `docs/acceptance-criteria/README.md` — directory structure and quick-start.
+- `docs/acceptance-criteria/README.md` — directory structure and quick-start. Sibling references: [ac-declared-files.md](ac-declared-files.md) (generated `files_touched` from `declared_files`), [ac-assignments.md](ac-assignments.md) (agent-card assignments, AC persistence), [ac-readiness-and-assignment-gates.md](ac-readiness-and-assignment-gates.md) (hold reasons, readiness gate, assignment quality).
 - `config/ac_store_schema.json` — machine-readable JSON Schema (draft-07) for the AC YAML format.
 - `docs/INDEX.md` — full documentation index.
