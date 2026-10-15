@@ -39,6 +39,7 @@ from kernel.contracts.payloads import (
 from kernel.contracts.query import (QueryBuildRequest, QueryCandidate,
                                     QueryActivationRequest, QueryActivationReceipt)
 from kernel.contracts.retrieval_needs import RetrievalNeedsRequest, RetrievalNeedsOutput
+from kernel.contracts.split import GoalDecompositionPayload, GoalDecompositionRequestPayload
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 SCHEMA_CATALOG: dict[str, type[KernelModel]] = {
     sid.RETRIEVAL_NEEDS_REQUEST: RetrievalNeedsRequest,
     sid.RETRIEVAL_NEEDS_OUTPUT: RetrievalNeedsOutput,
+    sid.GOAL_DECOMPOSITION_REQUEST: GoalDecompositionRequestPayload,
+    sid.GOAL_DECOMPOSITION: GoalDecompositionPayload,
     sid.QUERY_BUILD_REQUEST: QueryBuildRequest,
     sid.QUERY_CANDIDATE: QueryCandidate,
     sid.QUERY_ACTIVATION_REQUEST: QueryActivationRequest,
@@ -344,3 +347,4 @@ def export_json_schemas(directory: Path) -> list[Path]:
 #   (#KernelBootstrapV0/P1)
 # ====================================================================
 # - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)
+# - 2026-10-06 18:00 [python-coder]: Add the goal_decomposition_request.v1 and goal_decomposition.v1 payload schemas. (#TICKET-20261006-DK-400a-1)

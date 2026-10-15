@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "PartProposal": {
+      "additionalProperties": false,
+      "description": "One proposed part: its id, text, the verbatim span it quotes, dependencies and capability.",
+      "properties": {
+        "child_capability": {
+          "description": "Whether the part is run as a decision or as research.",
+          "enum": [
+            "decision",
+            "research"
+          ],
+          "title": "Child Capability",
+          "type": "string"
+        },
+        "covers": {
+          "description": "The words of the request this part quotes verbatim; a part whose quote is not found is dropped.",
+          "minLength": 1,
+          "title": "Covers",
+          "type": "string"
+        },
+        "depends_on": {
+          "description": "Ids of parts that must be settled before this one runs.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Depends On",
+          "type": "array"
+        },
+        "id": {
+          "description": "Short id other parts cite in depends_on.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "text": {
+          "description": "The part written as one question that stands alone.",
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "covers",
+        "child_capability"
+      ],
+      "title": "PartProposal",
+      "type": "object"
+    }
+  },
+  "$id": "leafcutter.goal_decomposition.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "leafcutter.goal_decomposition.v1: the parts the host proposes (a proposal, never a fact).\n\nZero parts up to `MAX_PROPOSED_PARTS` are legal: more than `split.max_parts` is cut by the\nconversion, and fewer than two ends the split there (not at the schema).",
+  "properties": {
+    "one_question_rewording": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The host's suggestion for asking the request as one bounded question; shown as a hint after a jev_none rejection, never run.",
+      "title": "One Question Rewording"
+    },
+    "parts": {
+      "description": "The parts the host proposes; a proposal the kernel checks, never a fact.",
+      "items": {
+        "$ref": "#/$defs/PartProposal"
+      },
+      "maxItems": 12,
+      "title": "Parts",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "description": "Version of this contract's shape, so a reader can reject a payload written for another shape.",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "parts"
+  ],
+  "title": "GoalDecompositionPayload",
+  "type": "object"
+}

@@ -29,7 +29,7 @@ from kernel.registry.eligibility import filter_candidates
 from tests.kernel.helpers import ScriptedExecutor, load_json, make_request_body
 
 CONFIG = Path(__file__).resolve().parents[3] / "config"
-HOST_IDS = ["host.formulate_question", "host.generate_options", "host.query_build", "host.research",
+HOST_IDS = ["host.decompose_goal", "host.formulate_question", "host.generate_options", "host.query_build", "host.research",
             "host.retrieval_needs", "host.synthesize"]
 
 
@@ -56,7 +56,8 @@ class TestEntries(unittest.TestCase):
         for d in self.snapshot.descriptors:
             self.assertEqual(d.admission.kind, "native_registration")
             references = {"host.query_build": "TICKET-20261001-KM-500b-3",
-                          "knowledge.activate_query": "TICKET-20261001-KM-500b-3", "host.retrieval_needs": "ADR-053"}
+                          "knowledge.activate_query": "TICKET-20261001-KM-500b-3", "host.retrieval_needs": "ADR-053",
+                          "host.decompose_goal": "ADR-067"}
             expected = references.get(d.id, "TICKET-20260930-KernelBootstrapV0")
             self.assertEqual(d.admission.decision_ref, expected)
             self.assertEqual(d.version, "1.0.0")

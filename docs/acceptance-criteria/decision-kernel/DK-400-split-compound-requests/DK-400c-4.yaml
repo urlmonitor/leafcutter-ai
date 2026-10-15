@@ -78,7 +78,8 @@ amended_by:
       named leafcutter.split_answer.v1 and leafcutter.decomposition.v1; ADR-067 doc_link set to exists.'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-4.md
 notes: |
   Documentation AC for DK-400c documentation_triggers [component-diagram]. The new diagram's
   file number comes from the diagram sequence tool.

@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -102,7 +102,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - DK-400c-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-2.md
 notes: |
   Flow branch split-dropped. The person can still add the set-aside question by rewording a
   part (DK-400d-2-ii).
