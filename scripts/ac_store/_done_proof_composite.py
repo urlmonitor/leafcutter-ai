@@ -21,6 +21,7 @@ from pathlib import Path
 
 import yaml
 
+import ac_retirement  # ACS-900d-4: the ONE retired-record predicate (looked up at call time)
 from test_enforcement import COVERS_TAG_RE
 
 # Directory names excluded from all test-file scanning (both .py and .ts/.tsx).
@@ -116,23 +117,130 @@ def _composite_child_ids(covered_by: object) -> list[str]:
     return [e for e in map(str, covered_by if isinstance(covered_by, list) else []) if not re.search(r"[/\\]|\.(py|ts|tsx)$", e)]
 
 
-def is_superseded_ac(ac_info: dict | None) -> bool:
-    """Return whether an AC record has been withdrawn in favour of another (KI-ACS-016).
+def collect_store_ids(ac_root: Path | None) -> frozenset[str]:
+    """Return the id of every AC record under *ac_root* (the filename stem).
 
-    The ONE shared predicate for both composite paths -- the pre-commit
-    :func:`_unproven_composite_children` and the CI ``_resolve_all_child_ids`` --
-    so they cannot disagree about a withdrawn child. A record is superseded
-    when ``superseded_by`` is non-empty or ``req_status`` is ``"superseded"``.
+    The store convention is that a record's filename stem equals its ``id``
+    (:func:`_resolve_child_ac` relies on the same convention), so this is one
+    directory walk with no YAML parsing. Callers compute it ONCE per hook or CI
+    run and hand it to ``ac_retirement.is_retired``.
 
     Args:
-        ac_info: A parsed AC record or an ``_build_ac_status_map`` entry.
+        ac_root: The ``acceptance-criteria`` directory, or ``None``.
 
     Returns:
-        ``True`` for a superseded record; ``False`` for ``None`` or any other.
+        The ids found. Empty when *ac_root* is ``None`` or cannot be walked, so
+        a retirement check against it answers "not retired" (fails closed).
     """
-    if not isinstance(ac_info, dict):
-        return False
-    return bool(ac_info.get("superseded_by")) or ac_info.get("req_status") == "superseded"
+    if ac_root is None:
+        return frozenset()
+    try:
+        return frozenset(path.stem for path in ac_root.rglob("*.yaml"))
+    except OSError as exc:
+        print(f"WARNING: check_done_proof: cannot scan {ac_root}: {exc}", file=sys.stderr)
+        return frozenset()
+
+
+def _entry_retired(ac_id: str, info: dict, ac_status_map: dict[str, dict]) -> bool:
+    """Return whether the status-map entry *info* for *ac_id* is retired (ACS-900d-4)."""
+    return ac_retirement.is_retired({"id": ac_id, **info}, ac_status_map)
+
+
+def _has_resolvable_child(covered_by: list[str], ac_status_map: dict[str, dict]) -> bool:
+    """Return whether at least one entry of *covered_by* resolves to a real AC.
+
+    BO-2500a-6 remediation M-2: legacy ACs hold TEST FILE PATHS in
+    ``covered_by``; none resolve to a record in *ac_status_map*, so such an AC
+    is a LEAF, not a composite with phantom "uncovered children". The
+    classification is data-driven: it checks store resolvability only.
+
+    Args:
+        covered_by: The AC's own ``covered_by`` list.
+        ac_status_map: ``{ac_id: entry}`` from ``_build_ac_status_map``.
+
+    Returns:
+        ``True`` iff at least one entry is a key in *ac_status_map*.
+    """
+    return any(entry in ac_status_map for entry in covered_by)
+
+
+def _has_live_child(covered_by: list[str], ac_status_map: dict[str, dict]) -> bool:
+    """Return whether *covered_by* names at least one resolvable, NON-retired child."""
+    return any(
+        entry in ac_status_map and not _entry_retired(entry, ac_status_map[entry], ac_status_map)
+        for entry in covered_by
+    )
+
+
+def _resolve_all_child_ids(
+    covered_by: list[str],
+    ac_status_map: dict[str, dict],
+    _seen: set[str] | None = None,
+) -> list[str]:
+    """Flatten a composite's ``covered_by`` tree into its leaf descendant ids.
+
+    A child that is itself a composite (it has a LIVE resolvable child --
+    BO-2500a-6-ii) is expanded recursively; a child holding only test-file
+    paths, or whose children are all retired, is a LEAF needing its own
+    covers-tagged test (ACS-900d-4-iv). A RETIRED child (``ac_retirement``)
+    stays in ``covered_by`` as an audit trail but owes no proof and supplies
+    none: it contributes nothing. Cycles are broken via *_seen*. An entry that
+    does not resolve in *ac_status_map* is skipped entirely.
+
+    Args:
+        covered_by: The composite's own list of direct child AC ids.
+        ac_status_map: ``{ac_id: entry}`` from ``_build_ac_status_map``; its keys
+            are the whole-store id set the retirement predicate needs.
+        _seen: Internal recursion guard; callers should omit this argument.
+
+    Returns:
+        Leaf AC ids reachable from *covered_by*, in traversal order.
+    """
+    seen = _seen if _seen is not None else set()
+    leaf_ids: list[str] = []
+    for child_id in covered_by:
+        if child_id in seen:
+            continue
+        seen.add(child_id)
+        child_info = ac_status_map.get(child_id)
+        if child_info is None or _entry_retired(child_id, child_info, ac_status_map):
+            continue  # unresolvable entry, or a retired child that owes and gives no proof
+        child_covered_by = child_info.get("covered_by", [])
+        if _has_live_child(child_covered_by, ac_status_map):
+            leaf_ids.extend(_resolve_all_child_ids(child_covered_by, ac_status_map, seen))
+        else:
+            leaf_ids.append(child_id)
+    return leaf_ids
+
+
+def _retired_verdict(
+    ac_id: str, ac_status_map: dict[str, dict], dangling_tags: list[dict]
+) -> dict | None:
+    """Return the "eligible" verdict for a retired *ac_id*, else ``None`` (ACS-900d-4).
+
+    A retired record is never asked for a covering test or for finished
+    children, and its own ``work_status`` is not re-evaluated. This is a
+    read-side decision: nothing is written to the record.
+
+    Args:
+        ac_id: The AC being judged.
+        ac_status_map: ``{ac_id: entry}`` from ``_build_ac_status_map``.
+        dangling_tags: Dangling-tag diagnostics, passed through unchanged.
+
+    Returns:
+        A verdict dict shaped like ``verify_done_eligible``'s, or ``None`` when
+        *ac_id* is not retired.
+    """
+    info = ac_status_map.get(ac_id)
+    if info is None or not _entry_retired(ac_id, info, ac_status_map):
+        return None
+    return {
+        "eligible": True,
+        "reason": "",
+        "passing_tests": [],
+        "failing_tests": [],
+        "dangling_tags": dangling_tags,
+    }
 
 
 def _find_ac_root(yaml_path: Path) -> Path | None:
@@ -210,11 +318,50 @@ def _resolve_child_ac(ac_root: Path, child_id: str) -> dict | None:
     return _load_ac_yaml_or_none(matches[0])
 
 
+def _judge_child(
+    child_id: str,
+    ac_root: Path | None,
+    all_covered_ids: set[str],
+    store_ids: frozenset[str],
+    seen: set[str],
+) -> tuple[bool, list[str]]:
+    """Judge one AC-id child of a composite: is it live, and what is unproven?
+
+    Args:
+        child_id: The child's AC id.
+        ac_root: The ``acceptance-criteria`` root, or ``None`` (fail closed).
+        all_covered_ids: AC ids carrying a covers tag anywhere under the test root.
+        store_ids: Every AC id in the whole store (retirement successor check).
+        seen: The caller's cycle guard, shared with nested composites.
+
+    Returns:
+        ``(live, unproven)``. A retired child is not live and proves nothing; an
+        unresolvable child is not live and is itself unproven (fail closed).
+    """
+    from done_proof import is_covers_tag_waived  # local: avoids module-load cycle
+
+    child_data = _resolve_child_ac(ac_root, child_id) if ac_root is not None else None
+    if child_data is None:
+        return False, [child_id]
+    if ac_retirement.is_retired(child_data, store_ids):
+        return False, []  # ACS-900d-4-iv: stays in covered_by, owes and gives no proof
+    if child_data.get("work_status") != "done":
+        return True, [child_id]
+    if _composite_child_ids(child_data.get("covered_by")):
+        nested = _unproven_composite_children(
+            child_data, ac_root, all_covered_ids, store_ids=store_ids, _seen=seen
+        )
+        return True, nested
+    proven = child_id in all_covered_ids or is_covers_tag_waived(child_data)
+    return True, [] if proven else [child_id]
+
+
 def _unproven_composite_children(
     data: dict,
     ac_root: Path | None,
     all_covered_ids: set[str],
     *,
+    store_ids: frozenset[str] | None = None,
     _seen: set[str] | None = None,
 ) -> list[str]:
     """Return the ids of ``covered_by`` children that fail to prove a composite done.
@@ -239,6 +386,14 @@ def _unproven_composite_children(
     falsely-done-composite defect (20 recorded instances in this repo) —
     composites must be provably done via their children, not skipped.
 
+    Retired children (ACS-900d-4-iv, :func:`ac_retirement.is_retired`) are
+    neither a block nor a proof: a todo retired child does not hold the parent
+    back and a done, covered retired child does not prove it. When EVERY child
+    is retired the composite falls back to the single-record rule -- its own
+    covers tag or waiver (``[]`` when it has one, ``[<own id>]`` when not). A
+    child whose supersession is structurally invalid (missing successor, empty
+    list, self-reference) is NOT retired and counts as live.
+
     Args:
         data: Parsed YAML mapping of the composite AC being evaluated.
         ac_root: Root ``acceptance-criteria`` directory to resolve children
@@ -247,6 +402,8 @@ def _unproven_composite_children(
         all_covered_ids: Set of AC ids found in ``# covers:``/``// covers:``
             tags anywhere under the test root (from
             :func:`_collect_all_covered_ids`).
+        store_ids: Every AC id in the whole store. Computed once from
+            *ac_root* when omitted; hook callers pass one shared set per run.
         _seen: Internal cycle guard against a malformed ``covered_by`` cycle;
             callers should not pass this.
 
@@ -258,9 +415,11 @@ def _unproven_composite_children(
     from done_proof import is_covers_tag_waived  # local: avoids module-load cycle
 
     seen = _seen if _seen is not None else set()
+    store_ids = collect_store_ids(ac_root) if store_ids is None else store_ids
+    own_id = str(data.get("id", "?"))
     child_ids = _composite_child_ids(data.get("covered_by"))
     if not child_ids:
-        return [str(data.get("id", "?"))]
+        return [own_id]
 
     unproven: list[str] = []
     live_children = 0
@@ -268,33 +427,47 @@ def _unproven_composite_children(
         if child_id_str in seen:
             continue
         seen.add(child_id_str)
-
-        if ac_root is None:
-            unproven.append(child_id_str)
-            continue
-
-        child_data = _resolve_child_ac(ac_root, child_id_str)
-        if child_data is None:
-            unproven.append(child_id_str)
-            continue
-        if is_superseded_ac(child_data):
-            continue  # KI-ACS-016: withdrawn child stays in covered_by, owes no proof
-        live_children += 1
-        if child_data.get("work_status") != "done":
-            unproven.append(child_id_str)
-            continue
-
-        child_composite_children = _composite_child_ids(child_data.get("covered_by"))
-        if child_composite_children:
-            unproven.extend(
-                _unproven_composite_children(child_data, ac_root, all_covered_ids, _seen=seen)
-            )
-        elif child_id_str not in all_covered_ids and not is_covers_tag_waived(child_data):
-            unproven.append(child_id_str)
+        live, child_unproven = _judge_child(child_id_str, ac_root, all_covered_ids, store_ids, seen)
+        live_children += live
+        unproven.extend(child_unproven)
 
     if live_children == 0 and not unproven:
-        return [str(data.get("id", "?"))]  # all superseded: nothing to derive from
+        # ACS-900d-4-iv: every child is retired, so there is nothing to derive
+        # fulfilment from. The composite falls back to the single-record rule:
+        # its OWN covers tag, or a valid covers-tag waiver. Never vacuously proven.
+        own_proof = own_id in all_covered_ids or is_covers_tag_waived(data)
+        return [] if own_proof else [own_id]
     return unproven
+
+
+def _own_proof_verdict(
+    ac_id: str, ac_status_map: dict[str, dict], dangling_tags: list[dict]
+) -> dict:
+    """Judge a composite whose children are ALL retired by the single-record rule.
+
+    ACS-900d-4-iv: with no live child there is nothing to derive fulfilment
+    from, so the composite needs its OWN covers tag (the caller reaches here
+    only when none is linked) or a valid covers-tag waiver. It is never proven
+    vacuously.
+
+    Args:
+        ac_id: The composite being judged.
+        ac_status_map: ``{ac_id: entry}`` from ``_build_ac_status_map``.
+        dangling_tags: Dangling-tag diagnostics, passed through unchanged.
+
+    Returns:
+        The standard eligibility verdict.
+    """
+    from done_proof import is_covers_tag_waived  # local: avoids module-load cycle
+
+    waived = is_covers_tag_waived(ac_status_map.get(ac_id))
+    return {
+        "eligible": waived,
+        "reason": "" if waived else f"no linked test found for {ac_id}",
+        "passing_tests": [],
+        "failing_tests": [],
+        "dangling_tags": dangling_tags,
+    }
 
 
 def _verify_composite_eligible(
@@ -322,7 +495,6 @@ def _verify_composite_eligible(
         JsRunnerUnavailable,
         _build_failure_reason,
         _collect_linked_tests,
-        _resolve_all_child_ids,
         _run_python_test_phase,
         _run_ts_test_phase,
         _split_linked_tests_by_language,
@@ -330,6 +502,8 @@ def _verify_composite_eligible(
     )
 
     leaf_child_ids = _resolve_all_child_ids(covered_by, ac_status_map)
+    if not leaf_child_ids and not _has_live_child(covered_by, ac_status_map):
+        return _own_proof_verdict(ac_id, ac_status_map, dangling_tags)
     if not leaf_child_ids:
         return {
             "eligible": False,
@@ -408,3 +582,11 @@ def _verify_composite_eligible(
 #   _unproven_composite_children and their helpers here verbatim from
 #   check_done_proof.py so mark_ac_done.py imports the same function objects
 #   instead of copying them. (ticket 06 EPIC-BuildToolingRunsThrough)
+# - 2026-10-15 [python-coder]: ACS-900d-4. is_superseded_ac (KI-ACS-016: any
+#   non-empty superseded_by OR req_status superseded) is gone; both composite
+#   rollups now ask ac_retirement.is_retired (superseded status, existing
+#   successors, no self-reference). _has_resolvable_child and
+#   _resolve_all_child_ids moved here from done_proof.py (re-exported there) to
+#   repay done_proof.py's file-size ratchet. A composite whose children are ALL
+#   retired falls back to the single-record rule instead of being refused
+#   unconditionally. (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)

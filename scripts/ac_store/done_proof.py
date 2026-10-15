@@ -206,8 +206,10 @@ from _done_proof_phase_helpers import (
 )
 from _done_proof_entry_point_gate import _apply_entry_point_reachability_gate  # BO-2900a-1
 from _done_proof_composite import (  # noqa: F401  # re-exported for phase helpers
+    _has_resolvable_child,
+    _resolve_all_child_ids,
+    _retired_verdict,
     _verify_composite_eligible,
-    is_superseded_ac,
 )
 from _done_proof_reachability_gate import (  # noqa: F401  # BO-2900d-1: re-exported, moved verbatim
     _COMMIT_GUARDIAN_DIR,
@@ -1424,81 +1426,8 @@ def _collect_linked_tests(ac_id: str, all_tags: list[dict]) -> list[dict]:
     return [t for t in all_tags if t["ac_id"] == ac_id]
 
 
-def _has_resolvable_child(covered_by: list[str], ac_status_map: dict[str, dict]) -> bool:
-    """Return whether at least one entry of *covered_by* resolves to a real AC.
-
-    BO-2500a-6 remediation M-2: legacy ACs written before the child-id
-    convention hold TEST FILE PATHS in ``covered_by`` (e.g.
-    ``['tests/test_skill_registry.py']``) rather than child AC ids. None of
-    those entries resolve to a record in *ac_status_map*, so such an AC must
-    be classified as a LEAF (falling back to the direct-linked-test
-    requirement) rather than a COMPOSITE with phantom "uncovered children".
-    The classification is data-driven — it never hard-codes an AC-id
-    allowlist — it simply checks store resolvability.
-
-    Args:
-        covered_by: The AC's own ``covered_by`` list (may be empty, may hold
-            AC ids, legacy test-file path strings, or a mix).
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store.
-
-    Returns:
-        ``True`` iff at least one entry of *covered_by* is a key in
-        *ac_status_map* (i.e. resolves to a real AC record).
-    """
-    return any(entry in ac_status_map for entry in covered_by)
-
-
-def _resolve_all_child_ids(
-    covered_by: list[str],
-    ac_status_map: dict[str, dict],
-    _seen: set[str] | None = None,
-) -> list[str]:
-    """Flatten a composite's ``covered_by`` tree into its leaf descendant ids.
-
-    A child that is itself a composite (its own ``covered_by`` RESOLVES to real
-    ACs — BO-2500a-6-ii) is expanded recursively rather than treated as a leaf
-    requiring a direct test; a child holding only test-file paths is a LEAF
-    needing its own covers-tagged test.  Cycles are broken via *_seen* (a
-    malformed store could otherwise recurse forever); a child id already
-    visited is not expanded a second time.
-
-    A *covered_by* entry that does not resolve to a real AC record in
-    *ac_status_map* (BO-2500a-6 remediation M-2 — e.g. a legacy test-file
-    path string predating the child-id convention) is skipped entirely: it
-    is neither a leaf requiring its own covers-tagged test nor a composite to
-    expand, since it is not a store-resolvable AC id at all.  Callers decide
-    whether to classify the AC itself as composite via
-    :func:`_has_resolvable_child` before calling this function.
-
-    Args:
-        covered_by: The composite's own list of direct child AC ids.
-        ac_status_map: Mapping ``{ac_id: {"status": ..., "covered_by": [...]}}``
-            from the AC store, used to look up each child's own ``covered_by``.
-        _seen: Internal recursion guard; callers should omit this argument.
-
-    Returns:
-        List of leaf AC id strings reachable from *covered_by*, in traversal
-        order with duplicates removed by the cycle guard.  Unresolvable
-        entries contribute nothing to the result.
-    """
-    seen = _seen if _seen is not None else set()
-    leaf_ids: list[str] = []
-    for child_id in covered_by:
-        if child_id in seen:
-            continue
-        seen.add(child_id)
-        child_info = ac_status_map.get(child_id)
-        if child_info is None:
-            continue  # unresolvable entry (e.g. legacy test-file path) — skip
-        if is_superseded_ac(child_info):
-            continue  # KI-ACS-016: withdrawn child stays in covered_by, owes no proof
-        child_covered_by = child_info.get("covered_by", [])
-        if _has_resolvable_child(child_covered_by, ac_status_map):
-            leaf_ids.extend(_resolve_all_child_ids(child_covered_by, ac_status_map, seen))
-        else:
-            leaf_ids.append(child_id)
-    return leaf_ids
+# _has_resolvable_child and _resolve_all_child_ids (ACS-900d-4-iv) now live in
+# _done_proof_composite.py and are re-exported by the import near the top.
 
 
 def _nodeid_function_name(nodeid: str) -> str:
@@ -1872,6 +1801,9 @@ def verify_done_eligible(
     ac_status_map = _build_ac_status_map(ac_root)
     all_tags = _scan_test_root_for_covers_tags(test_root)
     dangling_tags = _collect_dangling_tags(all_tags, ac_status_map)
+    retired = _retired_verdict(ac_id, ac_status_map, dangling_tags)  # ACS-900d-4
+    if retired is not None:
+        return retired
     linked_tests = _collect_linked_tests(ac_id, all_tags)
 
     if not linked_tests:

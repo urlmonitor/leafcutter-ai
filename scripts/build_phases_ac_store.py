@@ -30,6 +30,25 @@ ARCHITECTURE: One module-level constant, ``AC_STORE_DEPLOY_MAP`` (the single,
     sibling module, build_phases_ac_store_docs.py, and re-exported below so
     ``from build_phases_ac_store import build_ac_store_docs`` -- and
     build_phases.py's own re-export of it -- keep working unchanged.
+
+DECISION HISTORY:
+  - 2026-10-15 [python-coder/ACS-900d-4]: Added scripts/ac_store/ac_retirement.py
+    (the ONE retired-record predicate) to AC_STORE_DEPLOY_MAP, because
+    _done_proof_composite.py imports it at module scope and the commit-guardian
+    hooks reach it through _ac_store_locator. The comment paragraph explaining
+    why `_component_migration_map.py` is listed moved here from above the map
+    to repay this file's size ratchet. It is resolved by
+    generate_ticket_from_ac.py's `_load_migration_map()` via
+    `importlib.util.spec_from_file_location` at import time, but was never
+    listed in the map, so every consumer install shipped
+    generate_ticket_from_ac.py without its sibling and silently degraded (a
+    WARNING, not a crash -- see `_load_migration_map`'s except clause) per AC
+    BP-900g-8. Adding it there is NECESSARY but not SUFFICIENT to satisfy that
+    AC: the derived, transitive closure check in build.py
+    (`_check_intra_package_closure_guard`) is the actual mechanism that would
+    have caught this gap on its own, and is what prevents a future sibling
+    reference from silently reproducing this same defect.
+    (#TICKETLESS reason=acs-900d-4-ac-driven-no-ticket-file)
 """
 
 from __future__ import annotations
@@ -58,17 +77,7 @@ from build_phases_ac_store_docs import build_ac_store_docs  # noqa: F401  # re-e
 # deployed it -- a guard whose view of "deployed" was really "exists in the
 # source directory" could never detect a file present in source but absent
 # from this map, which is exactly the defect class BP-900g-8 exists to close.
-#
-# `_component_migration_map.py` is included here per AC BP-900g-8: it is
-# resolved by generate_ticket_from_ac.py's `_load_migration_map()` via
-# `importlib.util.spec_from_file_location` at import time, but was never
-# listed here, so every consumer install shipped generate_ticket_from_ac.py
-# without its sibling and silently degraded (a WARNING, not a crash -- see
-# `_load_migration_map`'s except clause). Adding it here is NECESSARY but not
-# SUFFICIENT to satisfy the AC: the derived, transitive closure check in
-# build.py (`_check_intra_package_closure_guard`) is the actual mechanism that
-# would have caught this gap on its own, and is what prevents a future sibling
-# reference from silently reproducing this same defect.
+# (Why `_component_migration_map.py` is listed: see the module DECISION HISTORY.)
 AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     ("scripts/ac_store/scan_ac_store.py",            "scan_ac_store.py"),
     ("scripts/ac_store/generate_ticket_from_ac.py",  "generate_ticket_from_ac.py"),
@@ -142,6 +151,7 @@ AC_STORE_DEPLOY_MAP: tuple[tuple[str, str], ...] = (
     # own simulated deployed tree and does not read this map.
     ("scripts/ac_store/_done_proof_phase_helpers.py", "_done_proof_phase_helpers.py"),
     ("scripts/ac_store/_done_proof_composite.py", "_done_proof_composite.py"),
+    ("scripts/ac_store/ac_retirement.py", "ac_retirement.py"),  # ACS-900d-4: MUST deploy (see DECISION HISTORY)
     # _done_proof_entry_point_gate.py (BO-2900a-1) is a THIRD sibling
     # extracted out of done_proof.py, alongside _done_proof_phase_helpers.py,
     # and done_proof.py imports it at MODULE scope too. Same fast-lane gate,
