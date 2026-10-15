@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -119,8 +119,12 @@ amended_by:
     summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
       ships false in E1 and E2.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/kernel/split/test_dk_400a_2.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-2.md
+- docs/architecture/adrs/ADR-053-intelligence-selection-deterministic-jev-llm-human.md
+- docs/product-truth/flows/leafcutter/decision-forming.flow.json
 notes: |
   Flow node split-detect, the accepted-as-one case (user decision 2026-10-05, DK-400 Q1).
   The real case is the run of 2026-10-01 (run-5d246775f5e54f11), where the person had to add a

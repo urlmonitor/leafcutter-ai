@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given L1 ACD-9990a declares documentation triggers [sequence-diagram, reference-doc],
     and its feature folder holds one documentation requirement assigned to

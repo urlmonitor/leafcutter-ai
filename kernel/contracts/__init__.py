@@ -29,6 +29,7 @@ from kernel.contracts import (
     retrieval_needs,
     run,
     schema_ids,  # noqa: F401
+    split,
     task,
     work,
 )
@@ -118,13 +119,17 @@ from kernel.contracts.work import (  # noqa: F401
 
 from kernel.contracts.context import CallerContext, ContextExcerpt, EnrichedContext  # noqa: F401
 from kernel.contracts.retrieval_needs import RetrievalNeedsRequest, RetrievalNeedsOutput  # noqa: F401
+from kernel.contracts.split import (  # noqa: F401
+    Decomposition, FoundAt, GoalDecompositionPayload, GoalDecompositionRequestPayload,
+    KeptRouting, PartProposal, SplitTrigger, SubjectKind,
+)
 from kernel.contracts.entity_context import (  # noqa: F401
     EntityBudgets, EntityCard, EntityContext, EntityCounts, EntityCoverage,
     EntityMatch, EntityProvenance, UnresolvedEntity,
 )
 
 _MODULES: tuple[ModuleType, ...] = (base, capability, context, decision, entity_context, enums, evidence, interaction,
-                                    payloads, payloads_human, query, retrieval_needs, run, task, work)
+                                    payloads, payloads_human, query, retrieval_needs, run, split, task, work)
 
 
 def _collect_types() -> tuple[type, ...]:
@@ -151,3 +156,4 @@ __all__ = [name for name in dir() if not name.startswith("_")]
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
 # ====================================================================
 # - 2026-10-03 00:00 [python-coder]: Add typed host-needs support without activating production retrieval. (#TICKETLESS reason=user-requested-isolated-host-experiment)
+# - 2026-10-06 18:00 [python-coder]: Export the split contract types. (#TICKET-20261006-DK-400a-1)

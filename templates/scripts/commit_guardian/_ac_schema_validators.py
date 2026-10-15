@@ -105,6 +105,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from _test_design_pending import missing_contract_message
 
 _SLOT_REGEX = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
 _HOOK_PREFIX = "[check-ac-schema]"
@@ -632,13 +633,7 @@ def validate_test_contract(
                 f"ticket that the check-ticket-test-requirements guard blocks."
             )
         elif not has_spec and not retired:
-            errors.append(
-                f"{path}: approved code AC must declare a test contract — add a "
-                f"non-empty test_spec (what test-writer should author, derived from "
-                f"the Gherkin criteria). If this AC is genuinely test-free, "
-                f"reclassify it as non-code (change_target docs/prompt with a "
-                f"non-coder assigned_agent). ACs are the source of truth for tests."
-            )
+            errors.append(missing_contract_message(path, data))
 
     return errors
 

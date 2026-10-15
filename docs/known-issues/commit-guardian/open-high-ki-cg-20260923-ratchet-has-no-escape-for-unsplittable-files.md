@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-09-23
-last_updated: 2026-09-23
+last_updated: '2026-10-14'
 components:
   - commit_guardian
 related_docs:
@@ -85,3 +85,13 @@ resolved), where the same hook was correct in intent but wrong for one whole sha
 commit.
 
 ---
+
+## User position (2026-10-14)
+
+While paying for the ACD-2500a-1 rule-check lines in `plan-feature.js` (EPIC-RightJobRightAgent G2),
+the user ruled out comment restyling as payment, accepted moving rationale comments verbatim into
+a reference doc as a genuine reduction, and stated that history comments "should be excluded from
+the line count". `//` and `#` comments are measured today (verified with
+`describe_measurement_rule`), so this section's earlier claim that the ratchet strips comments is
+wrong for those forms. Excluding all comment forms from the measure would also remove the
+restyling incentive. The user noted separate work is already shrinking the large workflow bodies.

@@ -56,36 +56,74 @@ doc_links:
     relevance: "Step 3 — verify_red_baseline's inputs and halt reasons, reused unchanged."
 assigned_agent: llm-expert
 estimated_complexity: S
-delivers_to: null
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-1-viii
+  contract: >-
+    On /build-epic, for every ticket including one with no source_ac, ticket-supervisor calls
+    heavy_lane_gate with --record <ticket-key> between the test-writer phase and the first coder
+    dispatch, so the CLI itself writes <git-dir>/leafcutter/gate-verdicts/<ticket-key>/red_baseline.json.
+    The supervisor never writes, edits or deletes that record.
 expects_from:
-  - ac_id: TQ-500f-3-i
-    contract: "The one red-baseline reader (fast_lane.py verify_red_baseline), carrying the absence-only rule, callable with requirement ids and a test root, returning a JSON verdict."
+- ac_id: TQ-500f-3-i
+  contract: >-
+    The one red-baseline reader, callable as python scripts/build_orchestration/fast_lane.py
+    heavy_lane_gate --source-ac <comma-separated ids; empty means not applicable> --test-root <dir>
+    --ac-root <dir>. It prints one JSON verdict ({gate_passed, applicable, verified, outcome, ...});
+    with no ids, outcome is 'red-baseline reader not applicable: no source requirement'.
+- ac_id: TQ-500g-1-viii
+  contract: >-
+    The record option --record <ticket-key> on heavy_lane_gate (added through _fl_cli.py and
+    _fl_heavy_lane_gate.py), with which the CLI writes its own red_baseline.json record.
 it_requirements:
-- Edit the ticket-level phase algorithm in templates/skills/building-epics/SKILL.md, and templates/agents/ticket-supervisor.md
-  only where it restates it. Make this one llm-expert change with TQ-500g-1-vii.
-- 'Instruction: between the test-writer phase and the first coder dispatch, including on resume when test-writer
-  is already signed_off, run the same CLI /build-feature uses: fast_lane.py heavy_lane_gate with --source-ac,
-  the worktree as --test-root, and --ac-root. On gate_passed false, report the ticket as blocked with
-  the reader''s JSON verbatim, and dispatch no coder. The test writer''s red_baseline_verified or sign-off
-  is never a substitute.'
-- Call the gate CLI with the record option TQ-500g-1-viii adds, naming this ticket. The CLI ITSELF then
-  writes its verdict to the ticket's record under the worktree's git directory. The supervisor never writes,
-  edits, paraphrases or summarises that record, and never substitutes its own account of the verdict.
-- 'K3 (no source_ac): still call heavy_lane_gate with no ids. It returns and records ''red-baseline reader
-  not applicable: no source requirement''. Then continue to the coder.'
-- Tickets WITH source_ac get every existing halt reason of the shared reader (for example no_new_covering_tests).
-  That is the carried-over TQ-500f-3-ii user decision.
-- Ship in ONE change together with TQ-500f-3-iv / TQ-500g-1-vii (the paired prompt) and TQ-500g-1-viii
-  (the backstop). Without -1-viii the instruction names a record option that does not exist. Without the
+- >-
+  Edit the ticket-level phase algorithm in templates/skills/building-epics/SKILL.md, and
+  templates/agents/ticket-supervisor.md only where it restates it. Make this one llm-expert change
+  with TQ-500g-1-vii.
+- >-
+  Instruction: between the test-writer phase and the first coder dispatch, including on resume when
+  test-writer is already signed_off, run the same CLI /build-feature uses: fast_lane.py
+  heavy_lane_gate with --source-ac (the ticket's source_ac ids, comma-separated), the worktree root
+  as --test-root, and --ac-root. On gate_passed false, report the ticket as blocked with the
+  reader's JSON verbatim, and dispatch no coder. The test writer's red_baseline_verified or sign-off
+  is never a substitute.
+- >-
+  Call the gate CLI with the record option TQ-500g-1-viii adds (--record <ticket-key>), naming this
+  ticket. The ticket key is the same one the wrong-version step passes as --work-key and --record
+  (TQ-500g-1-vii), so both records land in the same gate-verdicts folder. The CLI ITSELF then
+  writes its verdict to the ticket's record under the worktree's git directory. The supervisor never
+  writes, edits, paraphrases or summarises that record, and never substitutes its own account of the
+  verdict. The existing --ticket option of heavy_lane_gate is a different record, and it does not
+  replace this one.
+- >-
+  K3 (no source_ac): still call heavy_lane_gate with no ids. It returns and records 'red-baseline
+  reader not applicable: no source requirement'. Then continue to the coder.
+- >-
+  Tickets WITH source_ac get every existing halt reason of the shared reader (for example
+  no_new_covering_tests). That is the carried-over TQ-500f-3-ii user decision.
+- >-
+  The reader changes no file in the working tree, so, unlike the wrong-version step, it needs no
+  commit-phase lock.
+- >-
+  Ship in ONE change together with TQ-500g-1-vii (the paired prompt) and TQ-500g-1-viii (the
+  backstop). Without -1-viii the instruction names a record option that does not exist. Without the
   instruction, -1-viii blocks every /build-epic commit.
+- >-
+  The edit passes prompt-audit: no compound bash (one invocation run from the worktree root), and
+  the spawn_allowlist covers every dispatch.
 test_required: false
-test_rationale: 'Prompt-only, for the same reasons as TQ-500g-1-vii. The reader is deterministic and already
-  tested (TQ-500f-3-i, TQ-500f-3-ii). Mechanical backstop: TQ-500g-1-viii blocks the commit of a /build-epic
-  ticket whose red-baseline record is missing or unreadable. Substitutes: pr-reviewer against the Then
-  clauses, and a live /build-epic drive of a fixture epic with K1 to K3.'
+test_rationale: >-
+  Prompt-only, for the same reasons as TQ-500g-1-vii. The reader is deterministic and already tested
+  (TQ-500f-3-i, TQ-500f-3-ii). Mechanical backstop: TQ-500g-1-viii blocks the commit of a
+  /build-epic ticket whose red-baseline record is missing or unreadable. Substitutes: pr-reviewer
+  against the Then clauses, and a live /build-epic drive of a fixture epic with K1 to K3.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+- reason: "Technical fields aligned with the real CLIs and the shipped design: heavy_lane_gate's actual flags (--source-ac comma-separated, --test-root, --ac-root) and the record option --record <ticket-key> from TQ-500g-1-viii, with the same ticket key as the wrong-version step. expects_from cites TQ-500g-1-viii; delivers_to states the record contract. The ship-together entry names TQ-500g-1-vii (it named this AC). Criteria unchanged; they still match."
+  date: '2026-10-14'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -123,3 +161,12 @@ notes: |
   test_required: false child joins them, so TQ-500f-3 cannot be marked done by
   the pre-commit done-proof path until
   KI-CG-20260914-done-proof-precommit-ignores-test-required is fixed.
+
+  IT-PO AMENDMENT (2026-10-14)
+  Shipped with TQ-500g-1-vii and -viii, so its fields were checked against
+  the design now on main. The red-baseline step does not use test-breaker,
+  the writer or the runner. Only the record wiring changed: --record
+  <ticket-key> (TQ-500g-1-viii), with the same key the wrong-version step
+  uses. heavy_lane_gate with no ids already prints the not-applicable outcome
+  that K3 names, word for word. The criteria still match; no clause needs the
+  BA.

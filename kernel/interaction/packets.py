@@ -148,7 +148,10 @@ def build_host_request(state: Mapping[str, Any], item: WorkItem, revision: int, 
     operations = list(descriptor.operations) if descriptor else []
     evidence_ids = input_evidence_ids(state, request)
     operation = operations[0] if operations else capability_id
-    compiled = compiler_for(capability_id).compile(TaskInputs(
+    host = compiler_for(capability_id)
+    if host.packet_operations is not None:
+        operations = list(host.packet_operations)
+    compiled = host.compile(TaskInputs(
         capability_id=capability_id, operation=operation,
         goal=request.goal or request.question or capability_id,
         payload=request.payload if isinstance(request.payload, Mapping) else {},
@@ -193,6 +196,24 @@ def _bound_host_evidence(body: dict[str, Any], maximum: int, reserve: int) -> di
     return body
 
 
+def _with_context(body: dict[str, Any], state: Mapping[str, Any], redactor: Redactor,
+                  maximum: int | None, send_repo_excerpts: bool) -> dict[str, Any]:
+    """Return the input body with clarifications and the entity or enrichment context added."""
+    clarifications = _host_clarifications(state)
+    if clarifications:
+        body["clarifications"] = redactor.mask(clarifications)
+    meanings = state.get("entity_context")
+    if meanings is not None:
+        if maximum is not None:
+            body = _bound_host_evidence(body, maximum, min(2000, maximum // 3))
+        masked = EntityContext.model_validate(redactor.mask(meanings.model_dump(mode="json")))
+        return attach_entity_context(body, masked, maximum - 1 if maximum else None,
+                                     send_repo_excerpts=send_repo_excerpts)
+    if state.get("context_enrichment") is not None:
+        body["context_enrichment"] = redactor.mask(context_payload(state["context_enrichment"]))
+    return body
+
+
 def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_id: str,
                          state: Mapping[str, Any], packet: HostWorkRequest, *,
                          send_repo_excerpts: bool = False) -> HostWorkRequest:
@@ -212,19 +233,9 @@ def write_input_artifact(artifacts: ArtifactStorePort, redactor: Redactor, run_i
         "prompt_fingerprint": ref.fingerprint if ref else None,
         "request_schema": invocation.input_payload_schema if invocation else None,
         "request": dict(invocation.input_payload) if invocation else {}, "evidence": evidence})
-    clarifications = _host_clarifications(state)
-    if clarifications:
-        body["clarifications"] = redactor.mask(clarifications)
     maximum = packet.context_limits.max_input_chars
-    meanings = state.get("entity_context")
-    if meanings is not None:
-        if maximum is not None:
-            body = _bound_host_evidence(body, maximum, min(2000, maximum // 3))
-        masked = EntityContext.model_validate(redactor.mask(meanings.model_dump(mode="json")))
-        body = attach_entity_context(body, masked, maximum - 1 if maximum else None,
-                                     send_repo_excerpts=send_repo_excerpts)
-    elif state.get("context_enrichment") is not None:
-        body["context_enrichment"] = redactor.mask(context_payload(state["context_enrichment"]))
+    if not (invocation and compiler_for(invocation.capability_id).bare_input):
+        body = _with_context(body, state, redactor, maximum, send_repo_excerpts)
     encoded = canonical_json(body) + "\n"
     if maximum is not None and len(encoded) > maximum:
         fail(f"host input exceeds max_input_chars={maximum}")
@@ -278,4 +289,5 @@ def redact_packet(packet: HostWorkRequest | HumanQuestion, redactor: Redactor
 #   schema or patterns would corrupt them, and the entropy rule would hit the schema patterns.
 #   (#KernelBootstrapV0/P6)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-09 [python-coder]: A host operation with bare_input (decompose_goal) gets an input artifact of the request only; the packet allowed operations come from the operation when it names them. (#TICKET-20261006-DK-400c-1)
 # ====================================================================

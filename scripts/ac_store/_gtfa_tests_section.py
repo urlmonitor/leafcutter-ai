@@ -48,6 +48,7 @@ _gtfa_files_touched = importlib.import_module(
 _gtfa_impl_py = importlib.import_module(
     f"{_PKG}._gtfa_impl_py" if _PKG else "_gtfa_impl_py"
 )
+_test_intent = importlib.import_module(f"{_PKG}._test_intent" if _PKG else "_test_intent")
 
 logger = logging.getLogger(_gtfa_seams.logger_name())
 
@@ -68,6 +69,20 @@ _TEST_ANGLES = _gtfa_constants._TEST_ANGLES
 _slugify_for_test = _gtfa_test_descriptors._slugify_for_test
 _derive_tests_from_criteria = _gtfa_test_descriptors._derive_tests_from_criteria
 _ensure_reachability_floor = _gtfa_test_descriptors._ensure_reachability_floor
+
+
+class TestDesignPendingError(ValueError):
+    """The AC carries test intent and no test design (ADR-071): there is nothing to derive tests
+    from, and an empty section would let test-writer skip. The CLI refuses and writes nothing."""
+
+    __test__ = False  # not a pytest test class, despite the name
+
+
+def require_design(ac: AcRecord) -> None:
+    """Raise TestDesignPendingError when *ac* has test intent and no design (``test_required``
+    not false). Called by the body builder on every path, whatever files are in scope."""
+    if _test_intent.design_pending(ac):
+        raise TestDesignPendingError("test design pending")
 
 
 def _test_descriptors_from_spec(ac: AcRecord, ac_id: str) -> list[dict[str, Any]]:
@@ -249,9 +264,14 @@ def _build_test_requirements_section(
     Returns:
         Formatted ``## Test Requirements`` markdown block, or ``""`` when the AC
         is explicitly marked test-free.
+
+    Raises:
+        TestDesignPendingError: The AC has test intent and no test design
+            (``test_required`` is not false); raised before any derivation.
     """
     if ac.get("test_required") is False:
         return ""
+    require_design(ac)
 
     descriptors = _test_descriptors_from_spec(ac, ac_id)
     if not descriptors:

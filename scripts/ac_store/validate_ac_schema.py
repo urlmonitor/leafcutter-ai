@@ -317,7 +317,7 @@ def _validate_file(
                 f"got {type(triggers).__name__}."
             )
         else:
-            invalid = [t for t in triggers if t not in _DOC_TRIGGER_VALUES]
+            invalid = [] if schema is not None else [t for t in triggers if t not in _DOC_TRIGGER_VALUES]  # a passed schema owns the enum
             if invalid:
                 errors.append(
                     f"{path}: Field 'documentation_triggers' contains invalid values: "
@@ -332,7 +332,6 @@ def _validate_file(
                     f"{path}: Field 'documentation_triggers' is permitted only on L1 "
                     f"ACs. AC {data['id']} has level {ac_level!r}."
                 )
-
     errors.extend(test_spec_entry_errors(path, data, schema))  # TQ-500f-1 / TQ-500f-2-i
     # --- Validate against config/ac_store_schema.json (ACS-200e) ---
     # This is the SAME schema file the commit-time hook

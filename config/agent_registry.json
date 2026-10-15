@@ -3150,7 +3150,7 @@
             "id": "it-po",
             "name": "IT Product Owner",
             "tier": "utility",
-            "role": "analysis",
+            "role": "planning",
             "portable": true,
             "domain": null,
             "spawn_allowlist": [],
@@ -3159,7 +3159,7 @@
             "selection_criteria": null,
             "template_path": "templates/agents/it-po.md",
             "model": "opus",
-            "description": "IT Product Owner for v3 ticket-creation pipeline. Enriches L2/L3 AC YAML files with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, and doc_links.",
+            "description": "IT Product Owner — technical enrichment agent for the v3 AC pipeline. Operates AFTER the BA has produced L2/L3 AC YAML files. Enriches each AC with technical fields: assigned_agent, it_requirements, estimated_complexity, delivers_to/expects_from contracts, doc_links to architecture documents, and the test intent (test_intent / test_required): per outcome clause, whether a test is needed and why. It writes no test design. Does NOT create tickets. Does NOT modify the BA's criteria field. Uses architecture docs, component registries, and agent registries to understand the technical landscape. Splits ACs when technical boundaries reveal multi-agent work. Use when: the BA has produced L2/L3 AC files and the pipeline needs technical enrichment before implementation agents can begin work. This agent operates on AC YAML files directly.",
             "category": "planning",
             "skills_invoked": [
                 {
@@ -3184,6 +3184,43 @@
                 {
                     "channel": 8,
                     "source": "PROJECT_CONTEXT.md"
+                }
+            ],
+            "produces": "requirement_records",
+            "components": [
+                "product_ownership"
+            ]
+        },
+        {
+            "id": "test-designer",
+            "name": "Test Designer",
+            "tier": "utility",
+            "role": "analysis",
+            "portable": true,
+            "domain": null,
+            "spawn_allowlist": [],
+            "spawned_by": [
+                "plan-feature.js"
+            ],
+            "is_ticket_phase": false,
+            "selection_criteria": null,
+            "template_path": "templates/agents/test-designer.md",
+            "model": "sonnet",
+            "description": "Code-aware planning agent that reads the pre-pass report, then the real code files and existing tests, and writes the test design (ACD-2500c) and the file findings (ACD-2500d) onto the requirement record in separate fields before the build. The only planning step that may read source (ADR-072).",
+            "category": "planning",
+            "skills_invoked": [],
+            "knowledge_channels": [
+                {
+                    "channel": 1,
+                    "source": "template description field"
+                },
+                {
+                    "channel": 6,
+                    "source": "project files read during execution"
+                },
+                {
+                    "channel": 7,
+                    "source": "bash command output (date, git)"
                 }
             ],
             "produces": "analysis",

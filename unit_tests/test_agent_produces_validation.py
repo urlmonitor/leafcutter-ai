@@ -101,6 +101,7 @@ class TestAllExistingAgentsHaveProducesInRegistry:
             "orchestration",
             "test_artifact",
             "analysis",
+            "requirement_records",
         }
         agents = _load_registry()
         invalid = [
@@ -192,9 +193,6 @@ class TestAllExistingTemplatesHaveProducesInFrontmatter:
 
 # ---------------------------------------------------------------------------
 # §2  Unit tests for validate_produces_field() with in-memory fixtures
-#
-# These tests prove that the validation function correctly detects omissions
-# and produces error messages matching the AC-required format.
 # ---------------------------------------------------------------------------
 
 

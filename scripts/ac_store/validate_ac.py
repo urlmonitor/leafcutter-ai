@@ -75,10 +75,24 @@ PACKAGE_SURFACE_COMPONENTS: frozenset[str] = frozenset(
 #: explicit denial that switches the obligation off.
 DECLARATION_FIELD: str = "package_surface"
 
-#: Required sub-keys in it_requirements for package-surface ACs.
+#: The reference-file sub-key of it_requirements.
+REFERENCE_FILE_FIELD: str = "reference_file_path"
+
+#: The hold_reason value that defers reference_file_path (ACD-2500d-2-i).
+REFERENCE_PENDING_MARKER: str = "reference file pending"
+
+#: Sub-keys always required; reference_file_path is required unless the marker is set.
 REQUIRED_IMPL_FIELDS: tuple[str, ...] = (
     "config_schema_fragment",
-    "reference_file_path",
+    "n_location_rule",
+    "required_skills",
+    "post_write_commands",
+)
+
+#: All five fields, as named in refusal messages.
+_ALL_IMPL_FIELDS: tuple[str, ...] = (
+    "config_schema_fragment",
+    REFERENCE_FILE_FIELD,
     "n_location_rule",
     "required_skills",
     "post_write_commands",
@@ -165,6 +179,26 @@ def is_package_surface_ac(ac_data: dict[str, Any]) -> bool:
     return False
 
 
+def _reference_path_errors(ac_id: Any, ref_path_raw: Any, repo_root: Path | None) -> list[str]:
+    """Return the refusal messages for a named ``reference_file_path`` (none when absent or valid)."""
+    if ref_path_raw is None:
+        return []
+    if not isinstance(ref_path_raw, str) or not ref_path_raw.strip():
+        return [
+            f"[{ac_id}] reference_file_path must be a non-empty string, "
+            f"got {type(ref_path_raw).__name__!r}."
+        ]
+    root = repo_root if repo_root is not None else _default_repo_root()
+    resolved = root / ref_path_raw
+    if resolved.exists():
+        return []
+    return [
+        f"[{ac_id}] reference_file_path '{ref_path_raw}' does not exist "
+        f"at resolved path '{resolved}'. Verify the path is correct relative "
+        f"to the repository root '{root}'."
+    ]
+
+
 def validate_package_surface_spec(
     ac_data: dict[str, Any],
     *,
@@ -207,7 +241,7 @@ def validate_package_surface_spec(
         errors.append(
             f"[{ac_id}] it_requirements is absent. A record that registers a package "
             f"surface must carry a structured it_requirements object with keys: "
-            f"{', '.join(REQUIRED_IMPL_FIELDS)}."
+            f"{', '.join(_ALL_IMPL_FIELDS)}."
         )
         return ValidationResult(ok=False, errors=errors)
 
@@ -215,36 +249,24 @@ def validate_package_surface_spec(
         errors.append(
             f"[{ac_id}] it_requirements must be an object (dict) for package-surface ACs, "
             f"got {type(it_req).__name__!r}. Provide a structured spec with: "
-            f"{', '.join(REQUIRED_IMPL_FIELDS)}."
+            f"{', '.join(_ALL_IMPL_FIELDS)}."
         )
         return ValidationResult(ok=False, errors=errors)
 
     # --- Check 2: all required keys must be present ---
-    missing_keys = [k for k in REQUIRED_IMPL_FIELDS if k not in it_req]
+    pending = ac_data.get("hold_reason") == REFERENCE_PENDING_MARKER
+    needed = REQUIRED_IMPL_FIELDS if pending else _ALL_IMPL_FIELDS
+    missing_keys = [k for k in needed if k not in it_req]
     if missing_keys:
         for key in missing_keys:
             errors.append(
                 f"[{ac_id}] it_requirements is missing required key '{key}'. "
-                f"Package-surface ACs must supply all of: {', '.join(REQUIRED_IMPL_FIELDS)}."
+                f"Package-surface ACs must supply all of: {', '.join(_ALL_IMPL_FIELDS)}."
             )
 
-    # --- Check 3: reference_file_path must resolve to an existing file ---
-    ref_path_raw = it_req.get("reference_file_path")
-    if ref_path_raw is not None:
-        if not isinstance(ref_path_raw, str) or not ref_path_raw.strip():
-            errors.append(
-                f"[{ac_id}] reference_file_path must be a non-empty string, "
-                f"got {type(ref_path_raw).__name__!r}."
-            )
-        else:
-            root = repo_root if repo_root is not None else _default_repo_root()
-            resolved = root / ref_path_raw
-            if not resolved.exists():
-                errors.append(
-                    f"[{ac_id}] reference_file_path '{ref_path_raw}' does not exist "
-                    f"at resolved path '{resolved}'. Verify the path is correct relative "
-                    f"to the repository root '{root}'."
-                )
+    # --- Check 3: reference_file_path must resolve to an existing file (skipped while pending) ---
+    if not pending:
+        errors.extend(_reference_path_errors(ac_id, it_req.get("reference_file_path"), repo_root))
 
     # --- Check 4: required_skills must be a non-empty list ---
     skills = it_req.get("required_skills")
@@ -392,7 +414,7 @@ def main(argv: list[str] | None = None) -> int:
             "the deprecated legacy proxy (assigned_agent=python-coder with "
             "component in build_pipeline/build-pipeline/build-orchestration) — "
             "must have it_requirements as a structured object with:\n"
-            f"  {', '.join(REQUIRED_IMPL_FIELDS)}\n"
+            f"  {', '.join(_ALL_IMPL_FIELDS)}\n"
             "\n"
             "Non-package-surface ACs are skipped (no impl-spec requirement).\n"
             "Exits non-zero if any validation error is found, or if the\n"

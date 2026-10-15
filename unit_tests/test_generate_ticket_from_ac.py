@@ -1733,10 +1733,6 @@ class TestVerificationReport:
 
 # ===========================================================================
 # BO-500 AC Coverage Backfill Tests
-# Ticket: 03_bo500_test_coverage.md
-# ACs covered: BO-510-1, BO-510-2, BO-510-4, BO-510-4-i, BO-510-5,
-#              BO-530-1-i, BO-530-2, BO-530-3, BO-530-3-i, BO-540-1,
-#              BO-540-1-i, BO-540-2, BO-550-1-i, BO-660-1
 # ===========================================================================
 
 import json as _json  # noqa: E402
@@ -1762,6 +1758,7 @@ _VALID_PRODUCES_ENUM = frozenset({
     "orchestration",
     "test_artifact",
     "analysis",
+    "requirement_records",
 })
 
 # Role → produces mapping from BO-510-1 criteria
@@ -1783,7 +1780,7 @@ _ROLE_PRODUCES_MAPPING = {
 
 class TestBO510Registry:
     """BO-510-1: Every agent_registry.json entry carries a 'produces' field
-    with a value from the 8-member enum; the role→produces mapping is consistent.
+    with a value from the 9-member enum; the role→produces mapping is consistent.
     """
 
     def test_bo510_1_all_registry_entries_have_produces_field(self) -> None:
@@ -1811,7 +1808,7 @@ class TestBO510Registry:
 
     def test_bo510_1_produces_values_match_defined_enum(self) -> None:
         # covers: BO-510-1
-        """BO-510-1: Every produces field value must be one of the 8-member enum:
+        """BO-510-1: Every produces field value must be one of the 9-member enum:
         production_code, documentation, configuration, prompt, review_verdict,
         orchestration, test_artifact, analysis.
         """

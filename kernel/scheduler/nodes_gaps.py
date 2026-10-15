@@ -52,6 +52,8 @@ MAX_NEED_TOKENS = 12
 #: Exclusion reasons that mean "the run may not do this" (never a missing capability).
 DENIAL_CODES = frozenset({"permission_denied", "side_effect_forbidden"})
 HUMAN_CAPABILITY = "kernel.human"
+#: Host steps the kernel itself starts; they are never demand for a native capability.
+KERNEL_HOST_STEPS = frozenset({"host.decompose_goal"})
 _DONE = frozenset({WorkItemStatus.COMPLETED, WorkItemStatus.PARTIAL})
 _FAILED = frozenset({WorkItemStatus.FAILED, WorkItemStatus.BLOCKED, WorkItemStatus.CANCELLED})
 
@@ -286,7 +288,7 @@ def record_host_only(state: KernelState, ctx: KernelRuntime, item: WorkItem,
     """
     binding = item.binding
     if (binding is None or binding.execution_mode is not ExecutionMode.HOST_HANDOFF
-            or binding.capability_id == HUMAN_CAPABILITY):
+            or binding.capability_id in (HUMAN_CAPABILITY, *KERNEL_HOST_STEPS)):
         return None
     if any(e.kind == "gap.fallback_started" and e.refs.get("work_item_id") == item.id
            for e in state.get("events", [])):
@@ -350,6 +352,7 @@ def settle_gap_outcomes(state: KernelState, ctx: KernelRuntime, draft: Draft, *,
 # ====================================================================
 # DECISION HISTORY
 # ====================================================================
+# - 2026-10-09 [python-coder]: The split proposal request (host.decompose_goal) is a kernel step, so it records no host_only gap; a too-few-parts run would otherwise show a gap beside today's. (#TICKET-20261006-DK-400c-3)
 # - 2026-10-02 [python-coder]: A gap observation carries the run trace URL (when exported).
 #   (#KernelBootstrapV0/GROUND)
 # - 2026-10-01 23:00 [python-coder]: A host_only gap with a native twin gets a draft as well: a

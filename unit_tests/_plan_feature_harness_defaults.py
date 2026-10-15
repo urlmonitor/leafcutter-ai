@@ -123,9 +123,13 @@ def worktree_setup_default_responses() -> dict[str, Any]:
     shim) and only needs the payload shapes, not the `_is_plan_feature_script()`
     gate `plan_feature_default_label_responses()` applies below for
     run_workflow_under_e2()'s generic multi-script dispatch. The single
-    source of these two shapes -- never pasted per caller.
+    source of these two shapes -- never pasted per caller. Also carries the
+    passed `rule-check-<stage>` replies (ACD-2500a-1) so every shim caller
+    meets a well-formed check reply at stage end.
     """
     return {
+        **rule_check_default_responses(),
+        **design_stage_default_responses(),
         _WORKTREE_SETUP_SCRIPT_LABEL: {
             "output": _WORKTREE_SETUP_DEFAULT_SCRIPT_PATH,
             "exit_code": 0,
@@ -143,6 +147,38 @@ def worktree_setup_default_responses() -> dict[str, Any]:
             "exit_code": 0,
             "stderr": "",
         },
+    }
+
+
+def rule_check_default_responses() -> dict[str, Any]:
+    """Return a well-formed PASSED rule-check reply for each authoring stage label.
+
+    ACD-2500a-1: plan-feature.js dispatches `rule-check-<stage>` at the end of every
+    authoring stage and reads the verdict fail-closed (exit 0, verdict "passed",
+    records_checked > 0). Shaped like requirement_rule_check.py's real stdout.
+    """
+    report = json.dumps(
+        {"verdict": "passed", "location": "docs/acceptance-criteria", "records_checked": 1, "findings": [], "records_to_commit": []}
+    )
+    reply = {"output": report, "exit_code": 0, "stderr": ""}
+    return {f"rule-check-{stage}": dict(reply) for stage in ("po", "ba", "itpo", "test-design")}
+
+
+def design_stage_default_responses() -> dict[str, Any]:
+    """Return the default replies of the test-design stage's two scripts (ACD-2500c-2).
+
+    `design-prepass` reports an empty batch so no existing test dispatches the designer; `approval-holds`
+    reports nothing held. Shaped like design_prepass.py / approval_hold_report.py stdout.
+    """
+    prepass = {"output": json.dumps({"batch": [], "records": []}), "exit_code": 0, "stderr": ""}
+    holds = {"output": json.dumps({"approved": [], "held": []}), "exit_code": 0, "stderr": ""}
+    designer = {"status": "ok", "records": [], "anomalies": []}
+    # itpo is now an auto-approved, committed stage, so every run that reaches the final gate commits once first.
+    commit = {"status": "ok", "message": "committed successfully"}
+    branch = {"output": _WORKTREE_SETUP_DEFAULT_BRANCH, "exit_code": 0}
+    return {
+        "design-prepass": prepass, "approval-holds": holds, "stage-test-design-author": designer,
+        "commit-stage-output": commit, "branch-check": branch,
     }
 
 

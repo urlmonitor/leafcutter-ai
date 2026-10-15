@@ -46,6 +46,7 @@ _gtfa_constants = _sib("_gtfa_constants")
 _gtfa_agents_map = _sib("_gtfa_agents_map")
 _gtfa_config = _sib("_gtfa_config")
 _gtfa_contracts = _sib("_gtfa_contracts")
+_gtfa_declared_surface = _sib("_gtfa_declared_surface")
 _gtfa_files_touched = _sib("_gtfa_files_touched")
 _gtfa_frontmatter = _sib("_gtfa_frontmatter")
 _gtfa_impl_py = _sib("_gtfa_impl_py")
@@ -365,7 +366,13 @@ def _build_ticket_body(
     lines: list[str] = _body_header_lines(
         ac, ac_id, assigned_agent, complexity, criteria
     )
+    # TKT-600a-3 / -3-i: the surface section (marker + provenance, or the
+    # "derived, not declared" label), adjacent to the criteria.
+    surface = _gtfa_declared_surface.surface_section(ac, ac_id, files_touched)
+    if surface:
+        lines.append(surface)
 
+    _gtfa_tests_section.require_design(ac)
     if implementation_in_scope or authored_spec:
         # Derive the Test Requirements from the AC (test_spec first, else the
         # Gherkin criteria) — never a hardcoded empty stub. The AC is the source
