@@ -22,7 +22,8 @@ from typing import Any
 
 from kernel.adapters.cli import main
 from kernel.contracts import Actor, ActorKind, RunStatus, TaskInput
-from tests.kernel.helpers import make_scope, narrow
+from kernel.contracts.interaction import HostWorkRequest
+from tests.kernel.helpers import as_type, make_scope, narrow
 from tests.kernel.split.test_dk_400a_1 import SplitCase, _val
 
 GOAL = ("Decide the storage format for reusable decision criteria, and find which published "
@@ -55,7 +56,7 @@ class TestAmbiguousSplit(AmbiguousCase):
         service = self.service()
         envelope = await service.start_run(self.goal_task())
         self.assertEqual(envelope.status, RunStatus.WAITING_HOST)
-        self.assertEqual(narrow(envelope.pending_interaction).operation, "decompose_goal")
+        self.assertEqual(as_type(narrow(envelope.pending_interaction), HostWorkRequest).operation, "decompose_goal")
         values = await self.checkpoint_values(envelope.run_id)
         (split,) = self.splits_of(values)
         self.assertEqual(_val(split.trigger), "ambiguous")
@@ -102,7 +103,7 @@ class TestAmbiguousReachability(AmbiguousCase):
         self.arrange_ambiguous(bundle=0.9)
         service_env = self.service()  # builds self.env over the scripted rig
         del service_env
-        env = self.env
+        env = narrow(self.env)
         task_file = self.run_root.parent / "task.json"
         task_file.write_text(self.goal_task().model_dump_json(), encoding="utf-8")
         out = io.StringIO()

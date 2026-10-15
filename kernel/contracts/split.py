@@ -130,7 +130,7 @@ class GoalDecompositionRequestPayload(KernelModel):
     subject_text: str = Field(min_length=1)
     """The exact text the host must split into separate questions."""
     allowed_capabilities: list[ChildCapability] = Field(
-        default_factory=lambda: ["decision", "research"], min_length=1)
+        default_factory=lambda: list[ChildCapability](("decision", "research")), min_length=1)
     """The capabilities a part may use; the host picks one for each part."""
     min_parts: int = Field(default=2, ge=2, le=2)
     """Fewest parts a split may offer; fewer than two is no split."""

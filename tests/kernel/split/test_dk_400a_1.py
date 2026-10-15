@@ -19,8 +19,9 @@ from typing import Any
 
 from kernel.config import KernelConfig, default_config_path
 from kernel.contracts import Actor, ActorKind, RunStatus, TaskInput
+from kernel.contracts.interaction import HostWorkRequest
 from kernel.providers.fakes import noul_answer
-from tests.kernel.helpers import make_scope, narrow
+from tests.kernel.helpers import as_type, make_scope, narrow
 from tests.kernel.integration.scenario_support import ScenarioCase
 
 # Mock record dcp-reusable-criteria-by-hand: the goal as the product owner submitted it.
@@ -83,7 +84,7 @@ class TestSplitStarted(SplitCase):
         service = self.service()
         envelope = await service.start_run(self.goal_task())
         self.assertEqual(envelope.status, RunStatus.WAITING_HOST)
-        self.assertEqual(narrow(envelope.pending_interaction).operation, "decompose_goal")
+        self.assertEqual(as_type(narrow(envelope.pending_interaction), HostWorkRequest).operation, "decompose_goal")
         self.assertEqual(service.list_gaps(), [])  # no capability gap recorded
         values = await self.checkpoint_values(envelope.run_id)
         (split,) = self.splits_of(values)

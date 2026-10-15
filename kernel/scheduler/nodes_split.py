@@ -31,6 +31,7 @@ from kernel.contracts import (
     schema_ids,
 )
 from kernel.contracts.split import (
+    ChildCapability,
     GoalDecompositionPayload,
     GoalDecompositionRequestPayload,
     KeptRouting,
@@ -54,7 +55,7 @@ if TYPE_CHECKING:  # the route node imports this module, so these are for the ty
 
 DECOMPOSE_OPERATION = "decompose_goal"
 #: Child capabilities a goal's parts may be routed to (ADR-067 section 3).
-GOAL_CHILD_CAPABILITIES = ["decision", "research"]
+GOAL_CHILD_CAPABILITIES: list[ChildCapability] = ["decision", "research"]
 JEV_NONE = "jev_none"
 #: Record state of a split that ended with fewer than two parts; it never reaches the envelope.
 CLOSED_STATE = "closed"
@@ -78,6 +79,7 @@ class SplitStep:
         def _bind_descriptor(self, item: WorkItem, descriptor: Any,
                              routing_ref: str | None) -> None: ...
         def _unclear(self, entry: RouteEntry, result: RouteResult) -> None: ...
+        def _park(self, item: WorkItem, proposal: RequestProposal) -> bool: ...
         def answers_of(self, item: WorkItem) -> list[Any]: ...
 
     def _task(self) -> Any:

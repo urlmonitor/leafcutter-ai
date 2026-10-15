@@ -59,7 +59,7 @@ def gate_text(record: Decomposition, released: dict[str, list[str]]) -> str:
     lines = [f"Split {record.id}: I would answer your request as {n} separate parts. "
              "Each part quotes your own words. Nothing runs until you answer.", ""]
     for part in record.parts:
-        lines += [*_part_lines(part, released.get(part["id"], [])), ""]
+        lines += [*_part_lines(part, released.get(str(part["id"]), [])), ""]
     if record.not_covered:
         lines += _not_covered_lines(record.not_covered)
     if record.dropped:

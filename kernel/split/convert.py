@@ -73,7 +73,12 @@ def _cycle(parts: Sequence[PartProposal]) -> list[str] | None:
 def dependency_problems(parts: Sequence[PartProposal]) -> list[str]:
     """Return why the proposal's ids and dependencies are refused (empty when they are sound)."""
     seen: set[str] = set()
-    duplicates = [p.id for p in parts if p.id in seen or seen.add(p.id)]
+    duplicates: list[str] = []
+    for p in parts:
+        if p.id in seen:
+            duplicates.append(p.id)
+        else:
+            seen.add(p.id)
     if duplicates:
         return [f"duplicate part id: {i}" for i in dict.fromkeys(duplicates)]
     unknown = [f"{p.id} depends on {d}, which the proposal does not contain"
