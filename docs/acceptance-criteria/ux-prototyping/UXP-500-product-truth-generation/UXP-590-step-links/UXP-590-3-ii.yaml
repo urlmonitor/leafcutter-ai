@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given the product-truth generation flow has steps map, derive, invert, backref and validate,
@@ -21,15 +21,29 @@ criteria: |
 depends_on:
   - UXP-590-3
 doc_links:
-  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
-    relationship: implements
-    status: exists
+- path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+- path: docs/product-truth/scripts/README.md
+  relationship: describes
+  status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- A claim naming a step id the flow does not have is an error (non-zero exit) whose text contains the
+  AC id, the flow id, the unknown step id and the flow's existing step ids in flow order
+- A claim naming a flow id absent from the store is an error whose text contains the AC id and the unknown
+  flow id
+- An unknown-step or unknown-flow claim is reported once, as that error only; it must not additionally
+  be reported as an unsupported-claim error for the same (flow, step, AC)
+- Both errors fire whether or not any step links the AC
 delivers_to: null
 expects_from:
   ac_id: UXP-590-3
-  contract: "The step-claim cross-check this edge case extends"
+  contract: The step-claim check module; this AC adds the unknown-step and unknown-flow errors to it
 notes: |
   Guards the rename case: a step id renamed in the flow would otherwise leave every claim
   pointing at it silently unsupported and indistinguishable from a mislink.
@@ -39,3 +53,38 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+- name: test_claim_on_an_unknown_step_makes_the_validator_exit_nonzero
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: reachability
+  description: 'Fixture where UXP-512 claims ''write-backrefs'' of the generation flow: runs the validator
+    CLI and asserts a non-zero exit.'
+- name: test_unknown_step_error_names_ac_flow_and_step_and_lists_existing_steps
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: Asserts the error contains UXP-512, 'leafcutter/generate-product-truth', 'write-backrefs'
+    and the five step ids map, derive, invert, backref, validate.
+- name: test_claim_on_an_unknown_flow_is_an_error_naming_ac_and_flow
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Fixture AC claims a step of a flow id that is not in the store: asserts an error naming
+    the AC and that flow id.'
+- name: test_unknown_step_claim_is_reported_once_not_also_as_unsupported
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: discrimination
+  description: Asserts the 'write-backrefs' claim yields exactly one finding, the unknown-step error,
+    and no 'claims write-backrefs, but write-backrefs does not link it' error.
+  must_catch:
+  - report an unknown step as an ordinary unsupported claim
+  - report both errors for the same claim

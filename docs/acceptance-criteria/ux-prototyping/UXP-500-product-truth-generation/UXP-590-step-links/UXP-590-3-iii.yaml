@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: medium
 criteria: |
   Given UXP-510 claims steps [map, derive] of the product-truth generation flow,
@@ -24,15 +24,30 @@ criteria: |
 depends_on:
   - UXP-590-3
 doc_links:
-  - path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
-    relationship: implements
-    status: exists
+- path: docs/product-truth/flows/leafcutter/generate-product-truth.flow.json
+  relationship: implements
+  status: exists
+- path: docs/architecture/components/ux-prototyping.md
+  relationship: describes
+  status: exists
+- path: docs/product-truth/scripts/README.md
+  relationship: describes
+  status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'Matching must be per (flow, step, AC) triple over a many-to-many relation: no assumption of one AC
+  per step or one step per AC'
+- Claims on several flows are evaluated per flow independently; a claim on one flow never satisfies or
+  masks a link on another
+- Each removed link or removed claim must produce exactly one error naming the flow id, the step id and
+  the AC id
+- Fixture flow 'leafcutter/fixture-flow' exists only in the test's temporary store; the test must not
+  write into the live store
 delivers_to: null
 expects_from:
   ac_id: UXP-590-3
-  contract: "The step-claim cross-check this edge case bounds"
+  contract: The step-claim check module; this AC bounds its matching to many-to-many, multi-flow claims
 notes: |
   The step-to-AC relationship is many-to-many (UXP-512). A check that assumes one AC per
   step, or one step per AC, would flag the corrected UXP-510 links as wrong. The second
@@ -43,3 +58,39 @@ amended_by: []
 superseded_by: null
 covered_by: []
 implemented_by: []
+change_target: code
+risk_surface: internal
+test_required: true
+test_spec:
+- name: test_multi_step_and_multi_flow_claims_that_are_all_linked_yield_no_errors
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Fixture with UXP-510 claiming [map, derive] and fixture-flow rollup, UXP-700e-2-ii claiming
+    derive, all linked: asserts zero step-claim errors for UXP-510 and UXP-700e-2-ii.'
+- name: test_removing_one_link_of_a_multi_step_claim_yields_exactly_one_error
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Drops UXP-510 from derive''s implements: asserts exactly one error, ''UXP-510 claims derive,
+    but derive does not link it''.'
+- name: test_removing_the_second_flow_claim_yields_exactly_one_error_naming_that_flow
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: criterion
+  description: 'Drops the rollup claim from UXP-510 while rollup still links it: asserts exactly one error
+    naming ''leafcutter/fixture-flow'', rollup and UXP-510.'
+- name: test_shared_step_with_two_claiming_acs_is_not_flagged
+  target_dir: unit_tests/product_truth/
+  framework: unittest
+  type: integration
+  angle: discrimination
+  description: Asserts derive linking both UXP-510 and UXP-700e-2-ii, each claiming derive, produces no
+    error for either.
+  must_catch:
+  - assume one AC per step
+  - assume one step per AC
+  - key claims by AC only and drop all but the last flow
