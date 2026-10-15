@@ -19,6 +19,8 @@ related_code:
   - templates/scripts/workspace/workspace_core.py
   - templates/scripts/workspace/workspace_checks.py
   - templates/scripts/workspace/workspace_create.py
+  - unit_tests/build_orchestration/test_bo_4300b_4.py
+  - .github/workflows/ci.yml
 related_docs:
   - docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md
   - docs/architecture/adrs/ADR-071-workflow-shell-steps-reach-only-shell-permitted-agents.md
@@ -129,7 +131,7 @@ internal to it:
 | `workspace/workspace_core.py` | One naming table (kind and slug to branch and folder), `make_plan`, git runner, `MakerError`, marker read/write, landing-place scan, `discard_tree` |
 | `workspace/workspace_root.py` | `resolve_project_root`: `--repo-root`, workspace marker, git common dir, child search, sibling search; recomputed on every call |
 | `workspace/workspace_create.py` | Clone, re-point origin, fetch, check out, copy `.env` and `.mcp.json`, build, prove ready, mark ready; a failed `ensure` deletes the half-made workspace |
-| `workspace/workspace_checks.py` | Recomputes every readiness check from disk, including the hooks canary; raises `NOT_READY` |
+| `workspace/workspace_checks.py` | Recomputes every readiness check from disk, including `install_paths_regular` and the hooks canary; raises `NOT_READY` |
 
 How to read it:
 
@@ -145,7 +147,9 @@ How to read it:
 - **Readiness is measured, not assumed.** `workspace_checks` returns the same set of check
   names for every route: an independent repository, not the main checkout, the same
   project, the expected branch, not a protected branch, a fresh base, an install, a clean
-  tree, a real `.pre-commit-config.yaml`, a hook file for each declared stage, and
+  tree, a real `.pre-commit-config.yaml`, `install_paths_regular` (no link anywhere in the
+  install or protections, see [No links, so no link permission needed](#no-links-so-no-link-permission-needed)),
+  a hook file for each declared stage, and
   `hooks_canary_rejected`. The canary commits a known-bad file with the working directory
   set to the workspace, never with `git -C`. A rejection counts as proof only if a control
   commit made with `--no-verify` succeeds. The check never runs on a tree that holds work.
@@ -171,8 +175,36 @@ What the maker itself guarantees:
   work unless `--discard` is given.
 - **No symlinks.** The workspace gets real install files from its own `build.py`. It never
   links to the main install, so a build in one workspace cannot rewrite another's tools.
+  This is measured, not assumed: see the next section.
 - **No guessed paths.** Every caller takes the workspace path from the maker's JSON answer.
   The project root is recomputed on every call by `workspace_root.py`.
+
+### No links, so no link permission needed
+
+Source AC: `BO-4300b-4`. On Windows, creating a symbolic link needs a permission an
+ordinary user often lacks. The `ensure` path creates no link anywhere, so a user without
+that permission still gets a workspace answered `ready`. The answer and the workspace are
+the same as on a machine where links are permitted. The build's shim installer
+(`install_shims` in `scripts/build_helpers.py`) takes its copy path.
+
+- **The check.** `install_paths_regular` in `workspace/workspace_checks.py` walks the
+  `.leafcutter` install tree, `.pre-commit-config.yaml` and `.git/hooks`. It uses `lstat`
+  and never follows a link. A symlink or a Windows junction (reparse point) anywhere in
+  those paths makes the check false, `require_ready` raises `NOT_READY`, and the half-made
+  workspace is deleted like any other failed `ensure`. `precommit_config_present` also
+  rejects a symlinked `.pre-commit-config.yaml`.
+- **The protections still protect.** `hooks_canary_rejected` still has to pass, so a commit
+  of a known-bad file inside a link-free workspace is rejected by its installed hook.
+- **`workspace_create.py` needed no change.** It already makes no links; the readiness
+  check is what turns that property into a recorded, per-workspace fact.
+- **Proof, on two arms.** Arm 1 is the `workspace-no-links-windows` job in
+  `.github/workflows/ci.yml`: a `windows-latest` runner runs
+  `unit_tests/build_orchestration/test_bo_4300b_4.py` with no setting changed to permit
+  links. Its Windows-only tests report as skipped ("not run"), never as passed, on a runner
+  that does hold the permission. Arm 2 runs on every platform: the deployed maker is run as
+  a separate process with a `sitecustomize` that makes `os.symlink` raise, against real
+  temporary git repositories and a real bare hub. The tests compare the answers of the
+  link-permitted and link-denied runs after normalising paths, timestamps and shas.
 
 ### Legacy: `setup_ticket_worktree.py` (until BO-4300f-2)
 
