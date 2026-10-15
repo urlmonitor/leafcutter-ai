@@ -50,7 +50,7 @@ Each candidate is verified by probing for `docs/roadmap.json`.
 | `/` | Pulse | Project health at a glance — AC/ticket/component/agent counts, work-status donut, the L0–L3 pyramid, delivery throughput, phase progress, and what's approved & ready to build. |
 | `/now` | Now & Next | What is in flight plus what builds next. |
 | `/atlas` | AC Atlas | How acceptance criteria connect — the AC graph and drill-downs. |
-| `/flows` | Flows | Product truth, coloured by live build status — the product-truth Flows, with each step's derived `impl_status` resolved from its ACs' `work_status`. |
+| `/flows` | Flows | The flow finder: search and filter flows and steps; the address carries the whole search ([how-to](../docs/how-to/find-a-flow-in-the-atlas.md), [address reference](../docs/reference/atlas-flows-finder-address.md)). One flow lives at `/flows/<product>/<flow>`: product truth, coloured by live build status, with each step's derived `impl_status` resolved from its ACs' `work_status`. |
 | `/roadmap` | Roadmap | Phases, exit criteria, and what's next. |
 | `/coverage` | Coverage | How many tests guard each AC. |
 | `/pipeline` | Pipeline | How Leafcutter builds software — the phase-agent pipeline. |

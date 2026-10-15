@@ -6,9 +6,14 @@
  * One popstate listener restores the view: the entry's URL is the authority
  * for the flow and the drawer (?step=), history.state["leafcutter:flows-view"]
  * for crumbs and filters. A pop writes no history.
+ *
+ * Amended 2026-10-14 (UXP-617): sessions start from a flow's own address (no
+ * default flow at /flows), a /flows entry pops back to the finder, and an entry
+ * restores with the 'Outside the current filters' notice its filters imply.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, waitFor } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import { openAt } from "../helpers/drawer-nav";
 import { activeOf, clickNode } from "../helpers/flow-routes";
 import {
   DEFAULT,
@@ -79,10 +84,11 @@ const otherBuiltUserFlow = getFlows().find(
 )!;
 
 describe("Back and Forward restore each entry", () => {
-  it("Back twice and Forward once after two drills shows how-acs-are-built, the default flow at /flows, then how-acs-are-built again", async () => {
+  it("Back twice and Forward once after two drills shows how-acs-are-built, deliver-a-feature at its own address, then how-acs-are-built again", async () => {
     // covers: UXP-591-5-ii
     // angle: criterion
-    await openTab(nav, "/flows");
+    await openTab(nav, `/flows/${DEFAULT}`);
+    await expectOnScreen({ flow: DEFAULT, crumbs: [DEFAULT], address: `/flows/${DEFAULT}` });
     drillNode(labelOf(DEFAULT, "build"));
     await expectOnScreen({ flow: HOW });
     drillNode(labelOf(HOW, "code"));
@@ -91,7 +97,7 @@ describe("Back and Forward restore each entry", () => {
     await traverse("back");
     await expectOnScreen({ flow: HOW, crumbs: [DEFAULT, HOW], address: `/flows/${HOW}` });
     await traverse("back");
-    await expectOnScreen({ flow: DEFAULT, crumbs: [DEFAULT], address: "/flows" });
+    await expectOnScreen({ flow: DEFAULT, crumbs: [DEFAULT], address: `/flows/${DEFAULT}` });
     await traverse("forward");
     await expectOnScreen({ flow: HOW, crumbs: [DEFAULT, HOW], address: `/flows/${HOW}` });
   });
@@ -163,6 +169,28 @@ describe("Back and Forward restore each entry", () => {
     expect(here()).toBe("/flows/leafcutter/flow-render-pipline");
   });
 
+  it("Back onto a /flows entry shows the finder with no flow drawn, and Forward returns the flow", async () => {
+    // covers: UXP-591-5-ii
+    // angle: seam
+    const appState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: ["", {}] };
+    window.history.pushState(appState, "", "/flows"); // the finder entry the flow was opened from
+    window.history.pushState(appState, "", `/flows/${DEFAULT}`);
+    await openAt(nav, `/flows/${DEFAULT}`);
+    await expectOnScreen({ flow: DEFAULT, address: `/flows/${DEFAULT}` });
+
+    await traverse("back");
+    await waitFor(() => {
+      expect(here()).toBe("/flows");
+      expect(screen.queryAllByRole("status").map((s) => s.textContent)).toEqual([`${getFlows().length} flows`]);
+      expect(document.querySelector(".react-flow")).toBeNull();
+      expect(h1()).not.toContain(nameOf(DEFAULT));
+    });
+    expect(flowNotFoundNoticeShown()).toBe(false);
+
+    await traverse("forward");
+    await expectOnScreen({ flow: DEFAULT, crumbs: [DEFAULT], address: `/flows/${DEFAULT}` });
+  });
+
   it("restoring filters on a pop does not call replaceState or pushState", async () => {
     // covers: UXP-591-5-ii
     // angle: discrimination
@@ -181,6 +209,8 @@ describe("Back and Forward restore each entry", () => {
     ["drill-and-return", [1, 2, 3, 4, 5, 6]],
     ["shared-mock-journey", [1, 2, 3, 4, 5]],
     ["recover-from-unknown", [1, 2, 3]],
+    ["drawer-in-history", [1, 2, 3, 4, 5, 6]],
+    ["filter-replace", [1, 2, 3, 4, 5, 6, 7]],
   ])("replays the %s session from atlas-flows.mock.json", async (session, seqs) => {
     // covers: UXP-591-5-ii
     // angle: real_artifact

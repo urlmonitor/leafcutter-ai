@@ -1,11 +1,14 @@
 /**
- * UXP-591-5-v - a filter change while 'Flow not found' shows clears the
- * notice, re-picks a flow, and replaces the address in place. (Ticket names a
- * Python test file; vitest only collects *.test.{ts,tsx}.)
+ * UXP-591-5-v (amended 2026-10-14, owner-confirmed) - a filter change while
+ * 'Flow not found' shows keeps the notice and the address, draws nothing, and
+ * only re-lists the selector. (Ticket names a Python test file; vitest only
+ * collects *.test.{ts,tsx}.)
  *
+ * Replaces the PR #1176 tests that cleared the notice and re-picked a flow.
  * The not-found state is the Flows view rendered by the route's not-found
  * boundary; the entry state written by the replace must win over that
- * boundary's server-rendered props whenever the entry is shown again.
+ * boundary's server-rendered defaults (Real, User, All) whenever the entry is
+ * shown again.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, waitFor } from "@testing-library/react";
@@ -16,12 +19,12 @@ import {
   drawerIds,
   expectNoRouter,
   expectOnScreen,
+  flowNotFoundNoticeShown,
   groupButtonsText,
   h1,
   here,
   nameOf,
   openNotFoundTab,
-  openTab,
   selectFlow,
   setFilter,
   storedView,
@@ -71,87 +74,115 @@ afterEach(() => {
 const UNKNOWN = "/flows/leafcutter/flow-render-pipline?step=resolve";
 const ARCH = "leafcutter/product-truth-architecture";
 const CHECKOUT = "fern-and-fig/checkout-and-pay";
-const BUYS = "fern-and-fig/customer-buys-a-plant";
+
+/**
+ * The selector under Real · Architecture lists the architecture flow and nothing outside that scope.
+ * Button names carry a progress badge ('N/M done'), which is stripped before comparing; the
+ * selector may list more than one Real · Architecture flow, so the list is not required to be exactly one.
+ */
+const listedFlows = () => groupButtonsText("Flow").map((t) => t.replace(/\d+\/\d+ done$/, "").trim());
+function expectArchSelector() {
+  const listed = listedFlows();
+  expect(listed).toContain(nameOf(ARCH));
+  for (const outside of ["leafcutter/deliver-a-feature", CHECKOUT, "leafcutter/define-a-feature"]) {
+    expect(listed, `${outside} is not a Real · Architecture flow`).not.toContain(nameOf(outside));
+  }
+}
+
+/** Nothing is drawn: no graph, no heading naming a flow, no breadcrumb, no drawer. */
+function expectNothingDrawn() {
+  expect(document.querySelector(".react-flow__node")).toBeNull();
+  expect(crumbNames()).toEqual([]);
+  expect(drawerIds()).toEqual([]);
+  expect(h1()).not.toContain(nameOf(ARCH));
+  expect(h1()).not.toContain(nameOf(CHECKOUT));
+}
 
 describe("a filter change from the 'Flow not found' state", () => {
-  it("Kind Architecture clears the notice, draws product-truth-architecture alone and replaces the address at one entry", async () => {
+  it("Kind Architecture keeps the notice, the address and one entry, and the selector lists only product-truth-architecture", async () => {
     // covers: UXP-591-5-v
     // angle: criterion
     await openNotFoundTab(nav, UNKNOWN);
-    expect(document.body.textContent).toContain("Flow not found");
+    expect(flowNotFoundNoticeShown()).toBe(true);
+    expect(activeOf("Kind")).toBe("User");
     const w = watchNav(nav);
     setFilter("Kind", "Architecture");
-    await expectOnScreen({ flow: ARCH, crumbs: [ARCH], drawer: null, address: `/flows/${ARCH}` });
-    expect(document.body.textContent).not.toContain("Flow not found");
-    expect(document.body.textContent).not.toContain("Step not found");
+
+    await waitFor(() => expect(activeOf("Kind")).toBe("Architecture"));
+    await waitFor(() => expectArchSelector());
+    // a filter change never picks or swaps a flow
+    expect(flowNotFoundNoticeShown()).toBe(true);
+    expect(document.body.textContent).toContain("No flow has the id 'leafcutter/flow-render-pipline'");
+    expectNothingDrawn();
+    // the unknown ?step=resolve stays; the entry is rewritten in place
+    expect(here()).toBe(UNKNOWN);
     expect(w.replace).toHaveBeenCalledTimes(1);
-    // the unknown flow's ?step=resolve is not carried over
-    expect(addressOf(w.replace.mock.calls[0][2])).toBe(`/flows/${ARCH}`);
+    expect(addressOf(w.replace.mock.calls[0][2])).toBe(UNKNOWN);
     expect(w.push).not.toHaveBeenCalled();
     expect(window.history.length).toBe(w.length);
     expectNoRouter(nav);
-    expect(storedView()).toEqual({
-      crumbs: [ARCH],
-      filters: { source: "real", kind: "architecture", realization: "all" },
-    });
+    expect(storedView()?.filters).toEqual({ source: "real", kind: "architecture", realization: "all" });
   });
 
-  it("Source Mock picks the first flow the selector lists: fern-and-fig/checkout-and-pay", async () => {
+  it("Source Mock re-lists the selector the same way and still draws nothing", async () => {
     // covers: UXP-591-5-v
     // angle: boundary
     await openNotFoundTab(nav, UNKNOWN);
     const w = watchNav(nav);
     setFilter("Source", "Mock");
-    await expectOnScreen({ flow: CHECKOUT, crumbs: [CHECKOUT], drawer: null, address: `/flows/${CHECKOUT}` });
-    expect(groupButtonsText("Flow")[0]).toContain(nameOf(CHECKOUT));
-    expect(w.replace).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(activeOf("Source")).toBe("Mock"));
+    await waitFor(() => expect(groupButtonsText("Flow")[0]).toContain(nameOf(CHECKOUT)));
+    expect(flowNotFoundNoticeShown()).toBe(true);
+    expectNothingDrawn();
+    expect(here()).toBe(UNKNOWN);
     expect(w.push).not.toHaveBeenCalled();
     expect(window.history.length).toBe(w.length);
-    expect(document.body.textContent).not.toContain("Flow not found");
   });
 
-  it("after picking Customer buys a plant and pressing Back the entry shows checkout-and-pay, never the notice", async () => {
+  it("picking Product-truth in the leafcutter architecture pushes its canonical address with a one-flow breadcrumb", async () => {
+    // covers: UXP-591-5-v
+    // angle: criterion
+    await openNotFoundTab(nav, UNKNOWN);
+    setFilter("Kind", "Architecture");
+    await waitFor(() => expectArchSelector());
+    const start = window.history.length;
+
+    selectFlow(nameOf(ARCH));
+
+    await expectOnScreen({ flow: ARCH, crumbs: [ARCH], drawer: null, address: `/flows/${ARCH}` });
+    expect(window.history.length).toBe(start + 1); // the ordinary select push
+    expect(flowNotFoundNoticeShown()).toBe(false);
+  });
+
+  it("Back from there returns the 'Flow not found' entry with the Kind filter at Architecture", async () => {
     // covers: UXP-591-5-v
     // angle: seam
     await openNotFoundTab(nav, UNKNOWN);
-    setFilter("Source", "Mock");
-    await expectOnScreen({ flow: CHECKOUT });
-    const start = window.history.length;
-    selectFlow(nameOf(BUYS));
-    await expectOnScreen({ flow: BUYS, crumbs: [BUYS], address: `/flows/${BUYS}` });
-    expect(window.history.length).toBe(start + 1);
+    setFilter("Kind", "Architecture");
+    await waitFor(() => expectArchSelector());
+    selectFlow(nameOf(ARCH));
+    await expectOnScreen({ flow: ARCH, address: `/flows/${ARCH}` });
 
     await traverse("back");
-    await expectOnScreen({ flow: CHECKOUT, crumbs: [CHECKOUT], drawer: null, address: `/flows/${CHECKOUT}` });
-    expect(document.body.textContent).not.toContain("Flow not found");
-    expect(here()).not.toContain("flow-render-pipline");
-    await waitFor(() => expect(activeOf("Source")).toBe("Mock"));
+
+    await waitFor(() => expect(here()).toBe(UNKNOWN));
+    await waitFor(() => expect(flowNotFoundNoticeShown()).toBe(true));
+    // the stored filters win over the boundary's server-rendered Real, User, All
+    await waitFor(() => expect(activeOf("Kind")).toBe("Architecture"));
+    expectArchSelector();
+    expectNothingDrawn();
   });
 
-  it("a reload of the replaced entry renders the re-picked flow through the catch-all route", async () => {
-    // covers: UXP-591-5-v
-    // angle: reachability
-    await openNotFoundTab(nav, UNKNOWN);
-    setFilter("Kind", "Architecture");
-    await expectOnScreen({ flow: ARCH, address: `/flows/${ARCH}` });
-    const replaced = here();
-    cleanup();
-    await openTab(nav, replaced);
-    expect(h1()).toContain(nameOf(ARCH));
-    expect(drawerIds()).toEqual([]);
-    expect(crumbNames()).toEqual([]);
-  });
-
-  it("control: before any filter change the notice shows with an empty breadcrumb and no flow drawn", async () => {
+  it("control: before any filter change the notice shows with an empty breadcrumb and the default filters", async () => {
     // covers: UXP-591-5-v
     // angle: discrimination
     await openNotFoundTab(nav, UNKNOWN);
     expect(document.body.textContent).toContain("No flow has the id 'leafcutter/flow-render-pipline'");
-    expect(crumbNames()).toEqual([]);
-    expect(drawerIds()).toEqual([]);
-    const w = watchNav(nav);
-    setFilter("Kind", "Architecture");
-    await waitFor(() => expect(document.body.textContent).not.toContain("Flow not found"));
-    expect(w.replace).toHaveBeenCalledTimes(1);
+    expect(activeOf("Source")).toBe("Real");
+    expect(activeOf("Kind")).toBe("User");
+    expect(activeOf("Realization")).toBe("All");
+    expectNothingDrawn();
+    expect(groupButtonsText("Flow").join(" | ")).not.toContain(nameOf(ARCH));
   });
 });

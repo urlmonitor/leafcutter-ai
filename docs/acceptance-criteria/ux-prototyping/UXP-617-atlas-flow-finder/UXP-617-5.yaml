@@ -74,7 +74,8 @@ amended_by:
   date: '2026-10-14'
 superseded_by: null
 covered_by: []
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-UXP-617-5.md
 change_target: docs
 risk_surface: contract_boundary
 notes: |

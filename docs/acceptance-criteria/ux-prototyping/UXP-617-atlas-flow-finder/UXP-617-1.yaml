@@ -160,7 +160,8 @@ covered_by:
   - UXP-617-1-iii
   - UXP-617-1-iv
   - UXP-617-1-v
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-UXP-617-1.md
 change_target:
   - code
   - ui
