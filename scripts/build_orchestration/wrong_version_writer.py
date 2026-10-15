@@ -3,7 +3,7 @@ MODULE: scripts/build_orchestration/wrong_version_writer.py
 GOAL: The deterministic writer between the read-only test-breaker and the wrong-version
     runner: ``list`` prints what is owed, ``write`` turns the preparer's reply into the
     alterations manifest the runner reads (``wrong_version_runner.py --alterations``).
-BUSINESS CONTEXT: TQ-500g-1-ix. The preparer only RETURNS exact-match replacements; this
+BUSINESS CONTEXT: TQ-500g-1-ix, -x. The preparer only RETURNS exact-match replacements; this
     CLI applies each where it matches exactly once, computes every diff itself, records
     every owed name once and refuses what it must (test files, paths outside the
     repository or inside the version-control folder, files not in scope for the name).
@@ -11,7 +11,9 @@ ARCHITECTURE: Public module with its own CLI (flags only; the runner's CLI is un
     Holds argument parsing and the one JSON object on stdout; the logic lives in the
     siblings ``_wvw_list`` (owed names, via the runner's declared-scope reader),
     ``_wvw_reply``, ``_wvw_prepare`` and ``_wvw_write``. ``list`` exits 0 when printed and
-    1 when the AC store or test root cannot be read; ``write`` exits 0 when the manifest
+    1 when the AC store or test root cannot be read or the base ref is missing while a name
+    needs it; both steps take ``--base-ref`` (default HEAD, empty means HEAD). ``list`` prints
+    ``{owed: [{name, files, scope}], error}``, scope ``declared`` or ``derived``; ``write`` exits 0 when the manifest
     was written and 1 when the step stopped. Logging goes to stderr only. Never uses git stash.
 """
 
@@ -44,6 +46,7 @@ def _parser() -> argparse.ArgumentParser:
         step.add_argument("--ac-ids", default="")
         step.add_argument("--ac-root", required=True)
         step.add_argument("--test-root", required=True)
+        step.add_argument("--base-ref", default="HEAD", help="ref the work began from (empty means HEAD)")
     return parser
 
 
@@ -51,7 +54,7 @@ def _run_list(args: argparse.Namespace) -> tuple[dict, int]:
     """Run the ``list`` step; an internal error still prints the shape."""
     ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
     try:
-        derived = derive_owed(ids, Path(args.test_root), Path(args.ac_root))
+        derived = derive_owed(ids, Path(args.test_root), Path(args.ac_root), args.base_ref or "HEAD")
     except (OSError, ValueError) as exc:
         _LOG.warning("the list step failed: %s", exc)
         derived = Derived(error=f"internal error: {exc}")
@@ -87,7 +90,7 @@ def main(argv: list[str] | None = None) -> int:
             payload, code = _guarded(lambda: _run_list(args), "list")
         else:
             ids = [i.strip() for i in args.ac_ids.split(",") if i.strip()]
-            payload, code = _guarded(lambda: run_write(args.work_key, args.reply, ids, Path(args.test_root), Path(args.ac_root)), "write")
+            payload, code = _guarded(lambda: run_write(args.work_key, args.reply, ids, Path(args.test_root), Path(args.ac_root), args.base_ref or "HEAD"), "write")
     print(json.dumps(payload))
     return code
 

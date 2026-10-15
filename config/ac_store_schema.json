@@ -461,7 +461,7 @@
                                     "type": "string",
                                     "pattern": "\\S"
                                 },
-                                "description": "TQ-500g-1-ix: the repo-relative POSIX paths of the files a wrong version named in this entry's must_catch may alter. Optional; when present it must be a non-empty list and every item must contain at least one non-whitespace character. The wrong-version writer (scripts/build_orchestration/wrong_version_writer.py) reads it through the runner's declared-scope reader: a name's in-scope files are the union over every entry carrying that exact name, minus any test file. A name with no in_scope_files has no in-scope file, so every replacement for it is refused. Not copied onto the generated ticket."
+                                "description": "TQ-500g-1-ix: the repo-relative POSIX paths of the files a wrong version named in this entry's must_catch may alter. Optional; when present it must be a non-empty list and every item must contain at least one non-whitespace character. The wrong-version writer (scripts/build_orchestration/wrong_version_writer.py) reads it through the runner's declared-scope reader: a name's in-scope files are the union over every entry carrying that exact name, minus any test file. A declaration on any entry naming the name wins. A name whose entries carry no in_scope_files takes the non-test files the work changed relative to the writer's --base-ref (TQ-500g-1-x), and the list marks each name declared or derived; an empty derived scope refuses every replacement. Not copied onto the generated ticket."
                             }
                         }
                     }

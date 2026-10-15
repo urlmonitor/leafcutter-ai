@@ -127,17 +127,19 @@ def _build(work_key: str, work_dir: Path, derived: Derived, reply: reply_mod.Rep
             "ignored_reply_names": ignored, "preparer_anomalies": reply.anomalies}, 0
 
 
-def _run(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root: Path, work_dir: Path) -> tuple[dict, int]:
+def _run(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root: Path, work_dir: Path,
+         base_ref: str) -> tuple[dict, int]:
     """Clean the work folder, derive the owed names, read the reply and build the manifest."""
     _clean(work_dir)
-    derived = derive_owed(ac_ids, test_root, ac_root)
+    derived = derive_owed(ac_ids, test_root, ac_root, base_ref)
     if derived.error:
         return _fail(derived.error)
     work_dir.mkdir(parents=True, exist_ok=True)
     return _build(work_key, work_dir, derived, _prepare_reply(source, work_key, bool(derived.owed)))
 
 
-def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root: Path) -> tuple[dict, int]:
+def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac_root: Path,
+              base_ref: str = "HEAD") -> tuple[dict, int]:
     """Run the ``write`` step; return ``(stdout payload, exit code)``.
 
     Args:
@@ -146,6 +148,7 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
         ac_ids: The requirement ids whose owed names are derived.
         test_root: The working-tree root.
         ac_root: Root of the AC store.
+        base_ref: The ref the work began from (empty means HEAD); scope of an undeclared name derives from it.
 
     Returns:
         The one JSON object to print and the exit code (0 when the manifest was written).
@@ -158,7 +161,7 @@ def run_write(work_key: str, source: str, ac_ids: list[str], test_root: Path, ac
         return _fail(f"internal error: {exc}")
     work_dir = git_dir / "leafcutter" / "work" / work_key
     try:
-        return _run(work_key, source, ac_ids, test_root, ac_root, work_dir)
+        return _run(work_key, source, ac_ids, test_root, ac_root, work_dir, base_ref)
     except reply_mod.ReplyError as exc:
         return _fail(str(exc))
     except Exception as exc:  # noqa: BLE001 -- the JSON shape must print whatever went wrong
