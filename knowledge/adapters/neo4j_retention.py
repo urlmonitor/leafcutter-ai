@@ -5,6 +5,8 @@ ARCHITECTURE: Read-only evaluation over generation facts; reclaiming lives elsew
 
 DECISION HISTORY
 ========================================
+- 2026-10-15 02:00 [python-coder]: Catch backend refusals and return an assessment outcome (assessed, partial, could_not_assess); undetermined figures are never 0. (#KM-400f-1-vi)
+- 2026-10-15 01:00 [python-coder]: Reconcile entity nodes against every generation record; count nodes no record accounts for and state a zero. (#KM-400f-1-v)
 - 2026-10-14 23:50 [python-coder]: Name every reclaimability basis per generation and count each basis apart, stating a zero and the overlap; failed publications take no count slot. (#KM-400f-1-iv)
 - 2026-10-14 23:30 [python-coder]: Keep retention evaluation in its own module so projection stays under the file-size limit and further retention work lands here. (#KM-400f-1-iii)
 - 2026-10-14 23:00 [python-coder]: Protect the active generation by the active pointer alone; with no pointer, report that and reclaim nothing. (#KM-400f-1-iii)
@@ -14,8 +16,21 @@ DECISION HISTORY
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import TYPE_CHECKING
+
+from knowledge.adapters.neo4j_retention_assessment import (
+    COUNTS_PART,
+    RECORDS_PART,
+    UNDETERMINED,
+    could_not_assess_report,
+    refusal,
+    with_assessment,
+)
+from knowledge.errors import BackendUnavailable
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from knowledge.adapters.neo4j_backend import Neo4jBackend
@@ -64,7 +79,11 @@ async def evaluate_retention(
     if not isinstance(bound, RetentionBound):
         raise TypeError(_NO_BOUND)
     clock = time.time() if now is None else now
-    facts = await db.retention_facts(repository_id)
+    try:
+        facts = await db.retention_facts(repository_id)
+    except BackendUnavailable as exc:
+        logger.warning("retention evaluation could not read generation records: %s", exc)
+        return could_not_assess_report(bound.model_dump(), [refusal(RECORDS_PART, exc)])
     # A generation with no creation time has no place in the newest-first order; it ranks last.
     ordered = sorted(
         facts,
@@ -75,13 +94,21 @@ async def evaluate_retention(
         ),
     )
     active = active_generation_verdict(facts)
+    refusals: list[dict] = []
+    nodes = await _reconcile_nodes(db, repository_id, facts, refusals)
     verdicts = [
-        {"generation_id": f["generation_id"], **_verdict(f, rank, bound, clock)}
+        {
+            "generation_id": f["generation_id"],
+            "entity_nodes": nodes["per_generation"][f["generation_id"]],
+            **_verdict(f, rank, bound, clock),
+        }
         for f, rank in zip(ordered, _count_ranks(ordered))
     ]
     if not active["identified"]:
         verdicts = [_withhold(v) for v in verdicts]
-    return {
+    report = {
+        "unaccounted_nodes": nodes["unaccounted_nodes"],
+        "unaccounted_generation_keys": nodes["unaccounted_generation_keys"],
         "bound": bound.model_dump(),
         "assessed": len(verdicts),
         "active_generation": active["generation_id"],
@@ -91,6 +118,74 @@ async def evaluate_retention(
         "reclaimable_by_basis": _basis_counts(verdicts),
         "reclaimable_by_basis_note": _BASIS_NOTE,
     }
+    return with_assessment(report, refusals)
+
+
+async def _reconcile_nodes(
+    db: Neo4jBackend, repository_id: str, facts: list[dict], refusals: list[dict]
+) -> dict:
+    """Attribute every generation-tagged entity node to a record, or count it unaccounted.
+
+    Reconciles against the FULL record set (failed publications included), so no filtered
+    set can manufacture orphans. Unaccounted nodes join no generation and no verdict.
+
+    Args:
+        db: Scoped Neo4j adapter; ``entity_node_counts`` is read when it offers it.
+        repository_id: Trusted repository namespace isolating all reads.
+        facts: Every generation record row from ``retention_facts``.
+        refusals: Collector; a refused node count is appended here and reported as undetermined.
+
+    Returns:
+        ``per_generation`` (generation_id to integer count, 0 stated), ``unaccounted_nodes``
+        (integer, 0 stated) and sorted ``unaccounted_generation_keys``. A backend that cannot
+        count nodes yields ``"undetermined"`` for each, never a false 0.
+    """
+    from knowledge.adapters.neo4j_backend import scope_key
+
+    counter = getattr(db, "entity_node_counts", None)
+    if counter is None:
+        return {
+            "per_generation": {f["generation_id"]: "undetermined" for f in facts},
+            "unaccounted_nodes": "undetermined",
+            "unaccounted_generation_keys": "undetermined",
+        }
+    try:
+        rows = await counter(repository_id)
+    except BackendUnavailable as exc:
+        logger.warning("retention evaluation could not count entity nodes: %s", exc)
+        refusals.append(refusal(COUNTS_PART, exc))
+        return {
+            "per_generation": {f["generation_id"]: UNDETERMINED for f in facts},
+            "unaccounted_nodes": UNDETERMINED,
+            "unaccounted_generation_keys": UNDETERMINED,
+        }
+    held = {row["generation_key"]: row["nodes"] for row in rows}
+    keys = {scope_key(repository_id, f["generation_id"]): f["generation_id"] for f in facts}
+    orphans = {key: n for key, n in held.items() if key not in keys}
+    return {
+        "per_generation": {gid: int(held.get(key, 0)) for key, gid in keys.items()},
+        "unaccounted_nodes": int(sum(orphans.values())),
+        "unaccounted_generation_keys": sorted(orphans),
+    }
+
+
+async def entity_node_counts(db: Neo4jBackend, repository_id: str) -> list[dict]:
+    """Count entity nodes per generation key, whether or not a generation record exists.
+
+    Args:
+        db: Scoped Neo4j adapter owning the driver and transaction policy.
+        repository_id: Trusted repository namespace isolating all reads.
+
+    Returns:
+        One ``{"generation_key", "nodes"}`` row per distinct key nodes carry. Read-only.
+    """
+    from knowledge.adapters.domain_schema import NODE_LABELS
+
+    return await db._run(
+        "MATCH (n:" + NODE_LABELS + " {repository_id:$repo}) WHERE n.generation_key IS NOT NULL "
+        "RETURN n.generation_key AS generation_key, count(n) AS nodes",
+        {"repo": repository_id},
+    )
 
 
 def _count_ranks(ordered: list[dict]) -> list[int]:

@@ -69,6 +69,10 @@ class FakeDb:
         self.reads += 1
         return copy.deepcopy(self.facts)
 
+    async def entity_node_counts(self, repository_id):
+        """Read-only node reconciliation read (KM-400f-1-v); serves no nodes."""
+        return []
+
     def __getattr__(self, name):
         raise WriteAttempted(name)
 
