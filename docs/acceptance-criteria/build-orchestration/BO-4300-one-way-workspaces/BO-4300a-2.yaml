@@ -7,7 +7,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: critical
 roadmap_phase: phase_1
@@ -111,9 +111,11 @@ origin_agent: business-analyst
 created: 2026-09-25
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+- unit_tests/build_orchestration/test_bo_4300a_2.py
 implemented_by:
 - tickets/00_inbox/TICKET-20260927-BO-4300a-2.md
+- templates/scripts/workspace/workspace_core.py
 notes: |
   F10 and KI-BO-20260921 "abandons the epic worktree branch": a re-run moved the epic from
   EPIC-FilesStayWorkable to a fresh epic/files-stay-workable cut from the shared main line
