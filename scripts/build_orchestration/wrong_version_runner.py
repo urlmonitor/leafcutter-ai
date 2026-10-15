@@ -35,11 +35,25 @@ from pathlib import Path
 
 import _wvr_gate as gate_mod
 from _wvr_pytest import PytestRun, run_selected
-from _wvr_scope import UNDONE_NAME, ScopedTest, build_alterations, load_manifest, prepare_fix_undone, resolve_scope, wrong_version_key
+from _wvr_scope import (
+    UNDONE_NAME,
+    ChangesError,
+    DiffCache,
+    OwedName,
+    ScopedTest,
+    build_alterations,
+    changed_non_test_files,
+    load_manifest,
+    owed_names,
+    prepare_fix_undone,
+    resolve_scope,
+    wrong_version_key,
+)
 from _wvr_verdict import NO_SOURCE_OUTCOME, NOT_APPLIED, NOT_PREPARED, assemble, classify_run, row
 
 _LOG = logging.getLogger("wrong_version_runner")
 NO_TESTS_OUTCOME = "wrong-version runs not applicable: no covering test declares a wrong version or the discrimination angle"
+_SCOPE_PREFIX = "not prepared"
 _NOT_IN_SCOPE = "not in scope for the runs: its test_spec entry names no wrong version and does not declare the discrimination angle"
 
 
@@ -87,21 +101,57 @@ class Context:
     manifest: dict[str, dict]
     manifest_problem: str
     gate: gate_mod.RunGate
+    diff: DiffCache | None = None
+    tests: list[ScopedTest] = field(default_factory=list)
+    owed: dict[str, OwedName] | None = None
+    scope_error: str = ""
     undone: tuple[dict[str, bytes], str, str] | None = None
     interrupted: bool = False
+
+    def shared_diff(self) -> DiffCache:
+        """The run's one ``git diff``, shared by the fix undone and the per-name scope check."""
+        if self.diff is None:
+            self.diff = DiffCache(self.root, self.base_ref)
+        return self.diff
+
+    def scope_of(self, key: str) -> OwedName | None:
+        """The in-scope files of one wrong version, from the one function the writer uses."""
+        if self.owed is None:
+            def derive() -> list[str]:
+                try:
+                    return changed_non_test_files(self.root, self.shared_diff(), self.test_root_rel, self.ac_root_rel)
+                except ChangesError as exc:
+                    self.scope_error = str(exc)
+                    return []
+            self.owed = {wrong_version_key(o.name): o for o in owed_names(self.tests, self.test_root_rel, derive)}
+        return self.owed.get(key)
+
+
+def _out_of_scope(entry_files: dict[str, bytes], wv_key: str, ctx: Context) -> str:
+    """Return why a prepared entry alters a file outside its name's scope, or ``""``."""
+    item = ctx.scope_of(wv_key)
+    if item is None:
+        return ""
+    if item.scope == "derived" and ctx.scope_error:
+        return f"{_SCOPE_PREFIX}: {ctx.scope_error}"
+    for rel in entry_files:
+        if rel not in item.files:
+            return f'{_SCOPE_PREFIX}: {rel} is not in scope for "{item.name}"'
+    return ""
 
 
 def _prepare(wv: WrongVersion, ctx: Context) -> tuple[dict[str, bytes], str, str]:
     """Prepare the alteration of *wv*; return ``(files, state, detail)`` (state ``ready`` when usable)."""
     if wv.is_undone:
         if ctx.undone is None:
-            ctx.undone = prepare_fix_undone(ctx.root, ctx.base_ref, ctx.test_root_rel, ctx.ac_root_rel)
+            ctx.undone = prepare_fix_undone(ctx.root, ctx.base_ref, ctx.test_root_rel, ctx.ac_root_rel, ctx.shared_diff())
         return ctx.undone
     entry = ctx.manifest.get(wv.key)
     if entry is None:
         extra = f" ({ctx.manifest_problem})" if ctx.manifest_problem else ""
         return {}, "invalid", f"no entry in the alterations manifest{extra}"
     files, problem = build_alterations(entry, ctx.root, ctx.test_root_rel)
+    problem = problem or _out_of_scope(files, wv.key, ctx)
     return ({}, "invalid", problem) if problem else (files, "ready", "")
 
 
@@ -115,7 +165,7 @@ def _files_for(wv: WrongVersion, ctx: Context) -> tuple[dict[str, bytes], list[d
     if state == "not_applicable":
         return {}, [row("", wv.name, "not_applicable", detail)]
     if state != "ready":
-        return {}, rows("invalid", detail if detail.startswith(NOT_PREPARED) else f"{NOT_PREPARED}: {detail}")
+        return {}, rows("invalid", detail if detail.startswith((NOT_PREPARED, _SCOPE_PREFIX)) else f"{NOT_PREPARED}: {detail}")
     try:
         changed = {rel: data for rel, data in files.items() if _as_written(ctx.root, rel) != data}
     except OSError as exc:
@@ -201,7 +251,7 @@ def _verdict_for(tests: list[ScopedTest], out_rows: list[dict], test_root: Path,
     manifest, problem = load_manifest(alterations)
     run_id = f"{time.strftime('%Y%m%dT%H%M%S')}-{os.getpid()}"
     ctx = Context(root, _rel_to(root, test_root), _rel_to(root, ac_root), base_ref, manifest, problem,
-                  gate_mod.RunGate(root, gate_dir / run_id))
+                  gate_mod.RunGate(root, gate_dir / run_id), tests=[t for t in tests if t.node is not None])
     unresolved = [t for t in tests if t.node is None]
     rows = [row(t.label, "", "invalid", t.issue) for t in unresolved] + out_rows
     runnable = [t for t in tests if t.node is not None]

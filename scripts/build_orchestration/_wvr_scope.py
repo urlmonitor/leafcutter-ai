@@ -2,7 +2,7 @@
 MODULE: scripts/build_orchestration/_wvr_scope.py
 GOAL: What the wrong-version runner runs: the tests in scope, the wrong versions
     each one answers for, the alterations manifest, and "the fix undone".
-BUSINESS CONTEXT: TQ-500g-1-i. Scope is declared, never inferred: a covering test
+BUSINESS CONTEXT: TQ-500g-1-i. Scope is declared: a covering test
     is in scope only when its own AC ``test_spec`` entry carries ``must_catch`` or
     ``angle: discrimination``. Requirement prose is never read. Each test answers
     for the wrong versions its OWN entry names; "the fix undone" is the code as it
@@ -12,6 +12,9 @@ ARCHITECTURE: Declared-name matching reuses
     ``done_proof._nodeid_function_name``; covers tags come from done_proof's
     scanner. The alias constant :data:`ALIASES` is the one place the
     "revert the fix" spellings live (documented on the TQ-500g-5 reference page).
+    A wrong version whose entries declare no ``in_scope_files`` takes the non-test files the
+    work changed against the base ref (TQ-500g-1-x): :class:`DiffCache` is the one
+    ``git diff --name-status`` shared by the fix undone and that derived scope.
     Manifest claim fields (``caught`` and the like) are never read: only ``name``,
     ``status``, ``reason`` and ``files`` are.
 """
@@ -22,6 +25,7 @@ import ast
 import json
 import logging
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path, PureWindowsPath
 
@@ -236,26 +240,42 @@ def _safe_rel(root: Path, raw: str) -> str | None:
 
 @dataclass
 class OwedName:
-    """One owed wrong version and the source files it may alter."""
+    """One owed wrong version, the source files it may alter and where that scope came from."""
 
     name: str
     files: list[str] = field(default_factory=list)
+    scope: str = "declared"
 
 
-def owed_names(tests: list[ScopedTest], test_root_rel: str | None) -> list[OwedName]:
-    """List the owed wrong versions of *tests* with their per-name in-scope files (TQ-500g-1-ix).
+def owed_names(tests: list[ScopedTest], test_root_rel: str | None,
+               derive: Callable[[], list[str]] | None = None) -> list[OwedName]:
+    """List the owed wrong versions of *tests* with their per-name in-scope files (TQ-500g-1-ix, -x).
 
     Names come from the same ``ScopedTest.versions`` the runner holds the tests to, minus the
-    aliases, each once (first spelling) in order. A name's files are the union of its entries'
-    ``in_scope_files`` in order of first declaration, minus every test file.
+    aliases, each once (first spelling) in order. A name is ``declared`` when ANY entry naming it
+    carries ``in_scope_files``; its files are then the union of those declarations in order of
+    first declaration, minus every test file (nothing is derived, even when that leaves ``[]``).
+    Any other name is ``derived``: its files are what *derive* returns, called at most once and
+    only when some name needs it (``[]`` when *derive* is ``None``). *derive* raises
+    :class:`ChangesError` when the work's changed files cannot be worked out.
     """
     owed: dict[str, OwedName] = {}
+    declared: set[str] = set()
     for test in tests:
         for key, name in test.versions.items() if test.names else ():
             if key == wrong_version_key(UNDONE_NAME):
                 continue
             item = owed.setdefault(key, OwedName(name))
+            if test.files:
+                declared.add(key)
             item.files += [f for f in dict.fromkeys(test.files) if f not in item.files and not is_test_path(f, test_root_rel)]
+    shared: list[str] | None = None
+    for key, item in owed.items():
+        if key in declared:
+            continue
+        if shared is None:
+            shared = derive() if derive is not None else []
+        item.scope, item.files = "derived", list(shared)
     return list(owed.values())
 
 
@@ -310,8 +330,80 @@ def _git_bytes(root: Path, *args: str) -> bytes:
     return proc.stdout
 
 
+class ChangesError(Exception):
+    """The files the work changed cannot be worked out (the message names the base ref)."""
+
+
+class DiffCache:
+    """The one ``git diff --name-status`` of a run, read at most once and shared (TQ-500g-1-x).
+
+    A failure is cached too, so every later reader sees the same error and git is not run again.
+    """
+
+    def __init__(self, root: Path, base_ref: str) -> None:
+        self.root, self.base_ref = root, base_ref
+        self._done = False
+        self._value: list[tuple[str, str]] = []
+        self._error: Exception | None = None
+
+    def get(self) -> list[tuple[str, str]]:
+        """Return ``[(status, path)]`` of the working tree against the base ref (``--no-renames``).
+
+        Raises:
+            OSError, UnicodeDecodeError, subprocess.TimeoutExpired: When git or the decoding fails.
+        """
+        if not self._done:
+            self._done = True
+            try:
+                raw = _git_bytes(self.root, "diff", "--name-status", "-z", "--no-renames", self.base_ref, "--")
+                tokens = raw.decode("utf-8").split("\0")
+                self._value = list(zip(tokens[0::2], tokens[1::2]))
+            except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired) as exc:
+                self._error = exc
+        if self._error is not None:
+            raise self._error
+        return self._value
+
+
+def _base_ref_check(root: Path, base_ref: str) -> None:
+    """Raise :class:`ChangesError` naming *base_ref* when it does not resolve to a commit."""
+    try:
+        _git_bytes(root, "rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}")
+    except OSError as exc:
+        msg = f'the base ref "{base_ref}" does not exist, so the files the work changed cannot be worked out'
+        raise ChangesError(msg) from exc
+
+
+def changed_non_test_files(root: Path, diff: DiffCache, test_root_rel: str | None, ac_root_rel: str | None) -> list[str]:
+    """Return the non-test files the work changed relative to ``diff.base_ref`` (the derived scope).
+
+    The A and M paths of the shared diff plus the untracked files git does not ignore, minus test
+    files, the AC store and refused paths; sorted, without duplicates. Other statuses are left out
+    with a warning. Nothing is staged or written.
+
+    Raises:
+        ChangesError: When the base ref does not exist or git cannot list the changes.
+    """
+    ref = diff.base_ref
+    _base_ref_check(root, ref)
+    try:
+        changes = diff.get()
+        untracked = _git_bytes(root, "ls-files", "--others", "--exclude-standard", "-z").decode("utf-8").split("\0")
+    except (OSError, UnicodeDecodeError, subprocess.TimeoutExpired) as exc:
+        msg = f'the files changed since the base ref "{ref}" cannot be worked out: {exc}'
+        raise ChangesError(msg) from exc
+    found = {rel for status, rel in changes if status in ("A", "M")}
+    for status, rel in changes:
+        if status not in ("A", "M", "D"):
+            _LOG.warning("the change of %s has status %s; it is not part of the derived scope", rel, status)
+    found.update(rel for rel in untracked if rel)
+    kept = sorted(r for r in found if not is_test_path(r, test_root_rel) and not _under(r, ac_root_rel) and not path_refusal(root, r))
+    _LOG.debug("derived scope against %s: %s", ref, kept)
+    return kept
+
+
 def prepare_fix_undone(root: Path, base_ref: str, test_root_rel: str | None,
-                       ac_root_rel: str | None = None) -> tuple[dict[str, bytes], str, str]:
+                       ac_root_rel: str | None = None, diff: DiffCache | None = None) -> tuple[dict[str, bytes], str, str]:
     """Prepare "the fix undone" from git: changed non-test files at their base content.
 
     A file the work created is left in place (deleting it would be an absence red).
@@ -321,15 +413,15 @@ def prepare_fix_undone(root: Path, base_ref: str, test_root_rel: str | None,
         base_ref: The ref the work began from.
         test_root_rel: The test root relative to *root*, or ``None``.
         ac_root_rel: The AC store relative to *root*, or ``None``; its files are not undone.
+        diff: The run's shared :class:`DiffCache`, or ``None`` to read the diff here.
 
     Returns:
         ``(files, state, detail)``; *state* is ``ready``, ``not_applicable`` or ``error``.
     """
     try:
-        tokens = _git_bytes(root, "diff", "--name-status", "-z", "--no-renames", base_ref, "--").decode("utf-8").split("\0")
         files: dict[str, bytes] = {}
         created = 0
-        for status, rel in zip(tokens[0::2], tokens[1::2]):
+        for status, rel in (diff or DiffCache(root, base_ref)).get():
             if is_test_path(rel, test_root_rel) or _under(rel, ac_root_rel):
                 continue
             if status == "A":
