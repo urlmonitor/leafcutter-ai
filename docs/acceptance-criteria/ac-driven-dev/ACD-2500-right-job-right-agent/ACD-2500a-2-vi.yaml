@@ -2,7 +2,7 @@ id: ACD-2500a-2-vi
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: high
 title: "A field the test-design stage does not own, changed on a record that already existed, is reported and fails the stage"
 component: ac-driven-dev
@@ -56,12 +56,83 @@ doc_links:
   - path: docs/reference/requirement-rule-check.md
     relationship: describes
     status: exists
+  - path: docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+- 'A new rule family registered as docs/reference/requirement-rule-check.md ''How a new family registers''
+  describes (own module, name constant in the report module, entry in the deploy map). It is report-only:
+  it never repairs, and the guarded writer''s repairable-field set does not change.'
+- The before-state for field comparison is each record as committed at --before-ref. A run whose before-state
+  holds no field values (a readiness-only --before-snapshot) lists the records 'not evaluated' for this
+  family; it never passes them.
+- The fixed protected-field list is held once in code and must equal the list of fields templates/agents/test-designer.md
+  tells the test designer not to touch; a parity test fails naming the field present on one side only.
+- A field counts as changed when its parsed value differs; a re-formatting that leaves the value equal
+  is not a finding.
+- covered_by entries appended by the back-link family in the same run are told apart by the run's own
+  pending repairs, not by exempting covered_by.
+- The report stays deterministic (sorted findings, no timestamps), with at most one finding per (record,
+  field).
+declared_files:
+- path: scripts/ac_store/_rc_protected_fields.py
+  state: to_be_created
+- path: scripts/ac_store/requirement_rule_check.py
+  state: existing
+- path: scripts/ac_store/_rc_report.py
+  state: existing
+- path: scripts/build_phases_ac_store_rc.py
+  state: existing
+delivers_to:
+  agent: python-coder
+  contract: 'Rule family ''protected fields'': findings with disposition ''needs a decision'' and detail
+    {field: str, stage: str, before: any, after: any}; the fixed protected-field list held once in the
+    family''s module; new records listed ''not evaluated: new record''. ACD-2500a-2-vii adds the per-stage
+    owner map that this family reads.'
 expects_from:
   ac_id: ACD-2500a-1
   contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message, line, detail}], disposition one of fixed / needs a decision / failed / not evaluated; any finding fails the stage verdict.'
+test_intent:
+- clause: 'the rule family "protected fields" reports exactly three findings, each with disposition "needs
+    a decision": ACD-9990a-1 field criteria, ACD-9990a-2 field assigned_agent and ACD-9990a-2 field expects_from,
+    each naming the record''s file, the record id, the field and the stage'
+  needs_test: true
+  reason: Detecting a changed protected field is the family's whole job, and a missed field would let
+    a stage silently rewrite another stage's work.
+- clause: the finding for assigned_agent states the value before ("python-coder") and after ("llm-expert")
+  needs_test: true
+  reason: The before and after values are read from two sources, and a wrong source would report a misleading
+    value.
+- clause: no finding is raised for the test design, the authorship mark, the file findings, the reference
+    file path or the cleared marker
+  needs_test: true
+  reason: The test-design stage's own fields must not be flagged, or every correct stage would fail.
+- clause: 'this family changes no record: every field it reports keeps the value the stage left'
+  needs_test: true
+  reason: A repair here would throw away the stage's edit, so report-only must be proven.
+- clause: the stage's verdict is failed, so the stage is not reported complete
+  needs_test: true
+  reason: The stage gate depends on this verdict, and a finding that did not fail the verdict would make
+    the family toothless.
+- clause: 'ACD-9990a-3 is listed as "not evaluated: new record" for this family'
+  needs_test: true
+  reason: New records have no before-state, and treating them as changed or as passed would both be wrong.
+- clause: 'the protected fields are exactly: criteria, test_intent, assigned_agent, implements_pattern,
+    pattern_bindings, declared_files, covered_by, delivers_to, expects_from, test_required, and every
+    it_requirements key except reference_file_path'
+  needs_test: true
+  reason: The exact field list is the contract shared with the test designer's instructions, and drift
+    between them is silent.
+- clause: a covered_by entry that the rule check itself appends in the same run as a parent back-link
+    repair is not reported as a change made by the stage
+  needs_test: true
+  reason: Interaction with the back-link repair in the same run would otherwise raise a false finding
+    on every repaired parent.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

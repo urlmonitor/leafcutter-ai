@@ -1,7 +1,7 @@
 id: GE-127h-1
 components:
   - commit_guardian
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "A file's decision-history block is left out of its measured length, in every covered language, and nothing else changes"
 component: guardrail-engine
@@ -40,10 +40,54 @@ doc_links:
     relationship: related
     status: exists
     relevance: Section 3 and 8 define the decision-history block's heading, underline and entry form per language.
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+it_requirements:
+- Changed in the one measurement function of the size standard (templates/scripts/commit_guardian/_file_size_ratchet.py).
+  Every gate that measures length (crossing, growth ratchet, published-rule agreement) picks the change
+  up; there is no second implementation.
+- Lands in the same change as GE-127h-3, so the published rule and the measurement change together; otherwise
+  the rule-agreement check of GE-127d-1 fails.
+- A file whose measured length drops because of this change is not reported as a violation, and no stored
+  baseline needs a hand edit.
+- Language coverage comes from the standard's existing per-language comment syntax (GE-127c); no per-language
+  list is hard-coded for the block.
+- 'A block does not need ''='' rule lines: about 50 of the headings in the repository have none.'
+- Measuring stays linear in file length.
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
+delivers_to:
+  agent: python-coder
+  contract: 'The size standard''s measured length of a file (int >= 0) leaves out each line-comment DECISION
+    HISTORY block: a comment whose whole text is DECISION HISTORY, an optional ''='' rule line directly
+    above it, through the last consecutive comment line. Every other line counts as before; before- and
+    after-lengths use the same rule.'
 expects_from: null
+test_intent:
+- clause: the Python file measures 80 and the JavaScript file measures 120
+  needs_test: true
+  reason: The exclusion is computed by the measurement, and both the Python and JavaScript forms must
+    be proven.
+- clause: the same holds for the line-comment form of every other language the standard covers (for example
+    "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell)
+  needs_test: true
+  reason: Every covered language must get the same exclusion, and a missed comment syntax would go unnoticed.
+- clause: every line outside the block is measured exactly as it was before this change, including ordinary
+    comments, docstrings, JSDoc and blank lines
+  needs_test: true
+  reason: Lines outside the block must keep their old count, or the exclusion would widen silently.
+- clause: a file with no decision-history block measures the same length as before this change
+  needs_test: true
+  reason: Files without a block must measure as before, which guards against a broken scanner.
+- clause: a decision-history block that sits inside text the rule in force already leaves out (a module
+    docstring or a block comment) is not subtracted a second time, so that file measures what it measured
+    before this change
+  needs_test: true
+  reason: Double subtraction is a computed edge case that would under-count files.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

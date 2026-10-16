@@ -2,7 +2,7 @@ id: ACD-2500e-1-ii
 components:
   - ac_driven_dev
   - build_pipeline
-readiness: draft
+readiness: reviewed
 priority: high
 title: "The decision history of the agent self-description check lives in the file that defines that check, not in the profile-consistency check"
 component: ac-driven-dev
@@ -42,6 +42,18 @@ doc_links:
     relevance: Decision history is append-only; a verbatim move keeps every entry.
 assigned_agent: python-coder
 estimated_complexity: XS
+it_requirements:
+- The entries move verbatim (character for character, same order) and are appended after the destination's
+  existing entries, per the doc-enforcer append-only decision-history convention.
+- No line of code changes in either file; the build's agent validation and the profile consistency check
+  give identical output before and after.
+- Build after GE-127h-1. If the destination history sits in a docstring, which the measurement already
+  leaves out, the size-related reason for that dependency does not apply (logged as a caveat).
+declared_files:
+- path: scripts/build_phases_profile_consistency.py
+  state: existing
+- path: scripts/build_phases_agent_validation.py
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false

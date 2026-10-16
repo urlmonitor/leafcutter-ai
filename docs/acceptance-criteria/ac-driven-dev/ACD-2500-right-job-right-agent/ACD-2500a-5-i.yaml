@@ -3,7 +3,7 @@ components:
   - ac_driven_dev
   - ac_store
   - documentation_system
-readiness: draft
+readiness: reviewed
 priority: high
 title: "ADR-073 records why mechanical requirement rules are checked by one fail-closed rule check"
 component: ac-driven-dev
@@ -49,6 +49,21 @@ doc_links:
     status: planned
 assigned_agent: adr-author
 estimated_complexity: S
+it_requirements:
+- Number ADR-073 is pinned. The file name follows the ADR folder's naming convention; the doc_links path
+  docs/architecture/adrs/ADR-073-requirement-rule-check.md is the suggested name.
+- Written to the write-adr how-to's required sections (Status, Context, Decision, Consequences, Alternatives),
+  with one rejected alternative per decision.
+- 'The salvaged ADR-069 draft held by the main session is input only and outdated: it is not copied wholesale
+  and does not override the as-built reference doc.'
+- Links ADR-072 and docs/reference/requirement-rule-check.md instead of restating the report format or
+  the families' criteria. It is added to docs/architecture/adrs/README.md and to any generated index the
+  documentation checks require.
+declared_files:
+- path: docs/architecture/adrs/ADR-073-requirement-rule-check.md
+  state: to_be_created
+- path: docs/architecture/adrs/README.md
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false

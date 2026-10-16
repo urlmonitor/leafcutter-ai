@@ -2,7 +2,7 @@ id: ACD-2500b-1-ii
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: high
 title: "The test-intent reader passes the type checker with no union-attribute finding"
 component: ac-driven-dev
@@ -31,8 +31,26 @@ doc_links:
     relevance: The clause-matching rule the reader implements; behaviour must not change.
 assigned_agent: python-coder
 estimated_complexity: XS
+it_requirements:
+- The clause reader and the normalisation rule behave as before; the existing test-intent tests pass unmodified.
+- 'The finding is fixed in the code: no inline ignore comment and no change to the type checker''s settings.'
+declared_files:
+- path: scripts/ac_store/_test_intent.py
+  state: existing
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the type checker reports no finding for scripts/ac_store/_test_intent.py
+  needs_test: false
+  reason: The type checker run is the proof; a unit test cannot observe a static typing finding.
+- clause: for a criteria text whose outcome clauses are "Then one row is written" and "And the count is
+    1", the reader returns the same clauses, in the same order, as before the change
+  needs_test: true
+  reason: The reader feeds every test-intent check, and a changed clause list would break them all silently.
+- clause: a criteria text with no outcome clause gives the same result as before the change, and raises
+    no error
+  needs_test: true
+  reason: The no-match case is exactly the code being changed, so its result must be pinned.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

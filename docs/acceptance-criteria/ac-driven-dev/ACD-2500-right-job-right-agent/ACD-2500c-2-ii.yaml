@@ -2,7 +2,7 @@ id: ACD-2500c-2-ii
 components:
   - ac_driven_dev
   - testing_quality
-readiness: draft
+readiness: reviewed
 priority: high
 title: "The test-design stage's shared test support passes the type checker with no missing-annotation finding"
 component: ac-driven-dev
@@ -27,6 +27,14 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: XS
+it_requirements:
+- 'The finding is fixed by a type annotation: no inline ignore comment and no change to the type checker''s
+  settings.'
+- The ticket records the number of tests collected in unit_tests/ac_driven_dev/test_design_stage/ before
+  and after the change.
+declared_files:
+- path: unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false

@@ -49,8 +49,9 @@ it_requirements:
 - Each family's rule is read from the one rule source the existing record checks read (config/ac_store_schema.json,
   docs/components.json, docs/acceptance-criteria/index.yaml and the documentation-trigger map); no rule,
   id list or trigger table is restated inside the check. A duplicated rule source is a defect to delete.
-- The documentation-trigger-to-specialist map (5 triggers) lives in exactly one machine-readable config
-  location read by this check; the it-po.md S7b table and ACD-200b-1's 4-entry table are not sources.
+- The documentation-trigger-to-specialist map (5 triggers) has exactly one home, the rule check's single map
+  kept in code (TRIGGER_SPECIALISTS in scripts/ac_store/_rc_doc_triggers.py, user decision D2, 2026-10-16);
+  the it-po.md S7b table and ACD-200b-1's 4-entry table are not sources.
 - 'Every write is a field-targeted edit: only the named field changes and every other byte of the record
   is preserved (no whole-file YAML load/dump rewrite; see the fast_lane.py round-trip hazard in the ac-driven-dev
   PROJECT_CONTEXT).'
@@ -116,6 +117,11 @@ amended_by:
 - reason: it-po-technical-enrichment
   date: '2026-09-25'
   by: it-po
+- reason: 'it-po: it_requirements line on the documentation-trigger map aligned with user decision D2
+    (the rule check''s single map, kept in code as TRIGGER_SPECIALISTS in _rc_doc_triggers.py, not a config
+    location). Criteria, readiness and work_status unchanged.'
+  date: '2026-10-16'
+  by: it-po
 superseded_by: null
 covered_by:
   - ACD-2500a-2-i
@@ -126,6 +132,7 @@ covered_by:
   - ACD-2500a-2-vi
   - ACD-2500a-2-vii
   - ACD-2500a-2-viii
+  - ACD-2500a-2-ix
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgent/09_TICKET-20261012-ACD-2500a-2.md
 change_target: code

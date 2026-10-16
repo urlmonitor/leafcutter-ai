@@ -2,7 +2,7 @@ id: ACD-300c-4-ii
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "An approval that cannot be written and read back is a failed run, never a reported success"
 component: ac-driven-dev
@@ -29,8 +29,43 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'IT PO decision (the BA''s open question): records written and read back cleanly in a failed run keep
+  readiness approved on disk. Because the step is idempotent, a re-run converges; they are not rolled
+  back, and the failure report names them as written but not committed.'
+- A record whose read-back fails is restored to its exact pre-write bytes before the step exits.
+- 'The workflow treats a non-zero exit or an unreadable report from the approval step as a failed run:
+  it makes no stage commit, and the closing summary names the failure.'
+- The failure is logged at error severity, naming the file and the reason.
+declared_files:
+- path: scripts/ac_store/approve_acs.py
+  state: existing
+- path: templates/workflows-js/plan-feature.js
+  state: existing
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-300c-4
+  contract: 'scripts/ac_store/approve_acs.py gains an id-list mode and a priority option: given ids [str]
+    and priority (critical|high|medium|low) it writes, for each id it does not hold, readiness approved,
+    that priority and one appended amended_by approval entry, as one field-targeted write per record followed
+    by a read-back. --json prints {approved: [id], held: [{id, file, reason}]} (reason in HOLD_REASONS),
+    plus an additive already_approved: [id] list; --dry-run --json prints the same report without writing.
+    Exit is non-zero when any written record fails read-back, and that record is restored to its pre-write
+    bytes.'
+test_intent:
+- clause: the run is reported failed, not complete, and the failure names ACD-9990a-2, its file and the
+    reason it could not be read back
+  needs_test: true
+  reason: A silent success on a broken write is the failure mode this record exists to forbid.
+- clause: ACD-9990a-2's file is left as it was before the approval was attempted
+  needs_test: true
+  reason: Restoring the file is computed behaviour that a missed branch would skip.
+- clause: the closing summary does not state that ACD-9990a-2 was approved
+  needs_test: true
+  reason: The summary must not claim an approval that did not stick.
+- clause: no commit is made that records the batch as approved
+  needs_test: true
+  reason: Committing a batch as approved after a failed write would put a broken record on the branch.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

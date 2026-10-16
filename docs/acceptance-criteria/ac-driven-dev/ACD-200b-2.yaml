@@ -2,7 +2,7 @@ id: ACD-200b-2
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The documentation-trigger names are declared in one list that the schema, the record check and the rule check all read"
 component: ac-driven-dev
@@ -40,10 +40,60 @@ doc_links:
     relationship: related
     status: exists
     relevance: The trigger-to-specialist expectations the rule check's map holds.
+  - path: docs/reference/requirement-rule-check.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'IT PO decision (the BA''s open call): the one list is the documentation_triggers value list in config/ac_store_schema.json.
+  The schema check and the record check both read it; the hard-coded name list in the record check is
+  deleted, not kept in sync.'
+- The rule check's trigger-to-specialist map stays in code in the documentation-trigger family (user decision
+  D2). It is keyed by trigger name; no third copy of the names is added anywhere.
+- The parity test runs in the normal test suite and fails naming the trigger and the side (list or map)
+  it is missing from.
+- The commit hook (templates/scripts/commit_guardian/check_ac_schema.py) and the agent-side validator
+  give the same verdict on the same record; if the hook holds its own copy of the names it reads the one
+  list instead.
+- Every documentation_triggers value accepted today is still accepted; no record in the store changes
+  verdict.
+declared_files:
+- path: config/ac_store_schema.json
+  state: existing
+- path: scripts/ac_store/validate_ac_schema.py
+  state: existing
+- path: scripts/ac_store/_rc_doc_triggers.py
+  state: existing
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the store's schema check, the commit-time record check and the requirement rule check each reject
+    "api-guide" as an unknown trigger name and accept "reference-doc"
+  needs_test: true
+  reason: All three checks must reject the same unknown name, and one check reading a stale list would
+    silently accept it.
+- clause: the trigger names are declared in exactly one list, which the schema check and the record check
+    both read, and the rule check's single trigger-to-specialist map has exactly one entry for each name
+    in that list
+  needs_test: true
+  reason: Single-sourcing is the deliverable, and a leftover duplicate list only shows itself when the
+    lists drift apart.
+- clause: given a sixth name "api-guide" is added to that one list and given a specialist in the rule
+    check's map, with no other edit
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: all three checks accept "api-guide"
+  needs_test: true
+  reason: Accepting the new name in all three checks after one edit proves they read the one list.
+- clause: given a name is in the list but has no entry in the map, or has a map entry but is not in the
+    list
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: a test fails naming that trigger name and the side it is missing from
+  needs_test: true
+  reason: The parity test is the guard against future drift, and it must name the trigger and the missing
+    side.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

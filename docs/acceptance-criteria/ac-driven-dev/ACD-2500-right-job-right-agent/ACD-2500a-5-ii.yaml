@@ -2,7 +2,7 @@ id: ACD-2500a-5-ii
 components:
   - ac_driven_dev
   - documentation_system
-readiness: draft
+readiness: reviewed
 priority: high
 title: "ADR-072 stops describing a backstop and an approval follow-up as missing once they exist"
 component: ac-driven-dev
@@ -35,6 +35,13 @@ doc_links:
     status: exists
 assigned_agent: adr-author
 estimated_complexity: XS
+it_requirements:
+- Each amendment note is dated and names the record that closed the gap (ACD-2500a-2-vi, ACD-300c-4);
+  the original sentences stay readable below the notes.
+- Build only after ACD-2500a-2-vi and ACD-300c-4 are done. ADR-072's status and decisions do not change.
+declared_files:
+- path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false

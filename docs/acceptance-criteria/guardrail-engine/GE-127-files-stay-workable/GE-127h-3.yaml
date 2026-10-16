@@ -1,7 +1,7 @@
 id: GE-127h-3
 components:
   - commit_guardian
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The published measurement rule says the decision-history block is left out and how its start and end are found"
 component: guardrail-engine
@@ -32,8 +32,38 @@ doc_links:
       quoted length; this record states only WHAT the rule must now say. Do not restate GE-127d-2.
 assigned_agent: python-coder
 estimated_complexity: XS
-delivers_to: null
-expects_from: null
+it_requirements:
+- The stated rule is produced from the rule in force (GE-127d-2), and every published place that the rule-agreement
+  check (GE-127d-1) compares is updated in the same change as GE-127h-1.
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
+delivers_to:
+  agent: documentation-expert
+  contract: The published measurement-rule sentence, exactly as the size standard states it in its refusals
+    and published-rule output, for GE-127h-4's reference doc to quote verbatim.
+expects_from:
+  ac_id: GE-127h-1
+  contract: 'The size standard''s measured length of a file (int >= 0) leaves out each line-comment DECISION
+    HISTORY block: a comment whose whole text is DECISION HISTORY, an optional ''='' rule line directly
+    above it, through the last consecutive comment line. Every other line counts as before; before- and
+    after-lengths use the same rule.'
+test_intent:
+- clause: it says that a decision-history block is not counted
+  needs_test: true
+  reason: The stated rule is generated text that must now name the exclusion.
+- clause: it says that the block starts at a comment whose whole text is "DECISION HISTORY" (together
+    with a rule line of "=" characters directly above it, if there is one), and ends at the first line
+    that is not a comment line
+  needs_test: true
+  reason: The start and end conditions must be stated so an author can apply them by hand.
+- clause: it says that ordinary comments are still counted
+  needs_test: true
+  reason: Saying ordinary comments still count keeps the rule from being misread as wider.
+- clause: an author who applies the stated rule by hand to the Python example of GE-127h-1 arrives at
+    80 lines
+  needs_test: true
+  reason: Reproducing the quoted length by hand is the published-rule promise of GE-127d.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

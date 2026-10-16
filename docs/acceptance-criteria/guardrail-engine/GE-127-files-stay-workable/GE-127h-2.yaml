@@ -1,7 +1,7 @@
 id: GE-127h-2
 components:
   - commit_guardian
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Adding decision-history entries never pushes a file over its limit or blocks a change to an oversized file"
 component: guardrail-engine
@@ -35,8 +35,38 @@ doc_links:
     relevance: The user's position recorded there; history-only changes to over-limit workflow bodies were refused.
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'No new mechanism: the growth ratchet (GE-127b-1) and the crossing check (GE-127a-1) measure before
+  and after with the GE-127h-1 rule. If either side still uses the old rule, the fix lands in the ratchet
+  module.'
+- A refusal states the before and after lengths.
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-127h-1
+  contract: 'The size standard''s measured length of a file (int >= 0) leaves out each line-comment DECISION
+    HISTORY block: a comment whose whole text is DECISION HISTORY, an optional ''='' rule line directly
+    above it, through the last consecutive comment line. Every other line counts as before; before- and
+    after-lengths use the same rule.'
+test_intent:
+- clause: the commit completes, and the file's measured length before and after is 1,400
+  needs_test: true
+  reason: A history-only change to an oversized file must commit, which is the user-visible promise.
+- clause: when a change appends the same 3 history entry lines and also adds 1 code line
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: the commit does not complete, and the outcome states a length before of 1,400 and a length after
+    of 1,401
+  needs_test: true
+  reason: A real code line must still be refused, or the exclusion would be an escape hatch.
+- clause: given a Python file that measures 399 lines against a permitted length of 400
+  needs_test: false
+  reason: Precondition line of the next scenario, not an outcome, so there is nothing to prove here.
+- clause: the commit completes, and the file is not reported as having crossed its limit
+  needs_test: true
+  reason: The crossing check must use the same rule as the growth ratchet.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

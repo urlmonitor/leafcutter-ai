@@ -2,7 +2,7 @@ id: ACD-2500a-2-vii
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: high
 title: "Which protected fields a stage may change comes from one per-stage owner map; the planner's hand-back may change the assignment and the finding decision"
 component: ac-driven-dev
@@ -44,12 +44,67 @@ doc_links:
     relationship: related
     status: exists
     relevance: The planner's decision on a file finding (choice reassign / split / assignment stands, by it-po).
+  - path: docs/architecture/diagrams/c3-030-requirement-rule-check-components.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/ac-driven-dev.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: S
-delivers_to: null
+it_requirements:
+- 'IT PO decision (the BA''s open call): the hand-back pass is named to the check as its own --stage value,
+  itpo-handback. The CLI stage list, the owner map and the reference doc use that one spelling.'
+- The owner map is held in exactly one place and read only by the protected-fields family; no other code
+  branches on a stage name to allow a field.
+- For itpo-handback the protected set also covers the test designer's outputs (file_findings verdict,
+  reason, line_range, found_in, file_findings_opened_files, test_spec, test_design_authorship), and of
+  all protected fields it allows only assigned_agent and each file finding's decision (it-po S3b).
+- Wiring /plan-feature to run the check with --stage itpo-handback after the hand-back pass is not in
+  this record's scope (logged as a caveat).
+declared_files:
+- path: scripts/ac_store/_rc_protected_fields.py
+  state: to_be_created
+- path: scripts/ac_store/requirement_rule_check.py
+  state: existing
+delivers_to:
+  agent: python-coder
+  contract: 'The rule check accepts --stage itpo-handback and applies that stage''s owner map: assigned_agent
+    and file_findings[].decision allowed, every other protected field (including the test designer''s
+    outputs) reported as a ''protected fields'' finding with disposition ''needs a decision''; exit 0
+    only on verdict passed. Consumed by ACD-2500a-2-ix''s /plan-feature step.'
 expects_from:
-  ac_id: ACD-2500a-1
-  contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message, line, detail}], disposition one of fixed / needs a decision / failed / not evaluated; any finding fails the stage verdict.'
+- ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message,
+    line, detail}], disposition one of fixed / needs a decision / failed / not evaluated; any finding
+    fails the stage verdict.'
+- ac_id: ACD-2500a-2-vi
+  contract: Rule family 'protected fields' with its fixed protected-field list and findings carrying detail
+    {field, stage, before, after}; this record adds the per-stage owner map it reads.
+test_intent:
+- clause: no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision
+  needs_test: true
+  reason: The hand-back pass's allowed changes must pass, or every legitimate reassignment fails the stage.
+- clause: 'exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and ACD-9990a-2
+    file-finding verdict, each naming the hand-back pass as the stage'
+  needs_test: true
+  reason: The fields the hand-back pass must not touch, including another stage's finding verdict, must
+    still be caught.
+- clause: the same assigned_agent change made during the test-design stage instead is reported, as ACD-2500a-2-vi
+    requires
+  needs_test: true
+  reason: The same change is allowed in one stage and refused in another, which only the owner map decides.
+- clause: which protected fields each stage may change is read from one owner map, so allowing one more
+    field for one stage is a single edit to that map and changes this family's verdict on the next run
+    with no other edit
+  needs_test: true
+  reason: Single-sourcing the owner map is the deliverable, and a second place allowing fields would only
+    show when they drift.
+- clause: a stage the owner map does not list (the product owner, business analyst and the planner's first
+    pass, which own these fields) is listed "not evaluated" for this family and is not failed by it
+  needs_test: true
+  reason: Stages that own these fields must not be failed by this family, or the PO, BA and first planner
+    pass could never complete.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

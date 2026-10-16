@@ -2,7 +2,7 @@ id: ACD-2500f-1-i
 components:
   - ac_driven_dev
   - agent_registry
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "An agent that changes the requirement store but says it produces something else is flagged"
 component: ac-driven-dev
@@ -39,8 +39,36 @@ doc_links:
     relevance: The same profile consistency check's existing rule (edit tools but "changes nothing"); extend it, do not add a second check.
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'Extends the existing profile consistency check (ACD-2500e-1-i) with one more rule: no second checker,
+  and each mismatch is reported by exactly one rule.'
+- '''Changes the requirement store'' is derived from a declared mutates surface under docs/acceptance-criteria/,
+  read from template frontmatter and the registry, with no hard-coded agent list.'
+- Runs in the same mode as the existing rule (warning first, ADR-026). An unreadable profile is reported
+  as an error, never as zero flagged agents.
+declared_files:
+- path: scripts/build_phases_profile_consistency.py
+  state: existing
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: '"fixture-req-writer" is listed, naming the agent, the requirement-store change surface and
+    the declared produces value "analysis"'
+  needs_test: true
+  reason: Flagging a writer that declares the wrong produces value is the new rule's purpose.
+- clause: '"fixture-reader" is not listed'
+  needs_test: true
+  reason: A read-only agent must not be flagged, or the rule would be noise.
+- clause: none of it-po, product-owner, business-analyst or test-designer is listed once ACD-2500f-1 is
+    done
+  needs_test: true
+  reason: The four real requirement writers must pass on the real registry once fixed, which proves the
+    rule and the data agree.
+- clause: the business-analyst profile as it stood before ACD-2500f-1 (produces "analysis", changes nothing)
+    is listed by the check that ACD-2500e-1-i defines, not by this one, so each mismatch is reported once
+  needs_test: true
+  reason: Each mismatch reported once depends on how the two rules split the cases, which a fixture can
+    show.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

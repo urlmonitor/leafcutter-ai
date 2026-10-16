@@ -2,7 +2,7 @@ id: GE-113c-4-i
 components:
   - commit_guardian
   - documentation_system
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "The six pipeline diagrams that name a parent which does not list them get a parent of the right tier, linked both ways"
 component: guardrail-engine
@@ -44,6 +44,27 @@ doc_links:
     status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
+it_requirements:
+- Parent paths are written from the repository root, per docs/reference/architecture-docs-layout.md, and
+  each chosen parent lists the diagram among its children (both directions).
+- Build after GE-113c-4, and stage all six diagrams with their parents in one commit so the working check
+  proves the fix.
+- 'No change to a diagram''s file name, tier, picture or body below its Parent: line.'
+declared_files:
+- path: docs/architecture/diagrams/c2-001-ac-driven-pipeline.md
+  state: existing
+- path: docs/architecture/diagrams/c2-002-ac-authoring-pipeline.md
+  state: existing
+- path: docs/architecture/diagrams/c2-003-ac-readiness-states.md
+  state: existing
+- path: docs/architecture/diagrams/c2-004-build-ac-flow.md
+  state: existing
+- path: docs/architecture/diagrams/c2-005-goal-to-epic-dispatch.md
+  state: existing
+- path: docs/architecture/diagrams/c2-006-feature-to-merged-pr.md
+  state: existing
+- path: docs/architecture/diagrams/c1-001-command-map.md
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false

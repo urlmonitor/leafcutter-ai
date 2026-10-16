@@ -1,7 +1,7 @@
 id: GE-127h-1-i
 components:
   - commit_guardian
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Only a real decision-history block is left out: a mention of the words, or code after the block, still counts"
 component: guardrail-engine
@@ -36,8 +36,35 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- The boundary rules live in the same measurement function as GE-127h-1; there is no separate pre-pass.
+declared_files:
+- path: templates/scripts/commit_guardian/_file_size_ratchet.py
+  state: existing
 delivers_to: null
 expects_from: null
+test_intent:
+- clause: the comment line and the LABEL line are counted
+  needs_test: true
+  reason: A mention of the words must not start a block, or ordinary comments could be hidden.
+- clause: the 6 block lines are not counted
+  needs_test: true
+  reason: The real block must be left out, which is the feature.
+- clause: x = 1 is counted, because the block ends at the first line that is not a comment line
+  needs_test: true
+  reason: The block's end is computed, and code after it must still count.
+- clause: only a comment whose whole text is "DECISION HISTORY" starts a block, so the comment "# DECISION
+    HISTORY notes are below" starts none and it and the comments after it are counted
+  needs_test: true
+  reason: The whole-text rule is what keeps the exclusion narrow.
+- clause: a rule line of "=" characters directly above the heading belongs to the block and is not counted,
+    while one separated from the heading by any other line is counted
+  needs_test: true
+  reason: Rule-line attachment is a computed boundary that could swallow an unrelated line.
+- clause: a file whose whole content is one decision-history block measures 0, and is not refused as an
+    empty or unreadable file
+  needs_test: true
+  reason: A zero-length file must not trip the empty-file refusal.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

@@ -2,7 +2,7 @@ id: GE-127h-4
 components:
   - commit_guardian
   - documentation_system
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Reference doc: how a source file's length is measured, including the decision-history exclusion"
 component: guardrail-engine
@@ -34,8 +34,17 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+- Reference genre in docs/reference/ (a new sibling page or a section of an existing one, the author's
+  choice), within the document-length standard.
+- Quotes the published rule verbatim from the size standard's output. If GE-127d-1's rule-agreement check
+  compares published places, this page is one of them.
+- Links GE-127h and templates/skills/doc-enforcer/SKILL.md instead of restating the decision-history convention.
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: GE-127h-3
+  contract: The published measurement-rule sentence, exactly as the size standard states it in its refusals
+    and published-rule output, for GE-127h-4's reference doc to quote verbatim.
 test_required: false
 test_rationale: "Documentation-only deliverable; agreement between the published rule and this doc is enforced by GE-127d-1's check, and links and frontmatter by the documentation checks at commit time."
 origin_agent: business-analyst

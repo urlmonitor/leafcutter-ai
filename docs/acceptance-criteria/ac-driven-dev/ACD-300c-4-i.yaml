@@ -2,7 +2,7 @@ id: ACD-300c-4-i
 components:
   - ac_driven_dev
   - ac_store
-readiness: draft
+readiness: reviewed
 priority: medium
 title: "Applying the same final-gate approval a second time changes nothing"
 component: ac-driven-dev
@@ -28,8 +28,37 @@ doc_links:
     status: exists
 assigned_agent: python-coder
 estimated_complexity: S
+it_requirements:
+- 'Idempotent: a second application with the same ids and priority writes no file (no rewrite of unchanged
+  bytes, no new amended_by entry) and exits with success.'
+- Already-approved ids are reported in the step's JSON (the additive already_approved list) and in the
+  closing summary.
+declared_files:
+- path: scripts/ac_store/approve_acs.py
+  state: existing
+- path: templates/workflows-js/plan-feature.js
+  state: existing
 delivers_to: null
-expects_from: null
+expects_from:
+  ac_id: ACD-300c-4
+  contract: 'scripts/ac_store/approve_acs.py gains an id-list mode and a priority option: given ids [str]
+    and priority (critical|high|medium|low) it writes, for each id it does not hold, readiness approved,
+    that priority and one appended amended_by approval entry, as one field-targeted write per record followed
+    by a read-back. --json prints {approved: [id], held: [{id, file, reason}]} (reason in HOLD_REASONS),
+    plus an additive already_approved: [id] list; --dry-run --json prints the same report without writing.
+    Exit is non-zero when any written record fails read-back, and that record is restored to its pre-write
+    bytes.'
+test_intent:
+- clause: all 4 record files are byte-identical to what they were after the first application
+  needs_test: true
+  reason: A resumed run must not rewrite records, and only a byte comparison shows it.
+- clause: none of the three approved records gains a second approval entry in amended_by
+  needs_test: true
+  reason: A duplicate approval entry would corrupt the audit trail on every resume.
+- clause: the closing summary states "3 approved, 1 held" again and states that the 3 were already approved,
+    rather than reporting a failure
+  needs_test: true
+  reason: Reporting an idempotent no-op as a failure would block resumed runs.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

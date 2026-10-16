@@ -3,7 +3,7 @@ components:
   - ac_driven_dev
   - ac_store
   - documentation_system
-readiness: draft
+readiness: reviewed
 priority: high
 title: "The rule check's reference doc covers the protected-field family and says a repairing run needs a before-state"
 component: ac-driven-dev
@@ -36,6 +36,17 @@ doc_links:
     status: exists
 assigned_agent: documentation-expert
 estimated_complexity: S
+it_requirements:
+- 'Updates docs/reference/requirement-rule-check.md in place: the family table and count, the CLI stage
+  list (including itpo-handback), the report keys (the no-before-state statement) and every example command
+  that can repair.'
+- Family names and the count are taken from the check as built (its family registry), not retyped from
+  the records.
+- Stays within the document-length standard; if the page would exceed its budget it is split by the docs
+  convention, not trimmed of required content.
+declared_files:
+- path: docs/reference/requirement-rule-check.md
+  state: existing
 delivers_to: null
 expects_from: null
 test_required: false
