@@ -75,7 +75,7 @@ implemented_by:
 - tickets/00_inbox/TICKET-20261014-KM-400f-1-vi.md
 - docs/reference/knowledge-retention-bound.md
 - knowledge/adapters/neo4j_retention.py
-- knowledge/adapters/neo4j_retention_assessment.py
+- knowledge/adapters/retention/assessment.py
 change_target: code
 risk_surface: contract_boundary
 notes: |

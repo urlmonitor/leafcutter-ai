@@ -1,10 +1,11 @@
-"""MODULE: neo4j_retention_assessment
+"""MODULE: retention.assessment
 GOAL: Describe how much of a retention evaluation the backend allowed, naming every refusal.
 BUSINESS CONTEXT: An evaluation that could not read the store must never read as a store with nothing to reclaim.
 ARCHITECTURE: Pure report-shaping helpers used by neo4j_retention; no I/O, no backend access.
 
 DECISION HISTORY
 ========================================
+- 2026-10-16 11:00 [restructuring-specialist]: Moved from knowledge/adapters/neo4j_retention_assessment.py into the knowledge/adapters/retention/ sub-package to stay under the folder-density cap; behaviour unchanged. (#KM-400f-2/03)
 - 2026-10-15 02:00 [python-coder]: Report refusals as an assessment outcome (assessed, partial, could_not_assess) with undetermined figures and a read-only consequence, never as an empty result. (#KM-400f-1-vi)
 """
 
