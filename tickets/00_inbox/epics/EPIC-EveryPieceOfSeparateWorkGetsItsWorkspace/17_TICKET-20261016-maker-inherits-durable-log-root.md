@@ -53,7 +53,7 @@ agents:
   ac-validator: signed_off
   ac-fulfillment-gate: signed_off
   user-surface-smoker: not_needed
-  commit: needed
+  commit: signed_off
   pull-request: not_needed
 ---
 
@@ -158,7 +158,7 @@ Acceptance adjustments: none to the AC text. AC-2's warning must name the declar
 - [x] pr-reviewer — 2026-10-16 23:00
 - [x] ac-validator — 2026-10-16 23:30
 - [x] ac-fulfillment-gate — 2026-10-16 23:45
-- [ ] commit
+- [x] commit — 2026-10-17 22:29
 
 ## Comments
 
@@ -387,3 +387,8 @@ All 1 AC verified (INF-500d-4-iii, L3, work_status done). Auto-fixes: implemente
 feedback-id: fb_2026-10-16_394abea5
 
 check-exception-handling IO-001 fix in templates/scripts/worktree_log_root.py: both build subprocess.run calls now go through _run_build, which catches (OSError, subprocess.SubprocessError) and re-raises subprocess.SubprocessError with context. Caller worktree_readiness.run_install_build handler unchanged (BOOTSTRAP_FAILED refusal path identical).
+
+### 2026-10-17 22:29 — commit (status: ok)
+feedback-id: fb_2026-10-16_e35eb5ad
+
+Committed in two parts. Part 1 (tests) = f8e491eb8; part 2 (implementation, AC YAMLs, docs, CLAUDE.md, ticket) = ad0ff5fab. All pre-commit hooks passed on the first attempt; no overrides used.
