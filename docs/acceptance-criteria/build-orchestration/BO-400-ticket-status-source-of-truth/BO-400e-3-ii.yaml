@@ -1,0 +1,396 @@
+id: BO-400e-3-ii
+title: "Finalization may close only what the finalizing branch was built to deliver and itself changed since it left main -- on a single-ticket branch only its own ticket and that ticket's source AC -- never a record changed only on main, edited in passing, or untouched"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: contract_boundary
+criteria: |
+  Background:
+    Given main is at commit M0 when the single-ticket branch "feat-close-x" is created from it
+        to build the ticket "TICKET-X.md"
+      And on "feat-close-x" the ticket "TICKET-X.md" is edited so that every phase it names is
+        signed off or not needed, and its source acceptance criterion is "BO-9100a-1"
+      And after the branch was created, main gains a commit M1 that edits the ticket
+        "TICKET-Y.md" and the acceptance criterion "BO-9200a-1", both of which stay unfinished
+      And the store also holds the ticket "TICKET-Z.md" and the acceptance criterion
+        "BO-9300a-1", which neither main nor the branch has changed since M0
+      And "feat-close-x" has not yet taken in M1
+
+  Scenario: Control -- the branch's own delivery is closable
+    When finalization works out which records it may close for "feat-close-x"
+    Then the set it may close is exactly "TICKET-X.md" and "BO-9100a-1"
+
+  Scenario: A record changed only on main is not the branch's delivery
+    When finalization works out which records it may close for "feat-close-x"
+    Then neither "TICKET-Y.md" nor "BO-9200a-1" is in the set
+      Because the comparison is between the branch and the point where it left main, not
+        between the branch's files and main's current files -- a whole-tree comparison lists
+        every record main changed since the branch was created as if the branch had changed it
+
+  Scenario: An untouched record is never in the set
+    When finalization works out which records it may close for "feat-close-x"
+    Then neither "TICKET-Z.md" nor "BO-9300a-1" is in the set
+      And no record enters the set because it was found by walking the inbox or the
+        acceptance-criteria store
+
+  Scenario: Changes that arrived by taking in main are not the branch's own
+    Given "feat-close-x" took in main at M1 by merging it, before finalization started
+    When finalization works out which records it may close for "feat-close-x"
+    Then "TICKET-Y.md" and "BO-9200a-1" are still not in the set
+      And "TICKET-X.md" and "BO-9100a-1" still are
+
+  Scenario: A single-ticket branch closes only the ticket it was built for -- not a ticket it edited in passing
+    Given "feat-close-x" also edited the ticket "TICKET-Q.md" in passing (a wording fix), and
+        "TICKET-Q.md" reads "todo" with every phase it names signed off or not needed, and its
+        source acceptance criterion is "BO-9400a-1", which reads "todo"
+    When finalization works out which records it may close for "feat-close-x"
+    Then the set is exactly "TICKET-X.md" and "BO-9100a-1"
+      And after finalization "TICKET-Q.md" still reads "todo" and "BO-9400a-1" still reads "todo"
+      Because a branch changing a ticket is not the branch delivering it, and a ticket whose
+        record happens to pass the check would otherwise be closed on the strength of a typo fix
+
+  Scenario: The ticket a single-ticket branch was built for must be one the branch changed
+    Given "feat-close-x" was built for "TICKET-X.md" but no commit on the branch since M0
+        changed "TICKET-X.md"
+    When finalization works out which records it may close for "feat-close-x"
+    Then the set is empty, and the outcome is reported as described in BO-400e-3-viii
+
+  Scenario: When the ticket a single-ticket branch was built for cannot be identified, nothing is closed
+    Given finalization cannot establish which ticket "feat-close-x" was built for
+    When finalization works out which records it may close
+    Then the set is empty and no record changes status
+      And the run reports that it could not tell which ticket the branch was built for
+      And it does not fall back to treating every ticket the branch changed as closable
+
+  Scenario: An epic branch is bounded by its own epic folder
+    Given the branch is "EPIC-Alpha" and it changed both
+      "tickets/00_inbox/epics/EPIC-Alpha/alpha-01.md" and
+      "tickets/00_inbox/epics/EPIC-Beta/beta-01.md"
+    When finalization works out which records it may close
+    Then "alpha-01.md" is in the set and "beta-01.md" is not
+      And the acceptance criteria in the set are exactly the source acceptance criteria of
+        the epic tickets in the set
+
+  Scenario: The same branch state always gives the same set, and the set is fixed before anything is written
+    Given finalization is run twice against "feat-close-x" in the identical state
+    When each run works out which records it may close
+    Then both runs produce the identical set, listed in the same order
+      And the set is settled before any record is written, so the party carrying out the
+        closure is handed that list and cannot add a record to it
+  So a ticket or acceptance criterion is marked done only because the branch being finished
+    delivered it -- because "done" unblocks the work that depends on it and drops the item out
+    of the backlog, a record closed on someone else's behalf silently releases work whose
+    prerequisites do not exist.
+depends_on:
+  - BO-400e-3
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+    relationship: describes
+    status: exists
+    relevance: "The defect this record closes. Remediation item 1 -- derive the set from the branch, not an inbox scan -- is this record."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Step 3.5 (:1257-1466). The set is worked out today inside the dispatched prompt at :1340-1427, sub-step B1 at :1353-1358."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "Sibling: HOW finalization closes a record (through the checking mechanism). This record is WHICH records it may close."
+  - path: docs/acceptance-criteria/build-orchestration/BO-400-ticket-status-source-of-truth/BO-400e-3-ix.yaml
+    relationship: related
+    status: exists
+    relevance: "IT-PO split. The record of which ticket a single-ticket branch was built for, written at setup and read here. Without it the 'cannot be identified' scenario is the only outcome on every single-ticket branch."
+  - path: docs/architecture/components/finalize.md
+    relationship: describes
+    status: exists
+  - path: docs/reference/workflow-authoring-contract.md
+    relationship: describes
+    status: exists
+    relevance: "Why the derivation cannot live in finalize-feature.js. An E2 workflow body has no fs, no subprocess and no module loader, so any computation over git and the store has to be a script that the workflow dispatches."
+  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+    relationship: related
+    status: exists
+    relevance: "status-checker has permits_shell false. The dispatch that runs the derivation must go to an agent chartered to run shell, or it can be refused."
+assigned_agent: python-coder
+estimated_complexity: L
+package_surface: false
+declares_side_effect: true
+it_requirements:
+  - >-
+    WHERE THE DERIVATION LIVES (cause 1 of the KI: the scoping is prose today). The closable set is
+    computed by a new Python module, scripts/build_orchestration/finalize_closable_set.py. Its CLI
+    prints one JSON object on stdout. finalize-feature.js only dispatches it. No agent prompt may
+    carry set-selection logic: no git commands for finding candidates, no "only close tickets this
+    branch changed" prose, no inbox or store walk. scripts/build_orchestration/ is deployed
+    whole-directory by build_build_orchestration_scripts (scripts/build_phases_script_deploy.py),
+    and the manifest is derived from the same directory scan, so no deploy-manifest tuple needs
+    editing. If the module imports a helper from another scripts/ subdirectory, that helper must
+    already be deployed, or be added to its phase's deploy list in the same change (CLAUDE.md, "New
+    Hook / Gate Dependencies Must Be in the Build Deploy-Manifest"). Verify against the deployed
+    layout, not only the source tree.
+  - >-
+    finalize-feature.js MUST NOT GROW. It is already 2,027 lines against a 1,000-line limit, and the
+    size ratchet makes it shrink twice as much as it grows. Across the whole BO-400e-3-ii..ix change
+    set, the net line count of templates/workflows-js/finalize-feature.js must be zero or
+    negative. Pay for the new dispatches by deleting Step 3.5's sub-step B-E prompt string, which
+    runs to about 90 lines. Snapshot comparison, closing, path-list building and outcome
+    classification all go in the Python module, never in workflow JS.
+  - >-
+    MERGE-BASE COMPARISON, NEVER TWO-DOT. "Changed by the branch" is measured from the merge base of
+    HEAD and the base ref finalize already uses (origin/main after Step 2's fetch). A path counts
+    only when BOTH hold: (a) it differs between the merge base and HEAD (three-dot, git diff
+    <base>...HEAD), and (b) at least one of the branch's own first-parent, non-merge commits since
+    the merge base touched it. (b) is what makes the "took in main by merging it" scenario hold even
+    when the local base ref predates the commit that was merged in. Content that arrived through a
+    merge of main never qualifies. A file that the branch changed and then reverted is excluded
+    by (a). The two-dot form (git diff origin/main HEAD), which today's B1 instruction uses, is
+    forbidden.
+  - >-
+    BOTH BOUNDS, ALWAYS. A ticket is closable only when it is (i) the ticket the branch was built
+    for (single-ticket branch) or inside tickets/00_inbox/epics/<BRANCH>/ (a branch whose name
+    starts EPIC-), excluding Master_Plan.md, AND (ii) changed by the branch per the rule above.
+    Source ACs enter the set only as the source_ac of a ticket that is in the set. An AC is never
+    in the set because the branch changed it, or because it was found by walking the store.
+  - >-
+    DECISION 1, HOW THE BUILT-FOR TICKET IS IDENTIFIED: read from the branch record that BO-400e-3-ix
+    writes at setup. That record is the git config key branch.<branch>.leafcutterTicket in the
+    clone's shared config, holding the repo-relative POSIX path of the ticket. It is the ONLY
+    source. The module never parses the branch name or reverses _derive_slug, never searches
+    tickets for one that mentions the branch, and never treats "every ticket the branch changed" as
+    a fallback. Why git config and not the alternatives: (1) It survives the lossy slug and the
+    --branch override, because it is keyed by the real branch name. (2) It is not a file in the
+    tree, so setting up a branch can never make the branch "change" its own ticket, which would make
+    the "built-for ticket must be one the branch changed" scenario pass vacuously. A field written
+    onto the ticket would do exactly that, and writing it on main needs a PR. (3) Every worktree of
+    the clone sees it, and finalize always resolves its worktree from the same clone (git worktree
+    list). (4) git branch -d/-D and git branch -m delete or move the section along with the branch,
+    so a stale record cannot outlive its branch. A finalize argument was rejected as the primary
+    source: /finalize-feature <BRANCH> is typed by hand, often in a later session, and an argument
+    that has to be remembered is the guess this record exists to remove. If the branch moved the
+    recorded ticket, the derivation follows the move (rename detection over the merge-base diff)
+    rather than reporting it unchanged.
+  - >-
+    BRANCHES WITH NO RECORDED TICKET. These are worktrees from create-only (/quick-fix),
+    create-fastlane-worktree (fast-lane/<slug>) and create-ac-worktree (ac-authoring/<name>), plus
+    any single-ticket worktree created before BO-400e-3-ix shipped. Evaluation order, fixed: first
+    the merge base (unknown means undeterminable, reason merge_base_unknown). Then the branch's
+    changed tickets and ACs (none means nothing_to_close; no built-for ticket is needed when no
+    record could be closed anyway). Only then, for a non-EPIC branch, the built-for ticket (absent
+    means undeterminable, reason built_for_unknown). So a docs-only quick-fix or fast-lane branch
+    finalizes cleanly with "nothing to close". A fast-lane or pre-existing branch that did change
+    tickets or ACs closes NOTHING and says it could not tell which ticket the branch was built for.
+    The report tells the person how to record the ticket by hand
+    (git config branch.<branch>.leafcutterTicket <path>) and re-run.
+  - >-
+    THE "CANNOT BE IDENTIFIED" SCENARIO HALTS BEFORE THE MERGE. This record's criteria say only
+    "the set is empty and no record changes status". BO-400e-3-viii (amended 2026-10-15, decided by
+    BrainCandy) adds the rest: for built_for_unknown and merge_base_unknown, finalization stops
+    before the merge to main, prints the fix, and makes no merge dispatch. That halt applies to this
+    record's case too. The derive reply's outcome "undeterminable" is the signal finalize-feature.js
+    halts on, using the same halt as BO-400e-3-vii's decline. "nothing_to_close" is never a halt.
+  - >-
+    THE SET IS FIXED BEFORE ANY WRITE AND THE CLOSER CANNOT ADD TO IT. The derive step persists the
+    set it printed, with a content digest, to a file under the worktree's git dir (never in the
+    tracked tree). The closing step (BO-400e-3-iv) reads only that file, takes no record list from
+    its caller, and echoes the digest. finalize-feature.js compares the digest in the derive reply
+    with the one in the close reply, and a mismatch is reported as a closure that did not complete.
+    This is how the agent that relays the CLI output is kept unable to widen the set.
+  - >-
+    DETERMINISTIC. The same repository state yields byte-identical stdout: records sorted (tickets by
+    path, then ACs by id), no timestamps or absolute temp paths in the set, and the same digest.
+  - >-
+    THE DISPATCH THAT RUNS THE CLI goes to an agent whose registry entry permits shell (see
+    KI-BO-20260927). Its reply is parsed through parseAgentJson. A refused, unreadable or
+    schema-invalid reply is "the set could not be worked out" (BO-400e-3-viii, FIN-100h). It is
+    never an empty set and never "nothing to close".
+  - >-
+    Error handling per the project policy. git subprocess failures are caught as specific exceptions
+    and reported as an undeterminable outcome with the failing check named. They are never reported
+    as an empty set. The module performs no writes during derivation apart from the set file.
+  - "Derivation completes within 10 seconds on a store of 5,000 AC records and 2,000 tickets, measured on the CI runner."
+delivers_to:
+  - agent: python-coder
+    contract: >-
+      stdout of `finalize_closable_set.py derive --worktree <abs> --branch <name> --base-ref
+      <ref>`: a single JSON object {outcome: "closable"|"nothing_to_close"|"undeterminable",
+      reason_code: null|"no_records_changed"|"built_for_not_changed"|"built_for_already_done"|
+      "all_already_done"|"merge_base_unknown"|"built_for_unknown", branch: str, branch_kind:
+      "epic"|"single_ticket", base_ref: str, merge_base: str|null, built_for_ticket: str|null,
+      records: [{kind: "ticket"|"ac", id: str, path: str (repo-relative POSIX), status: str}] (sorted
+      tickets-by-path then acs-by-id; empty unless outcome is closable), already_done: [str],
+      changed_not_closable: [str], set_digest: str (sha256 hex of the canonical records array),
+      set_file: str (absolute, under the worktree git dir)}. Consumed by BO-400e-3-iii, -iv, -v,
+      -vi, -vii and -viii.
+  - agent: python-coder
+    contract: >-
+      The set file named by set_file, containing exactly the records array and the set_digest. It is
+      the closer's only input (BO-400e-3-iv) and the source of the commit path list that
+      BO-4500a-5-iv's shared commit step is handed (BO-400e-3-v).
+expects_from:
+  ac_id: BO-400e-3-ix
+  contract: >-
+    git config key branch.<branch>.leafcutterTicket in the clone's shared (non-worktree) config,
+    holding the repo-relative POSIX path of the ticket .md the branch was set up for. Absent means
+    no recorded ticket.
+test_required: true
+test_spec:
+  - name: test_control_branch_own_delivery_is_exactly_the_closable_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Real scratch git repo in the BA's background shape (M0, branch feat-close-x recorded for TICKET-X.md, main gains M1 editing TICKET-Y and BO-9200a-1, TICKET-Z and BO-9300a-1 untouched); the derive CLI's records are exactly TICKET-X.md then BO-9100a-1."
+  - name: test_main_only_changes_are_excluded_where_two_dot_would_include_them
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Same repo; TICKET-Y.md and BO-9200a-1 are absent from the set. NEGATIVE CONTROL in the same test: assert `git diff --name-only origin/main HEAD` on that repo DOES list TICKET-Y.md, so the fixture is proven able to expose a two-dot implementation."
+    must_catch:
+      - "compare the branch tree with main's current tree (two-dot git diff origin/main HEAD)"
+  - name: test_untouched_records_never_enter_the_set_and_no_store_walk_is_used
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "TICKET-Z.md (status todo, every phase signed off) and BO-9300a-1 are absent; a second variant adds an unchanged ticket inside the epic folder with closable frontmatter and asserts it is still absent."
+    must_catch:
+      - "walk tickets/00_inbox for open tickets with closable frontmatter"
+  - name: test_records_brought_in_by_merging_main_are_not_the_branchs_own
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Branch merges M1 before derivation; set is still exactly TICKET-X.md and BO-9100a-1. Run twice: once with origin/main at M1 and once with the local base ref left STALE at M0, the second being the case only the first-parent own-commit rule survives."
+  - name: test_ticket_edited_in_passing_is_not_closed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "Branch also edits TICKET-Q.md (todo, every phase signed off, source_ac BO-9400a-1 todo); set is exactly TICKET-X.md and BO-9100a-1 and TICKET-Q.md is listed under changed_not_closable."
+    must_catch:
+      - "treat every ticket the single-ticket branch changed as closable"
+  - name: test_built_for_ticket_not_changed_by_branch_gives_empty_set
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Record names TICKET-X.md but no branch commit since the merge base touched it; outcome nothing_to_close, reason built_for_not_changed, records empty."
+  - name: test_unrecorded_built_for_ticket_closes_nothing_without_fallback
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Same repo with the git config record removed (the pre-existing-worktree case) and the branch named feature/close-x so the slug would reverse to TICKET-X; outcome undeterminable, reason built_for_unknown, records empty."
+    must_catch:
+      - "reverse the feature/<slug> branch name into a ticket path"
+      - "fall back to every ticket the branch changed"
+  - name: test_epic_branch_is_bounded_by_its_own_folder
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Branch EPIC-Alpha changes EPIC-Alpha/alpha-01.md and EPIC-Beta/beta-01.md; set contains alpha-01.md and its source AC only, and no AC that is not the source_ac of an in-set ticket."
+  - name: test_same_state_gives_identical_output_and_digest
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Two derive runs over the identical repo state produce byte-identical stdout (same order, same set_digest)."
+  - name: test_closer_input_is_the_persisted_set_and_cannot_be_widened
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: "Hand the close step an extra record by every input it exposes (argv, env, an edited set file with a stale digest); it closes only the persisted set and an edited set file is refused, leaving every record unchanged."
+  - name: test_finalize_dispatches_the_derivation_and_carries_no_selection_prose
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: reachability
+    description: "Drive finalize-feature.js through run_workflow_under_e2 (unit_tests/_workflow_engine_harness.py) with the derivation dispatch answered by the REAL CLI output from the scratch repo; assert the derivation was dispatched, the closing dispatch received no record list of its own, and no recorded dispatch prompt in Step 3.5 contains `git diff --name-only origin/main HEAD` or a candidate-finding instruction."
+  - name: test_derivation_cli_runs_from_the_deployed_layout
+    target_dir: unit_tests/build_orchestration/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Using the shared_reference_layout fixture (marked shared_layout_reader), run the deployed scripts/build_orchestration/finalize_closable_set.py against the scratch repo and get the same output as the source copy (no ModuleNotFoundError)."
+test_rationale: >-
+  The defect is a wrong set produced by a real git history: main moving after the branch point, a
+  merge of main, an in-passing edit. A unit test over a mocked diff would reproduce whatever
+  assumption the implementer made about git, so every behavioural test builds ONE real scratch
+  repository in the BA's exact fixture shape and runs the real CLI against it. The two-dot negative
+  control is in the test itself, so the fixture is proven able to expose the original defect and the
+  test cannot pass vacuously. The stale-base variant exists because the merged-in-main scenario
+  passes under a fresh origin/main with plain three-dot and fails only when the base ref is older
+  than the merge. Workflow wiring is proven by driving finalize-feature.js through the existing E2
+  harness with the real CLI output as the scripted reply, never by grepping the source (CLAUDE.md,
+  "Gate / Workflow ACs: Verify Behaviorally, Not by Grep"). The deployed-layout test guards the
+  deploy-manifest trap.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Requested by BrainCandy 2026-10-15 to close KI-BO-20260930. Authored by the business-analyst
+  on the user's behalf; readiness draft -- the user approves before build.
+
+  WHY THIS IS STILL OPEN AFTER ae5f9db9c (2026-07-08, "scope step 3.5 ac-closure to epic branch
+  only"). Confirmed against templates/workflows-js/finalize-feature.js on origin/main at the
+  time of authoring:
+    (1) The scoping is prose, not a computed result. The whole of sub-steps B-E is a prompt
+        string handed to a status-checker agent (:1340-1427, dispatched at :1427). "Only close
+        tickets that this branch explicitly changed" (:1350) and "DO NOT walk the whole ticket
+        store" (:1351) are instructions an agent may or may not follow; nothing in the workflow
+        computes the set or checks the agent stayed inside it. This is why the last scenario
+        pins "settled before any record is written ... cannot add a record to it".
+    (2) The comparison is whole-tree. :1354 instructs `git diff --name-only origin/main HEAD`,
+        the two-dot form, which lists every path that differs between the two trees --
+        including every ticket main changed since the branch point. For a single-ticket branch
+        SCOPE_PREFIX is empty (:1335-1337), so nothing filters those out; for an epic branch
+        they leak whenever main changed a ticket inside the epic's own folder (e.g. a scaffold
+        that reached main after the branch was cut). :1355 (`log origin/main..BRANCH
+        --diff-filter=A`) is branch-relative but only catches added files.
+    (3) Staging is by directory -- see BO-400e-3-v.
+
+  "Touched" vs "delivered" -- DECIDED by BrainCandy 2026-10-15: NARROW. On a single-ticket
+  branch the closable set is only the ticket the branch was built for (provided the branch
+  changed it) plus that ticket's source AC; a ticket edited in passing is never closed. On an
+  epic branch the set is the epic-folder tickets the branch changed plus their source ACs.
+  In both cases a record must satisfy BOTH bounds: built-for/epic-folder AND changed by the
+  branch since its merge base with main.
+
+  HOW "THE TICKET THE BRANCH WAS BUILT FOR" IS IDENTIFIED TODAY -- there is NO reliable
+  source finalization can read. Open item for the IT-PO; not invented here.
+    - finalize-feature.js receives only a target branch/worktree (args.target /
+      args.target_branch, :442) and derives BRANCH and WORKTREE_ROOT from preflight
+      (:514-515). It takes no ticket argument. Its Step 6b scope probe (:1892-1907) asks an
+      agent to "Search tickets/ tree for ticket files referencing this branch" -- a guess,
+      the same prose-scoping weakness as cause (1).
+    - scripts/setup_ticket_worktree.py `setup-ticket` names the branch feature/<slug>
+      (:1729), where the slug comes from _derive_slug (:1512-1527): strip
+      "TICKET-YYYYMMDD-", lowercase, "_" to "-". That mapping is lossy (the date is dropped,
+      so two tickets with the same title on different days collide, and case is folded), so
+      the branch name cannot be turned back into one ticket path reliably. It is also
+      overridable with --branch (:1696-1697), which breaks the link entirely; `create-only`
+      (:1736-1775) makes a feature/ branch with no ticket at all.
+    - The ticket path IS known at setup time: setup_ticket_worktree.py prints it as
+      ticket_path_final in its JSON payload (:1730), and build-single-ticket consumes it as
+      TICKET_PATH (templates/skills/build-single-ticket/SKILL.md:79). But nothing found
+      persists it in the worktree, on the branch, or in the ticket's frontmatter, so it is
+      gone by the time finalization runs.
+  Options for the IT-PO: persist the built ticket's path at setup (a marker in the worktree
+  or on the branch), pass it into finalization as an argument, or record the branch on the
+  ticket. Until one exists, the "cannot be identified" scenario applies: close nothing and say
+  so -- never fall back to "every ticket the branch changed".

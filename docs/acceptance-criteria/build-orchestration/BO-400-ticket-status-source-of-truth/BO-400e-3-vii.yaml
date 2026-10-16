@@ -1,0 +1,162 @@
+id: BO-400e-3-vii
+title: "Until the closable set is derived mechanically, finalization closes nothing without the person's own confirmation -- and a declined or unanswered one stops the run before the merge"
+component: build-orchestration
+components:
+  - build_orchestration
+  - finalize
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: pipeline
+risk_surface: safety
+criteria: |
+  Given finalization of "EPIC-Alpha" has shown the list of records it is about to close --
+      "alpha-02.md" and "BO-9100a-2"
+  When the person running finalization confirms
+  Then exactly those records are closed, and the run continues towards the merge
+
+  Given the same list
+  When the person declines
+  Then no ticket and no acceptance criterion changes status
+    And no closure commit is made
+    And the run stops before the merge to main
+    And its report says the closure was declined, names the listed records as left open, and
+      states that running finalization again will show the list again
+
+  Given the same list
+  When no answer arrives within the time the run allows for an answer
+  Then the outcome is the same as a decline, and the report says the closure went unanswered
+    rather than that it was declined
+
+  Given the same list
+  When the only "yes" comes from an agent taking part in the run, not from the person
+  Then it is treated as no answer, and nothing is closed
+  Because writing "done" across the store is destructive in the same sense as the merge that
+    finalization already will not make without the person's say-so, and while the set of
+    records cannot yet be trusted to scope itself, the person is the only check standing
+    between a wrong set and a false "done" that nothing downstream ever corrects.
+depends_on:
+  - BO-400e-3
+  - BO-400e-3-vi
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260930-finalize-step-35-closes-every-inbox-ticket-store-wide.md
+    relationship: describes
+    status: exists
+    relevance: "Remediation item 2: 'Until that lands, have Step 3.5 print the records it is about to close and require confirmation.'"
+  - path: docs/known-issues/build-orchestration/open-blocker-ki-bo-20260925-finalize-gate-accepts-agent-answers.md
+    relationship: related
+    status: exists
+    relevance: "finalize-feature's existing human gate can be passed by an agent reply. The last scenario exists so this new gate does not inherit that defect."
+  - path: templates/workflows-js/finalize-feature.js
+    relationship: implements
+    status: exists
+    relevance: "Step 3.5 (:1257-1466) has no gate today; the merge gate is Step 4 (:1680, :1778)."
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+    relevance: "The pause-resume gate substrate this gate must use: a resume answer validated against the durable pause record."
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    ONLY THE PERSON'S ANSWER COUNTS (KI-BO-20260925). This gate must NOT use finalize's current
+    resolveGate live path, which accepts any {action} object that an agent returns. The only
+    accepted confirmation is a resume answer for this gate's id that carries channel "person" and
+    is validated against the durable pause record (ADR-024): the same provenance rule
+    plan-feature's gate already enforces. A live agent reply, an answer without channel "person",
+    or an answer for another gate id is treated as no answer. If the shared gate module from
+    KI-BO-20260925's fix direction exists when this is built, use it rather than adding another
+    copy of the gate code.
+  - >-
+    Outcomes map exactly. Confirm: close the listed set, then continue to the merge. Decline: no
+    close, no commit, halt before Step 4, report "declined" with the listed records as left open and
+    the statement that re-running finalize shows the list again. No answer, or an expired or stale
+    pause record: the same as decline, but reported as "unanswered". Every non-confirm path returns
+    a halted result before any merge dispatch and is never recorded as Step 3.5 completed.
+  - >-
+    The pause-store dispatches for this gate go to an agent permitted to run shell (KI-BO-20260927;
+    plan-feature uses worktree-agent as the stopgap). A failed persist is reported as unanswered.
+    It is never a silent pause that no later run can resume.
+  - >-
+    INTERIM, WITH A RETIREMENT CONDITION. Implement the gate as one contiguous guarded block in Step
+    3.5, so that retiring it (once -ii, -iii, -iv and -v are done with scratch-repo behavioural
+    tests, per this record's notes) is a deletion, not a refactor. The listing (BO-400e-3-vi) must
+    not depend on the gate being present.
+  - "Answering the gate is not timed by the workflow body (E2 bans Date.now()). 'The time the run allows' is the pause record's staleness rule in pause_store.py, and a stale record is the 'unanswered' outcome."
+  - "When the derived set is empty or undeterminable (BO-400e-3-viii), the gate is not shown. There is nothing to confirm, and showing an empty list for confirmation would turn a non-closure into a question."
+delivers_to: null
+expects_from:
+  ac_id: BO-400e-3-vi
+  contract: "listing_text and the records array from the derive reply. The gate prompt carries the listing verbatim."
+test_required: true
+test_spec:
+  - name: test_person_confirmation_closes_exactly_the_listed_records_and_continues
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "Two-invocation harness run (pause, then resume with resume_answer {gate_id, action confirm, channel person} and a matching pause record); the close dispatch runs once against the listed set and the run proceeds to the Step 4 dispatches."
+  - name: test_decline_closes_nothing_and_halts_before_merge
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "Resume with action decline from channel person; no close dispatch, no commit dispatch, no merge dispatch is recorded, and the halted result says declined, names alpha-02.md and BO-9100a-2 as left open and states a re-run shows the list again."
+  - name: test_no_answer_or_stale_record_is_unanswered_and_halts
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "Headless run (no resume answer) and a resume against a stale pause record both halt before merge with no close dispatch, reported as unanswered rather than declined."
+  - name: test_agent_yes_is_treated_as_no_answer
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The live gate dispatch is answered {status ok}/{action ok} by the stubbed agent, and separately a resume answer without channel person is supplied; in both runs nothing is closed and no merge dispatch is recorded. NEGATIVE CONTROL: the same answer with channel person does close, which proves the provenance check discriminates and does not simply refuse everything."
+    must_catch:
+      - "accept the live agent's {action: ok} reply as the confirmation"
+      - "accept a resume answer without channel person"
+test_rationale: >-
+  The gate's correctness is control flow across a pause and a resume, so it is proven with the E2
+  harness's two-invocation pause-resume runs (the pattern in
+  unit_tests/workflows/test_bo_2300_pause_resume.py). Each assertion is on which dispatches were
+  and were not recorded, and above all on the absence of the close and merge dispatches. The
+  agent-yes test carries a positive control, because a gate that refuses every answer would
+  otherwise pass the safety tests while being unusable.
+origin_agent: BrainCandy
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Requested by BrainCandy 2026-10-15 (KI-BO-20260930).
+
+  INTERIM, WITH A NAMED RETIREMENT CONDITION -- decided, with reasons. This record should be
+  superseded (superseded_by set, not deleted) once BO-400e-3-ii, BO-400e-3-iii, BO-400e-3-iv
+  and BO-400e-3-v are all work_status done with behavioural tests that run the closure step
+  against a real scratch repository (a branch with main-only changes, a merged-in main, and
+  unrelated dirty edits). At that point the set is a computed, tested result and a per-run
+  human stop buys little that the listing (BO-400e-3-vi, permanent) does not, while it costs
+  a human at every finalize and blocks any unattended finalize. Until then the KI's own words
+  apply: Step 3.5 "cannot currently be trusted to scope itself".
+
+  Why stop BEFORE the merge on decline, rather than merge without closing: the closure commit
+  is made on the feature branch precisely so the PR carries it to main atomically
+  (finalize-feature.js :1259-1262; main is PR-only). Merging without it leaves the delivered
+  tickets open on main with no route to close them except another PR. Stopping keeps the
+  re-run path open.
+  Decided by BrainCandy 2026-10-15: stop before merge, because the closure commit must ride the PR to main.
+
+  Why an agent's "yes" counts as no answer: KI-BO-20260925 records that finalize's existing
+  gate never checks the answer came from the person. A gate that an agent can pass is not a
+  check on the agent.
