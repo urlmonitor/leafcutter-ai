@@ -60,7 +60,7 @@ def _decide(hook: Path, command: str, commit_agent_env: bool = False) -> tuple[i
 
 
 def _blocked(decision: dict | None) -> bool:
-    return bool(decision) and decision.get("decision") == "block"
+    return decision is not None and decision.get("decision") == "block"
 
 
 @pytest.mark.shared_layout_reader
@@ -79,6 +79,7 @@ def test_non_commit_agent_running_the_step_is_blocked(shared_reference_layout: P
         code, step, out = _decide(hook, _STEP_CALL)
         assert code == 0, f"[{label}] hook exit {code}"
         assert _blocked(step), f"[{label}] step call was not blocked: {out!r}"
+        assert step is not None and direct is not None
         assert step["reason"] == direct["reason"], f"[{label}] block message differs from direct commit"
 
 
