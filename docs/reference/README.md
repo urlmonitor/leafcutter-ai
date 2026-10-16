@@ -51,6 +51,7 @@ below by hand.
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 | [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
 | [knowledge-retention-evaluation-details.md](knowledge-retention-evaluation-details.md) | Detail sections of the retention evaluation result: active generation, reclaimable bases, entity-node reconciliation, assessment outcome and the read-only condition. |
+| [knowledge-publication-reclamation.md](knowledge-publication-reclamation.md) | How a successful publication reclaims superseded generations: entry points, ordering, result keys, retained reasons, guards (including the continuation-lifetime pin rule) and failure results. |
 
 ## Documentation & Architecture Conventions
 

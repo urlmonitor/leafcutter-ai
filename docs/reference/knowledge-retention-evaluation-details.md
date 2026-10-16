@@ -92,7 +92,7 @@ Not established: the live test (`tests/knowledge_live/test_km_400f_1_v.py`) skip
 
 ## Assessment outcome
 
-AC `KM-400f-1-vi`. `evaluate_retention` catches a `BackendUnavailable` refusal from each backend request and reports it instead of raising it or reading it as an empty store. The helpers are in `knowledge/adapters/neo4j_retention_assessment.py`; `evaluate_retention` attaches their result as `assessment`.
+AC `KM-400f-1-vi`. `evaluate_retention` catches a `BackendUnavailable` refusal from each backend request and reports it instead of raising it or reading it as an empty store. The helpers are in `knowledge/adapters/retention/assessment.py`; `evaluate_retention` attaches their result as `assessment`.
 
 | `assessment` key | Type | Description |
 |---|---|---|
@@ -158,4 +158,4 @@ Not established: the read-only latch is recognised by matching the refusal text,
 - [KM-400f-4](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml) - Operator listing and sweep; reports these figures rather than recomputing them.
 - [KM-400b-3](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml) - Pinning constraint that outranks the age basis.
 - `knowledge/adapters/neo4j_retention.py` - `evaluate_retention`, `retention_facts`, `active_generation_verdict`, `_reconcile_nodes`.
-- `knowledge/adapters/neo4j_retention_assessment.py` - Assessment and read-only helpers.
+- `knowledge/adapters/retention/assessment.py` - Assessment and read-only helpers.

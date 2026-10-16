@@ -20,7 +20,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from knowledge.adapters.neo4j_retention_assessment import (
+from knowledge.adapters.retention.assessment import (
     COUNTS_PART,
     RECORDS_PART,
     UNDETERMINED,

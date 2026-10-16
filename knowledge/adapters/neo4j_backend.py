@@ -18,6 +18,7 @@ TransactionResult = TypeVar("TransactionResult")
 if TYPE_CHECKING:
     from collections.abc import Callable
     from neo4j import ManagedTransaction
+    from knowledge.config import RetentionBound
 
 import asyncio
 import hashlib
@@ -64,6 +65,8 @@ class Neo4jBackend:
     publication_counts: dict | None = None
     # Outcome of removing the last failed publication's own generation, set by neo4j_projection.publish.
     publication_removal: dict | None = None
+    # Reclamation report of the last publication (explicit zero when none), set by neo4j_projection.publish.
+    publication_reclamation: dict | None = None
 
     def __init__(
         self,
@@ -254,20 +257,25 @@ class Neo4jBackend:
         )
 
     async def publish(
-        self, snapshot: ProjectionSnapshot, expected_generation: str | None = None
+        self,
+        snapshot: ProjectionSnapshot,
+        expected_generation: str | None = None,
+        retention_bound: RetentionBound | None = None,
     ) -> bool:
         """Build an immutable generation and atomically compare-and-swap its pointer.
 
         Args:
             snapshot: Validated immutable generation and its canonical source records.
             expected_generation: Previously active generation required for compare-and-swap.
+            retention_bound: Declared bound; when given, a successful publication reclaims
+                the generations it permits and reports them in ``publication_reclamation``.
 
         Returns:
             Whether the guarded operation succeeded.
         """
         from knowledge.adapters.neo4j_projection import publish
 
-        return await publish(self, snapshot, expected_generation)
+        return await publish(self, snapshot, expected_generation, retention_bound)
 
     async def query(
         self, repository_id: str, generation_id: str, operation: str, arguments: dict, limit: int
