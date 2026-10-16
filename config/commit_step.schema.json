@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "commit_step.schema.json",
+  "title": "Commit Step Contract",
+  "description": "Schema for commit_step.json -- the single source of the shared commit step's one-answer contract: answer_version, the answer keys with their empty values, the reason_code enumeration partitioned into disjoint families, and the two retry ceilings. The step validates the same structure by hand (stdlib only) at start; this schema is the published form of that check.",
+  "type": "object",
+  "required": ["answer_version", "answer_keys", "reason_codes", "max_automated_fix_retries", "max_transient_retries"],
+  "properties": {
+    "_comment": {"type": "string"},
+    "answer_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of the answer contract; changes with any breaking edit of keys or codes."
+    },
+    "answer_keys": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Every key of the answer, mapped to its empty value (null or an empty list)."
+    },
+    "reason_codes": {
+      "type": "object",
+      "required": ["policy", "step", "check", "nothing"],
+      "additionalProperties": false,
+      "description": "Disjoint families: refused answers carry policy or step codes, hook_failed carries check codes, nothing_to_commit carries nothing codes.",
+      "properties": {
+        "policy": {"$ref": "#/definitions/codes"},
+        "step": {"$ref": "#/definitions/codes"},
+        "check": {"$ref": "#/definitions/codes"},
+        "nothing": {"$ref": "#/definitions/codes"}
+      }
+    },
+    "max_automated_fix_retries": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Re-runs allowed after a fixing check rewrites a named file."
+    },
+    "max_transient_retries": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Fresh calls a caller may make on a step_ code."
+    }
+  },
+  "definitions": {
+    "codes": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    }
+  }
+}
