@@ -189,25 +189,21 @@ def test_pt_authoring_dispatch_carries_an_explicit_anchor_warning():
 # cover: an uninterpretable reply, a refusal, a non-zero exit code, a success-shaped
 # reply naming no directory, and a no-failure-reported reply naming neither directory
 # nor branch.
+# BO-4300c-3 replaced that gate's shape-by-shape classification with ONE acceptance
+# predicate on the workspace maker's answer: the run goes on only for a single JSON
+# object whose status is "ok" and whose workspace_path is a non-empty string. The five
+# shapes below keep their names and now say the same five things in the maker's terms.
 _UNREACHABLE_WORKTREE_SETUP_SHAPES = {
-    # wtParsed === null (raw reply is a plain string with no parseable JSON at all,
-    # and carries none of isAgentRefusal()'s AGENT_REFUSAL_MARKERS) -> "uninterpretable".
+    # prose with no JSON object at all.
     "uninterpretable": "The setup step could not determine what to do with this request.",
-    # wtParsed === null AND the free text matches an AGENT_REFUSAL_MARKERS phrase
-    # ("outside my scope") -> "refused".
+    # prose refusal.
     "refused": "I'm sorry, but creating a worktree is outside my scope of responsibility.",
-    # wtParsed is a real object with an explicit non-zero exit_code -> fails hard
-    # before the no-worktree-path check is even reached.
-    "non_zero_exit": {"output": "", "exit_code": 1, "stderr": "fatal: unable to create worktree"},
-    # wtParsed.output parses to a real JSON object with an explicit exit_code but no
-    # worktree_path -> "no_workspace_named".
-    "success_no_directory": {
-        "output": json.dumps({"ac_store_path": "docs/acceptance-criteria"}),
-        "exit_code": 0,
-    },
-    # wtParsed.output parses to `{}` -- no worktree_path AND no exit_code at all,
-    # i.e. no failure reported either -> "silent_success".
-    "no_failure_no_directory": {"output": json.dumps({}), "exit_code": None},
+    # an explicit error answer.
+    "non_zero_exit": {"status": "error", "message": "fatal: unable to create worktree"},
+    # status ok but no workspace_path.
+    "success_no_directory": {"status": "ok", "ac_store_path": "docs/acceptance-criteria"},
+    # an object that states neither ok nor refused.
+    "no_failure_no_directory": {},
 }
 
 
@@ -226,13 +222,18 @@ def test_pt_phase_is_unreachable_without_an_authoring_worktree():
     """
     for shape_name, wt_response in _UNREACHABLE_WORKTREE_SETUP_SHAPES.items():
         label_responses = _label_responses()
-        label_responses["worktree-setup"] = wt_response
+        # The workspace step's own label, sent the hostile answer verbatim; the
+        # run names a project root so the maker is actually asked.
+        label_responses["workspace-ensure"] = wt_response
 
         result = run_workflow_under_e2(
             _PLAN_FEATURE_JS,
             timeout=_TIMEOUT,
             label_responses=label_responses,
-            args={"run_id": f"test-acd-2400-unreachable-{shape_name}"},
+            args={
+                "run_id": f"test-acd-2400-unreachable-{shape_name}",
+                "project_root": "/tmp/acd2400-project",
+            },
         )
         assert result.error == "", f"[{shape_name}] Harness error: {result.error}"
 

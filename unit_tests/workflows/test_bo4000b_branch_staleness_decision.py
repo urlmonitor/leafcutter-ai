@@ -211,5 +211,19 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         self.assertTrue(_setup_calls(current))
 
 
+# BO-4300c-3: the workflow no longer judges a branch's standing against
+# origin/main before opening a worktree; the one workspace maker owns that (see
+# unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestUpToDateBranchUsedWithoutStalenessReport.test_up_to_date_branch_is_used_without_a_staleness_report",
+    "TestUnfetchableOriginMainRefusesExistingBranch.test_unfetchable_origin_main_refuses_an_existing_branch",
+    "TestBehindBranchWithNoUniqueCommitsStartsFromOriginMain.test_behind_branch_with_no_unique_commits_starts_the_worktree_from_origin_main",
+    "TestBehindBranchWithUniqueCommitsStops.test_behind_branch_with_unique_commits_stops_and_names_both_counts",
+    "TestReachableFromTopLevelBody.test_branch_staleness_decision_is_reachable_from_the_workflow_top_level_body",
+)
+
 if __name__ == "__main__":
     unittest.main()

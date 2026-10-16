@@ -498,57 +498,43 @@ class TestWorktreePathIsConfirmedFromGit(unittest.TestCase):
         self.assertIsNotNone(content, f"{_WORKFLOW_PATH} does not exist.")
         self.content = content or ""
 
-    def test_workflow_asks_git_where_the_worktree_is(self) -> None:
+    # BO-4300c-3 (test-drift repair, classification: test_drift): the four
+    # source-text checks that stood here pinned the second git probe
+    # ('git worktree list --porcelain' + the quoted-path guard + the
+    # claimed-path fallback). BO-4300f-1 removed that probe and the fallback:
+    # the location is the workspace maker's ready answer and nothing else. The
+    # behaviour that replaces them is held by RUNNING the lane, not by reading
+    # its text -- see test_bo2400f_3_i_worktree_verify_workflow.py (no second
+    # probe, resolver runs against workspace_path, a non-ready answer stops
+    # before Resolve) and unit_tests/build_orchestration/test_bo_4300c_3.py.
+    # The one check below is its behavioural form: no dispatch of a real run
+    # asks git where the worktree is.
+
+    def test_no_dispatch_of_a_run_asks_git_where_the_worktree_is(self) -> None:
+        import tempfile  # noqa: PLC0415
+
+        from _workflow_engine_harness import run_workflow_under_e2  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_workflow_under_e2(
+                _WORKFLOW_PATH,
+                label_responses={"resolve-connected": {"ac_ids": [], "message": "0 to build"}},
+                args={
+                    "ac": "BO-STUB-1",
+                    "workspace": {"status": "ok", "workspace_path": tmp, "branch": "fast-lane/BO-STUB-1"},
+                },
+            )
+        self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
+        labels = [c.label for c in result.agent_calls]
         self.assertIn(
-            "git worktree list --porcelain",
-            self.content,
-            "The workflow must ask git for the worktree location rather than "
-            "trusting the phase agent's reported path.",
+            "resolve-connected", labels, f"The run must proceed past the workspace step. Labels: {labels}"
         )
-
-    def test_reported_path_is_not_used_without_confirmation(self) -> None:
-        self.assertNotIn(
-            "const worktreePath = worktreeResult.worktree_path;",
-            self.content,
-            "worktreeResult.worktree_path is the LLM's claim and must not be "
-            "assigned straight to worktreePath — it has been fabricated twice.",
-        )
-
-    def test_the_path_must_be_quoted_from_the_raw_git_output(self) -> None:
-        self.assertRegex(
-            self.content,
-            r"gitRaw\s*\.\s*includes\s*\(\s*gitReportedPath\s*\)",
-            "The confirmed path must be checked for presence in the raw git "
-            "output it was supposedly read from. A path absent from that output "
-            "was invented rather than quoted, which is the one failure mode this "
-            "step exists to catch.",
-        )
-
-    def test_an_unconfirmed_path_halts_instead_of_proceeding(self) -> None:
-        self.assertIn(
-            "does not appear in",
-            self.content,
-            "A path git did not actually print must halt with a message naming "
-            "both the reported path and git's raw output. That path was composed "
-            "rather than quoted, which is what sent the resolver to a "
-            "non-existent directory.",
-        )
-
-    def test_silence_from_git_falls_back_rather_than_halting(self) -> None:
-        """An unanswered probe is not evidence of fabrication.
-
-        The first version of this guard halted whenever the verification
-        dispatch returned nothing. That made the whole lane unrunnable any time
-        one extra agent call hiccupped -- a worse failure mode than the bug it
-        prevents, and it broke every fixture that walks this workflow without
-        stubbing the new label. Only a positive contradiction halts now.
-        """
-        self.assertRegex(
-            self.content,
-            r"gitReportedPath\s*\|\|\s*claimedWorktreePath",
-            "With no answer from git the workflow must fall back to the phase "
-            "agent's claim, leaving it no worse off than before this guard "
-            "existed, rather than refusing to run at all.",
+        asking = [c.label for c in result.agent_calls if "worktree list" in str(c.prompt)]
+        self.assertEqual(
+            asking,
+            [],
+            "No dispatch may ask git where the worktree is: the location is the "
+            f"maker's ready answer. Dispatches that did: {asking}",
         )
 
     def test_no_hardcoded_worktrees_convention_is_assumed(self) -> None:

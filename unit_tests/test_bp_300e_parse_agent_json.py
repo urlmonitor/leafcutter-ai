@@ -48,8 +48,6 @@ _FINALIZE_FEATURE_JS = _WORKFLOWS_JS_DIR / "finalize-feature.js"
 _BUILD_EPIC_JS = _WORKFLOWS_JS_DIR / "build-epic.js"
 _BUILD_TICKET_JS = _WORKFLOWS_JS_DIR / "build-ticket.js"
 
-# All five delivery workflow scripts.
-# build-feature.js is trivially compliant (0 parse sites, schema-enforced agent() calls).
 _ALL_SCRIPTS: dict[str, Path] = {
     "plan-feature.js": _PLAN_FEATURE_JS,
     "build-feature.js": _BUILD_FEATURE_JS,
@@ -60,16 +58,6 @@ _ALL_SCRIPTS: dict[str, Path] = {
 
 # Scripts that must carry a byte-identical parseAgentJson helper (BP-300e-5,
 # "uniformly across every delivery workflow script").
-#
-# plan-feature.js and finalize-feature.js: have LIVE parse call sites that
-#   call parseAgentJson() directly on agent-reply variables.
-# build-epic.js and build-ticket.js: schema-only (0 live parse call sites —
-#   every agent() call passes a schema: so the engine auto-parses). They carry
-#   the helper for structural uniformity and forward-compatibility, NOT because
-#   they currently have parse sites.
-# build-feature.js: EXCLUDED — schema-only and no uniformity carve-in was
-#   made for it (the ticket's files_touched lists it but implementation notes
-#   mark it 0-parse-site and unchanged).
 _SCRIPTS_REQUIRING_TOLERANT_READER: dict[str, Path] = {
     "plan-feature.js": _PLAN_FEATURE_JS,
     "finalize-feature.js": _FINALIZE_FEATURE_JS,
@@ -77,8 +65,6 @@ _SCRIPTS_REQUIRING_TOLERANT_READER: dict[str, Path] = {
     "build-ticket.js": _BUILD_TICKET_JS,
 }
 
-# Brittle ternary pattern: typeof x === "string" ? JSON.parse(x) : x
-# This is the pattern that parseAgentJson must replace.
 _BRITTLE_TERNARY_RE = re.compile(
     r"typeof\s+\w+\s*===\s*['\"]string['\"]\s*\?\s*JSON\.parse\("
 )
@@ -208,22 +194,19 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
 """
         return _invoke_node(self.fn_body, driver)
 
+    def _assert_typed_error(self, result: dict, stage: str, agent: str) -> None:
+        """Assert the call threw and its error message names both stage and agent."""
+        self.assertTrue(result.get("threw"), f"Expected function to throw but got: {result}")
+        error_msg = result.get("error", "")
+        self.assertIn(stage, error_msg, f"Error must name the stage {stage!r}; got: {error_msg!r}")
+        self.assertIn(agent, error_msg, f"Error must name the agent {agent!r}; got: {error_msg!r}")
+
     def test_object_with_trailing_prose_parsed(self) -> None:
         # covers: BP-300e-1
         """AC: parseAgentJson recovers a JSON object followed by trailing markdown;
         all fields intact, trailing prose ignored."""
-        driver = r"""
-(async () => {
-  const raw = "{\"status\": \"ok\", \"name\": \"leafcutter\"}\n## Anomalies\nNo anomalies.";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        raw = '{"status": "ok", "name": "leafcutter"}\n## Anomalies\nNo anomalies.'
+        result = self._call(json.dumps(raw))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertEqual(value.get("status"), "ok")
@@ -233,18 +216,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-1-i
         """AC: Extraction stops at the matching top-level closing brace, not the first
         nested one; nested objects recovered whole."""
-        driver = r"""
-(async () => {
-  const raw = "{\"outer\": {\"inner\": \"nested_value\"}, \"count\": 3}";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps('{"outer": {"inner": "nested_value"}, "count": 3}'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertIsInstance(value.get("outer"), dict, "outer must be a dict")
@@ -255,18 +227,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-1-ii
         """AC: { } and # characters inside JSON string values and escaped quotes are
         treated as text, not structure/delimiters; object recovered with string intact."""
-        driver = r"""
-(async () => {
-  const raw = '{"msg": "foo { bar } # baz \\"escaped\\""}';
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps(r'{"msg": "foo { bar } # baz \"escaped\""}'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         msg = result["value"].get("msg", "")
         self.assertIn("{", msg, "Opening brace inside string must be preserved")
@@ -277,18 +238,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-1-iii
         """AC: A non-string (already-parsed) value is returned unchanged with no
         re-parse attempt."""
-        driver = """
-(async () => {
-  const raw = { status: "done", items: [1, 2, 3] };
-  try {
-    const result = parseAgentJson(raw, { stage: "preflight", agent: "status-checker" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call('{ status: "done", items: [1, 2, 3] }')
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertEqual(value.get("status"), "done")
@@ -298,18 +248,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-2
         """AC: parseAgentJson recovers a valid JSON object wrapped in prose both before
         the opening brace and after the closing brace."""
-        driver = r"""
-(async () => {
-  const raw = "Agent result:\n{\"status\": \"ok\", \"score\": 7}\nEnd of output.";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps('Agent result:\n{"status": "ok", "score": 7}\nEnd of output.'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertEqual(value.get("status"), "ok")
@@ -319,18 +258,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-2-i
         """AC: When a reply contains more than one top-level JSON block, the FIRST
         complete balanced value is parsed and later blocks ignored (deterministic)."""
-        driver = r"""
-(async () => {
-  const raw = "First: {\"a\": 1} then: {\"b\": 2}";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps('First: {"a": 1} then: {"b": 2}'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertEqual(value.get("a"), 1, "First block's 'a' field must be present")
@@ -339,18 +267,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
     def test_json_array_with_prose_parsed(self) -> None:
         # covers: BP-300e-3
         """AC: A valid JSON array surrounded by prose is recovered with every element intact."""
-        driver = r"""
-(async () => {
-  const raw = "Results:\n[\"item1\", \"item2\", \"item3\"]\nDone.";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps('Results:\n["item1", "item2", "item3"]\nDone.'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertIsInstance(value, list, "Array reply must be recovered as a list")
@@ -363,55 +280,16 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-4
         """AC: A prose-only reply with no parseable JSON raises a typed error naming
         the stage and agent; never silently skipped or swallowed."""
-        driver = """
-(async () => {
-  const raw = "This is explanatory prose only. No JSON at all.";
-  try {
-    const result = parseAgentJson(raw, { stage: "ac-triage", agent: "ac-triage-agent" });
-    process.stdout.write(JSON.stringify({ ok: false, threw: false, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: true, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
-        self.assertTrue(result.get("threw"), f"Expected function to throw but got: {result}")
-        error_msg = result.get("error", "")
-        self.assertIn(
-            "ac-triage", error_msg,
-            f"Error must name the stage 'ac-triage'; got: {error_msg!r}"
-        )
-        self.assertIn(
-            "ac-triage-agent", error_msg,
-            f"Error must name the agent 'ac-triage-agent'; got: {error_msg!r}"
-        )
+        raw = "This is explanatory prose only. No JSON at all."
+        result = self._call(json.dumps(raw), '{ stage: "ac-triage", agent: "ac-triage-agent" }')
+        self._assert_typed_error(result, "ac-triage", "ac-triage-agent")
 
     def test_empty_or_whitespace_reply_raises_same_typed_error(self) -> None:
         # covers: BP-300e-4-i
         """AC: An empty or whitespace-only reply raises the same typed stage+agent error,
         never treated as an acceptable/skippable result."""
-        driver = """
-(async () => {
-  const raw = "   ";
-  try {
-    const result = parseAgentJson(raw, { stage: "commit-stage", agent: "commit-agent" });
-    process.stdout.write(JSON.stringify({ ok: false, threw: false, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: true, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
-        self.assertTrue(result.get("threw"), f"Expected function to throw but got: {result}")
-        error_msg = result.get("error", "")
-        self.assertIn(
-            "commit-stage", error_msg,
-            f"Error must name the stage; got: {error_msg!r}"
-        )
-        self.assertIn(
-            "commit-agent", error_msg,
-            f"Error must name the agent; got: {error_msg!r}"
-        )
+        result = self._call('"   "', '{ stage: "commit-stage", agent: "commit-agent" }')
+        self._assert_typed_error(result, "commit-stage", "commit-agent")
 
     def test_top_level_scalar_reply_raises_typed_error(self) -> None:
         # covers: BP-300e-4
@@ -421,31 +299,8 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         Documents the M-1 contract change: the old greedy helper tolerated bare
         scalars; the new brace-matching helper requires an object or array.
         """
-        driver = """
-(async () => {
-  const raw = "42";
-  try {
-    const result = parseAgentJson(raw, { stage: "build-stage", agent: "build-agent" });
-    process.stdout.write(JSON.stringify({ ok: false, threw: false, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: true, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
-        self.assertTrue(
-            result.get("threw"),
-            f"Expected function to throw on bare scalar input but got: {result}",
-        )
-        error_msg = result.get("error", "")
-        self.assertIn(
-            "build-stage", error_msg,
-            f"Error must name the stage 'build-stage'; got: {error_msg!r}",
-        )
-        self.assertIn(
-            "build-agent", error_msg,
-            f"Error must name the agent 'build-agent'; got: {error_msg!r}",
-        )
+        result = self._call('"42"', '{ stage: "build-stage", agent: "build-agent" }')
+        self._assert_typed_error(result, "build-stage", "build-agent")
 
     def test_escaped_backslash_before_closing_quote_parsed(self) -> None:
         # covers: BP-300e-1-ii
@@ -462,26 +317,9 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         C + colon + backslash = 3 chars). After brace-extraction and JSON.parse the
         recovered path must equal "C:\\" — confirming the escape was handled correctly.
         """
-        driver = r"""
-(async () => {
-  const raw = '{"path":"C:\\\\"}';
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call(json.dumps(r'{"path":"C:\\"}'))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         path_value = result["value"].get("path", "")
-        # The JS driver uses a single-quoted string literal whose bytes on disk are:
-        #   C, colon, 4 backslash bytes, closing-quote  →  {"path":"C:\\"}  at JS runtime.
-        # JSON.parse decodes C + : + \\ (two backslashes) → C + : + \ (3-char value: C:\).
-        # The key escape-edge assertion: the trailing \\ in the JSON stream is consumed
-        # as a complete backslash escape, so the following " correctly closes the string
-        # rather than being misread as an escaped-quote (\\\" extends-string bug).
         self.assertTrue(
             path_value.endswith("\\"),
             f"Expected path value ending with a backslash but got: {path_value!r}",
@@ -495,18 +333,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-1-iii
         """AC: A non-string null input is returned as null unchanged with no throw and
         no re-parse attempt."""
-        driver = """
-(async () => {
-  const raw = null;
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call("null")
         self.assertTrue(result.get("ok"), f"Expected ok=True for null input but got: {result}")
         self.assertIn("value", result, "Output must contain 'value' key")
         self.assertIsNone(result["value"], "null input must be returned as null (Python None)")
@@ -515,18 +342,7 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         # covers: BP-300e-1-iii
         """AC: A non-string numeric input (e.g. 42) is returned unchanged with no throw
         and no re-parse attempt."""
-        driver = """
-(async () => {
-  const raw = 42;
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        result = self._call("42")
         self.assertTrue(result.get("ok"), f"Expected ok=True for numeric input but got: {result}")
         self.assertEqual(result.get("value"), 42, "Numeric input 42 must be returned unchanged")
 
@@ -540,18 +356,8 @@ class TestParseAgentJsonBehavior(unittest.TestCase):
         The variant uses leading prose + an incidental {step:1} + real {status:'done'}
         to document that first-match is deterministic, even when the earlier block is small.
         """
-        driver = r"""
-(async () => {
-  const raw = "Step completed {\"step\": 1} and full result: {\"status\": \"done\", \"count\": 5}";
-  try {
-    const result = parseAgentJson(raw, { stage: "s", agent: "a" });
-    process.stdout.write(JSON.stringify({ ok: true, value: result }));
-  } catch (err) {
-    process.stdout.write(JSON.stringify({ ok: false, threw: true, error: String(err) }));
-  }
-})();
-"""
-        result = _invoke_node(self.fn_body, driver)
+        raw = 'Step completed {"step": 1} and full result: {"status": "done", "count": 5}'
+        result = self._call(json.dumps(raw))
         self.assertTrue(result.get("ok"), f"Expected ok=True but got: {result}")
         value = result["value"]
         self.assertEqual(
@@ -591,12 +397,10 @@ class TestParseAgentJsonStructuralAudit(unittest.TestCase):
         for script_name, script_path in _ALL_SCRIPTS.items():
             source = _read_source(script_path)
 
-            # Remove the parseAgentJson body (legitimately contains JSON.parse).
             try:
                 fn_body = _extract_fn(source, "parseAgentJson", script_name)
                 source_without_fn = source.replace(fn_body, "/* parseAgentJson body removed */")
             except AssertionError:
-                # Function absent — still check the rest of the source.
                 source_without_fn = source
 
             hits = _BRITTLE_TERNARY_RE.findall(source_without_fn)
@@ -722,19 +526,15 @@ class TestParseAgentJsonIntegration(unittest.TestCase):
         if not _FINALIZE_FEATURE_JS.exists():
             self.fail(f"finalize-feature.js not found at {_FINALIZE_FEATURE_JS}")
 
-        # A prose-wrapped reply whose trailing text contains '}' so that a greedy
-        # /\{[\s\S]*\}/ regex captures too much and produces invalid JSON (the greedy
-        # match extends from the opening '{' all the way to the last '}' in
-        # 'feature-{name}'), whereas brace-matching stops at the correct closing brace.
-        expected_worktree_root = "/tmp/wt-leafcutter-test"
+        # BO-4300c-3: the workspace maker's answer is not read tolerantly
+        # (test_bo_4300c_3.py), so the prose-wrapped reply goes to the PR probe.
         prose_reply_with_brace_in_trailing_text = (
-            "Pre-flight completed:\n"
-            f'{{"branch": "conventions-fix", "worktree_root": "{expected_worktree_root}", '
-            '"found": true, "status": "ok"}\n'
+            "PR probe completed:\n"
+            '{"found": true, "number": 4242, "url": "https://example.test/pull/4242"}\n'
             "Note: branch convention is `feature-{name}` (see docs/conventions.md)."
         )
 
-        label_responses = {"pre-flight": prose_reply_with_brace_in_trailing_text}
+        label_responses = {"step-1-pr-probe": prose_reply_with_brace_in_trailing_text}
         result = run_workflow_under_e2(
             _FINALIZE_FEATURE_JS,
             timeout=20,
@@ -744,41 +544,26 @@ class TestParseAgentJsonIntegration(unittest.TestCase):
             result.error,
             f"Harness returned an error running finalize-feature.js: {result.error!r}",
         )
-        # Expect at least 2 dispatches: pre-flight + one subsequent call (gh-config).
-        self.assertGreaterEqual(
-            result.dispatch_count,
-            2,
-            (
-                f"finalize-feature.js dispatched only {result.dispatch_count} agent(s) "
-                "with a prose-wrapped pre-flight reply — expected at least 2. "
-                f"stderr: {result.stderr!r}"
-            ),
-        )
-        # The gh-config call (the call after pre-flight) embeds WORKTREE_ROOT in its
-        # prompt: `cat "${WORKTREE_ROOT}/settings.json"`. After correct prose parsing,
-        # WORKTREE_ROOT must equal the expected value from the JSON block.
-        # If safeParseJSON (greedy regex) was used, WORKTREE_ROOT would be "unknown"
-        # because the greedy regex fails on the trailing '}' and safeParseJSON returns
-        # {malformed: true}, causing the fallback {worktree_root: "unknown"} to apply.
-        settings_prompts = [
-            str(call.prompt)
-            for call in result.agent_calls
-            if "settings.json" in str(call.prompt)
-        ]
+        labels = [call.label for call in result.agent_calls]
+        self.assertIn("step-1-pr-probe", labels, f"The PR probe was never dispatched: {labels}")
         self.assertGreater(
-            len(settings_prompts),
+            len(labels) - 1 - labels.index("step-1-pr-probe"),
             0,
-            "Expected at least one agent call with 'settings.json' in its prompt "
-            "(the gh-config call embeds WORKTREE_ROOT); none found. "
-            f"All prompts: {[str(c.prompt)[:120] for c in result.agent_calls]!r}",
+            "finalize-feature.js dispatched nothing after the PR probe with a "
+            f"prose-wrapped probe reply. stderr: {result.stderr!r}",
+        )
+        self.assertNotIn(
+            "step-1-open-pr",
+            labels,
+            "The prose-wrapped probe reply {found: true} was not parsed (the greedy-regex "
+            "failure): the run fell back to 'no PR exists' and tried to open a duplicate "
+            f"pull request. Labels: {labels}",
         )
         self.assertIn(
-            expected_worktree_root,
-            settings_prompts[0],
-            f"Expected WORKTREE_ROOT '{expected_worktree_root}' (from correctly parsed JSON) "
-            "in the gh-config prompt, but it was absent — likely 'unknown' (the fallback "
-            "from greedy-regex safeParseJSON failure) appeared instead. "
-            f"Actual prompt (first 200 chars): {settings_prompts[0][:200]!r}",
+            "4242",
+            str(result.result) + " ".join(str(call.prompt) for call in result.agent_calls),
+            "The PR number from the correctly parsed reply appears nowhere in the run's "
+            "result or later prompts.",
         )
 
 

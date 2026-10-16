@@ -299,8 +299,10 @@ class TestBP600WorkflowFullRunTopology:
         """An uninterrupted successful run dispatches exactly these labels,
         in this order, and returns status: ok."""
         result = run_workflow_under_e2(_JS_PATH, label_responses=_full_success_responses())
+        # BO-4300c-3: the run's first dispatch used to be 'isolation-check'. The
+        # workspace is now the maker's ready answer, handed in as args.workspace
+        # (the harness supplies one by default), so the run starts at the guards.
         assert _labels(result) == [
-            "isolation-check",
             "guard-checks",
             "ac-creation",
             # BO-4400f-1: the shell step that creates this run's labelled scratch

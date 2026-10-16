@@ -62,6 +62,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
+from unit_tests._workspace_harness_defaults import inline_workspace_block, ready_workspace_args
 from unit_tests.workflows.test_acd_2100c_2 import (  # noqa: F401 -- shared real-execution helpers
     _init_git_project, _install_real_pause_store, _parsed_real_result, _real_calls, _run, _strip_exports,
     _write_shaped_calls,
@@ -82,11 +83,6 @@ _DRAFT_CONTENT = (
     "  When the pipeline pauses and is later resumed\n"
     "  Then this file must carry forward byte-identical\n"
 )
-
-
-# ---------------------------------------------------------------------------
-# Fixture builders (self-contained copy of test_acd_2100c_2.py's conventions)
-# ---------------------------------------------------------------------------
 
 
 def _make_worktree_fixture(tmp_path: Path) -> dict:
@@ -286,13 +282,13 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
 
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
 
@@ -433,11 +429,6 @@ def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str, label_r
         f"The run must report that it is waiting for an answer. Got result={result!r}"
     )
     return payload, gate_id
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 
 def test_resume_in_a_new_process_continues_from_the_decision_point():

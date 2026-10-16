@@ -71,9 +71,17 @@ def _get_step_block(js: str, step_label: str, next_step_label: str) -> str:
     return js[start:end]
 
 
-# ---------------------------------------------------------------------------
+def _has_build(block: str) -> bool:
+    """True when a step block carries a build.py / install_shims instruction."""
+    return "build.py" in block or "install_shims" in block
+
+
+def _has_object_extraction(block: str) -> bool:
+    """True when the block reads args.target / args.target_branch."""
+    return "args.target" in block or "args.target_branch" in block
+
+
 # FIN-100a-4: Step 0 and Step 3 must be symmetric in their build/deploy setup
-# ---------------------------------------------------------------------------
 
 class TestBaselineAndPostMergeBuildSymmetry:
     """FIN-100a-4: both Step 0 (pre-merge baseline) and Step 3 (post-merge suite)
@@ -90,12 +98,7 @@ class TestBaselineAndPostMergeBuildSymmetry:
         pass in a properly-built environment, skewing the triage set-difference.
         """
         step0 = _get_step_block(_js_text(), "Step 0", "Step 1")
-        has_build = (
-            "build.py" in step0
-            or "scripts/build.py" in step0
-            or "install_shims" in step0
-        )
-        assert has_build, (
+        assert _has_build(step0), (
             "Step 0 baseline dispatch prompt must include a build.py / install_shims "
             "instruction before running pytest. "
             "Without it, ~13 deploy-dependent tests fail in the baseline."
@@ -112,12 +115,7 @@ class TestBaselineAndPostMergeBuildSymmetry:
         the PR could be merged.
         """
         step3 = _get_step_block(_js_text(), "Step 3", "Step 3.5")
-        has_build = (
-            "build.py" in step3
-            or "scripts/build.py" in step3
-            or "install_shims" in step3
-        )
-        assert has_build, (
+        assert _has_build(step3), (
             "Step 3 post-merge test-runner dispatch prompt must include a build.py / "
             "install_shims instruction before running the suite."
         )
@@ -133,16 +131,8 @@ class TestBaselineAndPostMergeBuildSymmetry:
         step0 = _get_step_block(js, "Step 0", "Step 1")
         step3 = _get_step_block(js, "Step 3", "Step 3.5")
 
-        step0_has_build = (
-            "build.py" in step0
-            or "scripts/build.py" in step0
-            or "install_shims" in step0
-        )
-        step3_has_build = (
-            "build.py" in step3
-            or "scripts/build.py" in step3
-            or "install_shims" in step3
-        )
+        step0_has_build = _has_build(step0)
+        step3_has_build = _has_build(step3)
 
         assert step0_has_build and step3_has_build, (
             "BOTH Step 0 and Step 3 must reference build.py / install_shims. "
@@ -235,19 +225,10 @@ class TestPreflightArgNormalizationFIN100g2:
         """
         preflight = _get_preflight_block(_js_text())
 
-        has_string_check = (
-            "typeof args === 'string'" in preflight
-            or 'typeof args === "string"' in preflight
-        )
-        has_object_extraction = (
-            "args.target" in preflight
-            or "args.target_branch" in preflight
-        )
-
-        assert has_string_check, (
+        assert "typeof args === 'string'" in preflight or 'typeof args === "string"' in preflight, (
             "Pre-flight must retain the typeof-string check for bare-string args."
         )
-        assert has_object_extraction, (
+        assert _has_object_extraction(preflight), (
             "Pre-flight must ALSO extract the target from object args "
             "(args.target / args.target_branch). "
             "Current code only has the typeof-string check; object args collapse to empty. "
@@ -326,12 +307,7 @@ class TestPreflightArgNormalizationFIN100g2:
             "typeof args === 'string' ? args.trim() : ''" in preflight
             or "typeof args === 'string' ? args.trim() : \"\"" in preflight
         )
-        object_extraction_present = (
-            "args.target" in preflight
-            or "args.target_branch" in preflight
-        )
-
-        assert not (collapse_pattern_present and not object_extraction_present), (
+        assert not (collapse_pattern_present and not _has_object_extraction(preflight)), (
             "Pre-flight uses `typeof args === 'string' ? args.trim() : ''` as the "
             "SOLE normalization, which collapses {target: 'ge-116a-1'} to empty string. "
             "FIN-100g-2 requires object-key extraction (args.target / args.target_branch) "
@@ -380,13 +356,7 @@ class TestPreflightArgNormalizationFIN100g2i:
         """
         preflight = _get_preflight_block(_js_text())
 
-        # Explicit object extraction must be present.
-        has_object_extraction = (
-            "args.target" in preflight
-            or "args.target_branch" in preflight
-        )
-
-        assert has_object_extraction, (
+        assert _has_object_extraction(preflight), (
             "Pre-flight must explicitly extract args.target / args.target_branch "
             "from object args so that {} is intentionally recognized as 'no target "
             "supplied' and routes to CWD-based detection. "
@@ -413,20 +383,12 @@ class TestPreflightArgNormalizationFIN100g2i:
         """
         preflight = _get_preflight_block(_js_text())
 
-        # Must have explicit object extraction…
-        has_object_extraction = (
-            "args.target" in preflight
-            or "args.target_branch" in preflight
-        )
-        # …and must apply trim() to handle whitespace/empty values.
-        has_trim_on_extraction = ".trim()" in preflight
-
-        assert has_object_extraction, (
+        assert _has_object_extraction(preflight), (
             "Pre-flight must explicitly extract args.target / args.target_branch "
             "from object args to handle the {target: ''} empty-value case. "
             "Current code has no object extraction — FIN-100g-2-i is unsatisfied."
         )
-        assert has_trim_on_extraction, (
+        assert ".trim()" in preflight, (
             "Pre-flight normalization must call .trim() on the extracted target value "
             "so that {target: ''} (or {target: '  '}) produces an empty string that "
             "routes to CWD detection rather than a non-empty whitespace target."
@@ -454,18 +416,10 @@ class TestPreflightArgNormalizationFIN100g2i:
         """
         preflight = _get_preflight_block(_js_text())
 
-        # (a) The abort condition must reference BRANCH, not epicArg directly.
-        # This ensures the abort fires on the resolved branch, not the raw arg.
-        abort_on_branch = (
-            'BRANCH === "main"' in preflight
-            or "BRANCH === 'main'" in preflight
-            or "BRANCH === \"master\"" in preflight
-            or "BRANCH === 'master'" in preflight
-        )
-        # (b) Explicit object extraction must be present (the missing piece in current code).
-        has_object_extraction = (
-            "args.target" in preflight
-            or "args.target_branch" in preflight
+        abort_on_branch = any(
+            f"BRANCH === {q}{name}{q}" in preflight
+            for q in ('"', "'")
+            for name in ("main", "master")
         )
 
         assert abort_on_branch, (
@@ -473,7 +427,7 @@ class TestPreflightArgNormalizationFIN100g2i:
             "not the raw epicArg. This ensures the abort fires on the actual branch "
             "returned by CWD detection, not on an empty epicArg from a missing-key object."
         )
-        assert has_object_extraction, (
+        assert _has_object_extraction(preflight), (
             "Pre-flight must have explicit object-key extraction (args.target / "
             "args.target_branch) so that the no-key object case reaches the CWD-detection "
             "fallback intentionally. "
@@ -492,11 +446,10 @@ class TestPreflightArgNormalizationFIN100g2i:
         typeof-string check on the extracted candidate.
         """
         preflight = _get_preflight_block(_js_text())
-        trims_raw_extraction = (
+        assert not (
             "args.target_branch) || '').trim()" in preflight
             or 'args.target_branch) || "").trim()' in preflight
-        )
-        assert not trims_raw_extraction, (
+        ), (
             "Normalization calls .trim() directly on the object extraction "
             "(args.target || args.target_branch); a truthy non-string target would raise "
             "a TypeError. Guard the trim behind a typeof-string check so a non-string "
@@ -646,3 +599,22 @@ class TestUnresolvableTargetAbortOrderingFIN100g3i:
             "'must be run from a feature branch' abort instead of the actionable "
             "unresolved-target error."
         )
+
+
+# BO-4300c-3: finalize no longer lists registered worktrees and composes an
+# "unresolvable target" error naming the candidates (FIN-100g-3, FIN-100g-3-i).
+# It asks the workspace maker for the named target's workspace and accepts only a
+# ready answer; any other answer ends the run with an error quoting what came
+# back (unit_tests/build_orchestration/test_bo_4300c_3.py). These five tests
+# state the retired candidate-listing error and stay as strict expected failures
+# (see unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestUnresolvableTargetErrorFIN100g3.test_unresolvable_target_error_names_target",
+    "TestUnresolvableTargetErrorFIN100g3.test_unresolvable_target_error_lists_expected_forms",
+    "TestUnresolvableTargetErrorFIN100g3.test_unresolvable_target_error_lists_candidate_worktrees",
+    "TestUnresolvableTargetErrorFIN100g3.test_unresolvable_target_error_distinct_from_generic",
+    "TestUnresolvableTargetAbortOrderingFIN100g3i.test_found_false_return_precedes_main_branch_abort",
+)

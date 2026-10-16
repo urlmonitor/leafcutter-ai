@@ -92,6 +92,7 @@ from pathlib import Path
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
+from _workspace_harness_defaults import inline_workspace_block, ready_workspace_args
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -115,7 +116,6 @@ _WORKTREE_SETUP_PATH_RE = re.compile(
     r'"(/[^"]*\.leafcutter/scripts/setup_ticket_worktree\.py)"'
 )
 
-# ---------------------------------------------------------------------------
 # The in-repository worktree-setup stub -- a self-contained copy of
 # test_acd_2100a_1.py's own `_IN_REPO_STUB` (that file's own convention of
 # not depending on other test files' private internals). Its own file
@@ -124,7 +124,6 @@ _WORKTREE_SETUP_PATH_RE = re.compile(
 # CORRECT project regardless of the run's own starting cwd -- exactly what
 # every scenario below needs once the shared resolution snippet has located
 # this script's absolute, repository-anchored path.
-# ---------------------------------------------------------------------------
 
 _WORKTREE_SETUP_STUB = textwrap.dedent(
     """\
@@ -168,11 +167,6 @@ _WORKTREE_SETUP_STUB = textwrap.dedent(
         sys.exit(main())
     """
 )
-
-
-# ---------------------------------------------------------------------------
-# Fixture builders
-# ---------------------------------------------------------------------------
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -483,13 +477,14 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     {calls: [...], result: ..., error?: ...} payload.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
 
+    # BO-4300c-3: the workspace is the maker's ready answer, handed in as args.workspace.
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
 

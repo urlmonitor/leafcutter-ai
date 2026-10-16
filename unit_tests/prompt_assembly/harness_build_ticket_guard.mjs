@@ -230,7 +230,25 @@ const recordMode = !!scenario.tickets;
 const ticketConfigs = scenario.tickets || {};
 const ticketPaths = Object.keys(ticketConfigs);
 
-const source = readFileSync(scriptPath, "utf8").replace(
+// BO-4300c-3: a raw templates/workflows-js/<name>.js carries only an EMPTY
+// WORKSPACE-ANSWER marker pair (the build fills it from the single tracked
+// source). Fill it here the same way so the template runs; a script that
+// already holds the block (a deployed copy) or carries no pair is untouched.
+function inlineWorkspaceBlock(text) {
+  const start = "// WORKSPACE-ANSWER-START";
+  const end = "// WORKSPACE-ANSWER-END";
+  const s = text.indexOf(start);
+  const e = text.indexOf(end);
+  if (s < 0 || e < 0 || e < s) return text;
+  if (text.slice(s + start.length, e).trim() !== "") return text;
+  const block = readFileSync(
+    join(REPO_ROOT, "templates", "workflows-js", "_shared", "workspace-answer.js"),
+    "utf8"
+  );
+  return text.slice(0, s + start.length) + "\n" + block + "\n" + text.slice(e);
+}
+
+const source = inlineWorkspaceBlock(readFileSync(scriptPath, "utf8")).replace(
   /^export const meta/m,
   "const meta"
 );
@@ -1174,10 +1192,24 @@ const run = new AsyncFunction(
 
 const defaultArgs = {
   ticket_path: "/fake/worktree/tickets/TICKET-example.md",
-  // Supplying worktree_path makes the script trust the caller and skip the
-  // ambient git check, so the harness never shells out.
   worktree_path: "/fake/worktree",
 };
+
+// BO-4300c-3: a workflow takes its workspace only from the maker's ready answer
+// (args.workspace) or one maker dispatch. This harness hands in a ready answer
+// at the run's own worktree location unless the scenario supplies its own
+// `workspace` (or sets no_default_workspace), so a scenario about a LATER step
+// is not stopped at the workspace step.
+function withReadyWorkspace(runArgs) {
+  if (scenario.no_default_workspace === true) return runArgs;
+  if (runArgs && Object.prototype.hasOwnProperty.call(runArgs, "workspace")) return runArgs;
+  const where =
+    (runArgs && (runArgs.worktree_path || runArgs.caller_worktree_path)) || "/fake/worktree";
+  return {
+    ...(runArgs || {}),
+    workspace: { status: "ok", workspace_path: where, worktree_path: where, branch: "feature/harness-default" },
+  };
+}
 
 let result = null;
 let errorMessage = null;
@@ -1191,7 +1223,7 @@ try {
       logs.push(String(msg));
     },
     () => {},
-    scenario.args !== undefined ? scenario.args : defaultArgs,
+    withReadyWorkspace(scenario.args !== undefined ? scenario.args : defaultArgs),
     { total: null, spent: () => 0, remaining: () => Infinity },
     async () => ({})
   );

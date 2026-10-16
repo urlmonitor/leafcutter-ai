@@ -189,5 +189,17 @@ class TestUnwrapIsWiredIntoTheWorkflow(unittest.TestCase):
         self.assertTrue(isinstance(payload, dict) and payload.get("worktree_undetermined") is True)
 
 
+# BO-4300c-3: the workflow no longer reads worktree facts through a repo-facts
+# probe, so there is no facts envelope to unwrap (see
+# unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestPlainFactsEnvelopeIsParsedOnceAndReturnedUnchanged.test_plain_facts_envelope_is_parsed_once_and_returned_unchanged",
+    "TestUnparseableOrFailedFactsReadStillRefusesWithoutGuessing.test_unparseable_or_failed_facts_read_still_refuses_without_guessing",
+    "TestUnwrapIsWiredIntoTheWorkflow.test_facts_envelope_unwrapping_is_reachable_from_the_workflow_top_level_body",
+)
+
 if __name__ == "__main__":
     unittest.main()

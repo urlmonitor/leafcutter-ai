@@ -1,42 +1,51 @@
 """
 MODULE: unit_tests/workflows/test_bo2400f_13_workspace_refusal_workflow.py
-GOAL: RED behavioural (workflow-level) tests for the BO-2400f-13 family —
+GOAL: Behavioural (workflow-level) tests for the BO-2400f-13 family --
       BO-2400f-13, BO-2400f-13-i, BO-2400f-13-ii, BO-2400f-13-iii, and
-      BO-2400f-13-iv — driving fast-lane-ship.js's Phase 1 (Worktree) guard
+      BO-2400f-13-iv -- driving fast-lane-ship.js's Phase 1 (Worktree) guard
       through unit_tests/_workflow_engine_harness.py's run_workflow_under_e2().
 
-=== Target contract (greenfield today) ===
+=== Restated for BO-4300c-3 (test-drift repair, classification: test_drift) ===
 
-Today, fast-lane-ship.js's ONLY check on the worktree phase result is:
+Before BO-4300c-3 fast-lane-ship.js read a worktree-phase payload keyed by
+``outcome`` (``opened`` / ``refused``), treated a payload with a path but no
+outcome as a fail-closed refusal, and ended an occupied workspace with a
+distinct ``refused`` terminal status carrying the refusal's facts as structured
+fields.
 
-    if (!worktreeResult || !worktreeResult.worktree_path) {
-      return { status: "error", message: "...", failing_phase: "worktree" };
-    }
+The run now takes its workspace from the workspace maker's answer and from
+nowhere else (BO-4300c-2 / BO-4300c-3): one JSON object whose ``status`` is
+``"ok"`` and whose ``workspace_path`` is a non-empty string. Anything else --
+a refusal included -- ends the run with ``status: "error"`` and
+``abort_reason: "workspace-not-ready"``, quoting what was received. The same
+intent survives in the maker's terms:
 
-This means:
-  - A refusal payload (no worktree_path) already halts the run today — but
-    the terminal status is the generic "error", never the distinct
-    "refused" outcome the AC requires, and none of the refusal's facts
-    (occupant, uncommitted_changes, published, options, message) are
-    relayed to the operator at all.
-  - A payload that HAS worktree_path but a null/absent `outcome` (the
-    fail-closed case BO-2400f-13 requires) is treated as a SUCCESS today —
-    the run proceeds straight to Resolve. This is the sharpest RED case:
-    a payload the AC says must refuse instead builds.
-  - A fully "opened" payload's `created` / `base_commit` /
-    `base_matches_origin_main` facts (BO-2400f-13-iv) are never read or
-    relayed anywhere in the script.
+  * an occupied workspace stops the run before ANY dispatch, so no downstream
+    step and no release step runs;
+  * the refusal's facts (who occupies the workspace, the unsent work, the
+    options and which of them destroy) still reach the operator -- as the quoted
+    answer in the stop message;
+  * an answer that is not unmistakably "ok" with a workspace path (the legacy
+    empty-path shape, an empty reply, a path with no status) fails closed
+    before Resolve;
+  * a ready answer proceeds, proved by PRESENCE of the next dispatch, and its
+    newness / base-commit facts ride the terminal payload.
+
+The maker's answer is handed to the workflow as ``args.workspace`` (the way an
+entry skill passes it, BO-4300a-1-ib), so each hostile or refused shape reaches
+the workflow exactly as written; the harness does not restate it.
 
 === Why this is not a grep test ===
 
 Every assertion below drives fast-lane-ship.js through run_workflow_under_e2(),
 which executes the script's REAL top-level control flow in a Node.js
-subprocess (inside a locked-down vm context — see _workflow_engine_harness.py)
+subprocess (inside a locked-down vm context -- see _workflow_engine_harness.py)
 and records every agent() dispatch verbatim, plus the script's own terminal
 return value. Nothing here inspects the JS source text.
 """
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -64,12 +73,13 @@ _BUILD_AGENT_TYPES = {"python-coder", "test-writer"}
 
 
 def _run_lane(
-    ac_id: str, label_responses: dict[str, Any], args: dict[str, Any] | None = None
+    ac_id: str, workspace_answer: Any, label_responses: dict[str, Any] | None = None
 ) -> HarnessResult:
+    """Run the lane with the maker's answer handed in as args.workspace."""
     return run_workflow_under_e2(
         _WORKFLOW_PATH,
-        label_responses=label_responses,
-        args={"ac": ac_id, **(args or {})},
+        label_responses=label_responses or {},
+        args={"ac": ac_id, "workspace": workspace_answer},
     )
 
 
@@ -79,6 +89,22 @@ def _calls_with_label(result: HarnessResult, label: str) -> list:
 
 def _labels_seen(result: HarnessResult) -> list[str | None]:
     return [c.label for c in result.agent_calls]
+
+
+def _quoted(payload: dict[str, Any]) -> str:
+    """The stop message, with every JSON string made comparable (compact form)."""
+    return payload.get("message") or ""
+
+
+def _refusal(**refusal: Any) -> dict[str, Any]:
+    """A refused maker answer carrying ``refusal`` facts (status states refused)."""
+    return {
+        "status": "refused",
+        "code": "WORKSPACE_OCCUPIED",
+        "branch": "fast-lane/BO-STUB-1",
+        "refusal": {"reason": "workspace_occupied", "ac_id": "BO-STUB-1", **refusal},
+        "message": "The workspace for BO-STUB-1 is occupied.",
+    }
 
 
 class _FixtureCase(unittest.TestCase):
@@ -97,32 +123,21 @@ class TestOccupiedWorkspaceRefusesBeforeAnyDispatch(_FixtureCase):
     def test_occupied_workspace_refuses_before_any_dispatch(self) -> None:
         # covers: BO-2400f-13
         # angle: criterion
-        refusal_payload = {
-            "outcome": "refused",
-            "branch": "fast-lane/BO-STUB-1",
-            "refusal": {
-                "reason": "workspace_occupied",
-                "ac_id": "BO-STUB-1",
-                "occupied_path": str(self.worktree_root / "worktrees" / "bo-stub-1"),
-                "occupant": "foreign",
-                "occupant_branch": None,
-                "uncommitted_changes": None,
-                "published": {"pushed": None, "pr_url": None, "pr_lookup": "not_attempted"},
-                "options": [
-                    {"action": "inspect", "description": "Look inside the workspace.", "destructive": False}
-                ],
-                "message": "The workspace for BO-STUB-1 is occupied at <path>.",
-            },
-        }
-        result = _run_lane("BO-STUB-1", {"fastlane-worktree": refusal_payload})
+        refusal_payload = _refusal(
+            occupied_path=str(self.worktree_root / "worktrees" / "bo-stub-1"),
+            occupant="foreign",
+            options=[
+                {"action": "inspect", "description": "Look inside the workspace.", "destructive": False}
+            ],
+        )
+        result = _run_lane("BO-STUB-1", refusal_payload)
 
         labels = _labels_seen(result)
         self.assertEqual(
             labels,
-            ["fastlane-worktree"],
-            f"Only the worktree-phase dispatch may occur before/at the refusal — "
-            f"the operator has paid for exactly one check. Got labels: {labels}. "
-            f"stderr={result.stderr!r}",
+            [],
+            f"No dispatch of any kind may follow a refused workspace answer. "
+            f"Got labels: {labels}. stderr={result.stderr!r}",
         )
         for forbidden in _DOWNSTREAM_LABELS:
             self.assertFalse(
@@ -132,37 +147,22 @@ class TestOccupiedWorkspaceRefusesBeforeAnyDispatch(_FixtureCase):
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
-        self.assertEqual(
-            payload.get("status"),
-            "refused",
-            f"Expected the distinct 'refused' terminal status (today's code "
-            f"returns the generic 'error'). Got: {payload}",
-        )
+        self.assertEqual(payload.get("status"), "error", f"Got: {payload}")
+        self.assertEqual(payload.get("abort_reason"), "workspace-not-ready", f"Got: {payload}")
+        self.assertIn("WORKSPACE_OCCUPIED", _quoted(payload), f"Got: {payload}")
         self.assertFalse(payload.get("pr_url"))
 
 
 class TestOccupiedRefusalDoesNotInvokeRelease(_FixtureCase):
-    """BO-2400f-13-iii: the refusal precedes the claim by two phases — no release."""
+    """BO-2400f-13-iii: the refusal precedes the claim by two phases -- no release."""
 
     def test_refusing_run_does_not_invoke_the_release_step(self) -> None:
         # covers: BO-2400f-13-iii
         # angle: failure
-        refusal_payload = {
-            "outcome": "refused",
-            "branch": "fast-lane/BO-STUB-1",
-            "refusal": {
-                "reason": "workspace_occupied",
-                "ac_id": "BO-STUB-1",
-                "occupied_path": "/tmp/occupied",
-                "occupant": "foreign",
-                "occupant_branch": None,
-                "uncommitted_changes": None,
-                "published": {"pushed": None, "pr_url": None, "pr_lookup": "not_attempted"},
-                "options": [],
-                "message": "occupied",
-            },
-        }
-        result = _run_lane("BO-STUB-1", {"fastlane-worktree": refusal_payload})
+        refusal_payload = _refusal(
+            occupied_path="/tmp/occupied", occupant="foreign", options=[]
+        )
+        result = _run_lane("BO-STUB-1", refusal_payload)
 
         release_labels = [lbl for lbl in _labels_seen(result) if lbl and lbl.startswith("release-on")]
         self.assertEqual(
@@ -173,42 +173,50 @@ class TestOccupiedRefusalDoesNotInvokeRelease(_FixtureCase):
         )
         self.assertFalse(_calls_with_label(result, "claim-connected"))
         self.assertIsNotNone(result.result)
-        self.assertEqual(result.result.get("status"), "refused", f"Got: {result.result}")
+        self.assertEqual(result.result.get("status"), "error", f"Got: {result.result}")
+        self.assertEqual(
+            result.result.get("abort_reason"), "workspace-not-ready", f"Got: {result.result}"
+        )
 
 
 class TestBlankOrMissingOutcomeRefuses(_FixtureCase):
-    """BO-2400f-13: FAIL CLOSED on an unreadable/legacy worktree payload."""
+    """BO-2400f-13: FAIL CLOSED on an unreadable/legacy workspace answer."""
 
-    def _assert_refuses_and_no_resolver(self, payload: dict[str, Any], case_name: str) -> None:
-        result = _run_lane("BO-STUB-1", {"fastlane-worktree": payload})
+    def _assert_refuses_and_no_resolver(self, answer: Any, case_name: str) -> None:
+        result = _run_lane("BO-STUB-1", answer)
 
         self.assertFalse(
             _calls_with_label(result, "resolve-connected"),
-            f"[{case_name}] An unreadable/legacy worktree outcome must refuse "
+            f"[{case_name}] An unreadable/legacy workspace answer must refuse "
             f"before Resolve, never proceed to dispatch the resolver. "
             f"Labels seen: {_labels_seen(result)}. stderr={result.stderr!r}",
         )
+        self.assertEqual(
+            _labels_seen(result), [], f"[{case_name}] No dispatch may follow the stop."
+        )
         self.assertIsNotNone(result.result, f"[{case_name}] stderr={result.stderr!r}")
         self.assertEqual(
-            result.result.get("status"),
-            "refused",
+            result.result.get("status"), "error", f"[{case_name}] Got: {result.result}"
+        )
+        self.assertEqual(
+            result.result.get("abort_reason"),
+            "workspace-not-ready",
             f"[{case_name}] Got: {result.result}",
         )
         self.assertIn(
-            "could not be determined",
-            (result.result.get("message") or "").lower(),
-            f"[{case_name}] The refusal must say occupancy could not be "
-            f"determined. Got: {result.result}",
+            "Received:",
+            _quoted(result.result),
+            f"[{case_name}] The stop must quote what it received. Got: {result.result}",
         )
 
     def test_blank_or_missing_outcome_refuses_rather_than_proceeding(self) -> None:
         # covers: BO-2400f-13
         # angle: failure
         """Three fail-closed shapes in turn: the legacy empty-path success
-        shape, a totally empty reply, and — the sharpest case — a reply that
-        DOES carry a worktree_path but whose outcome is explicitly null. Today's
-        code treats the third shape as a SUCCESS (proceeds to Resolve) because
-        its only check is `!worktreeResult.worktree_path`."""
+        shape, a totally empty reply, and -- the sharpest case -- an answer that
+        DOES carry a worktree_path but states no status. That last shape was
+        once read as a SUCCESS because the only check was on the path; the one
+        acceptance predicate takes the location only from a ready answer."""
         self._assert_refuses_and_no_resolver(
             {"worktree_path": ""}, "legacy-blank-worktree-path"
         )
@@ -229,47 +237,41 @@ class TestOwnLeftoverRefusalReachesOperator(_FixtureCase):
     def test_own_leftover_refusal_reaches_the_operator_with_no_dispatch(self) -> None:
         # covers: BO-2400f-13-i
         # angle: criterion
-        refusal_payload = {
-            "outcome": "refused",
-            "branch": "fast-lane/BO-STUB-1",
-            "refusal": {
-                "reason": "workspace_occupied",
-                "ac_id": "BO-STUB-1",
-                "occupied_path": "/tmp/own-leftover",
-                "occupant": "own_prior_attempt",
-                "occupant_branch": "fast-lane/BO-STUB-1",
-                "uncommitted_changes": True,
-                "published": {"pushed": False, "pr_url": None, "pr_lookup": "ok"},
-                "options": [
-                    {"action": "inspect", "description": "Look inside.", "destructive": False},
-                    {"action": "clear", "description": "Clear and re-run.", "destructive": True},
-                    {"action": "elsewhere", "description": "Aim the lane elsewhere.", "destructive": False},
-                ],
-                "message": "Your own earlier attempt at BO-STUB-1 left uncommitted work.",
-            },
-        }
-        result = _run_lane("BO-STUB-1", {"fastlane-worktree": refusal_payload})
+        refusal_payload = _refusal(
+            occupied_path="/tmp/own-leftover",
+            occupant="own_prior_attempt",
+            occupant_branch="fast-lane/BO-STUB-1",
+            uncommitted_changes=True,
+            published={"pushed": False, "pr_url": None, "pr_lookup": "ok"},
+            options=[
+                {"action": "inspect", "description": "Look inside.", "destructive": False},
+                {"action": "clear", "description": "Clear and re-run.", "destructive": True},
+                {"action": "elsewhere", "description": "Aim the lane elsewhere.", "destructive": False},
+            ],
+        )
+        result = _run_lane("BO-STUB-1", refusal_payload)
 
         for forbidden in _DOWNSTREAM_LABELS:
             self.assertFalse(_calls_with_label(result, forbidden))
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
-        self.assertEqual(payload.get("status"), "refused", f"Got: {payload}")
-        refusal = payload.get("refusal") or {}
-        self.assertEqual(
-            refusal.get("occupant"),
-            "own_prior_attempt",
+        self.assertEqual(payload.get("status"), "error", f"Got: {payload}")
+        message = _quoted(payload)
+        # The facts reach the operator inside the quoted answer, each as the maker wrote it.
+        self.assertIn(
+            '"occupant":"own_prior_attempt"',
+            message,
             f"The occupant classification must reach the operator. Got: {payload}",
         )
-        self.assertIs(
-            refusal.get("uncommitted_changes"),
-            True,
+        self.assertIn(
+            '"uncommitted_changes":true',
+            message,
             f"The uncommitted-changes fact must reach the operator. Got: {payload}",
         )
-        self.assertEqual(
-            (refusal.get("published") or {}).get("pushed"),
-            False,
+        self.assertIn(
+            '"pushed":false',
+            message,
             f"The published/pushed fact must reach the operator. Got: {payload}",
         )
 
@@ -280,48 +282,44 @@ class TestForeignOccupantRefusalReachesOperator(_FixtureCase):
     def test_foreign_occupant_refusal_reaches_the_operator_with_no_dispatch(self) -> None:
         # covers: BO-2400f-13-ii
         # angle: criterion
-        refusal_payload = {
-            "outcome": "refused",
-            "branch": "fast-lane/BO-STUB-1",
-            "refusal": {
-                "reason": "workspace_occupied",
-                "ac_id": "BO-STUB-1",
-                "occupied_path": "/tmp/foreign-occupant",
-                "occupant": "foreign",
-                "occupant_branch": "feature/unrelated-work",
-                "occupant_kind": "registered_worktree_other_branch",
-                "options": [
-                    {"action": "inspect", "description": "Look inside.", "destructive": False}
-                ],
-                "message": "The workspace is occupied by unrelated work on feature/unrelated-work.",
-            },
-        }
-        result = _run_lane("BO-STUB-1", {"fastlane-worktree": refusal_payload})
+        refusal_payload = _refusal(
+            occupied_path="/tmp/foreign-occupant",
+            occupant="foreign",
+            occupant_branch="feature/unrelated-work",
+            occupant_kind="registered_worktree_other_branch",
+            options=[
+                {"action": "inspect", "description": "Look inside.", "destructive": False}
+            ],
+        )
+        result = _run_lane("BO-STUB-1", refusal_payload)
 
         for forbidden in _DOWNSTREAM_LABELS:
             self.assertFalse(_calls_with_label(result, forbidden))
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
-        self.assertEqual(payload.get("status"), "refused", f"Got: {payload}")
-        refusal = payload.get("refusal") or {}
-        self.assertEqual(
-            refusal.get("occupant"),
-            "foreign",
+        self.assertEqual(payload.get("status"), "error", f"Got: {payload}")
+        message = _quoted(payload)
+        self.assertIn(
+            '"occupant":"foreign"',
+            message,
             f"The foreign classification must reach the operator. Got: {payload}",
         )
-        self.assertEqual(
-            refusal.get("occupant_kind"),
-            "registered_worktree_other_branch",
+        self.assertIn(
+            '"occupant_kind":"registered_worktree_other_branch"',
+            message,
             f"The occupant_kind must reach the operator. Got: {payload}",
         )
-        options = refusal.get("options") or []
-        self.assertTrue(options, f"Options must reach the operator. Got: {payload}")
-        for opt in options:
-            self.assertFalse(
-                opt.get("destructive", True),
-                f"No option on a foreign refusal may be destructive. Got: {opt}",
-            )
+        self.assertIn(
+            '"action":"inspect"',
+            message,
+            f"Options must reach the operator. Got: {payload}",
+        )
+        self.assertNotIn(
+            '"destructive":true',
+            message,
+            f"No option on a foreign refusal may be destructive. Got: {payload}",
+        )
 
 
 class TestFreeLocationProceedsToDownstreamDispatches(_FixtureCase):
@@ -330,8 +328,10 @@ class TestFreeLocationProceedsToDownstreamDispatches(_FixtureCase):
     def test_free_location_proceeds_to_the_downstream_dispatches(self) -> None:
         # covers: BO-2400f-13-iv
         # angle: criterion
-        opened_payload = {
-            "outcome": "opened",
+        ready_answer = {
+            "status": "ok",
+            "code": "OK",
+            "workspace_path": str(self.worktree_root),
             "worktree_path": str(self.worktree_root),
             "branch": "fast-lane/BO-STUB-1",
             "ac_store_path": str(self.worktree_root / "docs" / "acceptance-criteria"),
@@ -341,46 +341,74 @@ class TestFreeLocationProceedsToDownstreamDispatches(_FixtureCase):
         }
         result = _run_lane(
             "BO-STUB-1",
-            {
-                "fastlane-worktree": opened_payload,
-                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
-            },
+            ready_answer,
+            {"resolve-connected": {"ac_ids": [], "message": "0 to build"}},
         )
 
         self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
         payload = result.result
         self.assertNotEqual(
-            payload.get("status"),
-            "refused",
-            f"A free-location opened workspace must never be refused. Got: {payload}",
+            payload.get("abort_reason"),
+            "workspace-not-ready",
+            f"A ready workspace answer must never be refused. Got: {payload}",
         )
         self.assertTrue(
             _calls_with_label(result, "resolve-connected"),
-            f"An opened workspace must proceed to dispatch the resolver "
-            f"(proof by PRESENCE, not merely the absence of a refusal — a "
+            f"A ready workspace must proceed to dispatch the resolver "
+            f"(proof by PRESENCE, not merely the absence of a refusal -- a "
             f"crashed run would also satisfy that weaker check). "
             f"Labels seen: {_labels_seen(result)}. stderr={result.stderr!r}",
         )
 
         # The newness/base-commit facts (BO-2400f-13-iv) must ride the payload
-        # all the way to the operator — today nothing in fast-lane-ship.js
-        # reads or relays created/base_commit/base_matches_origin_main at all.
+        # all the way to the operator.
         self.assertIn(
             "created",
             payload,
             f"The terminal payload must carry whether the workspace is new. Got: {payload}",
         )
-        self.assertIn(
-            "base_commit",
-            payload,
+        self.assertEqual(payload.get("created"), True, f"Got: {payload}")
+        self.assertEqual(
+            payload.get("base_commit"),
+            "a" * 40,
             f"The terminal payload must name the mainline point the workspace "
             f"was cut from. Got: {payload}",
         )
-        self.assertIn(
-            "base_matches_origin_main",
-            payload,
+        self.assertIs(
+            payload.get("base_matches_origin_main"),
+            True,
             f"The terminal payload must say whether the base matches the "
             f"current origin/main. Got: {payload}",
+        )
+
+    def test_a_ready_answer_scripted_as_the_maker_dispatch_is_taken_the_same_way(self) -> None:
+        # covers: BO-2400f-13-iv
+        # angle: seam
+        """The same ready answer, delivered as the reply to the ONE maker dispatch
+        (no args.workspace, the run names its project root), is accepted and the
+        run proceeds -- so the proof above does not depend on the hand-in path."""
+        ready_answer = {
+            "status": "ok",
+            "workspace_path": str(self.worktree_root),
+            "branch": "fast-lane/BO-STUB-1",
+            "created": False,
+            "base_commit": "b" * 40,
+            "base_matches_origin_main": False,
+        }
+        result = run_workflow_under_e2(
+            _WORKFLOW_PATH,
+            label_responses={
+                "fastlane-worktree": ready_answer,
+                "resolve-connected": {"ac_ids": [], "message": "0 to build"},
+            },
+            args={"ac": "BO-STUB-1", "project_root": str(self.worktree_root)},
+        )
+        self.assertIsNotNone(result.result, f"stderr={result.stderr!r}")
+        self.assertEqual(_labels_seen(result)[:2], ["fastlane-worktree", "resolve-connected"])
+        self.assertEqual(result.result.get("base_commit"), "b" * 40, f"Got: {result.result}")
+        self.assertIs(result.result.get("created"), False, f"Got: {result.result}")
+        self.assertEqual(
+            json.dumps(result.result.get("base_matches_origin_main")), "false", f"Got: {result.result}"
         )
 
 

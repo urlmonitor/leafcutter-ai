@@ -144,54 +144,58 @@ class TestBP600WorkflowGuardsHalt:
             f"target file dirty (BP-600a-3). Labels dispatched: {labels}"
         )
 
-    def test_ac_bp600a2_blocked_isolation_check_halts_with_no_downstream_dispatch(self):
-        # covers: BP-600a-2
-        """A 'blocked' isolation-check response must halt immediately — no
-        self-isolate, no guard-checks, nothing downstream."""
+    # BO-4300c-3 (test-drift repair, classification: test_drift): the two tests
+    # that stood here drove the retired 'isolation-check' / 'self-isolate' pair
+    # (a blocked check, then a blocked worktree creation). The run now has ONE
+    # workspace step, the maker's answer; a refusal or an error there halts the
+    # run in the same way -- immediately, with nothing downstream -- so the two
+    # halts are restated against that step.
+
+    def test_ac_bp600a2_a_refused_workspace_halts_with_no_downstream_dispatch(self):
+        # covers: BO-4300c-3
+        # angle: failure
+        """A 'refused' workspace answer must halt immediately -- no guard-checks,
+        nothing downstream; the one dispatch is the workspace step itself."""
         result = run_workflow_under_e2(
             _JS_PATH,
             label_responses={
-                "isolation-check": {
-                    "status": "blocked",
-                    "is_repo": True,
-                    "session_cwd": "/repo",
-                    "needs_isolation": False,
-                    "message": "isolation-check refused to proceed",
+                "workspace-ensure": {
+                    "status": "refused",
+                    "code": "WORKSPACE_OCCUPIED",
+                    "message": "the workspace for this fix is occupied",
                 }
             },
+            args={"project_root": "/tmp/bo600a2-project"},
         )
-        assert result.result is not None and result.result.get("status") == "blocked"
-        assert result.dispatch_count == 1, (
-            "A blocked isolation-check must halt before any further dispatch "
-            f"(BP-600a-2). Labels dispatched: {_labels(result)}"
+        assert result.result is not None and result.result.get("status") == "error"
+        assert result.result.get("abort_reason") == "workspace-not-ready"
+        assert "WORKSPACE_OCCUPIED" in str(result.result.get("message")), result.result
+        assert _labels(result) == ["workspace-ensure"], (
+            "A refused workspace must halt before any further dispatch. "
+            f"Labels dispatched: {_labels(result)}"
         )
 
-    def test_ac_bp600a2_blocked_self_isolate_halts_with_no_downstream_dispatch(self):
-        # covers: BP-600a-2
-        """A 'blocked' self-isolate response must halt immediately with
-        halt_reason 'isolation_failed' — no guard-checks, nothing downstream."""
+    def test_ac_bp600a2_an_errored_workspace_halts_with_no_downstream_dispatch(self):
+        # covers: BO-4300c-3
+        # angle: failure
+        """An 'error' workspace answer must halt immediately, quoting what was
+        received -- no guard-checks, nothing downstream."""
         result = run_workflow_under_e2(
             _JS_PATH,
             label_responses={
-                "isolation-check": {
-                    "status": "ok",
-                    "is_repo": False,
-                    "session_cwd": "/untracked/workspace",
-                    "initial_branch": "",
-                    "needs_isolation": True,
-                },
-                "self-isolate": {
-                    "status": "blocked",
-                    "worktree_root": "",
-                    "branch": "",
+                "workspace-ensure": {
+                    "status": "error",
+                    "code": "CLONE_FAILED",
                     "message": "worktree creation failed",
-                },
+                }
             },
+            args={"project_root": "/tmp/bo600a2-project"},
         )
         assert result.result is not None
-        assert result.result.get("status") == "blocked"
-        assert result.result.get("halt_reason") == "isolation_failed"
-        assert result.dispatch_count == 2, (
-            "A blocked self-isolate must halt before guard-checks or any later "
+        assert result.result.get("status") == "error"
+        assert result.result.get("abort_reason") == "workspace-not-ready"
+        assert "worktree creation failed" in str(result.result.get("message")), result.result
+        assert result.dispatch_count == 1, (
+            "A errored workspace must halt before guard-checks or any later "
             f"phase. Labels dispatched: {_labels(result)}"
         )

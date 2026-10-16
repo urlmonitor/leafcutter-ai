@@ -319,9 +319,21 @@ def run_plan_feature_e2(
     Raises:
         NodeScriptError: If the Node.js process exits non-zero.
     """
-    source = strip_exports(read_e2_source())
+    from _workspace_harness_defaults import (  # noqa: PLC0415
+        inline_workspace_block,
+        ready_workspace_args,
+    )
 
-    args_obj: dict[str, Any] = {"userInput": user_input, "run_id": "test-run"}
+    # BO-4300c-3: the workflow takes its workspace only from the maker's ready
+    # answer; hand one in as args.workspace (a caller's extra_args still wins) and
+    # fill the template's empty WORKSPACE-ANSWER marker pair the way the build does.
+    source = strip_exports(inline_workspace_block(read_e2_source(), E2_PLAN_FEATURE_JS))
+
+    args_obj: dict[str, Any] = {
+        **ready_workspace_args(),
+        "userInput": user_input,
+        "run_id": "test-run",
+    }
     if extra_args:
         args_obj.update(extra_args)
 

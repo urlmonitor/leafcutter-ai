@@ -352,15 +352,20 @@ class TestFin100hLegitimateStatusCheckerDispatchesUnaffected:
 
     def test_ac_fin100h_ticket_state_dispatches_still_use_status_checker(self):
         # covers: FIN-100h
-        """Guard: 'pre-flight' (branch/worktree detection via git commands
-        status-checker already covers) and 'step-1-pr-probe' (gh pr list, a
-        read-only ticket/PR-state query) must remain on agentType
-        'status-checker'. The FIN-100h fix must be scoped to the two
-        capability-requiring dispatches (step-0-baseline, step-2-merge-main),
-        not a blanket removal of status-checker from the workflow.
+        """Guard: 'step-1-pr-probe' (gh pr list, a read-only ticket/PR-state
+        query) must remain on agentType 'status-checker'. The FIN-100h fix must
+        be scoped to the capability-requiring dispatches (step-0-baseline,
+        step-2-merge-main), not a blanket removal of status-checker from the
+        workflow.
+
+        BO-4300c-3: 'pre-flight' left this list. It is now the one workspace
+        maker dispatch, which runs a command and so goes to a shell-permitted
+        agent (ADR-073), never to status-checker; the branch read it still
+        makes when the maker's answer names no branch ('pre-flight-branch')
+        is the read-only part and stays on status-checker.
         """
         js = _js_text()
-        for label in ("pre-flight", "step-1-pr-probe"):
+        for label in ("pre-flight-branch", "step-1-pr-probe"):
             options = _get_dispatch_options(js, label)
             assert options, (
                 f"Could not locate the agent(...) dispatch labeled '{label}' "

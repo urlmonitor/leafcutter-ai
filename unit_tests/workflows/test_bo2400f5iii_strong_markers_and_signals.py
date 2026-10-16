@@ -89,8 +89,9 @@ class TestStrongMarkerWithFailureStatusIsDeclined(unittest.TestCase):
         cases = [
             ("fastlane-commit", "commit",
              {"status": "error", "reason": "Refusing this task. I am status-checker, scoped to ticket state"}),
-            ("fastlane-worktree", "worktree-agent",
-             {"outcome": None, "message": "I am declining: this is outside my role"}),
+            # BO-4300c-3: the former ("fastlane-worktree", "worktree-agent", ...) case is
+            # gone -- the workspace step is the maker's answer handed in as
+            # args.workspace, not a dispatch of the lane.
             ("test-writer-connected", "test-writer",
              {"status": "blocker", "message": "I am the pr-reviewer, not a test writer"}),
             ("resolve-connected", "status-checker",
@@ -132,7 +133,6 @@ class TestSuccessSignalIsAlwaysAResult(unittest.TestCase):
             ("fastlane-review", _with("fastlane-review", verdict_obtained=True, message="I declined to file the low findings"), True),
             ("resolve-connected", {"ac_ids": [AC_ID], "message": "I declined to include Y"}, True),
             ("fastlane-pr", _with("fastlane-pr", message="I declined to add labels"), True),
-            ("fastlane-worktree", _with("fastlane-worktree", outcome="opened", message="I declined to reuse the old one"), True),
             ("fastlane-context-bundle", _with("fastlane-context-bundle", message="I declined to include the stale layer"), True),
             ("check-producibility",
              {"producible": False, "reason": "I refuse to build a set with an unapproved member"}, False),
@@ -233,8 +233,10 @@ class TestContextBundleWithoutObtainedIsNotADecline(unittest.TestCase):
 class TestDeclinedStepMessageIsNeutral(unittest.TestCase):
     """The halt message must not claim the step was 'never attempted'."""
 
+    # BO-4300c-3: 'fastlane-worktree' / 'fastlane-worktree-verify' are no longer
+    # steps of the lane (see _bo2400f5iii_fixtures.WORKSPACE_ANSWER).
     _LABELS = (
-        "fastlane-worktree", "fastlane-worktree-verify", "resolve-connected",
+        "resolve-connected",
         "check-producibility", "claim-connected", "fastlane-context-bundle",
         "test-writer-connected", "coder-connected", "fastlane-review",
         "fastlane-changelog", "fastlane-commit", "fastlane-pr",

@@ -198,5 +198,17 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         self.assertEqual(_phase_calls(occupied), [])
 
 
+# BO-4300c-3: the workflow no longer names a location from where the run
+# started or probes whether something occupies it; the one workspace maker owns
+# that (see unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestStartFromUnrelatedWorktreeNamesSameLocationAsMain.test_run_started_in_an_unrelated_worktree_names_the_same_location_as_from_main",
+    "TestReachableFromTopLevelBody.test_worktree_start_and_occupancy_are_reachable_from_the_workflow_top_level_body",
+    "TestOccupiedLocationRefusesWithoutAnAlternative.test_occupied_location_refuses_without_choosing_an_alternative",
+)
+
 if __name__ == "__main__":
     unittest.main()

@@ -243,25 +243,39 @@ def test_halt_stops_subsequent_batches():
 
 
 def test_worktree_guard_returns_error_on_main_clone():
-    """Worktree guard must return status 'error' with worktree_required when on main."""
+    """A run is never carried on in the main clone: anything but a ready workspace answer stops it.
+
+    BO-4300c-3 (test-drift repair, classification: test_drift): the guard used to
+    probe whether ``.git`` was a directory (the main clone) and return
+    ``worktree_required`` / ``action_required``. The run now takes its workspace
+    only from the workspace maker's ready answer; an answer that is not ready --
+    here a refusal naming the main clone -- ends the run with an error that
+    quotes what was received, and nothing is dispatched. Asserted by RUNNING the
+    workflow, not by reading its text.
+    """
     if not _WORKFLOW_PATH.exists():
         pytest.fail(f"build-epic.js not found at {_WORKFLOW_PATH}.")
 
-    content = _WORKFLOW_PATH.read_text(encoding="utf-8")
+    import sys  # noqa: PLC0415
 
-    assert "worktree_required" in content, (
-        "build-epic.js must return a 'worktree_required' field in the error "
-        "response when the worktree guard detects the main clone."
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _workflow_engine_harness import run_workflow_under_e2  # noqa: PLC0415
+
+    refusal = {
+        "status": "refused",
+        "code": "MAIN_CHECKOUT",
+        "message": "the working copy is the main clone, which is never worked in",
+    }
+    result = run_workflow_under_e2(
+        _WORKFLOW_PATH, args={"workspace": refusal}, label_responses={}
     )
-
-    assert "action_required" in content, (
-        "build-epic.js must return an 'action_required' field instructing "
-        "the caller how to create a worktree."
-    )
-
-    assert re.search(r'git_type\s*===\s*["\']directory["\']', content), (
-        "build-epic.js must check if git_type === 'directory' to detect "
-        "the main clone (where .git is a directory, not a file)."
+    assert result.error == "", result.error
+    assert result.result is not None and result.result.get("status") == "error", result.result
+    assert result.result.get("abort_reason") == "workspace-not-ready", result.result
+    assert "MAIN_CHECKOUT" in str(result.result.get("message")), result.result
+    assert result.dispatch_count == 0, (
+        "No dispatch may follow a refused workspace answer. "
+        f"Dispatched: {[c.label for c in result.agent_calls]}"
     )
 
 

@@ -61,6 +61,24 @@ import tempfile
 import textwrap
 from pathlib import Path
 
+import pytest
+
+# BO-4300c-3 retired the step these three tests drive: plan-feature.js no longer
+# dispatches a 'worktree-setup' step that runs setup_ticket_worktree.py. The
+# workspace is the one workspace maker's ready answer, and the maker command the
+# workflow issues is anchored on the project root it is given
+# (unit_tests/build_orchestration/test_bo_4300a_1_ia.py,
+# test_bo_4300c_3.py). Each test below still states the retired behaviour, so it
+# is kept as a strict expected failure instead of being softened or removed;
+# classification: test_drift (production behaviour intentionally replaced).
+_RETIRED_BY_BO_4300C_3 = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "BO-4300c-3: plan-feature.js no longer runs a worktree-setup step of "
+        "its own; the workspace maker's answer replaces it"
+    ),
+)
+
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
@@ -450,6 +468,7 @@ def _setup_calls(payload: dict) -> list:
 # ---------------------------------------------------------------------------
 
 
+@_RETIRED_BY_BO_4300C_3
 def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
     # covers: ACD-2100a-1
     # angle: criterion
@@ -492,6 +511,7 @@ def test_worktree_step_runs_the_in_repo_copy_from_an_untracked_cwd():
         )
 
 
+@_RETIRED_BY_BO_4300C_3
 def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
     # covers: ACD-2100a-1
     # angle: reachability
@@ -562,6 +582,7 @@ def test_worktree_step_invocation_is_reached_from_the_workflow_entry_point():
         )
 
 
+@_RETIRED_BY_BO_4300C_3
 def test_wrong_copy_execution_is_observable_and_blocks():
     # covers: ACD-2100a-1
     # angle: failure

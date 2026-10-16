@@ -207,5 +207,19 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         self.assertIn(bfx.NAMED_LOCATION, setup_calls[0].prompt or "")
 
 
+# BO-4300c-3: the workflow no longer names a worktree location, probes occupants
+# or opens a worktree through a setup agent; the one workspace maker owns that
+# (see unit_tests/workflows/_bo4300c3_retired.py). The tests below state the
+# retired placement behaviour and stay as strict expected failures.
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestNewLocationIsNamedByTheWorkflow.test_new_worktree_location_is_named_by_the_workflow_and_is_a_child_of_the_base",
+    "TestNamedLocationNeverUnderTargetOrCheckout.test_new_worktree_location_is_never_under_the_target_or_any_checkout",
+    "TestReachableFromTopLevelBody.test_worktree_placement_is_reachable_from_the_workflow_top_level_body",
+    "TestRejectedResolutionFallsThroughToNaming.test_resolved_path_that_is_not_a_worktree_top_level_is_not_reused",
+)
+
 if __name__ == "__main__":
     unittest.main()

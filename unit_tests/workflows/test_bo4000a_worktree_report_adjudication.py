@@ -139,5 +139,17 @@ class TestReachableFromTopLevelBody(unittest.TestCase):
         self.assertTrue(_phase_calls(reuse))
 
 
+# BO-4300c-3: the workflow no longer adjudicates a worktree-opening agent's
+# report against an instructed location; the workspace is the maker's ready
+# answer (see unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestWrongReportedLocationRefusesBeforeAnyPhaseAgent.test_reported_location_other_than_instructed_stops_before_any_phase_agent",
+    "TestUnreadableResultRefusesDistinguishably.test_unreadable_worktree_result_refuses_distinguishably_from_wrong_location",
+    "TestReachableFromTopLevelBody.test_worktree_report_adjudication_is_reachable_from_the_workflow_top_level_body",
+)
+
 if __name__ == "__main__":
     unittest.main()

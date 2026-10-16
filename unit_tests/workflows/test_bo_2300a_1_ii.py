@@ -197,11 +197,17 @@ def test_pause_store_and_script_resolution_dispatch_to_shell_permitted_agent():
 
     hop1_targets = _target_calls(hop1)
     hop1_labels_seen = {c.label for c in hop1_targets}
-    assert {"resolve-worktree-setup-script-path", "pause-persist", "pause-persist-verify"} <= hop1_labels_seen, (
-        "Hop 1 (headless pause) must dispatch at least "
-        "resolve-worktree-setup-script-path, pause-persist, and "
+    # BO-4300c-3 removed the 'resolve-worktree-setup-script-path' dispatch: the
+    # workflow no longer resolves a setup script (the workspace is the maker's
+    # answer), so hop 1 now reaches the pause-store pair only.
+    assert {"pause-persist", "pause-persist-verify"} <= hop1_labels_seen, (
+        "Hop 1 (headless pause) must dispatch at least pause-persist and "
         f"pause-persist-verify to reach this test's scenario. Got labels: "
         f"{[c.label for c in hop1.agent_calls]}"
+    )
+    assert "resolve-worktree-setup-script-path" not in {c.label for c in hop1.agent_calls}, (
+        "BO-4300c-3: no run resolves a worktree-setup script path any more. "
+        f"Got labels: {[c.label for c in hop1.agent_calls]}"
     )
 
     gate_id = "final-gate"

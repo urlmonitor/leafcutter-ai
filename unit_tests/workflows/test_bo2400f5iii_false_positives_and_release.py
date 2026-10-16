@@ -61,9 +61,11 @@ _CASES: list[tuple[str, Any, dict[str, Any]]] = [
      {"status": "error", "failing_phase": "pull-request",
       "message_has": "open the PR manually",
       "has_keys": ["worktree_path", "branch", "ac_ids"]}),
-    ("fastlane-worktree",
-     {"outcome": None, "message": "Connection refused"},
-     {"status": "refused", "failing_phase": "worktree"}),
+    # BO-4300c-3: the former ("fastlane-worktree", {"outcome": None, "message":
+    # "Connection refused"}) case is gone. The workspace step is the maker's
+    # answer handed in as args.workspace, not a dispatch of the lane, and a
+    # non-ready answer ends the run as abort_reason 'workspace-not-ready'
+    # (unit_tests/build_orchestration/test_bo_4300c_3.py).
 ]
 
 
@@ -114,9 +116,11 @@ _POST_CLAIM = (
     "fastlane-context-bundle", "test-writer-connected", "coder-connected",
     "fastlane-review", "fastlane-changelog", "fastlane-commit",
 )
+# BO-4300c-3: 'fastlane-worktree' and 'fastlane-worktree-verify' are no longer
+# steps of the lane (the workspace is the maker's answer, handed in as
+# args.workspace; the second probe is gone), so they leave this list.
 _PRE_OR_AT_CLAIM = (
-    "fastlane-worktree", "fastlane-worktree-verify", "resolve-connected",
-    "check-producibility", "claim-connected", "fastlane-pr",
+    "resolve-connected", "check-producibility", "claim-connected", "fastlane-pr",
 )
 
 

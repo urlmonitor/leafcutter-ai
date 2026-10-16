@@ -174,6 +174,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from _plan_feature_harness_defaults import plan_feature_default_label_responses
+from _workspace_harness_defaults import (
+    apply_workspace_defaults,
+    inline_workspace_block,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -486,38 +490,6 @@ var console = {
 }
 
 
-# R2 CORRECTION (namespace-leak fix): a Node global-symbol-registry key, not
-# a string name, for the harness's OWN internal bookkeeping (captured calls /
-# contract violations). Top-level `var __capturedCalls__ = [];` inside the
-# bootstrap used to attach as a NON-CONFIGURABLE, ENUMERABLE, STRING-keyed
-# property directly on the sandbox's global object — reachable from the
-# WORKFLOW BODY itself via `Object.getOwnPropertyNames(globalThis)`, which is
-# exactly what `test_harness_exposes_only_the_engine_injected_globals`
-# (test_bp_1100b_4.py) enumerates and asserts equals EXACTLY
-# ADR_030_INJECTED_GLOBALS. That test started failing the moment round 2
-# landed (`__capturedCalls__`, `__contractViolations__`, `__labelResponses__`
-# all showed up as unexpected extra names) — confirmed by direct execution
-# against a pristine checkout of this fix, not by argument. A later `delete
-# globalThis.__capturedCalls__` cannot fix it either: top-level `var`
-# properties on a vm context's global object are non-configurable, so
-# `delete` throws `TypeError` in strict mode (verified by direct execution).
-# A Symbol-keyed global property (`globalThis[Symbol.for(...)] = state`) was
-# tried next and also confirmed BROKEN by direct execution: a vm context's
-# contextified global object does not reliably expose symbol-keyed own
-# properties back to the driver realm at all — `Object.getOwnPropertySymbols()`
-# on the shell object came back empty even immediately after the sandboxed
-# bootstrap assigned one, so the driver's own `Symbol.for(...)` lookup read
-# back `undefined` and crashed every test. The fix that actually works: the
-# bootstrap's wrapping IIFE (below) ENDS with a `return {...}` expression, so
-# `vm.runInContext()` hands the state object back to the driver as its
-# ordinary JS *completion value* (same mechanism `eval()` uses) — never as a
-# property of the sandbox's global object at all, visible or not.
-# `agent()`/`parallel()`/etc. (published onto `globalThis` by name below, so
-# the SEPARATE, later `vm.runInContext()` call for the target script body can
-# still see them) keep closing over the exact same `__capturedCalls__` /
-# `__contractViolations__` array objects by reference, so calls made during
-# that later run still land in the object the driver already holds.
-
 
 def _bootstrap_source_js() -> str:
     """Assemble the JS source that constructs every mock global INSIDE the
@@ -691,62 +663,8 @@ class E1CheckResult:
 #      object, and serialises them plus the script's own top-level return
 #      value (the terminal payload) to JSON on stdout — from the OUTER
 #      (unsandboxed) driver scope, which still has full Node.js access.
-#
-# Hardening changes (ticket 08):
-#   - __contractViolations__ array records harness-layer contract breaches.
-#   - parallel() now requires an ARRAY of zero-arg thunks as its sole argument.
-#     A non-array (spread-form) first argument records a violation and returns [].
-#   - agent() checks __labelResponses__ before falling back to the default stub.
-#   - Output format changed to {calls: [...], violations: [...]} (was a bare list).
-#
-# Hardening changes (BP-1100b-4, round 1):
-#   - The target script body now runs inside a Node `vm` context, not as a
-#     plain CommonJS module. Only agent/parallel/pipeline/phase/log/args/
-#     workflow/budget/console are contextified into it.
-#   - Added `pipeline()`, `workflow()` (leaf-invariant guard), and `budget`
-#     (read-only stub) to match the full ADR-030 injected-globals set.
-#   - Error handling for the sandboxed body moved OUTSIDE the vm context (the
-#     driver scope owns `process.stderr`/`process.stdout`; the sandboxed body
-#     itself has no `process` reference at all) — a script-level throw now
-#     surfaces via the returned promise's rejection rather than an inner
-#     try/catch, since an inner try/catch could not reach `process` to log it.
-#   - `Object.setPrototypeOf(__sandbox__, null)` closed the ONE escape route
-#     this round demonstrated (`globalThis.constructor.constructor`).
-#
-# Hardening changes (BP-1100b-4, round 2 — R2 FIX):
-#   - Round 1's null-prototype fix left the whole escape CLASS open: every
-#     mock global was still a driver-realm value (constructed in the outer
-#     shim scope before round 1's fix even ran), so
-#     `budget.constructor.constructor` (and the same route through six other
-#     injected globals, including `console`) still reached a live
-#     driver-realm `Function`. Freezing `budget` makes `setPrototypeOf` on it
-#     a silent no-op, so a "null every injected value's prototype too" patch
-#     was tried and confirmed insufficient before this fix was chosen.
-#   - The actual fix: every mock global is now DEFINED inside a bootstrap
-#     source string (see `_bootstrap_source_js()` / `_MOCK_GLOBAL_JS_SNIPPETS`
-#     in the Python module) executed via `vm.runInContext()` BEFORE the
-#     target script runs, in the SAME context the target script later runs
-#     in. Every function/object/array those definitions create is therefore
-#     a SANDBOX-REALM value.
-#   - `__capturedCalls__` / `__contractViolations__` live inside a wrapping
-#     IIFE closure and are handed back to the driver as that IIFE's (and the
-#     whole bootstrap script's) ordinary JS *completion value* — read
-#     directly off the `vm.runInContext()` call below as `__harnessState__`
-#     — never as any property, visible or not, of the sandbox's global
-#     object (R2 CORRECTION — see `_bootstrap_source_js()`). The original
-#     `var` approach attached them as own STRING-keyed properties of the
-#     sandbox's global object, reachable from the WORKFLOW BODY itself via
-#     `Object.getOwnPropertyNames(globalThis)` — confirmed by direct
-#     execution to make `test_harness_exposes_only_the_engine_injected_
-#     globals` (test_bp_1100b_4.py) fail the moment round 2 landed. A
-#     Symbol-keyed property was tried next and confirmed BROKEN by direct
-#     execution (Node's vm module does not reliably surface symbol-keyed own
-#     properties of a contextified global object back to the driver realm).
-#     Reading the completion value sidesteps the whole class of "which
-#     property mechanism" question — nothing is ever written to the sandbox
-#     object for this purpose at all. Reaching OUT to the driver realm was
-#     always the only real risk either fix closes; reading a foreign-realm
-#     plain array/object value FROM the driver, via any channel, is safe.
+# The history of why each piece exists (ticket 08 contract hardening, BP-1100b-4
+# rounds 1 and 2, the R2 namespace-leak correction) is in the module docstring.
 
 _JS_SHIM_TEMPLATE = r"""
 'use strict';
@@ -980,8 +898,19 @@ def _default_args_for_script(script_path: Path) -> dict[str, Any]:
             "workspace_setup_permission response supplied.",
             script_path,
         )
-        return {}
+    verdict = _run_preflight_verdict(repo_root) if repo_root is not None else {}
+    # BO-4300c-3: a DEPLOYED workflow (shared reference layout) sits in a tree
+    # that is no repository, so the pre-flight cannot read a registry there; the
+    # package checkout that holds this harness is where the verdict is read from.
+    package_root = Path(__file__).resolve().parents[1]
+    unreadable = not verdict or verdict.get("outcome") == "read_failure"
+    if unreadable and package_root != repo_root:
+        verdict = _run_preflight_verdict(package_root) or verdict
+    return {_WORKSPACE_SETUP_PERMISSION_ARGS_KEY: verdict} if verdict else {}
 
+
+def _run_preflight_verdict(repo_root: Path) -> dict[str, Any]:
+    """Run the real pre-flight script with ``repo_root`` as cwd; ``{}`` if it yields no verdict."""
     preflight_script = repo_root / _PREFLIGHT_SCRIPT_RELATIVE_PATH
     if not preflight_script.is_file():
         logger.warning(
@@ -1015,7 +944,7 @@ def _default_args_for_script(script_path: Path) -> dict[str, Any]:
         )
         return {}
 
-    return {_WORKSPACE_SETUP_PERMISSION_ARGS_KEY: verdict}
+    return verdict if isinstance(verdict, dict) else {}
 
 
 def _strip_exports(source: str) -> str:
@@ -1077,7 +1006,7 @@ def _build_shim(
     except OSError as exc:
         raise OSError(str(exc)) from exc
 
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, script_path))
 
     # Serialise label_responses to a JSON object literal for inline injection.
     label_responses_json = json.dumps(label_responses or {})
@@ -1139,11 +1068,36 @@ def _build_shim(
 # ---------------------------------------------------------------------------
 
 
+def _merge_workspace_defaults(
+    script_path: Path,
+    merged_args: dict[str, Any],
+    label_responses: dict[str, Any] | None,
+    workspace_default: str | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Apply BO-4300c-3's ready-workspace defaults; return (args, label_responses).
+
+    A run whose caller neither hands in ``args.workspace`` nor scripts the
+    workspace step's reply gets a ready workspace answer, so a test about a
+    LATER step is not stopped at the workspace step. A DEPLOYED copy (under
+    .claude/workflows) is the real thing, so its maker dispatch stays visible
+    ("label"); a template run hands the answer in ("args").
+    """
+    mode = workspace_default or ("label" if ".claude" in script_path.parts else "args")
+    merged_args, scripted_labels = apply_workspace_defaults(
+        script_path, merged_args, label_responses or {}, mode
+    )
+    return merged_args, {
+        **_default_label_responses_for_script(script_path),
+        **scripted_labels,
+    }
+
+
 def run_workflow_under_e2(
     script_path: Path,
     timeout: int = 15,
     label_responses: dict[str, Any] | None = None,
     args: dict[str, Any] | None = None,
+    workspace_default: str | None = None,
 ) -> HarnessResult:
     """Execute a workflow script's top-level body under a stub E2 engine.
 
@@ -1183,6 +1137,12 @@ def run_workflow_under_e2(
             argument to inject workflow inputs such as ``resume_answer`` and
             ``run_id`` so a second invocation can drive the resume path of a
             paused run (two-invocation pause->resume tests).
+        workspace_default: How a run that names no workspace answer gets one
+            (BO-4300c-3): ``"args"`` hands a ready answer in as
+            ``args.workspace``; ``"label"`` scripts it as the reply to the ONE
+            maker dispatch, so a test about that dispatch can observe it;
+            ``"none"`` adds nothing. ``None`` (default): ``"label"`` for a
+            deployed script under ``.claude``, else ``"args"``.
 
     Returns:
         HarnessResult with captured agent() calls, contract violations, and
@@ -1205,11 +1165,6 @@ def run_workflow_under_e2(
     # are merged UNDER caller-supplied label_responses, so an explicit
     # caller value for the same label always wins (e.g. a test deliberately
     # exercising a refusal path).
-    merged_label_responses = {
-        **_default_label_responses_for_script(script_path),
-        **(label_responses or {}),
-    }
-
     # Script-specific built-in ARGS defaults (currently plan-feature.js's
     # `workspace_setup_permission` key, ACD-2100b-5) are merged UNDER
     # caller-supplied args, so an explicit caller value for the same key
@@ -1218,6 +1173,10 @@ def run_workflow_under_e2(
         **_default_args_for_script(script_path),
         **(args or {}),
     }
+
+    merged_args, merged_label_responses = _merge_workspace_defaults(
+        script_path, merged_args, label_responses, workspace_default
+    )
 
     try:
         shim_source = _build_shim(
@@ -1459,3 +1418,7 @@ def run_e1_import_check(script_path: Path, timeout: int = 10) -> E1CheckResult:
 #   scripts/build_phases.py's own DECISION HISTORY entry, corrected in the
 #   same pass, for the parallel correction there.
 #   (#EPIC-StartingNewWorkTheProperWayAlways/19)
+# - 2026-10-16 12:00 [python-coder]: Inlines the WORKSPACE-ANSWER block into raw
+#   templates, applies ready-workspace defaults (workspace_default), and falls
+#   back to the package checkout for the plan-feature pre-flight verdict when a
+#   deployed layout is no repository. (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/23)

@@ -35,6 +35,8 @@ from __future__ import annotations
 
 import re
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -50,12 +52,6 @@ from _workflow_engine_harness import (
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _WORKFLOWS_DIR = _REPO_ROOT / "templates" / "workflows-js"
-
-# ---------------------------------------------------------------------------
-# Scripts known to be E1-only under E2 (dispatch 0 agents from top-level body).
-# These are xfail(strict=True): expected to fail NOW; will become errors when
-# tickets 05/06 port them to the E2 contract and they start passing.
-# ---------------------------------------------------------------------------
 
 _E1_ONLY_SCRIPTS = frozenset(
     [
@@ -118,6 +114,23 @@ def _make_params(scripts: list[Path]) -> list:
         else:
             params.append(pytest.param(script_path))
     return params
+
+
+@contextmanager
+def _temp_script(source: str, prefix: str) -> Iterator[Path]:
+    """Write ``source`` to a temporary .js file, yield its path, always remove it."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".js", prefix=prefix, delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(source)
+        tmp_path = Path(tmp.name)
+    try:
+        yield tmp_path
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _script_id(script_path: Path) -> str:
@@ -192,8 +205,6 @@ def _make_e2_dispatch_test(script_path: Path) -> None:
 _ALL_SCRIPTS = _collect_workflow_scripts()
 _ALL_PARAMS = _make_params(_ALL_SCRIPTS)
 
-# Emit a clear collection-time warning if the fleet is empty so CI does not
-# silently pass with no tests.
 if not _ALL_SCRIPTS:
     import warnings
 
@@ -328,19 +339,8 @@ def test_parallel_contract_violation_recorded_for_spread_form() -> None:
         "const results = await parallel(...thunks);\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="harness_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(spread_form_script)
-        tmp_path = Path(tmp.name)
-
-    try:
+    with _temp_script(spread_form_script, "harness_test_") as tmp_path:
         result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     assert result.error == "", (
         f"Harness error during spread-form parallel test: {result.error}"
@@ -381,19 +381,8 @@ def test_parallel_array_form_runs_thunks() -> None:
         "]);\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="harness_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(array_form_script)
-        tmp_path = Path(tmp.name)
-
-    try:
+    with _temp_script(array_form_script, "harness_test_") as tmp_path:
         result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     assert result.error == "", (
         f"Harness error during array-form parallel test: {result.error}"
@@ -433,9 +422,6 @@ def test_build_epic_parallel_contract_baseline() -> None:
     if not build_epic.exists():
         pytest.skip(f"build-epic.js not found at {build_epic}")
 
-    # Provide fake planner output so the script reaches the parallel() dispatch.
-    # Without this, the planner returns the default stub (no `batches` field)
-    # and the script exits at the "no batches" guard before calling parallel().
     fake_planner_response = {
         "epic_path": "test-epic",
         "title": "Test Epic",
@@ -460,9 +446,6 @@ def test_build_epic_parallel_contract_baseline() -> None:
         f"stderr: {result.stderr[:300]}"
     )
 
-    # This assertion FAILS against the current build-epic.js because
-    # parallel(...chunk.map(...)) triggers a contract violation.
-    # Expected outcome: xfail (FAIL is the correct red baseline).
     assert len(result.contract_violations) == 0, (
         f"build-epic.js parallel() contract violation detected (H-5 baseline):\n"
         f"{result.contract_violations}\n\n"
@@ -505,22 +488,24 @@ def test_dispatch_order_build_epic() -> None:
         f"build-epic.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
     )
 
-    # build-epic.js must dispatch at least 2 agents (worktree-check + epic-planner)
-    # before the no-batches early exit.
-    assert result.dispatch_count >= 2, (
-        f"build-epic.js must dispatch >= 2 agents with default args "
-        f"(worktree-check + epic-planner before no-batches early exit). "
+    # BO-4300c-3 (test-drift repair, classification: test_drift): the 'worktree-check'
+    # git-context dispatch is gone -- the epic's workspace is the workspace maker's
+    # ready answer, handed in as args.workspace (the harness supplies one by
+    # default), so a default run starts at the planner.
+    # build-epic.js must dispatch the epic-planner before the no-batches early exit.
+    assert result.dispatch_count >= 1, (
+        f"build-epic.js must dispatch the epic-planner with default args "
+        f"(before the no-batches early exit). "
         f"Got {result.dispatch_count}.\n"
         f"Calls: {[(c.agent_type, c.label) for c in result.agent_calls]}"
     )
 
-    # Assert the exact ordered sequence (agentType, label) for the first two calls.
+    # Assert the exact ordered sequence (agentType, label) for the first call.
     expected_sequence = [
-        ("status-checker", "worktree-check"),
         ("status-checker", "epic-planner"),
     ]
     actual_sequence = [
-        (c.agent_type, c.label) for c in result.agent_calls[:2]
+        (c.agent_type, c.label) for c in result.agent_calls[:1]
     ]
 
     assert actual_sequence == expected_sequence, (
@@ -613,22 +598,12 @@ def test_dispatch_order_plan_feature() -> None:
     if not plan_feature.exists():
         pytest.skip(f"plan-feature.js not found at {plan_feature}")
 
-    result = run_workflow_under_e2(
-        plan_feature,
-        label_responses={
-            "resolve-worktree-setup-script-path": {
-                "output": "/tmp/fake-repo/.leafcutter/scripts/setup_ticket_worktree.py",
-                "exit_code": 0,
-            },
-            "worktree-setup": {
-                "output": (
-                    '{"worktree_path": "/tmp/fake-ac-worktree", '
-                    '"ac_store_path": "/tmp/fake-ac-worktree/docs/acceptance-criteria"}'
-                ),
-                "exit_code": 0,
-            },
-        },
-    )
+    # BO-4300c-3 (test-drift repair, classification: test_drift): the run's own
+    # 'resolve-worktree-setup-script-path' and 'worktree-setup' dispatches are gone.
+    # The workspace is the workspace maker's ready answer, handed in as
+    # args.workspace (the harness supplies one by default), so a default run goes
+    # from the branch check straight to the orphan scan.
+    result = run_workflow_under_e2(plan_feature)
 
     assert result.error == "", (
         f"plan-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
@@ -636,8 +611,6 @@ def test_dispatch_order_plan_feature() -> None:
 
     expected_sequence = [
         ("status-checker", "detect-current-branch"),
-        ("worktree-agent", "resolve-worktree-setup-script-path"),
-        ("worktree-agent", "worktree-setup"),
         ("status-checker", "scan-orphans-git-status"),
         ("status-checker", "scan-committed-stages"),
         ("ac-triage", "stage-0-triage"),
@@ -710,14 +683,20 @@ def test_dispatch_order_build_feature() -> None:
     if not build_feature.exists():
         pytest.skip(f"build-feature.js not found at {build_feature}")
 
+    # BO-4300c-3 (test-drift repair, classification: test_drift): the repo-facts
+    # checks and the 'worktree-setup' dispatch are gone; the workspace is the
+    # workspace maker's ONE dispatch (label 'workspace-ensure', to worktree-agent),
+    # made when the run names a project root and is not handed args.workspace.
     label_responses = {
-        "resolve-target": {"target_type": "ticket", "ticket_path": "tickets/00_inbox/07_TICKET-x.md", "worktree_path": None},
-        "worktree-base": {"output": '{"main_checkout": "/tmp/repo", "worktree_base": "/tmp/wtbase", "layout": "dev"}', "exit_code": 0},
-        "worktree-facts-location": {"output": '{"exists": false}', "exit_code": 0},
-        "worktree-setup": {"worktree_path": "/tmp/wtbase/07_TICKET-x.md", "status": "reused"},
+        "resolve-target": {"target_type": "ticket", "ticket_path": "tickets/00_inbox/07_TICKET-x.md"},
+        "workspace-ensure": {"status": "ok", "workspace_path": "/tmp/wtbase/07_TICKET-x.md"},
     }
 
-    result = run_workflow_under_e2(build_feature, label_responses=label_responses)
+    result = run_workflow_under_e2(
+        build_feature,
+        label_responses=label_responses,
+        args={"project_root": "/tmp/repo"},
+    )
 
     assert result.error == "", (
         f"build-feature.js harness error: {result.error}\nstderr: {result.stderr[:300]}"
@@ -733,12 +712,12 @@ def test_dispatch_order_build_feature() -> None:
 
     actual_labels = [(c.agent_type, c.label) for c in result.agent_calls]
     resolve_idx = actual_labels.index(("status-checker", "resolve-target"))
-    worktree_idx = actual_labels.index(("worktree-agent", "worktree-setup"))
+    worktree_idx = actual_labels.index(("worktree-agent", "workspace-ensure"))
     planner_idx = actual_labels.index(("status-checker", "ticket-planner"))
 
     assert resolve_idx < worktree_idx < planner_idx, (
-        f"build-feature.js dispatch order wrong (ticket 12 / AC-3, superseded by BO-4000).\n"
-        f"Expected resolve-target < worktree-setup < ticket-planner.\n"
+        f"build-feature.js dispatch order wrong (ticket 12 / AC-3, superseded by BO-4000 and BO-4300c-3).\n"
+        f"Expected resolve-target < workspace-ensure < ticket-planner.\n"
         f"Full sequence: {actual_labels}"
     )
 
@@ -780,37 +759,22 @@ def test_missing_worktree_dispatch_fails_build_feature_guard() -> None:
         ");\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".js", prefix="no_worktree_test_", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write(no_worktree_script)
-        tmp_path = Path(tmp.name)
-
-    try:
+    with _temp_script(no_worktree_script, "no_worktree_test_") as tmp_path:
         result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     assert result.error == "", (
         f"Harness error during no-worktree test: {result.error}"
     )
 
-    # The expected sequence (what the real build-feature.js should dispatch)
-    # includes worktree-agent at position 2.
     expected_sequence_with_worktree = [
         ("status-checker", "resolve-target"),
-        ("worktree-agent", "worktree-setup"),
+        ("worktree-agent", "workspace-ensure"),  # BO-4300c-3: was 'worktree-setup'
         ("ticket-supervisor", "build-ticket"),
     ]
     actual_sequence = [
         (c.agent_type, c.label) for c in result.agent_calls[:3]
     ]
 
-    # The synthetic script WITHOUT worktree-agent must NOT match the expected sequence.
-    # This proves the guard (test_dispatch_order_build_feature) is not vacuously passing.
     assert actual_sequence != expected_sequence_with_worktree, (
         "AC-3 guard meta-test FAILED: a script missing the worktree-agent dispatch "
         "matches the expected sequence — the guard is vacuously passing and would "
@@ -874,23 +838,8 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
         ");\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".js",
-        prefix="ac4_meta_test_",
-        delete=False,
-        encoding="utf-8",
-    ) as tmp:
-        tmp.write(old_style_script)
-        tmp_path = Path(tmp.name)
-
-    try:
+    with _temp_script(old_style_script, "ac4_meta_test_") as tmp_path:
         result = run_workflow_under_e2(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     assert result.error == "", (
         f"Harness error during AC-4 meta-test: {result.error}"
@@ -904,19 +853,12 @@ def test_build_feature_main_clone_path_dispatch_fails_guard() -> None:
     prompt = build_ticket_call.prompt
     prompt_str = prompt if isinstance(prompt, str) else ""
 
-    # The main-clone path MUST appear in the prompt — this represents the OLD
-    # (unfixed) behaviour that the guard is designed to catch.
     assert main_clone_prefix in prompt_str, (
         "AC-4 guard meta-test setup error: the synthetic old-style script prompt "
         "does not contain the main-clone path — the meta-test is misconfigured.\n"
         f"Expected {main_clone_prefix!r} to appear in the prompt.\n"
         f"Prompt: {prompt_str!r}"
     )
-    # Because main_clone_prefix IS in the prompt, the guard assertion
-    #   ``assert main_clone_prefix not in prompt``
-    # from test_build_feature_single_ticket_prompt_references_worktree_path
-    # would raise AssertionError for this script.  This confirms the guard is
-    # not vacuously passing — it catches the main-clone regression.
     guard_would_pass = main_clone_prefix not in prompt_str
     assert not guard_would_pass, (
         "AC-4 guard meta-test FAILED: the guard assertion "
@@ -1198,23 +1140,8 @@ def test_meta_guard_rejects_concatenated_description() -> None:
         "const result = await agent('stub prompt', {agentType: 'status-checker', label: 'stub'});\n"
     )
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".js",
-        prefix="meta_guard_test_",
-        delete=False,
-        encoding="utf-8",
-    ) as tmp:
-        tmp.write(synthetic_source)
-        tmp_path = Path(tmp.name)
-
-    try:
+    with _temp_script(synthetic_source, "meta_guard_test_") as tmp_path:
         violations = _check_meta_pure_literal_violations(tmp_path)
-    finally:
-        try:
-            tmp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
     assert len(violations) > 0, (
         "meta-pure-literal guard must detect concatenation in meta.description. "

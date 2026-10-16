@@ -96,6 +96,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from unit_tests._workspace_harness_defaults import inline_workspace_block, ready_workspace_args
+
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _PREFLIGHT_SCRIPT = (
@@ -104,11 +106,11 @@ _PREFLIGHT_SCRIPT = (
 
 _TIMEOUT = 40  # seconds; includes real git I/O and (for the real harness) real shell I/O.
 
-# Labels this file cares about, taken verbatim from plan-feature.js's own
-# agent() call sites around the Pre-Stage-0 Workspace-Setup Dispatch
-# Permission Gate and the step immediately after it.
 _REGISTRY_READ_LABEL = "resolve-workspace-setup-permission"
-_NEXT_STEP_LABEL = "resolve-worktree-setup-script-path"
+# BO-4300c-3: plan-feature.js no longer resolves a worktree-setup script path
+# (the workspace is the maker's ready answer, handed in as args.workspace), so
+# the first real step after the permission check is the triage dispatch.
+_NEXT_STEP_LABEL = "stage-0-triage"
 
 _DEFAULT_AGENT_ID = "worktree-agent"
 _ARGS_VERDICT_KEY = "workspace_setup_permission"
@@ -205,12 +207,6 @@ def _strip_exports(source: str) -> str:
     return "\n".join(out)
 
 
-# ---------------------------------------------------------------------------
-# Shared shim boilerplate (parallel/pipeline/phase/log/workflow/budget/args),
-# self-contained copies of the equivalent harness scaffolding in
-# test_acd_2100b_1.py / test_acd_2100a_3.py.
-# ---------------------------------------------------------------------------
-
 _SHIM_BOILERPLATE = r"""
 async function parallel(thunksArg) {
   var results = [];
@@ -267,11 +263,6 @@ __SCRIPT_BODY__
 });
 """
 
-# Blocked variant: EVERY agent() call is recorded (so we can still see what
-# the run attempted) and then IMMEDIATELY throws a simulated transport
-# error -- the literal Given "no agent can be dispatched -- every dispatch
-# attempt fails immediately with a transport error". Nothing is ever
-# actually executed via child_process in this variant.
 _BLOCKED_SHIM_TEMPLATE = (
     r"""
 'use strict';
@@ -288,11 +279,6 @@ async function agent(promptOrOpts, opts) {
     + _SHIM_BOILERPLATE
 )
 
-# Real-dispatch variant: agent() ACTUALLY EXECUTES every "Run the following
-# command ...:\n<cmd>\n" dispatch via a real Node child_process against the
-# given real `cwd`, and returns canned `label_responses` for labels present
-# in that map -- a self-contained copy of the harness used throughout
-# test_acd_2100b_1.py / test_acd_2100a_3.py.
 _REAL_SHIM_TEMPLATE = (
     r"""
 'use strict';
@@ -385,10 +371,10 @@ def _run_plan_feature_blocked(args: dict) -> dict:
     immediately throws a simulated transport error.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
     shim = (
         _BLOCKED_SHIM_TEMPLATE
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
     return _run_shim(shim, "acd_2100b5_blocked_")
@@ -400,12 +386,12 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     EXECUTED via a real Node child_process against `cwd`.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
     shim = (
         _REAL_SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
     return _run_shim(shim, "acd_2100b5_real_")
@@ -598,8 +584,6 @@ class TestStartupCheckConsumesPreflightVerdictFromArgs(unittest.TestCase):
                 Path(tmp),
                 agents=[{"id": _DEFAULT_AGENT_ID, "permits_shell": True}],
             )
-            # No `workspace_setup_permission` key in args at all -- standing
-            # in for a caller that bypasses the skill's pre-flight entirely.
             payload = _run_plan_feature_real(repo_dir, label_responses={}, args={})
 
         next_step_calls = _calls_with_label(payload, _NEXT_STEP_LABEL)
@@ -657,14 +641,10 @@ class TestStartupCheckConsumesPreflightVerdictFromArgs(unittest.TestCase):
         exact hardening pattern the harness module's own docstring already
         documents for this same script.
         """
-        unit_tests_dir = _WORKTREE_ROOT / "unit_tests"
-        if str(unit_tests_dir) not in sys.path:
-            sys.path.insert(0, str(unit_tests_dir))
+        if str(_WORKTREE_ROOT / "unit_tests") not in sys.path:
+            sys.path.insert(0, str(_WORKTREE_ROOT / "unit_tests"))
         from _workflow_engine_harness import run_workflow_under_e2  # noqa: E402
 
-        # Deliberately supplies NO `args` override at all -- exactly how
-        # every pre-existing, unrelated caller of plan-feature.js already
-        # calls this harness today.
         result = run_workflow_under_e2(_PLAN_FEATURE_JS)
 
         registry_dispatch_calls = [

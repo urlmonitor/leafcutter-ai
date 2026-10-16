@@ -4,7 +4,7 @@ components:
 title: "The worktree location the run proceeds on is confirmed against the repository the run is operating in"
 component: build-orchestration
 level: L3
-status: active
+status: superseded_by
 req_status: draft
 work_status: done
 readiness: approved
@@ -124,7 +124,7 @@ expects_from: null
 origin_agent: BrainCandy
 created: 2026-09-14
 amended_by: []
-superseded_by: null
+superseded_by: BO-4300c-3
 covered_by:
   - unit_tests/workflows/test_bo2400f_3_i_worktree_verify_workflow.py
 implemented_by:

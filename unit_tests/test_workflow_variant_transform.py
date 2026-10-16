@@ -304,6 +304,10 @@ class TestReachability:
         src_dir = tmp_path / "templates" / "workflows-js"
         src_dir.mkdir(parents=True)
         shutil.copy(_QUICK_FIX_JS, src_dir / _QUICK_FIX_JS.name)
+        # BO-4300c-3: quick-fix.js carries an empty WORKSPACE-ANSWER marker pair that
+        # the build fills from the one shared source block; a templates tree
+        # without that source makes the build refuse, by design. Give the tree it.
+        shutil.copytree(_QUICK_FIX_JS.parent / "_shared", src_dir / "_shared")
 
         monkeypatch.setattr(build_phases, "TEMPLATES_DIR", tmp_path / "templates")
         monkeypatch.setenv("CLAUDE_CODE_VERSION", "9.9.999")

@@ -413,5 +413,16 @@ class TestFileReferenceIsAnchoredOnItsFolder(_RealRepositoryFixture):
         self.assertEqual(from_file, from_folder)
 
 
+# BO-4300c-3: the driver no longer issues worktree_repo_facts invocations of its
+# own, so there is nothing for it to anchor; the workspace maker is anchored on
+# the project root it is given (see unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestDriverAnchorsEveryInvocation.test_every_worktree_repo_facts_invocation_in_the_driver_is_anchored",
+    "TestRealAnswersDecideTheRun.test_unanchored_answers_abort_the_run_and_anchored_answers_do_not",
+)
+
 if __name__ == "__main__":
     unittest.main()

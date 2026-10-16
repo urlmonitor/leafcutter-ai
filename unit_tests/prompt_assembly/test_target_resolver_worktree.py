@@ -46,6 +46,10 @@ import _driver_harness as H  # noqa: E402
 
 GATES = ["test-runner", "commit"]
 
+# BO-4300c-3: the label of the ONE workspace-maker dispatch. It establishes the
+# working copy, so it is not one of the phase agents these tests count.
+_MAKER_LABEL = "workspace-ensure"
+
 _UNDETERMINED_TOKENS = (
     "undetermined",
     "not determined",
@@ -56,6 +60,7 @@ _UNDETERMINED_TOKENS = (
     "tbd",
 )
 _HOLDBACK_TOKENS = _UNDETERMINED_TOKENS + (
+    "workspace-not-ready",  # BO-4300c-3: the one stop payload's abort_reason
     "no worktree",
     "without a worktree",
     "no isolated working copy",
@@ -141,8 +146,13 @@ class _ResolverCase(unittest.TestCase):
         self._tmpdirs.append(path)
         return path
 
-    def undetermined_scenarios(self):
+    def undetermined_scenarios(self, default_workspace: bool = True):
         """Yield (driver, script, scenario, store_paths) with no working copy.
+
+        ``default_workspace`` (BO-4300c-3): True leaves the harness's default
+        ready workspace answer in place, which is how every run is handed its
+        workspace now. False switches it off, so the run is genuinely without one
+        and the maker is asked and answers nothing usable.
 
         build-feature.js: the resolver answers exactly as today's prompt
         instructs — reporting the epic's work-store folder as worktree_path —
@@ -168,6 +178,7 @@ class _ResolverCase(unittest.TestCase):
 
             scenario = {
                 "record_dir": store,
+                "no_default_workspace": not default_workspace,
                 # NOTE: no worktree_path in args — the caller has not resolved one.
                 "args": {"target": epic_path, "ticket_path": ticket_path},
                 "resolve": {
@@ -216,11 +227,6 @@ class _ResolverCase(unittest.TestCase):
                 },
             )
             yield driver, script, scenario, worktree
-
-
-# ---------------------------------------------------------------------------
-# BO-1900a-4 — the resolver must say "not yet determined"
-# ---------------------------------------------------------------------------
 
 
 class TestResolvedTargetReportsUndeterminedWorkingCopy(_ResolverCase):
@@ -382,11 +388,6 @@ class TestResolvedTargetReportsUndeterminedWorkingCopy(_ResolverCase):
         )
 
 
-# ---------------------------------------------------------------------------
-# BO-1900a-4-i — the refusal that makes the marker load-bearing
-# ---------------------------------------------------------------------------
-
-
 class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
     """BO-1900a-4-i: an unanswered question about where the work belongs stops
     the drive instead of being answered by whatever is nearest."""
@@ -394,12 +395,14 @@ class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
     def test_no_phase_agent_is_dispatched_while_the_working_copy_is_undetermined(self):
         # covers: BO-1900a-4-i
         """The harness records exactly which phase agents a run spawned; that
-        list is the assertion."""
-        for driver, script, scenario, paths in self.undetermined_scenarios():
+        list is the assertion. BO-4300c-3: the workspace maker's own dispatch
+        (label 'workspace-ensure') is the step that ESTABLISHES the working copy,
+        not a phase agent, so it is not counted."""
+        for driver, script, scenario, paths in self.undetermined_scenarios(default_workspace=False):
             with self.subTest(driver=driver):
                 observation = H.run_driver(script, scenario)
                 self.assertEqual(
-                    observation["dispatched"],
+                    [d for d in observation["dispatched"] if d != _MAKER_LABEL],
                     [],
                     f"{driver} spawned {len(observation['dispatched'])} phase "
                     f"agent(s) — {observation['dispatched']} — while the isolated "
@@ -411,7 +414,7 @@ class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
         # covers: BO-1900a-4-i
         """An operator must not be left with a silent no-op, nor with a reason
         that fails to identify the undetermined working copy as the cause."""
-        for driver, script, scenario, paths in self.undetermined_scenarios():
+        for driver, script, scenario, paths in self.undetermined_scenarios(default_workspace=False):
             with self.subTest(driver=driver):
                 result = H.run_driver(script, scenario)["result"]
 
@@ -435,7 +438,7 @@ class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
         location is the single most likely wrong implementation, is invisible in
         a passing test suite, and is precisely how a phase agent ends up
         committing into the shared clone."""
-        for driver, script, scenario, paths in self.undetermined_scenarios():
+        for driver, script, scenario, paths in self.undetermined_scenarios(default_workspace=False):
             with self.subTest(driver=driver):
                 observation = H.run_driver(script, scenario)
 
@@ -454,7 +457,7 @@ class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
                             "copy.",
                         )
                 self.assertEqual(
-                    observation["dispatched"],
+                    [d for d in observation["dispatched"] if d != _MAKER_LABEL],
                     [],
                     f"{driver} reached for a substitute location instead of "
                     f"holding the work back: {observation['dispatches']}",
@@ -479,6 +482,22 @@ class TestNoDispatchWhileWorkingCopyUndetermined(_ResolverCase):
                     f"{observation['dispatched']}",
                 )
 
+
+# BO-4300c-3: a resolved target no longer carries a "working copy not yet
+# determined" marker. The workspace is the maker's answer, taken before the run
+# proceeds, so a run either has a ready workspace or stops (the two behaviours
+# held above by TestNoDispatchWhileWorkingCopyUndetermined and by
+# unit_tests/build_orchestration/test_bo_4300c_3.py). The three tests below state
+# the retired marker contract and stay as strict expected failures (see
+# unit_tests/workflows/_bo4300c3_retired.py).
+from unit_tests.workflows._bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestResolvedTargetReportsUndeterminedWorkingCopy.test_epic_target_resolves_with_the_working_copy_not_yet_determined",
+    "TestResolvedTargetReportsUndeterminedWorkingCopy.test_not_yet_determined_is_recognisable_without_comparison",
+    "TestResolvedTargetReportsUndeterminedWorkingCopy.test_both_drivers_resolve_the_same_way",
+)
 
 if __name__ == "__main__":
     unittest.main()

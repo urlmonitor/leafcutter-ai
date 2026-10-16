@@ -83,6 +83,7 @@ _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
 from _plan_feature_harness_defaults import worktree_setup_default_responses
+from _workspace_harness_defaults import inline_workspace_block, ready_workspace_args
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -123,20 +124,6 @@ def _install_real_pause_store(project_dir: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(_REAL_PAUSE_STORE_PY.read_bytes())
     return dest
-
-
-def _make_plain_project_fixture(tmp_path: Path) -> Path:
-    """A single real git repository with a real, installed pause_store.py --
-    no worktree indirection. Used only where the AC does not require the
-    worktree distinction (the failure-biconditional and reachability tests
-    still use the worktree fixture below, since a plain project would resolve
-    correctly even under the unfixed, cwd-relative code and so could not be
-    RED before the fix).
-    """
-    project_dir = tmp_path / "project"
-    _init_git_project(project_dir)
-    _install_real_pause_store(project_dir)
-    return project_dir
 
 
 def _make_worktree_fixture(tmp_path: Path) -> dict:
@@ -421,13 +408,14 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     supplied entry for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
 
+    # BO-4300c-3: the workspace is the maker's ready answer, handed in as args.workspace.
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
 

@@ -236,8 +236,21 @@ def make_repo_fixture(tmp_path: Path, *, agents: list[dict] | None = None) -> Pa
 # ---------------------------------------------------------------------------
 
 
-def worktree_setup_calls(result: Any, label: str = "worktree-setup") -> list:
-    """Return every agent() call on `result` whose label matches `label`."""
+#: The first real step plan-feature.js dispatches once the pre-Stage-0
+#: permission gate has let the run through. BO-4300c-3 removed the run's own
+#: 'worktree-setup' dispatch (the workspace is the maker's ready answer, handed
+#: in as args.workspace), so the step the gate's verdict is CONSUMED into is the
+#: triage dispatch: reached only when the gate did not halt the run.
+NEXT_STEP_AFTER_GATE_LABEL = "stage-0-triage"
+
+
+def worktree_setup_calls(result: Any, label: str = NEXT_STEP_AFTER_GATE_LABEL) -> list:
+    """Return every agent() call on `result` whose label matches `label`.
+
+    The default label is the step after the permission gate
+    (``NEXT_STEP_AFTER_GATE_LABEL``); the function keeps its historic name
+    because the gate tests that import it read as "the setup step ran".
+    """
     return [c for c in result.agent_calls if c.label == label]
 
 

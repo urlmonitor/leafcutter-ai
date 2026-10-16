@@ -132,12 +132,26 @@ def test_workspace_setup_dispatches_to_a_shell_permitted_agent():
     True -- the permitted agent id is READ from the registry, never
     hardcoded into the assertion.
     """
-    result = run_workflow_under_e2(_PLAN_FEATURE_JS, timeout=_TIMEOUT)
+    # BO-4300c-3: the workspace step is now the one workspace-maker dispatch
+    # (label 'workspace-ensure'), made only when the run names a project root
+    # and is not handed the maker's answer as args.workspace. Script its ready
+    # answer so the run is not stopped there, and read the dispatch it made.
+    result = run_workflow_under_e2(
+        _PLAN_FEATURE_JS,
+        timeout=_TIMEOUT,
+        args={"project_root": "/tmp/bo1500f1-project"},
+        label_responses={
+            "workspace-ensure": {
+                "status": "ok",
+                "workspace_path": "/tmp/bo1500f1-project/ws",
+            }
+        },
+    )
     assert result.error == "", f"Harness error: {result.error}"
 
-    setup_calls = _worktree_setup_calls(result)
-    assert len(setup_calls) > 0, (
-        "Expected exactly one 'worktree-setup' agent dispatch (the default, "
+    setup_calls = _worktree_setup_calls(result, "workspace-ensure")
+    assert len(setup_calls) == 1, (
+        "Expected exactly one 'workspace-ensure' agent dispatch (the default, "
         "permitted path must still perform the workspace setup). "
         f"Dispatched labels: {[c.label for c in result.agent_calls]}"
     )

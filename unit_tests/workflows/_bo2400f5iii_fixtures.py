@@ -83,20 +83,6 @@ _RELEASABLE_FILES_MODIFIED = ["scripts/build_orchestration/fast_lane.py"]
 # test_bo2400f_4_changelog_family.py's own _BASE_RESPONSES (same AC id,
 # worktree path and branch, so both files' fixtures stay comparable).
 BASE_RESPONSES: dict[str, Any] = {
-    "fastlane-worktree": {
-        "worktree_path": WORKTREE_PATH,
-        "branch": BRANCH,
-        "ac_store_path": f"{WORKTREE_PATH}/docs/acceptance-criteria",
-        "created": True,
-    },
-    "fastlane-worktree-verify": {
-        "worktree_path": WORKTREE_PATH,
-        "raw": (
-            f"worktree {WORKTREE_PATH}\n"
-            "HEAD 0000000000000000000000000000000000000000\n"
-            f"branch refs/heads/{BRANCH}"
-        ),
-    },
     "resolve-connected": {"ac_ids": [AC_ID], "message": "1 to build"},
     "check-producibility": {"producible": True, "unproducible": [], "message": "all producible"},
     # command-step-runner shape (PR #967 / BO-2400a-1-v): the gate payload rides
@@ -152,10 +138,30 @@ BASE_RESPONSES: dict[str, Any] = {
 }
 
 
+# BO-4300c-3: the lane takes its workspace only from the workspace maker's ready
+# answer. The run is handed that answer as args.workspace (the way an entry skill
+# passes it), so the workspace step is NOT a dispatch of the lane: the lane's
+# own steps start at Resolve, and a decline can only be a decline of one of
+# them. A workspace answer that is not ready is a different halt
+# (abort_reason 'workspace-not-ready', unit_tests/build_orchestration/test_bo_4300c_3.py).
+WORKSPACE_ANSWER: dict[str, Any] = {
+    "status": "ok",
+    "workspace_path": WORKTREE_PATH,
+    "worktree_path": WORKTREE_PATH,
+    "branch": BRANCH,
+    "ac_store_path": f"{WORKTREE_PATH}/docs/acceptance-criteria",
+    "created": True,
+}
+
+
 def run_lane(overrides: dict[str, Any] | None = None) -> HarnessResult:
     """Run fast-lane-ship.js with BASE_RESPONSES, overridden per-label by `overrides`."""
     label_responses = {**BASE_RESPONSES, **(overrides or {})}
-    return run_workflow_under_e2(WORKFLOW_PATH, label_responses=label_responses)
+    return run_workflow_under_e2(
+        WORKFLOW_PATH,
+        label_responses=label_responses,
+        args={"workspace": WORKSPACE_ANSWER},
+    )
 
 
 def calls_with_label(result: HarnessResult, label: str) -> list:

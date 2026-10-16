@@ -53,6 +53,10 @@ _TEST_ROOTS = [
 HIGH_WATER_MARK = 244
 
 _WORK_STATUS_DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
+# A superseded AC (status superseded_by / superseded) has no current behaviour
+# left to test, so it is not part of the untagged-done backlog (BO-4300c-3
+# superseding BO-2400f-3-i was the first case).
+_STATUS_SUPERSEDED_RE = re.compile(r"^status:\s*superseded(_by)?\s*$", re.M)
 _ID_LINE_RE = re.compile(r"^id:\s*(\S+)\s*$", re.M)
 _COVERS_RE = re.compile(r"covers:\s*([A-Za-z0-9\-_,\s\"']+)")
 
@@ -160,7 +164,7 @@ def _collect_done_ac_ids() -> set[str]:
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        if not _WORK_STATUS_DONE_RE.search(text):
+        if not _WORK_STATUS_DONE_RE.search(text) or _STATUS_SUPERSEDED_RE.search(text):
             continue
         match = _ID_LINE_RE.search(text)
         if match:

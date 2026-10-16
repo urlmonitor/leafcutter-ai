@@ -82,6 +82,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
+from unit_tests._workspace_harness_defaults import inline_workspace_block, ready_workspace_args
 from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
     _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
     _read_via_fresh_process, _run, _strip_exports,
@@ -318,13 +319,13 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     for either label still wins (dict merge order below).
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
 
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps({**worktree_setup_default_responses(), **label_responses}))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__DRAFT_RELATIVE_PATH_JSON__", json.dumps(_DRAFT_RELATIVE_PATH))
         .replace("__SCRIPT_BODY__", body)
     )
@@ -415,11 +416,6 @@ def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str) -> tupl
         f"written the drafted-work file before pausing. Missing: {draft_path}"
     )
     return payload, gate_id
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 
 def test_answer_naming_a_different_decision_is_not_applied():

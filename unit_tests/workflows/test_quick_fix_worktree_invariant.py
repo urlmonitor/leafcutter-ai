@@ -39,7 +39,6 @@ from _quick_fix_harness import (  # noqa: E402
     _full_success_responses,
     _js,
     _labels,
-    _phase_block,
     run_workflow_under_e2,
 )
 
@@ -74,29 +73,22 @@ class TestBP600a1WorktreeInvariant:
     def test_ac_bp600a1_no_git_worktree_add(self):
         # covers: BP-600a-1
         # covers: BP-600a-2
-        """quick-fix.js guard prompt must prohibit 'git worktree add'; must not execute it.
+        # angle: criterion
+        """No dispatch of a run tells an agent to run 'git worktree add'.
 
-        'git worktree add' may legitimately appear in a guard prohibition instruction
-        telling the agent NOT to call it. The correct assertion is that the prohibition
-        is present and that no agent call payload actually executes git worktree add as
-        an action (i.e., it is not wrapped in a shell execution directive absent of the
-        'Do NOT' / 'IMPORTANT' qualifier).
+        BO-4300c-3 (test-drift repair, classification: test_drift): the Guards
+        prompt used to carry a 'Do NOT invoke git worktree add' prohibition that
+        this test looked for. The workspace is now the maker's ready answer, so
+        there is no isolation step left for such a prohibition to guard, and the
+        invariant it enforced is asserted on the RECORDED dispatches instead: in
+        a full run, no prompt sent to any agent contains 'git worktree add'.
         """
-        js = _js()
-        guards_block = _phase_block(js, "Guards", "AC Creation")
-        # The string should appear in a prohibition context inside the guard prompt
-        assert "git worktree add" in guards_block, (
-            "Guards phase must explicitly prohibit 'git worktree add' in its agent "
-            "prompt (BP-600a-1, BP-600a-2). The prohibition is what enforces the "
-            "in-place constraint."
-        )
-        # Verify the prohibition keyword is adjacent (not an invocation)
-        prohibition_idx = guards_block.find("git worktree add")
-        surrounding = guards_block[max(0, prohibition_idx - 80):prohibition_idx + 30]
-        assert "NOT" in surrounding or "not" in surrounding or "never" in surrounding.lower(), (
-            "The occurrence of 'git worktree add' in the guard must be inside a "
-            "prohibition clause (e.g. 'Do NOT invoke git worktree add'), not an "
-            "invocation command (BP-600a-1)."
+        result = run_workflow_under_e2(_JS_PATH, label_responses=_full_success_responses())
+        assert result.agent_calls, f"the run dispatched nothing; stderr={result.stderr!r}"
+        offenders = [c.label for c in result.agent_calls if "git worktree add" in str(c.prompt)]
+        assert offenders == [], (
+            "quick-fix must never have an agent run 'git worktree add' (BP-600a-1, "
+            f"BP-600a-2); the workspace maker owns that. Dispatches that do: {offenders}"
         )
 
 
@@ -109,24 +101,28 @@ class TestBP600a2NoIsolationInfra:
 
     def test_ac_bp600a2_no_worktree_agent_dispatch(self):
         # covers: BP-600a-2
-        """quick-fix.js must not dispatch agentType:'worktree-agent' at any phase.
+        # angle: criterion
+        """The only dispatch of a run to 'worktree-agent' is the one workspace step.
 
-        'worktree-agent' may legitimately appear in a guard prohibition that tells
-        the phase agent NOT to use it. The assertion here checks that no agent()
-        call dispatches agentType: 'worktree-agent', which is the actual invocation
-        that BP-600a-2 prohibits.
+        BO-4300c-3 (test-drift repair, classification: test_drift): quick-fix used
+        to dispatch nothing to 'worktree-agent' and said so in its Guards prompt.
+        The workspace is now the maker's answer; when the run is not handed that
+        answer it makes exactly ONE shell-permitted dispatch for it (ADR-073),
+        labelled 'workspace-ensure', and nothing else in the run goes to
+        'worktree-agent' -- no isolation infrastructure beyond that step.
         """
-        js = _js()
-        # No dispatch: none of the agent() calls should target agentType:'worktree-agent'
-        assert "agentType: 'worktree-agent'" not in js, (
-            "quick-fix.js must not dispatch agentType: 'worktree-agent' "
-            "(BP-600a-2). Quick-fix is an in-place operation — no isolation infrastructure."
+        result = run_workflow_under_e2(
+            _JS_PATH,
+            label_responses={
+                **_full_success_responses(),
+                "workspace-ensure": {"status": "ok", "workspace_path": "/ws/fix", "branch": "fix/some-branch"},
+            },
+            args={"project_root": "/tmp/bp600a2-project"},
         )
-        # Guard prohibition must be present (validates the contract is documented)
-        guards_block = _phase_block(js, "Guards", "AC Creation")
-        assert "worktree-agent" in guards_block, (
-            "Guards phase must explicitly prohibit 'worktree-agent' in the agent "
-            "prompt to enforce the no-isolation-infra contract (BP-600a-2)."
+        to_worktree_agent = [c.label for c in result.agent_calls if c.agent_type == "worktree-agent"]
+        assert to_worktree_agent == ["workspace-ensure"], (
+            "Only the workspace step may be dispatched to 'worktree-agent' "
+            f"(BP-600a-2, BO-4300c-3). Got: {to_worktree_agent}; labels={_labels(result)}"
         )
 
     def test_ac_bp600a2_no_feature_skill(self):
@@ -147,15 +143,10 @@ class TestBP600a2NoIsolationInfra:
             "quick-fix.js must not dispatch agentType: 'feature' (BP-600a-2)."
         )
 
-    def test_ac_bp600a2_guard_instructs_no_isolation(self):
-        # covers: BP-600a-2
-        """The Guards phase prompt must tell the agent not to invoke worktree-agent."""
-        js = _js()
-        guards_block = _phase_block(js, "Guards", "AC Creation")
-        assert "worktree-agent" in guards_block or "IMPORTANT: Do NOT invoke" in guards_block, (
-            "The Guards phase prompt must instruct the agent not to invoke worktree-agent "
-            "(BP-600a-2). The guard must be explicit."
-        )
+    # BO-4300c-3: test_ac_bp600a2_guard_instructs_no_isolation stood here. It looked
+    # for a 'do not invoke worktree-agent' sentence in the Guards prompt; the Guards
+    # step no longer has an isolation phase to forbid, and the invariant is now
+    # held behaviourally by test_ac_bp600a2_no_worktree_agent_dispatch above.
 
 
 # ===========================================================================
@@ -176,33 +167,38 @@ class TestBP600WorkflowInPlaceAndSelfIsolation:
 
     def test_ac_bp600a1_in_place_skips_self_isolate_and_keeps_branch(self):
         # covers: BP-600a-1
-        """When the isolation-check reports a usable non-default branch,
-        self-isolate must NOT be dispatched, and the reported cwd/branch must
-        be the ones later phases operate on."""
-        js_path = _JS_PATH
+        # angle: criterion
+        """When the maker's ready answer is handed in, no workspace dispatch is
+        made, and the workspace path and branch it names are the ones the
+        guards operate on.
+
+        BO-4300c-3 (test-drift repair, classification: test_drift): the test used
+        to script an 'isolation-check' reporting a usable non-default branch and
+        assert 'self-isolate' was skipped. Both steps are gone; the same intent
+        (no isolation step of the run's own, and the reported location and branch
+        -- not a re-derived value -- anchor later phases) is stated against the
+        maker's answer.
+        """
         result = run_workflow_under_e2(
-            js_path,
-            label_responses=_full_success_responses(
-                **{
-                    "isolation-check": {
-                        "status": "ok",
-                        "is_repo": True,
-                        "session_cwd": "/repo",
-                        "initial_branch": "fix/some-branch",
-                        "needs_isolation": False,
-                    }
+            _JS_PATH,
+            label_responses=_full_success_responses(),
+            args={
+                "workspace": {
+                    "status": "ok",
+                    "workspace_path": "/repo",
+                    "branch": "fix/some-branch",
                 }
-            ),
+            },
         )
         labels = _labels(result)
-        assert "self-isolate" not in labels, (
-            "self-isolate must not be dispatched when needs_isolation is false "
-            f"(BP-600a-1). Labels dispatched: {labels}"
+        assert "workspace-ensure" not in labels and "self-isolate" not in labels, (
+            "No workspace or isolation dispatch may be made when the maker's "
+            f"answer is handed in (BP-600a-1). Labels dispatched: {labels}"
         )
         guard_call = next(c for c in result.agent_calls if c.label == "guard-checks")
         assert "/repo" in guard_call.prompt and "fix/some-branch" in guard_call.prompt, (
-            "The guard-checks prompt must be anchored to the reported session cwd "
-            "and branch, not a re-derived value (BP-600a-1)."
+            "The guard-checks prompt must be anchored to the workspace path "
+            "and branch the maker reported, not a re-derived value (BP-600a-1)."
         )
 
     def test_ac_bp600a2_self_isolate_dispatched_when_not_a_repo(self):
@@ -326,38 +322,54 @@ class TestBP600WorkflowInPlaceAndSelfIsolation:
     def test_ac_bp600a1_isolation_check_precedes_self_isolate_and_worktree_root_is_consumed(self):
         # covers: BP-600a-1
         # covers: BP-600a-2
-        """isolation-check must run before self-isolate, and the worktree_root
-        self-isolate returns must actually be threaded into later phases —
-        not merely produced and discarded."""
+        # angle: seam
+        """The workspace step runs before the guards, and the workspace_path the
+        maker's answer returns is actually threaded into later phases -- not
+        merely produced and discarded.
+
+        BO-4300c-3 (test-drift repair, classification: test_drift): restated from
+        the 'isolation-check' / 'self-isolate' pair onto the one workspace
+        dispatch. The maker's reply is scripted for that dispatch, the run names
+        a project root so the maker is asked, and the location the reply names
+        must appear in a later phase's prompt.
+        """
         result = run_workflow_under_e2(
             _JS_PATH,
-            label_responses=_full_success_responses(
-                **{
-                    "isolation-check": {
-                        "status": "ok",
-                        "is_repo": False,
-                        "session_cwd": "/untracked/workspace",
-                        "initial_branch": "",
-                        "needs_isolation": True,
-                    },
-                    "self-isolate": {
-                        "status": "ok",
-                        "worktree_root": "/isolated/wt-threaded",
-                        "branch": "feature/threaded-slug",
-                        "created": True,
-                    },
-                }
-            ),
+            label_responses={
+                **_full_success_responses(),
+                "workspace-ensure": {
+                    "status": "ok",
+                    "workspace_path": "/isolated/wt-threaded",
+                    "branch": "feature/threaded-slug",
+                },
+            },
+            args={"project_root": "/tmp/bp600a1-project"},
         )
         calls_by_label = {c.label: c for c in result.agent_calls}
-        assert "isolation-check" in calls_by_label and "self-isolate" in calls_by_label
+        assert "workspace-ensure" in calls_by_label and "guard-checks" in calls_by_label
         assert (
-            calls_by_label["isolation-check"].call_index
-            < calls_by_label["self-isolate"].call_index
-        ), "isolation-check must be dispatched before self-isolate (BP-600a-1)."
+            calls_by_label["workspace-ensure"].call_index
+            < calls_by_label["guard-checks"].call_index
+        ), "the workspace step must be dispatched before the guards (BP-600a-1)."
         later_call = calls_by_label["ac-creation"]
         assert "/isolated/wt-threaded" in later_call.prompt, (
-            "The worktree_root produced by self-isolate must be consumed by a "
+            "The workspace_path in the maker's answer must be consumed by a "
             "later phase's prompt (here: ac-creation) — proving the value is "
             "actually used, not just returned and dropped (BP-600a-2)."
         )
+
+
+# BO-4300c-3: the run no longer decides for itself whether to isolate. The four
+# triggers below (not a repo, on main, on master, detached HEAD) were that
+# decision; the workspace maker owns it now, and what the run does with the
+# maker's answer is held by the tests above and by test_bo_4300c_3.py. They stay
+# as strict expected failures (see unit_tests/workflows/_bo4300c3_retired.py).
+from _bo4300c3_retired import retire  # noqa: E402
+
+retire(
+    globals(),
+    "TestBP600WorkflowInPlaceAndSelfIsolation.test_ac_bp600a2_self_isolate_dispatched_when_not_a_repo",
+    "TestBP600WorkflowInPlaceAndSelfIsolation.test_ac_bp600a2_self_isolate_dispatched_on_main",
+    "TestBP600WorkflowInPlaceAndSelfIsolation.test_ac_bp600a2_self_isolate_dispatched_on_master",
+    "TestBP600WorkflowInPlaceAndSelfIsolation.test_ac_bp600a2_self_isolate_dispatched_on_detached_head",
+)

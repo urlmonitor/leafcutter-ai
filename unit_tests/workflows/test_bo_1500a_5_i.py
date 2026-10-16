@@ -52,7 +52,12 @@ _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature
 
 _TIMEOUT = 30  # seconds; all agent() calls are synchronous mocks
 
-_WORKTREE_SETUP_LABEL = "worktree-setup"
+# BO-4300c-3: the isolated-workspace step is the workspace maker's one dispatch
+# (label 'workspace-ensure'); a non-ready answer there ends the run with an
+# error that quotes what was received. The run names a project root so the
+# maker is actually asked (a run that names none is stopped before any ask).
+_WORKTREE_SETUP_LABEL = "workspace-ensure"
+_PROJECT_ROOT = "/tmp/bo1500a5i-project"
 
 # The five authoring-agent charters BO-1500a-5-i's Then-clause protects: NONE
 # of them may be dispatched once any of the four non-confirming shapes below
@@ -152,6 +157,7 @@ def _run_with_worktree_setup_response(response: object, run_id: str) -> HarnessR
             "userInput": "Add a widget",
             "workspace_setup_permission": _PERMIT_OK,
             "run_id": run_id,
+            "project_root": _PROJECT_ROOT,
         },
     )
 
@@ -220,34 +226,40 @@ def test_halt_records_which_of_the_four_shapes_occurred():
     """Then: "the message for each case names which of the four it was, so
     the user can tell a refusal apart from an uninterpretable reply."
 
-    Asserts each halt's terminal payload carries the matching
-    `setup_failure_kind` value (refused / uninterpretable /
-    no_workspace_named / silent_success) named in the AC's own
-    `config_schema_fragment`, and that the four values obtained across the
-    four shapes are pairwise distinct -- so a fix that reports the SAME kind
-    (or no kind at all) for every failure, satisfying "a message exists"
-    without satisfying "distinguishable", is rejected.
+    BO-4300c-3 replaced the per-shape `setup_failure_kind` label with one stop
+    payload that QUOTES what the maker answered, so the user tells the cases
+    apart by what they are shown. Asserts each halt's message quotes a
+    distinguishing phrase of its own reply, and that the four messages are
+    pairwise distinct -- so a fix that reports the SAME text for every failure,
+    satisfying "a message exists" without satisfying "distinguishable", is
+    rejected.
     """
-    observed_kinds = {}
-    for name, (response, expected_kind) in _FOUR_SHAPES.items():
+    # a phrase of each scripted reply that no other reply contains
+    quoted_phrase = {
+        "refused": "outside my defined scope",
+        "uninterpretable": "rate-limited",
+        "no_workspace_named": "setup_ticket_worktree.py",
+        "silent_success": '"message":"done"',
+    }
+    observed_messages = {}
+    for name, (response, _kind) in _FOUR_SHAPES.items():
         result = _run_with_worktree_setup_response(
             response, run_id=f"test-bo1500a5i-kind-{name}"
         )
         assert result.error == "", f"{name}: harness error: {result.error}"
         assert isinstance(result.result, dict), (
-            f"{name}: expected a structured halt payload naming which shape "
-            f"occurred, got: {result.result!r}"
+            f"{name}: expected a structured halt payload quoting the reply, "
+            f"got: {result.result!r}"
         )
-        actual_kind = result.result.get("setup_failure_kind")
-        assert actual_kind == expected_kind, (
-            f"{name}: expected setup_failure_kind={expected_kind!r}, got "
-            f"{actual_kind!r}. Full terminal payload: {result.result!r}"
+        message = result.result.get("message")
+        assert isinstance(message, str) and quoted_phrase[name] in message, (
+            f"{name}: expected the halt message to quote {quoted_phrase[name]!r}. "
+            f"Full terminal payload: {result.result!r}"
         )
-        observed_kinds[name] = actual_kind
+        observed_messages[name] = message
 
-    distinct_kinds = set(observed_kinds.values())
-    assert len(distinct_kinds) == len(observed_kinds), (
-        "BO-1500a-5-i: the four shapes' setup_failure_kind values must be "
-        f"pairwise distinct so a refusal is distinguishable from an "
-        f"uninterpretable reply. Got: {observed_kinds!r}"
+    assert len(set(observed_messages.values())) == len(observed_messages), (
+        "BO-1500a-5-i: the four shapes' halt messages must be pairwise distinct "
+        "so a refusal is distinguishable from an uninterpretable reply. "
+        f"Got: {observed_messages!r}"
     )

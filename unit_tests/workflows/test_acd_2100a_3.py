@@ -69,6 +69,7 @@ from pathlib import Path
 _UNIT_TESTS_DIR = Path(__file__).resolve().parent.parent
 if str(_UNIT_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_UNIT_TESTS_DIR))
+from _workspace_harness_defaults import inline_workspace_block, ready_workspace_args
 
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
@@ -77,7 +78,12 @@ _PREFLIGHT_SCRIPT = _WORKTREE_ROOT / "scripts" / "worktree" / "check_workspace_s
 
 _TIMEOUT = 40  # seconds; includes real `git worktree add` I/O.
 _MIS_ASSIGNMENT_LABEL = "workspace-setup-mis-assignment"
-_SETUP_RELATED_LABELS = ("resolve-worktree-setup-script-path", "worktree-setup")
+# BO-4300c-3: plan-feature.js no longer resolves or runs a worktree-setup script
+# of its own (the workspace is the maker's ready answer, handed in as
+# args.workspace). The "next real step" the startup check's verdict must be
+# consumed into is therefore the first authoring step after the workspace, the
+# triage dispatch, which is reached only when the check did not halt the run.
+_SETUP_RELATED_LABELS = ("stage-0-triage",)
 
 
 def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
@@ -316,13 +322,14 @@ def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict
     {calls: [...], result: ..., error?: ...} payload.
     """
     source = _PLAN_FEATURE_JS.read_text(encoding="utf-8")
-    body = _strip_exports(source)
+    body = _strip_exports(inline_workspace_block(source, _PLAN_FEATURE_JS))
 
+    # BO-4300c-3: the workspace is the maker's ready answer, handed in as args.workspace.
     shim = (
         _SHIM_TEMPLATE
         .replace("__RUN_CWD_JSON__", json.dumps(str(cwd)))
         .replace("__LABEL_RESPONSES_JSON__", json.dumps(label_responses))
-        .replace("__ARGS_JSON__", json.dumps(args))
+        .replace("__ARGS_JSON__", json.dumps({**ready_workspace_args(), **args}))
         .replace("__SCRIPT_BODY__", body)
     )
 

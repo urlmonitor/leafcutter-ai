@@ -79,10 +79,13 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
     # Inject a worktree-setup response that returns unparseable output (exit_code 0
     # but output is empty/unparseable JSON) — simulates a broken worktree payload.
     # BO-1500a-5-i: this is non-confirming shape (3), "no_workspace_named".
+    # BO-4300c-3: the step is now the workspace maker's one dispatch, labelled
+    # 'workspace-ensure'; the same reply states no status and no workspace_path,
+    # so it is not a ready answer.
     label_responses = {
-        "worktree-setup": {
+        "workspace-ensure": {
             "exit_code": 0,
-            "output": "",  # unparseable — wtPayload will be null
+            "output": "",  # unparseable — names no workspace_path
             "stderr": "",
         },
         # The scan-orphans / scan-committed-stages / final-gate / apply-approval
@@ -96,7 +99,12 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
         "apply-approval": {"status": "ok", "updated": []},
     }
 
-    result = run_workflow_under_e2(plan_feature, label_responses=label_responses)
+    # The run names a project root so the maker is actually asked.
+    result = run_workflow_under_e2(
+        plan_feature,
+        label_responses=label_responses,
+        args={"project_root": "/tmp/bo1500a5i-dual-project"},
+    )
 
     assert result.error == "", (
         f"Harness error: {result.error}\nstderr: {result.stderr[:300]}"
@@ -112,20 +120,19 @@ def test_plan_feature_commit_guard_fail_closed_when_worktree_unparseable() -> No
         f"M-2 / BO-1500a-5-i: expected the run to halt (status='error') on an "
         f"unparseable worktree-setup reply. Got terminal payload: {result.result!r}"
     )
-    assert result.result.get("setup_failure_kind") == "no_workspace_named", (
-        f"BO-1500a-5-i: expected setup_failure_kind='no_workspace_named' for a "
-        f"success-shaped (exit_code: 0) reply naming no worktree_path. "
+    assert result.result.get("abort_reason") == "workspace-not-ready", (
+        f"BO-4300c-3: expected abort_reason='workspace-not-ready' for a "
+        f"success-shaped (exit_code: 0) reply naming no workspace_path. "
         f"Got terminal payload: {result.result!r}"
     )
 
-    # The halt happens at Pre-Stage-0, so exactly these three calls precede it —
+    # The halt happens at Pre-Stage-0, so exactly these two calls precede it —
     # never scan-orphans-git-status, scan-committed-stages, any authoring agent,
     # or commit-stage-output.
     actual_calls = [(c.agent_type, c.label) for c in result.agent_calls]
     assert actual_calls == [
         ("status-checker", "detect-current-branch"),
-        ("worktree-agent", "resolve-worktree-setup-script-path"),
-        ("worktree-agent", "worktree-setup"),
+        ("worktree-agent", "workspace-ensure"),
     ], (
         f"M-2 / BO-1500a-5-i: expected the run to halt immediately after the "
         f"'worktree-setup' dispatch, with no later step (scan-orphans, "
