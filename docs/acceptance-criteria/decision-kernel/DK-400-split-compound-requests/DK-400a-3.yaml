@@ -6,7 +6,7 @@ components:
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: in_progress
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -108,7 +108,8 @@ superseded_by: null
 covered_by:
   - DK-400a-3-i
   - DK-400a-3-ii
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400a-3.md
 notes: |
   Flow branch split-not-needed. The guard against turning today's working path into a
   gate: a single bounded question must reach the same interactions it reaches today.

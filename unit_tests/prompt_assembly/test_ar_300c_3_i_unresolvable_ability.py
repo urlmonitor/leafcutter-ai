@@ -24,9 +24,9 @@ from _ar_300c_support import (  # noqa: E402
     copy_package_slice,
     declared_entries,
     make_skills,
-    migrate_or_fail,
     registry_agents,
     template_frontmatter,
+    transform_or_fail,
     write_template,
 )
 
@@ -41,8 +41,7 @@ def _verify(declarations, agents, packaged, project, output_root=".leafcutter"):
     from agent_ability_verdict import verify_abilities  # noqa: PLC0415
 
     if not agents:  # agreeing central records, so only resolution can produce findings
-        agents = [{"id": a, "skills_used": [e["skill_id"] for e in ents],
-                   "skills_invoked": [dict(e) for e in ents]}
+        agents = [{"id": a, "skills_invoked": [dict(e) for e in ents]}
                   for a, ents in declarations.items() if ents]
     return verify_abilities(declarations, agents, packaged_skills_root=packaged,
                             project_root=project, output_root_name=output_root)
@@ -59,8 +58,7 @@ def test_unresolvable_ability_is_reported_naming_agent_and_ability(tmp_path):
     ability; verdict not ok. The registry lists ONLY a resolvable skill, so an
     implementation reading the registry field would miss it (discrimination)."""
     packaged = make_skills(tmp_path / "pk", ["signoff"])
-    registry = [{"id": "a1", "skills_used": ["signoff"],
-                 "skills_invoked": [{"skill_id": "signoff", "mode": _ALWAYS}]}]
+    registry = [{"id": "a1", "skills_invoked": [{"skill_id": "signoff", "mode": _ALWAYS}]}]
     verdict = _verify({"a1": _decl("signoff", "no-such-skill")}, registry, packaged, tmp_path / "proj")
     found = _unresolved(verdict)
     assert [(f["agent"], f["ability"]) for f in found] == [("a1", "no-such-skill")]
@@ -134,27 +132,28 @@ def test_resolvable_ability_is_not_reported(tmp_path):
 def test_unresolvable_id_without_descriptive_only_is_still_reported_unresolved(tmp_path):
     # covers: AR-300c-3-i
     # angle: failure
-    """AR-300c-3-i stays strict: through the REAL migration, a planted
-    registry grant that resolves to no installed skill and is NOT
-    descriptive_only is declared and reported ``unresolved`` (and ONLY it --
-    a planted descriptive_only unresolvable id is left out, never reported).
-    Wrong version caught: a verifier/migration that exempts every unresolvable
-    id, or only the two known descriptive ones by name."""
+    """AR-300c-3-i stays strict: through the REAL transform hook, a planted
+    declared grant that resolves to no installed skill is reported
+    ``unresolved`` (and ONLY it -- a planted descriptive_only unresolvable id
+    in the registry record is preserved by the hook, never declared, never
+    reported). Wrong version caught: a verifier that exempts every
+    unresolvable id, or only the two known descriptive ones by name."""
     from agent_ability_verdict import verify_abilities  # noqa: PLC0415
 
     pkg = copy_package_slice(tmp_path / "pkg")
     add_registry_agent(pkg, {
         "id": "zz-ghost", "template_path": "templates/agents/zz-ghost.md",
-        "skills_used": [],
         "skills_invoked": [
-            {"skill_id": "signoff", "mode": "always"},
-            {"skill_id": "ghost-skill", "mode": "always"},
             {"skill_id": "phantom-described", "mode": "conditional", "descriptive_only": True},
         ],
     })
     write_template(pkg / "templates" / "agents" / "zz-ghost.md",
-                   {"name": "zz-ghost", "description": "d", "model": "sonnet", "tools": "Read"})
-    migrate_or_fail(pkg)
+                   {"name": "zz-ghost", "description": "d", "model": "sonnet", "tools": "Read",
+                    GRANT_KEY: [{"skill_id": "signoff", "mode": "always"},
+                                {"skill_id": "ghost-skill", "mode": "always"}]})
+    transform_or_fail(pkg)
+    record = {a["id"]: a for a in registry_agents(pkg)}["zz-ghost"]
+    assert {e["skill_id"] for e in record["skills_invoked"]} == {"signoff", "ghost-skill", "phantom-described"}
 
     agents = registry_agents(pkg)
     declarations = {}

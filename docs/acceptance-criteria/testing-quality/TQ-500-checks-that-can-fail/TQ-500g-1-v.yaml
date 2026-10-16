@@ -24,13 +24,14 @@ criteria: |
   When each reaches the step before commit,
   Then the fast lane makes the wrong-version runs through the one shared
       runner, with the same requirement ids, test root and base the other
-      routes pass,
+      routes pass, after asking the writer what is owed and, when anything
+      is, having test-breaker prepare it from that list unchanged,
     And F1 goes on to commit and open its pull request,
     And F2 stops before commit, no pull request is opened, and the stop
       carries the runner's report naming the test and the surviving wrong
       version,
-    And F3 goes on with "wrong-version runs not applicable: no test names a
-      wrong version" in its outcome, never "verified",
+    And F3 goes on with the runner's own not-applicable outcome in its
+      outcome, never "verified",
     And the red-before-the-code check and the green-and-covering check still
       run and still stop the work as they do today; the runs are added beside
       them, never in place of either,
@@ -39,6 +40,9 @@ criteria: |
 depends_on:
   - TQ-500g-1
   - TQ-500g-1-i
+  - TQ-500g-1-iv
+  - TQ-500g-1-ix
+  - TQ-500g-1-x
 doc_links:
   - path: docs/how-to/fast-lane-build.md
     relationship: describes
@@ -48,94 +52,386 @@ doc_links:
     relationship: describes
     status: exists
     relevance: "The fast-lane workflow; runs its gates through a depth-1 executor agent."
+  - path: docs/agents/coding/test-breaker.md
+    relationship: describes
+    status: exists
+    relevance: "The read-only preparer the route dispatches: inputs work_key, repo_root, requirement_ids, wrong_versions; one JSON reply."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The writer's list and write steps the route calls, and their JSON contracts in delivers_to."
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+- agent: python-coder
+  ac_id: TQ-500g-1-vi
+  contract: >-
+    Gate wrapper CLI, built and owned by this AC (IT-PO proposal 2026-10-14):
+    python scripts/build_orchestration/wrong_version_gate.py finish --work-key <key> --reply -
+    --ac-ids <comma-separated ids; empty or absent when there is no source requirement>
+    --ac-root <AC store root> --test-root <absolute worktree root> --base-ref <ref>.
+    stdin carries the raw reply text of agent test-breaker, byte for byte; it is empty when
+    nothing was owed and no agent was dispatched. The wrapper runs the writer's write step
+    (TQ-500g-1-ix) with that reply and the same ids, AC root and test root. Only when the writer
+    exits 0 does it run the runner's run step (TQ-500g-1-i) with --alterations <the
+    manifest_path the writer printed> and the same ids, AC root, test root and base ref. stdout:
+    exactly one JSON object {gate_passed: bool, stopped_at: null|"write", writer: <the writer's
+    write JSON verbatim> | null (null only when the writer printed no parseable JSON),
+    verdict: <the runner's run JSON verbatim> | null}. When the runner ran, gate_passed equals
+    verdict.gate_passed. When the writer stopped, stopped_at is "write", verdict is null, the
+    runner is never called and gate_passed is false. Exit 0 if and only if gate_passed is true.
+    An internal error still prints the shape, with gate_passed false. The wrapper never judges
+    anything itself.
+- agent: llm-expert
+  ac_id: TQ-500g-1-vii
+  contract: >-
+    The same wrapper CLI, stdin rule and JSON as for TQ-500g-1-vi. On /build-epic the supervisor
+    adds the record option that TQ-500g-1-viii adds, naming the ticket.
+- agent: python-coder
+  ac_id: TQ-500g-1-viii
+  contract: >-
+    The wrapper's finish step, which TQ-500g-1-viii extends with the runner's record option
+    (--record <ticket-key>, passed to the runner's run step unchanged). When the writer stops,
+    the runner is not called, so no wrong-version record is written. The backstop then reads
+    the record as missing.
 expects_from:
-  - ac_id: TQ-500g-1-i
-    contract: "The shared runner's CLI and its machine-readable stop/continue verdict."
+- ac_id: TQ-500g-1-i
+  contract: >-
+    Runner CLI (on main, #1044). The run step is python scripts/build_orchestration/wrong_version_runner.py run
+    --ac-ids <ids> --test-root <path> --ac-root <path> --base-ref <ref> --alterations <manifest path>.
+    It prints one JSON object {gate_passed, applicable, verified, outcome, reason, results,
+    survivors, unfinished} (shape in TQ-500g-1-i delivers_to) and exits 0 if and only if
+    gate_passed. The recover step is wrong_version_runner.py recover. It takes no flags, runs
+    with the worktree root as its working directory, and prints {restored: [str], ok: bool,
+    copy_dir: str|null, detail: str}.
+- ac_id: TQ-500g-1-iv
+  contract: >-
+    Dispatch of agent test-breaker (on main, #1206): inputs {work_key: str, repo_root: str
+    (absolute worktree root), requirement_ids: [str], wrong_versions: [{name: str, files: [str]}]}.
+    The reply is exactly one JSON value: {work_key, entries: [{name, status, reason,
+    replacements: [{path, old, new}]}], anomalies} or {status: 'failed', blocker_summary,
+    anomalies}. The route never reads the reply as an outcome. It only hands it to the writer.
+- ac_id: TQ-500g-1-ix
+  contract: >-
+    Writer CLI (on main, #1206). The list step is wrong_version_writer.py list --ac-ids <ids>
+    --ac-root <path> --test-root <path>. It prints {owed: [{name: str, files: [str]}], error:
+    str|null}, exits 0 when the list was printed (also when owed is []) and 1 when the AC store
+    or test root cannot be read. The write step is wrong_version_writer.py write --work-key <key>
+    --reply <path|-> --ac-ids --ac-root --test-root. It prints {written, manifest_path, error,
+    entries, ignored_reply_names, preparer_anomalies}, exits 0 when the manifest was written and
+    1 when it stopped, and writes no manifest when it stops. Both steps read scope from the AC
+    store's test_spec (must_catch, in_scope_files), never from the route.
 it_requirements:
-- 'Placement: immediately before the commit dispatch. This is after every pre-commit phase, so no later
-  step can change the code the runs judged. It runs on every drive that reaches that point, whatever earlier
-  sign-offs say. It is not a phase in the agents map, so there is no sign-off to trust.'
-- 'Sequence: (1) dispatch the preparer (TQ-500g-1-iv), passing the ids, the base ref and the manifest
-  path; (2) dispatch the shared runner CLI (TQ-500g-1-i) with the same ids, test root, AC store root,
-  base ref and manifest path as every other route. A preparer that fails or returns nothing is not a halt
-  by itself: the runner reports the missing entries as unfinished.'
-- 'Dispatch the command through an executor agent registered with permits_shell: true in config/agent_registry.json
-  (for example command-step-runner). Never use status-checker: it is registered read-only and has refused
-  shell steps (KI-BO-20260927, KI-BO-20260901-1620).'
-- Fail closed on the reply. A null, refused or unparseable reply, or one without a boolean gate_passed,
-  halts the work as blocked and never counts as a pass. The commit dispatch is unreachable on any path
-  that has not read gate_passed true from the runner's own JSON.
-- 'gate_passed false: halt before commit, carrying the runner''s JSON verbatim (survivors or unfinished)
-  in the halt payload. applicable false: record the runner''s outcome string and continue. Never record
-  ''verified'' for it.'
-- 'Resume: on a resumed drive, call the runner''s recovery step (TQ-500g-1-iii) before any other dispatch
-  that touches the worktree.'
-- Once TQ-500g-3-i and -3-ii exist, the same single before-commit CLI call also carries them. Do not add
-  a second dispatch for them.
-- 'Edit only templates/workflows-js/ sources. Deployed mirrors regenerate through build.py. Respect the
-  E2 leaf invariant and ADR-006: no workflow() call inside the workflow.'
-- The verify_red_baseline and verify_green_and_coverage invocations and halts stay unchanged. The runs
-  are added beside them. Build the runner invocation next to redBaselineInvocation and greenCoverageInvocation,
-  as one template string.
-- Runner failure releases the claimed ACs exactly as the other gate failures do (buildReleaseOutcomeFields).
-- The commit message and PR body name the runs among the passed gates only when they were applicable and
-  passed. F3 shows the not-applicable outcome.
-- 'JS growth: fast-lane-ship.js has 1652 counted lines, against a .js limit of 1000, so the ratchet forbids
-  growth. Expected growth is about 45 to 60 lines: two dispatches, a fail-closed parse, release-on-failure
-  and the resume recovery call. Before commit this needs either an equal in-file shrink or an explicit,
-  recorded ratchet decision by the user (see the BO-3900 precedent).'
+- >-
+  Placement: immediately before the commit dispatch, after verify_green_and_coverage and the Review
+  phase. So no later step can change the code the runs judged. The sequence runs on every drive
+  that reaches that point, whatever earlier sign-offs say. It is not a phase in the agents map,
+  so there is no sign-off to trust.
+- >-
+  Sequence, every time, in this order. (0) On a resumed drive only: the runner's recover step,
+  before the list step and before test-breaker reads any file. test-breaker would otherwise read
+  a file a cut-short run left altered. (1) When the batch has source requirement ids: the writer's
+  list step for those ids, run fresh immediately before the dispatch and never taken from a cached
+  copy. (2) When owed is non-empty: dispatch agent test-breaker with work_key, repo_root (the
+  absolute worktree root), requirement_ids (the same ids) and wrong_versions, which is the list's
+  owed array unchanged (same entries, same order, same spellings, same files). (3) and (4) One
+  dispatch of the wrapper's finish step. The reply goes in on stdin, and the wrapper runs the
+  writer's write step and then, only if the writer did not stop, the runner's run step with
+  --alterations <manifest path>. (5) Reach the commit dispatch only when finish's own gate_passed
+  is true.
+- >-
+  Inputs: the runner gets the same values on every route: the batch's AC ids, the worktree root
+  as --test-root, the AC store root as --ac-root, and --base-ref HEAD passed explicitly. The fast
+  lane commits once at the end, so HEAD is still the state before the work began. The list step
+  and the write step get the same ids, AC root and test root.
+- >-
+  Reply transport (IT-PO decision 2026-10-14): stdin. The workflow body cannot write files, so a
+  shell executor would have to persist the reply in an extra step. Instead the finish command the
+  JS builds carries the reply text on stdin through a quoted here-document. The reply must reach
+  the writer byte for byte, with no shell expansion of $, backticks or quotes. The here-document
+  delimiter must be a token that does not occur in the reply. No reply file is left in the working
+  tree or the work folder.
+- >-
+  Writer stop (IT-PO decision 2026-10-14): halt, never a runner call without a manifest. When the
+  writer stops (unreadable reply, the failed shape, a reply for another work key, or an internal
+  error), finish does not call the runner and reports gate_passed false with stopped_at "write".
+  The route halts the work as blocked and carries the writer's JSON (its error) verbatim in the
+  halt payload. That decision sits in the wrapper, not in the JS.
+- >-
+  The JS never interprets the test-breaker reply. A dispatch that throws, is refused or returns
+  nothing is passed on as an empty reply. With names owed, the writer then stops and the work
+  halts. The JS never decides that an empty reply means nothing is owed.
+- >-
+  Nothing owed: when the list returns owed [], test-breaker is not dispatched, and finish still
+  runs with an empty stdin. The writer writes an empty manifest, and the runner then judges "the
+  fix undone" and any discrimination-angle tests alone. No source requirement: the list step and
+  test-breaker are skipped, and finish runs with no ids, so the runner itself returns its
+  not-applicable outcome.
+- >-
+  New Python entry (IT-PO proposal 2026-10-14, owned and built by this AC):
+  scripts/build_orchestration/wrong_version_gate.py with one step, finish (contract in delivers_to).
+  It is a public module with its own CLI entry and no leading underscore. It holds no rule of its
+  own: it calls the writer and the runner through their existing entries and prints the runner's
+  JSON verbatim under verdict, so every route's verdict is still the one shared runner's. Progress
+  logging goes to stderr only. It stays at or under 400 counted lines
+  (scripts/commit_guardian/_file_size_ratchet.py). It is deployed exactly as wrong_version_runner.py
+  and wrong_version_writer.py are, so an installed project's workflows can call it. Why: one executor
+  dispatch and one fail-closed parse instead of two in each of the three over-ratchet JS files, and
+  the "writer stopped, do not run" decision stays in Python. If the user rejects the wrapper, the
+  fallback is two executor dispatches (write, then run). The JS then halts unless the write JSON has
+  written true and a string manifest_path.
+- >-
+  Dispatch every command step (recover, list, finish) through an executor agent registered with
+  permits_shell: true in config/agent_registry.json (command-step-runner, which already lists
+  fast-lane-ship.js in spawned_by). Never use status-checker: it is registered read-only and has
+  refused shell steps (KI-BO-20260927, KI-BO-20260901-1620). test-breaker already lists
+  fast-lane-ship.js in spawned_by.
+- >-
+  Fail closed on every command reply. recover: ok must be the boolean true. list: owed must be an
+  array and error null. finish: gate_passed must be a boolean. A null, refused or unparseable
+  reply, or one that fails its check, halts the work as blocked and never counts as a pass. The
+  commit dispatch is unreachable on any path that has not read gate_passed true from finish's own
+  JSON.
+- >-
+  gate_passed false: halt before commit and carry finish's JSON verbatim (survivors, unfinished, or
+  the writer's error) in the halt payload. verdict.applicable false: record verdict.outcome verbatim
+  and continue. Never record "verified" for it.
+- >-
+  work_key: one plain path segment (no separator, no ".."), stable across a resume of the same
+  drive: the fast lane's target AC id. The same key goes to test-breaker and to finish.
+- >-
+  The fast lane builds its set one AC at a time in its own worktree, so no other step can run
+  in the worktree while finish has a file altered. If the fast lane ever drives work in parallel
+  inside one worktree, the finish step needs a per-worktree exclusion first.
+- >-
+  Once TQ-500g-3-i and -3-ii exist, the same single before-commit finish call also carries them.
+  Do not add a second dispatch for them.
+- >-
+  Edit only templates/workflows-js/ sources. Deployed mirrors regenerate through build.py. Respect
+  the E2 leaf invariant and ADR-006: no workflow() call inside the workflow; test-breaker is
+  dispatched at depth 1 from the workflow body.
+- >-
+  The verify_red_baseline and verify_green_and_coverage invocations and halts stay unchanged. The
+  runs are added beside them. Build the recover, list and finish invocations next to
+  redBaselineInvocation and greenCoverageInvocation.
+- >-
+  A halt anywhere in the sequence releases the claimed ACs exactly as the other gate failures do
+  (buildReleaseOutcomeFields).
+- >-
+  The commit message and PR body name the runs among the passed gates only when they were
+  applicable and passed. F3 shows the runner's not-applicable outcome.
+- >-
+  JS growth: fast-lane-ship.js has 1652 counted lines, against a .js limit of 1000, so the ratchet
+  forbids growth. Expected growth is about 55 to 75 lines: three command builders (recover, list,
+  finish), the test-breaker dispatch, the fail-closed parses, release-on-failure and the resume
+  call. Before commit this needs either an equal in-file shrink or an explicit, recorded ratchet
+  decision by the user (see the BO-3900 precedent).
+- >-
+  The workflow tests that carry must_catch exercise fast-lane-ship.js as it stands in
+  templates/workflows-js/ when they run, never a deployed copy left from an earlier build.
+  Otherwise a wrong version applied to the template would go unseen and survive this AC's own
+  wrong-version runs.
 test_spec:
-- name: test_fast_lane_dispatches_runner_after_green_and_review_before_commit
+- name: test_fast_lane_wrong_version_sequence_runs_after_green_and_review_before_commit
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: reachability
   surface_invoked: templates/workflows-js/fast-lane-ship.js under unit_tests/_workflow_engine_harness.py
-  description: Drives fast-lane-ship.js (the build.py-deployed copy) under the workflow-engine harness.
-    The recorded dispatches show the preparer and the runner after verify_green_and_coverage and Review
-    and before the commit agent, carrying the batch ids, worktree, AC root and base ref.
+  description: >-
+    Drives fast-lane-ship.js under the workflow-engine harness for F1. The recorded dispatches show,
+    after verify_green_and_coverage and Review and before the commit agent: the list step, then
+    test-breaker, then the finish step. The list and finish steps carry the batch ids, the worktree
+    root, the AC root and --base-ref HEAD.
   must_catch:
   - runner placed after the commit dispatch
+  - test-breaker dispatched before the list step
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_owed_list_reaches_test_breaker_unchanged
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: >-
+    The list executor returns two owed entries, one with two in-scope files. The test-breaker dispatch
+    input carries wrong_versions equal to that owed array (same order, spellings and files), the
+    same requirement_ids, the work key and an absolute repo_root.
+  must_catch:
+  - owed entries filtered, reordered or re-spelled before the dispatch
+  - in-scope files dropped from the dispatch
+  - repo_root passed as a relative path
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_test_breaker_reply_reaches_writer_byte_for_byte
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: >-
+    The harness returns a test-breaker reply whose replacement text holds $HOME, backticks, a single
+    quote and a line reading EOF. The recorded finish command is then executed by a real shell in a
+    temp git repo with a temp AC store, and the writer's manifest holds that replacement's altered copy
+    exactly.
+  must_catch:
+  - reply expanded by the shell
+  - reply cut off at a line equal to the here-document delimiter
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_nothing_owed_skips_test_breaker_and_still_runs_finish
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: >-
+    The list returns owed []. No test-breaker dispatch is recorded. The finish step is dispatched
+    with an empty stdin, and its gate_passed true leads to commit.
+  must_catch:
+  - runner skipped when nothing is owed
+  - test-breaker dispatched with an empty wrong_versions list
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
 - name: test_f2_survivor_stops_before_commit_and_pr
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: criterion
-  description: 'F2: the runner executor returns gate_passed false with a survivor. No commit or pull-request
-    agent is dispatched, and the halt payload names the test and the wrong version. F1: gate_passed true,
-    and commit and PR follow.'
+  description: >-
+    F2: finish returns gate_passed false with a survivor in verdict. No commit or pull-request agent
+    is dispatched, and the halt payload carries finish's JSON naming the test and the wrong version.
+    F1: gate_passed true, and commit and PR follow.
   must_catch:
   - runner dispatched but its verdict ignored
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
 - name: test_f3_not_applicable_continues_never_verified
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: discrimination
-  description: 'F3: the runner returns applicable false. The drive continues to commit, the outcome reads
-    ''wrong-version runs not applicable: no test names a wrong version'', and no field says verified.'
+  description: >-
+    F3: finish returns gate_passed true with verdict.applicable false. The drive continues to commit,
+    the outcome carries verdict.outcome verbatim, and no field says verified.
   must_catch:
   - F3 recorded as verified
   - F3 halted as a failure
-- name: test_refused_or_unparseable_runner_reply_fails_closed
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_writer_stop_halts_before_commit_with_writer_error
   target_dir: unit_tests/workflows/
   framework: pytest
   type: integration
   angle: failure
-  description: Null, refused and non-JSON replies each halt as blocked, with no commit and the claimed
-    ACs released. The existing red and green gate halts still fire unchanged.
+  description: >-
+    finish returns gate_passed false with stopped_at "write" and verdict null. The drive halts as
+    blocked, no commit is dispatched, the claimed ACs are released, and the payload carries the
+    writer's error.
   must_catch:
-  - unparseable runner reply treated as a pass
+  - writer stop treated as nothing owed
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_refused_or_unparseable_command_replies_fail_closed
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    For each of recover, list and finish, a null, refused, non-JSON or wrongly shaped reply halts as
+    blocked, with no commit and the claimed ACs released. A test-breaker dispatch that returns null
+    is passed on as an empty reply, never as nothing owed. The existing red and green gate halts still
+    fire unchanged.
+  must_catch:
+  - unparseable finish reply treated as a pass
+  - list reply without an owed array treated as nothing owed
   - existing verify_green_and_coverage halt removed
-test_rationale: A workflow gate is only proven by driving the workflow and asserting that its verdict
-  controls the next dispatch. A grep of the workflow source is forbidden (CLAUDE.md). The harness runs
-  the deployed copy, so a deploy gap also shows up. Cross-route verdict identity is proven once, by the
-  TQ-500g-1 seam test.
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_resumed_drive_recovers_before_test_breaker_reads
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    On a resumed drive, recover is recorded before the list step and before test-breaker. A recover
+    reply with ok false halts the drive as blocked before any of them.
+  must_catch:
+  - recovery called after test-breaker has read the code
+  - recover ok false ignored
+  in_scope_files:
+  - templates/workflows-js/fast-lane-ship.js
+- name: test_gate_finish_verdict_is_runner_json_verbatim
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: seam
+  description: >-
+    On a temp git repo and AC store with a readable reply fixture, finish's verdict equals,
+    key for key, the JSON the runner prints when run directly with the manifest the writer
+    wrote and the same ids, roots and base ref. gate_passed equals verdict.gate_passed.
+  must_catch:
+  - wrapper rewrites or summarises the runner's verdict
+  - wrapper passes a different base ref or AC root to the runner
+  in_scope_files:
+  - scripts/build_orchestration/wrong_version_gate.py
+- name: test_gate_finish_writer_stop_never_runs_runner
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: >-
+    With names owed and an empty, cut-off or failed-shape reply, finish exits 1 with gate_passed
+    false, stopped_at "write", verdict null, and the writer's JSON under writer. No runner run
+    happened: no wrong-version-runs folder was created and the working tree is unchanged.
+  must_catch:
+  - runner called without a manifest after the writer stopped
+  - writer stop reported as gate_passed true
+  in_scope_files:
+  - scripts/build_orchestration/wrong_version_gate.py
+- name: test_gate_finish_nothing_owed_empty_stdin_still_runs_runner
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: boundary
+  description: >-
+    For ids whose test entries owe no named wrong version but carry a discrimination-angle test,
+    finish with an empty stdin writes an empty manifest and runs the runner, whose verdict reports
+    "the fix undone". With no ids at all, verdict.outcome is the runner's no-source-requirement
+    outcome.
+  must_catch:
+  - empty stdin treated as a writer stop when nothing is owed
+  in_scope_files:
+  - scripts/build_orchestration/wrong_version_gate.py
+- name: test_gate_finish_cli_end_to_end
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: reachability
+  surface_invoked: python scripts/build_orchestration/wrong_version_gate.py finish
+  description: >-
+    Runs finish as a subprocess with the reply on stdin. Asserts exactly one JSON object on stdout
+    with keys gate_passed, stopped_at, writer and verdict, and exit 0 if and only if gate_passed.
+test_required: true
+test_rationale: >-
+  A workflow gate is only proven by driving the workflow and asserting that its replies control the
+  next dispatch; a grep of the workflow source is forbidden (CLAUDE.md). The harness entries prove
+  the order (recover, list, test-breaker, finish, commit), that the owed list reaches test-breaker
+  unchanged, and that every halt is fail-closed. One entry runs the recorded finish command in a
+  real shell, because only that shows the reply reaching the writer byte for byte. The wrapper's own
+  entries run the real writer and runner against a temp repo and prove that the wrapper adds no rule:
+  its verdict is the runner's JSON, and a writer stop never reaches the runner. Every must_catch entry
+  names its in_scope_files, so this AC's own wrong-version runs have files to alter.
+  Cross-route verdict identity is proven once, by the TQ-500g-1 seam test.
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+- reason: "Technical fields aligned with the design now on main (#1044, #1206): the route runs the writer's list step, dispatches test-breaker with the owed list unchanged, then one gate-wrapper call that runs the writer's write step and the runner. Reply transport (stdin) and the writer-stop rule (halt) decided. New Python entry wrong_version_gate.py finish proposed and owned here. expects_from cites TQ-500g-1-i, -iv and -ix; delivers_to gives the wrapper to -vi, -vii and -viii; test_spec rewritten. Criteria unchanged; clauses for the BA are listed in notes."
+  date: '2026-10-14'
+  by: it-po
+  directed_by: user
+- reason: "User-approved criteria amendment (2026-10-15), from the IT-PO's clauses for the BA: the runs now follow asking the writer what is owed and, when anything is, having test-breaker prepare it from that list unchanged; F3's outcome is the runner's own not-applicable outcome (on main: 'wrong-version runs not applicable: no covering test declares a wrong version or the discrimination angle'), never 'verified'. depends_on gains TQ-500g-1-iv, TQ-500g-1-ix and TQ-500g-1-x. All other clauses kept."
+  date: '2026-10-15'
+  by: business-analyst
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
@@ -165,3 +461,39 @@ notes: |
   change can never follow the runs.
   Lane: fast lane (python-coder) after -1-i, -1-ii, -1-iii and -1-iv. The JS
   ratchet decision is open (see the growth it_requirement).
+
+  IT-PO AMENDMENT (2026-10-14): THE THREE-STEP DESIGN ON MAIN
+  The runner (TQ-500g-1-i/-ii/-iii, #1044), the read-only test-breaker
+  (TQ-500g-1-iv) and the writer with its list and write steps (TQ-500g-1-ix,
+  #1206) are on main. The route sequence before commit is: recover (resume
+  only), list, test-breaker (only when something is owed), then one finish
+  call that writes the manifest and runs the runner. The commit is reached only
+  on finish's gate_passed true.
+  DECISIONS:
+    - Reply transport: stdin, through a quoted here-document in the finish
+      command. The workflow body cannot write files, and a reply file would need
+      an extra executor step.
+    - Writer stop: halt the work. The runner is never called without a manifest.
+    - New Python entry: scripts/build_orchestration/wrong_version_gate.py
+      finish, owned and built by THIS AC (first in the route build order);
+      -vi and -vii consume it, and -viii adds the record pass-through. It holds
+      no rule of its own. If the user rejects it, the fallback is two executor
+      dispatches (write, then run) with a fail-closed parse of each.
+    - Every must_catch test entry names in_scope_files, so this AC's own
+      wrong-version runs have files to alter.
+  CRITERIA CLAUSES FOR THE BA (criteria untouched here):
+    - "And F3 goes on with "wrong-version runs not applicable: no test names a
+      wrong version" in its outcome": the runner on main prints "wrong-version
+      runs not applicable: no covering test declares a wrong version or the
+      discrimination angle". Proposed: "And F3 goes on with the runner's own
+      not-applicable outcome in its outcome, never "verified"."
+    - "Then the fast lane makes the wrong-version runs through the one shared
+      runner, with the same requirement ids, test root and base the other routes
+      pass": still true, but it says nothing about the preparation. Proposed
+      addition: "after asking the writer what is owed and, when anything is,
+      having test-breaker prepare it from that list unchanged".
+  FOLLOW-UPS OUTSIDE THIS AC: depends_on does not name TQ-500g-1-iv or -ix
+  (BA/user to add). Existing must_catch entries without in_scope_files list
+  their names with files [], so test-breaker can prepare nothing for them and
+  the runner reports them unfinished. Wiring this route before those entries
+  are backfilled stops every fast-lane work whose ACs carry such entries.

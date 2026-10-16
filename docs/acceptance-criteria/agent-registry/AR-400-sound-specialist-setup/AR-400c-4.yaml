@@ -1,0 +1,116 @@
+id: AR-400c-4
+title: "A build of the package's own tree prints no ability or hand-off warnings and passes"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree after every record under AR-400 is done,
+  When the build runs over it into a fresh target,
+  Then the build passes,
+    And the part of the run that reports on specialists' abilities and hand-off
+      permissions contains zero lines at warning severity,
+    And each of the 30 such warning lines in the 2026-10-12 rebuild report is
+      accounted for by exactly one record under AR-400 that either fixed its
+      cause or removed the message, and the mapping is recorded in this record's
+      evidence,
+    And the run still reports how many specialists the ability and hand-off
+      checks examined, and that number equals the number of specialist
+      definitions in the tree.
+depends_on:
+  - AR-400c
+  - AR-400a-3
+  - AR-400b-3
+  - AR-400c-1
+  - AR-400c-2
+  - AR-400d-1
+  - AR-400f-2
+doc_links:
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "Closes when this passes and the reference check is wired (AR-400a-1, AR-400b-4)."
+  - path: docs/build-pipeline.md
+    relationship: describes
+    status: exists
+    relevance: "The build whose ability/hand-off reporting this record's acceptance run inspects."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "ACCEPTANCE RUN, NOT NEW LOGIC: the evidence is one real build of the checked-out package into a fresh target after every AR-400 record is done. Any residual warning line in the ability/hand-off part of the run is fixed at its cause in the owning record, never by filtering the output."
+  - "The 'ability and hand-off part of the run' is bounded by the output of registry_validator.validate_agent_registry and agent_ability_gate.refuse_on_ability_findings (the two producers of the 2026-10-12 lines 297-326); the 14 compute_intra_package_closure 'A human should verify' lines and the version-probe line are outside it, as the criteria state."
+  - "The 30-line mapping is recorded in this record's evidence (the notes table) and each mapped record's test is cited by path."
+  - "The examined-specialists figure is derived from the tree at run time and compared with the number of templates/agents/*.md definitions with a registry entry -- never a hard-coded 63."
+  - "Tests that need a deployed layout use the session-scoped shared_reference_layout fixture (read-only) rather than spawning their own build.py."
+test_spec:
+  - name: test_real_build_ability_and_handoff_output_has_zero_warning_lines
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: e2e
+    angle: real_artifact
+    description: "From the shared reference build of the checked-out package, the validation-phase output (registry validator + ability gate) contains zero [WARNING] lines and the build exited 0."
+    must_catch:
+      - "a residual warning is hidden by filtering stdout rather than fixing its cause"
+  - name: test_examined_specialists_equals_definitions_in_tree
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "The examined-specialists figure the run reports equals the number of agent definitions derived independently from templates/agents/ and the registry."
+  - name: test_reintroducing_a_2026_10_12_warning_cause_fails_the_run
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control: in a copy of the real tree, restore ticket-supervisor's explicit llm-expert spawn entry; the validator fails with the redundant-entry finding (not a warning)."
+test_rationale: >-
+  The goal's own acceptance is a property of the real build's output, so the
+  test reads that output from a real build; the control proves the clean
+  output is not the product of a check that stopped looking.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  THE GOAL'S OWN ACCEPTANCE: "a clean build means every specialist's setup is
+  coherent". Hosted under AR-400c because its promise is the report.
+
+  THE 30 LINES (rebuild log 2026-10-12, lines 297-326) AND THEIR OWNERS. The
+  log's 32 warnings are these 30 plus line 434 (version detection -- the
+  separate /quick-fix, absent from this tree by design) and line 669
+  (BP-1500h):
+    297 ticket-supervisor redundant llm-expert         -> AR-400f-2
+    298 ticket-supervisor/webapp-testing               -> AR-400b-2-ii
+    299 brainstorm-worker/signoff                      -> AR-400b-2-i
+    300,301,303 research-agent trading ids             -> AR-400a-3-i
+    302 research-agent/knowledge-query                 -> AR-400b-3-i
+    304 python-coder/collector-enforcer                -> AR-400d-1-ii
+    305 python-coder/sign-off                          -> AR-400b-3-ii
+    306,307,313-317,321-324 granted-not-mentioned (11) -> AR-400c-1 (+ AR-400c-2)
+    308 retrospective-agent/route-learning             -> AR-400a-3-ii
+    309,311 sql-coder/postgres, sql-test               -> AR-400d-1-i
+    310 sql-coder/sql-query                            -> AR-400b-3-iv
+    312 frontend-coder/frontend-design                 -> AR-400b-2-i
+    318 architecture-diagram-author casing             -> AR-400b-3-iii
+    319,325,326 live-surface-tester, BA, IT PO/signoff -> AR-400b-1 (control)
+    320 onboard/webapp-testing                         -> AR-400b-2-iv
+  OUT OF SCOPE AND NOT IN THE 30: the 14 "a human should verify" closure
+  lines (log lines 280-293, printed without a [WARNING] tag) and lines 434 and
+  669 above. "Zero warning lines" is scoped to the ability and hand-off part
+  of the run for that reason.

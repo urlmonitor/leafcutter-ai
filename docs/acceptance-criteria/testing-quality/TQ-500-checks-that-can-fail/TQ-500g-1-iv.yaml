@@ -2,12 +2,13 @@ id: TQ-500g-1-iv
 components:
   - testing_quality
   - llm_authoring
+  - agent_registry
 title: "Each named wrong version becomes one alteration of the finished code that does what its name says and nothing else"
 component: testing-quality
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_1
@@ -44,35 +45,197 @@ doc_links:
     relationship: relates-to
     status: exists
     relevance: "Where must_catch names come from (the code-aware test designer); their wording is what this step must turn into code."
+  - path: docs/architecture/adrs/ADR-033-agent-model-tiers.md
+    relationship: describes
+    status: exists
+    relevance: "Model tier (Sonnet, section 2.1), Internal visibility (2.5), and narrowing the tool allowlist below the Sonnet floor to Read, which needs no justification block (2.6, 2.8)."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry the test-breaker entry lands in, and the spawned_by / spawn_allowlist reciprocity the build and the check-agent-spawn-consistency hook enforce."
+  - path: docs/acceptance-criteria/testing-quality/TQ-500-checks-that-can-fail/TQ-500g-1-ix.yaml
+    relationship: relates-to
+    status: exists
+    relevance: "The deterministic writer that turns this agent's reply into the altered copies and the alterations manifest (run-92227a2a275f44ff)."
 assigned_agent: llm-expert
 estimated_complexity: M
 delivers_to:
 - agent: python-coder
-  ac_id: TQ-500g-1-i
-  contract: 'Alterations manifest (JSON), written to <git-dir>/leafcutter/work/<work-key>/alterations.json:
-    {work_key: str, entries: [{name: str (the must_catch string verbatim), status: ''prepared''|''could_not_prepare'',
-    reason: str|null (one line; required when could_not_prepare), files: [{path: str (repo-relative POSIX),
-    altered_copy: str (absolute path of the full altered file, outside the working tree)}], diff: str
-    (unified diff against the code as written, shown next to the name)}]}. There is one entry per named
-    wrong version other than the fix-undone aliases. Nothing is ever omitted silently, and there are no
-    outcome claims.'
+  ac_id: TQ-500g-1-ix
+  contract: 'Reply of agent test-breaker, read by the writer step. Exactly one JSON value, no prose around
+    it. Success shape: {work_key: str (as dispatched), entries: [{name: str (the must_catch string verbatim,
+    as dispatched), status: ''prepared''|''could_not_prepare'', reason: str|null (one line; required when
+    could_not_prepare, null when prepared), replacements: [{path: str (repo-relative POSIX), old: str (exact
+    text copied from the file as read; must occur exactly once in that file when applied), new: str}] (at
+    least one when prepared, [] when could_not_prepare)}], anomalies: [str]}. Failure shape: {status:
+    ''failed'', blocker_summary: str (one line), anomalies: [str]}. Replacements on one file apply in order,
+    each against the result of the one before. Each name is applied to the code as written on its own,
+    never on top of another name. The aliases ''revert the fix'' and ''the fix undone'' get no entry (noted
+    in anomalies as ''alias skipped: <name>''). The reply carries no diff, no altered copy and no outcome
+    claim. Anything of that kind, and the anomalies, never reach the manifest.'
+- agent: python-coder
+  ac_id: TQ-500g-1-v
+  contract: 'Route sequence, every time, immediately before the commit dispatch. (1) Dispatch agent test-breaker
+    (Internal; tools: Read only; it writes nothing and cannot run git) with work_key: str; repo_root: str
+    (absolute working-tree root); requirement_ids: [str] (the AC ids); wrong_versions: [{name: str (the
+    must_catch string verbatim), files: [str (repo-relative POSIX source paths in scope)]}]. There is no
+    manifest_path and no copies_dir input. It replies with one JSON value, the shape in the TQ-500g-1-ix
+    entry above. (2) Dispatch the writer CLI (TQ-500g-1-ix) with that reply. The writer writes the altered
+    copies and <git-dir>/leafcutter/work/<work-key>/alterations.json and prints the manifest path. (3)
+    Dispatch the shared runner CLI (TQ-500g-1-i) with --alterations <that path>. A failed or empty reply,
+    or a writer that stops, leaves no manifest, so the runner reports every owed name as unfinished. Whether
+    the route halts at once or still calls the runner is this AC''s wiring choice; either way the work
+    never reads as owing nothing. The reply only routes and is never read as an outcome.'
+- agent: python-coder
+  ac_id: TQ-500g-1-vi
+  contract: Same sequence (test-breaker, then the writer, then the runner), inputs and replies as for TQ-500g-1-v
+    (dispatched from build-feature.js and build-ticket.js).
+- agent: llm-expert
+  ac_id: TQ-500g-1-vii
+  contract: Same sequence (test-breaker, then the writer, then the runner), inputs and replies as for TQ-500g-1-v
+    (dispatched by ticket-supervisor per the building-epics skill).
 expects_from: null
+package_surface: true
 it_requirements:
-- The preparer is an agent that wrote neither the code nor the tests (user decision Q1). So it is not
-  test-writer and not the coder. It may be a new agent (working name test-breaker) or an existing independent
-  one, chosen at build time. A new agent is registered through the add-agent-to-package procedure (config/agent_registry.json,
-  docs/agents/README.md). Its tool allowlist lets it read the code and write the manifest, but not run
-  tests.
-- It writes the manifest described in delivers_to and nothing else. It never edits the working tree (the
-  runner applies each alteration), never runs tests, and never says whether a test would catch a wrong
-  version.
-- Each named wrong version gets exactly one entry, under its name verbatim. A name it cannot prepare gets
-  'could_not_prepare' with a one-line reason, never a silent omission. The fix-undone aliases ('revert
-  the fix', 'the fix undone') are not prepared (TQ-500g-1-i).
-- Each alteration changes only what its name says. The diff shown next to the name is the evidence a reviewer
-  checks.
-- 'The template passes prompt-audit: signoff protocol, spawn_allowlist, no compound bash, and a tool allowlist
-  that matches the body.'
+  config_schema_fragment:
+    type: object
+    required:
+    - id
+    - name
+    - tier
+    - role
+    - portable
+    - domain
+    - spawn_allowlist
+    - spawned_by
+    - is_ticket_phase
+    - selection_criteria
+    - template_path
+    - model
+    - skills_used
+    - permits_shell
+    - produces
+    - category
+    - components
+    properties:
+      id:
+        const: test-breaker
+      category:
+        const: research
+      tier:
+        const: utility
+      portable:
+        const: true
+      domain:
+        const: null
+      is_ticket_phase:
+        const: false
+      selection_criteria:
+        const: null
+      permits_shell:
+        const: false
+      spawn_allowlist:
+        type: array
+        maxItems: 0
+      spawned_by:
+        type: array
+        uniqueItems: true
+        minItems: 4
+        maxItems: 4
+        items:
+          enum:
+          - fast-lane-ship.js
+          - build-feature.js
+          - build-ticket.js
+          - ticket-supervisor
+      template_path:
+        const: templates/agents/test-breaker.md
+      model:
+        const: sonnet
+      produces:
+        const: test_artifact
+      components:
+        type: array
+        contains:
+          const: testing_quality
+  reference_file_path: config/agent_registry.json
+  n_location_rule: "2: one new object in agents[] with id test-breaker, and 'test-breaker' appended to
+    the ticket-supervisor entry's spawn_allowlist so spawned_by stays reciprocal. No other registry entry
+    changes."
+  required_skills:
+  - llm-expert
+  - add-agent-to-package
+  - prompt-audit
+  post_write_commands:
+  - python scripts/build.py --validate-only
+  - python scripts/build.py --target-dir . --force
+  - python scripts/build.py --update-diagrams
+  files:
+  - path: templates/agents/test-breaker.md
+    change: "Create. Canonical source: frontmatter name test-breaker, model sonnet, tools: Read, portable true,
+      signoff false, domain null, requires_verification false. The agent holds no Write or Edit, so the registry
+      verification-flag rules demand neither requires_verification true nor Bash."
+  - path: config/agent_registry.json
+    change: Register per config_schema_fragment and n_location_rule.
+  - path: docs/agents/README.md
+    change: "Section 5 inventory: one row in the coding/ family table, alphabetical, Sonnet | Internal | no slash
+      command, linking coding/test-breaker.md. Section 4 spawn diagrams refreshed by build.py --update-diagrams.
+      Use Edit, never Write (add-agent-to-package step 5)."
+  - path: docs/agents/coding/test-breaker.md
+    change: "Create the reference doc (inputs, outputs, behaviour, constraints, see-also), at the path the README
+      inventory links and test-writer uses. docs/how-to/creating-an-agent-template.md step 8 still names
+      docs/reference/<name>.md, which no agent uses."
+  - path: docs/agents/cards/test-breaker.card.md
+    change: Generated by build.py (generate_agent_cards.py). Commit it with the change; never hand-write it.
+  constraints:
+  - The preparer is an agent that wrote neither the code nor the tests (user decision Q1). So it is not
+    test-writer and not the coder. Build-time decision dec-124faaaa3d814050 (2026-10-07) chose the new
+    dedicated agent test-breaker, registered through the add-agent-to-package procedure (config/agent_registry.json,
+    docs/agents/README.md). Decision Kernel run run-92227a2a275f44ff (2026-10-11) made it read-only. Its
+    tool allowlist is Read only. It lets it read the code, but not write any file or run tests (no Write,
+    no Edit, no Bash or other shell, no Agent, no search tools).
+  - It writes nothing. Its only output is the reply described in delivers_to (TQ-500g-1-ix). It never edits
+    the working tree (the runner applies each alteration), never runs tests, and never says whether a test
+    would catch a wrong version.
+  - Each named wrong version gets exactly one entry, under its name verbatim. A name it cannot prepare gets
+    'could_not_prepare' with a one-line reason, never a silent omission. The fix-undone aliases ('revert
+    the fix', 'the fix undone') are not prepared (TQ-500g-1-i).
+  - Each alteration changes only what its name says. The diff shown next to the name is the evidence a reviewer
+    checks. The writer (TQ-500g-1-ix) computes that diff from the replacements; the agent supplies none.
+  - 'The template passes prompt-audit: signoff protocol, spawn_allowlist, no compound bash, and a tool allowlist
+    that matches the body. For this agent signoff is false and it holds no Agent tool, so checks 4 and 5
+    are N/A, and check 2 reports no tool named in the body outside Read.'
+  - 'Writer split (run-92227a2a275f44ff): the writer step TQ-500g-1-ix, which is code and not an agent, validates
+    the reply, makes the altered copies, computes every diff and writes the alterations manifest the runner
+    (TQ-500g-1-i) reads. The agent never produces a copy, a diff or the manifest, and its reply never reaches
+    the runner directly.'
+  - 'Dispatch inputs: work_key, repo_root (the absolute working-tree root; the Read tool takes absolute paths
+    and the agent cannot ask git for it), requirement_ids, and wrong_versions (each named wrong version with
+    its in-scope source files, repo-relative POSIX). manifest_path and copies_dir are no longer inputs.
+    The reply is the one JSON value in the delivers_to entry for TQ-500g-1-ix.'
+  - 'Exact names (TQ-500g-1-ix decision): the writer matches a reply name to an owed name exactly, so the agent
+    answers every dispatched spelling under that exact spelling. It merges only names that are identical
+    strings, never names that differ by case or spacing. Merging those would leave the second spelling
+    "no alteration returned".'
+  - 'Tier and visibility (ADR-033): Sonnet, because each prose name needs judgement and is not a fixed recipe.
+    Internal, so the description takes the internal shape and spawned_by never names ''user''. Narrowing
+    to Read, below the Sonnet floor, needs no justification block (section 2.8). requires_verification
+    is false and permits_shell is false: the agent holds no Write or Edit, so the post-edit verification
+    block, which needs a shell, does not apply.'
+  - 'Spawn reciprocity: spawned_by names exactly the four dispatching routes: fast-lane-ship.js (TQ-500g-1-v),
+    build-feature.js and build-ticket.js (TQ-500g-1-vi), and ticket-supervisor (TQ-500g-1-vii). The build''s
+    asymmetric-spawn check and the check-agent-spawn-consistency hook must pass. The __ticket_phase_agents__
+    wildcard does not cover a non-phase agent, so ticket-supervisor''s spawn_allowlist gains test-breaker.
+    If a workflow-script caller is not exempt in that check (the docs name only user and finalize-feature.js;
+    fast-lane-ship.js already appears on command-step-runner), raise it as a blocker. Never invent a reciprocal
+    entry.'
+  - 'Registry category research (IT-PO decision, on llm-expert''s recommendation). research defaults to signoff_capable
+    false, no required inputs and no spawning. That matches a read-only internal agent that replies with
+    JSON, like ac-triage and pt-classifier. testing would default to signoff_capable true and a required
+    ticket_path, and the fast lane has no ticket. produces stays test_artifact: the category sets defaults,
+    not the artifact type.'
+  - The registry entry and the build-generated card match the template frontmatter (tools, model, produces,
+    visibility). Deployed/template parity comes from the build (ADR-001).
 test_required: false
 test_rationale: 'Prompt-only. How faithfully an LLM turns a prose name into code cannot be unit-tested,
   and a template text search is forbidden (CLAUDE.md). Deterministic backstops bound the damage: TQ-500g-1-ii
@@ -81,11 +244,21 @@ test_rationale: 'Prompt-only. How faithfully an LLM turns a prose name into code
   Then clauses, and an eval row for the preparer under TQ-200 once the agent exists.'
 origin_agent: business-analyst
 created: 2026-09-28
-amended_by: []
+amended_by:
+- reason: "Record the build-time agent decision dec-124faaaa3d814050 (new dedicated agent test-breaker, tools Read and Write only, no shell). Declare package_surface: true and convert it_requirements to the structured object (ACS-100i-6), because the AC registers an agent_registry.json entry, which the check-package-surface-declaration commit-msg hook (ACS-100i-8) reconciles. The earlier list requirements are carried verbatim or near-verbatim into it_requirements.constraints. The routes' dispatch contract is added to notes and to delivers_to (TQ-500g-1-v, -vi, -vii). change_target gains config, and components gains agent_registry. Criteria unchanged."
+  date: '2026-10-09'
+  by: it-po
+  directed_by: user
+- reason: "Re-amend to the read-only design. Decision Kernel run run-92227a2a275f44ff (2026-10-11, on a basis the user approved) settled the clash with the registry verification-flag rules: Write needs requires_verification true, and that needs Bash. test-breaker is read-only (tools: Read, requires_verification false) and replies with exact-match replacements. The new deterministic writer TQ-500g-1-ix makes the altered copies and the manifest. delivers_to now sends the reply contract to TQ-500g-1-ix. The manifest contract to TQ-500g-1-i moved to TQ-500g-1-ix, and the route entries read: test-breaker, then the writer, then the runner. The dispatch inputs drop manifest_path and copies_dir, the Write-reach constraint is removed, and registry category research is decided. package_surface stays true. Criteria unchanged."
+  date: '2026-10-11'
+  by: it-po
+  directed_by: user
 superseded_by: null
 covered_by: []
 implemented_by: []
-change_target: prompt
+change_target:
+- prompt
+- config
 risk_surface: contract_boundary
 notes: |
   PROMPT-ONLY. must_catch entries are prose ("drop the retry_due condition"), so
@@ -113,3 +286,58 @@ notes: |
   llm-expert lane. The runner (-1-i) can be built and tested before this
   AC, using hand-written manifests as fixtures. The routes (-1-v, -1-vi,
   -1-vii) need both.
+
+  BUILD-TIME DECISION (2026-10-07; Decision Kernel decision
+  dec-124faaaa3d814050, run run-c730927ae56c4299; the user's choice): the
+  preparer is a NEW dedicated agent, test-breaker. Its tools were set to Read
+  and Write only, with no Bash and no shell of any kind, so it cannot run
+  tests or git. (The tool set was superseded on 2026-10-11; see READ-ONLY
+  REDESIGN below.) It is registered through the add-agent-to-package
+  procedure (config/agent_registry.json, docs/agents/README.md). This settles
+  the "chosen at build time" point above. The criteria stay agent-neutral
+  ("the preparer") on purpose.
+
+  READ-ONLY REDESIGN (2026-10-11; Decision Kernel run run-92227a2a275f44ff,
+  on a basis the user approved). Read and Write without Bash cannot be
+  registered. The registry's verification-flag rules require
+  requires_verification: true for any agent holding Write, and that
+  post-edit git-diff verification step needs a shell. So test-breaker is
+  READ-ONLY (tools: Read, requires_verification: false). It REPLIES with
+  exact-match replacements per name ({path, old, new}), or with
+  could_not_prepare and a one-line reason. A new deterministic writer step,
+  TQ-500g-1-ix (python-coder), validates the reply, makes the altered copies
+  outside the working tree, computes every diff and writes the alterations
+  manifest. The manifest contract to TQ-500g-1-i is unchanged; only its
+  author moved from this agent to TQ-500g-1-ix. Both decisions stand
+  together: dec-124faaaa3d814050 (a new agent) and run-92227a2a275f44ff
+  (read-only plus writer). Registry category: research (see constraints).
+
+  DISPATCH CONTRACT THE ROUTES RELY ON (TQ-500g-1-v, -vi, -vii; the exact
+  shapes are in delivers_to). The route runs three steps in order:
+  test-breaker, then the writer (TQ-500g-1-ix), then the runner
+  (TQ-500g-1-i). The agent cannot run git, so the route passes it:
+    - work_key
+    - repo_root: the absolute working-tree root. The Read tool takes absolute
+      paths, and the agent cannot ask git for the root.
+    - requirement_ids: the AC ids
+    - wrong_versions: the named wrong versions (the must_catch strings,
+      verbatim), each with the source files in scope as repo-relative POSIX
+      paths
+  manifest_path and copies_dir are gone: the agent writes nothing. It returns
+  one JSON value:
+    {work_key, entries: [{name, status: prepared|could_not_prepare,
+    reason|null, replacements: [{path, old, new}]}], anomalies: [...]}
+  or, on failure,
+    {status: "failed", blocker_summary, anomalies}.
+  The writer turns that reply into the copies and the manifest and prints the
+  manifest path. The runner then takes that path through --alterations. A
+  failed or unreadable reply leaves no manifest, so the runner reports every
+  owed name as unfinished. The work never reads as owing nothing.
+
+  IT-PO AMENDMENT (2026-10-09): package_surface: true and the structured
+  it_requirements object (ACS-100i-6). Registering test-breaker adds an
+  agent_registry.json entry, and the check-package-surface-declaration
+  commit-msg hook (ACS-100i-8) checks that against this declaration. The five
+  earlier list requirements are the first five entries of
+  it_requirements.constraints. The object form has a free-text slot
+  (additionalProperties: true), so nothing is duplicated here.

@@ -1,0 +1,64 @@
+id: AR-400b-3-ii
+title: "python-coder is told to load signoff by its real name"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given python-coder's definition in the package's real tree, whose own
+    definition grants "signoff",
+  When the build compiles python-coder's prompt,
+  Then the sign-off step of the compiled prompt tells python-coder to load the
+    ability "signoff" by that identifier,
+    And no instruction in the compiled prompt names an ability "sign-off",
+    And the build reports no finding for python-coder about "sign-off" or
+      "signoff".
+depends_on:
+  - AR-400b-3
+doc_links:
+  - path: templates/agents/python-coder.md
+    relationship: modifies
+    status: exists
+    relevance: "'Resolve and load the sign-off skill' at line 636 (dated snapshot, 2026-10-12)."
+assigned_agent: llm-expert
+estimated_complexity: XS
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "Change 'Resolve and load the sign-off skill' (templates/agents/python-coder.md ~line 636, dated snapshot) to name the ability id signoff; leave the English noun 'sign-off' elsewhere untouched."
+  - "templates/agents/_signoff_block.md line 5 carries the SAME phrasing ('Resolve and load the sign-off skill', verified 2026-10-12). It is the block appended to every `signoff: true` agent, so it is a shared guide the check scans; leaving it unfixed fails the real-tree build once AR-400a-1 is wired. Fix it in the same edit; the orchestrator confirmed on 2026-10-12 that this instance belongs to this record."
+test_spec:
+  - name: test_compiled_python_coder_loads_signoff_by_id
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile python-coder from the real template; its sign-off step names the ability 'signoff', and no recognised instruction in the compiled prompt names 'sign-off'."
+  - name: test_validator_has_no_finding_for_python_coder_signoff
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The validator over the real tree reports no finding for python-coder about sign-off or signoff; a copy with the old sentence restored fails with 'ability does not exist' (or 'differs only in case') for 'sign-off'."
+test_rationale: >-
+  The revert control shows the gate sees the old sentence, so the clean
+  real-tree run is meaningful.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-3.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  The English noun "sign-off" (the act) stays legitimate prose everywhere; only
+  its use as the NAME of an ability to load is the defect.

@@ -95,8 +95,8 @@ flowchart TD
 
 | Skill | Mode | Condition |
 |-------|------|-----------|
-| `knowledge-query` | — | — |
-| `ac-tree-split` | — | — |
+| `knowledge-query` | conditional | Use when you need to search a keyword across agents, skills, docs and ADRs for component context. |
+| `ac-tree-split` | conditional | When a split L1 is overcrowded, load ac-tree-split to redistribute its L2s (Pattern C). |
 ---
 
 ## Configuration

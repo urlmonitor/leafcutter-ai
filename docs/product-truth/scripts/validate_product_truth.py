@@ -305,15 +305,14 @@ from generate_product_truth import (
 from product_truth_checks import (
     _check_artifact_paths,
     _check_canonical_datasets,
-    _check_derived_indexes,
+    _check_derived_indexes,  # noqa: F401  # re-exported for callers
     _check_expands,
     _check_flow,
-    _check_impl_status,
+    _check_impl_status,  # noqa: F401  # re-exported for callers
     _check_index,
     _check_mock_invariants,
     _check_pointers,
-    _check_product_truth,
-    _check_screens,
+    _check_screens,  # noqa: F401  # re-exported for callers
     _check_shape_version_bounds,  # noqa: F401  # re-exported for callers
     _check_truth_evidence,
     _validate_schema,  # noqa: F401  # re-exported for callers
@@ -328,6 +327,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     _OUTCOME_ERRORS,
     _OUTCOME_SOUND,
     build_examined_total,
+    ensure_utf8_streams,
     examined_by_check,
     record_check_executed,
     record_check_not_executed,
@@ -344,6 +344,7 @@ from product_truth_outcome import (  # noqa: F401  # re-exported for callers
     compute_type_population,
 )
 from product_truth_bounds import check_bounds, tighten_refusal
+from product_truth_drift_checks import run_drift_checks, unexercised_drift_checks
 from product_truth_descriptions import check_descriptions
 from product_truth_shapes import _check_outcome_kinds, count_branches  # noqa: F401
 from product_truth_label_checks import (  # noqa: F401  # re-exported for callers
@@ -619,10 +620,7 @@ def run_checks() -> dict:
     _check_eval(errors, checks)
 
     # Derived-vs-source checks (the generator is the single writer).
-    _check_impl_status(flows, ac_records, errors)
-    _check_product_truth(ac_records, by_ac, errors)
-    _check_derived_indexes(index, flows, flow_paths, mocks, ac_records, errors)
-    _check_screens(flows, mockups, errors, warnings)
+    run_drift_checks(flows, flow_paths, mocks, mockups, ac_records, index, by_ac, errors, warnings, checks)
     _check_expands(flows, index, errors)
 
     # Pointer-resolution check (UXP-700c-1): every AC `implements` pointer must
@@ -684,6 +682,7 @@ def main() -> int:
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--tighten", metavar="BOUND", help="hold BOUND as blocking; refused while any artifact is on an older shape version")
     args = parser.parse_args()
+    ensure_utf8_streams()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO, format="%(message)s")
 
     refusal_text = dependency_refusal()
@@ -703,7 +702,8 @@ def main() -> int:
     unresolvable, compared_freshness = report["unresolvable_pointers"], report["compared_freshness"]
     type_population = report["type_population"]
     example_only_types = compute_example_only_types(type_population)
-    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable))
+    top_outcome = _top_level_outcome(examined_flows, unreadable_flows, bool(errors), empty_types, len(unresolvable),
+                                     len(unexercised_drift_checks(checks)))
     contract = (top_outcome, examined_flows, unreadable_flows, empty_types, report["resolved_pointers"], len(unresolvable),
                 examined_by_check(checks), report["resolved_labels"], report["bounds"], type_population, example_only_types)
 

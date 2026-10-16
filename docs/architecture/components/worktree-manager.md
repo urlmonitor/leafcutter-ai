@@ -23,7 +23,7 @@ related_code:
   - .github/workflows/ci.yml
 related_docs:
   - docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md
-  - docs/architecture/adrs/ADR-071-workflow-shell-steps-reach-only-shell-permitted-agents.md
+  - docs/architecture/adrs/ADR-073-workflow-shell-steps-reach-only-shell-permitted-agents.md
   - docs/architecture/adrs/ADR-018-agent-isolation-topology.md
   - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
   - docs/architecture/adrs/ADR-001-self-hosting-boundary.md

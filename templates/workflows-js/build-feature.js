@@ -318,17 +318,10 @@ const PHASE_RESULT_SCHEMA = {
     },
     result_status: { type: "string" },
     message: { type: "string" },
-    // handoff_target (BO-3000a). The driver's ONLY source for the identity of
-    // the agent a handoff is addressed to is this field on the handing-off
-    // agent's OWN result — the driver never infers it from the ticket body.
-    // Declared here so an agent returning `status: "handoff"` has a
-    // structural cue to name the field the driver actually routes on, rather
-    // than following a template that tells it WHAT it owes the ticket
-    // (the `### <agent>` task-breakdown convention) without ever telling it
-    // WHO the driver should re-dispatch. See the `if`/`then` below, which
-    // makes this field REQUIRED exactly when `status` is `"handoff"` without
-    // touching the top-level `required: ["status"]` — every reply that is
-    // valid today stays valid.
+    // handoff_target (BO-3000a). The driver's ONLY source for who a handoff is
+    // addressed to is this field on the handing-off agent's OWN result, never
+    // the ticket body. REQUIRED exactly when `status` is "handoff" (see the
+    // `if`/`then` below); every reply valid today stays valid.
     handoff_target: {
       type: "string",
       description:
@@ -694,13 +687,6 @@ function writtenPhaseEntries(dispatchedPhases, phaseOutcomes) {
 // Record adjudication — pure functions over a ticket record read back off disk
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-//
-// BUG-23 (run wf_cc2b46d9-f6f): phase agents returned `status: ok` and left no
-// sign-off in the ticket's record — ticket 01 lost test-runner AND pr-reviewer,
-// ticket 03 lost test-runner, ticket 09 lost pr-reviewer. A gate's word for its
-// own success is therefore never sufficient: the verdict the drive carries
-// forward is derived from the record that was read back, never from the gate's
-// own report of itself (BO-2900f-1-i).
 
 /**
  * Sign-off statuses that count as a gate having PASSED.
@@ -726,13 +712,6 @@ function signoffEntriesFor(record, agentName) {
   }
   return record.signoffs.filter((s) => s && s.agent === agentName);
 }
-
-// BO-2900f-1-ii — "the latest entry is the one that counts" is implemented at
-// the two places that need it (adjudicatePhaseAgainstRecord and
-// completionVerdictFromRecord), each of which already holds the entries array
-// to report its length. A latestSignoffFor() helper existed here and was never
-// called by either; it is removed rather than left as a second, untested
-// definition of the same rule.
 
 /**
  * True when a sign-off entry represents a passing outcome.
@@ -892,10 +871,8 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
     };
   }
   const latest = entries[entries.length - 1];
-  if (!isPassingSignoff(latest)) {
-    if (String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest)) {
-      return { verified: true, entries: entries.length, reason: null };
-    }
+  const resolvedHandoff = String(latest.status) === "handoff" && isHandoffResolved(record, phaseName, latest);
+  if (!isPassingSignoff(latest) && !resolvedHandoff) {
     return {
       verified: false,
       entries: entries.length,
@@ -938,6 +915,12 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
  * BO-1900a-4-ii is a second, independent one — so a guard placed on one route
  * leaves the rest live.
  *
+ * BO-400a-2-v (KI-BO-20261009): a phase the frontmatter marks failed, or that
+ * THIS drive skipped after a cross_agent blocker, is outstanding
+ * regardless of its Comments entries — failureSignalFor() is consulted per
+ * phase BEFORE the entries are read. The guards above still answer first, and
+ * the handoff-resolution path applies only to phases that carry no such signal.
+ *
  * TWIN: mirrors build-ticket.js. Keep in sync with that file.
  *
  * @param {object|null} record — the last record read back during the drive
@@ -950,19 +933,10 @@ function adjudicatePhaseAgainstRecord(record, phaseName) {
 function completionVerdictFromRecord(record, ctx) {
   const required = ctx.requiredPhases || [];
 
-  // BO-400a-2-iii — UNREADABLE ANSWERS FIRST, and the order is the whole guard.
-  // `noPhaseRequired` is a claim about what the ticket's frontmatter SAYS; this
-  // branch is the admission that the frontmatter was never read. When both
-  // conditions hold, letting the empty-set refusal answer first reports
-  // `unreadable: false` about a record nobody could open, discards
-  // `record.error`, and sends the operator to edit the agents: map of a file
-  // that is not there — a statement about the contents of a file the drive could
-  // not open. "No outstanding phases found" and "could not look" must never
-  // produce the same answer, least of all when the second is the true one.
-  //
-  // Nothing is lost by deciding it here: over an empty required set the map
-  // below yields `outstanding: []`, so this branch returns the same not-done
-  // verdict the empty-set refusal would have, and keeps the diagnosis with it.
+  // BO-400a-2-iii — UNREADABLE ANSWERS FIRST, and the order is the whole guard:
+  // "no phase required" is a claim about frontmatter that was never read, and
+  // "could not look" must not share an answer with "found nothing outstanding".
+  // Same not-done verdict as the empty-set refusal, with the diagnosis kept.
   if (!record || record.readable !== true) {
     return {
       completed: false,
@@ -979,16 +953,9 @@ function completionVerdictFromRecord(record, ctx) {
     };
   }
 
-  // BO-400a-2-iv — the ticket names no phase for this drive to verify, so no
-  // evidence was inspected and none could have been. Its own verdict, not a
-  // satisfied one: there is nothing here to be outstanding, which is why the
-  // per-phase loop below cannot detect this state and why the answer has to be
-  // decided before that loop is ever reached.
-  //
-  // Reached only once the record has been READ, which is what makes the claim
-  // it makes true: by here `record.readable === true`, so "this ticket names no
-  // phase" is a fact established from the file rather than assumed about one
-  // that could not be opened.
+  // BO-400a-2-iv — no phase named means no evidence inspected: its own verdict,
+  // not a satisfied one, decided before the per-phase loop (which cannot see
+  // this state). Reached only once the record was READ (readable === true).
   if (required.length === 0) {
     return {
       completed: false,
@@ -1007,14 +974,18 @@ function completionVerdictFromRecord(record, ctx) {
     if (entries.length > 1) {
       duplicates.push({ agent: agentName, entries: entries.length });
     }
+    // BO-400a-2-v — a failure signal the drive can see outranks any Comments
+    // entry. Checked BEFORE the entries are read so an older, misplaced or
+    // premature ok cannot overrule it (KI-BO-20261009).
+    const signalReason = failureSignalFor(record, ctx, agentName);
+    if (signalReason) {
+      outstanding.push({ agent: agentName, reason: signalReason });
+      continue;
+    }
     if (entries.length === 0) {
       let reason;
       if (ctx.unverifiedReasons && ctx.unverifiedReasons[agentName]) {
         reason = ctx.unverifiedReasons[agentName];
-      } else if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
-        reason =
-          `'${agentName}' was skipped after a cross_agent blocker and left no ` +
-          `sign-off entry in the record`;
       } else if ((ctx.dispatchedAgents || []).indexOf(agentName) === -1) {
         reason =
           `'${agentName}' is still needed and was never dispatched, so the ` +
@@ -1050,6 +1021,47 @@ function completionVerdictFromRecord(record, ctx) {
     outstanding,
     duplicates,
   };
+}
+
+/**
+ * Name the failure signal, if any, that makes `agentName` outstanding no matter
+ * what its `## Comments` entries say. Pure; returns a reason string or null.
+ *
+ * BO-400a-2-v (KI-BO-20261009): the verdict used to take the LAST entry in file
+ * order as the phase's word, so an older, misplaced or premature ok overruled
+ * both the ticket's own frontmatter and this drive's own cross_agent skip, and
+ * the ticket was recorded done. Two signals outrank any entry:
+ *   (a) `record.failed_phases` — the frontmatter marks the phase `failed`;
+ *   (b) `ctx.skippedAgents` — this drive skipped it after a cross_agent blocker.
+ * The reason names the signal and never tells the operator to add a sign-off the
+ * record already carries.
+ *
+ * A frontmatter value of `needed` is deliberately NOT a signal here: the
+ * BO-400e-1 demanded-set contract counts a `needed` phase with a passing entry
+ * as satisfied, and `set_ticket_status.py` already refuses to write done while
+ * any phase reads `needed`, so that case cannot become a phantom done.
+ *
+ * TWIN: mirrors build-ticket.js. Keep in sync with that file.
+ *
+ * @param {object} record — a `record.readable === true` reply
+ * @param {{skippedAgents: Array<string>}} ctx
+ * @param {string} agentName
+ * @returns {(string|null)}
+ */
+function failureSignalFor(record, ctx, agentName) {
+  if ((record.failed_phases || []).indexOf(agentName) !== -1) {
+    return (
+      `the ticket's own frontmatter marks '${agentName}' failed, which a ` +
+      `sign-off entry in the record cannot overrule`
+    );
+  }
+  if ((ctx.skippedAgents || []).indexOf(agentName) !== -1) {
+    return (
+      `'${agentName}' was skipped by this drive after a cross_agent blocker, ` +
+      `so no sign-off entry in the record is trusted for it`
+    );
+  }
+  return null;
 }
 
 /**
@@ -1151,14 +1163,6 @@ function requiredPhasesForCompletion(recordDemandedPhases, deferredPhases) {
 // The plan reply the drive cannot use (BO-1900a-4-ii)
 //
 // TWIN: mirrors build-ticket.js. Keep in sync with that file.
-//
-// The reduction these two functions replace was `ticketPlan || {}` followed by
-// `plan.ordered_phases || []`. Each substitution looks like defensive
-// programming; in sequence they convert a dead planner into a completion claim.
-// A missing reply becomes a blank record, a missing list becomes a blank list,
-// the drive concludes the ticket needs no phase, takes its no-phases exit, and
-// arrives at a completion decision with an empty required set. Nothing throws,
-// because every step did exactly what it was written to do.
 
 /**
  * Why the drive cannot use this plan reply — or null when it can.
@@ -1352,16 +1356,11 @@ function buildTicketOutcome(spec) {
     skipped_phases: skippedOut,
   };
 
-  // BO-2900f-1-ii — surface the duplicate, do not swallow it. Set BEFORE the
-  // completed/not-completed branch, because the completed path is precisely
-  // where a duplicate is otherwise invisible: the adjudication resolved it
-  // cleanly from the latest entry, and with no outstanding-phase list for the
-  // operator to inspect, an unreported duplicate leaves the write-side defect
-  // (BO-2900f-2-ii) masked for as long as this read-side rule keeps
-  // compensating for it. Omitted entirely when there are no duplicates — a
-  // report naming every gate is indistinguishable from no report at all.
   if (spec.verdict.duplicates && spec.verdict.duplicates.length > 0) {
     base.duplicate_signoff_entries = spec.verdict.duplicates;
+  }
+  if (spec.noPhasesToRun) {
+    base.no_phases_dispatched = true;
   }
 
   if (spec.verdict.completed && spec.writeApplied) {
@@ -1376,20 +1375,9 @@ function buildTicketOutcome(spec) {
         (skippedOut.length > 0
           ? `, ${skippedOut.length} skipped (cross_agent blockers).`
           : ".");
-    if (spec.noPhasesToRun) {
-      base.no_phases_dispatched = true;
-    }
     return base;
   }
 
-  // BO-400a-2-iii — `status` is the machine-readable signal in these drivers:
-  // every other failure exit (the coder guard, the null-result guard, the
-  // retry cap, design/halt, the epic halt) emits blocked or error, and the epic
-  // loop's halted filter branches on exactly that vocabulary. Leaving "ok" here
-  // while the same payload carries `ticket_completed: false`, `not_completed`
-  // and an outstanding-phase list inverts the signal for every caller that
-  // reads the field first — and the single-ticket branch returns this payload
-  // verbatim, with no compensating re-derivation of its own.
   base.status = "blocked";
   base.ticket_completed = false;
   base.not_completed = true;
@@ -1400,18 +1388,7 @@ function buildTicketOutcome(spec) {
   if (spec.writeError) {
     base.completion_write_error = spec.writeError;
   }
-  if (spec.noPhasesToRun) {
-    base.no_phases_dispatched = true;
-  }
 
-  // BO-400a-2-iv — the refusal taken over an EMPTY required set needs its own
-  // wording, and this is why. The standard message below counts outstanding
-  // phases and the standard advice tells the operator to re-run the phase that
-  // failed or supply the sign-off it owes. With no phase required of the ticket
-  // at all there is no count to state, nothing to re-run and nothing that owes
-  // a sign-off, so that advice names nothing the operator can act on and sends
-  // them looking for a phase failure that never happened. What IS actionable is
-  // the ticket's own list of phases: it is the thing that is wrong.
   if (spec.verdict.noPhaseRequired) {
     base.no_phase_required = true;
     base.message =
@@ -2203,6 +2180,17 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
             `self-skipped) — an empty list is the correct, honest answer and will stop the coder ` +
             `phase rather than let it run untested. Do not list a file you did not actually write.`
           : "") +
+        (phaseName === "documentation-expert"
+          ? ` LEAF MODE (BO-2200c-5-vii): this flat depth-1 dispatch CANNOT spawn sub-agents. For ` +
+            `each required doc in the ticket's "## Agent Contracts" -> "### documentation-expert" ` +
+            `block, classify its intent exactly as your template says, pick the specialist ` +
+            `(how-to-author, reference-author, explanation-author, adr-author, architecture-diagram-author ` +
+            `or architecture-author), read its template (.claude/agents/<specialist>.md in the worktree, ` +
+            `else templates/agents/<specialist>.md) and canonical how-to, and author the doc yourself by ` +
+            `its rules. For this dispatch ONLY, this overrides the "never author a doc file yourself" ` +
+            `rule. Never return status "handoff" to a specialist that is not a key of the ticket's ` +
+            `agents map; author that doc yourself instead.`
+          : "") +
         (from
           ? ` You are being RE-DISPATCHED because phase '${from.from}' returned 'status: handoff' naming you as the agent that must act before it can proceed. Handoff message: ${JSON.stringify(from.message)}.`
           : "") +
@@ -2339,9 +2327,10 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
          * a deliberate targetless halt looks like. The ticket body is never read.
          */
         if (normalizedTarget === "") return refuse(`Phase '${phaseName}' returned 'status: handoff' but its result was read and named no handoff target (handoff_target was ${JSON.stringify(handoffTarget)}). Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. This may be a deliberate targetless halt (a contract-shrinkage guard or test-drift stop asking for user authorization) rather than an omission — inspect '${phaseName}'` + `'s message and the ticket's ## Comments for what it needs before re-running /build-feature.`);
-
         /* BO-3800b: only an engage-specialist declaration (read via the shared loader, never inferred) brings in a specialist. */
         const remedy = phaseResult.remedy; let brief = null;
+        /* BO-3800e-1: a remedy that is not an object, or whose disposition is not text, is UNREADABLE (never absent): a named stop, nobody engaged, delivery not retried. Absent/null/blank take the existing route. */
+        if (remedy !== undefined && remedy !== null && (typeof remedy !== "object" || Array.isArray(remedy) || (remedy.disposition !== undefined && remedy.disposition !== null && typeof remedy.disposition !== "string"))) return refuse(`Phase '${phaseName}' refused delivery naming '${normalizedTarget}', but its remedy could not be read as a disposition (remedy was ${JSON.stringify(remedy)}). An unreadable outcome is not an absent one. Stopping; nobody was engaged and delivery was not attempted again.`);
         if (remedy && remedy.disposition === "engage-specialist") {
           const decl = await agent(
             `Read the remedy declaration of hook '${remedy.hook_id}'. Run: python -c "import json,pathlib,sys; sys.path.insert(0,'${resolvedTarget.worktree_path}/{{config.output_root}}/scripts/commit_guardian'); import _remedy_declarations as d; print(json.dumps(d.load('${remedy.hook_id}', pathlib.Path('${resolvedTarget.worktree_path}'))))" and return it with status "ok".`,
@@ -2353,7 +2342,6 @@ async function driveTicketPhases(worktreeTicketPath, isEpicMember = false) {
         }
         /* Case (b): a target was named but is not a recognised phase agent; reproduced verbatim. */
         if (!phaseOrder.includes(normalizedTarget)) return refuse(`Phase '${phaseName}' returned 'status: handoff' naming '${normalizedTarget}' as its handoff_target, which is not an agent this driver recognises as a phase agent. Refusing to guess a re-dispatch target and refusing to advance to the next phase in phaseOrder. Check '${normalizedTarget}' for a misspelling or a name that does not exist, fix the emitter, then re-run /build-feature.`);
-
         /*
          * Cases (c)-(e), BO-3000a: nobody is dispatched for a self handoff, a target that
          * is not on this ticket (orderedPhases keeps not_needed keys) or a deferred target.
@@ -2982,16 +2970,11 @@ if (target_type === "epic") {
   // prerequisite finishes) is still part of what the completion-time re-read
   // below is compared against.
   //
-  // BO-100e-1's own scope boundary against BO-300a-5 (done), restated because
-  // it is easy to blur with the paragraph above: a path is folded in here
-  // ONLY after passing the FIRST-LOOK RUN-SET LOCK below, which is what makes
-  // this an admitted set rather than simply "everything any look ever said".
-  // Look 1's own offer is admitted unconditionally — it defines the set this
-  // run started with. A later look's offer is admitted only when it links
-  // back into what THIS variable already holds (see the lock's own comment).
-  // A path the lock rejects is never folded in here, which is exactly what
-  // keeps it visible to `discovered_after_planning` at the completion-time
-  // re-read below instead of being silently absorbed.
+  // BO-100e-1's scope boundary against BO-300a-5 (done): a path is folded in
+  // here ONLY after passing the FIRST-LOOK RUN-SET LOCK below. Look 1's offer
+  // is admitted unconditionally; a later look's only if look 1 enumerated it
+  // (or, degraded, if its depends_on links into this set). A rejected path
+  // stays visible to `discovered_after_planning` at the completion re-read.
   const plannedTicketPaths = [];
 
   // The epic's full contents as look 1 found them — the run set, frozen.
@@ -3055,13 +3038,7 @@ if (target_type === "epic") {
       epicTitle = plan.title;
     }
 
-    // Work that was already finished before this run began. Kept SEPARATE
-    // from completedTicketOutcomes on purpose: that map is this run's own
-    // first-hand verdict, and folding a frontmatter reading into it would
-    // erase the difference between "this drive watched it succeed" and "the
-    // record says it succeeded". The eligibility gate below needs both to
-    // count as satisfied, and the withheld report needs to be able to say
-    // which kind of evidence it had.
+    // Already done before this run began; kept apart from completedTicketOutcomes (see priorCompletedPaths).
     inWorktree(plan.already_done).forEach((p) => priorCompletedPaths.add(p));
 
     // Freeze the run set from the FIRST look only. Later looks re-enumerate a
@@ -3094,28 +3071,7 @@ if (target_type === "epic") {
     // principle one level up: re-check rather than trust the planner got it
     // right.
     //
-    // FIRST-LOOK RUN-SET LOCK (the second condition below) is the fix for the
-    // separate regression this ticket exists to close: a later look's own
-    // enumeration re-reads the epic folder fresh, so it may legitimately
-    // contain a path no EARLIER look ever offered, for either of two reasons
-    // that are NOT distinguishable by path alone:
-    //
-    //   * a genuine next LAYER of the set this run started with — a chain
-    //     member whose own depends_on names something this run has already
-    //     admitted (`plannedTicketPaths`) or that was already done before
-    //     this run began (`priorCompletedPaths`), unlocked now that its
-    //     prerequisite finished. This is the ENTIRE reason the loop keeps
-    //     looking (BO-100e-1's own criterion) and must still be driven.
-    //   * work ADDED to the epic folder after this run began — no such link.
-    //     Absorbing this is BO-300a-5's (done) job to prevent: that work must
-    //     be reported via `discovered_after_planning` at the completion-time
-    //     re-read, never silently driven by a later look.
-    //
-    // `readTicketRecordBack` is the SAME helper the (unchanged) eligibility
-    // gate below already dispatches per driven ticket to read depends_on —
-    // reused here, before this ticket ever reaches that gate, so a path that
-    // fails the link check is dropped BEFORE it is ever driven, not merely
-    // withheld after being dispatched.
+    // FIRST-LOOK RUN-SET LOCK (second condition below): see runSetPaths for why look 1's enumeration decides it.
     //
     // `lookNumber > 1` guards it because look 1's own offer is unconditional:
     // it IS the set this run started with, by definition, with nothing yet
@@ -3195,13 +3151,8 @@ if (target_type === "epic") {
       if (lookNumber === 1) {
         // The EXISTING empty-plan return, unchanged in substance: nothing was
         // ever eligible, or the epic is genuinely empty / already done.
-        // BO-300a-5-iii — the completed set is passed at ALL FOUR call sites, not
-        // only the two that can exhibit the bug today. This return ran no batches,
-        // so its record of completed work is empty BY CONSTRUCTION and it reports no
-        // `completed_batches` at all. Passing the literal empty set (rather than
-        // reaching for a `completedBatches` that is not yet in scope here) states
-        // that emptiness explicitly and keeps the partition's one input the same
-        // shape at every site.
+        // BO-300a-5-iii — no batch ran, so the completed set is empty BY
+        // CONSTRUCTION; the literal [] states that explicitly.
         const emptyRecheck = epicRecheckReport(
           compareEpicTicketSets(
             plannedTicketPaths,
@@ -3611,7 +3562,6 @@ if (target_type === "epic") {
    */
   if (classifyPathForm(singleTicketPath) === "unrecognised") {
     return {
-      status: "blocked",
       resolved_target: resolvedTarget,
       ...pathFormRefusal(singleTicketPath, ""),
     };

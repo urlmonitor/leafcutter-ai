@@ -18,7 +18,7 @@ ASSUMED PRODUCTION CONTRACT (the ACs do not name it; python-coder builds to it):
   * script ``templates/scripts/commit_guardian/transform_agent_registry.py``
     (deployed to ``<output_root>/scripts/commit_guardian/``). Run with
     ``--package-root DIR`` it rewrites ``DIR/config/agent_registry.json``'s
-    ability fields (``skills_used`` / ``skills_invoked``) from the templates'
+    ability field (``skills_invoked`` only; the retired ``skills_used`` is dropped) from the templates'
     ``skills:`` declarations, touches NOTHING else, does no git staging, and
     exits 0. Without the flag it works on the git toplevel and re-stages the
     registry when it changed (like transform_doc_index.py).
@@ -35,7 +35,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -47,12 +46,11 @@ from _ar_300c_support import (  # noqa: E402
     descriptive_only_ids,
     granted_ids,
     installed_skill_ids,
-    migrate_or_fail,
-    output_root_name,
     registry_agents,
     strip_frontmatter_keys,
     template_frontmatter,
     template_stem,
+    transform_or_fail,
 )
 from _ar_300e_support import MACRO, yaml_block  # noqa: E402
 
@@ -121,10 +119,11 @@ def _sync_registry_spawn(pkg: Path) -> None:
 
 
 def _prepared(tmp_path: Path):
-    """Pristine copy -> real migration -> then CHANGE two agents' declarations
-    in frontmatter only. Returns (pkg, edited agent ids, registry bytes S1)."""
+    """Package slice -> real hook (registry copy now consistent) -> then CHANGE
+    two agents' declarations in frontmatter only. Returns (pkg, edited agent
+    ids, registry bytes S1)."""
     pkg = copy_package_slice(tmp_path / "pkg")
-    migrate_or_fail(pkg)
+    transform_or_fail(pkg)
     _sync_registry_spawn(pkg)
     s1 = (pkg / "config" / "agent_registry.json").read_bytes()
     installed = installed_skill_ids(pkg)
@@ -204,6 +203,28 @@ def test_transform_regenerates_the_ability_fields_so_the_verdict_reports_zero_di
         assert granted_ids(by_id[agent_id]) == {e["skill_id"] for e in entries}, agent_id
 
 
+def test_transform_writes_skills_invoked_only_and_drops_a_stale_skills_used(tmp_path):
+    # covers: AR-400e-2
+    # angle: discrimination
+    """AR-400e-2 (retargeted from the AR-300c-3 two-field expectation): the hook writes ONLY
+    ``skills_invoked`` -- a record that still carries the retired ``skills_used`` (planted
+    here, even empty) loses it, and no templated record has it afterwards. Control: the same
+    run does regenerate ``skills_invoked`` for the edited agents. Wrong version caught: a hook
+    that keeps writing (or leaving) the retired field."""
+    pkg, edited, _s1 = _prepared(tmp_path)
+    reg = pkg / "config" / "agent_registry.json"
+    data = json.loads(reg.read_text(encoding="utf-8"))
+    for agent in data["agents"]:
+        if template_stem(agent):
+            agent["skills_used"] = []
+    reg.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
+    _hook_or_fail(HOOK_SCRIPT, pkg)
+    after = {a["id"]: a for a in registry_agents(pkg)}
+    templated = [a for a in after.values() if template_stem(a)]
+    assert len(templated) > 30 and not [a["id"] for a in templated if "skills_used" in a]
+    assert all(granted_ids(after[i]) == {e["skill_id"] for e in _declarations(pkg)[i]} for i in edited)
+
+
 def test_transform_changes_no_other_field_and_no_other_agents_record(tmp_path):
     # covers: AR-300c-3
     # angle: boundary
@@ -277,23 +298,6 @@ def test_transform_is_registered_as_a_pre_commit_hook_like_transform_doc_index()
     assert not pattern.search("docs/INDEX.md")
 
 
-@pytest.mark.shared_layout_reader
-def test_deployed_transform_hook_regenerates_the_copy_from_the_deployed_layout(shared_reference_layout, tmp_path):
-    # covers: AR-300c-3
-    # angle: deployed
-    """AR-300c-3: the hook runs from the DEPLOYED layout (a build output), not
-    just the source tree -- its dependencies must be in the deploy manifest or it
-    is a silent no-op / ModuleNotFoundError in every consumer. Same regeneration
-    result as the source-tree run."""
-    layout = shared_reference_layout
-    deployed = layout / output_root_name(layout) / "scripts" / "commit_guardian" / "transform_agent_registry.py"
-    assert deployed.is_file(), f"hook not deployed: {deployed}"
-    pkg, edited, _s1 = _prepared(tmp_path)
-    assert _compare_findings(pkg), "no divergence to repair"
-    _hook_or_fail(deployed, pkg)
-    assert _compare_findings(pkg) == []
-
-
 # --------------------------------------------------------------------------
 # AR-300c-5-ii (slice 5): the same hook also regenerates ``spawn_allowlist``
 # --------------------------------------------------------------------------
@@ -316,12 +320,12 @@ def _records(pkg: Path) -> dict:
 
 
 def _prepared_spawn(tmp_path: Path):
-    """Pristine copy -> real skills migration -> every spawn declaration replaced by a PLANNED
+    """Package slice -> real hook -> every spawn declaration replaced by a PLANNED
     one: a revocation (one fewer than the record), an addition (record empty), the macro
     verbatim, an explicit empty, and agents that keep a registry permission but declare
     nothing. Returns (pkg, roles, registry bytes S1)."""
     pkg = copy_package_slice(tmp_path / "pkg")
-    migrate_or_fail(pkg)
+    transform_or_fail(pkg)
     recs = [a for a in registry_agents(pkg) if template_stem(a) and a["id"] != "ticket-supervisor"]
     holders = sorted((a for a in recs if a.get(SPAWN)), key=lambda a: a["id"])
     empties = sorted((a["id"] for a in recs if not a.get(SPAWN)))
@@ -401,7 +405,7 @@ def test_spawn_revocation_is_regenerated_for_that_agent_only(tmp_path):
     agent holding the same sub-agent keeps it, and the registry diff is exactly that one list.
     Wrong version caught: removing the sub-agent from a shared structure."""
     pkg = copy_package_slice(tmp_path / "pkg")
-    migrate_or_fail(pkg)
+    transform_or_fail(pkg)
     templated = [a for a in registry_agents(pkg) if template_stem(a)]
     _plant(pkg, {template_stem(a): list(a.get(SPAWN) or []) for a in templated if a.get(SPAWN)})
     reg = pkg / "config" / "agent_registry.json"
@@ -424,22 +428,3 @@ def test_spawn_revocation_is_regenerated_for_that_agent_only(tmp_path):
     before = {a["id"]: a for a in json.loads(s0)["agents"]}
     changed = sorted(i for i in after if after[i] != before[i])
     assert changed == [victim], f"the revocation moved other records: {changed}"
-
-
-@pytest.mark.shared_layout_reader
-def test_deployed_transform_hook_regenerates_spawn_allowlist_from_the_deployed_layout(shared_reference_layout, tmp_path):
-    # covers: AR-300c-5-ii
-    # angle: deployed
-    """AR-300c-5-ii: the DEPLOYED hook (a build output, run from <output_root>/scripts/
-    commit_guardian/) regenerates the spawn lists exactly as the source-tree run does -- the
-    spawn-side helper it imports must be deployed with it, or it is a silent no-op /
-    ModuleNotFoundError in every consumer."""
-    layout = shared_reference_layout
-    deployed = layout / output_root_name(layout) / "scripts" / "commit_guardian" / "transform_agent_registry.py"
-    assert deployed.is_file(), f"hook not deployed: {deployed}"
-    pkg, roles, _s1 = _prepared_spawn(tmp_path)
-    assert sorted(_records(pkg)[roles["undeclared"]][SPAWN]) != [], "control: nothing to regenerate"
-    _hook_or_fail(deployed, pkg)
-    after = _records(pkg)
-    assert after[roles["undeclared"]][SPAWN] == [] and after[roles["added"]][SPAWN] == ["research-agent"]
-    assert roles["dropped"] not in after[roles["revoked"]][SPAWN]

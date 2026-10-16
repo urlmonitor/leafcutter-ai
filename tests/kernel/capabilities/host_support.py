@@ -45,6 +45,8 @@ QUESTION_REQUEST = {"question": "Which store?", "free_text_allowed": False,
                                 {"id": "files", "label": "Plain files"}]}
 REQUESTS: dict[str, dict[str, Any]] = {"host.generate_options": OPTIONS_REQUEST, "host.synthesize": SYNTHESIS_REQUEST,
             "host.research": RESEARCH_REQUEST, "host.formulate_question": QUESTION_REQUEST}
+REQUESTS["host.decompose_goal"] = {"split_id": "dcp-0123456789abcdef", "subject_text": "How should the storage format and the clustering method work?",
+    "subject_kind": "goal", "max_parts": 5}
 REQUESTS["host.query_build"] = {"question":"Which tests cover a component?",
     "repository_id":"repo","source_sha":"a"*40,"generation_id":"g1",
     "component_ids":["component"],"need_id":"need.tests","attempt_id":"attempt1"}
@@ -61,6 +63,7 @@ ANSWER_AFTER = timedelta(milliseconds=1500)
 SCHEMAS = {
     "host.retrieval_needs": (schema_ids.RETRIEVAL_NEEDS_REQUEST,
                              schema_ids.RETRIEVAL_NEEDS_OUTPUT),
+    "host.decompose_goal": (schema_ids.GOAL_DECOMPOSITION_REQUEST, schema_ids.GOAL_DECOMPOSITION),
     "host.query_build": (schema_ids.QUERY_BUILD_REQUEST,schema_ids.QUERY_CANDIDATE),
     "host.generate_options": (schema_ids.OPTIONS_REQUEST, schema_ids.OPTIONS),
     "host.synthesize": (schema_ids.SYNTHESIS_REQUEST, schema_ids.FINDINGS),

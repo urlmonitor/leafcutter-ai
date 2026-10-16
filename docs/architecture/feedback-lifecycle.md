@@ -21,7 +21,7 @@ related_docs:
 - docs/architecture/agent_knowledge_system.md
 - docs/architecture/adrs/ADR-069-durable-log-root-for-workspaces.md
 - docs/architecture/components/feedback-collector.md
-- docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+- docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
 related_tickets:
 - tickets/00_inbox/TICKET-20260603-FeedbackResolutionTracking.md
 - tickets/00_inbox/TICKET-20260603-FeedbackReviewSkill.md

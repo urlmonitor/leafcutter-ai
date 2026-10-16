@@ -1,0 +1,162 @@
+id: KM-400f-1-vi
+title: "An evaluation that could not assess the store says so instead of reporting nothing to reclaim"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the backend refuses the request that lists generation records
+  When the retention policy is evaluated
+  Then the evaluation reports that it could not assess the generation population, naming the refusal it received
+  And it does not report 0 generation records assessed and 0 reclaimable
+  And the could-not-assess result is distinguishable in the report from a result that assessed every generation record and found none reclaimable
+
+  Given the backend lists 12 generation records but refuses the request that counts entity nodes per generation
+  When the retention policy is evaluated
+  Then all 12 generation records still receive a reclaimability verdict
+  And the entity-node counts are reported as undetermined, naming the refusal
+  And the undetermined node counts are not reported as 0
+  And the evaluation states which part of its assessment succeeded and which part it could not complete
+
+  Given the backend has latched read-only
+  When the retention policy is evaluated
+  Then the evaluation reports the read-only condition as the reason it is constrained
+  And it states that reclaiming space is itself blocked while the backend refuses changes
+  And the read-only condition is not reported as an absence of generations or as an empty result
+depends_on: [KM-400f-1, KM-400f-1-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Reports a reclaimable set; this record requires an unassessable
+      store to be reported as such rather than as an empty reclaimable set.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400e-4.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the distinction between an outage or a refusal and an empty result;
+      a store that cannot be read is never reported as a store with nothing in it.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that a reported figure states its method;
+      an undetermined figure is reported as undetermined, never as zero.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The could-not-assess result is operator-visible, because it is the signal
+      that the retention report in front of the operator is not evidence of a healthy store.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: An assessment outcome that distinguishes assessed-and-nothing-reclaimable from
+    could-not-assess, which KM-400f-3's headroom verdict and KM-400f-4's operator surface
+    must relay rather than flatten into a clean report.
+expects_from:
+  ac_id: KM-400f-1-i
+  contract: The full generation population and the assessed-record figure, which this
+    record requires to be reported as undetermined when it could not be established.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_km_400f_1_vi.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-1-vi.md
+- docs/reference/knowledge-retention-bound.md
+- knowledge/adapters/neo4j_retention.py
+- knowledge/adapters/neo4j_retention_assessment.py
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12. The measured failure is that an unexamined population and an examined
+  empty population produced the same report. On the live store on 2026-10-12 the retention
+  evaluation reported zero generations and zero reclaimable — a true statement about the set
+  it looked at, and an actively misleading one about the store, which held 123,810
+  reclaimable nodes. The report gave an operator no way to tell the two apart, and that
+  indistinguishability is what let the accumulation run to the point of no recovery twice in
+  four days.
+
+  KM-400f-1-i removes the specific filter that produced that reading. This record removes
+  the CLASS of it: any reason the evaluation cannot see the population — a refused request,
+  an unreachable backend, a partial read — must surface as could-not-assess, not as a clean
+  report. Without this clause, closing the one measured filter leaves the next one silent.
+
+  The second scenario is the partial case and is the one most likely to be implemented
+  wrongly, because a failed count has an obvious and wrong default. An entity-node count
+  that could not be obtained is not 0; reported as 0 it feeds KM-400f-3's headroom
+  measurement a figure that says there is room.
+
+  The third scenario is the catch-22 that destroyed both instances, stated so that the
+  report names it. Reclaiming space requires changes the backend refuses once it has
+  latched, so by the time the read-only condition appears, the operation that would have
+  recovered the space is already unavailable. An operator who sees the read-only condition
+  reported alongside that consequence knows the remaining options are outside this system;
+  an operator who sees an empty result does not.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_unreadable_population_is_reported_as_could_not_assess
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: With a backend double that refuses the generation-listing request, evaluate
+      the policy and assert the result reports that the population could not be assessed,
+      names the refusal, and is distinguishable from a result that assessed 12 generation
+      records and found none reclaimable.
+    covers: [KM-400f-1-vi]
+    must_catch:
+      - "swallow the refusal and report 0 assessed with 0 reclaimable, which is the measured defect"
+      - "report an error without stating that no assessment was made, so the reclaimable set still reads as empty"
+    requires_db: false
+  - name: test_partial_assessment_reports_undetermined_node_counts_not_zero
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With a backend double that lists 12 generation records but refuses the
+      per-generation node count, assert all 12 still receive verdicts, the node counts are
+      reported undetermined with the refusal named, and no count is reported as 0.
+    covers: [KM-400f-1-vi]
+    must_catch:
+      - "default an unobtainable node count to zero, feeding the headroom check a figure that says there is room"
+      - "abandon the whole evaluation because one part of it failed, so the verdicts that were obtainable are lost"
+    requires_db: false
+  - name: test_read_only_backend_is_reported_with_its_consequence
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: Simulate a backend that has latched read-only and assert the evaluation
+      reports the read-only condition, states that reclaiming space is blocked while it
+      holds, and is distinguishable from a successful evaluation that found nothing.
+    covers: [KM-400f-1-vi]
+    must_catch:
+      - "surface the read-only rejection as an empty or successful result"
+      - "report the read-only condition without stating that reclamation is itself blocked by it"
+    requires_db: false
+test_rationale: >-
+  This record exists because a green-looking report was the whole failure, so no test here
+  may assert only the happy path's shape. Each test drives the evaluation against a backend
+  double that REFUSES a specific request and asserts the result is distinguishable from the
+  empty-but-healthy result — a test that checked only the returned reclaimable set would pass
+  on the exact code that destroyed two instances, since that code returned an empty set.
+  KM-400f-1's existing fixture is a hand-built set of completed and retired generations with
+  a cooperative backend, so neither a refusal nor a partial read is ever exercised and a
+  swallow-and-return-empty implementation passes; the fixtures here reproduce the REAL
+  observed shape instead — generations whose publication FAILED, no retirement time, and a
+  backend that refuses — because a cooperative-backend fixture rebuilds the blind spot. The
+  undetermined-versus-zero assertion is a value assertion on purpose: zero is the plausible
+  wrong default and it is the one that propagates into the headroom verdict as evidence of
+  room.

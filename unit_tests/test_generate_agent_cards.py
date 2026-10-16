@@ -34,7 +34,6 @@ PYTHON_CODER_TEMPLATE_FM = {
     "config_keys": {
         "test_command_live_trader": {"required": False},
         "test_output_dir": {"required": False},
-        "collector_enforcer_paths": {"required": False},
     },
     "inputs": [
         {"name": "ticket_path", "type": "path", "description": "Path to ticket .md file"},
@@ -66,11 +65,10 @@ PYTHON_CODER_TEMPLATE_FM = {
             "related_agent": "sql-coder",
         },
     ],
-    "skills_invoked": [
+    "skills": [
         {"skill_id": "signoff", "mode": "always"},
         {"skill_id": "doc-enforcer", "mode": "always"},
         {"skill_id": "complexity-reduction", "mode": "conditional", "condition": "when flagged"},
-        {"skill_id": "collector-enforcer", "mode": "conditional", "condition": "when paths under collector/"},
     ],
 }
 
@@ -106,7 +104,6 @@ PYTHON_CODER_REGISTRY = {
         {"skill_id": "signoff", "mode": "always"},
         {"skill_id": "doc-enforcer", "mode": "always"},
     ],
-    "skills_used": ["signoff"],
 }
 
 # Minimal agent template frontmatter (pre-Ticket-5: no new structured fields)
@@ -117,7 +114,7 @@ MINIMAL_AGENT_FM = {
     "tools": "Bash, Read",
     "portable": True,
     "signoff": True,
-    "skills_used": ["signoff"],
+    "skills": [{"skill_id": "signoff", "mode": "always"}],
 }
 
 MINIMAL_AGENT_REGISTRY = {
@@ -128,7 +125,6 @@ MINIMAL_AGENT_REGISTRY = {
     "is_ticket_phase": True,
     "spawned_by": ["ticket-supervisor"],
     "spawn_allowlist": [],
-    "skills_used": ["signoff"],
 }
 
 
@@ -213,48 +209,33 @@ class TestCardGeneratedForMinimalAgent(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Test 3 — skills_invoked takes precedence over skills_used
+# Test 3 — the card lists the template's skills declaration (AR-400e-1-iii)
 # ---------------------------------------------------------------------------
 
-class TestSkillsPrecedence(unittest.TestCase):
-    """INF-600b: skills_invoked data wins over skills_used when both present."""
+class TestSkillsFromDeclaration(unittest.TestCase):
+    """INF-600b: the Skills Used section is the template's ``skills:`` declaration."""
 
     def setUp(self):
         # covers: INF-600b
         from generate_agent_cards import generate_card  # noqa: F401
         self.generate_card = generate_card
 
-    def test_skills_invoked_takes_precedence_over_skills_used(self):
+    def test_card_lists_the_template_declaration_and_not_the_registry_copy(self):
         # covers: INF-600b
-        """INF-600b: When both skills_invoked and skills_used are present, card uses skills_invoked."""
+        """INF-600b: the card lists each declared skill once (with mode/condition) and ignores
+        a registry-only ``skills_invoked`` entry (the derived copy is not read)."""
         fm = dict(PYTHON_CODER_TEMPLATE_FM)
-        fm["skills_invoked"] = [{"skill_id": "signoff", "mode": "always"}, {"skill_id": "doc-enforcer", "mode": "always"}]
-
         registry = dict(PYTHON_CODER_REGISTRY)
-        registry["skills_used"] = ["signoff"]  # legacy field
-        registry["skills_invoked"] = fm["skills_invoked"]
+        registry["skills_invoked"] = [{"skill_id": "registry-only-skill", "mode": "always"}]
 
-        result = self.generate_card(
-            agent_id="python-coder",
-            template_frontmatter=fm,
-            registry_entry=registry,
-        )
-        # The skills section should contain "doc-enforcer" (from skills_invoked)
-        self.assertIn("doc-enforcer", result)
-        # Should NOT double-list "signoff" — count occurrences in Skills section
-        skills_section_start = result.find("## Skills Used")
-        self.assertGreater(skills_section_start, -1, "Skills section must exist")
-        skills_section = result[skills_section_start:]
-        # Find next section boundary
-        next_section = skills_section.find("## ", 3)
-        if next_section > 0:
-            skills_section = skills_section[:next_section]
-        signoff_count = skills_section.count("signoff")
-        self.assertLessEqual(
-            signoff_count,
-            1,
-            msg="'signoff' appears more than once in Skills section — double-listing detected.",
-        )
+        result = self.generate_card(agent_id="python-coder", template_frontmatter=fm, registry_entry=registry)
+        start = result.find("## Skills Used")
+        self.assertGreater(start, -1, "Skills section must exist")
+        section = result[start:].split("\n---", 1)[0]
+        for skill in ("signoff", "doc-enforcer", "complexity-reduction"):
+            self.assertEqual(section.count(f"| `{skill}` |"), 1, msg=f"{skill} must be listed exactly once")
+        self.assertIn("| conditional | when flagged |", section)
+        self.assertNotIn("registry-only-skill", result)
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +299,7 @@ class TestDryRunWritesNoFiles(unittest.TestCase):
             config_dir.mkdir(parents=True)
             import json
             (config_dir / "agent_registry.json").write_text(
-                json.dumps([{"id": "test-agent", "name": "Test Agent", "tier": "phase", "spawned_by": [], "spawn_allowlist": [], "skills_used": []}]),
+                json.dumps([{"id": "test-agent", "name": "Test Agent", "tier": "phase", "spawned_by": [], "spawn_allowlist": [], "skills_invoked": []}]),
                 encoding="utf-8",
             )
 
@@ -417,7 +398,7 @@ class TestBuildPhaseIntegration(unittest.TestCase):
             templates_dir = target_root / "templates" / "agents"
             templates_dir.mkdir(parents=True)
             (templates_dir / "test-agent.md").write_text(
-                "---\nname: test-agent\ndescription: Test agent.\nmodel: sonnet\ntools: Bash\nskills_used:\n  - signoff\n---\n",
+                "---\nname: test-agent\ndescription: Test agent.\nmodel: sonnet\ntools: Bash\nskills:\n  - skill_id: signoff\n    mode: always\n---\n",
                 encoding="utf-8",
             )
             # Create registry
@@ -430,7 +411,7 @@ class TestBuildPhaseIntegration(unittest.TestCase):
                     "tier": "phase",
                     "spawned_by": ["ticket-supervisor"],
                     "spawn_allowlist": [],
-                    "skills_used": ["signoff"],
+                    "skills_invoked": [{"skill_id": "signoff", "mode": "always"}],
                 }]),
                 encoding="utf-8",
             )

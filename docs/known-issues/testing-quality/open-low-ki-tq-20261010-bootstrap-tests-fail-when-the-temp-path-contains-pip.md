@@ -1,11 +1,11 @@
 ---
 title: "KI-TQ-20261010-bootstrap-tests-fail-when-the-temp-path-contains-pip — six setup_ticket_worktree tests route subprocess calls by substring, so a random temp directory whose name contains 'pip' sends the build.py call down the install branch and the test fails"
-description: "low — a rare CI flake with a deterministic cause. The fake subprocess.run in six tests of tests/test_setup_ticket_worktree.py checks '\"pip\" in cmd_str' before it checks for build.py. The build command carries the temp path, so when tempfile picks a name like tmpipohl1rp the build is answered as a pip install, no .pre-commit-config.yaml is written, and _bootstrap raises BootstrapError. Seen once on PR #1138 (shard 2/8), green on rerun. Reproduced every time with a temp root whose path contains 'pip'."
+description: "low — a rare CI flake with a deterministic cause. The fake subprocess.run in six tests of tests/test_setup_ticket_worktree.py checks '\"pip\" in cmd_str' before it checks for build.py. The build command carries the temp path, so when tempfile picks a name like tmpipohl1rp the build is answered as a pip install, no .pre-commit-config.yaml is written, and _bootstrap raises BootstrapError. Seen twice: PR #1138 and PR #1186 (both shard 2/8), green on rerun each time. Reproduced every time with a temp root whose path contains 'pip'."
 type: reference
 category: reference
 status: active
 created: '2026-10-10'
-last_updated: '2026-10-10'
+last_updated: '2026-10-14'
 components:
   - testing_quality
 related_docs:
@@ -24,10 +24,19 @@ related_docs:
   across the six tests (estimate below).
 - **Status:** open, no AC. Cause verified: the CI log matches the mechanism line for line, and the
   failure reproduces every time locally.
-- **Occurrences:** 1 in CI. PR #1138 (docs-only), CI run `38053212873`, job `114216373815`,
-  "Test suite shard 2/8", 2026-10-10 13:01 UTC. Green on a rerun of the failed jobs (attempt 2).
-  main's CI was green at the same base.
-- **First seen:** 2026-10-10 · **Last seen:** 2026-10-10
+- **Occurrences:** 2 in CI.
+  1. PR #1138 (docs-only), CI run `38053212873`, job `114216373815`, "Test suite shard 2/8",
+     2026-10-10 13:01 UTC. Green on a rerun of the failed jobs (attempt 2). main's CI was green at
+     the same base.
+  2. PR #1186 (BO-3800d), CI run `38307908973`, job `115006297623`, "Test suite shard 2/8",
+     2026-10-12 21:13 UTC. The test was
+     `TestBootstrapAC2ProbeGuarantee::test_ac2_probe_precondition_config_present_implies_hooks_activatable`
+     and the temp dir was `/tmp/tmpnpipvc1f` (`tmpn[pip]vc1f`). Same `BootstrapError` (AC-5), same
+     two warnings, plus a `<MagicMock name='mock.stderr'>` prefix in the captured stderr. It passed
+     alone locally and was green on a rerun of the failed jobs, and main's CI was green at the same
+     base. It was first misread as a mock leaking between tests in the shard; the temp name is the
+     cause.
+- **First seen:** 2026-10-10 · **Last seen:** 2026-10-12
 - **Where:** `tests/test_setup_ticket_worktree.py` on `origin/main` `d03830e7c`. In
   `TestBootstrapAC1HappyPath::test_ac1_no_bootstrap_error_when_config_present` the fake is
   `fake_run` (:1000-1012). The `"poetry" in cmd_str or "pip" in cmd_str` branch (:1004) comes before

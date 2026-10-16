@@ -32,6 +32,7 @@ from kernel.providers.base import (
     JevInvalidResponse,
     JevPayloadTooLarge,
     JevPort,
+    JevResult,
     JevUnavailable,
     QuestionSpec,
     json_strings,
@@ -101,6 +102,8 @@ class IntentAssessment:
     jev_called: bool = False
     model_id: str | None = None
     usage: list[Usage] = field(default_factory=list)
+    #: The bundle probability that rode this batch (None: not asked or not answered).
+    bundle_probability: float | None = None
 
 
 def effective_goal(original: str, answers: list[ClarificationAnswer], limit: int = 16000) -> str:
@@ -120,8 +123,12 @@ def build_batch(goal: str, answers: list[ClarificationAnswer], component_ids: li
                 corr: CorrelationIds, *, context: EnrichedContext | EntityContext | None = None,
                 entity_context: EntityContext | None = None,
                 max_state_chars: int | None = None,
-                send_repo_excerpts: bool = True) -> JevBatch:
-    """Build one intent request, retaining required goal, answers and question before meanings."""
+                send_repo_excerpts: bool = True,
+                extra_questions: tuple[QuestionSpec, ...] = ()) -> JevBatch:
+    """Build one intent request, retaining required goal, answers and question before meanings.
+
+    `extra_questions` ride the same batch (the bundle question), so they add no provider call.
+    """
     state: dict[str, JsonValue] = {
         "task": {"goal": effective_goal(goal, answers),
                  "component_ids": json_strings(sorted(component_ids))},
@@ -132,10 +139,12 @@ def build_batch(goal: str, answers: list[ClarificationAnswer], component_ids: li
     meanings = entity_context or (context if isinstance(context, EntityContext) else None)
     if meanings is not None:
         state = attach_entity_context(state, meanings, max_state_chars, send_repo_excerpts,
-                                      questions={question.id: question_to_wire(question)})
+                                      questions={q.id: question_to_wire(q)
+                                                 for q in (question, *extra_questions)})
     elif isinstance(context, EnrichedContext):
         state = attach_context(state, context, max_state_chars, send_repo_excerpts)
-    return JevBatch(purpose=INTENT_PURPOSE, state=state, questions=[question], correlation=corr)
+    return JevBatch(purpose=INTENT_PURPOSE, state=state, questions=[question, *extra_questions],
+                    correlation=corr)
 
 
 def interpret(answer: ChoiceAnswer, cfg: IntentConfig) -> IntentAssessment:
@@ -161,6 +170,14 @@ def interpret(answer: ChoiceAnswer, cfg: IntentConfig) -> IntentAssessment:
                             **base)
 
 
+def _noul_probability(result: JevResult, question_id: str) -> float | None:
+    """Return the probability answered to a noul question, or None when it is missing."""
+    try:
+        return result.noul(question_id).probability
+    except (KeyError, JevInvalidResponse):
+        return None
+
+
 def _unavailable(code: str) -> IntentAssessment:
     """Return the outcome for a provider failure (never a gap; the default contract is kept)."""
     return IntentAssessment(RoutingOutcome.UNAVAILABLE, reason_codes=[code])
@@ -171,7 +188,8 @@ async def assess_intent(jev: JevPort, goal: str, answers: list[ClarificationAnsw
                         corr: CorrelationIds, *, context: EnrichedContext | EntityContext | None = None,
                         entity_context: EntityContext | None = None,
                         max_state_chars: int | None = None,
-                        send_repo_excerpts: bool = True) -> IntentAssessment:
+                        send_repo_excerpts: bool = True,
+                        extra_questions: tuple[QuestionSpec, ...] = ()) -> IntentAssessment:
     """Ask Jev what kind of answer the goal needs and interpret the answer.
 
     Args:
@@ -188,7 +206,7 @@ async def assess_intent(jev: JevPort, goal: str, answers: list[ClarificationAnsw
     """
     batch = build_batch(goal, answers, component_ids, corr, context=context,
                         entity_context=entity_context, max_state_chars=max_state_chars,
-                        send_repo_excerpts=send_repo_excerpts)
+                        send_repo_excerpts=send_repo_excerpts, extra_questions=extra_questions)
     try:
         result = await jev.assess(batch)
     except JevUnavailable:
@@ -204,6 +222,8 @@ async def assess_intent(jev: JevPort, goal: str, answers: list[ClarificationAnsw
         assessment.jev_called = True
     assessment.model_id = result.model_id
     assessment.usage = [result.usage]
+    for extra in extra_questions:  # the bundle question: a failure to read it is not an error
+        assessment.bundle_probability = _noul_probability(result, extra.id)
     return assessment
 
 
@@ -218,4 +238,5 @@ async def assess_intent(jev: JevPort, goal: str, answers: list[ClarificationAnsw
 #   (answer first, original request after it) so a user who restates the request is not
 #   re-classified on the words they just replaced. (#KernelBootstrapV0/INTENT)
 # - 2026-10-03 15:10 [python-coder]: Preserve verbatim goals and separate meaning, caller and clarification channels. (#DK-300/entity-context)
+# - 2026-10-06 18:00 [python-coder]: Let the bundle question ride the intent batch. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

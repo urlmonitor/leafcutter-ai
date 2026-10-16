@@ -38,7 +38,7 @@ python .agents/agents/pr-reviewer/scripts/run.py --args="$ARGUMENTS"
 4. Surfaces high-confidence findings; suppresses low-confidence ones with a visible tally.
 5. When medium-confidence findings exceed 3, bundles them and escalates to Opus for a promote/drop decision.
 6. Merges the Opus decision into the final report.
-7. Always appends an `## Escalation` section naming the branch taken and the one-line reason.
+7. Always appends an `**Escalation**` label line naming the branch taken and the one-line reason.
 8. **files_touched drift check** (non-blocking):
    1. Run `git diff --name-only $(git merge-base HEAD origin/main)..HEAD` to collect the set of actually-changed files.
    2. Infer the ticket path from the branch name (pattern: look for a `tickets/**/*.md` substring in the branch name) or by scanning `git log --oneline -20` for commit messages containing `tickets/.../*.md`. If neither yields a path, skip the step and emit a note: "files_touched drift check skipped: ticket path not inferable".
@@ -70,7 +70,7 @@ Diff size: <N lines across M files>
 Suppressed: X low-confidence nits, Y medium findings dropped by Opus.
 Run /pr-review explain <N> to re-examine any finding in detail.
 
-## Escalation
+**Escalation**
 Branch: <none | opus>
 Reason: <one-line>
 

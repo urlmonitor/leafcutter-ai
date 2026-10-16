@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -127,8 +127,11 @@ amended_by:
       not_covered reason by binding limit (Open Question 2); refusals named as leafcutter.split_answer.v1''s semantic
       check; ADR-067 doc_link set to exists.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/kernel/split/test_dk_400c_1_i.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-1-i.md
+- docs/product-truth/flows/leafcutter/decision-forming.flow.json
 notes: |
   User decision (DK-400 Q2): more than five means asking the person to narrow the request, or
   offering five parts and listing the rest read-only as not covered; never a silent drop. This AC

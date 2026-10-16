@@ -74,6 +74,10 @@ Group **non-judgment** hooks by `(effective_model, subagent_type)` so a single a
 
 For each failing hook whose rule `category` is `structural` (judgment-tier) and whose `hook_id` is in `blocking_hook_ids`:
 
+### Step 4a.0 — Specialist handoff (before any dispatch)
+
+If the failing hook's declared remedy disposition is `engage-specialist` (today: `check-complexity` → `restructuring-specialist`, `complexity-reduction`), **do not dispatch** — this skill runs at depth 1 and ADR-019 drops nested `Agent` calls. Run `python scripts/commit_guardian/remedy_handoff.py --hook-id <hook_id>` with the hook output on stdin and return its `status: handoff` JSON unchanged to the caller; the depth-0 dispatcher engages the specialist. If it exits 1, return a blocker with its stderr reason. Skip Steps 4a.1-4a.4 and 5 for this hook, and never reset, stash, checkout, restore or bypass hooks.
+
 ### Step 4a.1 — Parse the originating agent
 
 Scan the raw hook output for a line matching:

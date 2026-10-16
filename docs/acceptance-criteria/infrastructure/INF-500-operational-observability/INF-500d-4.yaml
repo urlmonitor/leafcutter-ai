@@ -7,7 +7,7 @@ component: infrastructure
 level: L2
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: medium
 roadmap_phase: phase_1
@@ -97,7 +97,7 @@ doc_links:
   - path: docs/architecture/adrs/ADR-001-self-hosting-boundary.md
     relationship: constrains
     status: exists
-  - path: docs/known-issues/feedback-collector/open-low-ki-fc-001.md
+  - path: docs/known-issues/feedback-collector/resolved/resolved-low-ki-fc-001.md
     relationship: describes
     status: exists
     relevance: "The defect census (787 records across 18 sinks on 2026-09-30, 1 in the sink people check)."
@@ -165,6 +165,15 @@ amended_by:
   - reason: "BrainCandy approved readiness on 2026-10-09 (relayed via the orchestrating session). readiness: reviewed -> approved on this record and on the children this change set touched or created (INF-500d-4-i, -iii, -iv, -v, -vi, -vii, -viii); INF-500d-4-ii was already approved and done and is not touched. Criteria and work_status unchanged."
     by: BrainCandy
     at: 2026-10-09
+  - reason: "The four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py (all pass against main). work_status flipped to done. History: a local pre-commit check-done-proof from a deployed hook built 2026-10-08 refused the flip over the test_required:false documentation children INF-500d-4-vii and INF-500d-4-viii (KI-CG-20260914-done-proof-precommit-ignores-test-required); PR #1165 fixed that waiver gap in source and the source composite check reports no unproven children. Criteria unchanged; covered_by and implemented_by link fields added."
+    by: test-writer
+    at: 2026-10-14
+  - reason: "work_status done -> todo, set while merging origin/main. PR #1193 (merge 2832c5357) added the child INF-500d-4-ix (rule-copies parity, approved, work_status todo), so the composite cannot be done until -ix is built. The four end-to-end tests and the covered_by/implemented_by links stay. Criteria unchanged."
+    by: orchestrator
+    at: 2026-10-14
+  - reason: "work_status todo -> done. The last open child, INF-500d-4-ix (rule-copies parity), is done in the same commit, proven by unit_tests/feedback/test_inf_500d_4_ix.py. All nine children (-i to -ix) are done, and the four end-to-end scenarios are proven by unit_tests/portability/test_inf_500d_4_e2e.py. Criteria unchanged."
+    by: orchestrator
+    at: 2026-10-14
 superseded_by: null
 covered_by:
   - INF-500d-4-i
@@ -175,7 +184,18 @@ covered_by:
   - INF-500d-4-vi
   - INF-500d-4-vii
   - INF-500d-4-viii
-implemented_by: []
+  - INF-500d-4-ix
+  - unit_tests/portability/test_inf_500d_4_e2e.py
+  - unit_tests/portability/_inf_500d_4_e2e_helpers.py
+implemented_by:
+  - templates/scripts/feedback/submit_feedback.py
+  - templates/scripts/feedback/feedback_sink.py
+  - templates/skills/agent-telemetry/scripts/emit_event.py
+  - templates/scripts/setup_ticket_worktree.py
+  - scripts/build_log_root.py
+  - scripts/build_phases_knowledge.py
+  - scripts/knowledge/sink_resolution.py
+  - scripts/knowledge/harvest_learnings.py
 change_target:
   - code
   - infrastructure

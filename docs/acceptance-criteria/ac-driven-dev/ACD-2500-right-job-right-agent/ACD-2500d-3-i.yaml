@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given requirement R carries a file finding from the file-aware step with no recorded decision,
     and requirement S carries a file finding whose recorded decision is "assignment stands" with a

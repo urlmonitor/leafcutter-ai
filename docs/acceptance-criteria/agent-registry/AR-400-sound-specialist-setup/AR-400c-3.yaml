@@ -1,0 +1,86 @@
+id: AR-400c-3
+title: "llm-expert no longer tells authors to hand-write an abilities section, or points them at a table that is not there"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given llm-expert's definition in the package's real tree,
+  When the build compiles llm-expert's prompt,
+  Then the compiled step that lists the body sections to draft for a new
+    specialist does not include a "Skills" section, and states that the
+    specialist's abilities are declared once in its `skills:` header and
+    delivered by the build,
+    And the compiled promotion step names add-agent-to-package and
+      add-skill-to-package without the words "the Skills table above", and
+      refers instead to the delivered abilities section of llm-expert's own
+      compiled prompt,
+    And the compiled prompt contains exactly one abilities section -- the
+      delivered one,
+    And a specialist written by following that drafting step -- a fixture
+      definition with a `skills:` header and no hand-written abilities section --
+      compiles to a prompt with exactly one abilities section.
+depends_on:
+  - AR-400c
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: modifies
+    status: exists
+    relevance: "Body-section list at line 362 (includes 'Skills'); 'per the Skills table above' at line 372 (dated snapshot, 2026-10-12)."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300a-4.yaml
+    relationship: related
+    status: exists
+    relevance: "No compiled prompt carries two competing accounts of what an agent may use -- the guidance currently produces exactly that."
+  - path: docs/acceptance-criteria/build_pipeline/BP-200-llm-expert-agent/BP-200a-5.yaml
+    relationship: related
+    status: exists
+    relevance: "Already superseded for the same reason (hand-written Skills table); this removes the guidance that tells others to repeat it."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "templates/agents/llm-expert.md ~line 362 (body-section list) drops 'Skills' and states abilities are declared once in the `skills:` header and delivered by the build; ~line 372 drops 'per the Skills table above' and points at the delivered abilities section."
+  - "No hand-written abilities heading may remain in llm-expert.md's body; the only abilities section in the compiled prompt is the one agent_skills_declaration.append_declared_skills appends ('## Your Available Skills')."
+  - "Check templates/skills/add-agent-to-package/SKILL.md for the same 'write a Skills section' guidance; if present, flag it for a follow-up record rather than widening this one."
+test_spec:
+  - name: test_compiled_llm_expert_has_exactly_one_abilities_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: deployed
+    description: "Compile llm-expert from the real template; exactly one abilities section heading occurs, it is the delivered one, the drafting step's section list excludes 'Skills', and 'the Skills table above' does not occur."
+  - name: test_specialist_drafted_per_guidance_compiles_with_one_abilities_section
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: "A fixture definition built from the drafting step's section list (with a `skills:` header and no hand-written abilities section) compiles to a prompt with exactly one abilities section."
+    must_catch:
+      - "the guidance still yields a hand-written Skills section duplicating the delivered one"
+test_rationale: >-
+  Guidance is only correct if following it yields a coherent specialist; the
+  fixture descriptor tests the guidance's output, not its wording.
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400c_2_3_cleanup.py
+implemented_by:
+  - templates/agents/llm-expert.md
+notes: |
+  The last clause is the behaviour that matters: guidance is only correct if
+  following it produces a coherent specialist. The reference-doc side of the
+  authoring change is owned by AR-300c's existing trigger (AR-400c's
+  documentation_rationale), so no doc AC here.

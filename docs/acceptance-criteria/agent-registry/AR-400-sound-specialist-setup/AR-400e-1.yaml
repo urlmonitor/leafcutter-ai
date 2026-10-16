@@ -1,0 +1,125 @@
+id: AR-400e-1
+title: "For every specialist, each view of its abilities lists exactly what its own definition grants"
+component: agent-registry
+components:
+  - agent_registry
+  - skill_registry
+  - knowledge_system
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree, and for each specialist the set of abilities
+    its own definition's `skills:` declaration grants,
+  When each view of a specialist's abilities is produced from that tree --
+      the specialist's compiled briefing (its effective prompt),
+      the registry validation run by the build,
+      the architecture diagram of specialists and their abilities,
+      the knowledge graph's specialist-to-ability edges,
+      the specialist's published card,
+      the verdict on whether a specialist's ability work is done,
+  Then for every specialist, every view names exactly the same set of
+    abilities, equal to the declared set -- none added, none omitted,
+    And a specialist whose definition grants nothing appears in every view with
+      no abilities, rather than being absent from some views and present in
+      others,
+    And the comparison reports the number of specialists examined per view, and
+      every view's number equals the number of specialist definitions in the
+      tree.
+depends_on:
+  - AR-400e
+  - AR-400e-2
+doc_links:
+  - path: config/agent_registry.json
+    relationship: modifies
+    status: exists
+    relevance: "On 2026-10-12: 4 specialists in only the older derived field, 12 in only the newer, 27 in both. Each view reads one field, so the same specialist shows different abilities in different views."
+  - path: docs/acceptance-criteria/agent-registry/AR-300-granted-abilities-arrive/AR-300c.yaml
+    relationship: related
+    status: exists
+    relevance: "Promised 'two records of the same grant can no longer disagree' for the authored side; this finishes it for the derived side."
+  - path: docs/architecture/components/knowledge-system.md
+    relationship: describes
+    status: exists
+    relevance: "The knowledge graph whose specialist-to-ability edges are one of the six views."
+assigned_agent: python-coder
+estimated_complexity: L
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "THE READERS, VERIFIED 2026-10-12 (field each reads today): briefing scripts/render_effective_prompt.py ~404 (skills_invoked); registry validation scripts/build_phases_agent_validation.py ~199 and ~307 (skills_invoked) AND scripts/registry_validator._check_skills_used ~244-270 (skills_used -- a second validation reader the design list omits); diagram scripts/generate_agent_diagram.py ~160-182 (skills_used); knowledge graph config/paths.json surfaces.agents.edge_fields (skills_used -- the LOAD-BEARING source) with scripts/knowledge_edges.py:72 _SURFACE_EDGE_FIELDS only a legacy fallback; card scripts/generate_agent_cards.py render_skills ~446-477 (frontmatter 'skills_invoked' -- a key no template has -- then registry skills_invoked, then legacy skills_used); done verdict scripts/agent_ability_verdict._record_abilities ~117-120 (both)."
+  - "EXCLUDE descriptive_only: skills_invoked carries descriptive_only entries appended after the grants (_agent_ability_sync.regenerate_record). They describe behaviour and are not grants, so every view that moves to skills_invoked must drop them, or 'none added' fails."
+  - "DICT ENTRIES: skills_invoked items are {skill_id, mode, condition?, provided_by?} objects, not strings. The diagram must key on skill_id; the knowledge-graph extractor (knowledge_edges.extract_edges -> resolve_frontmatter_path_entry) must yield a target per skill_id and must not refuse dict items as malformed path entries."
+  - "The card should read the specialist's own `skills:` declaration (or registry skills_invoked) -- not a frontmatter 'skills_invoked' key that no template carries; remove the legacy skills_used fallback. generate_agent_cards.py (744 content lines) and render_effective_prompt.py (716) may not grow; the fallback removal is the room."
+  - "Knowledge-graph edge label stays 'skills_used', sourced from skills_invoked skill ids (user decision 12); the mechanism is specified in AR-400e-1-ii."
+  - "ORDER: readers move BEFORE or WITH AR-400e-2's removal of the field, never after; a reader still looking for skills_used silently empties its view."
+  - "The comparison reports a per-view examined count equal to the specialist definitions in the tree; a specialist with an empty declaration appears in every view with no abilities."
+test_spec:
+  - name: test_every_view_lists_exactly_the_declared_abilities_for_every_specialist
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Over the real tree: for each specialist, the sets produced by render_effective_prompt, build_phases_agent_validation's examined set, generate_agent_diagram's links, the knowledge graph's agent->ability edges, the generated card's abilities section and the ability verdict all equal the frontmatter `skills:` id set."
+    must_catch:
+      - "a view still reads skills_used"
+      - "descriptive_only entries appear as abilities in a view"
+      - "the knowledge graph refuses dict skills_invoked entries and drops them"
+  - name: test_empty_declaration_appears_in_every_view_with_no_abilities
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "A specialist with no grant is present in each view's population with an empty ability set (not absent from some views)."
+  - name: test_each_view_reports_examined_count_equal_to_definitions
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: "Each view's examined-specialist count equals the number of agent definitions derived from templates/agents/ and the registry."
+test_rationale: >-
+  Evidence is each view's list for every specialist, computed by the real
+  readers over the real tree; the must_catch items are the three ways a
+  reader can go wrong when the field moves.
+delivers_to: null
+expects_from:
+  ac_id: AR-400e-2
+  contract: "A registry carrying one derived abilities field (skills_invoked), regenerated from the declarations."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400e.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400e-1-i
+  - AR-400e-1-ii
+  - AR-400e-1-iii
+  - AR-400e-1-iv
+implemented_by:
+  - scripts/generate_agent_diagram.py
+  - scripts/knowledge_edges.py
+  - scripts/generate_agent_cards.py
+  - scripts/agent_ability_verdict.py
+  - scripts/render_effective_prompt.py
+notes: |
+  THE READERS ARE THE TEST (AR-400e notes). The design names, per view, which
+  field each reader picks today -- the L3s pin the populations that each reader
+  currently gets wrong:
+    - briefing (render_effective_prompt) and registry validation
+      (build_phases_agent_validation) read skills_invoked -> blind to the 4
+      skills_used-only specialists                             -> AR-400e-1-i
+    - architecture diagram (generate_agent_diagram) and knowledge-graph edges
+      (knowledge_edges) read skills_used -> blind to the 12
+      skills_invoked-only specialists                          -> AR-400e-1-ii
+    - published card and done verdict (agent_ability_verdict)  -> AR-400e-1-iii
+    - migration helper (migrate_agent_abilities)              -> AR-400e-1-iv
+  Module names are for the IT PO; the criteria are about the views.
+
+  EVIDENCE IS EACH VIEW'S LIST FOR EVERY SPECIALIST, not that the old field is
+  gone (AR-400e notes). Removing the field while one reader still looks for it
+  silently empties that view.

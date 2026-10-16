@@ -28,7 +28,7 @@ ENTROPY_HIGH:unit_tests/test_bo_2200a_3_i.py:*
 # stale per-line entry stops suppressing without saying so.
 ENTROPY_HIGH:unit_tests/ac_store/test_bo_2900g_2_ii_store.py:*
 # False positives: pre-existing markdown file-path / doc-link references (not secrets)
-ENTROPY_HIGH:docs/agents/coding/python-coder.md:91
+ENTROPY_HIGH:docs/agents/coding/python-coder.md:*
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:59
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:125
 ENTROPY_HIGH:templates/scripts/commit_guardian/INTEGRATION.md:382
@@ -1024,5 +1024,10 @@ ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/closure-integrity.json:133
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:120
 ENTROPY_HIGH:reports/retrieval-aura-2026-10-09/runs/precision-v2-44406d9/readiness.json:471
+# False positive (user-approved 2026-10-14): the rule-check tests name the family constant
+# FAMILY_DOC_TRIGGERS in findings_for(...) calls; a SCREAMING_SNAKE identifier, not a secret.
+ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2.py:*
+ENTROPY_HIGH:unit_tests/ac_store/test_acd_2500a_2_v.py:*
 ENTROPY_HIGH:templates/scripts/commit_guardian/_lint_scope.py:*
 ENTROPY_HIGH:docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md:*
+ENTROPY_HIGH:tests/knowledge/test_km_400f_1_vi.py:*

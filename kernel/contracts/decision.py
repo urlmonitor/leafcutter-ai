@@ -283,6 +283,9 @@ class RoutingAssessment(PersistedModel):
     reason_codes: list[str] = Field(default_factory=list)
     thresholds: dict[str, float] = Field(default_factory=dict)
     jev_called: bool = False
+    #: The bundle judgement riding this assessment (None: not asked) and the threshold applied.
+    bundle_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    bundle_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def _selected_is_eligible(self) -> RoutingAssessment:
@@ -319,4 +322,5 @@ class RoutingAssessment(PersistedModel):
 #   caller-supplied criterion); a generated one must carry proposal_status proposed plus an
 #   approval_status of proposed, approved or rejected, enforced by _check_proposal.
 #   (#KernelBootstrapV0/P1)
+# - 2026-10-06 18:00 [python-coder]: Carry the bundle probability and threshold in the routing assessment. (#TICKET-20261006-DK-400a-1)
 # ====================================================================

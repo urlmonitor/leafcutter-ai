@@ -49,6 +49,10 @@ class HostOperation:
     operation: str = ""
     request_model: type[KernelModel] | None = None
     output_model: type[KernelModel] | None = None
+    #: Operations the packet allows; None means the registry descriptor's own operations.
+    packet_operations: tuple[str, ...] | None = None
+    #: True when the input artifact holds only the request: no clarifications or entity context.
+    bare_input: bool = False
 
     @property
     def template_id(self) -> str:

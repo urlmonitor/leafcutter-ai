@@ -1,0 +1,155 @@
+id: KM-400f-1-iv
+title: "Reclaimable because the publication failed is reported apart from reclaimable because it is outside the bound"
+component: knowledge-management
+components: [knowledge_system]
+level: L3
+status: active
+req_status: active
+readiness: approved
+priority: high
+work_status: done
+parent: KM-400f-1
+criteria: |
+  Given the declared retention bound is at most 3 retained generations and a minimum retirement age of 24 hours
+  And the active pointer references generation G12, whose publication completed
+  And generations G11, G10 and G9 each record a completed publication, were retired more than 24 hours ago, and are the three retained generations inside the declared count bound
+  And generations G8 and G7 each record a completed publication, were retired more than 24 hours ago, and sit outside the declared count bound
+  And generations G6 and G5 each record a failed publication, were created 40 hours ago and carry no retirement time
+  When the retention policy is evaluated
+  Then G8 and G7 are reported reclaimable on the basis that they fall outside the declared count bound
+  And G6 and G5 are reported reclaimable on the basis that their publication failed
+  And those two bases are reported as distinct named values rather than as one combined reclaimable indication
+  And the evaluation reports a separate count per basis: 2 outside the declared bound and 2 whose publication failed
+
+  Given generation G4 records a failed publication, was created 40 hours ago, and also falls outside the declared count bound
+  When the retention policy is evaluated
+  Then the evaluation reports both bases for G4 rather than only the first basis it established
+  And G4 is counted under each basis it satisfies, and the report states that the per-basis counts may overlap so they are not read as a total
+
+  Given every generation outside the declared bound records a completed publication and no generation records a failed publication
+  When the retention policy is evaluated
+  Then the count of generations reclaimable because their publication failed is reported as 0
+  And that figure is reported explicitly rather than left out of the report
+depends_on: [KM-400f-1, KM-400f-1-i]
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: context
+    status: exists
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml
+    relationship: context
+    status: exists
+    relevance: Parent. Requires a reason per not-reclaimable generation; this record
+      requires a named basis per RECLAIMABLE generation, which the parent leaves unstated.
+  - path: docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml
+    relationship: context
+    status: exists
+    relevance: The operator listing and sweep report these bases rather than recomputing
+      them; routine retention and garbage collection must be tellable apart on that surface.
+  - path: docs/acceptance-criteria/ac-store/ACS-1100-honest-coverage-answers/ACS-1100.yaml
+    relationship: context
+    status: exists
+    relevance: Inherit the standing requirement that a reported figure states its scope and
+      method; a zero is stated, never omitted.
+  - path: docs/how-to/run-knowledge-retrieval.md
+    relationship: describes
+    status: exists
+    relevance: The two bases are operator-visible, because the operational response to
+      routine retention differs from the response to accumulated failed publications.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to:
+  agent: python-coder
+  contract: The per-generation reclaimability basis and the per-basis counts, which
+    KM-400f-2's publication result and KM-400f-4's operator surface report verbatim.
+expects_from:
+  ac_id: KM-400f-1-i
+  contract: The full generation population spanning both completed and failed
+    publications, without which only one of the two bases can ever arise.
+origin_agent: business-analyst
+created: '2026-10-12'
+amended_by: []
+superseded_by: null
+covered_by:
+- tests/knowledge/test_km_400f_1_iv.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261014-KM-400f-1-iv.md
+- docs/reference/knowledge-retention-bound.md
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Authored 2026-10-12. The two bases call for different operator responses, and a single
+  reclaimable indication conflates them. A generation reclaimable because it fell outside
+  the declared count bound is routine retention working as specified — the expected steady
+  state of a healthy store. A generation reclaimable because its publication failed is
+  garbage: it was never usable, it was never retired, and a store that holds many of them
+  is one where publication is failing repeatedly and nobody has been told.
+
+  That distinction is measurable and was the whole content of the 2026-10-12 incident. On
+  the live store, 12 of 12 generations were reclaimable on the failed-publication basis and
+  0 on the outside-the-bound basis — a report that stated only "12 reclaimable" would have
+  read as routine retention catching up, when in fact no publication had ever completed.
+  On the instance destroyed four days earlier the split was 25 failed of 32, holding 137,980
+  of 189,950 nodes.
+
+  The second scenario is the clause that an implementer is most likely to get wrong and is
+  the reason this is a record rather than a sentence. A generation can satisfy both bases at
+  once, and reporting only the first basis established makes the per-basis counts depend on
+  evaluation order. The overlap statement is required for the same reason an explicit zero
+  is: two counts that cannot be added, presented as if they could be, misstate the size of
+  the problem.
+it_requirements: null
+test_required: true
+test_spec:
+  - name: test_both_reclaimability_bases_are_named_and_counted_separately
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: criterion
+    description: Build a fixture holding an active generation, three retained inside the
+      bound, two completed-publication generations outside the bound and two
+      failed-publication generations, then assert each reclaimable generation carries its own
+      named basis and that the per-basis counts are 2 and 2.
+    covers: [KM-400f-1-iv]
+    must_catch:
+      - "report a single reclaimable indication with no basis, so routine retention and accumulated failures read alike"
+      - "report every reclaimable generation under the outside-the-bound basis because that is the only basis the policy knows"
+      - "report one combined reclaimable count instead of a count per basis"
+    requires_db: false
+  - name: test_a_generation_satisfying_both_bases_reports_both
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: boundary
+    description: With one generation that both records a failed publication and falls outside
+      the declared count bound, assert both bases are reported for it, that it is counted
+      under each, and that the report states the per-basis counts may overlap.
+    covers: [KM-400f-1-iv]
+    must_catch:
+      - "report only the first basis established, making the counts depend on evaluation order"
+      - "present the per-basis counts as summing to the reclaimable total when they overlap"
+    requires_db: false
+  - name: test_zero_failed_publication_basis_is_stated_not_omitted
+    target_dir: tests/knowledge/
+    framework: pytest
+    type: integration
+    angle: failure
+    description: With a population in which no generation records a failed publication,
+      assert the failed-publication basis count is reported as 0 rather than the basis being
+      left out of the report.
+    covers: [KM-400f-1-iv]
+    must_catch:
+      - "omit a basis whose count is zero, so an absent figure and a figure of zero read alike"
+    requires_db: false
+test_rationale: >-
+  Under KM-400f-1's existing fixture of completed and retired generations, the
+  failed-publication basis can never arise at all, so a policy that knows only the
+  outside-the-bound basis passes every assertion — that fixture bias is exactly why the
+  distinction was never specified. Every fixture here reproduces the REAL observed shape
+  instead, mixing generations whose publication FAILED and which carry no retirement time
+  with completed-and-retired ones, because a fixture built only from completed publications
+  rebuilds the blind spot. The per-basis counts are asserted as separate values with an
+  overlapping member present, since a test using only disjoint generations passes under an
+  implementation that reports the first basis it finds — and that implementation's counts
+  change with evaluation order, which is silent. The explicit-zero test is its own case
+  because an omitted basis and a basis of zero were indistinguishable on the live store's
+  reports, which is the same reporting defect KM-400f-2 was already written to prevent.

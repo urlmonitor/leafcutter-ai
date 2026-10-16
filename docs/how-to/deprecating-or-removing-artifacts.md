@@ -4,7 +4,7 @@ description: "Step-by-step guide for safely deprecating or deleting agents, skil
 type: how_to
 status: active
 created: 2026-05-28
-last_updated: 2026-10-09
+last_updated: 2026-10-15
 components:
   - build_pipeline
   - config_loader
@@ -149,9 +149,9 @@ compile to `.claude/skills/<name>/` in the target project.
    entries); a declared skill that no longer exists refuses the build. If that
    empties an agent's `skills:` list, also drop `Skill` from its `tools:`
    (`scripts/skill_tool_grant_validator.py` requires `Skill` only for a
-   non-empty list). Do not hand-edit `skills_used` / `skills_invoked` in
+   non-empty list). Do not hand-edit `skills_invoked` in
    `config/agent_registry.json`: the "Transform agent registry" pre-commit hook
-   regenerates them. Also clean `add-skill-to-package` mentions in skill bodies:
+   regenerates it (`skills_used` is retired and refused). Also clean `add-skill-to-package` mentions in skill bodies:
    ```bash
    git grep -n '<name>' templates/agents/ templates/skills/
    ```

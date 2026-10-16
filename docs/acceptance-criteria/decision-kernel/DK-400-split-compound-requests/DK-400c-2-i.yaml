@@ -6,7 +6,7 @@ components:
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 readiness: approved
 priority: high
 roadmap_phase: phase_kernel_1_founding
@@ -84,8 +84,12 @@ amended_by:
     summary: 'Build-slice amendment (dec-9925ebf1895222f4): its tests enable splitting explicitly, because split.enabled
       ships false in E1 and E2.'
 superseded_by: null
-covered_by: []
-implemented_by: []
+covered_by:
+- tests/kernel/split/test_dk_400c_2_i.py
+implemented_by:
+- tickets/00_inbox/TICKET-20261006-DK-400c-2-i.md
+- kernel/split/text.py
+- kernel/split/convert.py
 notes: |
   Pins the mock-data rule "verbatim (whitespace normalised)" from both sides, so that neither
   an over-strict nor a fuzzy match passes. Letter case is not normalised by the mock data and is

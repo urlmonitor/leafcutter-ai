@@ -64,6 +64,7 @@ async function mockAgent(call) {
     if (label === 'read-pause-record') { return { exists: true, stale: false }; }
     if (label === 'clear-pause-record') { return { ok: true }; }
     if (label === 'clear-pause-record-verify') { return { exists: false }; }
+    if (label === 'approval-holds') { return { output: JSON.stringify({ approved: /--ids (\S+)/.exec(instructions)[1].split(','), held: [] }), exit_code: 0 }; }
   }
 
   if (agentType === 'status-checker') {
@@ -345,7 +346,6 @@ class TestPtGating(unittest.TestCase):
         commit_instrs = [c["instructions"] for c in side.get("commitCalls", [])]
         self.assertTrue(any("plan-feature(MOCK-DATA)" in i for i in commit_instrs))
         self.assertFalse(any("plan-feature(MOCKUP)" in i for i in commit_instrs))
-        # No PR was opened.
         self.assertNotIn("pull-request", _agent_types(side))
 
 
@@ -377,7 +377,6 @@ class TestStoreAbsentSelfSkip(unittest.TestCase):
         self.assertIn("pt-telemetry", _labels(side))
         # …no PT authors dispatched…
         self.assertEqual(_pt_author_order(side), [])
-        # …and the AC pipeline proceeded.
         self.assertIn("it-po", _agent_types(side))
         self.assertEqual(res.get("status"), "ok")
 
@@ -544,6 +543,7 @@ class TestAuthorResultTolerantParse(unittest.TestCase):
             "classifier": {"outcome": "none", "component": "ux-prototyping"},
             "triageRoute": "technical",
             "acAuthorReturnsString": True,
+            "resumeBodyLog": "plan-feature(IT-PO): ux-prototyping\n\nAC IDs: ACD-ITPO",
         }
         res, _side = _run(cfg)
         self.assertEqual(res.get("status"), "ok")

@@ -167,6 +167,37 @@ def declared_view(tables: list[tuple[Path, list[dict]]]) -> dict[str, dict]:
     return view
 
 
+def gating_hook_ids(root: Path | None = None) -> list[str] | None:
+    """Return the ``blocking_hook_ids`` list: the sole authority on which hooks gate a commit.
+
+    Tables are consulted in precedence order (local, then package seed); the first
+    one carrying a ``blocking_hook_ids`` list supplies it, so an install whose local
+    table predates the field still resolves against the seed.
+
+    Args:
+        root: Project root; defaults to the process cwd.
+
+    Returns:
+        The hook ids that gate a commit, or None when no table carries the list.
+
+    Raises:
+        RemedyInputError: A table exists but is unreadable, or the list is malformed.
+    """
+    base = root if root is not None else Path.cwd()
+    for path in (local_table_path(base), seed_table_path(base)):
+        if path is None or not path.is_file():
+            continue
+        table = _read_json(path)
+        listed = table.get("blocking_hook_ids") if isinstance(table, dict) else None
+        if listed is None:
+            continue
+        if not isinstance(listed, list) or not all(isinstance(h, str) for h in listed):
+            msg = f"{path} has a blocking_hook_ids that is not a list of hook ids"
+            raise RemedyInputError(msg)
+        return listed
+    return None
+
+
 def load(hook_id: str, root: Path | None = None) -> dict | None:
     """Return the remedy declaration for one hook, or None when missing.
 

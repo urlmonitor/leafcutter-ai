@@ -159,11 +159,14 @@ flowchart TD
 | `mcp__plugin_serena_serena__get_symbols_overview` |
 | `mcp__plugin_context7_context7__resolve-library-id` |
 | `mcp__plugin_context7_context7__query-docs` |
+| `Skill` |
 ---
 
 ## Skills Used
 
-*No skills declared.*
+| Skill | Mode | Condition |
+|-------|------|-----------|
+| `knowledge-query` | conditional | Use when the question is about cross-surface knowledge graph queries (nodes, edges, surfaces) rather than code search. |
 ---
 
 ## Configuration

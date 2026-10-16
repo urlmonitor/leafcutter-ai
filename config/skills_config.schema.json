@@ -118,12 +118,6 @@
       "description": "Name of the default/main branch for PR targets and merge operations.",
       "default": "main"
     },
-    "collector_enforcer_paths": {
-      "type": "array",
-      "items": {"type": "string"},
-      "description": "List of path prefixes that trigger the collector-enforcer skill.",
-      "default": ["collector/"]
-    },
     "top_level_packages": {
       "type": "array",
       "items": {"type": "string"},
@@ -164,6 +158,11 @@
       "type": "string",
       "description": "Path to a Markdown file containing project-specific commit categorization rules. Read at runtime by changelog-agent Step 3. If the file does not exist, changelog-agent falls back to conventional-commit prefix heuristics only.",
       "default": ".claude/changelog_categories.md"
+    },
+    "reachability_exemptions_path": {
+      "type": "string",
+      "description": "Path to the reachability-exemption registry the done-proof reachability guard reads. Set to an empty string to turn the feature off; leave the key out to use the shipped default.",
+      "default": "config/reachability_exemptions.yaml"
     },
     "worktree_cleanup": {
       "type": "object",

@@ -1,0 +1,149 @@
+id: AR-400c-5
+title: "A specialist that declares it does not sign off, but is granted the signoff ability, stops the build"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a package tree in which the definition of a test specialist
+    "probe-planner" declares `signoff: false` and its own `skills:` declaration
+    grants "signoff",
+  When the build runs over that tree, and separately when the registry
+    validator runs over it,
+  Then both stop with a failing result naming "probe-planner" and the grant
+    "signoff", stating that the specialist declares `signoff: false`,
+    And neither prints the finding as a warning -- it is a failure,
+    And removing the "signoff" grant from "probe-planner" makes both runs pass
+      with no finding about it, and so does changing its declaration to
+      `signoff: true`,
+    And a specialist that declares `signoff: false` and grants other abilities
+      but not "signoff" produces no finding from this check,
+    And a specialist with no `signoff:` declaration at all that grants
+      "signoff" produces no finding from this check,
+    And a specialist whose central registry entry has tier "supervisor", that
+      declares `signoff: false` and grants "signoff", produces no finding from
+      this check, while the same declaration on a specialist of any other tier
+      stops the build,
+    And on the package's real tree the check reports zero findings.
+depends_on:
+  - AR-400c
+  - AR-400c-2
+doc_links:
+  - path: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400c-2.yaml
+    relationship: related
+    status: exists
+    relevance: "The one-off cleanup of product-owner's signoff grant. This record makes that one case mechanical so it cannot recur."
+  - path: docs/reference/agent-template-frontmatter.md
+    relationship: describes
+    status: exists
+    relevance: "Documents the `signoff:` flag and the `skills:` declaration this check compares."
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+    relevance: "The registry validation the check is wired into."
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "Both sides are read from the specialist's OWN frontmatter: the `signoff:` flag and the `skills:` declaration (parsed by agent_ability_verdict.normalize_entries). The derived registry copy is not consulted."
+  - "Only an explicit `signoff: false` triggers the rule. An absent `signoff:` key is not a declaration (eight sql-* specialists grant signoff with no `signoff:` key on 2026-10-12 and must produce no finding)."
+  - "The rule keys on the literal ability id 'signoff' because the frontmatter flag it is compared with is named for that ability; no other ability is special-cased, and the check names no specialist."
+  - "Wire it so the finding is a RETURNED error of registry_validator.validate_agent_registry (both doors, AR-400b-4). registry_validator.py may not grow (634 content lines, 2026-10-12): the logic lives in a new module or in scripts/agent_declaration_shape.py (48 lines), not inline."
+  - "SUPERVISOR EXEMPTION IS DATA (user decision 9): the exemption is keyed on the registry entry's authored `tier` field equal to 'supervisor' (config/agent_registry.json; tier is authored, not derived by the transform hook). No agent id appears in the check. Supervisors load the signoff skill to VALIDATE ticket state, not to sign off."
+  - "REAL-TREE MEASUREMENT (2026-10-12): agents with explicit `signoff: false` AND a signoff grant are epic-supervisor (tier supervisor -> exempt) and product-owner (tier utility -> finding, removed by AR-400c-2). Registry tier 'supervisor' holds epic-supervisor, ticket-supervisor, workflow-architect and sql-coder (sql-coder has no `signoff:` key, so it is unaffected either way). After AR-400c-2 the real tree has zero findings. The test re-derives this population at run time rather than trusting this list."
+test_spec:
+  - name: test_signoff_grant_on_signoff_false_specialist_fails_both_doors
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice with probe-planner (`signoff: false`, grants signoff); the validator CLI and scripts/build.py --target-dir <tmp> both exit non-zero with a finding naming probe-planner, signoff and the `signoff: false` declaration, printed as an error not a [WARNING]."
+    must_catch:
+      - "the finding is printed as a warning and the build exits 0"
+      - "the rule reads the registry copy instead of the frontmatter"
+  - name: test_removing_grant_or_flipping_flag_clears_the_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Two negative controls on the same copy: drop the signoff grant -> both doors pass; restore it and set `signoff: true` -> both doors pass."
+  - name: test_absent_flag_and_other_grants_are_not_findings
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A `signoff: false` specialist granting only knowledge-query, and a specialist with no `signoff:` key granting signoff, both produce no finding from this check."
+    must_catch:
+      - "the rule fires on 'signoff is not True' rather than 'signoff is False'"
+  - name: test_supervisor_tier_is_exempt_and_other_tiers_are_not
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Negative control pair on one copy: probe-planner (`signoff: false`, grants signoff) with registry tier 'supervisor' passes; changing only its registry tier to 'utility' fails with the finding."
+    must_catch:
+      - "the exemption is keyed on agent names (epic-supervisor, ticket-supervisor) instead of tier"
+      - "the exemption reads tier from somewhere other than the registry entry"
+  - name: test_real_tree_has_no_signoff_false_signoff_grant
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "The validator over the checked-out package reports zero findings of this kind (requires AR-400c-2); the test also derives the explicit-false + grant population and asserts every member is supervisor-tier."
+test_rationale: >-
+  The rule is small, so its risk is in its edges: the absent-flag case is the
+  real population (sql-*) a careless 'not True' test would fail, and the two
+  negative controls prove the finding is caused by the pairing and nothing
+  else.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The validate_agent_registry wiring that returns reference-check findings as errors; this kind is appended to the same returned list."
+origin_agent: it-po
+created: 2026-10-12
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "Record created. User decision 6 (BrainCandy, 2026-10-12, BA-stage Q5): add the mechanical check -- a `signoff` grant on an agent declaring `signoff: false` stops the build. Authored by the IT PO at the orchestrator's instruction as the fifth L2 under AR-400c (AR-400c had four L2s, so the 5-L2 cap is respected); parent covered_by back-linked."
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "criteria: new clause -- a specialist whose registry tier is 'supervisor' with `signoff: false` and a signoff grant produces no finding; the same declaration on any other tier stops the build. it_requirements: the epic-supervisor blocker replaced by the tier-based exemption and the real-tree measurement; test_spec gains the supervisor/non-supervisor negative-control pair. WHY: user decision 9 (BrainCandy, 2026-10-12): exempt agents whose registry tier is supervisor (data, not a name list) -- epic-supervisor and ticket-supervisor validate ticket state with the signoff skill; only an explicit `signoff: false` counts, an absent key is unaffected (confirms the fifth clause)."
+superseded_by: null
+covered_by:
+  - unit_tests/prompt_assembly/test_ar_400c_5_signoff_false_grant.py
+implemented_by:
+  - scripts/agent_signoff_grant_check.py
+  - scripts/registry_validator.py
+notes: |
+  USER DECISION 6 (BrainCandy, 2026-10-12), BINDING: the mechanical case raised
+  as an open question in AR-400c-2's notes is adopted as a refusing check.
+  AR-400c-2 removes the real instance (product-owner); this record stops the
+  next one.
+
+  PLACEMENT. AR-400c ("everything the build reports about a specialist's
+  abilities is a real problem" -- dead grants are named there) is the natural
+  host; AR-400b is at its 5-L2 cap.
+
+  INTERPRETATION RECORDED. "Declaring signoff: false" is read literally: an
+  absent `signoff:` key is not a declaration. Measured 2026-10-12: sql-coder,
+  sql-function-creator, sql-index-creator, sql-procedure-creator, sql-query,
+  sql-table-creator, sql-test-writer and sql-view-creator carry no `signoff:`
+  key and grant signoff; product-owner and epic-supervisor carry
+  `signoff: false` and grant signoff. If the user intends absent to mean false,
+  the fifth clause inverts and the eight sql-* definitions need a decision.
+
+  RESOLVED 2026-10-12 (user decision 9): supervisor-tier agents are exempt
+  (epic-supervisor is tier supervisor), and an explicit `signoff: false` is the
+  only trigger -- the reading above is confirmed.

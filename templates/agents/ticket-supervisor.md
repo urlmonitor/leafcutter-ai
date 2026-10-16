@@ -17,7 +17,7 @@ tools: Bash, Read, Edit, Write, Agent, Skill
 spawn_allowlist:
 - __ticket_phase_agents__
 - brainstorm-lead
-- llm-expert
+- test-breaker
 skills:
 - skill_id: building-epics
   mode: always
@@ -278,6 +278,7 @@ is loaded once per ticket run (cached in memory across the agent loop).
 | `prompt` | NO (TDD) | TDD guardrails do NOT apply. Prompt-quality guardrails apply instead (see llm-expert's `## Prompt-Quality Checklist`). A prompt-only AC should carry `test_required: false`; a prompt-only ticket has no production-code agent, so the test-writer skip rule (non-code ticket) handles it. |
 | `test_artifact` | NO | Agent IS the test artifact producer — it would be circular to wrap it in test-writer/test-runner. |
 | `review_verdict` | NO | Review agents produce verdicts, not executable artifacts. |
+| `requirement_records` | NO | Planning agents write requirement records, not executable artifacts. |
 | `analysis` | NO | Analysis agents produce reports/recommendations, not executable logic. |
 | `orchestration` | NO | Orchestrators drive other agents; no test guardrails apply. |
 | `configuration` | CONDITIONAL | Apply TDD guardrails only if the configuration change is consumed by tested code (supervisor judgment). |

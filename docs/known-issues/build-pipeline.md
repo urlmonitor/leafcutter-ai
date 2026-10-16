@@ -5,7 +5,7 @@ type: reference
 category: reference
 status: active
 created: 2026-08-18
-last_updated: '2026-09-28'
+last_updated: '2026-10-14'
 components:
   - build_pipeline
 related_docs:
@@ -101,7 +101,7 @@ Severity in the **filename** is a three-level index bucket (`blocker` / `high` /
 
 Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and are no longer listed as open. They are kept, not deleted.
 
-**Open: 46** (1 blocker, 22 high, 23 low) · **Resolved: 12**
+**Open: 50** (1 blocker, 21 high, 3 medium, 25 low) · **Resolved: 14** (KI-BP-007 resolved 2026-10-15) (recounted from the directory 2026-10-14; the table below still lacks rows for some entries filed since 2026-09-28)
 
 ## Open
 
@@ -112,7 +112,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `high` | KI-BP-004 — A worktree's deployed hooks are frozen at build time, so after merging `main` the gates enforce the previous ruleset | [open-high-ki-bp-004.md](build-pipeline/open-high-ki-bp-004.md) |
 | `high` | KI-BP-20261007 — RETRACTED: "`check-product-truth-validate` fails closed on an undeclared `aiosqlite` dependency" — tested and disproved; `aiosqlite` is supplied transitively by `langgraph-checkpoint-sqlite==3.1.1` (`requirements-dev.txt:52`) and the real cause was a stale local `.venv` | [resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md](build-pipeline/resolved/resolved-high-ki-bp-20261007-product-truth-gate-fails-closed-on-an-undeclared-dependency.md) |
 | `high` | KI-BP-005 — Deleting a template leaves its deployed copy behind, and the build reports "no stale files found" | [open-high-ki-bp-005.md](build-pipeline/open-high-ki-bp-005.md) |
-| `high` | KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist | [open-high-ki-bp-007.md](build-pipeline/open-high-ki-bp-007.md) |
+| `high` | KI-BP-007 — No gate validates a skill reference written in template prose, so six skills are loaded by name and none of them exist | [resolved-high-ki-bp-007.md](build-pipeline/resolved/resolved-high-ki-bp-007.md) |
 | `high` | KI-BP-008 — A version gate can skip the entire workflow-install phase and still report a successful build, leaving every deployed workflow silently stale | [open-high-ki-bp-008.md](build-pipeline/open-high-ki-bp-008.md) |
 | `high` | KI-BP-009 — `.claude/skills/` is symlinked wholesale to the generated tree, so an adopter's own skills have nowhere to live and `--clean` targets them | [open-high-ki-bp-009.md](build-pipeline/open-high-ki-bp-009.md) |
 | `high` | KI-BP-011 — `.build_manifest.json` is written to the package that ran the build, not the target install it describes, so it is not portable to any consumer install | [open-high-ki-bp-011.md](build-pipeline/open-high-ki-bp-011.md) |
@@ -160,6 +160,7 @@ Fixed issues move to [`build-pipeline/resolved/`](build-pipeline/resolved/) and 
 | `low` | KI-BP-20260914-1415 — a test asserts a literal string appears exactly twice in `build.py`'s source text, so relocating either function fails a fixture premise far from the cause | [open-low-ki-bp-20260914-1415.md](build-pipeline/open-low-ki-bp-20260914-1415.md) |
 | `low` | KI-BP-20260927 — the closure walk's second-hop symlink fix has no regression test, so a reintroduced `.resolve()` would only be caught by an unrelated CI failure | [open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md](build-pipeline/open-low-ki-bp-20260927-closure-walk-symlink-hop-untested.md) |
 | `low` | KI-BP-20260928-closure-guard-reads-comparison-literals-as-file-reads — the intra-package closure guard treats a `dir/file.ext` literal used only for path comparison as a data-file read and fails the build with a false missing-deploy-mapping | [open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md](build-pipeline/open-low-ki-bp-20260928-closure-guard-reads-comparison-literals-as-file-reads.md) |
+| `medium` | KI-BP-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable — when `git log <pin>..HEAD` fails, `build_halt_guard` silently treats every changelog entry as new, so an already-applied breaking migration halts the build again instead of the guard saying it could not tell | [open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md](build-pipeline/open-medium-ki-bp-20261014-halt-guard-widens-to-every-changelog-when-the-pin-is-unreachable.md) |
 
 ## Resolved
 

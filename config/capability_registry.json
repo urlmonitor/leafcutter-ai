@@ -40,6 +40,40 @@
       }
     },
     {
+      "id": "host.decompose_goal",
+      "name": "Host goal decomposition",
+      "description": "Host handoff: proposes the separate parts of a request that bundles several questions; the host only proposes, a person approves.",
+      "version": "1.0.0",
+      "request_kinds": [
+        "capability"
+      ],
+      "operations": [
+        "decompose_goal"
+      ],
+      "accepts_schemas": [
+        "leafcutter.goal_decomposition_request.v1"
+      ],
+      "produces_schemas": [
+        "leafcutter.goal_decomposition.v1"
+      ],
+      "execution_mode": "host_handoff",
+      "binding": "host.decompose_goal",
+      "side_effect_class": "none",
+      "permissions_required": [],
+      "routing": "fixed",
+      "cost_hints": {
+        "jev_calls": 0,
+        "host_operations": 1,
+        "latency_ms": null
+      },
+      "admission": {
+        "kind": "native_registration",
+        "decision_ref": "ADR-067",
+        "admitted_on": "2026-10-06",
+        "admitted_by": "BrainCandy"
+      }
+    },
+    {
       "id": "research",
       "name": "Research",
       "description": "Gathers inspectable evidence for a question: selects needed evidence categories, retrieves from available sources, and reports coverage, unavailable sources and contradictions.",

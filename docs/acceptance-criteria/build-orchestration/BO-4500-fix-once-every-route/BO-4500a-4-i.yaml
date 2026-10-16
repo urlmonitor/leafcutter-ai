@@ -1,0 +1,108 @@
+id: BO-4500a-4-i
+title: "The shared step refuses to commit onto main, master, the default branch or no branch at all"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given a workspace whose current branch is main, with a.py changed,
+  When the shared commit step is asked to commit a.py,
+  Then no commit is recorded, a.py is not staged by the call and no check is run,
+  And the answer is refused with a reason naming the branch main.
+
+  Given the same workspace on branch master,
+  When the step is asked to commit a.py,
+  Then the answer is refused naming master, and no commit is recorded.
+
+  Given a repository whose default branch, as its origin reports it, is trunk, and a workspace
+    on trunk,
+  When the step is asked to commit a.py,
+  Then the answer is refused naming trunk, and no commit is recorded.
+
+  Given a workspace with no current branch (a detached checkout),
+  When the step is asked to commit a.py,
+  Then the answer is refused with a reason stating the workspace is on no branch.
+
+  Given a workspace on branch main-followup,
+  When the step is asked to commit a.py and every check passes,
+  Then the commit is recorded and the answer is committed.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/acceptance-criteria/build-orchestration/BO-4300-one-way-workspaces/BO-4300.yaml
+    relationship: related
+    status: exists
+    relevance: "BO-4300 and BO-1800e guarantee a route has its own line of work to begin with. This record is the last-line refusal at the commit; it does not restate either."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - The branch check runs first, before path validation side effects, staging or any check, so a refused call changes nothing in the index or working tree.
+  - >-
+    The protected set is main, master and the origin-reported default branch, matched by whole
+    name. The default branch is read from locally recorded remote state (no network access); when
+    it is not recorded locally, only main and master are protected and the answer is not delayed.
+    Additional protected names may come from project config; none is hard-coded beyond main and
+    master.
+  - Codes (BO-4500a-4 enum) are policy_protected_branch (reason naming the branch) and policy_detached_head; both are policy refusals a caller must not retry.
+  - HARDENED SOURCE is quick-fix's BP-600f protected-branch refusal; its regression test runs against this step (BO-4500a-5-iii).
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract and the policy_ reason_code family."
+test_required: true
+test_spec:
+  - name: test_main_and_master_are_refused_before_any_check_runs
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "On main and on master the answer is refused with policy_protected_branch naming the branch; no commit, a.py not staged and the fixture check log is empty."
+  - name: test_origin_default_branch_trunk_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "With the scratch repo's recorded origin default branch set to trunk, a call on trunk is refused naming trunk."
+  - name: test_detached_checkout_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A detached checkout answers refused with policy_detached_head."
+  - name: test_main_followup_is_allowed
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "A branch named main-followup commits normally."
+    must_catch:
+      - "a prefix match that refuses every branch starting with main"
+test_rationale: >-
+  The refusal must precede any side effect, so the tests assert both the answer and the empty
+  check-invocation log from a real run on each branch shape.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  Repo CLAUDE.md "In-Place Workflow Specs -- Protected-Branch AC Required": quick-fix shipped without
+  a main-branch guard (BP-600f). One refusal in the shared step gives every route the guard.
+
+  ASSUMPTION beyond the C6 spec ("refuses on main/master"): the origin-reported default branch is
+  refused too, and the match is by whole name (main-followup is allowed). Risk if wrong: a project
+  that deliberately commits to a differently-named default branch through the step is refused;
+  the user can drop the third scenario at the gate.
+
+  Refusal happens BEFORE any check runs, so a refused call cannot leave a fixing check's edits behind.

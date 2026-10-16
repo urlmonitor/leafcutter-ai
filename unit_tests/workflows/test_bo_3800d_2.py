@@ -117,7 +117,8 @@ class TestBo3800d2(unittest.TestCase):
                 self.assertNotRegex(fell, D.MACHINERY, "a file that resists is reported as broken machinery")
                 self.assertRegex(broke, D.MACHINERY, "machinery failure is not reported as such")
                 self.assertNotEqual(fell, broke, "the two endings produced the same account")
-                self.assertNotIn(str(NOW_LINES), broke, "machinery failure claims a file standing")
+                # \b: the random temp-dir name in the account may contain the digits
+                self.assertNotRegex(broke, rf"\b{NOW_LINES}\b", "machinery failure claims a file standing")
                 self.assertTrue(S.completed(landed_path))
                 self.assertNotRegex(landed, D.NOT_DELIVERED)
                 self.assertNotRegex(landed, D.MACHINERY)

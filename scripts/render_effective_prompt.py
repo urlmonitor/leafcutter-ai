@@ -35,6 +35,11 @@ Options:
 Exit codes:
     0  Rendered successfully.
     1  Bad input (agent template not found, AC id not found, I/O error).
+
+DECISION HISTORY
+- 2026-10-15 [python-coder/AR-400e-1-i]: The briefing's skills section lists
+  only real abilities: ``descriptive_only`` registry entries (behaviour
+  descriptions, not grants) are no longer listed. (#AR-400e-1-i)
 """
 
 from __future__ import annotations
@@ -382,6 +387,9 @@ def _resolve_agent_template(repo_root: Path, agent: str) -> tuple[str | None, st
 def _resolve_agent_skills(repo_root: Path, agent: str) -> list[dict[str, Any]]:
     """Read the agent's skills_invoked from the registry and load each SKILL.md.
 
+    ``descriptive_only`` entries describe behaviour and are not abilities, so
+    they are left out of the briefing (AR-400e-1-i).
+
     Args:
         repo_root: Repo root.
         agent: Agent id.
@@ -401,25 +409,22 @@ def _resolve_agent_skills(repo_root: Path, agent: str) -> list[dict[str, Any]]:
     raw: list[Any] = []
     for entry in registry.get("agents", []):
         if entry.get("id") == agent:
-            raw = entry.get("skills_invoked") or []
+            raw = [i for i in entry.get("skills_invoked") or [] if not (isinstance(i, dict) and i.get("descriptive_only"))]
             break
     out: list[dict[str, Any]] = []
     for item in raw:
-        # skills_invoked entries are dicts ({skill_id, mode, descriptive_only})
-        # or, defensively, bare strings.
+        # skills_invoked entries are dicts ({skill_id, mode}) or, defensively, bare strings.
         if isinstance(item, dict):
             skill = item.get("skill_id") or item.get("skill") or item.get("id")
             mode = item.get("mode")
-            descriptive_only = bool(item.get("descriptive_only"))
         else:
-            skill, mode, descriptive_only = str(item), None, False
+            skill, mode = str(item), None
         if not skill:
             continue
         skill_md = repo_root / _DEFAULT_SKILLS_TEMPLATES / skill / "SKILL.md"
         out.append({
             "skill": skill,
             "mode": mode,
-            "descriptive_only": descriptive_only,
             "path": str(skill_md.relative_to(repo_root)) if skill_md.exists() else None,
             "present": skill_md.exists(),
             "body": _read_text(skill_md) if skill_md.exists() else None,
@@ -557,12 +562,10 @@ def _fence(text: str | None, lang: str = "") -> str:
 
 
 def _skill_status(sk: dict[str, Any]) -> str:
-    """Format the status label for one invoked skill (present / descriptive / missing)."""
+    """Format the status label for one invoked skill (present / missing)."""
     mode = f" · {sk['mode']}" if sk.get("mode") else ""
     if sk["present"]:
         return f"{sk['path']}{mode}"
-    if sk.get("descriptive_only"):
-        return f"descriptive-only, no SKILL.md{mode}"
     return f"**NOT FOUND**{mode}"
 
 
@@ -808,14 +811,14 @@ def render_markdown(
             lines.append("")
         for dp in doc_paths:
             full = repo_root / dp
-            body = _read_text(full)
+            doc_body = _read_text(full)
             lines.append(f"#### `{dp}`")
-            if body is None:
+            if doc_body is None:
                 lines.append("_[MISSING]_")
             else:
-                excerpt = "\n".join(body.splitlines()[:doc_excerpt])
+                excerpt = "\n".join(doc_body.splitlines()[:doc_excerpt])
                 lines.append(_fence(excerpt, "markdown"))
-                if len(body.splitlines()) > doc_excerpt:
+                if len(doc_body.splitlines()) > doc_excerpt:
                     lines.append(f"_… truncated to {doc_excerpt} lines_")
             lines.append("")
 
@@ -880,9 +883,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
     args = _parse_args(argv if argv is not None else sys.argv[1:])
-
     repo_root = Path(args.repo_root).resolve() if args.repo_root else _find_repo_root(Path(__file__))
-
     if not args.ac and not args.ticket:
         logger.error("Provide --ac or --ticket (to resolve source_ac).")
         return 1

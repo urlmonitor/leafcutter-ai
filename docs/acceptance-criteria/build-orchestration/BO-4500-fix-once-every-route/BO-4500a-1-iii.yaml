@@ -1,0 +1,110 @@
+id: BO-4500a-1-iii
+title: "A file a check changes outside your list is named in the answer, never slipped into the commit"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: done
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-1.yaml"
+criteria: |
+  Given the caller names exactly docs/known-issues/a.md, docs/known-issues/b.md and
+    docs/known-issues/c.md,
+  And a fixing check regenerates docs/INDEX.md while the checks run and stages it,
+  When the shared commit step finishes with every check passing,
+  Then the new commit contains the three named files and does not contain docs/INDEX.md,
+  And docs/INDEX.md is left in the working tree with the check's regenerated content, unstaged,
+  And the answer has status committed and lists docs/INDEX.md separately from paths, as a
+    file changed by a check and not committed.
+
+  Given a fixing check rewrites a named file, docs/known-issues/a.md,
+  When the step finishes,
+  Then the fixed content of a.md is the content in the commit (BO-4500a-3),
+  And a.md is reported in paths, not as a file outside the list.
+depends_on: [BO-4500a-1]
+doc_links:
+  - path: docs/known-issues/build-orchestration/open-low-ki-bo-029.md
+    relationship: describes
+    status: exists
+    relevance: "Mechanism 2: transform-doc-index auto-adds docs/INDEX.md mid-commit, turning a changelog-exempt PR into a non-exempt one. The first scenario is the KI's own commit (three known-issues files staged, four landed)."
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120g.yaml
+    relationship: related
+    status: exists
+    relevance: "Owns whether a fixing (transform-tier) check may change files at all. This record does not restrict the checks; it decides only what the commit contains when they do."
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+it_requirements:
+  - >-
+    The answer field for files a check changed outside the named set is unlisted_changes (list of
+    repo-relative POSIX paths), always present, [] when none (BO-4500a-4 contract). It is distinct
+    from paths and from autofixed.
+  - >-
+    A path a check stages that is outside the named set (plus BO-4500a-1-ii parents) is removed
+    from the commit and left in the working tree with the check's content, unstaged. The check
+    itself is not suppressed or reconfigured (GE-120g owns whether a transform check may change
+    files at all).
+  - >-
+    The decision taken is the BA's Q3 default -- leave out and report -- because including the file
+    is KI-BO-029 mechanism 2 and breaks "commit messages must match the diff". If the user
+    reverses it, only the commit-membership clause flips; unlisted_changes still reports.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-1
+  contract: "Explicit-path staging rule."
+test_required: true
+test_spec:
+  - name: test_check_regenerated_index_is_left_out_of_the_commit
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A fixture transform check regenerates and stages docs/INDEX.md; the commit holds the three named known-issues files and not docs/INDEX.md."
+  - name: test_left_out_file_keeps_the_checks_content_unstaged
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "After the call docs/INDEX.md holds the regenerated content in the working tree and is not staged."
+  - name: test_answer_reports_left_out_file_in_unlisted_changes
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "The committed answer lists docs/INDEX.md in unlisted_changes and not in paths."
+    must_catch:
+      - "include the check-staged file silently"
+      - "drop the file without reporting it"
+  - name: test_check_rewrite_of_a_named_file_is_committed_and_reported_in_paths
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "When a fixing check rewrites docs/known-issues/a.md, the commit holds the fixed content and a.md is in paths, not unlisted_changes."
+test_rationale: >-
+  KI-BO-029's mechanism is a hook staging a file mid-commit; only a real fixture transform hook
+  inside a real commit run reproduces it. The tests read the commit and the index from git.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  DECISION FOR THE GATE (BA default, question Q3 in the sign-off): a check's change to a file
+  outside the list is LEFT OUT and REPORTED, rather than included and reported. Rationale: including
+  it is exactly KI-BO-029's mechanism 2, and the commit message (written before the checks ran)
+  cannot describe it -- the "commit messages must match the diff" rule in the repo CLAUDE.md.
+  The alternative is defensible if a check's output must land with the change to keep a later
+  check green; if the user chooses it, the second clause of the first Then flips and the reporting
+  clause stays.
+
+  The answer field name for these files is the IT PO's call; the spec's fixed field set (status,
+  sha, paths, hook_name, failing_files) gains one list here, flagged as an extension.

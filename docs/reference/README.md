@@ -4,7 +4,7 @@ description: "Human-curated, one-line-per-page orientation to every file in docs
 type: reference
 status: active
 created: 2026-09-14
-last_updated: 2026-10-10
+last_updated: 2026-10-14
 components:
   - documentation_system
 related_docs:
@@ -43,12 +43,14 @@ below by hand.
 |---|---|
 | [ac-schema.md](ac-schema.md) | Field-by-field schema for AC YAML records: required/optional fields, the status lifecycle, the composition depth rules, and the pre-commit hooks that enforce them. |
 | [ac-id-hierarchy.md](ac-id-hierarchy.md) | AC identifier format and full regex, the id-derived `derive_parent_id()` parent algorithm with its L0â€“L3 level table, and the direct-children scope rule governing every `covered_by` list. |
+| [requirement-rule-check.md](requirement-rule-check.md) | CLI flags, JSON report, dispositions, the seven rule families, fail-closed paths and `/plan-feature` use of the requirement rule check. |
 | [artifact-knowledge-graph-data-map.md](artifact-knowledge-graph-data-map.md) | Node and edge type map for the cross-artifact knowledge graph (ACs, tickets, tests, flows, mockups, changelog entries, components), with a per-edge enforcement and shape trust rating. |
 | [artifact-knowledge-graph.graph.json](artifact-knowledge-graph.graph.json) | Machine-readable JSON mirror of the data map above; drives the Atlas Flows view. It carries no Markdown frontmatter, so `docs/INDEX.md` does not list it â€” this index does. |
 
 | [knowledge-routing-step.md](knowledge-routing-step.md) | Where the knowledge-routing step runs, which completion paths carry it, the three-case outcome and report figures, what each harvester exit means to the caller, and the `--status` recency answer versus the waiting count and capture-health figures. |
 | [knowledge-retrieval-answers.md](knowledge-retrieval-answers.md) | Neutral research request fields, separate answer and execution states, population counts, proof/trace limits and reviewed evaluation contracts. |
 | [knowledge-retention-bound.md](knowledge-retention-bound.md) | The declared generation retention bound: its two settings, the resolved bound, the read-only evaluation result, the reason vocabulary, the refusals and the `retention` command. |
+| [knowledge-retention-evaluation-details.md](knowledge-retention-evaluation-details.md) | Detail sections of the retention evaluation result: active generation, reclaimable bases, entity-node reconciliation, assessment outcome and the read-only condition. |
 
 ## Documentation & Architecture Conventions
 
@@ -56,6 +58,7 @@ below by hand.
 |---|---|
 | [architecture-docs-layout.md](architecture-docs-layout.md) | What belongs in each `docs/architecture/` subdirectory, which files are currently misplaced, and what a fresh install must scaffold so the identifier-uniqueness gate's namespace roots resolve. |
 | [artifact-numbering.md](artifact-numbering.md) | The one-number-one-artifact rule, the per-namespace numbering shape and free-number lookup, and the current (partial) state of whole-collection uniqueness enforcement. |
+| [document-length-standard.md](document-length-standard.md) | Length limits check-doc-length applies to docs/**/*.md, the set-aside locations with their grounds and per-location report sizes, and what each kind of run prints. |
 
 ## Build Pipeline & Runtime Configuration
 

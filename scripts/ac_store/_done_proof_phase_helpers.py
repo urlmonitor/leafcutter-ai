@@ -91,9 +91,11 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
         ac_root: Root directory of the AC YAML store.
 
     Returns:
-        Dict mapping AC id strings to a dict with keys ``"status"`` (str),
-        ``"covered_by"`` (list[str]), ``"test_required"`` (bool | None), and
-        ``"test_rationale"`` (str | None).  An empty dict is returned when
+        Dict mapping AC id strings to a dict with keys ``"id"`` (str),
+        ``"status"`` (str), ``"covered_by"`` (list[str]), ``"test_required"``
+        (bool | None), ``"test_rationale"`` (str | None), ``"req_status"`` and
+        ``"superseded_by"`` (the fields ``ac_retirement.is_retired`` reads, with
+        ``id`` and ``status``, ACS-900d-4).  An empty dict is returned when
         *ac_root* does not exist or contains no parseable YAML files.
     """
     status_map: dict[str, dict] = {}
@@ -125,10 +127,13 @@ def _build_ac_status_map(ac_root: Path) -> dict[str, dict]:
             if not isinstance(covered_by, list):
                 covered_by = []
             status_map[str(ac_id)] = {
+                "id": str(ac_id),  # ACS-900d-4: ac_retirement's self-reference check
                 "status": str(status),
                 "covered_by": [str(child_id) for child_id in covered_by],
                 "test_required": data.get("test_required"),
                 "test_rationale": data.get("test_rationale"),
+                "req_status": data.get("req_status"),  # KI-ACS-016
+                "superseded_by": data.get("superseded_by"),  # KI-ACS-016
             }
     return status_map
 

@@ -82,6 +82,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 from unit_tests._plan_feature_harness_defaults import worktree_setup_default_responses
+from unit_tests.workflows.test_acd_2100c_3 import (  # noqa: F401 -- shared real-execution helpers
+    _DESIGNED_BATCH, _after_itpo_committed, _init_git_project, _labels, _pause_record_path, _permitted_args,
+    _read_via_fresh_process, _run, _strip_exports,
+)
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent.parent
 _PLAN_FEATURE_JS = _WORKTREE_ROOT / "templates" / "workflows-js" / "plan-feature.js"
 _REAL_PAUSE_STORE_PY = _WORKTREE_ROOT / "scripts" / "pause_store.py"
@@ -102,22 +106,6 @@ _A_DIFFERENT_DECISION_GATE_ID = "gate-ba"
 # ---------------------------------------------------------------------------
 # Fixture builders (self-contained copy of test_acd_2100c_3.py's conventions)
 # ---------------------------------------------------------------------------
-
-
-def _run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        cmd, cwd=str(cwd) if cwd else None, check=True, capture_output=True, text=True
-    )
-
-
-def _init_git_project(path: Path) -> None:
-    path.mkdir(parents=True)
-    _run(["git", "init", "-b", "main", str(path)])
-    _run(["git", "-C", str(path), "config", "user.email", "test@example.com"])
-    _run(["git", "-C", str(path), "config", "user.name", "Test"])
-    (path / "README.md").write_text("seed\n", encoding="utf-8")
-    _run(["git", "-C", str(path), "add", "README.md"])
-    _run(["git", "-C", str(path), "commit", "-m", "seed"])
 
 
 def _install_real_pause_store(project_dir: Path) -> Path:
@@ -165,18 +153,6 @@ def _assert_worktree_has_no_installed_leafcutter(worktree_path: Path) -> None:
         ".leafcutter/ support directory of its own. Found: "
         f"{sorted(p.name for p in worktree_path.iterdir())}"
     )
-
-
-def _permitted_args(**extra) -> dict:
-    """Args carrying the ACD-2100b-5 pre-flight permission verdict.
-
-    plan-feature.js consumes a pre-computed verdict via
-    `args.workspace_setup_permission` and fails closed (terminal
-    `status: "error"`, no gate ever reached) when it is absent. Every test
-    below supplies a permitting verdict directly to reach the real decision
-    point.
-    """
-    return {"workspace_setup_permission": {"permits": True}, **extra}
 
 
 def _draft_path(worktree_path: Path) -> Path:
@@ -317,24 +293,6 @@ __SCRIPT_BODY__
 """
 
 
-def _strip_exports(source: str) -> str:
-    """Minimal ESM `export` stripper (self-contained copy)."""
-    lines = source.splitlines()
-    out: list[str] = []
-    for line in lines:
-        stripped = line.lstrip()
-        if stripped.startswith("export default "):
-            out.append("/* export default stripped */")
-        elif stripped.startswith("export {"):
-            out.append("/* export block stripped */")
-        elif stripped.startswith("export "):
-            indent = len(line) - len(stripped)
-            out.append(" " * indent + stripped[len("export "):])
-        else:
-            out.append(line)
-    return "\n".join(out)
-
-
 def _run_plan_feature_real(cwd: Path, label_responses: dict, args: dict) -> dict:
     """Drive the REAL templates/workflows-js/plan-feature.js top-level body,
     as a brand-new Node child_process each call -- this IS the "new process"
@@ -420,40 +378,13 @@ def _write_shaped_calls(payload: dict) -> list:
     return out
 
 
-def _labels(payload: dict) -> list:
-    return [c.get("label") for c in payload.get("calls", [])]
-
-
-def _pause_record_path(project_dir: Path, run_id: str) -> Path:
-    return project_dir / ".leafcutter" / "paused_runs" / f"{run_id}.json"
-
-
-def _read_via_fresh_process(pause_store_path: Path, project_dir: Path, run_id: str) -> dict:
-    """Consumer: a fresh, independent `pause_store.py read` process -- never
-    plan-feature.js again -- started from the project root. Real reader
-    piped the real writer's own on-disk output (seam angle: producer and
-    consumer are both the real, on-disk artifacts, never mocked).
-    """
-    proc = subprocess.run(
-        ["python3", str(pause_store_path), "read", "--run-id", run_id],
-        cwd=str(project_dir),
-        capture_output=True,
-        text=True,
-        timeout=15,
-    )
-    assert proc.returncode == 0, (
-        f"The consumer read must exit 0. stdout={proc.stdout!r} stderr={proc.stderr!r}"
-    )
-    return json.loads(proc.stdout.strip())
-
-
 def _pause_headless(worktree_path: Path, project_dir: Path, run_id: str) -> tuple:
     """Run the real production entry point headless (no resume_answer) and
     confirm it pauses with a verified, on-disk record. Returns
     (payload, gate_id).
     """
     payload = _run_plan_feature_real(
-        worktree_path, label_responses={}, args=_permitted_args(run_id=run_id)
+        worktree_path, label_responses=_DESIGNED_BATCH, args=_permitted_args(run_id=run_id)
     )
     assert not payload.get("error"), (
         f"Unattended run must not crash. error={payload.get('error')} "
@@ -522,7 +453,7 @@ def test_answer_naming_a_different_decision_is_not_applied():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=mismatched_answer),
         )
         assert not payload2.get("error"), f"Mismatched resume must not crash. error={payload2.get('error')}"
@@ -548,7 +479,7 @@ def test_answer_naming_a_different_decision_is_not_applied():
         # acted on"): the authoring step for the decision actually being
         # waited on must not be re-dispatched just because SOME answer
         # arrived -- only a MATCHING answer may do that.
-        assert labels2.count("stage-itpo-author") == 0, (
+        assert (labels2.count("stage-itpo-author") + labels2.count("stage-test-design-author")) == 0, (
             "AC-1: a mismatched resume must not cause the step whose decision is being "
             "waited on to be re-executed. The current implementation computes "
             "skipAuthorOnResume from a naive per-step gate_id comparison BEFORE "
@@ -590,7 +521,7 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=mismatched_answer),
         )
         assert not payload2.get("error"), f"Mismatched resume must not crash. error={payload2.get('error')}"
@@ -614,7 +545,7 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
 
         # The mismatch must not have caused unwanted work: the authoring step
         # for the decision being waited on must not have been re-dispatched.
-        assert _labels(payload2).count("stage-itpo-author") == 0, (
+        assert (_labels(payload2).count("stage-itpo-author") + _labels(payload2).count("stage-test-design-author")) == 0, (
             "AC-2 read together with the Implementation Notes ('the subject binding must "
             "be checked before any part of the answer is acted on'): an intact record is "
             "not enough on its own if the mismatch still caused the authoring step to "
@@ -632,7 +563,7 @@ def test_run_remains_paused_with_its_record_intact_after_a_mismatch():
         }
         payload3 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=correct_answer),
         )
         assert not payload3.get("error"), f"Recovery resume must not crash. error={payload3.get('error')}"
@@ -669,7 +600,7 @@ def test_mismatch_report_names_the_decision_actually_being_waited_on():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=mismatched_answer),
         )
         assert not payload2.get("error"), f"Mismatched resume must not crash. error={payload2.get('error')}"
@@ -691,7 +622,7 @@ def test_mismatch_report_names_the_decision_actually_being_waited_on():
         # Tie the "honest report" requirement to "nothing acted on yet" --
         # a report that names the right gate is not meaningful proof of AC-3
         # if the mismatch already silently re-ran the step before it.
-        assert _labels(payload2).count("stage-itpo-author") == 0, (
+        assert (_labels(payload2).count("stage-itpo-author") + _labels(payload2).count("stage-test-design-author")) == 0, (
             "AC-3: reporting the correct decision point is undermined if the mismatch "
             f"already caused the authoring step to re-run. Labels: {_labels(payload2)}"
         )
@@ -738,7 +669,7 @@ def test_mismatched_resume_discards_nothing():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=mismatched_discard_answer),
         )
         assert not payload2.get("error"), f"Mismatched resume must not crash. error={payload2.get('error')}"
@@ -808,7 +739,7 @@ def test_acd_2100c_3_i_reachable_from_entry_point():
         }
         payload2 = _run_plan_feature_real(
             fixture["worktree_path"],
-            label_responses={},
+            label_responses=_after_itpo_committed(["DRAFT-8888"]),
             args=_permitted_args(run_id=run_id, resume_answer=mismatched_answer),
         )
         assert not payload2.get("error"), (
@@ -840,7 +771,7 @@ def test_acd_2100c_3_i_reachable_from_entry_point():
             f"The mismatched answer must not have been consumed by any downstream branch. "
             f"Labels: {labels2}"
         )
-        assert labels2.count("stage-itpo-author") == 0, (
+        assert (labels2.count("stage-itpo-author") + labels2.count("stage-test-design-author")) == 0, (
             "The mismatched resume, driven through the real production entry point, must "
             f"not re-execute the step before the decision it is waiting on. Labels: {labels2}"
         )

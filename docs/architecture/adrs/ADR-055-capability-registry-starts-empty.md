@@ -12,6 +12,7 @@ components:
 related_docs:
   - docs/architecture/adrs/ADR-052-capabilities-replace-agents-prompts-are-compiled.md
   - docs/architecture/adrs/ADR-054-process-representation-and-maturity-model.md
+  - docs/architecture/adrs/ADR-067-kernel-splits-bundled-requests-into-approved-parts.md
   - docs/architecture/components/decision-kernel.md
   - docs/analysis/2026-09-30-decision-kernel-design.md
   - docs/analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md
@@ -86,6 +87,8 @@ Spec §6's deterministic eligibility filter, snapshot pinning and descriptor nor
 still apply. They run over `config/capability_registry.json` instead of the legacy registries.
 Native kernel capabilities enter through `native_registration`, as design part 2 specifies.
 
+The fixed host operation `host.decompose_goal` is such an entry: it is admitted by `native_registration` with `decision_ref` `ADR-067`, which is the recorded decision this ADR requires. It is `routing` `fixed`, so it is never offered to Jev and never a `no_match` fallback (DK-400c-1).
+
 ## Consequences
 
 ### Positive
@@ -130,6 +133,7 @@ Native kernel capabilities enter through `native_registration`, as design part 2
   made by BrainCandy on 2026-09-30.
 - [ADR-052: Capabilities replace agents; prompts are compiled](ADR-052-capabilities-replace-agents-prompts-are-compiled.md)
 - [ADR-054: Process representation and maturity model](ADR-054-process-representation-and-maturity-model.md), §8
+- [ADR-067: Kernel splits bundled requests into approved parts](ADR-067-kernel-splits-bundled-requests-into-approved-parts.md), the decision behind the `host.decompose_goal` entry
 - [Decision Kernel component](../components/decision-kernel.md)
 - Kernel design [part 1](../../analysis/2026-09-30-decision-kernel-design.md) (deviation 1) and
   [part 2](../../analysis/2026-09-30-decision-kernel-design-2-contracts-registry-config.md)

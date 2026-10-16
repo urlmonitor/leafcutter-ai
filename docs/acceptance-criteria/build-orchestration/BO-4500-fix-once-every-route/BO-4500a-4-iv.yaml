@@ -1,0 +1,116 @@
+id: BO-4500a-4-iv
+title: "A supervised call names the run it commits for and never waits for a person"
+component: build-orchestration
+components:
+  - build_orchestration
+  - git_vcs_operations
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: high
+roadmap_phase: phase_1
+change_target: code
+risk_surface: safety
+created_by: "docs/acceptance-criteria/build-orchestration/BO-4500-fix-once-every-route/BO-4500a-4.yaml"
+criteria: |
+  Given a call marked supervised that names the run plan-bo-4500-20261012 and no acceptance
+    criterion id,
+  When the commit is recorded,
+  Then the answer is committed and carries the run name plan-bo-4500-20261012.
+
+  Given a call marked supervised that names the acceptance criterion BO-4500a-1 and no run,
+  When the commit is recorded,
+  Then the answer is committed and carries BO-4500a-1.
+
+  Given a call marked supervised that names neither a run nor an acceptance criterion,
+  When the step runs,
+  Then no commit is recorded and the answer is refused with a reason stating that a
+    supervised call must name the run or the criterion it commits for.
+
+  Given a call marked supervised during which a check stops to wait for keyboard input,
+  When 60 seconds pass with no input,
+  Then the step ends that check's wait without supplying input, records no commit,
+  And the answer is hook_failed naming that check.
+
+  Given a call not marked supervised that names neither a run nor a criterion,
+  When every check passes,
+  Then the commit is recorded and the answer is committed.
+depends_on: [BO-4500a-4]
+doc_links:
+  - path: docs/analysis/2026-09-25-duplication-clusters-that-produce-known-issues.md
+    relationship: describes
+    status: exists
+    relevance: "C3: each confirmation-gated agent treats 'no user present' differently; commit.md's supervised path is keyed on ticket_path and plan-feature's commit dispatch passes none. C6 spec: '--supervised'."
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+it_requirements:
+  - >-
+    Supervised mode is an explicit input of the step, never inferred from the environment. A
+    supervised call must name a run id or an AC id (either is enough); both are echoed in the
+    answer's run and ac_id keys. Missing both is refused with policy_unattributed_supervised_call
+    before anything is staged.
+  - >-
+    In supervised mode the checks run with no terminal input attached. A check that is still
+    waiting after the input-wait limit is ended and the call answers hook_failed with
+    check_awaited_input naming it. The limit is read from project config with a default of 60
+    seconds (the BA's placeholder), never hard-coded.
+  - The person-facing confirmation gate stays in the commit agent and is not moved into the step.
+  - The run and AC ids are free-text attribution only; the step does not look them up or validate them against any store, so routes with no AC id (plan-feature, finalize) work unchanged.
+delivers_to: null
+expects_from:
+  ac_id: BO-4500a-4
+  contract: "One-answer contract."
+test_required: true
+test_spec:
+  - name: test_supervised_call_naming_a_run_is_committed_and_echoes_the_run
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A supervised call naming run plan-bo-4500-20261012 and no AC id is committed with run set to that name."
+  - name: test_supervised_call_naming_an_ac_is_committed_and_echoes_the_ac
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: "A supervised call naming BO-4500a-1 and no run is committed with ac_id BO-4500a-1."
+  - name: test_supervised_call_naming_neither_is_refused
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: failure
+    description: "A supervised call with neither is refused with policy_unattributed_supervised_call and records no commit."
+  - name: test_check_waiting_for_input_is_ended_and_reported
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: "With the wait limit configured to 2 seconds, a fixture check that reads stdin is ended, no commit is recorded and the answer is hook_failed with check_awaited_input naming it."
+    must_catch:
+      - "inherit the caller's terminal so the check blocks forever"
+  - name: test_unsupervised_call_without_attribution_commits
+    target_dir: unit_tests/build_orchestration/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: "An unsupervised call naming neither run nor AC commits normally."
+test_rationale: >-
+  The wait limit is configured short in the test so the stop is observed in real time on a real
+  child process; the attribution cases read the echoed keys from the real answer.
+origin_agent: business-analyst
+created: 2026-10-12
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  BA INTERPRETATION OF "a supervised mode" (question Q2 in the sign-off): supervised means the call
+  is made on behalf of a run with no person present. It therefore (a) never waits for a person and
+  (b) must say which run or criterion it serves, so an unattended commit is always attributable --
+  the property KI-CG-20260907 says the delegation rule actually protects. Plan-feature and finalize
+  have no AC id (L1 constraint 1), hence "run OR criterion". The 60-second figure is a placeholder
+  for the IT PO to set; the testable fact is that the wait ends and is reported, not its length.
+  The confirmation gate a person sees stays in the commit agent and is not moved into the step.

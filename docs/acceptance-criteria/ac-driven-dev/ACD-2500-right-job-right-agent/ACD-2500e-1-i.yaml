@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given the agent registry,
   When the profile consistency check runs,
@@ -90,3 +90,10 @@ notes: |
   registry-wide, so IT-PO should measure how many agents are listed today and ship it
   advisory first (ADR-026 warn-before-required). If the user wants the scope limited to
   the planner, this L3 can be dropped - see open questions.
+  Amended 2026-10-15 (G5 architect review, ticket 41 comment 2026-10-14 19:36, D5):
+  Size ratchet: any code file over 400 lines that gains a line (for example the call
+  added to scripts/build_phases_agent_validation.py) is paid for first, as its own edit,
+  by moving a comment run of at least that size out verbatim (for example into the new
+  module's header); never by merging lines.
+  Day-one count (measured read-only 2026-10-14): 61 agents examined, 18 flagged before
+  ticket 41, 17 after (it-po drops out). The ticket re-measures and records the count.

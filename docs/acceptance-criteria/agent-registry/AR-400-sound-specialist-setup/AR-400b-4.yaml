@@ -1,0 +1,90 @@
+id: AR-400b-4
+title: "The registry validator and the build give the same verdict on a specialist's ability references"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a fixture tree containing one instance of each fault kind -- an
+    ability that does not exist, an ability not granted, a case-only mismatch
+    and a specialist named as an ability -- in four different specialists,
+  When the registry validator is run on its own over that tree, and separately
+    the build is run over the same tree,
+  Then both runs fail,
+    And both report the same four findings, each with the same specialist,
+      ability, file, line and fault kind,
+    And both report the same examined counts,
+    And on the package's real tree both runs pass with zero findings.
+depends_on:
+  - AR-400b
+  - AR-400a-1
+  - AR-400b-1
+doc_links:
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "The existing checker runs only by hand; this record is what makes it part of the validation the build already runs."
+  - path: docs/architecture/components/commit-guardian.md
+    relationship: describes
+    status: exists
+    relevance: "The check-agent-registry hook, one of the doors that reaches validate_agent_registry."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: contract_boundary
+package_surface: false
+it_requirements:
+  - "ONE COMPUTATION, TWO DOORS: the reference verdict is computed only inside registry_validator.validate_agent_registry(). The build reaches it through build.py:373 (and build_main_helpers._run_validation_guards for --validate-only); the standalone door is `python scripts/registry_validator.py` and templates/scripts/commit_guardian/check_agent_registry.py, which imports registry_validator from the package's scripts/. No door re-derives findings."
+  - "The deployed check-agent-registry hook resolves registry_validator from the package root's scripts/ (not from commit_guardian/), so any new module the validator imports (recognition rule, grant module) must live in scripts/ beside it; verify by running the hook from a built layout, not only the source-tree tests (CLAUDE.md 'New Hook / Gate Dependencies Must Be in the Build Deploy-Manifest')."
+  - "Both doors print the same finding lines in the same order (sorted by file then line) and the same examined counts; both exit non-zero on any finding."
+  - "Must not break the existing public signature validate_agent_registry(package_root) -> list[str]; callers (build.py, check_agent_registry.py, step_kinds_validator, registry_verification_flags) keep working (call-site audit per CLAUDE.md)."
+test_spec:
+  - name: test_validator_and_build_report_identical_findings_and_counts
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: seam
+    description: "Fixture copy with one instance of each fault kind in four specialists; run the validator CLI and scripts/build.py --target-dir <tmp> in subprocesses; both fail, and the four finding lines and the examined counts are identical between the two outputs."
+    must_catch:
+      - "the build calls a second implementation that drifts from the validator"
+      - "one door prints findings as warnings and exits 0"
+  - name: test_commit_hook_door_fails_on_the_same_fixture
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: "Run the deployed check-agent-registry hook from a built layout against the same fixture package; it fails with the same four findings (proves the new modules are reachable from the deployed hook)."
+  - name: test_real_tree_passes_through_both_doors
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "On the checked-out package, the validator CLI exits 0 with zero findings; the build's validation phase reports the same."
+test_rationale: >-
+  The record exists to stop two implementations drifting; comparing the two
+  doors' outputs on the same fixture is the only direct test of that, and the
+  deployed-hook descriptor guards the deploy-layout no-op trap.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-1
+  contract: "One grant-coverage verdict computation, called from both entry points."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  ONE CHECK, TWO DOORS. The design wires the existing checker into the registry
+  validation and deletes the old cross-reference warning. Two entry points that
+  each re-derive the verdict would drift -- the same two-records defect AR-300c
+  ended for grants. Equality of the four findings across both doors is the test.

@@ -22,7 +22,7 @@ ARCHITECTURE: :func:`is_implementation_python_path` is the SINGLE owner of the
     fingerprint — it fails on zero implementations and on two alike. Everything
     else here is a thin fold over that one function.
 
-    The rule is stated normatively in ``docs/reference/ac-schema.md`` under
+    The rule is stated normatively in ``docs/reference/ac-test-requirements-signal.md`` under
     "Implementation ``.py`` in scope". That document, not this module, is the
     reconciliation point with the ticket-supervisor template: the supervisor is
     markdown prose and cannot import Python, so the two sides are kept in step

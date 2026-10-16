@@ -1,0 +1,92 @@
+id: AR-400a-3
+title: "The package's own references to abilities that do not exist are gone, so its first build under the new check passes"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the package's real tree, with the existence check of AR-400a-1 and
+    AR-400a-2 in force,
+  When the build runs over it,
+  Then the check reports zero "ability does not exist" findings,
+    And its examined counts equal the number of specialist definitions and
+      shared guides in the tree, so zero findings is not zero examined,
+    And none of "find-context-candle", "import-scanner", "trade-analysis" or
+      "route-learning" appears as an instruction in any specialist definition or
+      shared guide the build reads.
+depends_on:
+  - AR-400a
+  - AR-400a-1
+  - AR-400a-2
+doc_links:
+  - path: docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md
+    relationship: describes
+    status: exists
+    relevance: "Lists the four dangling targets that remain (5 references). This AC is KI-BP-007's instance closure; wiring (AR-400a-1) is its gate closure. Close the KI when both are done."
+  - path: templates/agents/research-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "Three trading-domain rows (import-scanner, find-context-candle, trade-analysis) in its routing table."
+  - path: templates/agents/retrospective-agent.md
+    relationship: modifies
+    status: exists
+    relevance: "route-learning at the KI-routing step and in three surrounding sentences."
+  - path: templates/skills/README.md
+    relationship: modifies
+    status: exists
+    relevance: "route-learning (and the also-retired capture-learning) used as examples at lines 5, 27, 36 and 43."
+assigned_agent: llm-expert
+estimated_complexity: S
+change_target: prompt
+risk_surface: internal
+it_requirements:
+  - "SAME CHANGE AS THE WIRING: the three template fixes (AR-400a-3-i/-ii/-iii) land in the same pull request as AR-400a-1's wiring. Wiring first breaks every build; fixing first leaves nothing guarding them."
+  - "Evidence is a run of the wired check on the REAL tree (the validator CLI or build.py over the checked-out package), reporting zero 'ability does not exist' findings AND non-zero examined counts equal to the population present -- not a grep of the edited templates."
+  - "KI-BP-007 (docs/known-issues/build-pipeline/resolved/resolved-high-ki-bp-007.md) is closed only when this AC and AR-400a-1 are both done; closing it is part of this change's evidence, via the known-issue's own resolution procedure."
+  - "Edits are confined to the named instruction lines; no unrelated rewording of the three files."
+test_spec:
+  - name: test_real_tree_reports_zero_nonexistent_findings_with_full_counts
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: real_artifact
+    description: "Run the registry validator over the checked-out package (no fixture); assert zero 'ability does not exist' findings, and definitions/guides examined equal the counts derived from the tree."
+  - name: test_reintroducing_a_dangling_instruction_into_a_copy_fails
+    target_dir: unit_tests/prompt_assembly/
+    framework: pytest
+    type: integration
+    angle: discrimination
+    description: "Negative control: in a copy of the real tree, restore the 'Load `.claude/skills/route-learning/SKILL.md`' line in templates/skills/README.md; the validator fails naming that guide."
+test_rationale: >-
+  A real-tree pass is only evidence if the same check demonstrably fails when
+  one of the removed references is put back.
+delivers_to: null
+expects_from:
+  ac_id: AR-400a-1
+  contract: "The refusing existence check whose clean run on the real tree is this AC's evidence."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400a.yaml
+amended_by: []
+superseded_by: null
+covered_by:
+  - AR-400a-3-i
+  - AR-400a-3-ii
+  - AR-400a-3-iii
+implemented_by: []
+notes: |
+  ONE L3 PER INSTANCE (i research-agent, ii retrospective-agent, iii the shared
+  guide), so each fix is verifiable on its own and the composite cannot be marked
+  done with one of them outstanding.
+
+  ORDERING. This AC's real-tree run and the wiring in AR-400a-1 must land in the
+  same change: wiring first breaks the build on these instances; fixing first
+  leaves nothing guarding them. The design sequences both into PR-2.

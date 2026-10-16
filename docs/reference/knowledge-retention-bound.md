@@ -4,11 +4,12 @@ description: "Lookup for the declared generation retention bound of the knowledg
 type: reference
 status: active
 created: 2026-10-12
-last_updated: 2026-10-12
+last_updated: 2026-10-15
 components:
   - knowledge_management
   - decision_kernel
 related_docs:
+  - docs/reference/knowledge-retention-evaluation-details.md
   - docs/how-to/run-knowledge-retrieval.md
   - docs/reference/knowledge-retrieval-answers.md
   - docs/architecture/components/knowledge-retrieval.md
@@ -20,6 +21,8 @@ related_docs:
 Names, types, result shapes, reason values and refusal messages for the declared retention bound that decides which retained knowledge-graph generations may be reclaimed (AC `KM-400f-1`).
 
 The evaluation changes nothing. It reclaims no generation, moves no active pointer and expires no continuation. Reclamation is a separate criterion, `KM-400f-2`, that is not built.
+
+The detail sections of the evaluation result (active generation, reclaimable bases, entity-node reconciliation, assessment outcome, read-only condition) are in [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md).
 
 ---
 
@@ -80,7 +83,7 @@ The resolved bound uses different field names from the configuration settings.
 async evaluate_retention(db: Neo4jBackend, repository_id: str, bound: object, now: float | None = None) -> dict
 ```
 
-Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an optional clock value (seconds); the current time is used when omitted.
+Defined in `knowledge/adapters/neo4j_retention.py`. Read-only. `now` is an optional clock value (seconds); the current time is used when omitted.
 
 | Parameter | Type | Description |
 |---|---|---|
@@ -94,42 +97,64 @@ Defined in `knowledge/adapters/neo4j_projection.py`. Read-only. `now` is an opti
 | Key | Type | Description |
 |---|---|---|
 | `bound` | object | The reported bound: `generation_limit`, `minimum_age_seconds`, `source`. |
-| `generations` | list of verdicts | One entry per retained ready generation, newest first by `created_at`, ties by `generation_id` ascending. |
+| `assessed` | integer | Count of generation records evaluated. Equals the length of `generations`. |
+| `generations` | list of verdicts | One entry per generation record, whatever its publication outcome, newest first by `created_at`, ties by `generation_id` ascending. |
 | `reclaimable` | list of strings | `generation_id` of each verdict whose `reclaimable` is `true`. |
+| `reclaimable_by_basis` | object | Count of reclaimable generations per basis: `{"outside_count_bound": N, "publication_failed": M}`. Both keys are always present; a basis nobody holds is the integer `0`, never omitted. See [Reclaimable bases](knowledge-retention-evaluation-details.md#reclaimable-bases). |
+| `reclaimable_by_basis_note` | string | States that the per-basis counts may overlap and are not a total. |
+| `active_generation` | string or null | `generation_id` of the generation the active pointer references; `null` when no generation is flagged active. |
+| `findings` | list of strings | Statements about the active pointer; empty when the active generation's publication completed. See [Active generation](knowledge-retention-evaluation-details.md#active-generation). |
+| `unaccounted_nodes` | integer or string | AC `KM-400f-1-v`. Count of entity nodes whose generation key matches no generation record. Always present; `0` is stated, never omitted. `"undetermined"` when the backend cannot count nodes. See [Entity-node reconciliation](knowledge-retention-evaluation-details.md#entity-node-reconciliation). |
+| `unaccounted_generation_keys` | list of strings or string | Sorted generation keys those nodes name; empty list when `unaccounted_nodes` is `0`. `"undetermined"` when the backend cannot count nodes. |
+| `assessment` | object | AC `KM-400f-1-vi`. Always present. States how much of the evaluation the backend allowed. See [Assessment outcome](knowledge-retention-evaluation-details.md#assessment-outcome). |
+| `read_only` | object | AC `KM-400f-1-vi`. Present only when a refusal names a read-only latch; absent otherwise. See [Read-only condition](knowledge-retention-evaluation-details.md#read-only-condition). |
 
 ### Per-generation verdict
 
 | Key | Type | Description |
 |---|---|---|
 | `generation_id` | string | Generation identifier. |
+| `entity_nodes` | integer or string | AC `KM-400f-1-v`. Entity nodes attributed to this generation record. `0` is stated for a generation with no nodes. `"undetermined"` when the backend cannot count nodes. |
 | `reclaimable` | boolean | Whether the bound permits reclaiming the generation. |
 | `reason` | string | One value from the reason vocabulary. |
+| `reclaimable_bases` | list of strings | AC `KM-400f-1-iv`. The named bases on which a reclaimable generation is reclaimable: `outside_count_bound`, `publication_failed`, or both. Empty when the generation is not reclaimable. |
+| `reason_detail` | string | Present on `active_generation` and `active_generation_unidentified` verdicts only. Prose naming the active pointer; it never states the generation's publication outcome or age. |
+| `age_basis` | string | The recorded time the age was measured from: `retired_at` when the generation carries a retirement time, else `created_at`, else `undetermined`. Every generation never retired is aged from `created_at`, the same basis for all of them. |
+| `age_seconds` | number or null | Age in seconds measured from `age_basis`; `null` when `age_basis` is `undetermined`. |
+| `absent_times` | list of strings | Empty when the age is determined. `["retired_at", "created_at"]` when the generation carries neither time. |
 
 ### Generation facts read
 
-`retention_facts` (`knowledge/adapters/neo4j_projection.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per generation with status `ready`.
+`retention_facts` (`knowledge/adapters/neo4j_retention.py`, exposed as `Neo4jBackend.retention_facts`) returns one row per `Snapshot` record for the repository. It applies no status filter: every generation is assessed, whatever its publication outcome.
 
 | Column | Meaning |
 |---|---|
 | `generation_id` | Generation identifier. |
+| `publication_status` | The Snapshot's `status`: `ready`, `validated`, `building` or `failed`. |
 | `active` | `true` when the generation is the repository's active one. |
 | `created_at` | Creation time; orders the count rank. |
-| `retired_at` | Retirement time; `created_at` is used when it is null. |
+| `retired_at` | Retirement time; `created_at` is used when it is null. A failed generation has no `retired_at`, so it is aged from `created_at`, and the verdict says so. |
 | `pinned_until` | Expiry of a pinned continuation; null when none is pinned. |
+
+The active-generation verdict keeps precedence (reason order 1), so an active generation whose publication never completed is still reported not reclaimable.
+
+The active generation, reclaimable bases, entity-node reconciliation, assessment outcome and read-only condition are specified in [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md).
 
 ---
 
 ## Reason vocabulary
 
-`_verdict` in `knowledge/adapters/neo4j_projection.py` applies the checks in the order below and returns the first that matches.
+`_verdict` in `knowledge/adapters/neo4j_retention.py` applies the checks in the order below and returns the first that matches.
 
 | Order | `reason` | `reclaimable` | Condition |
 |---|---|---|---|
-| 1 | `active_generation` | `false` | The generation is active. |
-| 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. |
-| 3 | `younger_than_minimum_age` | `false` | `now` minus `retired_at` is less than `minimum_age_seconds`. |
-| 4 | `pinned_continuation_unexpired` | `false` | `pinned_until` is set and later than `now`. |
-| 5 | `reclaimable` | `true` | None of the above applies. |
+| 0 | `active_generation_unidentified` | `false` | No generation is flagged active; replaces the verdict of every generation, so checks 1 to 6 do not apply. |
+| 1 | `active_generation` | `false` | The generation is the one the active pointer references, whatever its publication outcome. |
+| 2 | `inside_count_bound` | `false` | Zero-based newest-first rank is less than `generation_limit`. The active generation occupies one rank slot. Does not apply to a failed-publication generation. |
+| 3 | `age_undetermined` | `false` | Neither `retired_at` nor `created_at` is recorded. |
+| 4 | `younger_than_minimum_age` | `false` | `age_seconds` (from `age_basis`) is less than `minimum_age_seconds`. |
+| 5 | `pinned_continuation_unexpired` | `false` | `pinned_until` is set and later than `now`. |
+| 6 | `reclaimable` | `true` | None of the above applies. |
 
 ---
 
@@ -147,6 +172,8 @@ When both settings are undeclared, the message names `retention_max_generations`
 
 Adjacent change in the same ticket: `cleanup` (`knowledge/adapters/neo4j_projection.py`) and `Neo4jBackend.cleanup` no longer default `retention_seconds` to 3600; `None` raises `ValueError` with `retention bound is unset: retention_seconds must be declared by the caller; no built-in value is used`. The `cleanup` command in `knowledge/cli_sync.py` gained `--retention-seconds` (default none). This path is not the `retention_max_generations` / `retention_min_age_seconds` bound.
 
+A backend refusal during evaluation is not one of these errors: it is reported in the result's `assessment` (see [Assessment outcome](knowledge-retention-evaluation-details.md#assessment-outcome)).
+
 ---
 
 ## retention command
@@ -162,16 +189,53 @@ Defined in `knowledge/cli_retention.py`, registered in `knowledge/__main__.py`. 
 
 The `source` reported by this command is the constant `BOUND_SOURCE`: `command line (--retention-max-generations, --retention-min-age-seconds)`.
 
-Output: `{"status": "ok", "bound": {...}, "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added.
+Output: `{"status": "ok", "bound": {...}, "assessed": N, "active_generation": ..., "findings": [...], "generations": [...], "reclaimable": [...]}`, the evaluation result with `status` added. `status` is `ok` even when `assessment.status` is `partial` or `could_not_assess`; read `assessment.status` to learn whether the store was assessed.
+
+---
+
+## Failed publication removal
+
+Defined by `publish` in `knowledge/adapters/neo4j_projection.py` (AC `KM-400b-5-i`, `docs/acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-5-i.yaml`).
+
+When a publication fails after its build has started (a count-check failure or an unavailable backend), the same operation removes the nodes and relationships tagged with that attempt's own generation key. Removal never matches on failed status, so other repositories and older generations are untouched. The generation record stays, with status `failed`.
+
+The failure keeps its original cause. The message appends one of:
+
+| Removal result | Appended message |
+|---|---|
+| Removed | `failed generation removed: N entity records, M relationships` |
+| Both deletes refused | `failed generation not removed: repository <repo> generation <gen>; refused: <refusal>; <remaining>` |
+| One delete refused | `failed generation partially removed (<kinds> remain): repository <repo> generation <gen>; refused: <refusal>; <remaining>` |
+
+Both deletes (relationships, then nodes) are attempted whatever happens to the first. `<remaining>` is recounted after the refusal: `N entity records, M relationships remain`, or `remaining amount undetermined` when the store also refuses the count. It is never stated as 0 for lack of a count (AC `KM-400b-5-ii`).
+
+The outcome is recorded on the backend as `publication_removal`:
+
+| `outcome` | Shape | Meaning |
+|---|---|---|
+| `removed` | `{"outcome": "removed", "nodes": N, "relationships": M}` | Figures are counted before deleting (`"undetermined"` if that count was refused). |
+| `partially_removed` | `{"outcome", "repository_id", "generation_id", "refusal", "remaining", "remaining_kinds"}` | One delete was refused; `remaining_kinds` names it. |
+| `not_removed` | `{"outcome", "repository_id", "generation_id", "refusal", "remaining"}` | Both deletes were refused; the publication failure is still the one raised. |
+| `nothing_stored` | `{"outcome": "nothing_stored"}` | The publication failed before anything was written; no removal was attempted. |
+
+`remaining` is `{"nodes": N, "relationships": M}` or `"undetermined"`.
+
+This removal is separate from retention reclaiming. A failed publication reclaims no retained generation. A generation left behind stays out of readers' view, and the retention evaluation assesses it with every other generation, failed ones included. The evaluation reports it reclaimable on the `publication_failed` basis (KM-400f-1-iv), but nothing removes a left-behind generation automatically yet. A read-only refusal has to be resolved first, because removal needs writes.
 
 ---
 
 ## See Also
 
+- [Knowledge Retention Evaluation Details](knowledge-retention-evaluation-details.md) - Active generation, reclaimable bases, entity-node reconciliation, assessment outcome and read-only condition.
 - [Knowledge retrieval how-to](../how-to/run-knowledge-retrieval.md) - Procedures for running knowledge retrieval.
 - [Knowledge Retrieval Answers](knowledge-retrieval-answers.md) - Sibling reference for the retrieval surfaces.
 - [Knowledge retrieval component](../architecture/components/knowledge-retrieval.md) - Ownership and integration boundaries.
 - [ADR-062](../architecture/adrs/ADR-062-standalone-knowledge-retrieval.md) - Immutable standalone projection decision.
+- [Artifact knowledge graph data map](artifact-knowledge-graph-data-map.md) - Node identities and generation tagging the reconciliation counts against.
+- [AC schema reference](ac-schema.md) - Schema of the acceptance-criteria records cited here.
+- [KM-400f-1](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-1.yaml) - Parent AC declaring the retention bound.
+- [KM-400f-4](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400f-4.yaml) - Operator listing and sweep; reports the reclaimable bases rather than recomputing them.
+- [KM-400b-3](../acceptance-criteria/knowledge-management/KM-400-trustworthy-project-knowledge/KM-400b-3.yaml) - Pinning constraint that outranks the age basis.
 - `knowledge/config.py` - Settings, `RetentionBound`, `resolve_retention_bound`.
-- `knowledge/adapters/neo4j_projection.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
+- `knowledge/adapters/neo4j_retention.py` - `evaluate_retention`, `retention_facts`, `_verdict`.
 - `knowledge/cli_retention.py` - The `retention` command.

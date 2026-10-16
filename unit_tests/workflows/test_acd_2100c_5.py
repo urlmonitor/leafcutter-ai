@@ -205,21 +205,6 @@ def _cancel_answer(gate_id, channel):
     return answer
 
 
-# ---------------------------------------------------------------------------
-# Forced-null-gate harness for the "missing gate result" test.
-#
-# resolveGate() itself, unmodified, structurally cannot return a falsy value
-# today (see this module's docstring). This helper produces a byte-identical
-# TEMP COPY of the real, on-disk plan-feature.js with ONE surgical insertion
-# at the top of resolveGate()'s body: for one named gate_id, it returns
-# `null` immediately -- before any of resolveGate()'s own real logic runs.
-# Every call site downstream of that gate_id is left COMPLETELY unmodified,
-# so the test drives the REAL, unmodified surrounding code (the actual
-# `if (!_xGateResult) {...}` guards, or final-gate's already-removed guard)
-# through the real workflow -- never a hand-derived stand-in for the
-# fallback expression itself.
-# ---------------------------------------------------------------------------
-
 _RESOLVE_GATE_SIGNATURE = (
     "async function resolveGate(gateId, liveGateFn, args, context, descriptor, runId) {"
 )
@@ -521,9 +506,11 @@ class TestWorkSurvivesAMissingGateResultOnTheRealExitPath(unittest.TestCase):
         finally:
             patched_script.unlink(missing_ok=True)
 
-        # No mutating/destructive dispatch may fire regardless of how the
-        # run ultimately reports its own outcome.
-        _assert_no_mutating_dispatch(self, result, "forced-null-final-gate")
+        # itpo's own auto-commit (ACD-2500c-2) precedes the design stage; nothing mutating may follow.
+        labels = _labels(result)
+        commits = [i for i, label in enumerate(labels) if label == "commit-stage-output"]
+        self.assertTrue(len(commits) <= 1 and all(i < labels.index("design-prepass") for i in commits), labels)
+        self.assertFalse(set(_MUTATING_LABELS[1:]) & set(labels), labels)
 
         terminal = result.result
         self.assertIsInstance(

@@ -1,0 +1,105 @@
+id: AR-400d-2
+title: "A project-supplied ability the project does not have is reported once and the install carries on"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the setup of AR-400d-1, except that the consumer project's own abilities
+    area under `.leafcutter/skills` holds no ability named "postgres",
+  When the build installs the package into that project,
+  Then the build passes and every other specialist is installed,
+    And the run reports exactly once, at informational severity, that
+      probe-coder is granted the project-supplied ability "postgres", that it
+      was looked for in the project's `.leafcutter/skills` area, and that it was
+      not found there,
+    And probe-coder's compiled prompt does not offer "postgres" as an available
+      ability, and states that the project-supplied "postgres" is not installed
+      in this project,
+    And when "postgres" is then added to the project's `.leafcutter/skills`
+      area, the next build lists it as available with no other edit and no
+      longer prints the report.
+depends_on:
+  - AR-400d-1
+doc_links:
+  - path: docs/acceptance-criteria/infrastructure/INF-600-self-describing-agents/INF-600g-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: "SUPERSEDED by this record and AR-400d-2-i: it resolved ANY ability by silently falling back to a project-local location; this makes it a per-grant declaration looked up only in .leafcutter/skills."
+assigned_agent: python-coder
+estimated_complexity: M
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "A THIRD SEVERITY: agent_ability_gate.refuse_on_ability_findings today has two outputs -- reported (printed with build_colors.warn) and refusing. A missing project-supplied ability is neither: it is printed at INFORMATIONAL severity via scripts/build_colors.info (not [WARNING], not an error) and never sets the exit code. Add it as a distinct finding kind, not by adding it to REPORT_ONLY_KINDS (which prints warnings)."
+  - "SAID ONCE PER (specialist, ability) PER BUILD, however many surfaces (gate, compile, effective-prompt render) learn of it; the line names the specialist, the ability, the absolute location looked in and 'not found'."
+  - "COMPILED PROMPT (orchestrator default Q2): the delivered abilities table does not list the absent ability as available and states that the project-supplied ability is not installed in this project. This is computed at compile time from the same lookup the gate uses (one resolution function, agent_ability_verdict._resolve or its successor), not a second existence probe."
+  - "Every other specialist compiles and is installed; the build exits 0."
+  - "SCOPE vs DECISION 10: this record's 'not installed' outcome applies to a marked id the PACKAGE does not ship either (postgres). A marked id the package DOES ship and the project lacks falls back to the packaged copy with its own informational line (AR-400d-2-ii); the two outcomes are distinct finding kinds with distinct wording."
+  - "The protected-id rule (user decision 10) applies here too: adding postgres later to <project>/<output_root>/skills is never undone by a later build or --clean."
+  - "Adding the ability to <project>/.leafcutter/skills/<id>/SKILL.md requires no other edit: the next build delivers it and the informational line disappears (no cached negative result)."
+test_spec:
+  - name: test_absent_project_ability_reported_once_at_info_and_build_passes
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: criterion
+    description: "Scratch consumer with empty .leafcutter/skills; package copy where probe-coder grants postgres provided_by: project; build.py exits 0, every agent is compiled, and exactly one non-warning, non-error line names probe-coder, postgres, the looked-in path and 'not found'."
+    must_catch:
+      - "the line is printed with the warning prefix"
+      - "the line is printed once per reader (gate and compile)"
+      - "the build refuses"
+  - name: test_compiled_prompt_states_project_ability_not_installed
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: deployed
+    description: "probe-coder's compiled prompt does not offer postgres as available and states the project-supplied postgres is not installed here."
+  - name: test_adding_the_ability_delivers_it_on_next_build
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: e2e
+    angle: discrimination
+    description: "Create .leafcutter/skills/postgres/SKILL.md and rebuild with no other edit: postgres is listed as available and the informational line is gone."
+test_rationale: >-
+  Severity and cardinality are the behaviour here, so the test reads the real
+  build output and counts lines by severity; the add-and-rebuild control proves
+  the report tracks the project's actual state.
+delivers_to: null
+expects_from:
+  ac_id: AR-400d-1
+  contract: "The parsed grant with its provided_by marking, and the single project-area lookup."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400d.yaml
+amended_by:
+  - reason: apply-user-decision
+    agent: it-po
+    date: '2026-10-12'
+    changed: "NOTE ONLY -- criteria unchanged (they concern an id the package does not ship). it_requirements: added the distinction from the decision-10 fallback for marked PACKAGED ids, and the protected-id rule. WHY: user decision 10 (BrainCandy, 2026-10-12)."
+superseded_by: null
+covered_by:
+  - AR-400d-2-i
+  - AR-400d-2-ii
+implemented_by: []
+notes: |
+  REPORT, NOT REFUSE (user decision 1). Not a warning either: this is a true
+  statement about the install the adopter may want to act on, said once
+  (AR-400 and BP-1500h both reject per-reader repetition).
+
+  DECISION FLAGGED -- WHAT THE COMPILED PROMPT SAYS. "The specialist simply does
+  without" could mean the ability is silently omitted from the prompt, or the
+  prompt says it is not installed. This record chooses the latter, because the
+  specialist's instructions still say "apply the postgres skill" and an agent
+  told to use something absent from its own list, with no explanation, will
+  guess. If the user prefers silent omission, the third clause changes -- see
+  BA report.

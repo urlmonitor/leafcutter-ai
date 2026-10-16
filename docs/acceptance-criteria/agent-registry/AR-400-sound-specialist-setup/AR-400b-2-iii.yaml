@@ -1,0 +1,90 @@
+id: AR-400b-2-iii
+title: "A citation of an ability's file as a source of a rule is not an instruction to load that ability"
+component: agent-registry
+components:
+  - agent_registry
+  - skills_system
+  - build_pipeline
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: approved
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a test specialist "probe-agent" that grants nothing, whose instructions
+    contain:
+      "This shape is normatively defined in `templates/skills/signoff/SKILL.md`
+       section 7 step 2 -- the field set below must match that definition."
+      "See signoff section 2b for the required format."
+  When the build runs,
+  Then the build reports no finding for "probe-agent" about "signoff",
+    And when the first sentence is rewritten as "Load
+      `templates/skills/signoff/SKILL.md` and follow section 7.", the build stops
+      with an "ability exists but is not granted" finding for "probe-agent" /
+      "signoff" on that line,
+    And a citation naming an ability that does not exist ("as defined in
+      `templates/skills/ghost-ability/SKILL.md`") is reported as "ability does
+      not exist" -- a citation is exempt from the grant check, not from the
+      existence check.
+depends_on:
+  - AR-400b-2
+doc_links:
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance: its knowledge-emission step cites signoff's SKILL.md section 7 for the event shape."
+  - path: templates/agents/live-surface-tester.md
+    relationship: describes
+    status: exists
+    relevance: "Real instance: 'See signoff section 2b for the required format.'"
+assigned_agent: python-coder
+estimated_complexity: S
+change_target: code
+risk_surface: internal
+package_surface: false
+it_requirements:
+  - "A citation (the ability's file or section is named as the SOURCE of a rule -- 'normatively defined in', 'as defined in', 'See <id> section N') is a recognised reference with a citation flag: it is exempt from the grant comparison and is STILL subject to the existence check (orchestrator default Q4)."
+  - "The citation flag must not swallow an imperative on the same line: 'Load `templates/skills/signoff/SKILL.md` and follow section 7.' is an instruction."
+test_spec:
+  - name: test_citations_of_existing_ability_produce_no_finding
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Copied package slice; probe-agent (grants nothing) carries the two citation sentences about signoff; the validator CLI passes with no finding."
+  - name: test_load_instruction_of_same_file_is_not_granted
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "Rewrite the first citation as 'Load `templates/skills/signoff/SKILL.md` and follow section 7.'; the run fails with 'not granted' for probe-agent/signoff."
+  - name: test_citation_of_nonexistent_ability_fails_existence
+    target_dir: unit_tests/prompt_assembly/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "A citation 'as defined in `templates/skills/ghost-ability/SKILL.md`' is reported 'ability does not exist'."
+    must_catch:
+      - "citations are exempt from both checks"
+test_rationale: >-
+  Citations are exempt from one check and not the other; the third descriptor
+  is what pins the asymmetry.
+delivers_to: null
+expects_from:
+  ac_id: AR-400b-2
+  contract: "The recognition rule, carrying a per-reference citation flag."
+origin_agent: BrainCandy
+created: 2026-10-12
+created_by: docs/acceptance-criteria/agent-registry/AR-400-sound-specialist-setup/AR-400b-2.yaml
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+notes: |
+  NEGATIVE CONTROL NAMED BY THE ORCHESTRATOR ("a citation of a SKILL.md path").
+  The third clause is a decision this BA made and flags: a citation to a file
+  that does not exist is still a dangling pointer and still a fault, even though
+  it does not ask the reader to load anything. If the user prefers citations to
+  be exempt from both checks, delete the third clause -- see BA report.

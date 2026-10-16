@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L3
 status: active
 req_status: draft
-work_status: todo
+work_status: done
 criteria: |
   Given record A has namespace component "ac-driven-dev" and an empty graph component list,
     and the store's namespace-to-graph mapping gives exactly one graph id, "ac_driven_dev",

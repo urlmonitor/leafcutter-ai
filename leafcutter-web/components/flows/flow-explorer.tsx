@@ -42,8 +42,10 @@ interface XY {
   y: number;
 }
 import { flowNodeTypes } from "./flow-nodes";
+import { buildFlowEdges } from "./parts/flow-explorer-edges";
+import { cardLabel } from "@/lib/flow-finder/actor";
 import { artifactEdgeTypes } from "./self-loop-edge";
-import { edgeStyle, artifactEdgeStyle } from "@/components/atlas/edges";
+import { artifactEdgeStyle } from "@/components/atlas/edges";
 import { FlowDrawer } from "./flow-drawer";
 import { ArtifactLegend } from "./artifact-legend";
 import { FlowLegend } from "./flow-legend";
@@ -423,6 +425,10 @@ function ExplorerInner({
   }, [graph]);
 
   /* ---------- nodes + edges ---------- */
+  const nodeSource = React.useMemo(
+    () => new Map([...flow.steps, ...flow.branches].map((x) => [x.id, x])),
+    [flow],
+  );
   const nodes = React.useMemo<Node[]>(
     () =>
       graph.nodes.map((n) => {
@@ -461,18 +467,24 @@ function ExplorerInner({
         const acDone = (n.meta?.acDone as number) ?? 0;
         const expandsTo = (n.meta?.expandsTo as string | null) ?? null;
         const screen = (n.meta?.screen as string | null) ?? null;
+        const variant = (n.meta?.variant as "step" | "branch") ?? "step";
+        const actorKind = nodeSource.get(n.id.replace(/^step:/, ""))?.actorKind ?? null;
         return {
           id: n.id,
           type: "flowStepNode",
           position: p,
+          focusable: false, // the card itself is the focusable, named button
           data: {
+            actorKind,
+            cardName: cardLabel({ variant, label: n.label, order: n.meta?.order as number | undefined, stepCount: flow.steps.length, actorKind }),
+            onOpen: () => setSelectedId(n.id),
             label: n.label,
             order: n.meta?.order as number | undefined,
             screen,
             screenTitle: screenTitleFor(screen),
             realization: flow.realization,
             status: (n.status as WorkStatus) ?? "unknown",
-            variant: (n.meta?.variant as "step" | "branch") ?? "step",
+            variant,
             acCount: acIds.length,
             acDone,
             drillable: Boolean(expandsTo && flowNames[expandsTo]),
@@ -481,52 +493,10 @@ function ExplorerInner({
           draggable: false,
         };
       }),
-    [graph, positions, selectedId, flowNames, screenTitleFor, flow.realization],
+    [graph, positions, selectedId, flowNames, screenTitleFor, flow, nodeSource, setSelectedId],
   );
 
-  const edges = React.useMemo<Edge[]>(
-    () =>
-      graph.edges.map((e) => {
-        const spec = edgeStyle(e.kind);
-        const isFlow = e.kind === "flow";
-        const base: Edge = {
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          animated: isFlow,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: `hsl(${spec.hsl})`,
-            width: 15,
-            height: 15,
-          },
-          style: {
-            stroke: `hsl(${spec.hsl})`,
-            strokeWidth: isFlow ? 2 : 1.4,
-            opacity: isFlow ? 0.85 : 0.55,
-            strokeDasharray: spec.dashed ? "5 4" : undefined,
-          },
-        };
-        // Decision edge label (yes / no / else / continue)
-        if (e.label) {
-          base.label = e.label;
-          base.labelStyle = {
-            fill: "hsl(155 7% 78%)",
-            fontSize: 10,
-            fontWeight: 600,
-          };
-          base.labelBgStyle = {
-            fill: "hsl(158 12% 11%)",
-            fillOpacity: 0.88,
-          };
-          base.labelBgPadding = [3, 5] as [number, number];
-        }
-        // Source handle routing for decision diamond edges ("yes" | "no")
-        if (e.sourceHandle) base.sourceHandle = e.sourceHandle;
-        return base;
-      }),
-    [graph],
-  );
+  const edges = React.useMemo<Edge[]>(() => buildFlowEdges(graph.edges), [graph]);
 
   const onNodeClick = React.useCallback(
     (evt: React.MouseEvent, node: Node) => {

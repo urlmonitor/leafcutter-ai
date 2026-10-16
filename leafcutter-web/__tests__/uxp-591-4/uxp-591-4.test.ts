@@ -4,6 +4,11 @@
  * semantics). (Ticket names a Python test file; vitest only collects
  * *.test.{ts,tsx}. The Playwright spec is deferred.)
  *
+ * Amended 2026-10-14 (UXP-617): bare /flows is the finder, so no drawer opens there
+ * and /flows is never rewritten to a step address; the owner-ruling-1 tests and
+ * the drawer-on-bare-flows session (removed from dataset v4) are gone. Keyboard
+ * open/close is replayed with clicks here; the keys are UXP-617-3-i.
+ *
  * jsdom does not run the App Router's history integration, so these tests pin
  * what the view asks the browser to do: one window.history.replaceState to the
  * step address, no pushState, no router.push / router.replace, no new entry.
@@ -13,7 +18,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import { clickNode, closeWithX, drawers, addressOf, expectDrawers } from "../helpers/flow-routes";
 import { expectReplaced, openAt, watchHistory, type NavState } from "../helpers/drawer-nav";
 
@@ -95,14 +100,26 @@ describe("opening a drawer replaces the address", () => {
     expect(nodeBefore!.isConnected).toBe(true);
   });
 
-  it("clicking Plan on the bare /flows replaces /flows with the default flow's canonical step address", async () => {
+  it("the finder at /flows renders no flow node or drawer, so no history write turns /flows into a step address", async () => {
     // covers: UXP-591-4
     // angle: boundary
-    await openAt(nav, "/flows");
+    window.history.replaceState({}, "", "/flows");
     const w = watchHistory(nav);
-    clickNode(labelOf(DEFAULT, "plan"));
-    expect(drawers().map((d) => d.id)).toEqual(["plan"]);
-    expectReplaced(nav, w, `/flows/${DEFAULT}?step=plan`);
+    await openAt(nav, "/flows");
+    await new Promise((r) => setTimeout(r, 0)); // let mount effects run
+
+    expect(document.querySelector(".react-flow__node")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Close step details" })).toBeNull();
+    // nothing the finder does writes a step address, and nothing adds an entry
+    for (const call of w.replace.mock.calls) {
+      expect(addressOf(call[2])).toBe("/flows");
+      expect(String(call[2])).not.toContain("step=");
+    }
+    expect(w.push).not.toHaveBeenCalled();
+    expect(nav.routerPush).not.toHaveBeenCalled();
+    expect(nav.routerReplace).not.toHaveBeenCalled();
+    expect(window.location.pathname + window.location.search).toBe("/flows");
+    expect(window.history.length).toBe(w.length);
   });
 
   it("the replaced address reopened through the catch-all route shows the same Plan drawer", async () => {
@@ -146,7 +163,7 @@ describe("opening a drawer replaces the address", () => {
     expect(viewState!.filters).toEqual({ source: "real", kind: "user", realization: "all" });
   });
 
-  it.each(["drawer-replace", "drawer-on-bare-flows"])(
+  it.each(["drawer-replace", "clear-step-notice", "keyboard-step-drawer"])(
     "replays the %s session's drawer actions from atlas-flows.mock.json",
     async (session) => {
       // covers: UXP-591-4
