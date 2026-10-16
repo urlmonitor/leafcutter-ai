@@ -1353,8 +1353,22 @@ if (!ticketPath) {
       "No ticket_path provided. Pass args: { ticket_path: '<path>' }",
   };
 }
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = (args && args.worktree_path) || null;
+// BO-4300c-3 — the workspace comes from the workspace maker's answer and from
+// nowhere else: args.workspace (handed in verbatim by the entry command) or one
+// maker dispatch. args.worktree_path, the ambient git check and the ticket's own
+// folder are never a source of the location.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+const workspaceDecision = await obtainWorkspace(args, {
+  scriptRel: '{{config.output_root}}/scripts/worktree.py',
+  kind: workspaceKindAndSlug(ticketPath).kind,
+  slug: workspaceKindAndSlug(ticketPath).slug,
+  label: 'workspace-ensure',
+  phase: 'Worktree Guard',
+});
+if (!workspaceDecision.accepted) {
+  return workspaceStop(workspaceDecision);
+}
 
 /**
  * The resolved target this drive emits for its consumers.
@@ -1371,49 +1385,8 @@ const resolvedTarget = {
   target_type: "ticket",
   epic_path: null,
   ticket_path: ticketPath,
-  worktree_path: null,
+  worktree_path: workspaceDecision.workspace_path,
 };
-let gitInfo = null;
-if (callerWorktreePath) {
-  resolvedTarget.worktree_path = callerWorktreePath;
-} else {
-  // No caller-supplied working copy. The ambient git check may POSITIVELY
-  // identify one — .git as a file on a non-protected branch is a real,
-  // verified worktree, and its root is reported explicitly. What the check
-  // must never do is answer the question by reaching for whatever is nearest:
-  // if it cannot identify a worktree, the working copy stays undetermined and
-  // the drive holds back (BO-1900a-4-i).
-  const worktreeCheck = await agent(
-    "Run these shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "3. `git rev-parse --show-toplevel` — reports the absolute root of the working copy you are in\n" +
-    "Report worktree_path ONLY from command 3, and ONLY when command 1 said \"file\". " +
-    "If any command fails, or .git is a directory, omit worktree_path entirely — do NOT substitute the current directory, the ticket's folder, or any other location you can find.\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<absolute path, omit if unknown>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
-  gitInfo = worktreeCheck;
-  if (gitInfo && (gitInfo.git_type === "directory" || gitInfo.branch === "main" || gitInfo.branch === "master")) {
-    return {
-      status: "error",
-      worktree_required: true,
-      resolved_target: resolvedTarget,
-      message:
-        "build-ticket.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (gitInfo.git_type || 'unknown') +
-        " (branch: " + (gitInfo.branch || 'unknown') + "), so there is no isolated " +
-        "working copy for this drive and no phase agent will be spawned. " +
-        "Create a worktree first:\n" +
-        "  /worktree create <branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
-  if (gitInfo && gitInfo.git_type === "file") {
-    resolvedTarget.worktree_path = gitInfo.worktree_path || null;
-  }
-}
 
 // BO-1900a-4-i — the refusal that makes the marker load-bearing. An unanswered
 // question about where the work belongs stops the drive instead of being
@@ -1446,7 +1419,7 @@ if (!resolvedTarget.worktree_path) {
 // -------------------------------------------------------------------------
 phase('Planner')
 const plannerResult = await agent(
-  `Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
+  `The drive's workspace is "${resolvedTarget.worktree_path}"; resolve any relative path against it. Read the ticket at "${ticketPath}". Extract the agents: map from the frontmatter and the files_touched list. Also check whether the ticket's ## Test Requirements section is populated: it is populated when there is a fenced code block after "## Test Requirements" that contains at least one "- name:" entry in the tests: array. Also report "existing_test_files": test files a previous drive already wrote for this ticket. Find them by reading any test-writer sign-off in the ticket's ## Comments section and collecting the test file paths it names, then verifying with the shell that each path actually EXISTS on disk. List only paths you confirmed exist; return [] if there is no test-writer sign-off, it names no files, or the named files are gone. Do not guess a path from the ticket title or a naming convention. Also report "source_ac": the ticket's source_ac frontmatter field (the requirement id(s) this ticket implements), normalised to an array of strings. Omit the key entirely (do not return an empty array) when the ticket's frontmatter carries no source_ac field at all. Return a JSON object with exactly these keys: { "ticket_path": "<path>", "title": "<ticket title>", "files_touched": [...], "has_test_requirements": true|false, "existing_test_files": [...], "source_ac": [...] (omit if none), "ordered_phases": [{"agent": "<name>", "status": "<status>"}, ...] }. The ordered_phases array must list ALL agents from the agents: map in canonical phase priority order. Each entry must include the agent name and its current status (needed | signed_off | not_needed | failed). Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'ticket-planner', phase: 'Planner' }
 )
 // BO-1900a-4-ii — an unusable plan reply holds the ticket back. It is never

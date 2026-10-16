@@ -443,76 +443,37 @@ const _epicArgCandidate = (
 );
 const epicArg = (typeof _epicArgCandidate === 'string' ? _epicArgCandidate : '').trim();
 
-const preflightResult = await agent(
-  "Detect the target worktree branch and root path for /finalize-feature.\n" +
-  "\n" +
-  (epicArg
-    ? "A target argument was provided. Resolve the worktree from it.\n" +
-      `Argument: "${epicArg}"\n` +
-      "\n" +
-      "Step 1 — list all registered worktrees:\n" +
-      "  Run: git worktree list --porcelain\n" +
-      "  Parse the output. Each block starts with 'worktree <path>' followed by\n" +
-      "  'HEAD <sha>' and optionally 'branch refs/heads/<branch_name>'.\n" +
-      "  Detached-HEAD entries have no 'branch' line — skip them.\n" +
-      "\n" +
-      "Step 2 — find the matching worktree:\n" +
-      "  Find a worktree whose branch_name:\n" +
-      `    - equals "${epicArg}" (exact match), OR\n` +
-      `    - equals "feature/${epicArg}", OR\n` +
-      `    - contains "${epicArg}" as a substring.\n` +
-      "  Exclude any worktree whose branch_name is 'main' or 'master'.\n" +
-      "  If multiple candidates match, prefer the one whose branch_name is\n" +
-      "  shortest (fewest extra characters beyond the argument string).\n" +
-      "\n" +
-      "Step 3a — matching worktree found:\n" +
-      "  Let <wt_path> = the matched worktree path.\n" +
-      "  Run: git -C \"<wt_path>\" branch --show-current\n" +
-      "  Run: git -C \"<wt_path>\" rev-parse --show-toplevel\n" +
-      "  Return ONLY: { \"found\": true, \"branch\": \"<branch_name>\", \"worktree_root\": \"<path>\" }\n" +
-      "\n" +
-      "Step 3b — no matching worktree found (FIN-100g-3):\n" +
-      "  A target was supplied but resolves to no registered worktree. Build a\n" +
-      "  SINGLE actionable error string containing ALL THREE of:\n" +
-      `    (a) the unresolved target name '${epicArg}';\n` +
-      "    (b) the expected argument forms — a bare branch-name string, OR an\n" +
-      "        object with a target/target_branch key;\n" +
-      "    (c) the candidate worktrees that ARE currently registered and their\n" +
-      "        checked-out branches — list the '<path> [<branch>]' entries you\n" +
-      "        parsed from `git worktree list --porcelain` in Step 1, sorted by\n" +
-      "        path for deterministic output.\n" +
-      "  This message is intentionally more specific than the generic\n" +
-      "  branch-named error (it adds the expected forms and the candidate list).\n" +
-      `  Return ONLY: { "found": false, "branch": null, "worktree_root": null,\n` +
-      `               "error": "No worktree found matching target '${epicArg}'. ` +
-      `Expected a bare branch-name string OR an object with a target/target_branch key. ` +
-      `Candidate worktrees (from git worktree list --porcelain): <path> [<branch>], ..." }`
-    : "No target argument provided — fall back to CWD-based detection.\n" +
-      "1. Run: git branch --show-current\n" +
-      "2. Run: git rev-parse --show-toplevel\n" +
-      "Return ONLY: { \"found\": true, \"branch\": \"<name>\", \"worktree_root\": \"<path>\" }"
-  ),
-  { agentType: "status-checker", label: "pre-flight", phase: "Pre-flight" }
-)
-
-const preflightInfo = parsedOr(() => parseAgentJson(preflightResult, { stage: "pre-flight", agent: "status-checker" }),
-  { found: true, branch: "unknown", worktree_root: "unknown" }, "using safe defaults (branch: unknown)");
-
-if (preflightInfo.found === false) {
-  return {
-    status: "error",
-    message:
-      preflightInfo.error ||
-      `/finalize-feature could not find a worktree matching target "${epicArg}". ` +
-      "Expected a bare branch-name string OR an object with a target/target_branch key. " +
-      "Run `git worktree list` to see the candidate worktrees and their branches, " +
-      "then re-run with the correct epic or ticket name.",
-    action_required: "resolve_worktree_argument",
-  };
+// BO-4300c-3 — the workspace comes from the workspace maker's answer and from
+// nowhere else: args.workspace (handed in verbatim by the entry command) or one
+// maker dispatch for the named target. The session's current directory, a
+// "found" worktree listing and an "unknown" default are never a source of the
+// location; a rejected answer ends the run before any step is dispatched.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+const workspaceDecision = await obtainWorkspace(args, {
+  scriptRel: "{{config.output_root}}/scripts/worktree.py",
+  kind: workspaceKindAndSlug(epicArg).kind,
+  slug: workspaceKindAndSlug(epicArg).slug,
+  label: "pre-flight",
+  phase: "Pre-flight",
+});
+if (!workspaceDecision.accepted) {
+  return workspaceStop(workspaceDecision);
 }
 
-const BRANCH = (preflightInfo.branch || "").trim();
-const WORKTREE_ROOT = (preflightInfo.worktree_root || "").trim();
+const WORKTREE_ROOT = workspaceDecision.workspace_path;
+let BRANCH = typeof workspaceDecision.answer.branch === "string" ? workspaceDecision.answer.branch.trim() : "";
+if (!BRANCH) {
+  // The maker's ready answer named no branch: read it from the given workspace only.
+  const branchResult = await agent(
+    `Report the branch checked out in the workspace "${WORKTREE_ROOT}".\n` +
+    `Run: git -C "${WORKTREE_ROOT}" branch --show-current\n` +
+    "Return ONLY: { \"branch\": \"<name>\" }",
+    { agentType: "status-checker", label: "pre-flight-branch", phase: "Pre-flight" }
+  );
+  const branchInfo = parsedOr(() => parseAgentJson(branchResult, { stage: "pre-flight-branch", agent: "status-checker" }), { branch: "" }, "branch of the workspace unknown");
+  BRANCH = (typeof branchInfo.branch === "string" ? branchInfo.branch : "").trim();
+}
 
 if (!BRANCH || BRANCH === "main" || BRANCH === "master") {
   return {
@@ -564,12 +525,8 @@ let baselineWorktreePath = null;
  */
 async function cleanupBaselineWorktree() {
   if (!baselineWorktreePath) return;
-  // Use WORKTREE_ROOT for the -C anchor when it is already resolved; fall
-  // back to the baseline path itself (which is a valid git repo checkout) so
-  // the worktree remove still works even if WORKTREE_ROOT is "unknown".
-  const gitAnchor = (WORKTREE_ROOT && WORKTREE_ROOT !== "unknown")
-    ? WORKTREE_ROOT
-    : baselineWorktreePath;
+  // WORKTREE_ROOT is always the maker's ready workspace_path (BO-4300c-3).
+  const gitAnchor = WORKTREE_ROOT;
   try {
     await agent(
       `Remove the temporary baseline worktree if it still exists:\n` +

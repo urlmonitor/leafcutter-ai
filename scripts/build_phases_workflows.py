@@ -43,6 +43,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from build_workflow_inline import inline_workspace_block
 from template_compiler import inject_config
 
 
@@ -297,7 +298,12 @@ def build_workflow_scripts(target_root: Path, config: dict[str, Any],
         # through unchanged (verbatim byte-for-byte, same as before this phase
         # gained injection).
         try:
-            emitted = inject_config(emitted.decode("utf-8"), config).encode("utf-8")
+            text = emitted.decode("utf-8")
+            # BO-4300c-3: fill an empty WORKSPACE-ANSWER marker pair from the
+            # one tracked source BEFORE config injection; a hand-filled pair or
+            # a missing source raises and fails the build (nothing deployed).
+            text = inline_workspace_block(text, js_file.name, workflows_js_src)
+            emitted = inject_config(text, config).encode("utf-8")
         except UnicodeDecodeError as exc:
             _bp._log.warning(
                 "Skipping config injection for %s (non-UTF-8 content): %s",
@@ -617,4 +623,10 @@ def build_workflow_tools(target_root: Path, config: dict[str, Any],
 #   knowledge_rendering.py, whose absence crashed deployed knowledge_query.py.
 # - 2026-10-12 [python-coder/BP-300d-3-ii]: version probe takes the first x.y.z
 #   in `claude --version` ("2.1.294 (Claude Code)"), not the last token.
+# - 2026-10-16 [python-coder/BO-4300c-3]: build_workflow_scripts() fills the empty
+#   `// WORKSPACE-ANSWER-START` / `-END` pair of a template from
+#   templates/workflows-js/_shared/workspace-answer.js (build_workflow_inline.py)
+#   before config injection; a hand-filled pair or a missing source fails the
+#   build. The shallow *.js glob never deploys _shared/ as a workflow.
+#   (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/23)
 # ===========================================================================

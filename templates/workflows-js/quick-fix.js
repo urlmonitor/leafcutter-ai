@@ -231,109 +231,28 @@ if (!diagnosis || !diagnosis.target_file || !diagnosis.root_cause) {
 
 const { target_file, location_hint, symptom, root_cause, divergence_decision } = diagnosis
 
-// Step 0a — OBSERVE. This call only reports what the current location is; it
-// creates nothing and decides nothing. The decision is made in JS below.
-const isolationCheck = await agent(
-  `You are the isolation-decision phase of /quick-fix. Report what the current location is.
-Create nothing.
+// Step 0a — the workspace (BO-4300c-3). It comes from the workspace maker's answer
+// and from nowhere else: args.workspace (handed in verbatim by the entry command)
+// or one maker dispatch. There is no in-place mode: the folder this run was started
+// from, the main copy and any ambient git state are never a source of the location,
+// and a rejected answer ends the run before anything is authored.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+const workspaceDecision = await obtainWorkspace(args, {
+  scriptRel: '{{config.output_root}}/scripts/worktree.py',
+  kind: 'feature',
+  slug: workspaceSlugFrom(target_file).replace(/\.[^.]*$/, '') + '-' +
+    String(root_cause).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).slice(0, 4).join('-'),
+  label: 'workspace-ensure',
+  phase: 'Guards',
+})
+if (!workspaceDecision.accepted) return workspaceStop(workspaceDecision)
 
-Every command below is a SINGLE simple command. Never chain with &&, ;, || or pipes, and never use cd — use absolute paths or "git -C <path>".
+const worktreeRoot = workspaceDecision.workspace_path
+const activeBranch = typeof workspaceDecision.answer.branch === 'string' ? workspaceDecision.answer.branch : ''
+const selfIsolated = true
 
-1. Run: pwd
-   Record the output as session_cwd. This is defined even outside a git repository.
-
-2. Run: git rev-parse --is-inside-work-tree
-   If it exits non-zero ("fatal: not a git repository"), set is_repo=false and leave
-   initial_branch as an empty string.
-   If it exits 0 and prints "true", set is_repo=true and run:
-     git branch --show-current
-   recording the output as initial_branch. An empty result means detached HEAD.
-
-3. Set needs_isolation = true when is_repo is false, OR initial_branch is "", "main",
-   or "master". Otherwise set it false.
-
-Return status="ok" — this step never blocks, it only reports. Do NOT run
-git worktree add, do NOT run setup_ticket_worktree.py, and do NOT dispatch
-worktree-agent or the feature skill. Creating the worktree is a later step, and only
-if this script decides it is needed.`,
-  { label: 'isolation-check', phase: 'Guards', schema: ISOLATION_CHECK_SCHEMA }
-)
-
-const isolationBlock = blockedOnFailure(isolationCheck, 'Guards (isolation-check)', 'Isolation-check agent')
-if (isolationBlock) return isolationBlock
-
-// Step 0b — DECIDE, here, in control flow. This replaces the former "no isolation,
-// ever" guard, which had no answer for a non-repo cwd and offered a dead end on main
-// (PR-only: the commit cannot be pushed, so confirming "yes" produced unlandable work).
-let worktreeRoot
-let activeBranch
-let selfIsolated = false
-
-if (isolationCheck.needs_isolation) {
-  const isolateResult = await agent(
-    `You are the self-isolation phase of /quick-fix. The current location cannot be used in
-place — it is not a git repository, or HEAD is detached, or the branch is main/master,
-which is PR-only here so a direct commit could not be pushed.
-
-Create an isolated worktree using the repository's canonical script. Never use
-worktree-agent, never use the feature skill, and never hand-roll a bare "git worktree add":
-a hand-made worktree gets none of the bootstrap and silently skips every package pre-commit
-hook for the whole run. The script below calls git worktree add for you and bootstraps the
-result — that is exactly why it is the required tool.
-
-Session cwd: ${isolationCheck.session_cwd}
-
-Use single, simple commands only.
-
-1. Locate the script by testing these absolute paths in order:
-     ls "${isolationCheck.session_cwd}/scripts/setup_ticket_worktree.py"
-     ls "${isolationCheck.session_cwd}/leafcutter-ai/scripts/setup_ticket_worktree.py"
-   The first that exists is script_path — the first is the deployed/consumer layout, the
-   second the dev workspace-parent layout where leafcutter-ai/ is a subdirectory. If
-   neither exists, return status="blocked" naming both paths tried.
-   script_repo_root is script_path with the trailing /scripts/setup_ticket_worktree.py removed.
-
-2. MANDATORY staleness gate, before creating anything. The create-only subcommand roots the
-   new branch at LOCAL main, not origin/main — it is the one subcommand in that script that
-   does (create-ac-worktree and create-fastlane-worktree both root at origin/main). A stale
-   local main silently yields a stale branch.
-     Run: git -C "<script_repo_root>" fetch origin
-     Run: git -C "<script_repo_root>" rev-list --left-right --count main...origin/main
-   The output is "<L>\\t<R>". If R is non-zero, return status="blocked": local main is R
-   commits behind. Tell the user to run
-     git -C "<script_repo_root>" checkout main
-     git -C "<script_repo_root>" merge --ff-only origin/main
-   and re-run /quick-fix. Do NOT create the worktree.
-
-3. Derive a short kebab-case slug from the diagnosed bug:
-     target file: ${target_file}
-     root cause:  ${root_cause}
-   For example, "fast-lane-structural-parent".
-
-4. Run: python "<script_path>" create-only "<slug>"
-   Idempotent: an existing worktree for that slug is reused and reported with created=false
-   rather than failing.
-   Parse the single-line JSON payload it prints to stdout:
-     {"worktree_path": "...", "branch": "feature/<slug>", "created": true|false}
-   Return worktree_root and branch from that payload verbatim — do not construct the path
-   any other way. The branch is ALWAYS feature/<slug>: the script does not honour fix/,
-   bugfix/, hotfix/ or chore/ prefixes on creation.`,
-    { label: 'self-isolate', phase: 'Guards', schema: SELF_ISOLATE_SCHEMA }
-  )
-
-  const isolateBlock = blockedOnFailure(isolateResult, 'Guards (self-isolate)', 'Self-isolate agent',
-    { halt_reason: 'isolation_failed' })
-  if (isolateBlock) return isolateBlock
-
-  worktreeRoot = isolateResult.worktree_root
-  activeBranch = isolateResult.branch
-  selfIsolated = true
-  log(`Self-isolated into ${worktreeRoot} on ${activeBranch} (created: ${isolateResult.created !== false}).`)
-} else {
-  worktreeRoot = isolationCheck.session_cwd
-  activeBranch = isolationCheck.initial_branch
-  log(`Operating in place: ${worktreeRoot} on ${activeBranch}.`)
-}
+log(`Workspace ready: ${worktreeRoot} on ${activeBranch || '(branch not reported)'}.`)
 
 // Step 0b — uncommitted-changes guard, anchored to the established worktree.
 const guardResult = await agent(

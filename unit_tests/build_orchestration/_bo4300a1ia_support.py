@@ -42,6 +42,13 @@ GENERIC_ARGS: dict[str, Any] = {
     "target_branch": "EPIC-Demo",
     "userInput": "plan a small demo feature",
     "run_id": "bo4300a1ia",
+    # plan-feature.js stops at its permission gate unless the entry skill's
+    # pre-flight verdict is handed in. The harness can supply one from the repo's
+    # own config/ and scripts/, but not from a DEPLOYED layout (there both live
+    # under the output root), where plan-feature would then never reach its
+    # workspace step. The verdict is passed explicitly so the run reaches it in
+    # either layout.
+    "workspace_setup_permission": {"permits": True, "outcome": "granted", "agent_id": "worktree-agent"},
 }
 
 WORKSPACE_PATTERNS = (
@@ -99,9 +106,12 @@ def shell_permitted_agents() -> set[str]:
 
 def run_workflow(path: Path, label_responses: dict | None = None,
                  args: dict | None = None) -> harness.HarnessResult:
+    # workspace_default="label": these tests observe the ONE maker dispatch (which
+    # workflows make it, what it carries), so a run that scripts nothing for it is
+    # answered ready on that dispatch instead of being handed args.workspace.
     return harness.run_workflow_under_e2(
         path, timeout=90, label_responses=label_responses,
-        args={**GENERIC_ARGS, **(args or {})})
+        args={**GENERIC_ARGS, **(args or {})}, workspace_default="label")
 
 
 def collect_runs(directory: Path, args: dict | None = None) -> dict[str, harness.HarnessResult]:

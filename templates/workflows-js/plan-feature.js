@@ -2359,99 +2359,32 @@ if (workspaceSetupPermission.permits !== true) {
   return { status: "error", message: deniedMessage };
 }
 
-let authoringWorktreePath = null;
 let acStoreDir = "docs/acceptance-criteria"; // default: overridden below
 
-// Why why the setup script is resolved to an absolute path: docs/reference/plan-feature-workflow-rationale-gates.md
-const worktreeScriptResolution = await resolveRepoAnchoredScriptPath(
-  "scripts/setup_ticket_worktree.py", workspaceSetupAgentId, "resolve-worktree-setup-script-path"
-);
-
-// Why why worktree-setup is dispatched exactly once (AC-3): docs/reference/plan-feature-workflow-rationale-gates.md
-const worktreeSetupCommand = worktreeScriptResolution.ok
-  ? "python \"" + worktreeScriptResolution.path + "\" create-ac-worktree" +
-    (sessionSlug ? ` "${sessionSlug}"` : "")
-  : buildRepoAnchoredResolutionCommand("scripts/setup_ticket_worktree.py");
-
-let worktreeSetupResult;
-try {
-  worktreeSetupResult = await agent(
-    "Run the following command and return ONLY the raw stdout output:\n" +
-    worktreeSetupCommand + "\n" +
-    "Return JSON: { \"output\": \"<raw stdout line>\", \"exit_code\": <number>, \"stderr\": \"<stderr or empty>\" }",
-    { agentType: workspaceSetupAgentId, label: "worktree-setup" }
-  );
-} catch (wtErr) {
-  return {
-    status: "error",
-    message:
-      "Failed to dispatch worktree setup: " + wtErr.message + "\n" +
-      "Cannot create the dedicated AC-authoring worktree. " +
-      "Resolve the issue and re-run /plan-feature.",
-  };
+// BO-4300c-3 — the authoring workspace comes from the workspace maker's answer
+// and from nowhere else: args.workspace (handed in verbatim by the entry skill)
+// or one maker dispatch to workspaceSetupAgentId's charter (worktree-agent,
+// permits_shell). There is no null-worktree mode: a rejected answer ends the run
+// here, before Stage 0 dispatches any authoring agent, and no other location
+// (the main copy, the folder the run started in, the epic folder) is used.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+const workspaceDecision = await obtainWorkspace(args, {
+  scriptRel: "{{config.output_root}}/scripts/worktree.py",
+  kind: "ac",
+  slug: sessionSlug || workspaceSlugFrom("plan-" + ((args && args.run_id) || "session")),
+  label: "workspace-ensure",
+  phase: "Workspace",
+});
+if (!workspaceDecision.accepted) {
+  log("[plan-feature][WARNING] workspace not ready: " + workspaceDecision.reason);
+  return workspaceStop(workspaceDecision);
 }
 
-let wtParsed;
-try {
-  wtParsed = parseAgentJson(worktreeSetupResult, { stage: "worktree-setup", agent: workspaceSetupAgentId });
-} catch (_parseErr) {
-  wtParsed = null;
+const authoringWorktreePath = workspaceDecision.workspace_path;
+if (typeof workspaceDecision.answer.ac_store_path === "string" && workspaceDecision.answer.ac_store_path.trim()) {
+  acStoreDir = workspaceDecision.answer.ac_store_path;
 }
-
-// Why why an uninterpretable setup reply halts (BO-1500a-5-i): docs/reference/plan-feature-workflow-rationale-gates.md
-if (wtParsed === null) {
-  const _rawText = (typeof worktreeSetupResult === "string") ? worktreeSetupResult : "";
-  // Reuses isAgentRefusal()'s AGENT_REFUSAL_MARKERS scan, never a second
-  // copy of that word list, by wrapping the free text as its `message` field.
-  const _isRefusal = isAgentRefusal({ message: _rawText });
-  return buildSetupFailureResult(
-    _isRefusal ? "refused" : "uninterpretable",
-    _isRefusal
-      ? "The isolated-workspace setup step declined the work as outside its own scope (a refusal)."
-      : "The isolated-workspace setup step's reply could not be interpreted as any recognised setup outcome.",
-    _rawText
-  );
-}
-
-// Only fail-hard when exit_code is explicitly non-zero.
-if (wtParsed.exit_code != null && wtParsed.exit_code !== 0) {
-  const wtStderr = wtParsed.stderr ? wtParsed.stderr : "(no stderr captured)";
-  return {
-    status: "error",
-    message:
-      "Authoring worktree creation failed (exit code " +
-      wtParsed.exit_code + ").\n" +
-      wtStderr + "\n" +
-      "Resolve the git error and re-run /plan-feature.",
-  };
-}
-
-let wtPayload = null;
-try {
-  if (typeof wtParsed.output === "string" && wtParsed.output.trim()) wtPayload = JSON.parse(wtParsed.output.trim().split(/\r?\n/).filter((l) => l.trim()).pop().trim());
-} catch (_parseErr) {
-  // Unparseable payload — handled by the no-worktree-path check below.
-  wtPayload = null;
-}
-
-const _hasWorktreePath = !!(
-  wtPayload && typeof wtPayload.worktree_path === "string" && wtPayload.worktree_path.trim()
-);
-
-if (!_hasWorktreePath) {
-  // Why the null worktree halt: docs/reference/plan-feature-workflow-rationale-helpers.md
-  const _hasExplicitExitCode = wtParsed.exit_code !== undefined && wtParsed.exit_code !== null;
-  return buildSetupFailureResult(
-    _hasExplicitExitCode ? "no_workspace_named" : "silent_success",
-    _hasExplicitExitCode
-      ? "The isolated-workspace setup step reported success but named no workspace directory."
-      : "The isolated-workspace setup step's reply reported no failure but named neither a directory nor a branch.",
-    wtParsed
-  );
-}
-
-authoringWorktreePath = wtPayload.worktree_path;
-acStoreDir = wtPayload.ac_store_path || acStoreDir;
 
 // Pre-Stage-0 — Partial-Run Recovery: detect and resolve orphaned AC drafts
 // ACD-2100c-3-iii: on resume with candidates, the run's own drafts (pause record context.acs) are not orphans.
@@ -3259,7 +3192,9 @@ for (const step of pipeline) {
         stageResults.push({ stage: step.stage, agent: step.agent, acs: written });
 
         // Why the delivery step: docs/reference/plan-feature-workflow-rationale-helpers.md
-        const authoringBranch = wtPayload ? wtPayload.branch : null;
+        const authoringBranch = (typeof workspaceDecision.answer.branch === "string" && workspaceDecision.answer.branch.trim())
+          ? workspaceDecision.answer.branch
+          : null;
         let deliveryOutcome = { status: "skipped", message: "No authoring branch available — push manually." };
 
         if (authoringBranch && authoringWorktreePath) {

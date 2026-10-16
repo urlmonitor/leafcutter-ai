@@ -278,50 +278,23 @@ if (!epicPath) {
   };
 }
 
-// If the caller already provided worktree_path in args, trust it — no ambient check.
-const callerWorktreePath = args && args.worktree_path;
-
-let worktreeGitInfo = null;
-
-if (!callerWorktreePath) {
-  // Fall back to the git info check when no worktree_path is provided in args.
-  // Use the explicit epic path context rather than session CWD.
-  const worktreeCheck = await agent(
-    `Check the git context for the epic at path "${epicPath}". ` +
-    "Run these two shell commands and report the results as JSON:\n" +
-    "1. `test -f .git && echo file || echo directory` — determines if .git is a file (worktree) or directory (main clone)\n" +
-    "2. `git branch --show-current` — reports the current branch name\n" +
-    "Return ONLY a JSON object: { \"git_type\": \"file\"|\"directory\", \"branch\": \"<name>\", \"worktree_path\": \"<cwd>\" }",
-    { agentType: "status-checker", schema: WORKTREE_SCHEMA, label: 'worktree-check', phase: 'Worktree Guard' }
-  );
-
-  worktreeGitInfo = worktreeCheck;
-
-  if (
-    worktreeGitInfo &&
-    (worktreeGitInfo.git_type === "directory" ||
-      worktreeGitInfo.branch === "main" ||
-      worktreeGitInfo.branch === "master")
-  ) {
-    return {
-      status: "error",
-      worktree_required: true,
-      message:
-        "build-epic.js must run inside a git worktree, not the main clone. " +
-        "The current working directory has .git as a " + (worktreeGitInfo.git_type || 'unknown') +
-        " (branch: " + (worktreeGitInfo.branch || 'unknown') + "). " +
-        "Create a worktree first:\n" +
-        "  /worktree create <epic-branch-name>\n" +
-        "Then re-run /build-feature from inside the worktree.",
-      action_required: "create_worktree",
-    };
-  }
+// BO-4300c-3 — the workspace comes from the workspace maker's answer and from
+// nowhere else: args.workspace (handed in verbatim by the entry command) or one
+// maker dispatch. args.worktree_path, the ambient git check and the epic folder
+// are never a source of the location; a rejected answer ends the run here.
+// WORKSPACE-ANSWER-START
+// WORKSPACE-ANSWER-END
+const workspaceDecision = await obtainWorkspace(args, {
+  scriptRel: '{{config.output_root}}/scripts/worktree.py',
+  kind: 'epic',
+  slug: workspaceSlugFrom(epicPath),
+  label: 'workspace-ensure',
+  phase: 'Worktree Guard',
+});
+if (!workspaceDecision.accepted) {
+  return workspaceStop(workspaceDecision);
 }
-
-// Resolve the worktree path: caller-provided wins, then git info, then epic path context.
-const worktreePath = callerWorktreePath ||
-  (worktreeGitInfo && worktreeGitInfo.worktree_path) ||
-  epicPath;
+const worktreePath = workspaceDecision.workspace_path;
 
 // -------------------------------------------------------------------------
 // Phase 1 — Planner: read Master_Plan.md + all ticket frontmatter → batches
@@ -330,7 +303,7 @@ const worktreePath = callerWorktreePath ||
 phase('Planner')
 
 const plannerResult = await agent(
-  `Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. Return ONLY the JSON object, no prose.`,
+  `The epic's workspace is "${worktreePath}". Read Master_Plan.md at the epic folder: "${epicPath}". Then read the frontmatter of every NN_*.md sub-ticket in that folder (excluding Master_Plan.md). Compute the dependency-ordered batch list: (1) Build a dependency graph using depends_on (logical edges) and files_touched overlap (physical edges). (2) Compute the maximal antichain of ready tickets (all depends_on met). (3) Split the antichain into batches so no two tickets in a batch share any files_touched entry. (4) Tickets with status 'done' are OMITTED from all batches (resume). Return a JSON object with these top-level keys: epic_path, title, batches. Return ONLY the JSON object, no prose.`,
   { agentType: "status-checker", schema: PLANNER_SCHEMA, label: 'epic-planner', phase: 'Planner' }
 )
 
