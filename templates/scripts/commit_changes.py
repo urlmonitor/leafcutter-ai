@@ -87,6 +87,7 @@ class Request(NamedTuple):
     ac_id: str | None = None
 
 
+_GIT_FATAL = re.compile(r"^fatal: ", re.MULTILINE)
 _VALUE_OPTIONS = {"--message-file": "message_file", "--run": "run", "--ac-id": "ac_id"}
 
 
@@ -370,6 +371,8 @@ def _failed_commit(root: Path, env: dict, output: str, carried: list[str]) -> di
     if not _hooks_present(root, env):
         return _answer("refused", reason_code="step_vcs_error", reason=f"git commit failed: {output.strip()[-400:]}")
     check = _hook_name(output)
+    if check is None and _GIT_FATAL.search(output):  # git itself failed after the checks passed
+        return _answer("refused", reason_code="step_vcs_error", reason=f"git commit failed: {output.strip()[-400:]}")
     handoff = _handoff(root, check, output)
     named_in_output = [p for p in carried if re.search(rf"(?<![\w/.-]){re.escape(p)}(?![\w])", output)]
     return _answer("hook_failed", hook_name=check, failing_files=named_in_output, reason_code="check_failed", reason=output.strip()[-400:], hook_output=output, remedy=handoff["remedy"] if handoff else None, handoff=handoff)
@@ -388,6 +391,19 @@ def _finish(root: Path, env: dict, base: str | None, paths: list[str], added: li
     return _answer("committed", sha=sha, paths=sorted(set(paths) | set(added)), added_parents=added, unlisted_changes=unlisted)
 
 
+def _refuse_held_index(root: Path) -> None:
+    """Refuse (step_index_locked) when another process holds the shared index.
+
+    The commit itself is built in a private index, so git would not notice the
+    lock until after the commit was recorded; checking first keeps the answer
+    honest and leaves a lock this step did not create untouched (BO-4500a-4-v).
+    """
+    lock = root / _git_out(["rev-parse", "--git-path", "index.lock"], root).strip()
+    if lock.exists():
+        detail = f"Unable to create '{lock}': File exists."
+        raise lock_refusal(detail) or StepRefusal("step_index_locked", detail)
+
+
 def _checked_run(request: Request) -> dict:
     """Validate the request, then commit; refusals propagate as StepRefusal."""
     message_file, entries = request.message_file, request.entries
@@ -396,6 +412,7 @@ def _checked_run(request: Request) -> dict:
     cwd = Path.cwd()
     root = Path(_git_out(["rev-parse", "--show-toplevel"], cwd).strip())
     refuse_protected_branch(root)
+    _refuse_held_index(root)
     tracked = {p for p in _git_out(["ls-files", "-z"], root).split("\0") if p}
     named = validate_paths(entries, cwd, root, tracked)
     scratch = Path(tempfile.mkdtemp(prefix="commit_changes_"))
