@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 criteria: |
   Given the requirement rule check specified by ACD-2500a-1, ACD-2500a-2 and ACD-2500a-3,
   When its reference documentation is authored,
@@ -58,7 +58,10 @@ amended_by:
   date: '2026-09-25'
   by: it-po
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-2500a-5-i
+  - ACD-2500a-5-ii
+  - ACD-2500a-5-iii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgent/19_TICKET-20261012-ACD-2500a-5.md
 change_target: docs

@@ -1,0 +1,67 @@
+id: GE-113c-5
+components:
+  - commit_guardian
+  - precommit_hooks
+readiness: draft
+priority: medium
+title: "The decision-record cross-reference check inspects the staged records in every layout it ships in"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a commit stages docs/architecture/adrs/ADR-901-example.md whose frontmatter lists the
+    component "commit_guardian",
+    and the cross-reference the check requires between that decision record and the
+    component's detail document is missing,
+  When the commit-time decision-record cross-reference check runs from its installed copy
+    (the copy the project's pre-commit configuration invokes), and again from its package
+    source copy,
+  Then both runs report the same finding, naming ADR-901-example.md and the missing
+    cross-reference, with the severity the check's strict setting gives it,
+  And when the cross-reference is added, both runs report no finding,
+  And the check reads staged documents, the component registry and the decision-record
+    folder from the project root obtained through the one shared root resolver of
+    GE-113c-1-iv,
+  And a run that was offered staged documents and could read none of them does not report a
+    pass (the outcome GE-120a-4 defines),
+  And every existing decision record or document the now-working check flags is either fixed
+    in the same change or recorded as a known issue naming it, and the check is not narrowed,
+    exempted or switched to warn-only to let that change through.
+depends_on:
+  - GE-113c
+  - GE-113c-1-iv
+  - GE-120a-4
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-113-artifacts-cant-land-in-the-wrong-place/GE-113c-1-iv.yaml
+    relationship: related
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-120-green-means-checked/GE-120a-4.yaml
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 3, verified 2026-10-16 (BA, by reading only the root lines): check_adr_cross_reference.py:64
+  sets REPO_ROOT = parents[2] and joins every staged path, docs/components.json and the ADR
+  folder to it (L65, L232, L263, L306, L350); a missing file reads as empty frontmatter and
+  returns no finding, so from the installed .leafcutter/ copy the check is INERT. If its
+  strict setting is off, the findings are warnings and the commit still completes; the
+  criteria require only that the installed copy now sees them. ADR-901 is a fixture name.
+  check_structural_change.py is NOT inert and gets no record here: it already resolves the
+  root via _resolve_root.find_project_root (L68-70); its parents[2] REPO_ROOT at L83 is an
+  unused leftover whose removal is already required by GE-113c-1-iv ("no guard re-derives
+  the project root via parents[N]").

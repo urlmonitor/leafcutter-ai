@@ -1,0 +1,73 @@
+id: ACD-2500f-1
+components:
+  - ac_driven_dev
+  - agent_registry
+  - llm_authoring
+readiness: draft
+priority: medium
+title: "The product owner, business analyst and test designer profiles say they change and produce requirement records"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the published profiles of product-owner, business-analyst and test-designer, which
+    today declare that they produce "analysis",
+    and the product-owner and business-analyst profiles declare they change nothing, although
+    all three write requirement records,
+  When each profile, its generated agent card and its agent registry entry are read,
+  Then each of the three profiles declares it produces "requirement_records",
+  And the product-owner and business-analyst profiles each declare one change surface, the
+    requirement store (docs/acceptance-criteria/), with a description of the fields that
+    agent writes, instead of "none",
+  And the test-designer profile keeps its existing change-surface entry unchanged,
+  And each agent card and registry entry shows the same produces value as its profile,
+  And the it-po profile, already corrected by ACD-2500e-1, is unchanged character for
+    character,
+  And the list of agents declaring "requirement_records" is exactly it-po, product-owner,
+    business-analyst and test-designer.
+depends_on:
+  - ACD-2500f
+  - ACD-2500e-1
+doc_links:
+  - path: templates/agents/product-owner.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/business-analyst.md
+    relationship: describes
+    status: exists
+  - path: templates/agents/test-designer.md
+    relationship: describes
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500e-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The precedent and its it_requirements: the registry entry carries produces and
+      description but no mutates; mutates is compared between template and generated card.
+  - path: docs/architecture/components/agent-registry.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-2500f-1-i
+implemented_by: []
+change_target:
+  - prompt
+  - config
+risk_surface: internal
+notes: |
+  Item 5. Frontmatter today (2026-10-16): product-owner and business-analyst have
+  produces: analysis and mutates [{name: none, surface: none}]; test-designer has produces:
+  analysis but already mutates [{name: requirement_records, surface: AC YAML store}];
+  config/agent_registry.json mirrors produces: analysis for all three. "requirement_records"
+  is already in the closed produces vocabulary (ACD-2500e-1, ticket 41).

@@ -1,0 +1,71 @@
+id: ACD-2500a-5-i
+components:
+  - ac_driven_dev
+  - ac_store
+  - documentation_system
+readiness: draft
+priority: high
+title: "ADR-073 records why mechanical requirement rules are checked by one fail-closed rule check"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the requirement rule check as built (ACD-2500a-1, ACD-2500a-2, ACD-2500a-3) and as
+    extended by ACD-2500a-2-vi, ACD-2500a-2-vii and ACD-2500a-2-viii,
+  When its decision record is authored,
+  Then it is numbered ADR-073, sits in the decision-record folder, and the decision-record
+    index lists it,
+  And it records each of these as a decision, with the alternative that was rejected:
+    - mechanical requirement rules are checked by one rule check made of rule families,
+      not by instructions an authoring agent must remember;
+    - the check runs after every /plan-feature authoring stage as a fail-closed gate, so a
+      failed or empty check means the stage is not reported complete;
+    - the check repairs only where exactly one right answer exists, through a guarded writer
+      that evaluates its repairs again, and a repairing run needs a before-state;
+    - one run can check every record changed since a given revision;
+    - the surface-to-specialist map (config/surface_craft_map.yaml) is the one authority for
+      which specialist owns a file surface;
+    - HOLD_REASONS is the one hold-reason vocabulary;
+    - the protected-field family is the deterministic backstop for stages that must not
+      change fields they do not own,
+  And it links ADR-072 and the rule check's reference document rather than restating the
+    report format or the rule families' criteria.
+depends_on:
+  - ACD-2500a-5
+  - ACD-2500a-2-vi
+  - ACD-2500a-2-viii
+doc_links:
+  - path: docs/reference/requirement-rule-check.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: related
+    status: exists
+  - path: docs/architecture/adrs/ADR-073-requirement-rule-check.md
+    relationship: implements
+    status: planned
+assigned_agent: adr-author
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Documentation-only deliverable (one ADR plus its index line); link, frontmatter and length rules are enforced by the project's documentation checks at commit time."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Item 4 (gap G2; ticket 06's architect note asked for this ADR). Number pinned to ADR-073:
+  free on origin/main and every remote ref on 2026-10-16; ADR-070 is contested across
+  branches, do not use it. Filename above is a suggestion; the number is not. Input only,
+  outdated: the 436-line salvaged draft at
+  <session scratchpad>/salvage/ADR-069-requirement-rule-check-report-contract.md (the main
+  session holds the path). Documentation-only: no code changes.

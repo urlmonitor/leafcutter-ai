@@ -1,0 +1,47 @@
+id: ACD-2500c-2-ii
+components:
+  - ac_driven_dev
+  - testing_quality
+readiness: draft
+priority: high
+title: "The test-design stage's shared test support passes the type checker with no missing-annotation finding"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the project's type checker, run with the project's own settings over
+    unit_tests/ac_driven_dev/test_design_stage/_design_stage_support.py, reports a
+    var-annotated finding at line 101 (a variable whose element type it cannot infer),
+  When that variable is given its type,
+  Then the type checker reports no finding for that file,
+  And every test in unit_tests/ac_driven_dev/test_design_stage/ passes, with the same
+    number of tests collected as before the change.
+depends_on:
+  - ACD-2500c-2
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500c-2.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Type annotation on a test helper; the type checker run and the unchanged test-design-stage suite are the proof, and there is no new behaviour to test."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Item 8(c), second finding; introduced by EPIC-RightJobRightAgent ticket 31 (ACD-2500c-2).
+  The third finding (unit_tests/test_generate_ticket_from_ac.py:1176/1204/1212, caplog typed
+  as object instead of pytest.LogCaptureFixture) is older than the epic and has no honest
+  parent here; the BA recommends a plain ticket for it.

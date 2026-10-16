@@ -1,0 +1,62 @@
+id: ACD-200b-2
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "The documentation-trigger names are declared in one list that the schema, the record check and the rule check all read"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the five documentation-trigger names how-to, reference-doc, sequence-diagram,
+    state-diagram and component-diagram,
+  When an L1 record declares documentation_triggers [reference-doc, api-guide],
+  Then the store's schema check, the commit-time record check and the requirement rule check
+    each reject "api-guide" as an unknown trigger name and accept "reference-doc",
+  And the trigger names are declared in exactly one list, which the schema check and the
+    record check both read, and the rule check's single trigger-to-specialist map has
+    exactly one entry for each name in that list,
+  And given a sixth name "api-guide" is added to that one list and given a specialist in the
+    rule check's map, with no other edit,
+  When the same record is checked again,
+  Then all three checks accept "api-guide",
+  And given a name is in the list but has no entry in the map, or has a map entry but is not
+    in the list,
+  When the project's tests run,
+  Then a test fails naming that trigger name and the side it is missing from.
+depends_on:
+  - ACD-200b
+  - ACD-2500a-2-v
+doc_links:
+  - path: docs/reference/ac-schema.md
+    relationship: describes
+    status: exists
+    relevance: The documentation_triggers field and its value list.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500a-2-v.yaml
+    relationship: related
+    status: exists
+    relevance: The trigger-to-specialist expectations the rule check's map holds.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - schema
+risk_surface: contract_boundary
+notes: |
+  Item 6, user decision D2 (2026-10-16): the map stays in code, as built TRIGGER_SPECIALISTS
+  in scripts/ac_store/_rc_doc_triggers.py. The NAMES are duplicated today in
+  validate_ac_schema._DOC_TRIGGER_VALUES and in the schema enum; fold them into one list.
+  Which of the two survives as the one list (the schema enum is the natural single source
+  both validators already read) is the IT PO's call. "api-guide" is a fixture name.

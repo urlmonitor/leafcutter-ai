@@ -1,0 +1,41 @@
+id: ACD-300c-4-i
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Applying the same final-gate approval a second time changes nothing"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the final-gate approval of ACD-300c-4 has already been applied to ACD-9990a-1,
+    ACD-9990a-2 and ACD-9990a-4, so all three read readiness "approved" and priority "high",
+    and the run is resumed, or the approval is requested again for the same batch and priority,
+  When the workflow applies the approval again,
+  Then all 4 record files are byte-identical to what they were after the first application,
+  And none of the three approved records gains a second approval entry in amended_by,
+  And the closing summary states "3 approved, 1 held" again and states that the 3 were
+    already approved, rather than reporting a failure.
+depends_on:
+  - ACD-300c-4
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300c-4.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal

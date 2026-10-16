@@ -1,0 +1,80 @@
+id: ACD-2500a-2-vi
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: high
+title: "A field the test-design stage does not own, changed on a record that already existed, is reported and fails the stage"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the before-state of a test-design stage (the technical planner's committed output)
+    holds ACD-9990a-1 and ACD-9990a-2,
+    and during the stage ACD-9990a-1 gains a test design and its test-design authorship mark,
+      and its criteria text changes from "Then one row is written" to "Then two rows are written",
+    and ACD-9990a-2 gains file findings, fills its reference file path and clears its
+      "reference file pending" marker, and its assigned_agent changes from python-coder to
+      llm-expert and its expects_from contract text changes,
+    and ACD-9990a-3 is created during the stage and is absent from the before-state,
+  When the requirement rule check runs at the end of the test-design stage,
+  Then the rule family "protected fields" reports exactly three findings, each with
+    disposition "needs a decision": ACD-9990a-1 field criteria, ACD-9990a-2 field
+    assigned_agent and ACD-9990a-2 field expects_from, each naming the record's file, the
+    record id, the field and the stage,
+  And the finding for assigned_agent states the value before ("python-coder") and after
+    ("llm-expert"),
+  And no finding is raised for the test design, the authorship mark, the file findings, the
+    reference file path or the cleared marker,
+  And this family changes no record: every field it reports keeps the value the stage left,
+  And the stage's verdict is failed, so the stage is not reported complete,
+  And ACD-9990a-3 is listed as "not evaluated: new record" for this family,
+  And the protected fields are exactly: criteria, test_intent, assigned_agent,
+    implements_pattern, pattern_bindings, declared_files, covered_by, delivers_to,
+    expects_from, test_required, and every it_requirements key except reference_file_path,
+  And a covered_by entry that the rule check itself appends in the same run as a parent
+    back-link repair is not reported as a change made by the stage.
+depends_on:
+  - ACD-2500a-2
+  - ACD-2500c-2
+  - ACD-2500d-1
+doc_links:
+  - path: templates/agents/test-designer.md
+    relationship: describes
+    status: exists
+    relevance: Lines ~160-163 list the fields the test designer must not touch; the family's fixed list must equal it.
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Section 2 names "the rule check, run with --before-ref HEAD" as the deterministic
+      backstop for these fields; this family is that backstop. Its disjoint-field table
+      lists what the stage DOES own.
+  - path: docs/reference/requirement-rule-check.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message, line, detail}], disposition one of fixed / needs a decision / failed / not evaluated; any finding fails the stage verdict.'
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 2 of the EPIC-RightJobRightAgent follow-up. Placed as an L3 of ACD-2500a-2 (the
+  rule families) rather than a sixth L2 of ACD-2500a, which already holds 5 L2s (the
+  ac-tree-split cap). Report-only on purpose: unlike the readiness family, restoring a
+  protected field would silently throw away the stage's edit; a failing finding is enough
+  to stop the stage. The per-stage owner map, including what the planner's hand-back pass
+  may change, is ACD-2500a-2-vii.

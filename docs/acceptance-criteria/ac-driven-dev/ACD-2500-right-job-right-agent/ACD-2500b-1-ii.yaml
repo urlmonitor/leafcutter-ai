@@ -1,0 +1,48 @@
+id: ACD-2500b-1-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: high
+title: "The test-intent reader passes the type checker with no union-attribute finding"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the project's type checker, run with the project's own settings over
+    scripts/ac_store/_test_intent.py, reports a union-attr finding at lines 64-65 (an
+    attribute read on a value that can be None when a pattern does not match),
+  When the reader is changed so that the no-match case is handled before the attribute is read,
+  Then the type checker reports no finding for scripts/ac_store/_test_intent.py,
+  And for a criteria text whose outcome clauses are "Then one row is written" and "And the
+    count is 1", the reader returns the same clauses, in the same order, as before the change,
+  And a criteria text with no outcome clause gives the same result as before the change,
+    and raises no error.
+depends_on:
+  - ACD-2500b-1
+  - ACD-2500b-1-i
+doc_links:
+  - path: docs/reference/test-intent.md
+    relationship: describes
+    status: exists
+    relevance: The clause-matching rule the reader implements; behaviour must not change.
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: internal
+notes: |
+  Item 8(c), first finding; introduced by EPIC-RightJobRightAgent (tickets 20/21,
+  ACD-2500b-1 and ACD-2500b-1-i). Placed here as the nearest honest parent. The example
+  clause texts are illustrative; the existing test-intent tests are the regression proof.

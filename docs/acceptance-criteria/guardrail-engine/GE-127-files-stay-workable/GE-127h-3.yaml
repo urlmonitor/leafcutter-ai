@@ -1,0 +1,51 @@
+id: GE-127h-3
+components:
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "The published measurement rule says the decision-history block is left out and how its start and end are found"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the size standard refuses a file and states the measurement rule it applied,
+  When an author reads that stated rule,
+  Then it says that a decision-history block is not counted,
+  And it says that the block starts at a comment whose whole text is "DECISION HISTORY"
+    (together with a rule line of "=" characters directly above it, if there is one), and
+    ends at the first line that is not a comment line,
+  And it says that ordinary comments are still counted,
+  And an author who applies the stated rule by hand to the Python example of GE-127h-1
+    arrives at 80 lines.
+depends_on:
+  - GE-127h-1
+  - GE-127d-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Requires the published rule to be taken from the rule in force and to reproduce the
+      quoted length; this record states only WHAT the rule must now say. Do not restate GE-127d-2.
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Today the stated rule reads "discards content inside triple-quoted strings and block
+  comments; counts every remaining line, including blank lines and '#' comments."
+  (describe_measurement_rule, ~L346 of _file_size_ratchet.py). GE-127d-1's agreement check
+  compares every published place that states the rule, so this sentence and the reference
+  doc (GE-127h-4) must change together.

@@ -1,0 +1,65 @@
+id: ACD-2500a-2-vii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: high
+title: "Which protected fields a stage may change comes from one per-stage owner map; the planner's hand-back may change the assignment and the finding decision"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the before-state of the technical planner's hand-back pass (the pass after test
+    design in which the planner decides on file findings) holds ACD-9990a-1 and ACD-9990a-2,
+    and ACD-9990a-2 carries one file finding with verdict "describes, does not implement"
+    and no decision,
+    and in the hand-back pass ACD-9990a-2's assigned_agent changes from python-coder to
+    sql-coder and that finding's decision changes from none to the choice "reassign" by it-po,
+    and ACD-9990a-1's criteria text changes, and ACD-9990a-2's finding verdict changes to
+    "consistent",
+  When the requirement rule check runs at the end of the hand-back pass,
+  Then no finding is raised for ACD-9990a-2's assigned_agent or for the finding's decision,
+  And exactly two "protected fields" findings are raised: ACD-9990a-1 field criteria and
+    ACD-9990a-2 file-finding verdict, each naming the hand-back pass as the stage,
+  And the same assigned_agent change made during the test-design stage instead is reported,
+    as ACD-2500a-2-vi requires,
+  And which protected fields each stage may change is read from one owner map, so allowing
+    one more field for one stage is a single edit to that map and changes this family's
+    verdict on the next run with no other edit,
+  And a stage the owner map does not list (the product owner, business analyst and the
+    planner's first pass, which own these fields) is listed "not evaluated" for this family
+    and is not failed by it.
+depends_on:
+  - ACD-2500a-2-vi
+  - ACD-2500d-3-i
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500a-2-vi.yaml
+    relationship: related
+    status: exists
+    relevance: The family and the fixed protected-field list this record adds the owner map to.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: The planner's decision on a file finding (choice reassign / split / assignment stands, by it-po).
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message, line, detail}], disposition one of fixed / needs a decision / failed / not evaluated; any finding fails the stage verdict.'
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 2, the owner-map half. The request: "The IT PO hand-back may legitimately change
+  assigned_agent and the finding decision." The CLI's stage names today are po, ba, itpo,
+  test-design, approval; how the hand-back pass is named to the check is the IT PO's call.

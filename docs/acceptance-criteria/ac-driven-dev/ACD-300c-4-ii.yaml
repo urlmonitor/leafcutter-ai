@@ -1,0 +1,47 @@
+id: ACD-300c-4-ii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "An approval that cannot be written and read back is a failed run, never a reported success"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the final gate releases ACD-9990a-1 and ACD-9990a-2 for approval,
+    and ACD-9990a-2's file cannot be read back as a requirement record after the approval
+    is written to it (for example the write leaves a YAML syntax error at line 12),
+  When the workflow applies the approval,
+  Then the run is reported failed, not complete, and the failure names ACD-9990a-2, its file
+    and the reason it could not be read back,
+  And ACD-9990a-2's file is left as it was before the approval was attempted,
+  And the closing summary does not state that ACD-9990a-2 was approved,
+  And no commit is made that records the batch as approved.
+depends_on:
+  - ACD-300c-4
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300c-4.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: contract_boundary
+notes: |
+  The approval step already re-reads what it writes; this record makes the workflow honour
+  that result. Whether ACD-9990a-1 (written and read back cleanly) stays approved in the
+  failed run is left to the IT PO; the criteria only forbid reporting ACD-9990a-2 approved
+  and committing the batch as approved.

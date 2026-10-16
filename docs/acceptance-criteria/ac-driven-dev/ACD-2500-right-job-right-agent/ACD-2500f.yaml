@@ -38,7 +38,9 @@ origin_agent: product-owner
 created: 2026-10-16
 amended_by: []
 superseded_by: null
-covered_by: []
+covered_by:
+  - ACD-2500f-1
+  - ACD-2500f-2
 implemented_by: []
 documentation_triggers: []
 documentation_rationale: "Corrects declared values in existing agent profiles; the agent cards that show them are regenerated, and no new user-facing behaviour is introduced."

@@ -1,0 +1,42 @@
+id: ACD-300c-5-i
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "No /plan-feature message says \"Why why\""
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the three /plan-feature messages that today read "Why why" (a doubled word),
+  When each of those messages is produced,
+  Then it reads "Why" once, with the rest of the message unchanged character for character,
+  And no message the workflow can produce contains the words "Why why" in any letter case,
+  And the test that asserts one of these messages expects the corrected text, so the test
+    and the workflow agree on the same single "Why".
+depends_on:
+  - ACD-300c-5
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300c-5.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+notes: |
+  Item 8(a), second half. Sites: templates/workflows-js/plan-feature.js ~L1660, L1694, L1721,
+  and the expected message at unit_tests/test_final_gate_and_commit_message.py:508. Changes
+  words, not line counts, so the body does not grow.

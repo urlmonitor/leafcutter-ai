@@ -1,0 +1,58 @@
+id: ACD-300c-5
+components:
+  - ac_driven_dev
+readiness: draft
+priority: medium
+title: "Every final-gate message names the test-design stage that now owns the final gate"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the final gate of a /plan-feature run now follows the test-design stage, not the
+    technical planner's stage,
+  When the user is shown the final gate, cancels at the final gate, or the final commit fails,
+  Then the final gate's heading names the test-design stage as the stage it follows,
+  And the cancel message names the final gate as the test-design gate, as in
+    "final gate (test design)", and does not contain "IT-PO" or "IT PO v3",
+  And the commit-failure message names the stage "test-design", not "it-po",
+  And the messages for the product owner, business analyst and technical planner gates are
+    unchanged, character for character,
+  And the workflow body's measured length after the change is no greater than before it.
+depends_on:
+  - ACD-300c
+  - ACD-2500c-2
+doc_links:
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Consequences: "The final gate id stays final-gate but now belongs to test-design. The
+      final commit subject becomes plan-feature(TEST-DESIGN, final)."
+  - path: docs/reference/plan-feature-workflow-rationale.md
+    relationship: related
+    status: exists
+    relevance: Where moved rationale comments go if lines must be freed to keep the body from growing.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-300c-5-i
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+notes: |
+  Item 8(a). Stale sites named in the request, all in templates/workflows-js/plan-feature.js:
+  ~L3132 comment, L3173 "The final gate (IT PO v3 review)", L3212
+  buildCancelMessage(... "final gate (IT-PO)" ...), L3223-3224, and L3251
+  formatCommitError("it-po", ...). The file is over its size limit (GE-127b-1 growth
+  ratchet), hence the last clause. A test asserting the old cancel text, if any, changes in
+  the same commit. The "Why why" sites are ACD-300c-5-i.

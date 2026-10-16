@@ -1,0 +1,45 @@
+id: ACD-300c-4-iii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "A feature record in the final-gate batch is approved like its children, not skipped for having children"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the final-gate batch holds the feature record ACD-9990a (level L1) and its two
+    children ACD-9990a-1 and ACD-9990a-2, all at readiness "reviewed",
+    and the approval-hold report returns none of the three as held,
+  When the user chooses "approve" and the workflow applies the approval,
+  Then all three records read readiness "approved",
+  And ACD-9990a is approved once under its own id: it is not skipped because it has
+    children, and it gains exactly one approval entry in amended_by,
+  And the closing summary states "3 approved, 0 held".
+depends_on:
+  - ACD-300c-4
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300c-4.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - pipeline
+risk_surface: internal
+notes: |
+  Non-obvious edge: the approval step's goal mode promotes only reviewed LEAF children of a
+  goal (see its --help), so "approve the batch's top record as a goal" would leave the L1
+  itself at reviewed. Today's agent edit approves every record in the batch, L1s included.

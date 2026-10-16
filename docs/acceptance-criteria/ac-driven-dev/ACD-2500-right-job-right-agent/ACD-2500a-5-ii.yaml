@@ -1,0 +1,54 @@
+id: ACD-2500a-5-ii
+components:
+  - ac_driven_dev
+  - documentation_system
+readiness: draft
+priority: high
+title: "ADR-072 stops describing a backstop and an approval follow-up as missing once they exist"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given ADR-072 section 2 names "the rule check, run with --before-ref HEAD" as the
+    deterministic backstop for fields the test designer must not touch,
+    and its Consequences state that byte-identity of those fields is "not by a dedicated
+    rule family" and that "The M-5 bypass stays open",
+    and the protected-field family (ACD-2500a-2-vi) and approval through the store's one
+    approval step (ACD-300c-4) are both done,
+  When ADR-072 is amended,
+  Then section 2's backstop sentence names the protected-field rule family,
+  And each of the two Consequences bullets carries a dated amendment note naming the record
+    that closed it, ACD-2500a-2-vi and ACD-300c-4 respectively,
+  And the original sentences stay readable beneath the notes,
+  And ADR-072's status and its decisions are otherwise unchanged, and it links ADR-073.
+depends_on:
+  - ACD-2500a-5
+  - ACD-2500a-5-i
+  - ACD-2500a-2-vi
+  - ACD-300c-4
+doc_links:
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: describes
+    status: exists
+assigned_agent: adr-author
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Documentation-only amendment of an existing ADR; checked by the project's documentation checks at commit time."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Items 2 and 1: the request asks to "correct that wording once it does [exist]" for the
+  section 2 backstop, and records the approval bypass as ADR-072's open follow-up. Build
+  this last in the epic, after both named records are done.

@@ -1,0 +1,78 @@
+id: ACD-300c-4
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "Final-gate approval is applied by the store's one approval step, to exactly the records the hold report releases"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the final gate of a /plan-feature run presents a batch of 4 records, ACD-9990a-1,
+    ACD-9990a-2, ACD-9990a-3 and ACD-9990a-4, all at readiness "reviewed",
+    and the approval-hold report for that batch returns ACD-9990a-3 as held with the reason
+    "file finding undecided" and the other three as not held,
+    and the user chooses "approve" with priority "high",
+  When the workflow applies the approval,
+  Then ACD-9990a-1, ACD-9990a-2 and ACD-9990a-4 read readiness "approved" and priority "high",
+  And ACD-9990a-3 still reads readiness "reviewed", and its priority is the value it had before,
+  And each of the three approved records has gained exactly one new amended_by entry, at the
+    end of its list, recording the approval and the date, and every amended_by entry it held
+    before is byte-identical to before,
+  And every other field of all 4 records is byte-identical to before,
+  And the approval is made by the store's one approval step -- the same step a person runs by
+    hand to approve records -- given exactly the ids ACD-9990a-1, ACD-9990a-2 and ACD-9990a-4,
+    as a deterministic workflow step, so no agent edits any record's readiness or priority
+    during approval,
+  And the run's closing summary states "3 approved, 1 held" and names ACD-9990a-3 with the
+    reason "file finding undecided".
+depends_on:
+  - ACD-300c
+  - ACD-2500d-3-i
+doc_links:
+  - path: docs/architecture/adrs/ADR-072-code-aware-test-designer-may-read-source.md
+    relationship: related
+    status: exists
+    relevance: >-
+      Section 6 says apply-approval MUST receive only the ids the hold report returns as not
+      held; the Consequences bullet "The M-5 bypass stays open" is the gap this record closes.
+  - path: docs/reference/ac-readiness-and-assignment-gates.md
+    relationship: describes
+    status: exists
+    relevance: The hold reasons and the approval gate the approval step applies.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500d-3-i.yaml
+    relationship: related
+    status: exists
+    relevance: Defines the "file finding undecided" hold used in the example; do not restate it.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - ACD-300c-4-i
+  - ACD-300c-4-ii
+  - ACD-300c-4-iii
+  - ACD-300c-4-iv
+implemented_by: []
+change_target:
+  - pipeline
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 1 of the EPIC-RightJobRightAgent follow-up (2026-10-16). Today the final
+  apply-approval step in templates/workflows-js/plan-feature.js (~L3235-3244) is a
+  status-checker agent told to edit YAML; it bypasses scripts/ac_store/approve_acs.py and
+  so skips its append-only amended_by entry, its write-then-reparse check and its
+  idempotent no-op. For the IT PO: approve_acs.py today accepts only --goal or a single
+  --ac and has no priority option (see its --help), so either the step gains an id-list and
+  a priority option, or priority is written by a second deterministic step; the criteria
+  only require that no agent edit does it. plan-feature.js is over its size limit and must
+  not grow (GE-127b-1).

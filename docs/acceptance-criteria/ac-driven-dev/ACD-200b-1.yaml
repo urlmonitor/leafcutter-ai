@@ -19,8 +19,8 @@ criteria: |
   And it instructs the IT PO that when that check reports a documentation trigger with no
     matching documentation AC, the IT PO adds the missing documentation AC for the named
     specialist before any AC in the batch is set to readiness: reviewed,
-  And the trigger-to-specialist mapping it relies on is the five-entry one read from the single
-    config source named in ACD-2500a-2:
+  And the trigger-to-specialist mapping it relies on is the five-entry one held in the rule
+    check's single map (the map ACD-2500a-2-v's check reads), not a copy in the template:
     - how-to -> documentation-expert
     - reference-doc -> documentation-expert
     - sequence-diagram -> architecture-diagram-author
@@ -54,6 +54,9 @@ amended_by:
     date: '2026-09-25'
     by: it-po
     directed_by: user
+  - reason: "amend (user decision D2, 2026-10-16): one criteria clause reworded -- the five-entry trigger-to-specialist mapping is 'held in the rule check's single map (the map ACD-2500a-2-v's check reads)', replacing 'read from the single config source named in ACD-2500a-2'. As built, that map lives in code (the rule check's documentation-trigger family), not in a config file; D2 keeps it there. The five entries, every other clause, title, readiness and work_status are unchanged. The duplicated trigger NAMES are folded into one list by the new sibling ACD-200b-2. it_requirements line 2 still says 'single config source named in ACD-2500a-2' and is the IT PO's to align."
+    date: '2026-10-16'
+    by: business-analyst
 superseded_by: null
 covered_by: []
 implemented_by: []

@@ -1,0 +1,68 @@
+id: GE-127h-1
+components:
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "A file's decision-history block is left out of its measured length, in every covered language, and nothing else changes"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a Python file that measures 80 lines under the measurement rule in force before this
+    change, made of code, ordinary "#" comments and blank lines,
+    followed by a decision-history block of 25 comment lines: a rule line of "=" characters,
+    the heading "# DECISION HISTORY", a second rule line, and 22 entry lines each starting
+    "# - " or "#   ",
+    and a JavaScript file that measures 120 lines before this change, whose header carries a
+    decision-history block of 15 "//" comment lines (the heading "// DECISION HISTORY" with
+    no rule lines, then 14 entry lines),
+  When the length of each file is measured,
+  Then the Python file measures 80 and the JavaScript file measures 120,
+  And the same holds for the line-comment form of every other language the standard covers
+    (for example "-- DECISION HISTORY" in SQL and "# DECISION HISTORY" in shell),
+  And every line outside the block is measured exactly as it was before this change,
+    including ordinary comments, docstrings, JSDoc and blank lines,
+  And a file with no decision-history block measures the same length as before this change,
+  And a decision-history block that sits inside text the rule in force already leaves out (a
+    module docstring or a block comment) is not subtracted a second time, so that file
+    measures what it measured before this change.
+depends_on:
+  - GE-127h
+  - GE-127c
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/doc-enforcer/SKILL.md
+    relationship: related
+    status: exists
+    relevance: Section 3 and 8 define the decision-history block's heading, underline and entry form per language.
+assigned_agent: python-coder
+estimated_complexity: M
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by:
+  - GE-127h-1-i
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 7, user decision D1. Measured by the BA on 2026-10-16 with the rule in force
+  (_file_size_ratchet.count_content_lines): it ALREADY discards triple-quoted strings and
+  block comments and counts every other line, including "#" and "//" comments. So a history
+  block inside a module docstring or a /* */ header is already free today, and the history
+  block in its doc-enforcer form (line comments, usually at the end of the file) is counted.
+  This record therefore removes the line-comment history block only and keeps every other
+  part of the rule "as before", as GE-127h says. See the open question in the BA report on
+  D1's wording "docstrings and JSDoc still count". Forms found in scripts/ and templates/ on
+  2026-10-16: about 245 "# DECISION HISTORY" line-comment headings, of which ~160 have "="
+  rule lines above and below, ~50 have none and ~36 only below; one "// DECISION HISTORY" in
+  JavaScript. The block definition therefore must not require a rule line.

@@ -1,0 +1,54 @@
+id: GE-127h-2
+components:
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "Adding decision-history entries never pushes a file over its limit or blocks a change to an oversized file"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a JavaScript workflow body that measures 1,400 lines against a permitted length of
+    1,000 before the change,
+  When a change that only appends 3 entry lines to its decision-history block is committed,
+  Then the commit completes, and the file's measured length before and after is 1,400,
+  And when a change appends the same 3 history entry lines and also adds 1 code line,
+  Then the commit does not complete, and the outcome states a length before of 1,400 and a
+    length after of 1,401,
+  And given a Python file that measures 399 lines against a permitted length of 400,
+  When a change appends 20 entry lines to its decision-history block and nothing else,
+  Then the commit completes, and the file is not reported as having crossed its limit.
+depends_on:
+  - GE-127h-1
+  - GE-127b-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: related
+    status: exists
+    relevance: The growth ratchet whose verdicts this record pins for history-only changes; do not restate it.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20260923-ratchet-has-no-escape-for-unsplittable-files.md
+    relationship: related
+    status: exists
+    relevance: The user's position recorded there; history-only changes to over-limit workflow bodies were refused.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  The user-visible outcome of GE-127h ("never pushes a file over its permitted length or
+  blocks a change"), stated against both ratchet paths: growth on an already-oversized file
+  (GE-127b-1) and crossing the limit (GE-127a-1). The before-length must be measured with the
+  same rule as the after-length, so a history block present before the change is not
+  counted on either side.

@@ -1,0 +1,52 @@
+id: ACD-300c-4-iv
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: medium
+title: "The scripted authoring workflow approves only through the approval step and only what the hold report releases"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the scripted AC-authoring workflow (the Python driver that dispatches the product
+    owner, business analyst and technical planner) reaches its approval with the records
+    ACD-9990a-1 and ACD-9990a-2,
+    and the approval-hold report returns ACD-9990a-2 as held with the reason
+    "test design pending",
+  When that workflow approves,
+  Then ACD-9990a-1 reads readiness "approved" and has gained one approval entry in amended_by,
+  And ACD-9990a-2 still reads readiness "reviewed",
+  And the value "approved" reaches a record's readiness only through the store's one
+    approval step, so this workflow writes no readiness value of its own,
+  And its result lists ACD-9990a-2 as held with the reason "test design pending".
+depends_on:
+  - ACD-300c-4
+doc_links:
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-300c-4.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-1405.yaml
+    relationship: related
+    status: exists
+    relevance: Names the scripted authoring workflow and the agents it dispatches.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 1, second half: create_ac_workflow.py:209-215 writes approved without consulting the
+  approval-hold report. "test design pending" is the example hold reason; the IT PO should
+  confirm the exact HOLD_REASONS spelling (any reason from the closed vocabulary works).

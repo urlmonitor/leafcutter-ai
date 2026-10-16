@@ -1,0 +1,48 @@
+id: ACD-2500f-2
+components:
+  - ac_driven_dev
+  - llm_authoring
+readiness: draft
+priority: medium
+title: "Guidance for choosing an agent's produces value no longer maps requirement-writing roles to analysis"
+component: ac-driven-dev
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the prompt-engineering agent's guidance for inferring an agent's produces value maps
+    "role: planning" to "analysis",
+  When an agent author follows that guidance for business-analyst (a planning agent that
+    writes requirement records) and for architect-review (a planning agent that writes none),
+  Then for business-analyst the guidance leads to "requirement_records", not "analysis",
+  And for architect-review it leads to the same value it leads to today,
+  And the guidance names writing requirement records as the signal for "requirement_records",
+    ranked above the role signal, so a planning role alone never decides it,
+  And no other agent template or skill in the package maps a requirement-writing role to
+    "analysis".
+depends_on:
+  - ACD-2500f
+  - ACD-2500f-1
+doc_links:
+  - path: templates/agents/llm-expert.md
+    relationship: describes
+    status: exists
+    relevance: Section P1 inference signals table, ~line 265.
+assigned_agent: llm-expert
+estimated_complexity: XS
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - prompt
+risk_surface: internal
+notes: |
+  Item 5, "stale mentions": templates/agents/llm-expert.md:265 maps role planning to
+  analysis. The last clause asks for a package-wide search, not only that line.

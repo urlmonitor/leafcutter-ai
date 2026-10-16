@@ -1,0 +1,65 @@
+id: ACD-2500a-2-viii
+components:
+  - ac_driven_dev
+  - ac_store
+readiness: draft
+priority: high
+title: "A rule-check run given no before-state repairs nothing and says which families it could not evaluate"
+component: ac-driven-dev
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a feature folder holds 3 records at readiness "approved" and work_status "done",
+    and a fourth record ACD-9990a-4 whose parent ACD-9990a lacks the back-link to it,
+  When the requirement rule check is run by hand on that folder with neither a before-state
+    revision nor a before-state snapshot,
+  Then no record file in the folder is changed: all 3 records still read readiness
+    "approved", and ACD-9990a's covered_by is unchanged,
+  And the readiness family and the protected-field family list every record as
+    "not evaluated: no before-state",
+  And the missing back-link is still reported, with disposition "needs a decision" and the
+    id that would have been added, instead of "fixed",
+  And the report states, before any finding, that no before-state was given and that the
+    run therefore repaired nothing,
+  And the same folder checked with a before-state taken from the last commit repairs the
+    back-link ("fixed") and leaves the 3 approved records approved.
+depends_on:
+  - ACD-2500a-2
+  - ACD-2500a-2-iv
+doc_links:
+  - path: docs/known-issues/ac-store/open-low-ki-acs-20261015-rule-check-without-before-state-demotes-approved.md
+    relationship: related
+    status: exists
+    relevance: >-
+      The defect: a hand run without --before-ref or --before-snapshot rewrote readiness
+      approved to draft in 46 done records. The fix direction is no repair without a
+      before-state.
+  - path: docs/acceptance-criteria/ac-driven-dev/ACD-2500-right-job-right-agent/ACD-2500a-2-iv.yaml
+    relationship: related
+    status: exists
+    relevance: The readiness repair that misfires when every record looks newly created.
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from:
+  ac_id: ACD-2500a-1
+  contract: 'Requirement rule-check report: findings [{file, record_id, rule_family, disposition, message, line, detail}], disposition one of fixed / needs a decision / failed / not evaluated.'
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Item 9 (KI-ACS-20261015). BA reading of "no repair without a before-state": a run with no
+  before-state writes no file at all, so the reference doc's sentence "a repairing run needs
+  a before-state" (ACD-2500a-5-iii) is literally true; the before-state-free families still
+  report what they would have repaired. /plan-feature always passes a before-state, so its
+  stage gates are unaffected. If the user prefers that only the before-state-dependent
+  families stop repairing (back-links still fixed on a hand run), clauses 1 and 3 change.

@@ -9,7 +9,7 @@ component: ac-driven-dev
 level: L2
 status: active
 req_status: draft
-work_status: done
+work_status: in_progress
 criteria: |
   Given a set of requirement records produced by an authoring stage,
   When the requirement rule check runs,
@@ -123,6 +123,9 @@ covered_by:
   - ACD-2500a-2-iii
   - ACD-2500a-2-iv
   - ACD-2500a-2-v
+  - ACD-2500a-2-vi
+  - ACD-2500a-2-vii
+  - ACD-2500a-2-viii
 implemented_by:
 - tickets/00_inbox/epics/EPIC-RightJobRightAgent/09_TICKET-20261012-ACD-2500a-2.md
 change_target: code

@@ -1,0 +1,52 @@
+id: GE-127h-1-i
+components:
+  - commit_guardian
+readiness: draft
+priority: medium
+title: "Only a real decision-history block is left out: a mention of the words, or code after the block, still counts"
+component: guardrail-engine
+level: L3
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given a Python file containing, in this order:
+    the comment "# see DECISION HISTORY below for why", a sentence that mentions the words,
+    the code line LABEL = "DECISION HISTORY",
+    a decision-history block of 6 comment lines (the heading "# DECISION HISTORY", a rule line
+    of "=" characters, 4 entry lines),
+    and then the code line x = 1 directly after the block,
+  When its length is measured,
+  Then the comment line and the LABEL line are counted,
+  And the 6 block lines are not counted,
+  And x = 1 is counted, because the block ends at the first line that is not a comment line,
+  And only a comment whose whole text is "DECISION HISTORY" starts a block, so the comment
+    "# DECISION HISTORY notes are below" starts none and it and the comments after it are
+    counted,
+  And a rule line of "=" characters directly above the heading belongs to the block and is
+    not counted, while one separated from the heading by any other line is counted,
+  And a file whose whole content is one decision-history block measures 0, and is not
+    refused as an empty or unreadable file.
+depends_on:
+  - GE-127h-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h-1.yaml
+    relationship: parent
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  Boundaries that keep D1 narrow: the exclusion must not become a way to hide ordinary
+  comments or code by putting the words DECISION HISTORY near them.

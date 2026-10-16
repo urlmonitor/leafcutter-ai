@@ -1,0 +1,53 @@
+id: GE-127h-4
+components:
+  - commit_guardian
+  - documentation_system
+readiness: draft
+priority: medium
+title: "Reference doc: how a source file's length is measured, including the decision-history exclusion"
+component: guardrail-engine
+level: L2
+status: active
+req_status: draft
+work_status: todo
+roadmap_phase: phase_1
+criteria: |
+  Given the measurement rule after GE-127h-1 and GE-127h-3,
+  When the size standard's reference documentation for source files is written or updated,
+  Then it states the rule in the same words the standard publishes, and names what is left
+    out: decision-history blocks, and the text the rule already left out before,
+  And it shows one Python and one JavaScript example with the raw line count and the
+    measured length side by side,
+  And it states that a decision-history block costs no measured lines, so moving a file's
+    decision history into another file or document frees no measured lines,
+  And it links GE-127h and the decision-history convention in the doc-enforcer skill rather
+    than restating that convention.
+depends_on:
+  - GE-127h-1
+  - GE-127h-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127h.yaml
+    relationship: parent
+    status: exists
+  - path: templates/skills/doc-enforcer/SKILL.md
+    relationship: related
+    status: exists
+assigned_agent: documentation-expert
+estimated_complexity: S
+delivers_to: null
+expects_from: null
+test_required: false
+test_rationale: "Documentation-only deliverable; agreement between the published rule and this doc is enforced by GE-127d-1's check, and links and frontmatter by the documentation checks at commit time."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - docs
+risk_surface: internal
+notes: |
+  Answers GE-127h's reference-doc trigger. No source-file size reference exists under
+  docs/reference/ today (document-length-standard.md covers docs/**/*.md only); the author
+  chooses whether to add a sibling page or a section, within docs/reference/.
