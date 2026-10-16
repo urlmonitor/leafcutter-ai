@@ -50,7 +50,7 @@ _TEST_ROOTS = [
 # /tmp/count_untagged_done_acs.py reports 248 because it does not strip
 # quotes from `id: "GE-114-1"`-style YAML values, so 4 quoted ids are
 # spuriously treated as distinct from their bare-token `# covers:` tags.
-HIGH_WATER_MARK = 244
+HIGH_WATER_MARK = 241
 
 _WORK_STATUS_DONE_RE = re.compile(r"^work_status:\s*done\s*$", re.M)
 # A superseded AC (status superseded_by / superseded) has no current behaviour
