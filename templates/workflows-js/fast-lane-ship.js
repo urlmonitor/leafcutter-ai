@@ -666,7 +666,7 @@ function classifyStepReply(reply, meta) {
       kind: "declined",
       reason: texts.length
         ? "No readable command result was returned (no exit_status): " + texts.join(" | ")
-        : "No readable command result was returned for this step: no exit_status was reported.",
+        : "No readable command result was returned for this step: no exit_status was reported. Received: " + JSON.stringify(reply),
     };
   }
   if (isObject) {
@@ -813,7 +813,6 @@ const selectConnectedInvocation =
   `python ${gateScript} select_connected --ac ${targetAc} --ac-root ${acStoreRoot} ` +
   `--exclude-structural-parent`;
 
-// Derived from the command actually composed above, never asserted independently.
 // What the run REPORTS about its own scope must be read off what the run DID:
 // a hardcoded `true` here would keep telling the operator the exclusion was in
 // force after a partial revert removed the flag 60 lines up, and the one test

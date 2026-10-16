@@ -672,6 +672,7 @@
         "templates/scripts/worktree_layout.py",
         "templates/scripts/worktree_paths.py",
         "templates/scripts/worktree_readiness.py",
+        "templates/scripts/worktree_log_root.py",
         "templates/scripts/worktree_remove.py",
         "templates/scripts/worktree_ensure_state.py",
         "templates/scripts/worktree_migrate.py"

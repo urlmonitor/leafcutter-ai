@@ -37,8 +37,10 @@ criteria: |
     by the same check without anyone editing a list,
   And when an agent asked to run a shell command declines, answers in prose, or
     answers without a result, the workflow ends with an error that quotes the
-    answer received, and no later step of that workflow is dispatched -- a
-    refusal is never taken as the step having run.
+    answer received -- or, where a more specific rule classifies that refusal
+    (BO-2400f-5-iii's declined step in the fast lane), with that rule's halt,
+    which also quotes the answer -- and no later step of that workflow is
+    dispatched; a refusal is never taken as the step having run.
 depends_on:
 - BO-4300a-1
 doc_links:
@@ -241,6 +243,14 @@ amended_by:
     in one shared place). Added a runtime harness test for a refused non-workspace shell step, and the
     lint tests' report now names workflow, step, agent and command, with no-permission counting as not
     permitted. readiness stays reviewed.
+- reason: defer-to-declined-step-rule
+  by: human:user
+  at: 2026-10-16
+  note: >-
+    Last clause amended after merging main (83db3c9ba): the fast lane's resolve step keeps
+    BO-2400f-5-iii's declined-step halt, which must also quote the answer; other shell
+    steps still end with a quoting error. Kernel decision dec-53b45488fdc621d9, approved
+    by the user 2026-10-16; implemented by ticket 17.
 superseded_by: null
 covered_by:
 - unit_tests/build_orchestration/test_bo_4300a_1_ia.py

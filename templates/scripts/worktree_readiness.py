@@ -35,6 +35,7 @@ from typing import Any
 
 import worktree_answer as wa
 import worktree_git as wg
+import worktree_log_root as wlr
 from worktree_canaries import (  # noqa: F401  (hooks_dir/install_dir re-exported for callers)
     declared_stages, hooks_dir, install_dir, install_shims, run_canaries,
 )
@@ -61,11 +62,12 @@ def run_install_build(workspace: Path, config_path: Path) -> dict[str, Any]:
         return {"ok": False, "code": "BOOTSTRAP_FAILED", "excerpt": "scripts/build.py is absent"}
     if not config_path.is_file():
         return {"ok": False, "code": "NO_CONFIG", "excerpt": ""}
-    env = {**os.environ, "LEAFCUTTER_SHIM_STRATEGY": "copy"}
     try:
-        proc = subprocess.run(
+        proc = wlr.build_with_inherited_log_root(
             [sys.executable, str(build_script), "--target-dir", str(workspace), "--config-path", str(config_path)],
-            cwd=str(workspace), capture_output=True, text=True, timeout=300, check=False, env=env,
+            Path(__file__).resolve().parents[1],
+            cwd=str(workspace), capture_output=True, text=True, timeout=300, check=False,
+            env={**os.environ, "LEAFCUTTER_SHIM_STRATEGY": "copy"},
         )
     except (OSError, subprocess.SubprocessError) as exc:
         _log.warning("run_install_build: failed to launch %s: %s", build_script, exc)
@@ -121,8 +123,7 @@ def restore_build_changes(workspace: Path, before: dict[str, str]) -> tuple[list
     for start in range(0, len(build_made), 100):
         wg.run_git(["checkout", "HEAD", "--", *build_made[start:start + 100]], workspace)
     still = set(tracked_changes(workspace))
-    leftover = [p for p in build_made if p in still]
-    return [p for p in build_made if p not in still], sorted(set(unrestorable + leftover))
+    return [p for p in build_made if p not in still], sorted(set(unrestorable) | (set(build_made) & still))
 
 
 def _git(workspace: Path, *args: str) -> subprocess.CompletedProcess:
@@ -214,8 +215,7 @@ def prove_ready(workspace: Path, hub: str, *, kind: str, branch: str, project_ro
         boot["failure_excerpt"] = build["excerpt"]
         return wa.error_answer(build["code"], "The install build failed inside the new workspace; it is not ready.",
                                bootstrap=boot, checks={"build_ok": False})
-    restored, leftover = restore_build_changes(workspace, before)
-    boot["restored_tracked"] = restored
+    boot["restored_tracked"], leftover = restore_build_changes(workspace, before)
     if leftover:
         return wa.error_answer("BOOTSTRAP_DIRTIED_TRACKED",
                                "The install build changed version-controlled files that could not be restored: "
@@ -273,4 +273,5 @@ def stored_checks(computed: dict[str, Any], marker: dict[str, Any]) -> dict[str,
 # - 2026-10-09 12:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/05)
 #   Split for the file-size limit: the canary-proving group moved to
 #   worktree_canaries.py and is imported here by name. No behaviour change. (ADR-018)
+# - 2026-10-16 20:00 [python-coder/EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17]: (#EPIC-EveryPieceOfSeparateWorkGetsItsWorkspace/17) run_install_build passes the project's durable log root via worktree_log_root (INF-500d-4-iii). (ADR-018)
 # ===========================================================================

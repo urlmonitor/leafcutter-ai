@@ -580,10 +580,9 @@ older than INF-500d-4-iii has no `--print-location` and prints nothing.
   directly under an absolute `operational_log_root`. A `--no-log-root` build records an empty
   declaration, so it lands here too. Writers refuse rather than write into the worktree.
   `submit_feedback.py` prints `destination could not be written`, exits 1, and agents record
-  `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: rebuild. The former
-  worktree bootstrap (`setup_ticket_worktree.py`, deleted by BO-4300) passed the main install's
-  recorded root as `--log-root`; the workspace maker's install build does not yet (pending
-  follow-up). A bare `build.py --target-dir <worktree>` without `--log-root` declares the
+  `(submit-failed)`. `emit_event.py` warns and drops the event. Fix: ask the workspace maker to (re)build the workspace, see
+  docs/how-to/get-a-workspace.md. The maker passes the project install's recorded root as
+  `--log-root` (or `--no-log-root` with a warning). A bare `build.py --target-dir <worktree>` without `--log-root` declares the
   worktree's own, disposable root.
 - **The enduring root is gone** (the project was moved or deleted after the build). Writers
   refuse as stale and create nothing. Fix: rebuild at the install's current location.
