@@ -63,6 +63,7 @@ covered_by:
   - ACD-2500c
   - ACD-2500d
   - ACD-2500e
+  - ACD-2500f
 implemented_by: []
 change_target:
   - prompt

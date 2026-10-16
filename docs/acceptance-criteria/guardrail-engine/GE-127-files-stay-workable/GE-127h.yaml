@@ -1,0 +1,63 @@
+id: GE-127h
+components:
+  - commit_guardian
+title: "Recording why a file changed never counts against its size"
+component: guardrail-engine
+level: L1
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  The history of decisions a file carries is free; the code and prose still count.
+
+  A file's written record of why it was changed the way it was is there to be read
+  only when someone needs it, so keeping that record honest never pushes a file over
+  its permitted length or blocks a change. Everything a person reads to work in the
+  file, including its ordinary comments and descriptions, is still measured as before,
+  and the published rule says exactly what is left out.
+depends_on:
+  - GE-127
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      THE PUBLISHED-RULE PROMISE THIS CHANGE MUST KEEP. GE-127d (done) already requires
+      that the quoted length follows a published rule an author can apply themselves,
+      and that a file with uncounted content says which quantity was stated. This L1
+      changes WHAT the rule leaves out; it must not reopen HOW that is published or
+      quoted. Do not restate GE-127d's criteria in this subtree.
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127c.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Every language the standard covers is held to the same rule, so the exclusion
+      applies to the equivalent history block in every covered language (the user named
+      Python module headers and JavaScript file headers), not to one language only.
+assigned_agent: null
+delivers_to: null
+expects_from: null
+origin_agent: product-owner
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+documentation_triggers:
+  - reference-doc
+change_target:
+  - code
+risk_surface: contract_boundary
+notes: |
+  USER DECISION D1 (2026-10-16), the boundary of this L1: ONLY the decision-history
+  block is left out of the measurement, plus the equivalent history block in
+  JavaScript file headers. Ordinary comments, docstrings and JSDoc still count. Any
+  wider exclusion (all comments, all docstrings) is out of scope and would weaken the
+  standard GE-127 exists to hold. Recorded earlier as the user's position in
+  KI-CG-20260923.

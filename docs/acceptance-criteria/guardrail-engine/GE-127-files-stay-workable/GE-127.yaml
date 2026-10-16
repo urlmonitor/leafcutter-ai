@@ -109,6 +109,7 @@ covered_by:
   - GE-127e
   - GE-127f
   - GE-127g
+  - GE-127h
 implemented_by: []
 change_target: code
 risk_surface: contract_boundary
