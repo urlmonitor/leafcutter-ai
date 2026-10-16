@@ -153,7 +153,8 @@ amended_by:
 superseded_by: null
 covered_by:
   - INF-700b-2-i
-implemented_by: []
+implemented_by:
+- tickets/00_inbox/epics/EPIC-ALearningAnAgentHasTodayActuallyGets/04_TICKET-20261016-INF-700b-2.md
 notes: |
   Evidence this exists to close (verified 2026-08-26): scripts/check_skill_refs.py
   is written, has unit tests, and appears in no CI workflow, no pre-commit
@@ -168,3 +169,4 @@ notes: |
   registered and never reached, which is the exact defect being closed.
 change_target: pipeline
 risk_surface: contract_boundary
+target_epic: EPIC-ALearningAnAgentHasTodayActuallyGets
