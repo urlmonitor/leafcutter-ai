@@ -264,7 +264,9 @@ task, then pull only those files.
 | workflow authoring contract | [docs/reference/workflow-authoring-contract.md](reference/workflow-authoring-contract.md) | Copy-paste reference for workflow script authors covering the E2 canonical execution contract, E1-wrap shim pattern, primitive mapping table, and non-transparent edge handling conventions. |
 | workflow constraints | [docs/reference/workflow-constraints.md](reference/workflow-constraints.md) | Reference: Claude Code Workflow Script Constraints |
 | workspace maker answers and codes | [docs/reference/workspace-maker-answers-and-codes.md](reference/workspace-maker-answers-and-codes.md) | JSON answer shape, status and refusal codes, and exit codes of the one workspace maker (worktree.py); consult it when parsing the maker's answer or handling a refusal. |
+| workspace maker deploy | [docs/reference/workspace-maker-deploy.md](reference/workspace-maker-deploy.md) | The WORKSPACE_MAKER_SCRIPTS deploy entries and their deployed paths for the one workspace maker (worktree.py); consult it when the maker or a module it imports is missing from a deployed install. |
 | workspace maker interface | [docs/reference/workspace-maker-interface.md](reference/workspace-maker-interface.md) | Verbs, flags, JSON answer shape, marker file fields, status codes, exit codes, readiness checks and deploy entry of the one workspace maker (worktree.py); consult it when calling the maker or parsing its answer. |
+| workspace maker naming | [docs/reference/workspace-maker-naming.md](reference/workspace-maker-naming.md) | Branch and folder naming per kind, slug normalisation rules and the epic spellings that name one workspace, for the one workspace maker (worktree.py); consult it when predicting the branch or folder a slug produces. |
 
 ## Explanation
 

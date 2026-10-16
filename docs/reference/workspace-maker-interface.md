@@ -4,12 +4,14 @@ description: "Verbs, flags, JSON answer shape, marker file fields, status codes,
 type: reference
 status: active
 created: 2026-10-14
-last_updated: 2026-10-14
+last_updated: 2026-10-16
 components:
   - worktree_manager
   - build_orchestration
 related_docs:
   - docs/reference/workspace-maker-answers-and-codes.md
+  - docs/reference/workspace-maker-naming.md
+  - docs/reference/workspace-maker-deploy.md
   - docs/architecture/adrs/ADR-070-single-workspace-maker-and-resolver.md
   - docs/architecture/components/worktree-manager.md
 ---
@@ -123,52 +125,9 @@ No flags. Answers with `maker_path`, the real path of `worktree.py`.
 
 ## Work Identity and Naming
 
-Source: `workspace_core.py` (`_PREFIX`, `_ALIASES`, `_WORD_FOLDED`, `_CAMEL_BOUNDARY`, `normalize_slug`, `branch_for`, `dirname_for`, `make_plan`).
-
-| Kind | Branch | Landing folder name for slug `S` |
-|---|---|---|
-| `ticket` | `ticket/S` | `ticket-S` |
-| `feature` | `feature/S` | `feature-S` |
-| `ac` | `ac/S` | `ac-S` |
-| `fastlane` | `fastlane/S` | `fastlane-S` |
-| `epic` | `EPIC-S` | `EPIC-S` |
-| `scratch` | none (detached at base) | `scratch-S` |
-
-| Normalisation rule | Behaviour |
-|---|---|
-| Alias strip | For kind `epic`, a leading `EPIC-` or `epic/` (case-insensitive) is removed. Each alias is tried in turn. |
-| Word folding | For kind `epic` only, a hyphen is inserted at each lower-case-or-digit to upper-case boundary, then the whole slug is lower-cased. Other kinds keep their case. |
-| Character class | Runs of characters outside `A-Za-z0-9._-` become `-`. |
-| Dots | Runs of two or more `.` collapse to one; leading and trailing `-` and `.` are trimmed. |
-| `.lock` suffix | A trailing `.lock` is removed. |
-| Empty result | `USAGE`. |
+> See [workspace-maker-naming.md](workspace-maker-naming.md) for the branch and folder per kind, the slug normalisation rules, and the epic spellings that name one workspace (BO-4300a-2).
 
 The workspace path is `<project parent>/worktrees/<folder name>`.
-
-### Epic spellings that name one workspace (BO-4300a-2)
-
-Every spelling in the first column normalises to the slug in the second, so `ensure`, `locate` and `list` resolve all of them to one workspace (`EPIC-files-stay-workable`) and one branch of the same name.
-
-| Spelling a route uses | Used by | Normalised slug |
-|---|---|---|
-| `EPIC-FilesStayWorkable` | feature skill epic route | `files-stay-workable` |
-| `epic/files-stay-workable` | build-feature route | `files-stay-workable` |
-| `Files Stay Workable` | the epic's display title | `files-stay-workable` |
-| `FilesStayPortable` | a different epic | `files-stay-portable` |
-
-Matching is on the whole normalised slug. It is never a prefix or substring match, so `Files Stay` does not select `Files Stay Workable`. A repeat request for an existing identity answers ok with the existing `workspace_path`. It creates no second workspace or branch and moves no commit on the existing branch.
-
-```mermaid
-flowchart LR
-    A["EPIC-FilesStayWorkable"] --> N["normalize_slug(epic)"]
-    B["epic/files-stay-workable"] --> N
-    C["Files Stay Workable"] --> N
-    N --> S["files-stay-workable"]
-    S --> W["worktrees/EPIC-files-stay-workable"]
-    S --> BR["branch EPIC-files-stay-workable"]
-```
-
-Limit: a title whose words are already lower-case with no separators (for example `filesstayworkable`) cannot be split and names a different identity.
 
 ---
 
@@ -193,6 +152,27 @@ Search excludes hidden folders and the `worktrees` folder. One candidate is ok; 
 | `how` | string | `ok`, and `AMBIGUOUS_REPO`. |
 | `candidates` | list of absolute paths | `AMBIGUOUS_REPO`. |
 | `searched_from` | absolute path | `NO_REPO`. |
+
+### Starting inside another workspace (BO-4300b-1-i)
+
+Source: `workspace_root.resolve_project_root` (rule 2, `workspace-marker`), `workspace_core.make_plan`, `workspace_create.create_workspace`. Proof: `unit_tests/build_orchestration/test_bo_4300b_1_i.py`, which runs the deployed `worktree.py ensure` as a subprocess from inside workspace W1 with no `--repo-root`.
+
+When `ensure` runs with its working directory inside an existing workspace W1, the project is taken from W1's marker (`project_root`), not from W1 itself. The new workspace "beta" is therefore planned against the main project, never against W1.
+
+| Property of the new workspace | Value when started from inside W1 |
+|---|---|
+| Location | `<project parent>/worktrees/<folder name>`: beside W1 in the landing place. Never a descendant of W1. |
+| `project_root` in its marker, and `repo_root` in the answer | The main project, not W1. |
+| `origin` | The hub. |
+| Base (`base_commit`, and `HEAD` after creation) | The hub's `main` tip. Never W1's `HEAD` or branch. |
+| W1's commits beyond the hub's `main` | Not reachable from beta's `HEAD`; the objects are absent from beta. |
+| W1's uncommitted changes and untracked files | Not present in beta's tree. |
+
+| Property of W1 | Effect of the request |
+|---|---|
+| Tracked and untracked file contents | Unchanged. |
+| Uncommitted changes (`git status --porcelain`) | Unchanged. |
+| `HEAD`, checked-out branch, branch refs | Unchanged. |
 
 ---
 
@@ -259,22 +239,7 @@ Canary rules: it is not run (key `false`) when `tree_clean` is false or HEAD doe
 
 ## Deploy Entry
 
-Source: `scripts/build_phases_script_deploy.py` `WORKSPACE_MAKER_SCRIPTS`; consumed by `build_template_standalone_scripts` and mirrored in `scripts/build_deploy_manifest_helpers.py` (imports the same tuple, adding `scripts/<name>` to the deployed set and `templates/scripts/<name>` to the source set).
-
-| Entry in `WORKSPACE_MAKER_SCRIPTS` | Deployed to |
-|---|---|
-| `worktree.py` | `<install>/scripts/worktree.py` |
-| `workspace/__init__.py` | `<install>/scripts/workspace/__init__.py` |
-| `workspace/workspace_root.py` | `<install>/scripts/workspace/workspace_root.py` |
-| `workspace/workspace_core.py` | `<install>/scripts/workspace/workspace_core.py` |
-| `workspace/workspace_checks.py` | `<install>/scripts/workspace/workspace_checks.py` |
-| `workspace/workspace_create.py` | `<install>/scripts/workspace/workspace_create.py` |
-
-| Behaviour | Rule |
-|---|---|
-| Missing source | A named entry whose source file is absent is recorded through `record_deploy_failure("build_template_standalone_scripts", ...)`. |
-| Nested entries | Entries containing `/` are copied explicitly; the shallow `templates/scripts/*.py` glob does not reach them. |
-| Overwrite | Compare-before-write; unchanged files are counted as up to date. |
+> See [workspace-maker-deploy.md](workspace-maker-deploy.md) for the `WORKSPACE_MAKER_SCRIPTS` entries, deployed paths and copy rules.
 
 ---
 
