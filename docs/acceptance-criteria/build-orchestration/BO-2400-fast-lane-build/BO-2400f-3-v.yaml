@@ -7,8 +7,8 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 roadmap_phase: phase_1
 criteria: |
   Given the worktree setup checks which version of the agent command-line tool is
@@ -34,18 +34,127 @@ criteria: |
   And the setup's result is a refusal or failure naming that problem.
 depends_on: [BO-2400f-3, BO-2400f-3-iii]
 doc_links:
-  - path: templates/scripts/setup_ticket_worktree.py
-    relationship: modifies
-    status: exists
-    relevance: "The setup whose warnings are relabelled and whose agent-tool probe is softened."
-  - path: docs/how-to/fast-lane-build.md
-    relationship: describes
-    status: exists
-    relevance: "What an operator sees during setup; should say which messages are harmless."
+- path: templates/scripts/setup_ticket_worktree.py
+  relationship: modifies
+  status: exists
+  relevance: The setup whose warnings are relabelled and whose agent-tool probe is softened.
+- path: docs/how-to/fast-lane-build.md
+  relationship: describes
+  status: exists
+  relevance: What an operator sees during setup; should say which messages are harmless.
+- path: docs/architecture/components/build-orchestration.md
+  relationship: describes
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    setup_message_severity_label:
+      type: string
+      enum:
+      - non-fatal
+      - setup stopped
+      description: One fixed label vocabulary, declared once. Every warning-class line emitted during
+        a successful create-fastlane-worktree run, including lines from the build.py child it runs, carries
+        'non-fatal' in its text. The line describing the problem that stopped a failed setup carries 'setup
+        stopped' and never 'non-fatal'.
+  reference_file_path: templates/scripts/setup_ticket_worktree.py
+  n_location_rule: 'all: every warning-class emission reachable during create-fastlane-worktree. That
+    covers the setup''s own ''WARNING:'' prints in templates/scripts/setup_ticket_worktree.py (for example
+    :550, :682, :1309-1341, :1450-1537, :1638) and the warnings of the build.py child run in _bootstrap
+    step 5 (:1515-1540): scripts/build_phases_workflows.py:240 (''claude --version probe failed: %s'')
+    and scripts/build_precommit.py:273 (hook script not found, see BO-2400f-3-vi). Neither scripts/build_*.py
+    file configures logging, so the last-resort handler prints the bare message on stderr.'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  - python -m pytest unit_tests/setup/ unit_tests/build_orchestration/ unit_tests/test_build_workflow_phase.py
+    -q
+  constraints:
+  - 'THE AGENT-TOOL PROBE. scripts/build_phases_workflows.py:228-241 runs `claude --version` with a 2-second
+    timeout and logs ''claude --version probe failed: <exc>'' on any exception. When the binary is not
+    on the child''s PATH, the line must say in one message that the agent command-line tool was not found
+    on the setup''s search path, that the setup continued, and that the worktree is usable, with the label
+    ''non-fatal''. Word not-found differently from a timeout or a non-zero exit. Neither becomes a stop.'
+  - 'LABEL BY OUTCOME, AT EVERY PRODUCER THAT CAN SPEAK. The coder chooses the mechanism: label at each
+    producer, or have the setup relay its build.py child''s stderr through one labelling pass. Either
+    way the result must hold for the child''s warnings, because both warnings cited on UXP-510 came from
+    the child, not from setup_ticket_worktree.py.'
+  - ORDERING. The success result is the last thing emitted. stderr is flushed before the final stdout
+    JSON line, and nothing is written after it on either stream. If BO-2400f-3-iii's result record is
+    present, it is written after the last warning.
+  - STOPPING PROBLEMS. Every unsuccessful exit of create-fastlane-worktree (the sys.exit(1) sites at 'cannot
+    list worktrees' and 'cannot create fast-lane worktree', and the AC-5 fail-fast pre-commit probe) labels
+    the line that names its cause 'setup stopped', and its result names that problem.
+  - DO NOT MOVE THE FATAL / NON-FATAL LINE. This AC relabels messages and must not change which conditions
+    stop the setup. BO-2400f-3-vi and its notes keep the hooks question open.
+  - PARITY. templates/scripts/setup_ticket_worktree.py is the source and is mirrored to scripts/ by build.py.
+    scripts/build_phases_workflows.py and scripts/build_precommit.py are self-hosted build sources with
+    no template mirror.
+  - The reworded messages print no environment values (no tokens, no PATH contents beyond the name of
+    the tool that was not found).
 delivers_to: null
 expects_from: null
+test_required: true
+test_spec:
+- name: test_missing_agent_tool_still_yields_a_success_result
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'REAL SUBPROCESS: create-fastlane-worktree in a temp repo whose child PATH has no `claude`
+    binary ends with outcome ''opened''.'
+- name: test_missing_agent_tool_message_says_not_found_continued_and_usable
+  target_dir: unit_tests/
+  framework: pytest
+  type: unit
+  angle: criterion
+  description: 'The version gate runs with `claude` absent from PATH and CLAUDE_CODE_VERSION unset: the
+    emitted line says the tool was not found on the search path, that the setup continued, and that the
+    worktree is usable.'
+- name: test_missing_agent_tool_message_is_labelled_non_fatal
+  target_dir: unit_tests/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The same line contains the non-fatal label.
+  must_catch:
+  - The message is reworded but carries no severity label.
+- name: test_every_warning_on_a_successful_setup_is_labelled_non_fatal
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: A real setup run with two induced non-stopping conditions (the agent tool missing, plus
+    one more) succeeds, and every warning-class line in its combined stderr carries the non-fatal label,
+    including the build.py child's lines.
+  must_catch:
+  - Only setup_ticket_worktree.py's own prints are labelled; the build.py child's warnings are not.
+- name: test_success_result_is_the_last_output_after_all_warnings
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: In the same run's interleaved output, the final success JSON line comes after every warning,
+    and nothing follows it.
+- name: test_stopping_problem_is_labelled_as_stopping_never_non_fatal
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: A run forced to stop (for example, worktree creation failing) labels the cause 'setup stopped',
+    and no line naming that cause carries 'non-fatal'.
+- name: test_stopped_setup_result_is_a_failure_naming_the_problem
+  target_dir: unit_tests/setup/
+  framework: pytest
+  type: integration
+  angle: failure
+  description: The same run's result is a failure or refusal whose message names the problem that stopped
+    it.
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []

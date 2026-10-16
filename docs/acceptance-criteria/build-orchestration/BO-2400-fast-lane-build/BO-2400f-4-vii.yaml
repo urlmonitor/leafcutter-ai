@@ -7,7 +7,7 @@ level: L3
 status: active
 req_status: draft
 work_status: todo
-readiness: draft
+readiness: approved
 priority: high
 roadmap_phase: phase_1
 criteria: |
@@ -35,27 +35,204 @@ criteria: |
     whichever stored login the operator's machine has active.
 depends_on: [BO-2400f-4]
 doc_links:
-  - path: templates/workflows-js/fast-lane-ship.js
-    relationship: modifies
-    status: exists
-    relevance: "The pull-request step that pushes and opens the PR."
-  - path: templates/agents/pull-request.md
-    relationship: related
-    status: exists
-    relevance: "The agent the step dispatches; its instructions carry no credential guidance today."
-  - path: docs/known-issues/build-orchestration/open-high-ki-bo-20260925-templates-hardcode-a-personal-gh-account.md
-    relationship: describes
-    status: exists
-    relevance: "Records that no site clears the environment token and that a personal account is written into the lane."
-  - path: docs/how-to/fast-lane-build.md
-    relationship: describes
-    status: exists
+- path: templates/workflows-js/fast-lane-ship.js
+  relationship: modifies
+  status: exists
+  relevance: The pull-request step that pushes and opens the PR.
+- path: templates/agents/pull-request.md
+  relationship: related
+  status: exists
+  relevance: The agent the step dispatches; its instructions carry no credential guidance today.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260925-templates-hardcode-a-personal-gh-account.md
+  relationship: describes
+  status: exists
+  relevance: Records that no site clears the environment token and that a personal account is written
+    into the lane.
+- path: docs/how-to/fast-lane-build.md
+  relationship: describes
+  status: exists
+- path: templates/agents/command-step-runner.md
+  relationship: related
+  status: exists
+  relevance: The deterministic executor the delivery command should run on.
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260927-status-checker-runs-workflow-shell-commands.md
+  relationship: related
+  status: exists
+- path: docs/known-issues/build-orchestration/open-high-ki-bo-20260930-fast-lane-ship-is-649-lines-over-and-cannot-grow.md
+  relationship: related
+  status: exists
+  relevance: The fast-lane-ship.js size ratchet; replacing the PR prompt is a net shrink.
+- path: unit_tests/_workflow_engine_harness.py
+  relationship: specifies
+  status: exists
+- path: docs/testing/test-angles.md
+  relationship: related
+  status: exists
 assigned_agent: python-coder
-estimated_complexity: S
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_delivery_attempt:
+      type: object
+      description: One JSON line printed by a fast-lane delivery subcommand (registered in scripts/build_orchestration/_fl_cli.py).
+        It is consumed by the lane's Pull Request phase and classified by BO-2400f-4-viii.
+      required:
+      - push
+      - pull_request
+      properties:
+        push:
+          type: object
+          required:
+          - ok
+          - exit_status
+          - branch
+          - commit
+          - remote_refusal_text
+          properties:
+            ok:
+              type: boolean
+            exit_status:
+              type: integer
+            branch:
+              type: string
+            commit:
+              type: string
+              description: git -C <worktree> rev-parse HEAD, read, never passed in.
+            remote_refusal_text:
+              type:
+              - string
+              - 'null'
+              description: The child's stderr verbatim when ok is false.
+        pull_request:
+          type: object
+          required:
+          - attempted
+          - ok
+          - url
+          - method
+          - remote_refusal_text
+          properties:
+            attempted:
+              type: boolean
+              description: False when the push failed.
+            ok:
+              type:
+              - boolean
+              - 'null'
+            url:
+              type:
+              - string
+              - 'null'
+            method:
+              type:
+              - string
+              - 'null'
+              enum:
+              - gh_cli
+              - rest_fallback
+              - null
+            remote_refusal_text:
+              type:
+              - string
+              - 'null'
+  reference_file_path: scripts/build_orchestration/_fl_cli.py
+  n_location_rule: '2: (1) a delivery subcommand registered in scripts/build_orchestration/_fl_cli.py,
+    with its logic in its own scripts/build_orchestration/_fl_*.py module (fast_lane.py stays a dispatcher,
+    at 629 lines), performing push, `gh pr create` and the EMU REST fallback; (2) the Pull Request phase
+    of templates/workflows-js/fast-lane-ship.js (:2035-2120). The pull-request agent prompt there (push
+    at :2067, `gh auth switch --user urlmonitor` at :2070, `gh pr create` at :2074, REST fallback `gh
+    api -X POST` at :2083) is replaced by one command-step-runner dispatch of that subcommand.'
+  required_skills:
+  - python-coder
+  post_write_commands:
+  - python scripts/build.py --target-dir .
+  - python -m pytest unit_tests/build_orchestration/ unit_tests/workflows/ unit_tests/setup/ -q
+  constraints:
+  - STORED LOGIN ONLY. Every child process that pushes or talks to GitHub (git push and the credential
+    helper it calls, gh pr create, gh api) runs with GH_TOKEN, GITHUB_TOKEN, GH_ENTERPRISE_TOKEN and GITHUB_ENTERPRISE_TOKEN
+    removed from its environment. This is the programmatic form of `env -u GH_TOKEN git push` / `env -u
+    GH_TOKEN gh pr create`, which is verified to work on this machine. The parent environment is not mutated,
+    and token values are never printed or logged.
+  - NO FALLBACK TO THE ENVIRONMENT TOKEN. If the stored login is refused, the attempt is reported as refused
+    (BO-2400f-4-viii). The lane does not retry with the token.
+  - NO ACCOUNT NAME IN THE LANE. Delete `gh auth switch --user urlmonitor` (fast-lane-ship.js:2070; KI-BO-20260925).
+    The lane issues no `gh auth switch` and selects no account; it uses whichever stored login is active.
+    The packaged lane source (templates/workflows-js/, scripts/build_orchestration/) contains no personal
+    account string.
+  - THE REST FALLBACK USES THE SAME CREDENTIAL. The existing EMU fallback moves into the subcommand with
+    the same trigger strings ('Enterprise Managed User', 'createPullRequest', 'GraphQL') and runs under
+    the same stripped environment.
+  - DETERMINISTIC EXECUTOR, NOT THE pull-request AGENT. Run the subcommand through command-step-runner,
+    as the claim step does (fast-lane-ship.js:1232), and parse its JSON on the caller's side. templates/agents/pull-request.md
+    requires an explicit user 'yes' before it pushes, which does not fit an unattended lane; leave that
+    agent template unchanged.
+  - THE PR TITLE AND BODY GO THROUGH BYTE-IDENTICAL. prTitle and prBody, including the BO-2400f-4-iv breaking-change
+    notice, are handed to the subcommand unchanged (e.g. via a body file) and are never re-composed in
+    Python.
+  - BOUNDED CALLS. push, gh pr create and gh api each carry a timeout, so one hung network call cannot
+    hold the lane past the command window. No force push; --set-upstream origin <branch> as today.
+  - 'JS SIZE: templates/workflows-js/fast-lane-ship.js is over its 1000 counted-line cap (KI-BO-20260930)
+    and the check-file-size ratchet refuses any growth. The change to the lane must be a net shrink in
+    counted lines: put the logic in Python and replace the existing prompt/branch rather than adding beside
+    it.'
 delivers_to:
   agent: python-coder
-  contract: "The push and pull-request outcomes, each with the remote's own refusal text when refused, consumed by the credential-failure report."
+  contract: 'fast_lane_delivery_attempt: push {ok, exit_status, branch, commit, remote_refusal_text} and
+    pull_request {attempted, ok, url, method, remote_refusal_text}, printed as one JSON line on stdout
+    by the delivery subcommand and relayed verbatim by command-step-runner. BO-2400f-4-viii classifies
+    remote_refusal_text into the credential-failure outcome.'
 expects_from: null
+test_required: true
+test_spec:
+- name: test_push_and_pr_children_never_see_the_environment_token
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: discrimination
+  description: PATH-shim wrappers for git and gh record each invocation's argv and environment, then call
+    the real git or a fake gh. With GH_TOKEN and GITHUB_TOKEN set in the parent, no recorded push, pr-create
+    or api invocation saw either variable.
+  must_catch:
+  - The token is stripped for git push but not for gh pr create (or the reverse).
+  - Only GH_TOKEN is stripped, so GITHUB_TOKEN still reaches gh.
+- name: test_branch_is_on_the_remote_at_the_runs_commit
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: real_artifact
+  description: 'REAL git against a local bare remote: after delivery, the remote''s fast-lane/<slug> ref
+    equals the worktree''s HEAD sha.'
+- name: test_pull_request_from_the_branch_against_main_is_created
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: The fake gh records `pr create --base main --head fast-lane/<slug>`, and the subcommand
+    reports pull_request.ok true with the url gh printed.
+- name: test_lane_delivers_through_the_subcommand_without_operator_action
+  target_dir: unit_tests/workflows/
+  framework: pytest
+  type: behavioral
+  angle: reachability
+  description: Under the workflow-engine harness, the Pull Request phase dispatches the delivery subcommand
+    on command-step-runner, issues no user-confirmation step, and returns a terminal payload with the
+    pr_url.
+- name: test_delivery_succeeds_with_no_token_in_the_environment
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: integration
+  angle: criterion
+  description: With neither variable set in the parent, the same shimmed delivery succeeds with identical
+    argv.
+- name: test_lane_issues_no_account_switch_and_ships_no_account_name
+  target_dir: unit_tests/build_orchestration/
+  framework: pytest
+  type: unit
+  angle: discrimination
+  description: The shim records no `gh auth switch` invocation, and the deployed lane source plus scripts/build_orchestration/
+    contain no `auth switch` and no account name.
+  must_catch:
+  - '`gh auth switch --user urlmonitor` is kept, or replaced by another hard-coded account.'
 origin_agent: business-analyst
 created: 2026-10-16
 amended_by: []
