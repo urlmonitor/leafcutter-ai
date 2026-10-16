@@ -1,0 +1,134 @@
+id: GE-127d-3-i
+title: "A comment marker inside a string literal, a glob or a regular expression is code, and the line it sits on is counted"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a covered JavaScript file of 8 lines in which line 2 is
+    const glob = "templates/**/*.js";
+    and line 7 is a genuine one-line block comment, every other line being code,
+  When its length is measured,
+  Then the measured length is 7 — the `/*` and `*/` inside the string open and
+    close nothing, and only the genuine comment line is uncounted,
+  And given covered files whose code lines carry these sequences inside string
+    literals or other non-comment syntax, each on its own line between ordinary
+    code lines:
+      a Python string holding `#`, `"""`, `/*` or `*/`;
+      a JavaScript or TypeScript single-quoted, double-quoted or template-literal
+        string holding `//`, `/*`, `*/` or `#`, including a URL such as
+        "https://example.com/a";
+      a JavaScript regular-expression literal containing `\/\*`;
+      a SQL string literal holding `--` or `/*`;
+      a shell line using `$#`, `${#name}`, or a word with `#` inside it such as
+        `a#b`, and a shell here-document whose body lines begin with `#`,
+  When their lengths are measured,
+  Then every one of those lines counts as code,
+  And no later line of the file is uncounted because of a marker that sat inside
+    one of them,
+  And given a `//` line comment in JavaScript whose text contains `/*`, followed
+    later in the file by a `*/` inside a string,
+  When the file's length is measured,
+  Then only the line comment itself is uncounted and every line between the two
+    counts,
+  And given a SQL function body enclosed in dollar quotes, or a JavaScript
+    template literal with an embedded `${ ... }` expression, containing a genuine
+    comment of that language inside the body or the expression,
+  When the file's length is measured,
+  Then that comment is uncounted like any other comment of the language.
+depends_on:
+  - GE-127d-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261009-file-size-measure-strips-from-slash-star-inside-strings.md
+    relationship: context
+    status: exists
+    relevance: >-
+      THE DEFECT, VERIFIED. A language-blind `/\*.*?\*/` with DOTALL opens a span at any
+      `/*` (string, glob, line comment, any .py or .sh file) and closes it at the next `*/`
+      anywhere later. 16 covered files lose 870 lines on origin/main fd9a5b4a4;
+      finalize-feature.js measures 1622 against a string-aware 1986. The 8-line repro in
+      the first criterion is the KI's own, where the incumbent measure returns 2.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    Markers are recognised only by a tokenizer for the file's language that tracks
+    string, template-literal (with nested `${}`), regex-literal, here-document and
+    dollar-quote state. Python has no block comments: no `/*` in a .py file is ever a
+    comment. Shell has neither block comments nor triple quotes.
+  - >-
+    The dollar-quote and template-expression arm is a stated decision, not a lexer
+    accident: a PL/pgSQL body and a `${}` expression are code in the same language, so
+    their comments are comments. A tokenizer that treats a whole dollar-quoted body as
+    one opaque string reintroduces a restyle asymmetry inside every SQL function.
+test_spec:
+  - name: test_ge_127d_3_i_the_ki_glob_repro_measures_seven_not_two
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      The 2026-10-09 KI's 8-line JavaScript file, written to disk and measured by the
+      shared measure, returns 7 (the incumbent returns 2); deleting the glob line
+      returns 6, so a one-line shrink reads as a one-line shrink.
+    must_catch:
+      - "language-blind /\\*.*?\\*/ with DOTALL over the whole file"
+      - "string-aware for double quotes only, blind to template literals"
+  - name: test_ge_127d_3_i_markers_inside_literals_are_counted_in_every_covered_language
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Generated files, one per covered extension, each holding N code lines that carry
+      the marker sequences the criteria list inside literals and M genuine comments, with
+      N and M varied; each measures exactly N. A file built so a false span would swallow
+      lines (marker in a string early, `*/` in a string late) still measures N.
+    must_catch:
+      - "a # inside a Python or shell string treated as a comment"
+      - "-- inside a SQL string literal treated as a comment"
+      - "dollar-quoted SQL body treated as one opaque string, its comments counted"
+  - name: test_ge_127d_3_i_a_real_python_file_measures_what_an_independent_tokenizer_says
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: >-
+      For the repository's real tests/knowledge/test_native_decision.py (which the KI
+      shows losing 127 lines to a false span) and a sample of real tracked .py files, the
+      measured length equals the line count derived independently with the standard
+      library tokenize module (lines carrying any non-comment, non-docstring token, plus
+      blank lines outside docstrings) — computed at run time, never a literal.
+test_rationale: |
+  The KI repro is kept as a discrimination descriptor because the incumbent returns 2 on it
+  and the fix returns 7; it cannot pass by accident. The generated per-language descriptor
+  covers every marker the criteria list in every covered extension. The real-artifact
+  descriptor uses the stdlib tokenizer as an oracle that shares no code with the measure,
+  over a real file the KI shows is mis-measured today.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-3
+  contract: "The per-language tokenizer behind the single shared measure."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Expected effect, recorded so nobody reads it as a regression: measured lengths of the 16
+  files the 2026-10-09 KI lists rise, and test_native_decision.py starts reading as over its
+  400 limit. GE-127d-3-iii is what keeps that rise from refusing an unrelated commit.

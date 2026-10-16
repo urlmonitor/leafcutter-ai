@@ -1,0 +1,97 @@
+id: GE-127d-3-iii
+title: "When the measurement rule changes, the previous version is measured by the new rule too, so no file is refused merely because the rule changed"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked Python file with a permitted length of 400 whose previous
+    version measured 380 under the rule in force before this change and measures
+    440 under the rule in force now, because it holds a 60-line triple-quoted
+    string assigned to a name,
+  And a staged change that takes 3 lines of code out of it and puts nothing in,
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome quotes the previous length as 440 and
+    the new length as 437, and the file is reported as already over its limit
+    rather than as having crossed it,
+  And given a tracked file whose previous version measured 450 under the earlier
+    rule and measures 390 under the rule in force now, because 60 of its lines
+    are line comments,
+  And a staged change that puts 5 lines of code into it,
+  When the author performs an ordinary commit,
+  Then the commit completes and the outcome quotes the previous length as 390 and
+    the new length as 395,
+  And for every file in every commit, the previous length and the new length the
+    outcome quotes were both arrived at by the one rule in force at the time of
+    that commit, and the outcome never compares a length measured by one rule
+    with a length measured by another.
+depends_on:
+  - GE-127d-3
+  - GE-127b-1
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127b-1.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      The growth ratchet compares a file's previous length with its new one. This record
+      pins that both sides use the rule in force now; the ratchet's own boundary is
+      unchanged.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    No stored baseline: the previous length is re-derived from the previous version's
+    content with the current measure on every run. If any cache or recorded length is
+    introduced later, it must be invalidated whenever the rule changes.
+test_spec:
+  - name: test_ge_127d_3_iii_a_file_that_measures_longer_under_the_new_rule_is_not_refused_as_crossing
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      In a temporary git repository, commit the first criterion's file, then stage the
+      3-line removal and run the hook: it completes, quoting previous and new lengths
+      that are both new-rule measurements (re-derived at run time with the shared
+      measure, not literals). Under the named wrong version it is refused as crossing.
+    must_catch:
+      - "previous length measured with the pre-2026-10-16 rule and new length with the new rule"
+  - name: test_ge_127d_3_iii_a_file_that_measures_shorter_under_the_new_rule_uses_the_shorter_previous
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The second criterion's file through the hook: completes, and the quoted previous
+      length equals the shared measure applied to the HEAD content now.
+test_rationale: |
+  The only failure this record forbids is a mixed-rule comparison, so the discrimination
+  descriptor builds the one file where a mixed comparison flips the verdict (380 old, 440
+  new, 437 staged against a 400 limit) and requires the hook to pass it.
+delivers_to: null
+expects_from:
+  ac_id: GE-127d-3
+  contract: "The single shared measure applied to both the previous and the staged content."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Files the new rule pushes over their limit (the 2026-10-09 KI names
+  test_native_decision.py) are grandfathered by the ratchet from the first commit under the
+  new rule, exactly as GE-127b grandfathered the original over-limit population.

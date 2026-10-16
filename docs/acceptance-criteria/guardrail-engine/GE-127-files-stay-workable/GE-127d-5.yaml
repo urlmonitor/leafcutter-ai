@@ -1,0 +1,165 @@
+id: GE-127d-5
+title: "The refusal's advice and every published statement of the size rule say that no comment counts, and none names a comment style that is free"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a staged covered file over its permitted length,
+  When the author performs an ordinary commit and it is refused,
+  Then the advice in the outcome states that comments of every style and
+    docstrings do not count toward the length and that blank lines outside
+    comments do,
+  And the advice does not state that comments of any one style count, does not
+    state that removing comments reduces the length, and does not name any
+    comment style or form whose content is uncounted while another is counted,
+  And the advice states that rewriting comments in another style, deleting
+    comments or docstrings, and joining lines are not ways to bring the file
+    within its limit,
+  And the outcome's statement of what the quoted length measures states the same
+    rule,
+  And given every published place that states the size rule,
+  When the published-versus-enforced comparison runs over the repository's real
+    published places and the rule in force,
+  Then each published place states that line comments, block comments and
+    docstrings are all uncounted and that blank lines outside them are counted,
+    and the comparison reports zero disagreements and a count of places compared
+    greater than zero,
+  And given one published place is left stating the earlier rule — that `#` or
+    `//` comment lines count, or that only block comments and triple-quoted
+    strings are discarded — while every other place states the rule in force,
+  When the author performs an ordinary commit,
+  Then the comparison names that place, and the commit does not complete.
+depends_on:
+  - GE-127d
+  - GE-127d-1
+  - GE-127d-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-1.yaml
+    relationship: depends_on
+    status: exists
+    relevance: >-
+      Owns the published-versus-enforced comparison over file_size.published_rule_surfaces
+      (README.md and commit_guardian.json today). This record requires that comparison to
+      cover the measurement rule as well; if it compares only scope, timing and limits
+      today, extend it in this change rather than adding a parallel check.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The advice printed with every refusal (lines 144-148 per the 2026-10-13 KI, printed
+      at 379-380): "blank lines and '#' comments count toward this length and removing them
+      WILL reduce it" and "content inside triple-quoted strings or block comments does NOT
+      count toward this length". Written to say "deleting docstrings will not help"; it
+      also told an agent which comment style is free. Both sentences are replaced.
+  - path: templates/scripts/commit_guardian/commit_guardian.json
+    relationship: modifies
+    status: exists
+    relevance: >-
+      file_size._comment carries the MEASUREMENT RULE paragraph GE-127d-2 added ("discards
+      content inside triple-quoted strings ... and content inside C-style block comments;
+      every remaining line -- including blank lines and hash comment lines -- is counted").
+      Rewrite it to the new rule. A nested key only; no new top-level key, so no package
+      surface.
+  - path: templates/scripts/commit_guardian/README.md
+    relationship: modifies
+    status: exists
+    relevance: "The second published rule surface; it states the rule GE-127d-2 published."
+  - path: docs/pre-commit-hooks.md
+    relationship: related
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    The statement of what a quoted length measures is generated from the shared measure
+    (GE-127d-2), so it follows GE-127d-3 without hand edits; the README rule text and the
+    file_size._comment do not, and must be rewritten in this change.
+  - >-
+    The advice may keep telling authors that formatting-only reductions are not the
+    remedy and may point at restructuring (GE-127e / GE-127f). It must not recommend
+    deleting blank lines, even though blank lines count.
+test_spec:
+  - name: test_ge_127d_5_the_refusal_advice_states_the_rule_and_names_no_free_comment_style
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      Run the hook in a temporary git repository on an over-limit .py file and an
+      over-limit .js file and read the advice from the hook's own output: it states that
+      every comment style and docstrings are uncounted and blank lines counted, and it
+      contains no statement that one style counts or that removing comments reduces the
+      length. Then verify the advice by behaviour: deleting every comment from the refused
+      file leaves the quoted length unchanged on the next run.
+    must_catch:
+      - "the incumbent advice: '#' comments count and removing them WILL reduce it"
+      - "advice says block comments do not count but is silent on line comments"
+  - name: test_ge_127d_5_the_real_published_surfaces_agree_with_the_rule_in_force
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: deployed
+    description: >-
+      Using the shared deployed layout, run the published-versus-enforced comparison over
+      the real published surfaces and real configuration: zero disagreements, surfaces
+      compared greater than zero, exit 0.
+  - name: test_ge_127d_5_a_surface_left_stating_the_old_measurement_rule_refuses_the_commit
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: seam
+    description: >-
+      In a fixture tree, restore the pre-2026-10-16 MEASUREMENT RULE paragraph to one
+      published surface only and run the comparison through its hook entry point: it names
+      that surface and the commit does not complete; reverting it returns to clean.
+    must_catch:
+      - "comparison checks scope, timing and limits but not the measurement rule"
+test_rationale: |
+  The advice test reads the hook's real output and then checks the advice against
+  behaviour (deleting comments does not move the number), so wording that names a free
+  style fails either way. The surface descriptors evaluate the published side and the
+  enforced side together, as GE-127d-1 requires, and the seam descriptor plants the exact
+  stale paragraph that is on disk today.
+delivers_to:
+  - agent: documentation-expert
+    ac_id: null
+    contract: >-
+      The new measurement rule for the reference-doc GE-127d's documentation_triggers
+      require; the text must be machine-comparable by GE-127d-1's comparison.
+expects_from:
+  - ac_id: GE-127d-3
+    contract: "The shared measure and its generated description of what is measured."
+  - ac_id: GE-127d-1
+    contract: "The published-versus-enforced comparison over file_size.published_rule_surfaces."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target:
+  - code
+  - docs
+risk_surface: contract_boundary
+notes: |
+  DOCUMENTATION TRIGGER. GE-127d carries documentation_triggers [reference-doc]. No
+  separate documentation-expert L2 is authored, for two reasons: GE-127d is now at its 5-L2
+  cap, and the reference surfaces for this rule (README.md and the file_size._comment) are
+  exactly the published surfaces this record rewrites, under a parity check that makes them
+  machine-compared. delivers_to hands the wording to documentation-expert for
+  docs/pre-commit-hooks.md if it states the rule.
+
+  BLANK LINES REMAIN A FORMATTING-ONLY LEVER. Blank lines still count (kept by decision), so
+  squeezing them out still lowers the number. Out of scope here; raise separately if wanted.

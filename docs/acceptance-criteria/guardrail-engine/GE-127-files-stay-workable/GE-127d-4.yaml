@@ -1,0 +1,156 @@
+id: GE-127d-4
+title: "A change that makes a file's measured length fall while its total line count rises is refused, and the refusal names that situation"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L2
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked covered file whose previous version measures 620 and holds 700
+    lines in total,
+  And a staged version that measures 610 and holds 712 lines in total,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome names the file and states
+    that its measured length fell from 620 to 610 while its total line count rose
+    from 700 to 712,
+  And the outcome states that this combination is refused whatever the file's
+    permitted length, and that a reduction in counted lines and an addition of
+    uncounted lines (comments, docstrings) are accepted when made in separate
+    commits,
+  And this refusal is distinguishable in the outcome from a refusal for crossing
+    the limit, for growth, or for an unpaid two-for-one repayment,
+  And the same holds for a file whose previous and staged lengths are both below
+    its permitted length,
+  And given a staged version that measures 610 and holds 690 lines in total,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced,
+  And given a staged version that measures 620 and holds 712 lines in total,
+    because the change only put comments into the file,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced,
+  And given a newly added file, which has no previous version,
+  When the author performs an ordinary commit,
+  Then this refusal is not produced.
+depends_on:
+  - GE-127d
+  - GE-127d-3
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d.yaml
+    relationship: parent
+    status: exists
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+    relationship: context
+    status: exists
+    relevance: >-
+      Fix direction 3 ("Close the loophole in the gate too. Refuse a change where the
+      measured length fell and the raw length grew for the same file, and name it") and the
+      detection signature ("a commit whose measured length falls while wc -l rises"). Every
+      one of the five gamed templates showed exactly this shape.
+  - path: templates/scripts/commit_guardian/check_file_size.py
+    relationship: modifies
+    status: exists
+    relevance: >-
+      The per-file verdict the backstop joins. It already resolves the previous version
+      for the ratchet; the backstop reuses that resolution and that measure.
+assigned_agent: python-coder
+estimated_complexity: M
+package_surface: false
+declares_side_effect: false
+it_requirements:
+  - >-
+    The backstop is a canary for gaps in the measure, so it must compare the measured
+    length with a count the measure cannot influence: the total number of lines in the
+    file. It reuses the previous-version resolution the ratchet already performs; when
+    that resolution is INDETERMINATE (GE-127b-1-i) the backstop is not evaluated and the
+    existing INDETERMINATE outcome stands.
+  - >-
+    A refusal here is a reported finding: exit status 1, as for every other size refusal.
+test_spec:
+  - name: test_ge_127d_4_measured_fell_while_total_rose_is_refused_and_named
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      In a temporary git repository, stage a version of a tracked covered file that
+      removes C code lines and adds K comment lines with K > C (C and K varied), once for a
+      file over its limit and once for a file under it. The hook refuses each with exit 1,
+      naming the file and both pairs of numbers, which the test computes at run time from
+      the two versions with the shared measure and a plain line count.
+    must_catch:
+      - "backstop omitted"
+      - "backstop evaluated only for files over their limit"
+  - name: test_ge_127d_4_the_backstop_catches_a_measure_gap
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      With the shared measure deliberately replaced in-process by the pre-2026-10-16 rule
+      (`#` and `//` counted, /* */ and triple-quoted strings discarded), replay the
+      2026-10-13 restyle of build-feature.js from the KI (`//` runs rewritten as /* */
+      blocks) through the hook's verdict: it is refused by this backstop, naming the
+      situation, even though the degraded measure reports the file shorter.
+  - name: test_ge_127d_4_honest_shapes_are_not_refused_by_the_backstop
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: boundary
+    description: >-
+      Measured and total both falling, measured unchanged with total rising (comments
+      only), and a newly added file each pass the hook without this refusal.
+    must_catch:
+      - "backstop fires when measured is unchanged and total rose"
+      - "backstop fires on a newly added file"
+  - name: test_ge_127d_4_the_backstop_refusal_reaches_the_registered_hook_output
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: integration
+    angle: reachability
+    surface_invoked: >-
+      python .leafcutter/scripts/commit_guardian/run_hook.py
+      .leafcutter/scripts/commit_guardian/check_file_size.py
+    description: >-
+      Through the registered hook entry point, the backstop refusal and its four numbers
+      appear in the hook's own output and the exit status is 1.
+test_rationale: |
+  Under a correct measure the backstop's honest trigger is "removed code and added more
+  comments in one change", so the criterion descriptor exercises exactly that. Its real
+  purpose is to catch a FUTURE gap in the measure, which no correct measure can
+  demonstrate; the discrimination descriptor therefore degrades the measure to the known-
+  gamed rule and replays the real 2026-10-13 restyle, proving the backstop catches what the
+  measure missed.
+delivers_to:
+  - agent: python-coder
+    ac_id: GE-127d-5
+    contract: "The backstop refusal text, which the rewritten advice must stay consistent with."
+expects_from:
+  ac_id: GE-127d-3
+  contract: "The shared measure, applied to both versions."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  CONFIRM BEFORE APPROVAL — THE BACKSTOP REFUSES ONE HONEST CHANGE SHAPE. With every comment
+  uncounted (GE-127d-3), a change that removes code and adds more lines of comments or
+  docstrings than it removed makes the measured length fall while the total rises, and is
+  refused. It is written that way on purpose, because the caller asked for the backstop on
+  every covered file, and the cost is bounded: the refusal tells the author to make the
+  reduction and the commenting in separate commits, and each of those passes on its own
+  (comment-only additions leave the measured length unchanged). If BrainCandy prefers a
+  narrower backstop (only files at or over their limit, or a small tolerance), that is a
+  criteria change and needs an amended_by entry.
+
+  WHY THIS IS AN L2 OF GE-127d AND NOT AN L3 OF GE-127d-3. It is a second, independent check
+  that exists precisely in case GE-127d-3's measure is wrong; filing it under that measure
+  would make the canary a child of what it watches.

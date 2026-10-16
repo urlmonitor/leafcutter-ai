@@ -1,0 +1,98 @@
+id: GE-127d-3-iv
+title: "Rewriting comments from one style to another adds no lines for the two-for-one repayment, in either direction"
+component: guardrail-engine
+components:
+  - commit_guardian
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a tracked JavaScript file measured at 1200 lines against a permitted length
+    of 1000, whose previous version carries a run of 4 `//` comment lines,
+  And a staged change whose only effect is replacing those 4 lines with one
+    `/* ... */` block carrying the same text,
+  When the author performs an ordinary commit,
+  Then the commit completes, the outcome states that the change added 0 lines,
+    and the file is quoted at 1200 both before and after,
+  And given the previous version instead carries that block and the staged change
+    only restores the 4 `//` lines,
+  When the author performs an ordinary commit,
+  Then the commit completes and the outcome states that the change added 0 lines,
+  And given a staged change to the same file that makes the same restyle and also
+    puts 5 new lines of code into it, taking nothing out,
+  When the author performs an ordinary commit,
+  Then the commit does not complete, and the outcome states that the change added
+    5 lines and that the file is required to stand at 1195 or below,
+  And the same three outcomes hold for a Python file over its limit when `#` lines
+    are rewritten as a docstring and back.
+depends_on:
+  - GE-127d-3
+  - GE-127f-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127d-3.yaml
+    relationship: parent
+    status: exists
+  - path: docs/acceptance-criteria/guardrail-engine/GE-127-files-stay-workable/GE-127f-2.yaml
+    relationship: related
+    status: exists
+    relevance: >-
+      Owns the two-for-one repayment: lines added are read from what the change put into
+      the file, and content the rule does not measure adds nothing. This record does not
+      change that rule; it pins its consequence under the new measure for the restyle case.
+  - path: docs/known-issues/commit-guardian/open-high-ki-cg-20261013-file-size-measure-can-be-gamed-by-comment-style.md
+    relationship: context
+    status: exists
+    relevance: >-
+      The second effect: with the restyle in HEAD, restoring the `//` lines was charged as
+      growth and as added lines, raising the bar by 37 lines on build-feature.js and 30 on
+      plan-feature.js for honest work. The second criterion forbids that.
+assigned_agent: python-coder
+estimated_complexity: S
+package_surface: false
+declares_side_effect: false
+test_spec:
+  - name: test_ge_127d_3_iv_restyling_comments_either_way_adds_zero_lines
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: discrimination
+    description: >-
+      In a temporary git repository with an over-limit .js file and an over-limit .py
+      file, stage a restyle-only change in each direction and run the hook: each completes
+      and states 0 lines added; the quoted lengths are equal before and after.
+    must_catch:
+      - "the pre-2026-10-16 rule, under which restoring // lines counts 4 added"
+      - "added lines counted from the raw diff rather than from measured content"
+  - name: test_ge_127d_3_iv_a_restyle_does_not_hide_code_added_in_the_same_change
+    target_dir: unit_tests/commit_guardian/
+    framework: unittest
+    type: behavioral
+    angle: criterion
+    description: >-
+      The restyle plus K new code lines (K varied) states K added and requires the file
+      to stand at its previous length minus K or below.
+test_rationale: |
+  Both directions of the restyle are run through the real hook, because the KI's second
+  effect appeared only in the restore direction. The mixed descriptor proves that zero-cost
+  restyling cannot be used as cover for added code.
+delivers_to: null
+expects_from:
+  ac_id: GE-127f-2
+  contract: "The added-measured-lines count, computed with the shared measure."
+origin_agent: business-analyst
+created: 2026-10-16
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  GE-127f-2 is work_status done and its criteria already hold that unmeasured content adds
+  nothing. Under the old rule `//` lines were measured, which is why restoring them cost
+  lines. No amendment to GE-127f-2 is needed; this record exists so the restyle case has
+  its own executing test.
