@@ -1,8 +1,8 @@
 id: ACD-1300e-2
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A run that needs several decisions can be resumed through each of them in turn"
 component: ac-driven-dev
 level: L2
@@ -41,15 +41,116 @@ doc_links:
   - path: docs/how-to/resume-a-paused-plan-feature-run.md
     relationship: describes
     status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: describes
+    status: exists
 assigned_agent: python-coder
 estimated_complexity: M
-delivers_to: null
+delivers_to:
+  agent: documentation-expert
+  contract: "Shipped multi-decision resume behaviour for ACD-1300e-4: one resume_answer {gate_id, action|choice, channel: 'person', ...} per invocation; a pause returns {status: 'paused_awaiting_input', run_id, gate_id, question}; the other resume outcomes are the TERMINAL_GATE_STATUSES values in templates/workflows-js/plan-feature.js (nothing_to_resume, unresumable_stale, pause_persist_failed, pause_record_unreadable) plus 'continued' (no terminal status, run proceeds)."
 expects_from:
   ac_id: ACD-1300e-1
   contract: "A resume does not detour into the covered-route decision on the run's own criteria, so the decision named in the record is the one the resume reaches."
+it_requirements:
+  - "Every decision point in one run has a distinct gate_id (e.g. covered-route-gate, gate-<stage>, final-gate); an answer is only ever applied where resume_answer.gate_id equals the current gate's id AND the durable record names that gate (ACD-2100c-3-i subject binding is kept)."
+  - "A second pause in the same invocation overwrites run R's record so it names the new gate (pause_store.py write replaces the record for that run id); the read-back verify confirms the record now names the new gate_id, not merely that a record exists."
+  - "The record is cleared and the clear verified only when the run moves past the gate (any action other than edit), so after the last decision no .leafcutter/paused_runs/<R>.json remains."
+  - "Committed criteria are never re-authored or rewritten by a resume: a step whose gate the run has already passed is skipped from committedStageKeys, and only the step paused at may skip authoring (skipAuthorOnResume)."
+  - "Behaviour is count-agnostic: no logic special-cases two decisions; N >= 3 decision points work by the same per-resume rule."
+  - "Every pause-store operation uses the executor chosen by ACD-1300e-3; no new dispatch site names worktree-agent or status-checker."
+  - "File-size ratchet: templates/workflows-js/plan-feature.js measures 2646 lines under scripts/commit_guardian/_file_size_ratchet.count_content_lines against a 1000-line .js limit, so check-file-size requires at least 2 measured lines removed for every measured line added (JSDoc/block comments are not counted, so deleting them earns nothing). The change must land with the measured length of plan-feature.js not increased beyond what the ratchet permits; new logic belongs in a Python script under scripts/ (deployed to .leafcutter/scripts/ by build.py, each new file under the 400-line .py limit) invoked as a command step, or is paid for by consolidating existing duplicated dispatch code."
+  - "templates/workflows-js/plan-feature.js is the source; .claude/workflows/plan-feature.js is rebuilt by python scripts/build.py in the same change and the two are byte-identical afterwards (never hand-edit the deployed copy)."
+test_intent:
+  - clause: "Then the D1 answer is applied to D1 and the run continues past it,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_d1_answer_applied_and_run_continues_past_d1 (criterion)."
+  - clause: "And when the run reaches D2 with still no person attached it pauses again and the durable record for run R now names D2 (not D1),"
+    needs_test: true
+    reason: "Observable outcome; proved by test_second_pause_record_names_d2_not_d1 (criterion)."
+  - clause: "And the report from that resume says the run is waiting on D2,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_resume_report_says_waiting_on_d2 (criterion)."
+  - clause: "And when the route is started again for run R supplying the person's answer for D2, that answer is applied to D2 -- it is not refused as naming a different decision,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_d2_answer_applied_not_refused (discrimination)."
+  - clause: "And the criteria committed before D1 and between D1 and D2 are carried forward unchanged through both resumes,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_committed_criteria_unchanged_through_both_resumes (criterion)."
+  - clause: "And after the run moves past D2 no waiting record for run R remains on disk,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_no_pause_record_remains_after_d2 (real_artifact)."
+  - clause: "And the same holds for a run with three or more decision points: each resume that supplies the answer for the decision currently named in the record advances the run to its next decision point or to completion."
+    needs_test: true
+    reason: "Observable outcome; proved by test_three_decision_chain_each_resume_advances (boundary)."
+test_spec:
+  - name: test_d1_answer_applied_and_run_continues_past_d1
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "Resume with the person answer for D1 applies it at D1 and dispatches the next stage's author."
+    proves_clause: "Then the D1 answer is applied to D1 and the run continues past it,"
+  - name: test_second_pause_record_names_d2_not_d1
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "On reaching D2 headless, the pause store's record for R has gate_id D2."
+    proves_clause: "And when the run reaches D2 with still no person attached it pauses again and the durable record for run R now names D2 (not D1),"
+  - name: test_resume_report_says_waiting_on_d2
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "The workflow's return value is {status: paused_awaiting_input, gate_id: D2, question}."
+    proves_clause: "And the report from that resume says the run is waiting on D2,"
+  - name: test_d2_answer_applied_not_refused
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: discrimination
+    description: "A second resume supplying the D2 answer is applied at D2, not refused as naming a different decision."
+    proves_clause: "And when the route is started again for run R supplying the person's answer for D2, that answer is applied to D2 -- it is not refused as naming a different decision,"
+    must_catch:
+      - "second pause does not overwrite the record, so it still names D1 and the D2 answer is refused"
+      - "covered-route detour on the run's own criteria is raised before D2 is reached"
+  - name: test_committed_criteria_unchanged_through_both_resumes
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: criterion
+    description: "AC files committed before D1 and between D1 and D2 are byte-identical after both resumes and no author re-dispatch targets them."
+    proves_clause: "And the criteria committed before D1 and between D1 and D2 are carried forward unchanged through both resumes,"
+  - name: test_no_pause_record_remains_after_d2
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: real_artifact
+    description: "With the real pause_store.py behind a stub command-step-runner, no paused_runs/<R>.json exists after D2 is answered."
+    proves_clause: "And after the run moves past D2 no waiting record for run R remains on disk,"
+  - name: test_three_decision_chain_each_resume_advances
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: boundary
+    description: "A run with three decision points advances one decision per resume to completion."
+    proves_clause: "And the same holds for a run with three or more decision points: each resume that supplies the answer for the decision currently named in the record advances the run to its next decision point or to completion."
+  - name: test_deployed_workflow_multi_resume_chain
+    target_dir: unit_tests/workflows/
+    framework: unittest
+    type: integration
+    angle: reachability
+    description: "The deployed workflow, resumed twice through the E2 harness, pauses at D2 then completes."
+    surface_invoked: ".claude/workflows/plan-feature.js (deployed build output), driven through unit_tests/_workflow_engine_harness.py run_workflow_under_e2"
+test_rationale: "Multi-resume state lives across separate workflow invocations sharing only the pause store and git history, so each test drives the real body across invocations with a real pause store on a temp dir; an in-memory resolveGate unit test cannot observe the record overwrite or the clear."
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
 superseded_by: null
 covered_by: [ACD-1300e-2-i]
 implemented_by: []

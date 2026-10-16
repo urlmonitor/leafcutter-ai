@@ -1,8 +1,8 @@
 id: ACD-1300e-5
 components:
   - ac_driven_dev
-readiness: draft
-priority: medium
+readiness: approved
+priority: high
 title: "A sequence diagram shows a run paused and resumed across successive decisions"
 component: ac-driven-dev
 level: L2
@@ -30,15 +30,66 @@ doc_links:
   - path: docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md
     relationship: describes
     status: exists
+  - path: docs/architecture/adrs/ADR-024-interactive-pause-resume.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/interactive-pause-resume-substrate.md
+    relationship: related
+    status: exists
 assigned_agent: architecture-diagram-author
 estimated_complexity: S
 delivers_to: null
 expects_from:
   ac_id: ACD-1300e-3
   contract: "The chosen pause-record executor, so the diagram names the right participant."
+it_requirements:
+  - "Extend docs/architecture/diagrams/c3-008-plan-feature-decision-gate-sequence.md in place (write-c4-diagram skill, Mermaid sequenceDiagram); no new diagram file."
+  - "The participant that writes, reads and clears the pause record is command-step-runner (per ACD-1300e-3) and appears as its own participant; worktree-agent does not appear as a pause-record actor."
+  - "docs/architecture/diagrams/c3-002-interactive-pause-resume-sequence.md currently labels the persist/read agent 'status-checker'; correct that participant to command-step-runner in the same change so the two diagrams agree."
+  - "Outcome labels use the route's actual reported values: continued (no terminal status), paused_awaiting_input (waiting again), paused_awaiting_input with a refusal for an answer naming a different decision, nothing_to_resume, pause_record_unreadable."
+  - "check-doc-length ratchet applies to both diagram docs."
+test_intent:
+  - clause: "Then the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_decision_gate_diagram_shows_resume_chain (real_artifact)."
+  - clause: "And it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent,"
+    needs_test: true
+    reason: "Observable outcome; proved by test_decision_gate_diagram_pause_actor_is_not_worktree_agent (discrimination)."
+  - clause: "And it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable."
+    needs_test: true
+    reason: "Observable outcome; proved by test_decision_gate_diagram_lists_reported_resume_outcomes (real_artifact)."
+test_spec:
+  - name: test_decision_gate_diagram_shows_resume_chain
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The c3-008 Mermaid block contains, in order, a resume entering with one answer, the duplicate-coverage check excluding own criteria, the answer applied to the named gate, the next gate reached, and a second pause naming the next gate."
+    proves_clause: "Then the diagram shows a resume entering with one answer, passing the duplicate-coverage check without counting the run's own committed criteria, applying the answer to the decision named in the record, reaching the next decision, and pausing again with the record now naming that next decision,"
+  - name: test_decision_gate_diagram_pause_actor_is_not_worktree_agent
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: discrimination
+    description: "The participant on the write/read/clear messages to the pause store is command-step-runner; no worktree-agent participant sends a pause-store message in c3-008 or c3-002."
+    proves_clause: "And it shows which participant writes, reads, and clears the pause record, and that participant is not the worktree agent,"
+    must_catch:
+      - "c3-002 still names status-checker as the persist/read agent"
+  - name: test_decision_gate_diagram_lists_reported_resume_outcomes
+    target_dir: unit_tests/docs/
+    framework: unittest
+    type: unit
+    angle: real_artifact
+    description: "The diagram shows the five resume outcomes, each status label being one the route returns."
+    proves_clause: "And it shows the outcomes the route actually reports for a resume: continued, waiting again, answer refused as naming a different decision, nothing to resume, and pause record unreadable."
+test_rationale: "Diagram claims are checkable as text in the Mermaid block; the discrimination entry guards the stale participant label in c3-002 that would contradict the new diagram."
 origin_agent: business-analyst
 created: 2026-10-16
-amended_by: []
+amended_by:
+  - reason: it-po-technical-enrichment
+    date: '2026-10-16'
+    by: it-po
+    run_id: plan-feature-resume-and-pause
 superseded_by: null
 covered_by: []
 implemented_by: []
