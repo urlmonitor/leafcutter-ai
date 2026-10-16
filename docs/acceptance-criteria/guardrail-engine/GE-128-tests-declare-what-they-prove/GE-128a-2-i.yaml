@@ -1,0 +1,75 @@
+id: GE-128a-2-i
+title: "A bulk or mechanical change that raises a file's undeclared count gets no implicit exemption"
+component: guardrail-engine
+components:
+  - commit_guardian
+  - testing_quality
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Scenario 1 - a generated block of undeclared tests
+  Given a tracked test file that, before the change, holds 3 undeclared test
+    functions,
+  And the test-declaration check is in error mode,
+  And a change is staged that adds 30 undeclared test functions to that file in
+    one mechanical edit (for example a generated block of near-identical tests),
+  When the author performs an ordinary commit,
+  Then the commit does not complete,
+  And the outcome states the file held 3 undeclared tests before the change and
+    holds 33 after it, exactly as a one-test increase would be reported.
+
+  Scenario 2 - a merge whose result raises a file's count
+  Given a tracked test file holding 3 undeclared test functions on the branch
+    being merged into,
+  And the test-declaration check is in error mode,
+  And a merge is staged whose result leaves that file holding 5 undeclared test
+    functions,
+  When the author completes the merge commit,
+  Then the merge commit does not complete,
+  And the outcome names the file and states 3 before and 5 after.
+
+  Scenario 3 - no exemption exists unless one is recorded
+  Given no exemption for bulk, generated or merge changes has been explicitly
+    configured for the test-declaration check,
+  When either change above is evaluated,
+  Then the size of the change, its mechanical nature, or its being a merge does
+    not alter the verdict.
+depends_on:
+  - GE-128a-2
+doc_links:
+  - path: docs/acceptance-criteria/guardrail-engine/GE-128-tests-declare-what-they-prove/GE-128a.yaml
+    relationship: describes
+    status: exists
+    relevance: >-
+      Its notes: an implementation permitting the undeclared population to grow
+      under any routine condition (a generated block, a large mechanical edit, a
+      merge) breaks the promise even if every hand-written scenario passes; any
+      exception must be decided explicitly and recorded, never defaulted.
+  - path: templates/scripts/commit_guardian/check_test_ac_tags.py
+    relationship: modifies
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: null
+it_requirements: []
+delivers_to: null
+expects_from: null
+origin_agent: BrainCandy
+created: 2026-10-16
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Authored as the edge-case child of GE-128a-2 while giving GE-128a live children (its only child GE-128a-1 is retired). Captures GE-128a's 'shrinking backlog is part of the promise' note as a testable refusal for bulk, generated and merge changes. origin_agent BrainCandy per the requesting user's instruction."
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: code
+risk_surface: contract_boundary
+notes: |
+  Scenario 2 assumes the check runs on merge commits. If it does not today, that
+  is an IT PO finding to record against this AC (the gap is the defect GE-128a's
+  notes warn about), not a reason to weaken the scenario.

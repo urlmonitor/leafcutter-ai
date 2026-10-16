@@ -1,7 +1,7 @@
 id: BO-100d-2a
 components:
   - build_orchestration
-readiness: approved
+readiness: draft
 priority: high
 title: "build-epic.js lets the drive proceed when the telemetry sink is reachable"
 component: build-orchestration
@@ -11,14 +11,19 @@ req_status: active
 work_status: todo
 criteria: |
   Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the install's telemetry location query prints exactly one absolute path,
+    the declared telemetry stream, that lies outside the drive's worktree,
   And the pre-drive feedback-sink reachability probe appends one probe line to
-    the telemetry sink at debugging/logs/agent_telemetry.jsonl,
-  When the probe returns a successful (zero) result,
+    that printed absolute path,
+  When the append succeeds,
   Then the drive proceeds past the pre-dispatch stage and dispatches
     ticket-supervisors according to the normal sequencing rules,
   And no pre-drive sink error is shown to the operator,
-  And the only content the probe added to the sink is its single probe line.
-depends_on: [BO-100d-2, BO-100d-1a]
+  And the only content the probe added to the declared stream is its single
+    probe line,
+  And the probe created and appended to no file at the workspace-relative path
+    debugging/logs/agent_telemetry.jsonl under the drive's worktree.
+depends_on: [BO-100d, BO-100d-2, BO-100d-1a]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -30,16 +35,19 @@ assigned_agent: python-coder
 estimated_complexity: S
 it_requirements:
   - "On a successful probe the build-epic.js gate must fall through to the normal batch loop (Step 3/4 parallel dispatch) without altering sequencing — the gate is a pass/fail guard, not a sequencing change."
-  - "The probe must be idempotent: the success path adds exactly one probe line to debugging/logs/agent_telemetry.jsonl and must not duplicate or rewrite prior content."
+  - "The probe must be idempotent: the success path adds exactly one probe line to the absolute stream path printed by the telemetry location query and must not duplicate or rewrite prior content."
   - "Dual-surface parity (the KI-3 lesson): the success-path behavior in build-epic.js and in the build-feature.md prose gate must match — both proceed only on a genuine exit-0 probe via the same shared helper."
   - "Deployed/template parity (ADR-001 self-hosting): edit the build-epic.js package source (and any helper) and verify the deployed copy via the build.py round-trip — never edit only one side."
 delivers_to: null
 expects_from:
   ac_id: BO-100d-1a
-  contract: "The shared pre-drive sink probe helper's success (exit-0) path — a typed pass result indicating the single probe line was appended to debugging/logs/agent_telemetry.jsonl. build-epic.js proceeds to Step 4 parallel dispatch only on this pass result."
+  contract: "The shared pre-drive sink probe helper's success (exit-0) path — a typed pass result indicating the single probe line was appended to the absolute stream path printed by the telemetry location query. build-epic.js proceeds to Step 4 parallel dispatch only on this pass result."
 origin_agent: it-po
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, with a closing clause that the probe touches no worktree-relative file, which is the false-green this gate must not give (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The idempotency it_requirement and the expects_from contract were updated to match. depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
 superseded_by: null
 covered_by: []
 implemented_by: []

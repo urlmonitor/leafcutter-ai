@@ -1,7 +1,7 @@
 id: BO-100d-2-i
 components:
   - build_orchestration
-readiness: approved
+readiness: draft
 priority: high
 title: "Remediation that makes a failing probe pass lets the drive proceed"
 component: build-orchestration
@@ -11,12 +11,13 @@ req_status: active
 work_status: todo
 criteria: |
   Given /build-feature is invoked for an epic with at least one ready ticket,
-  And the first pre-drive feedback-sink reachability probe against
-    debugging/logs/agent_telemetry.jsonl returns a non-zero result because the
-    debugging/logs/ directory is absent,
-  When the remediation step creates the missing directory and the probe is retried,
-  And the retried append to debugging/logs/agent_telemetry.jsonl returns a
-    successful (zero) result,
+  And the install's telemetry location query has printed an absolute stream path
+    (for example /home/dev/proj/debugging/logs/agent_telemetry.jsonl),
+  And the first pre-drive feedback-sink reachability probe against that printed
+    path fails because its log directory is absent,
+  When the remediation step creates the missing log directory and the probe is
+    retried,
+  And the retried append to the same printed path succeeds,
   Then the drive proceeds past the pre-dispatch stage and dispatches
     ticket-supervisors normally,
   And no hard-block operator message is shown,
@@ -31,7 +32,7 @@ estimated_complexity: S
 it_requirements:
   - "When the directory-absent remediation makes the re-probe succeed, the gate must treat the overall probe as PASS and proceed to normal dispatch — the earlier first-attempt failure must not latch the drive into a halt state."
   - "No hard-block operator message may be shown when remediation resolves the issue; the recovered path is silent-success (aside from any WARNING-level log of the transient first-miss)."
-  - "Idempotent: across first-probe + remediation + re-probe, exactly one probe line ends up appended to debugging/logs/agent_telemetry.jsonl."
+  - "Idempotent: across first-probe + remediation + re-probe, exactly one probe line ends up appended to the absolute stream path printed by the telemetry location query."
   - "Dual-surface parity (the KI-3 lesson): the remediate-then-proceed outcome must be identical whether the drive enters via build-epic.js or via the build-feature.md prose gate, since both use the single shared probe helper."
 delivers_to: null
 expects_from:
@@ -41,6 +42,9 @@ origin_agent: business-analyst
 created: 2026-06-22
 amended_by:
   - reason: "it-po enrichment: re-pointed depends_on from the now-superseded BO-100d-2 to the surviving BO-100d-1a (the shared probe helper, which owns the remediate-then-proceed flow this L3 exercises); added expects_from contract, it_requirements, and doc_links."
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl and debugging/logs/ to the absolute stream the install's telemetry location query prints and that stream's log directory (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). The idempotency it_requirement was updated to match. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
 superseded_by: null
 covered_by: []
 implemented_by: []

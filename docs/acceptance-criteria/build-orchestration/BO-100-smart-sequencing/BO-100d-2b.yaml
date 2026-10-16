@@ -1,7 +1,7 @@
 id: BO-100d-2b
 components:
   - build_orchestration
-readiness: approved
+readiness: draft
 priority: high
 title: "build-feature.md prose lets the drive proceed when the telemetry sink is reachable"
 component: build-orchestration
@@ -11,14 +11,19 @@ req_status: active
 work_status: todo
 criteria: |
   Given /build-feature is invoked for an epic that has at least one ready ticket,
+  And the install's telemetry location query prints exactly one absolute path,
+    the declared telemetry stream, that lies outside the drive's worktree,
   And the pre-drive feedback-sink reachability probe appends one probe line to
-    the telemetry sink at debugging/logs/agent_telemetry.jsonl,
-  When the probe returns a successful (zero) result,
+    that printed absolute path,
+  When the append succeeds,
   Then the drive proceeds past the pre-dispatch stage and dispatches
     ticket-supervisors according to the normal sequencing rules,
   And no pre-drive sink error is shown to the operator,
-  And the only content the probe added to the sink is its single probe line.
-depends_on: [BO-100d-2, BO-100d-1a]
+  And the only content the probe added to the declared stream is its single
+    probe line,
+  And the probe created and appended to no file at the workspace-relative path
+    debugging/logs/agent_telemetry.jsonl under the drive's worktree.
+depends_on: [BO-100d, BO-100d-2, BO-100d-1a]
 doc_links:
   - path: docs/architecture/agent_delivery_workflows.md
     relationship: describes
@@ -36,7 +41,10 @@ expects_from:
   contract: "The shared pre-drive sink probe helper's success (exit-0) path. The build-feature.md prose gate proceeds to Step B dispatch only when this pass result is returned, ensuring identical proceed-on-success behavior across both surfaces."
 origin_agent: it-po
 created: 2026-06-22
-amended_by: []
+amended_by:
+  - by: business-analyst
+    at: "2026-10-16"
+    reason: "Criteria re-pointed from the workspace-relative debugging/logs/agent_telemetry.jsonl to the absolute stream the install's telemetry location query prints, mirroring BO-100d-2a for dual-surface parity, including the clause that the probe touches no worktree-relative file (KI-BO-20261009-bo100d-probe-pins-a-relative-telemetry-path). depends_on gains BO-100d, this AC's id-derived parent, which now lists it in covered_by. readiness lowered from approved to draft because the approved criteria text changed; it needs IT PO review, then the user's re-approval."
 superseded_by: null
 covered_by: []
 implemented_by: []
