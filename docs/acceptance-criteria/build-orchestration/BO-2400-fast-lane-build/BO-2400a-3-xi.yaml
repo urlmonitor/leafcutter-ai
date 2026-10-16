@@ -1,0 +1,80 @@
+id: BO-2400a-3-xi
+components:
+  - build_orchestration
+  - testing_quality
+title: "A backfill whose tests survive every break, or that has nothing to break, stops the run with a named reason"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given UXP-511 is classified as a test backfill with newly-added tests T1, T2 and T3,
+  When the mutation proof finds T1 and T3 proven, but T2 still reported passed against
+    every broken version tried,
+  Then the run halts before the coder is dispatched and before anything is staged,
+    with reason tests_survive_mutation,
+  And the halt report names T2, UXP-511, and every broken version T2 survived,
+  And T1 and T3 being proven does not change that verdict.
+
+  Given a criterion classified as a test backfill whose newly-added tests exercise no
+    code that existed before this run, because they assert only on values the tests
+    build themselves or on code added during this run,
+  When the mutation proof runs,
+  Then the run halts with reason no_existing_implementation_to_mutate, naming the
+    criterion and its tests, because a test that is green with no implementation behind
+    it proves nothing.
+
+  Given a criterion classified as a test backfill where every broken version leaves
+    its newly-added tests inconclusive (skipped or errored),
+  When the mutation proof runs,
+  Then the run halts with reason mutation_inconclusive, naming each test with its raw
+    outcome under each broken version.
+
+  Given any of these three halts,
+  When the run ends,
+  Then the halt is a structured blocker result of the same shape as the red-baseline
+    halts of BO-2400a-3-i, and the criterion's work_status is unchanged.
+depends_on: [BO-2400a-3, BO-2400a-3-x, BO-2400a-3-i]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mutation_halt_reasons:
+      type: object
+      description: "Fixed named set extending the red-baseline halt vocabulary: tests_survive_mutation, no_existing_implementation_to_mutate, mutation_inconclusive (plus mutation_restore_unconfirmed from BO-2400a-3-xii). Each halt lists test id, AC id and per-mutation raw outcome."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The reason names are a fixed vocabulary that callers and tests can branch on. They are not free text."
+    - "Each refusal case needs its own covering test with a real fixture: a vacuous test, a test with no implementation behind it, and a mutation that only breaks import. Together they show the proof can say no."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "Per-test mutation outcomes for a backfill AC."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The second case is the reason the old halt existed. When a test-writer writes tests that
+  pass against nothing, those tests are green at baseline just like real backfill tests.
+  Only the mutation proof tells the two apart, so it must refuse when there is nothing to
+  break and must not take that as a pass.

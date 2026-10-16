@@ -1,0 +1,58 @@
+id: BO-2400a-4-iv
+components:
+  - build_orchestration
+  - testing_quality
+title: "The coder checks its own work against the same unmasked results the green gate will use"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast lane dispatches its coder for a batch whose criteria are not yet done,
+  When the coder receives its instructions for confirming the batch is green before it
+    reports,
+  Then those instructions direct it to run the batch's scoped tests with the
+    enforcement plugin's downgrading switched off, the same way the green gate runs
+    them,
+  And they state that an xfailed outcome on a scoped test is a failure the coder must
+    fix before reporting ok, not a pass.
+
+  Given the coder reports ok while 3 of the batch's scoped tests still fail,
+  When the green gate runs,
+  Then the run stops at the green gate naming those 3 tests and their criterion ids,
+  And the run's result records that the gate contradicted the coder's green report,
+    rather than recording the coder's report as the outcome.
+depends_on: [BO-2400a-4, BO-2400a-4-ii]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 4 (python-coder) describes the coder's own green check."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The strict-run instruction is part of the coder dispatch prompt the fast-lane workflow assembles, so it is checkable by reading the assembled prompt and does not depend on the coder's own discretion."
+  - "The green gate (BO-2400a-4-ii, -iii) stays the authority. This record shortens the loop and does not replace the gate."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-4-ii
+  contract: "The strict-mode way of running the scoped tests that the coder is told to reproduce."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  In the BO-2600b-4 run the coder reported green because its own check saw the same masked
+  xfail results. If the coder sees the real failures, it can fix them in the same dispatch,
+  and the run does not have to reach the green gate first.

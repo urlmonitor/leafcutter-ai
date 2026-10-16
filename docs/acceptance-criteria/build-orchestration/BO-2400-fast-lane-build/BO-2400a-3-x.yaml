@@ -1,0 +1,85 @@
+id: BO-2400a-3-x
+components:
+  - build_orchestration
+  - testing_quality
+title: "A backfilled test is accepted only after it is seen to fail against a deliberately broken implementation"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given UXP-510 is classified as a test backfill, with newly-added tests T1, T2, T3
+    and T4 all green at baseline,
+  When the mutation proof runs for UXP-510,
+  Then the code those tests exercise is broken in place, one deliberate change at a
+    time, where that code existed before this run and this run has not changed it,
+  And T1 to T4 are re-run against each broken version,
+  And a test counts as proven when it is classified red, under the rule of
+    BO-2400a-3-vi, against at least one broken version,
+  And UXP-510 passes the mutation proof only when every one of T1, T2, T3 and T4 is
+    proven.
+
+  Given a broken version that stops the code from being imported or collected, so that
+    T1 is reported errored rather than failed,
+  When the mutation proof classifies T1 against that version,
+  Then T1 is not proven by it, because an errored test is inconclusive and any test
+    errors against code that cannot load.
+
+  Given UXP-510 has passed the mutation proof,
+  When the verdict is reported,
+  Then it records, for each of T1 to T4, the broken version that made it red: what was
+    changed, in which file and where, so a reviewer can repeat the break by hand,
+  And once the code is restored, T1 to T4 are re-run and reported passed before the
+    run continues.
+depends_on: [BO-2400a-3, BO-2400a-3-ix, BO-2400a-3-vi]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: L
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mutation_proof:
+      type: object
+      description: "Per backfill AC: the list of mutations applied (file, location, change), and per newly-added test the mutation that turned it red or none; passed iff every newly-added test of the AC is red under >=1 mutation; post-restore re-run is all PASSED."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "OPEN for it-po: how mutation targets are chosen. Candidates are the backfill AC's implemented_by paths, the modules the newly-added tests import, or an agent-proposed break checked by the script. Whatever is chosen, applying the break, running the tests and deciding the verdict must be deterministic script steps. An agent never decides whether a test is proven."
+    - "Mutations must not touch test files, conftest files or the newly-added tests' fixtures. Only implementation code that existed at the merge-base may be broken."
+    - "Mutated test runs use the same strict-mode, per-test-outcome run as the green gate (BO-2400a-4-ii, -iii), so a mutated failure is not masked."
+    - "Restoration and its guarantees are specified separately in BO-2400a-3-xii."
+delivers_to:
+  agent: llm-expert
+  contract: "Mutation-proof verdict per backfill AC (passed / halt reason) plus the per-test mutation record that the lane reports in its result."
+expects_from:
+  ac_id: BO-2400a-3-ix
+  contract: "Backfill ACs and their green newly-added test ids."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The user's constraint is "still never accepting tests that pass against a broken
+  implementation", so the bar is set per test, not per criterion. If one red test per
+  criterion were enough, the other tests could still pass against broken code without
+  anyone noticing, which is the property the user ruled out. Errored outcomes do not count
+  as kills: otherwise a syntax-error mutation would prove every test.

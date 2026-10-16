@@ -1,0 +1,72 @@
+id: BO-2400a-3-xii
+components:
+  - build_orchestration
+  - testing_quality
+title: "The implementation is put back exactly as it was, whatever happens during the mutation proof"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the mutation proof has broken the implementation of UXP-510 in the run's
+    workspace,
+  When the proof finishes, whether it passes, halts with a named reason, or is stopped
+    by an error partway through a test run,
+  Then every file the proof changed is returned to its exact pre-proof content,
+  And the workspace's tracked and untracked files show no difference from their state
+    immediately before the proof began.
+
+  Given the proof cannot confirm that restoration succeeded, because a file still
+    differs from its pre-proof content,
+  When the run decides its next step,
+  Then the run halts with reason mutation_restore_unconfirmed, naming each file that
+    differs,
+  And nothing is staged, committed or pushed.
+
+  Given any run that used the mutation proof,
+  When its commits, staged changes and pull request are inspected,
+  Then no broken version appears in any of them,
+  And no file outside the run's own workspace was changed by the proof.
+depends_on: [BO-2400a-3, BO-2400a-3-x]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mutation_restore:
+      type: object
+      description: "Pre-proof content snapshot (content hash per touched file) taken before any mutation, restored in a finally path, then verified by hash; any mismatch yields halt reason mutation_restore_unconfirmed with the differing paths."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Restoration must not rely on git checkout of the file. The workspace may hold uncommitted coder or test-writer changes, which a checkout would destroy. Restore from the pre-proof snapshot."
+    - "The covering test must interrupt the proof partway, for example by having a test run raise, and assert the tree is restored. A test that only covers the happy path does not prove this record."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "The set of files the mutation proof changed."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The user did not ask for this record. It is kept because a mutation proof that can leave
+  broken code behind could ship a broken implementation under a green commit, which is the
+  opposite of what the feature is for.

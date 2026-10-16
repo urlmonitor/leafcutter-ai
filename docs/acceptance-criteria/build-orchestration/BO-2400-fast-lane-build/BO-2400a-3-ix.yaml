@@ -1,0 +1,88 @@
+id: BO-2400a-3-ix
+components:
+  - build_orchestration
+  - testing_quality
+title: "A criterion whose new tests all pass before any change is recognised as a test backfill and sent to a mutation proof, not halted"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch containing only UXP-510, whose implementation already exists in the
+    repository, and whose 4 covering tests are all newly-added in this run,
+  And all 4 are classified green at baseline and none is inconclusive,
+  When the red-baseline gate produces its verdict,
+  Then UXP-510 is classified as a test backfill, with proof route mutation instead of
+    red-first,
+  And the run does not halt with all_new_tests_green_at_baseline,
+  And the verdict names UXP-510, its 4 green newly-added tests, and the route mutation,
+  And the run goes no further than the mutation proof of BO-2400a-3-x for UXP-510
+    until that proof has passed.
+
+  Given the same batch,
+  When the gate decides whether UXP-510 is a backfill,
+  Then it decides only from the observed outcomes of UXP-510's newly-added tests. It
+    does not consult the criterion's work_status, its history of being demoted, or any
+    field or flag saying it is a backfill, so a run cannot opt into the mutation route
+    by labelling itself.
+
+  Given a criterion whose newly-added covering tests are 3 green and 1 inconclusive
+    (skipped or errored),
+  When the red-baseline gate produces its verdict,
+  Then the criterion is not classified as a test backfill,
+  And the run halts with no_red_outcome_among_new_tests exactly as BO-2400a-3-i states,
+    because a test that did not run cannot be proven by breaking the code it should
+    exercise.
+depends_on: [BO-2400a-3, BO-2400a-3-v, BO-2400a-3-vi]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 3 (verify_red_baseline) and its halt reasons."
+  - path: docs/how-to/prove-ac-done.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: M
+it_requirements:
+  config_schema_fragment:
+    fast_lane_red_baseline_proof_route:
+      type: object
+      description: "The red-baseline verdict carries a per-AC proof_route: red_first when the AC has >=1 red newly-added covering test, mutation when every newly-added covering test of the AC is green and none is inconclusive. A batch of only mutation-route ACs is not a halt; the verdict lists backfill ACs with their tests."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Classification is per AC, computed from the newly-added partition of BO-2400a-3-ii and the outcome classes of BO-2400a-3-vi. No AC-store field is read to decide it."
+    - "Before this is built, BO-2400a-3-i needs a spec amendment: all_new_tests_green_at_baseline stops being a halt reason on its own and becomes a mutation-route classification. Flagged to the store owner. This record does not edit BO-2400a-3-i."
+    - "it-po to decide the field and verdict names; criteria fix only the behaviour."
+delivers_to:
+  agent: python-coder
+  contract: "The list of backfill ACs with their green newly-added test ids, consumed by the mutation proof (BO-2400a-3-x)."
+expects_from:
+  ac_id: BO-2400a-3-vi
+  contract: "The red / green / inconclusive class of each newly-added covering test."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Change of intent, requested by the user on 2026-10-15. UXP-510 and UXP-511 had code
+  that landed in July and were demoted on 2026-09-07 because they had no covers-tagged
+  proof. On those runs the lane halted with all_new_tests_green_at_baseline, and the user
+  finished them by hand with a mutation check: break the code the tests target, confirm
+  the tests turn red, restore. This record lets the lane recognise that case. The proof
+  itself is BO-2400a-3-x, and the refusals are in BO-2400a-3-xi.

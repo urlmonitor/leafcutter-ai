@@ -1,0 +1,60 @@
+id: BO-2400a-7-ii
+components:
+  - build_orchestration
+title: "Sequence diagram update: the backfill branch through the mutation proof, and the strict green gate"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the fast-lane sequence diagram after BO-2400a-3-ix to BO-2400a-3-xiv and
+    BO-2400a-4-ii are built,
+  When a reader follows it from the red-baseline gate,
+  Then a criterion whose new tests are all green at baseline is shown taking a backfill
+    branch into the mutation proof: break, re-run, restore and verify, before the coder
+    would be dispatched,
+  And each of the mutation halt reasons is shown as its own halt path, separate from
+    the red-baseline halt paths,
+  And a batch of only proven backfills is shown going from the mutation proof straight
+    to the green gate without a coder dispatch,
+  And the green gate's test run is labelled as run with failure-masking switched off.
+depends_on: [BO-2400a-7, BO-2400a-3-ix, BO-2400a-3-x, BO-2400a-3-xi, BO-2400a-3-xii, BO-2400a-3-xiv, BO-2400a-4-ii]
+doc_links:
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: modifies
+    status: exists
+assigned_agent: architecture-diagram-author
+estimated_complexity: S
+it_requirements:
+  - >-
+    Document only what is built. Write it after the depends_on records are done, and
+    take participant ids and halt-reason names verbatim from the built lane.
+  - >-
+    Author through the write-c4-diagram skill, keeping the diagram's existing type,
+    level and file. Refresh last_updated, and stay within the doc-length and
+    doc-compliance hooks.
+test_required: false
+test_rationale: |
+  Architecture diagram. The store's convention for this tree is test_required: false, as
+  on the parent BO-2400a-7.
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "The built mutation-proof step and its position in the lane."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: docs
+risk_surface: internal
+notes: |
+  Produced for the parent L1's sequence-diagram documentation trigger. No component-diagram
+  update is produced: these records add no new collaborator. The mutation proof and the
+  strict run belong to the existing gate script and the existing fast-lane-ship workflow.
+  If it-po places the mutation proof in a new module, add a BO-2400a-8 update then.

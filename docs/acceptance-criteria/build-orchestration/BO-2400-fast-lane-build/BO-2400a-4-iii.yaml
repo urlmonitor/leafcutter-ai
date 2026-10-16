@@ -1,0 +1,72 @@
+id: BO-2400a-4-iii
+components:
+  - build_orchestration
+  - testing_quality
+title: "A scoped test whose failure reaches the green gate masked as an expected failure is still counted red"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given the green gate's scoped run for a batch reports outcome passed for 12 covering
+    tests and outcome xfailed for 1 covering test of BO-2600b-4,
+  And the run as a whole exits zero,
+  When the green gate produces its verdict,
+  Then the xfailed test counts as not passing and the green verdict is not green,
+  And the failing-test list names that test with BO-2600b-4 and its raw reported
+    outcome xfailed, so a reader can see the failure was masked rather than absent.
+
+  Given the green gate's scoped run reports a covering test with outcome xpassed,
+    skipped or errored, and every other covering test passed,
+  When the green gate produces its verdict,
+  Then the verdict is not green and that test is listed with its raw outcome — green
+    requires every scoped covering test to be reported passed, and the gate decides
+    from each test's own outcome, never from the run's exit status alone.
+
+  Given the green gate's scoped run executes no covering test at all for the batch,
+    because collection failed or the selection matched nothing,
+  When the green gate produces its verdict,
+  Then the verdict is not green and states that no covering test ran.
+depends_on: [BO-2400a-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 5, condition (a): only PASSED counts as passing."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_green_outcome_rule:
+      type: object
+      description: "Green is the conjunction over scoped covering tests of outcome == PASSED; XFAIL, XPASS, SKIPPED, ERROR and FAILED are each not-passing and listed with their raw outcome; zero executed covering tests is not green."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "This is the defence-in-depth half of the masked-failure fix. It must hold even if strict mode (BO-2400a-4-ii) fails to take effect, because a configuration override or a wrapper might drop the environment. The covering test runs the gate with strict mode absent and asserts the xfailed test still fails the gate."
+    - "An exit-code-only green decision is the defect class here, because pytest exits 0 when the only non-passing outcomes are xfail. The per-test outcome rule must decide the verdict."
+    - "A test the author explicitly marked expected-to-fail is also not passing at the green gate. An expected failure is not proof that a batch AC is met."
+delivers_to:
+  agent: llm-expert
+  contract: "failing_tests entries carrying test id, AC id and raw outcome for every non-passing scoped test."
+expects_from:
+  ac_id: BO-2400a-4
+  contract: "The green+coverage gate and the per-test outcomes of its scoped run."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal

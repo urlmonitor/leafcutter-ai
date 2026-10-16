@@ -1,0 +1,73 @@
+id: BO-2400a-3-xiii
+components:
+  - build_orchestration
+  - testing_quality
+title: "In a mixed batch, a criterion whose new tests all pass is still mutation-proven, even though another criterion supplies the red baseline"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch of TKT-600a-1, with 2 red and 2 green newly-added covering tests, and
+    UXP-511, whose 3 newly-added covering tests are all green at baseline,
+  When the red-baseline gate produces its verdict,
+  Then a red baseline is established by TKT-600a-1, its route is red-first, and its 2
+    green tests are reported green_at_baseline as BO-2400a-3-v states,
+  And UXP-511 is classified as a test backfill and must pass the mutation proof of
+    BO-2400a-3-x before the coder is dispatched,
+  And the red tests of TKT-600a-1 are not accepted as evidence about UXP-511's tests.
+
+  Given UXP-511's mutation proof halts with tests_survive_mutation in that mixed batch,
+  When the run ends,
+  Then the coder is not dispatched for the batch, and the halt names UXP-511 even
+    though TKT-600a-1's red baseline was established.
+
+  Given a criterion with at least one red newly-added covering test,
+  When the gate assigns its proof route,
+  Then the route is red-first and that criterion is never sent to the mutation proof.
+depends_on: [BO-2400a-3, BO-2400a-3-ix, BO-2400a-3-v]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_mixed_batch_routing:
+      type: object
+      description: "Proof route is assigned per AC within one batch; the batch proceeds to coder dispatch only when every mutation-route AC has passed its mutation proof and the red-first ACs establish a red baseline."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "The covering test must use a two-AC batch in which one AC is red-first and one is a backfill. A single-AC fixture cannot tell per-AC routing from batch-level routing."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-ix
+  contract: "Per-AC proof route classification."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  The user did not ask for this record. Under the current batch-level rule
+  (BO-2400a-3-v), a backfill criterion in the same batch as a red-first criterion passes
+  the red gate on the other criterion's red test, and its own tests are never shown to
+  constrain anything. That is the same "accept tests that pass against a broken
+  implementation" outcome the user ruled out. Kept narrow: the green_at_baseline tests
+  of a partially-implemented red-first criterion (the TKT-600a-1 case) are still not
+  mutation-proven. Whether they should be is an open question for the user.

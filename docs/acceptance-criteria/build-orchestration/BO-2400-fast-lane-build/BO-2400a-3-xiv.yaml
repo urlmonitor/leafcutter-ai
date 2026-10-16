@@ -1,0 +1,58 @@
+id: BO-2400a-3-xiv
+components:
+  - build_orchestration
+  - testing_quality
+title: "A batch made only of proven backfills goes from its mutation proof to the green gate without dispatching the coder"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given every criterion in the batch, UXP-510 and UXP-511, is classified as a test
+    backfill and has passed its mutation proof,
+  When the fast lane decides its next step,
+  Then the coder is not dispatched,
+  And the run goes on to the green gate, the coverage check, the pre-commit review and
+    the commit, exactly as for a batch the coder worked on,
+  And the run's result states, for each criterion, its proof route (red-first or
+    mutation), so the pull request shows how each criterion's tests were shown to
+    constrain the code.
+
+  Given a batch that holds at least one red-first criterion as well as proven
+    backfills,
+  When the fast lane decides its next step,
+  Then the coder is dispatched once for the whole batch, as before.
+depends_on: [BO-2400a-3, BO-2400a-3-ix, BO-2400a-3-x, BO-2400a-4-ii]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/diagrams/c3-fast-lane-build-loop-sequence.md
+    relationship: describes
+    status: exists
+assigned_agent: llm-expert
+estimated_complexity: S
+it_requirements:
+  - "The routing lives in the fast-lane-ship workflow and reads the gate verdict's per-AC proof routes. The workflow never re-derives them."
+  - "Skipping the coder must not skip any later gate. The green gate (strict, BO-2400a-4-ii), the coverage check and the BO-2400g review still run unchanged."
+  - "The per-AC proof route, and for mutation-route ACs the per-test mutation record from BO-2400a-3-x, is carried into the run result and the pull request description."
+delivers_to: null
+expects_from:
+  ac_id: BO-2400a-3-x
+  contract: "Mutation-proof verdict per backfill AC, including the per-test mutation record."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Assumed default: an all-backfill batch has no failing test for the coder to work on, so
+  dispatching it costs a run and changes nothing. If the user prefers to always dispatch
+  the coder, this record changes. The rest of the backfill decomposition does not.

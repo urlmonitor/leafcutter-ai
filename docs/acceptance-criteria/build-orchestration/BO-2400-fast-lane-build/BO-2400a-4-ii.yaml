@@ -1,0 +1,88 @@
+id: BO-2400a-4-ii
+components:
+  - build_orchestration
+  - testing_quality
+title: "The green gate runs the batch's tests with failure-masking switched off, so a failing test is seen as failing"
+component: build-orchestration
+level: L3
+status: active
+req_status: draft
+work_status: todo
+readiness: draft
+priority: medium
+roadmap_phase: phase_1
+criteria: |
+  Given a batch containing BO-2600b-4, whose work_status is todo for the whole run,
+    with 13 newly-added covering tests of which 3 fail on an assertion because their
+    fixtures build the wrong store shape and 10 pass,
+  And the repository's acceptance-criterion test-enforcement plugin, left at its
+    default, reports a failing test as xfailed whenever the criterion that test covers
+    is not yet done,
+  When the green gate runs the batch's scoped tests after the coder reports ok,
+  Then the scoped tests are run with the plugin's downgrading switched off for that run,
+    so each of the 3 failing tests is reported as failed, not xfailed,
+  And the green verdict is not green, and its failing-test list names those 3 tests,
+    each with BO-2600b-4,
+  And commit staging is not performed and the run stops at the green gate, before the
+    pre-commit review, the commit phase and the mark-done step run.
+
+  Given the same 13 tests after the 3 fixtures are corrected,
+  When the green gate runs again,
+  Then all 13 are reported passed and the green verdict is green.
+
+  Given the same tree,
+  When the green gate is run once with BO-2600b-4 at work_status todo and once with it
+    at work_status done,
+  Then both runs produce the same verdict and the same failing-test list — a
+    criterion's recorded progress has no influence on whether its tests count as
+    passing at the green gate.
+depends_on: [BO-2400a-4]
+doc_links:
+  - path: docs/how-to/fast-lane-build.md
+    relationship: describes
+    status: exists
+    relevance: "Step 5 (verify_green_and_coverage) is the gate whose test run this changes."
+  - path: docs/architecture/components/build-orchestration.md
+    relationship: describes
+    status: exists
+  - path: docs/architecture/adrs/ADR-027-tdd-workflow-enforcement.md
+    relationship: describes
+    status: exists
+assigned_agent: python-coder
+estimated_complexity: S
+it_requirements:
+  config_schema_fragment:
+    fast_lane_green_gate_strict_run:
+      type: object
+      description: "The green gate's scoped pytest run is executed with the AC test-enforcement plugin in strict mode (AC_ENFORCE_STRICT=1 set in the child process environment), so no failure of a scoped test is downgraded to xfail."
+  reference_file_path: "scripts/build_orchestration/fast_lane.py"
+  n_location_rule: "1"
+  required_skills:
+    - python-coder
+  post_write_commands: []
+  constraints:
+    - "Strict mode is set on the environment of the gate's own test subprocess, not inherited from the caller's shell, so the gate's verdict does not depend on how the lane was launched."
+    - "The covering test must reproduce the BO-2600b-4 shape: a not-yet-done AC whose covering test fails on an assertion, run through the real enforcement plugin, and assert the gate reports it failing. A fixture that emits FAILED directly cannot detect the defect."
+    - "it-po to confirm whether verify_red_baseline should also run strict. It need not for correctness, since BO-2400a-3-vi already counts xfailed as red, so this record does not require it."
+delivers_to:
+  agent: llm-expert
+  contract: "A green verdict whose failing_tests list includes every scoped test whose failure the enforcement plugin would otherwise have downgraded."
+expects_from:
+  ac_id: BO-2400a-4
+  contract: "The green+coverage gate and its verdict object."
+origin_agent: business-analyst
+created: 2026-10-15
+amended_by: []
+superseded_by: null
+covered_by: []
+implemented_by: []
+change_target: pipeline
+risk_surface: internal
+notes: |
+  Fidelity gap, not a change of intent: BO-2400a-4 already says the gate "confirms all of
+  them pass", and the fast-lane how-to already says XFAIL does not count as passing. In
+  the BO-2600b-4 run, 3 of 13 new tests failed on wrong fixtures, the enforcement plugin
+  downgraded them to xfail because the AC was not yet done, the green gate passed, and only
+  mark_done's stale-todo guard caught the failure, at the commit phase, after the full loop.
+  The parent's wording is not changed. Its work_status (done) now overstates the shipped
+  gate, so the store owner should reset it.
