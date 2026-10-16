@@ -240,21 +240,20 @@ notes: |
   is reopened to todo in the same commit, with an amended_by entry, so the ACD-400a
   falsely-done-composite shape is not staged.
 
-  TWO DECISIONS TAKEN HERE THAT THE CALLER DID NOT SPELL OUT. Confirm or reverse before
-  approval:
-    (1) DOCSTRING MEANS DOCSTRING POSITION. GE-127d-2's published rule discarded EVERY
-        triple-quoted string. A lexically correct rule cannot call an assigned SQL template
-        a comment, so only a string literal that is the first statement of a module, class
-        or function is uncounted; any other triple-quoted string counts as code. This
-        RAISES the measured length of files with large embedded strings. Default if
-        unanswered: as written.
+  TWO FURTHER DECISIONS:
+    (1) DOCSTRING MEANS DOCSTRING POSITION — CONFIRMED BY BRAINCANDY 2026-10-16.
+        GE-127d-2's published rule discarded EVERY triple-quoted string. A lexically
+        correct rule cannot call an assigned SQL template a comment, so only a string
+        literal that is the first statement of a module, class or function is uncounted;
+        any other triple-quoted string, assigned or bare, counts as code. This RAISES the
+        measured length of files with large embedded strings.
     (2) A BLANK LINE BETWEEN TWO LINE COMMENTS IS A BLANK LINE. With blank lines counted,
         `# a / (blank) / # b` measures 1 while the same text as one block comment with a
         blank line inside measures 0. The restyle invariant in the criteria is therefore
         stated for comment text whose every line carries the marker, which is how `//`, `#`
         and `--` runs are normally written. Removing this residue needs blank lines to stop
-        counting, which the decision kept. Default: keep, and accept a one-line-per-gap
-        difference.
+        counting, which the decision kept. Kept as written (BrainCandy did not reverse
+        it): accept a one-line-per-gap difference.
 
   LINES THAT ARE NOT COMMENTS EVEN THOUGH THEY START WITH A MARKER: GE-127d-3-i. A shebang
   and a Python encoding line ARE `#` comments lexically and are uncounted.

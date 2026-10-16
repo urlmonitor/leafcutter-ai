@@ -399,7 +399,8 @@ amended_by:
     "keep the rule, publish it" (hash comments counted, every triple-quoted string
     and every /* */ span discarded) is replaced by BrainCandy's 2026-10-16 decision
     recorded in GE-127d-3 — no comment counts in any style, docstrings (docstring
-    position only) uncounted, blank lines counted, per-language tokenizer. The test
+    position only, confirmed by BrainCandy 2026-10-16; other triple-quoted strings
+    count as code) uncounted, blank lines counted, per-language tokenizer. The test
     descriptor test_ge_127d_2_the_asymmetry_between_removable_and_non_removable_content_is_legible_from_the_outcome
     asserts that deleting hash comments moves the quoted length; it will go red when
     GE-127d-3 lands and must be rewritten to the new rule in that change, not
