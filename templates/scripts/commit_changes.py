@@ -19,9 +19,9 @@ ARCHITECTURE: Stdlib only. The commit is built in a PRIVATE temporary index
 
 CLI: commit_changes.py --message-file FILE PATH [PATH ...]   (cwd = workspace)
 
-Answer keys (always present): status, sha, paths, added_parents, unlisted_changes,
-    hook_name, failing_files, reason_code, reason, hook_output, autofixed,
-    skip_request_ignored, remedy, handoff.
+Answer keys (always present), reason_code families and answer_version: read from
+    config/commit_step.json (validated at start; unusable -> refused +
+    step_config_unreadable). Standard output carries the one answer only.
 
 Checks (BO-4500a-3): run once over the named files; a fixing check's rewrite is
     taken in and the checks re-run up to config/commit_step.json
@@ -37,6 +37,11 @@ DECISION HISTORY:
   - 2026-10-16 [BO-4500]: Split, behaviour unchanged. Answer/git/config primitives
     moved to commit_step_base.py and AC-parent resolution to commit_step_parents.py,
     both deployed beside this script, to make room for BO-4500a-4.
+  - 2026-10-16 [python-coder/BO-4500a-4]: One-answer contract. The vocabulary is
+    loaded once from config (commit_step_config.py); git_error, commit_error,
+    git_unavailable and internal_error retired for step_vcs_error / step_index_locked;
+    unexpected failures become refused + step_vcs_error, composed before anything
+    is written to stdout.
 """
 
 from __future__ import annotations
@@ -55,6 +60,7 @@ from commit_step_base import answer as _answer
 from commit_step_base import ceiling as _ceiling
 from commit_step_base import git as _git
 from commit_step_base import git_out as _git_out
+from commit_step_base import load_contract, lock_refusal
 from commit_step_parents import parent_candidates
 
 _USAGE = (
@@ -155,7 +161,7 @@ def _drop_unlisted(root: Path, env: dict, base: str | None, unlisted: list[str],
     parent_args = ["-p", base] if base else []
     proc = _git(["commit-tree", tree, *parent_args], root, author, stdin=msg)
     if proc.returncode != 0:
-        raise StepRefusal("git_error", f"commit-tree failed: {proc.stderr.strip()}")
+        raise StepRefusal("step_vcs_error", f"commit-tree failed: {proc.stderr.strip()}")
     new = proc.stdout.strip()
     _git_out(["update-ref", "-m", "commit_changes: drop unlisted paths", "HEAD", new, old], root)
     return new
@@ -291,6 +297,9 @@ def _run_checks_and_commit(root: Path, env: dict, msg_file: str, carried: list[s
         if proc.returncode == 0:
             return None, fixed
         output = proc.stdout + proc.stderr
+        locked = lock_refusal(output)
+        if locked is not None:  # a held .lock is the step's failure, never a check's
+            raise locked
         rewritten = _rewritten_by_checks(root, before, carried)
         if not rewritten or not _hooks_present(root, env):
             return _failed_commit(root, env, output, carried), fixed
@@ -312,7 +321,7 @@ def _hook_name(output: str) -> str | None:
 def _failed_commit(root: Path, env: dict, output: str, carried: list[str]) -> dict:
     """Map a failed `git commit` to hook_failed or refused; nothing was recorded."""
     if not _hooks_present(root, env):
-        return _answer("refused", reason_code="commit_error", reason=output.strip()[-400:])
+        return _answer("refused", reason_code="step_vcs_error", reason=f"git commit failed: {output.strip()[-400:]}")
     check = _hook_name(output)
     handoff = _handoff(root, check, output)
     named_in_output = [p for p in carried if re.search(rf"(?<![\w/.-]){re.escape(p)}(?![\w])", output)]
@@ -350,9 +359,23 @@ def _checked_run(argv: list[str]) -> dict:
 def run(argv: list[str]) -> dict:
     """Run the step; every outcome, refusals included, is returned as an answer."""
     try:
+        load_contract()  # once, before anything else: no usable config, no commit
         return _checked_run(argv)
     except StepRefusal as refusal:
         return _answer("refused", reason_code=refusal.code, reason=refusal.reason)
+
+
+def _safe_run(args: list[str]) -> dict:
+    """run(), with any unexpected failure turned into refused + step_vcs_error.
+
+    Nothing is printed here: the answer is composed first and written once by main(),
+    so a crash can never leave partial JSON or a traceback on standard output.
+    """
+    try:
+        return run(args)
+    except (OSError, subprocess.SubprocessError, ValueError, LookupError, RuntimeError) as exc:
+        print(f"[commit_changes] unexpected error: {exc!r}", file=sys.stderr)
+        return _answer("refused", reason_code="step_vcs_error", reason=f"unexpected error: {exc!r}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -361,11 +384,7 @@ def main(argv: list[str] | None = None) -> int:
     if "--help" in args or "-h" in args:
         sys.stdout.write(_USAGE)
         return 0
-    try:
-        answer = run(args)
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
-        print(f"[commit_changes] unexpected error: {exc}", file=sys.stderr)
-        answer = _answer("refused", reason_code="internal_error", reason=str(exc))
+    answer = _safe_run(args)
     sys.stdout.write(json.dumps(answer) + "\n")
     return 0 if answer["status"] in {"committed", "nothing_to_commit"} else 1
 
